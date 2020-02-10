@@ -21,6 +21,7 @@ Date            : 2017/09/26
 """
 import os
 import os.path
+import sys
 from shutil import move
 from setuptools import setup
 from setupUtilities import list_packages, get_py_modules, getConfig, createDirs, readFile
@@ -47,23 +48,44 @@ for sectionName in CONFIG.sections():
     print sectionName
     if sectionName in ['LookUpService', 'PolicyService', 'ProvisioningService']:
         SCRIPTS.append('packaging/dtnrm-site-fe/centos7/%s-update' % sectionName)
-setup(
-    name='DTNRMSiteFE',
-    version="0.1",
-    long_description="DTN-RM Site installation",
-    author="Justas Balcas",
-    author_email="justas.balcas@cern.ch",
-    url="http://hep.caltech.edu",
-    download_url="https://github.com/juztas/dtnrm/tarball/0.1",
-    keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
-    package_dir={'': 'src/python/'},
-    packages=['SiteFE'] + list_packages(['src/python/SiteFE/']),
-    install_requires=['rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5'],
-    data_files=[("/etc/", CONFIG_LOCATION),
-                (RAWCONFIGS, ["packaging/dtnrm-site-fe/sitefe-httpd.conf"]),
-                ("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
-                ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
-                                        "packaging/dtnrm-site-fe/welcome.conf"])],
-    py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
-    scripts=SCRIPTS
-)
+
+#  This is bare metal instalation which means config files should be added,
+#  while it is not done for docker as they are on HOST os.
+if "--docker" not in sys.argv:
+    setup(
+        name='DTNRMSiteFE',
+        version="0.1",
+        long_description="DTN-RM Site installation",
+        author="Justas Balcas",
+        author_email="justas.balcas@cern.ch",
+        url="http://hep.caltech.edu",
+        download_url="https://github.com/juztas/dtnrm/tarball/0.1",
+        keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
+        package_dir={'': 'src/python/'},
+        packages=['SiteFE'] + list_packages(['src/python/SiteFE/']),
+        install_requires=['rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5'],
+        data_files=[("/etc/", CONFIG_LOCATION),
+                    (RAWCONFIGS, ["packaging/dtnrm-site-fe/sitefe-httpd.conf"]),
+                    ("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
+                    ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
+                                            "packaging/dtnrm-site-fe/welcome.conf"])],
+        py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
+        scripts=SCRIPTS
+    )
+else:
+    sys.argv.remove("--docker")
+    setup(
+        name='DTNRMSiteFE',
+        version="0.1",
+        long_description="DTN-RM Site installation",
+        author="Justas Balcas",
+        author_email="justas.balcas@cern.ch",
+        url="http://hep.caltech.edu",
+        download_url="https://github.com/juztas/dtnrm/tarball/0.1",
+        keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
+        package_dir={'': 'src/python/'},
+        packages=['SiteFE'] + list_packages(['src/python/SiteFE/']),
+        install_requires=['rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5'],
+        py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
+        scripts=SCRIPTS
+    )
