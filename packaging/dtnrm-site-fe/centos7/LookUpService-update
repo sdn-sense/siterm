@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+"""
+This part of code is taken from:
+   https://web.archive.org/web/20160305151936/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+Please respect developer (Sander Marechal) and always keep a reference to URL and also as kudos to him
+Changes applied to this code:
+    Dedention (Justas Balcas 07/12/2017)
+    pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
+"""
+import sys
+import time
+from DTNRMLibs.Daemonizer import Daemon
+from SiteFE.LookUpService import lookup as LS
+from DTNRMLibs.MainUtilities import getLogger
+from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getStreamLogger
+
+
+CONFIG = getConfig(["/etc/dtnrm-site-fe.conf"])
+COMPONENT = 'LookUpService'
+LOGGER = getLogger("%s/%s/" % (CONFIG.get('general', 'logDir'), COMPONENT), CONFIG.get('general', 'logLevel'))
+
+
+class MyDaemon(Daemon):
+    """ My own Deamon override """
+    def run(self):
+        """ Run main execution """
+        lookThreads = {}
+        for siteName in CONFIG.get('general', 'sites').split(','):
+            looker = LS.LookUpService(CONFIG, LOGGER, siteName)
+            lookThreads[siteName] = looker
+        while True:
+            try:
+                for sitename, lookt in lookThreads.items():
+                    lookt.startwork()
+                time.sleep(2)
+            except:
+                LOGGER.info('There was uncaught exception')
+                excType, excValue = sys.exc_info()[:2]
+                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))
+                time.sleep(2)
+
+
+if __name__ == "__main__":
+    DAEMON = MyDaemon('/tmp/dtnrm-lookUpService.pid')
+    if len(sys.argv) == 3 and sys.argv[2] == 'debug':
+        LOGGER = getStreamLogger()
+        DAEMON.run()
+    if len(sys.argv) == 2:
+        DAEMON.command(sys.argv[1], sys.argv[0])
+    else:
+        DAEMON.command('', sys.argv[0])

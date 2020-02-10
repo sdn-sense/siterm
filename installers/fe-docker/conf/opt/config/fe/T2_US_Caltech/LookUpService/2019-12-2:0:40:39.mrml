@@ -1,0 +1,30 @@
+@prefix mrs: <http://schemas.ogf.org/mrs/2013/12/topology#> .
+@prefix nml: <http://schemas.ogf.org/nml/2013/03/base#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <http://schemas.ogf.org/nml/2012/10/ethernet> .
+@prefix sd: <http://schemas.ogf.org/nsi/2013/12/services/definition#> .
+@prefix site: <urn:ogf:network:ultralight.org:2013> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xml1: <http://www.w3.org/XML/1998/namespace#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+site: a nml:Topology ;
+    nml:hasBidirectionalPort <urn:ogf:network:ultralight.org:2013:s0:1_1:topology> ;
+    nml:hasService <urn:ogf:network:ultralight.org:2013:service+vsw> .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_1:topology:vlan-range> a nml:LabelGroup ;
+    nml:labeltype <http://schemas.ogf.org/nml/2012/10/ethernet#vlan> ;
+    nml:values "3600-3619" .
+
+<urn:ogf:network:ultralight.org:2013:service+vsw> a nml:SwitchingService ;
+    nml:encoding schema: ;
+    nml:hasBidirectionalPort <urn:ogf:network:ultralight.org:2013:s0:1_1:topology> ;
+    nml:labelSwapping "false" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_1:topology> a nml:BidirectionalPort ;
+    mrs:capacity "100" ;
+    nml:hasLabelGroup <urn:ogf:network:ultralight.org:2013:s0:1_1:topology:vlan-range> ;
+    nml:isAlias <urn:ogf:network:snvaca.pacificwave.net:2016:topology:caltech> .
+

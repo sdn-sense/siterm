@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+"""
+This part of code is taken from:
+   https://web.archive.org/web/20160305151936/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+Please respect developer (Sander Marechal) and always keep a reference to URL and also as kudos to him
+Changes applied to this code:
+    Dedention (Justas Balcas 07/12/2017)
+    pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
+"""
+import sys
+import time
+from DTNRMLibs.Daemonizer import Daemon
+from DTNRMLibs.MainUtilities import getDefaultConfigAgent
+from DTNRMAgent.NetTester import NetTester
+
+CONFIG, LOGGER = getDefaultConfigAgent('NetTester')
+
+class MyDaemon(Daemon):
+    """ My own Deamon override """
+    def run(self):
+        """ Run main execution """
+        netAgent = NetTester.NetTester(CONFIG, LOGGER)
+        while True:
+            time.sleep(60)
+            try:
+                netAgent.start()
+            except:
+                LOGGER.info('There was uncaught exception')
+                excType, excValue = sys.exc_info()[:2]
+                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))
+                time.sleep(30)
+
+if __name__ == "__main__":
+    DAEMON = MyDaemon('/data/config/DTNRM/dtnrm-nettester.pid')
+    if len(sys.argv) == 2:
+        DAEMON.command(sys.argv[1], sys.argv[0])
+    else:
+        DAEMON.command('', sys.argv[0])

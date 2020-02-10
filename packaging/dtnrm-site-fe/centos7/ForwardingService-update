@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+"""
+This part of code is taken from:
+   https://web.archive.org/web/20160305151936/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+Please respect developer (Sander Marechal) and always keep a reference to URL and also as kudos to him
+Changes applied to this code:
+    Dedention (Justas Balcas 07/12/2017)
+    pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
+"""
+import sys
+import time
+from DTNRMLibs.Daemonizer import Daemon
+from SiteFE.ForwardingService import forwarding as FS
+
+# TODO: Class
+
+class MyDaemon(Daemon):
+    """ My own Deamon override """
+    def run(self):
+        """ Run main execution """
+        while True:
+            time.sleep(20)
+            try:
+                FS.execute()
+            except:
+                print 'We got an exception which is not catched....'
+                time.sleep(20)
+
+if __name__ == "__main__":
+    DAEMON = MyDaemon('/tmp/dtnrm-forwardingService.pid')
+    if len(sys.argv) == 2:
+        DAEMON.command(sys.argv[1], sys.argv[0])
+    else:
+        DAEMON.command('', sys.argv[0])
