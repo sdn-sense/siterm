@@ -86,6 +86,7 @@ else:
         package_dir={'': 'src/python/'},
         packages=['SiteFE'] + list_packages(['src/python/SiteFE/']),
         install_requires=['rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5'],
+        data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"])],
         py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
         scripts=SCRIPTS
     )
