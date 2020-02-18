@@ -54,10 +54,10 @@ if "--docker" not in sys.argv:
         download_url="https://github.com/sdn-sense/siterm",
         keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
         package_dir={'': 'src/python/'},
-        packages=['DTNRMAgent'] + list_packages(['src/python/DTNRMAgent/']),
+        packages=['DTNRMAgent', 'DTNRMLibs'] + list_packages(['src/python/DTNRMAgent/']) + list_packages(['src/python/DTNRMLibs/']),
         install_requires=['importlib==1.0.4', 'psutil==5.2.2', 'potsdb', 'ipaddress', 'pyroute2'],
         data_files=[("%s/dtnrm/" % BASEPATH, CONFIG_LOCATION)],
-        py_modules=get_py_modules(['src/python/DTNRMAgent']),
+        py_modules=get_py_modules(['src/python/DTNRMAgent', 'src/python/DTNRMLibs']),
         scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler"]
     )
 else:
@@ -72,8 +72,8 @@ else:
         download_url="https://github.com/sdn-sense/siterm",
         keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
         package_dir={'': 'src/python/'},
-        packages=['DTNRMAgent'] + list_packages(['src/python/DTNRMAgent/']),
+        packages=['DTNRMAgent', 'DTNRMLibs'] + list_packages(['src/python/DTNRMAgent/']) + list_packages(['src/python/DTNRMLibs/']),
         install_requires=['importlib==1.0.4', 'psutil==5.2.2', 'potsdb', 'ipaddress', 'pyroute2'],
-        py_modules=get_py_modules(['src/python/DTNRMAgent']),
+        py_modules=get_py_modules(['src/python/DTNRMAgent', 'src/python/DTNRMLibs']),
         scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler"]
     )
