@@ -46,8 +46,7 @@ class VInterfaces(object):
         """ Add specific vlan """
         if identifyL23(vlan) == 'L2':
             self.logger.info('Called VInterface add L2 for %s' % str(vlan))
-            command = "ip link add link %s name %s.%s type vlan id %s" % (vlan['destport'],
-                                                                          vlan['destport'],
+            command = "ip link add link %s name vlan.%s type vlan id %s" % (vlan['destport'],
                                                                           vlan['vlan'],
                                                                           vlan['vlan'])
             return execute(command, self.logger, raiseError)
@@ -58,8 +57,8 @@ class VInterfaces(object):
         if identifyL23(vlan) == 'L2':
             if 'ip' in vlan.keys():
                 self.logger.info('Called VInterface setup L2 for %s' % str(vlan))
-                command = "ip addr add %s broadcast %s dev %s.%s" % (vlan['ip'], getBroadCast(vlan['ip'], self.logger),
-                                                                     vlan['destport'], vlan['vlan'])
+                command = "ip addr add %s broadcast %s dev vlan.%s" % (vlan['ip'], getBroadCast(vlan['ip'], self.logger),
+                                                                     vlan['vlan'])
                 return execute(command, self.logger, raiseError)
             else:
                 self.logger.info('Called VInterface setup for %s, but ip key is not present.' % str(vlan))
@@ -70,7 +69,7 @@ class VInterfaces(object):
         """ Start specific vlan """
         if identifyL23(vlan) == 'L2':
             self.logger.info('Called VInterface start L2 for %s' % str(vlan))
-            command = "ip link set %s.%s up" % (vlan['destport'], vlan['vlan'])
+            command = "ip link set vlan.%s up" % (vlan['vlan'])
             return execute(command, self.logger, raiseError)
         else:
             self.logger.info('Called VInterface start L3 for %s' % str(vlan))
@@ -89,7 +88,7 @@ class VInterfaces(object):
         """ Stop specific vlan """
         if identifyL23(vlan) == 'L2':
             self.logger.info('Called VInterface L2 stop for %s' % str(vlan))
-            command = "ip link set %s.%s down" % (vlan['destport'], vlan['vlan'])
+            command = "ip link set vlan.%s down" % (vlan['vlan'])
             return execute(command, self.logger, raiseError)
         return None
 
@@ -97,7 +96,7 @@ class VInterfaces(object):
         """ Remove specific vlan """
         if identifyL23(vlan) == 'L2':
             self.logger.info('Called VInterface remove for %s' % str(vlan))
-            command = "ip link delete %s.%s" % (vlan['destport'], vlan['vlan'])
+            command = "ip link delete vlan.%s" % (vlan['vlan'])
             return execute(command, self.logger, raiseError)
         else:
             self.logger.info('Called VInterface remove L3 for %s' % str(vlan))
@@ -116,7 +115,7 @@ class VInterfaces(object):
         """ Get status of specific vlan """
         if identifyL23(vlan) == 'L2':
             self.logger.info('Called VInterface status for %s' % str(vlan))
-            command = "ip link show dev %s.%s" % (vlan['destport'], vlan['vlan'])
+            command = "ip link show dev vlan.%s" % (vlan['vlan'])
             return execute(command, self.logger, raiseError)
         else:
             self.logger.info('Called VInterface status L3 for %s' % str(vlan))

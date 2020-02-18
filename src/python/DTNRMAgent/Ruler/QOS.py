@@ -119,9 +119,9 @@ class QOS(object):
                 tmpFile.write("# SPEEDLIMIT %s %s %s %s\n" % (inputDict['vlan'],
                                                               inputDict['destport'],
                                                               outrate, outtype))
-                tmpFile.write("interface %s.%s %s input rate %s%s\n" % (inputDict['destport'], inputDict['vlan'],
+                tmpFile.write("interface vlan.%s %s input rate %s%s\n" % (inputDict['vlan'],
                                                                         inputName, outrate, outtype))
-                tmpFile.write("interface %s.%s %s output rate %s%s\n" % (inputDict['destport'], inputDict['vlan'],
+                tmpFile.write("interface vlan.%s %s output rate %s%s\n" % (inputDict['vlan'],
                                                                          outputName, outrate, outtype))
                 totalAllocated += int(params['reservableCapacity'])
         intfName, maxThrgIntf = self.getMaxThrg()
