@@ -17,7 +17,7 @@ done
 if [ X"$certissuer" = X ]; then
   echo "--certissuer option is required. How do you want to request certificate?"
   echo "1) Using OpenSSL and creating own Root CA and Self Signed certificate?"
-  echo "2) Using LetsEncrypt? This requires port 443 open on the host."
+  echo "2) Using LetsEncrypt? This requires port 80 open and not used during generation on the host."
   echo "3) Other... (Manually installed certificate)"  
   read n
   case $n in
