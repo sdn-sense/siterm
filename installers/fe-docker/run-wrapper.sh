@@ -16,7 +16,7 @@ if [ $status -ne 0 ]; then
   echo "Failed to start httpd: $status"
   exit_code=1
 fi
-sleep 5
+sleep 30
 # Start the second process
 sudo -u root /usr/bin/LookUpService-update startforeground &
 status=$?

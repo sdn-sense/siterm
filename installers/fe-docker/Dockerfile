@@ -6,11 +6,10 @@ RUN adduser apache -U -u 48
 
 RUN mkdir -p /opt/ && mkdir -p /opt/config/fe/
 RUN mkdir -p /etc/httpd/certs/ && mkdir -p /etc/httpd/conf.d/
-RUN yum -y install git sudo wget && yum clean all
+RUN yum -y install git sudo libffi-devel openssl-devel pyOpenSSL && yum clean all
 RUN git clone https://github.com/sdn-sense/siterm-installers
-RUN wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py
-RUN pip install pyparsing
-RUN cd siterm-installers && sudo sh ./fresh-siterm-fe-install.sh -R /opt/
+RUN cd siterm-installers && sudo sh ./fresh-siterm-fe-install.sh -R /opt/ -D yes
+
 RUN mkdir -p /opt/config/fe/{LookUpService,PolicyService,ProvisioningService}
 RUN find /opt/config/fe/ -type f -exec chmod 0644 {} \;
 RUN find /opt/config/fe/ -type d -exec chmod 0755 {} \;

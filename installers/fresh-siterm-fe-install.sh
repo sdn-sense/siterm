@@ -27,6 +27,7 @@
 ##H  -I IP          Time Series database IP or hostname. No default;
 ##H  -U PROTOCOL    Time Series database protocol. By default tcp
 ##H  -G GITREPO     Git Repo to use for installation. default sdn-sense
+##H  -D anyvalue    this flag tells that this is docker installation. It will skip copying config files
 ##H  -h             Display this help.
 
 # TODO also force to specify TSDB parameters it should get from FE.
@@ -57,6 +58,7 @@ while [ $# -ge 1 ]; do
     -I ) tsdip="$2"; shift; shift;;
     -U ) tsdp="$2"; shift; shift;;
     -G ) gitr="$2"; shift; shift;;
+    -D ) docker="$2"; shift; shift;;
     -h ) perl -ne '/^##H/ && do { s/^##H ?//; print }' < $0 1>&2; exit 1 ;;
     -* ) echo "$0: unrecognized option $1, use -h for help" 1>&2; exit 1 ;;
     *  ) break ;;
@@ -132,40 +134,41 @@ echo "We need latest setuptools to be able to install dtnrm package. Updating se
 pip install --upgrade setuptools
 
 echo "==================================================================="
-echo "Cloning dtnrm and installing it"
+echo "Cloning siterm and installing it"
 cd $rootdir
-rm -rf siterm-fe
-git clone https://github.com/$gitr/siterm-fe
-cd siterm-fe
-python setup.py install || exit $?
-cd ..
-rm -rf siterm-utilities
-git clone https://github.com/$gitr/siterm-utilities
-cd siterm-utilities
-python setup.py install || exit $?
+rm -rf siterm
+git clone https://github.com/$gitr/siterm
+cd siterm
+if [ X"$docker" = X ]; then
+  python setup-sitefe.py install || exit $?
+else
+  python setup-sitefe.py install --docker || exit $?
+fi
 
-echo "==================================================================="
-echo "Modifying ownership and permission rules for Site FE directories"
-echo "-------------------------------------------------------------------"
+if [ X"$docker" = X ]; then
+  echo "==================================================================="
+  echo "Modifying ownership and permission rules for Site FE directories"
+  echo "-------------------------------------------------------------------"
 
-# Ownership
-echo "1. Making apache as owner of $datadir"
-chown apache:apache -R $datadir
-cd $datadir
-# File permissions, recursive
-echo "2. Recursive file permissions to 0644 in $datadir"
-find . -type f -exec chmod 0644 {} \;
- # Dir permissions, recursive
-echo "3. Recursive directory permissions to 0755 in $datadir"
-find . -type d -exec chmod 0755 {} \;
-# SELinux serve files off Apache, resursive
-echo "4. Apply SELinux rule to allow Apache serve files from $datadir"
-chcon -t httpd_sys_content_t $datadir -R
-# Allow write only to specific dirs
-chcon -t httpd_sys_rw_content_t $datadir -R
-echo "5. Applying mod_proxy policy change so that it can write remotely."
-echo "   More details: http://sysadminsjourney.com/content/2010/02/01/apache-modproxy-error-13permission-denied-error-rhel/"
-/usr/sbin/setsebool -P httpd_can_network_connect 1
+  # Ownership
+  echo "1. Making apache as owner of $datadir"
+  chown apache:apache -R $datadir
+  cd $datadir
+  # File permissions, recursive
+  echo "2. Recursive file permissions to 0644 in $datadir"
+  find . -type f -exec chmod 0644 {} \;
+  # Dir permissions, recursive
+  echo "3. Recursive directory permissions to 0755 in $datadir"
+  find . -type d -exec chmod 0755 {} \;
+  # SELinux serve files off Apache, resursive
+  echo "4. Apply SELinux rule to allow Apache serve files from $datadir"
+  chcon -t httpd_sys_content_t $datadir -R
+  # Allow write only to specific dirs
+  chcon -t httpd_sys_rw_content_t $datadir -R
+  echo "5. Applying mod_proxy policy change so that it can write remotely."
+  echo "   More details: http://sysadminsjourney.com/content/2010/02/01/apache-modproxy-error-13permission-denied-error-rhel/"
+  /usr/sbin/setsebool -P httpd_can_network_connect 1
+fi
 
 echo "==================================================================="
 echo "==================================================================="
