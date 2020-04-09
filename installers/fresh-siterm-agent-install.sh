@@ -26,7 +26,8 @@
 ##H  -P PORT        Time Series database repository port. No default;
 ##H  -I IP          Time Series database IP or hostname. No default;
 ##H  -U PROTOCOL    Time Series database protocol. By default tcp
-##H  -G GITREPO     Git Repo to use for installation. default sdn-sense
+##H  -G GITREPO     Git Repo to use for installation. default siterm
+##H  -O GITORG      Git Organization or user. default sdn-sense
 ##H  -D anyvalue    this flag tells that this is docker installation. It will skip copying config files
 ##H  -h             Display this help.
 
@@ -57,6 +58,7 @@ while [ $# -ge 1 ]; do
     -I ) tsdip="$2"; shift; shift;;
     -U ) tsdp="$2"; shift; shift;;
     -G ) gitr="$2"; shift; shift;;
+    -O ) gito="$2"; shift; shift;;
     -D ) docker="$2": shift; shift;;
     -h ) perl -ne '/^##H/ && do { s/^##H ?//; print }' < $0 1>&2; exit 1 ;;
     -* ) echo "$0: unrecognized option $1, use -h for help" 1>&2; exit 1 ;;
@@ -99,8 +101,13 @@ if [ X"$tsdip" = X ]; then
 fi
 
 if [ X"$gitr" = X ]; then
-  echo "WARNING: Git Repo not set. using default sdn-sense is not specified." 1>&2
-  gitr=sdn-sense
+  echo "WARNING: Git Repo not set. using default siterm is not specified." 1>&2
+  gitr=siterm
+fi
+
+if [ X"$gito" = X ]; then
+  echo "WARNING: Git Organization  not set. using default sdn-sense is not specified." 1>&2
+  gito=sdn-sense
 fi
 
 
@@ -157,9 +164,9 @@ pip install --upgrade setuptools
 echo "==================================================================="
 echo "Cloning siterm and installing it"
 cd $rootdir
-rm -rf siterm
-git clone https://github.com/$gitr/siterm
-cd siterm
+rm -rf $gitr
+git clone https://github.com/$gito/$gitr
+cd $gitr
 if [ X"$docker" = X ]; then
   python setup-agent.py install || exit $?
 else
