@@ -41,20 +41,22 @@ from logging import StreamHandler
 from logging.handlers import TimedRotatingFileHandler
 # Custom exceptions imports
 import pycurl
+import requests
+from yaml import load as yload
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import WrongInputError
-from DTNRMLibs.CustomExceptions import FailedToParseError
-from DTNRMLibs.CustomExceptions import NoSectionError
-from DTNRMLibs.CustomExceptions import NoOptionError
 from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
 from DTNRMLibs.CustomExceptions import NotSupportedArgument
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 from DTNRMLibs.HTTPLibrary import Requests
 
+
 def getUTCnow():
+    """ Get UTC Time"""
     now = datetime.datetime.utcnow()
     timestamp = int(time.mktime(now.timetuple()))
     return timestamp
+
 
 def getVal(conDict, **kwargs):
     """ Get value from configuration """
@@ -93,6 +95,7 @@ def getStreamLogger(logLevel='DEBUG'):
     logger.addHandler(handler)
     logger.setLevel(levels[logLevel])
     return logger
+
 
 def getLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='midnight', backupCount=10):
     """ Get new Logger for logging """
@@ -135,6 +138,7 @@ def readFile(fileName):
     except IOError:
         # File does not exist
         return []
+
 
 def externalCommand(command, communicate=True):
     """Execute External Commands and return stdout and stderr"""
@@ -180,6 +184,7 @@ def publishToSiteFE(inputDict, host, url):
         return (ex.args[1], ex.args[0], 'FAILED', False)
     return out
 
+
 def getDataFromSiteFE(inputDict, host, url):
     """Get data from Site FE"""
     req = Requests(host, {})
@@ -191,27 +196,114 @@ def getDataFromSiteFE(inputDict, host, url):
         return (ex.args[1], ex.args[0], 'FAILED', False)
     return out
 
-def getConfig(locations):
-    """ Get parsed configuration """
+
+def getWebContentFromURL(url):
+    """ TODO: Add some catches in future """
+    out = requests.get(url)
+    return out
+
+
+class GitConfig(object):
+    """ Git based configuration class """
+    def __init__(self):
+        self.config = {}
+        self.defaults = {'SITENAME':   {'optional': False},
+                         'GIT_REPO':   {'optional': True, 'default': 'sdn-sense/rm-configs'},
+                         'GIT_URL':    {'optional': True, 'default': 'https://raw.githubusercontent.com/'},
+                         'GIT_BRANCH': {'optional': True, 'default': 'master'},
+                         'MD5':        {'optional': False}}
+        self.logger = getStreamLogger()
+
+    def getFullGitUrl(self, customAdds=None):
+        """ Get Full Git URL """
+        urlJoinList = [self.config['GIT_URL'], self.config['GIT_REPO'],
+                       self.config['GIT_BRANCH'], self.config['SITENAME']]
+        if customAdds:
+            for item in customAdds:
+                urlJoinList.append(item)
+        return "/".join(urlJoinList)
+
+    def getLocalConfig(self):
+        """ Get local config for info where all configs are kept in git """
+        if not os.path.isfile('/etc/dtnrm.yaml'):
+            self.logger.debug('Config file /etc/dtnrm.yaml does not exist.')
+            raise Exception('Config file /etc/dtnrm.yaml does not exist.')
+        with open('/etc/dtnrm.yaml', 'r') as fd:
+            self.config = yload(fd.read())
+        for key, requirement in self.defaults.items():
+            if key not in self.config.keys():
+                # Check if it is optional or not;
+                if not requirement['optional']:
+                    self.logger.debug('Configuration /etc/dtnrm.yaml missing non optional config parameter %s', key)
+                    raise Exception('Configuration /etc/dtnrm.yaml missing non optional config parameter %s' % key)
+                else:
+                    self.config[key] = requirement['default']
+
+    def getGitAgentConfig(self):
+        """
+        https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/Agent01/main.yaml
+        """
+        if self.config['MAPPING']['type'] == 'Agent':
+            url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
+            self.config['MAIN'] = yload(getWebContentFromURL(url).text)
+            return
+
+    def getGitFEConfig(self):
+        """
+        https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/auth.yaml
+        https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/main.yaml
+        """
+        if self.config['MAPPING']['type'] == 'FE':
+            url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
+            self.config['MAIN'] = yload(getWebContentFromURL(url).text)
+            url = self.getFullGitUrl([self.config['MAPPING']['config'], 'auth.yaml'])
+            self.config['AUTH'] = yload(getWebContentFromURL(url).text)
+            return
+
+    def getGitConfig(self):
+        """https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/main.yaml
+
+        {'SITENAME': 'T2_US_Caltech', 'GIT_REPO': 'sdn-sense/rm-configs', 'BRANCH': 'master', 'MD5': '8feb35ed655904aa30d466658756a87f'}"""
+        if not self.config:
+            self.getLocalConfig()
+        mapping = yload(getWebContentFromURL("%s/mapping.yaml" % self.getFullGitUrl()).text)
+        if self.config['MD5'] not in mapping.keys():
+            msg = 'Configuration is not available for this MD5 %s tag in GIT REPO %s' % \
+                            (self.config['MD5'], self.config['GIT_REPO'])
+            self.logger.debug(msg)
+            raise Exception(msg)
+        self.config['MAPPING'] = copy.deepcopy(mapping[self.config['MD5']])
+        self.getGitFEConfig()
+        self.getGitAgentConfig()
+
+
+def getGitConfig():
+    """ Wrapper before git config class. Retirns dictionary """
+    gitConf = GitConfig()
+    gitConf.getGitConfig()
+    return gitConf.config
+
+
+def getConfig(locations=None):
+    """ Get parsed configuration in ConfigParser Format.
+        This is used till everyone move to YAML based config.
+        TODO: Move all to getGitConfig
+    """
+    del locations
+    config = getGitConfig()
     tmpCp = ConfigParser.ConfigParser()
-    for fileName in locations:
-        if os.path.isfile(fileName):
-            tmpCp.read(fileName)
-            return tmpCp
-    return None
-
-
-def getValueFromConfig(configPars, section, valName):
-    """ Return value if available, else return None"""
-    try:
-        return configPars.get(section, valName)
-    except ConfigParser.NoOptionError:
-        msg = 'Configuration files does not have option %s in section %s defined' % (valName, section)
-        raise NoOptionError(msg)
-    except ConfigParser.NoSectionError:
-        msg = 'Configuration files does not have section %s defined' % section
-        raise NoSectionError(msg)
-    return None
+    if not isinstance(config, dict):
+        print('ERROR: Config from Git returned not dictionary. Malformed yaml?')
+        return None
+    for key, item in config['MAIN'].items():
+        tmpCp.add_section(key)
+        print item, key
+        for key1, item1 in item.items():
+            out = item1
+            if isinstance(item1, list):
+                out = ",".join(item1)
+            tmpCp.set(key, key1, str(out))
+    return tmpCp
 
 
 def getFileContentAsJson(inputFile):
@@ -234,9 +326,11 @@ def getAllFileContent(inputFile):
             return fd.read()
     raise NotFoundError('File %s was not found on the system.' % inputFile)
 
+
 def getUsername():
     """Return current username"""
     return pwd.getpwuid(os.getuid())[0]
+
 
 class contentDB(object):
     """ File Saver, loader class """
@@ -244,17 +338,18 @@ class contentDB(object):
         self.config = config
         self.logger = logger
 
-
     def getFileContentAsJson(self, inputFile):
         """ Get file content as json """
         return getFileContentAsJson(inputFile)
 
     def getHash(self, inputText):
+        """ Get UUID4 hash """
         newuuid4 = str(uuid.uuid4())
         return str(newuuid4 + inputText)
 
     def dumpFileContentAsJson(self, outFile, content, newHash=None):
         """ Dump File content with locks """
+        del newHash
         tmpoutFile = outFile + '.tmp'
         with open(tmpoutFile, 'w+') as fd:
             json.dump(content, fd)
@@ -329,47 +424,11 @@ def validateInput(inputDict, validationKey):
     return
 
 
-def configOut(location, mandatoryOptions=None):
-    """ Check configuration if all needed options are defined """
-    defaults = [{"varName": "logdir", "varType": str, "varDefault": "/var/log/dtnrm/"},
-                {"varName": "loglevel", "varType": str, "varDefault": "DEBUG"},
-                {"varName": "logmaxbytes", "varType": int, "varDefault": 2000000},
-                {"varName": "logbackupCount", "varType": int, "varDefault": 5}]
-    config = getConfig(location)
-    if not config:
-        raise Exception("Configuration file is not available... Please refer to documentation")
-    # Check config file if all options are available
-    if not mandatoryOptions:
-        return config
-    for section, optionsList in mandatoryOptions.items():
-        if not config.has_section(section):
-            msg = "Configuration file does not have %s section defined. Please refer to documentation" % section
-            raise Exception(msg)
-        for option in optionsList:
-            if not config.has_option(section, option):
-                msg = "Configuration file does not have %s option defined. Please refer to documentation" % option
-                raise Exception(msg)
-    for section in config.sections():
-        for default in defaults:
-            if default['varName'] not in config.options(section):
-                config.set(section, default['varName'], str(default['varDefault']))
-            else:
-                try:
-                    if default['varType'] == str:
-                        config.get(section, default['varName'])
-                    elif default['varType'] == int:
-                        config.getint(section, default['varName'])
-                    elif default['varType'] == bool:
-                        config.getboolean(section, default['varName'])
-                except ValueError as ex:
-                    raise ValueError(ex)
-    return config
-
-
 def generateHash(inText):
     """ Generate unique using uuid """
     del inText
     return str(uuid.uuid1())
+
 
 def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):
     """ Create custom return dictionary """
@@ -384,23 +443,6 @@ def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):
         newOut['exitCode'] = exitCode
     return newOut
 
-def getDefaultConfigAgent(componentName='api', configIn=None, loggerIn=None, confloc=None, streamLogger=False):
-    """ Get default configuration and logger for agents """
-    if confloc:
-        configIn = configOut([confloc])
-    else:
-        configIn = configOut(['/etc/dtnrm/main.conf', 'dtnrmagent.conf'])
-    createDirs("%s/%s/" % (configIn.get('general', 'logDir'), componentName))
-    if not loggerIn:
-        if streamLogger:
-            loggerIn = getStreamLogger(configIn.get('general', 'logLevel'))
-        else:
-            loggerIn = getLogger("%s/%s/" % (configIn.get('general', 'logDir'), componentName),
-                                 configIn.get('general', 'logLevel'),
-                                 '%s.log' % componentName,
-                                 configIn.get('general', 'rotate'),
-                                 configIn.get('general', 'logbackupCount'))
-    return configIn, loggerIn
 
 def getUrlParams(environ, paramsList):
     """ Get URL parameters and return them in dictionary """
@@ -425,14 +467,17 @@ def getUrlParams(environ, paramsList):
                 elif outVals[0] in ['false', 'False']:
                     outParams[param['key']] = False
                 else:
-                    raise NotSupportedArgument("Parameter %s value is not acceptable. Allowed options: [tT]rue,[fF]alse" % param['key'])
+                    raise NotSupportedArgument("Parameter %s value not acceptable. Allowed options: [tT]rue,[fF]alse" %
+                                               param['key'])
             elif param['type'] == str:
                 if outVals[0] not in param['options']:
-                    raise NotSupportedArgument("Server does not support parameter %s=%s. Supported: %s" % (param['key'], outVals[0], param['options']))
+                    raise NotSupportedArgument("Server does not support parameter %s=%s. Supported: %s" %
+                                               (param['key'], outVals[0], param['options']))
         elif not outVals:
             outParams[param['key']] = param['default']
     print outParams
     return outParams
+
 
 def getHeaders(environ):
     """ Get all Headers and return them back as dictionary """
@@ -441,6 +486,7 @@ def getHeaders(environ):
         if key.startswith('HTTP_'):
             headers[key[5:]] = environ.get(key)
     return headers
+
 
 def convertTSToDatetime(inputTS):
     """ Convert timestamp to datetime """
@@ -458,12 +504,14 @@ def httpdate(timestamp):
     return "%s, %02d %s %04d %02d:%02d:%02d GMT" % (weekday, dat.day, month, dat.year,
                                                     dat.hour, dat.minute, dat.second)
 
+
 def httptimestamp(inhttpdate):
     """
     Return timestamp from RFC1123 (HTTP/1.1).
     """
     dat = datetime.datetime(*eut.parsedate(inhttpdate)[:5])
     return int(time.mktime(dat.timetuple()))
+
 
 def getModTime(headers):
     """ Get modification time from the headers """
@@ -485,8 +533,3 @@ def decodebase64(inputStr, decodeFlag=True):
     if decodeFlag and inputStr:
         return base64.b64decode(inputStr)
     return inputStr
-
-def mergeTwoDicts(inDict1, inDict2):
-    originCopy = inDict1.copy()   # start with x's keys and values
-    originCopy.update(inDict2)    # modifies z with y's keys and values & returns None
-    return originCopy

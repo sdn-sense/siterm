@@ -648,7 +648,7 @@ class LookUpService(object):
 def execute(config=None, logger=None):
     """Main Execute"""
     if not config:
-        config = getConfig(["/etc/dtnrm-site-fe.conf"])
+        config = getConfig()
     if not logger:
         component = 'LookUpService'
         logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), component), config.get(component, 'logLevel'))
@@ -658,6 +658,4 @@ def execute(config=None, logger=None):
 
 
 if __name__ == '__main__':
-    print 'WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.'
-    print 'Argument List:', str(sys.argv)
     execute(logger=getStreamLogger())

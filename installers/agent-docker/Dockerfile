@@ -3,7 +3,7 @@ FROM centos:7
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
 
 RUN mkdir -p /opt/ && mkdir -p /opt/config/
-RUN time yum -y install git sudo libffi-devel openssl-devel
+RUN  yum -y install git
 RUN git clone https://github.com/sdn-sense/siterm-installers
 RUN cd siterm-installers && sudo sh ./fresh-siterm-agent-install.sh -R /opt/ -D yes
 

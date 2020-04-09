@@ -22,23 +22,22 @@ import os
 import time
 from OpenSSL import crypto
 from datetime import datetime
+from DTNRMLibs.MainUtilities import getGitConfig
 
 class CertHandler(object):
     def __init__(self):
         self.allowedCerts = {}
+        self
         self.loadAuthorized()
 
     def loadAuthorized(self):
-        if os.path.isfile('/etc/dtnrm-auth.conf'):
-            lines = []
-            with open('/etc/dtnrm-auth.conf', 'r') as fd:
-                lines = fd.readlines()
-            for line in lines:
-                if line.startswith('#'):
-                    continue
-                auth = line.split("|")
-                if len(auth) == 3:
-                    self.allowedCerts[auth[0]] = {'username': auth[1], 'permissions': auth[2].strip()}
+        # TODO: YUse Git file
+        config = getGitConfig()
+        for user, userinfo in config['AUTH'].items():
+             self.allowedCerts.setdefault(userinfo['full_dn'], {})
+             self.allowedCerts[userinfo['full_dn']]['username'] = user
+             self.allowedCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
+
 
     def getCertInfo(self, environ):
         out = {}

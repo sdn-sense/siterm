@@ -15,7 +15,7 @@ from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getStreamLogger
 
-CONFIG = getConfig(["/etc/dtnrm-site-fe.conf"])
+CONFIG = getConfig()
 COMPONENT = 'PolicyService'
 LOGGER = getLogger("%s/%s/" % (CONFIG.get('general', 'logDir'), COMPONENT), CONFIG.get('general', 'logLevel'))
 
@@ -32,16 +32,19 @@ class MyDaemon(Daemon):
             except:
                 LOGGER.info('There was uncaught exception')
                 excType, excValue = sys.exc_info()[:2]
-                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))
+                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
                 time.sleep(2)
 
 
 if __name__ == "__main__":
     DAEMON = MyDaemon('/tmp/dtnrm-PolicyService.pid')
-    if len(sys.argv) == 3 and sys.argv[2] == 'debug':
-        LOGGER = getStreamLogger()
-        DAEMON.run()
-    if len(sys.argv) == 2:
+    options = ['start', 'stop', 'restart', 'startforeground', 'status']
+    if len(sys.argv) != 2:
+        print 'ERROR: Options available: %s ' % options
+        exit(1)
+    if sys.argv[1] in options:
+        if sys.argv[1] == 'startforeground':
+            LOGGER = getStreamLogger()
         DAEMON.command(sys.argv[1], sys.argv[0])
     else:
         DAEMON.command('', sys.argv[0])

@@ -82,4 +82,4 @@ def get(config):
 
 if __name__ == "__main__":
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig(['/etc/dtnrm/main.conf', 'main.conf'])))
+    PRETTY.pprint(get(getConfig()))

@@ -95,7 +95,7 @@ def getinfo(config, logger, nodesInfo=None, site=None):
 
 if __name__ == '__main__':
     print 'WARNING!!!! This should not be used through main call. Only for testing purposes!!!'
-    CONFIG = getConfig(["/etc/dtnrm-site-fe.conf"])
+    CONFIG = getConfig()
     COMPONENT = 'LookUpService'
     LOGGER = getStreamLogger()
     for sitename in CONFIG.get('general', 'sites').split(','):

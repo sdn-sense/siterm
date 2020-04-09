@@ -34,7 +34,7 @@
 # TODO. data directory should come from configuration parameter
 datadir=/opt/config/fe/
 workdir=`pwd`
-packages="git autoconf automake curl gcc libmnl-devel libuuid-devel lm_sensors make MySQL-python nc pkgconfig python wget python-psycopg2 PyYAML zlib-devel python-devel httpd mod_wsgi mod_ssl"
+packages="git autoconf sudo libffi-devel openssl-devel pyOpenSSL automake curl gcc libmnl-devel libuuid-devel lm_sensors make MySQL-python nc pkgconfig python wget python-psycopg2 PyYAML zlib-devel python-devel httpd mod_wsgi mod_ssl"
 # Check if release is supported.
 # TODO. Support other releases also.
 case $(uname) in
@@ -177,8 +177,7 @@ echo "                       INSTALLATION DONE                           "
 echo "==================================================================="
 echo "Please check the following things:"
 echo "   1. Configuration changes:"
-echo "        a) /etc/dtnrm-site-fe.conf file and that all parameters are correct"
-echo "        b) /etc/dtnrm-auth.conf - has to list all DNs allowed to query FE. Doc: https://github.com/sdn-sense/siterm-fe/wiki/HTTPS-and-Security"
+echo "      Your configuration is correct on GIT Repo."
 echo "   2. $netdataconf file and that all backend parameters are correct"
 echo "      It should report only to sense-service graphite listener. NOT to sense-dtn"
 echo "   3. Start httpd service"

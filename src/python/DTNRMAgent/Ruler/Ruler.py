@@ -20,13 +20,15 @@ Date			: 2017/09/26
 """
 import os
 import glob
-import sys
 import pprint
 from QOS import QOS
 from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict, getStreamLogger
-from DTNRMLibs.MainUtilities import getDefaultConfigAgent, createDirs, getFullUrl, contentDB, getFileContentAsJson
+from DTNRMLibs.MainUtilities import createDirs, getFullUrl, contentDB, getFileContentAsJson
+from DTNRMLibs.MainUtilities import getLogger
+from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 from Components.VInterfaces import VInterfaces
+
 
 COMPONENT = 'Ruler'
 
@@ -34,7 +36,9 @@ COMPONENT = 'Ruler'
 class Ruler(object):
     """ Ruler class to create interfaces on the system """
     def __init__(self, config, logger):
-        self.config, self.logger = getDefaultConfigAgent(COMPONENT, config, logger)
+        self.config = config if config else getConfig("")
+        self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
+                                                      self.config.get('general', 'logLevel'))
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         createDirs(self.workDir)
         self.fullURL = getFullUrl(self.config, self.config.get('general', 'siteName'))
@@ -251,6 +255,4 @@ def execute(config=None, logger=None):
     ruler.start()
 
 if __name__ == '__main__':
-    print 'WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.'
-    print 'Argument List:', str(sys.argv)
     execute(logger=getStreamLogger())

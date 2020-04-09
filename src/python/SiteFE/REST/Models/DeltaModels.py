@@ -40,7 +40,7 @@ class frontendDeltaModels(object):
     """ Delta Actions through Frontend interface """
     def __init__(self, logger, config=None):
         self.dbI = getDBConn()
-        self.config = getConfig(["/etc/dtnrm-site-fe.conf"])
+        self.config = getConfig()
         if config:
             self.config = config
         self.logger = logger

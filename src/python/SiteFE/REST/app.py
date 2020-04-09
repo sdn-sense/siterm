@@ -79,7 +79,7 @@ def check_initialized(environ):
     global _INITIALIZED
     global _CP
     if not _INITIALIZED:
-        _CP = getConfig(["/etc/dtnrm-site-fe.conf"])
+        _CP = getConfig()
         _INITIALIZED = True
 
 _FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata)$')
@@ -160,11 +160,10 @@ def application(environ, start_response):
     _HTTP_RESPOND = HTTPResponses()
     check_initialized(environ)
     certHandler = CertHandler()
-    permissions = {}
     try:
         environ['CERTINFO'] = certHandler.getCertInfo(environ)
         print environ['CERTINFO']
-        permissions = certHandler.validateCertificate(environ)
+        certHandler.validateCertificate(environ)
     except Exception as ex:
         _HTTP_RESPOND.ret_401('application/json', start_response, None)
         return [json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=401))]

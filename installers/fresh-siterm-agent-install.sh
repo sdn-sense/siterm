@@ -33,7 +33,7 @@
 # TODO also force to specify FE URL, FE Port; TSDB parameters it should get from FE.
 # Other configuration users have to specify by himself.
 workdir=`pwd`
-packages="git autoconf automake curl gcc traceroute libmnl-devel libuuid-devel lm_sensors ipset make MySQL-python nc pkgconfig python python-psycopg2 PyYAML zlib-devel python-devel wget vconfig tcpdump jq iproute"
+packages="git autoconf automake sudo libffi-devel openssl-devel curl gcc traceroute libmnl-devel libuuid-devel lm_sensors ipset make MySQL-python nc pkgconfig python python-psycopg2 PyYAML zlib-devel python-devel wget vconfig tcpdump jq iproute"
 # Check if release is supported.
 # TODO. Support other releases also.
 case $(uname) in
@@ -238,8 +238,7 @@ echo "==================================================================="
 echo "                       INSTALLATION DONE                           "
 echo "==================================================================="
 echo "Please check the following things:"
-echo "   1. /etc/dtnrm/main.conf file and that all parameters are correct. For more information on parameters see:"
-echo "        https://github.com/sdn-sense/siterm-agent/wiki/SiteRM-Agent-Configuration-parameters"
+echo "   1. Make sure your GIT Config is ok in official GIT Repo"
 echo "   2. $netdataconf file and that all backend parameters are correct if want to backup endhost metrics."
 echo "      It should report only to sensedtn opentsdb listener"
 echo "   3. Service to start:"

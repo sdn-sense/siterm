@@ -6,7 +6,7 @@ RUN adduser apache -U -u 48
 
 RUN mkdir -p /opt/ && mkdir -p /opt/config/fe/
 RUN mkdir -p /etc/httpd/certs/ && mkdir -p /etc/httpd/conf.d/
-RUN yum -y install git sudo libffi-devel openssl-devel pyOpenSSL && yum clean all
+RUN yum -y install git && yum clean all
 RUN git clone https://github.com/sdn-sense/siterm-installers
 RUN cd siterm-installers && sudo sh ./fresh-siterm-fe-install.sh -R /opt/ -D yes
 

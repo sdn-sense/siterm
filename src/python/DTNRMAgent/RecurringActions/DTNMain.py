@@ -23,11 +23,14 @@ import pprint
 import importlib
 import Plugins
 from DTNRMLibs.MainUtilities import publishToSiteFE, createDirs
-from DTNRMLibs.MainUtilities import getDefaultConfigAgent, getFullUrl
+from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getStreamLogger
 
 COMPONENT = 'RecurringAction'
+
 
 def prepareJsonOut(config, logger):
     """ Executes all plugins and prepares json output to FE """
@@ -103,9 +106,13 @@ def startWork(config=None, logger=None):
         if outVals[3]:
             publishToSiteFE(dic, fullUrl, '/json/frontend/addhost')
 
+
 def execute(config, logger):
+    """ Main Execute """
     startWork(config, logger)
 
+
 if __name__ == '__main__':
-    CONFIG, LOGGER = getDefaultConfigAgent('agent')
+    CONFIG = getConfig()
+    LOGGER = getStreamLogger()
     execute(CONFIG, LOGGER)

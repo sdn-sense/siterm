@@ -7,7 +7,7 @@ from DTNRMLibs.MainUtilities import getConfig, getLogger, getStreamLogger
 from DTNRMLibs.FECalls import getDBConn
 
 #LOGGER = getStreamLogger()
-config = getConfig(["/etc/dtnrm-site-fe.conf"])
+config = getConfig()
 LOGGER = getLogger("%s/%s/" % (config.get('general', 'logDir'), 'local'))
 stateMachine = StateMachine(LOGGER)
 

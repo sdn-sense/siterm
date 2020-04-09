@@ -34,7 +34,7 @@ class FrontendRM(object):
     def __init__(self):
         self.dbI = getDBConn()
         self.initialized = False
-        self.config = getConfig(["/etc/dtnrm-site-fe.conf"])
+        self.config = getConfig()
         self.siteDB = contentDB()
 
     def getHosts(self, **kwargs):

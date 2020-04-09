@@ -12,7 +12,7 @@ from DTNRMLibs.FECalls import getDBConn
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteFE.PolicyService import policyService as polS
 
-config = getConfig(["/etc/dtnrm-site-fe.conf"])
+config = getConfig()
 LOGGER = getStreamLogger()
 stateMachine = StateMachine(LOGGER)
 

@@ -359,7 +359,7 @@ class PolicyService(object):
 def execute(config=None, logger=None, args=None):
     """Main Execute"""
     if not config:
-        config = getConfig(["/etc/dtnrm-site-fe.conf"])
+        config = getConfig()
     if not logger:
         component = 'PolicyService'
         logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), component),
@@ -367,6 +367,7 @@ def execute(config=None, logger=None, args=None):
 
     policer = PolicyService(config, logger)
     if args:
+        # TODO: Remove hostname enforcement here.
         print policer.parseDeltaRequest(args[1], {'180-134.research.maxgigapop.net': []}, args[2])
     else:
         policer.startwork()

@@ -37,7 +37,7 @@ from DTNRMLibs.RESTInteractions import is_application_json
 from SiteFE.REST.Models.DeltaModels import frontendDeltaModels
 
 
-CONFIG = getConfig(["/etc/dtnrm-site-fe.conf"])
+CONFIG = getConfig()
 LOGGER = getStreamLogger(CONFIG.get('general', 'logLevel'))
 
 DELTABACKEND = frontendDeltaModels(logger=LOGGER, config=CONFIG)

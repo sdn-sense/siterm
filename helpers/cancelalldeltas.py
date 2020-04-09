@@ -6,7 +6,7 @@ from DTNRMLibs.MainUtilities import getConfig, getLogger, getStreamLogger
 from DTNRMLibs.FECalls import getDBConn
 
 LOGGER = getStreamLogger()
-config = getConfig(["/etc/dtnrm-site-fe.conf"])
+config = getConfig()
 stateMachine = StateMachine(LOGGER)
 
 def deleteAll(sitename, deltaUID=None):

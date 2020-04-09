@@ -28,7 +28,7 @@ from DTNRMLibs.DBBackend import dbinterface
 
 def getDBConn():
     dbConn = {}
-    config = getConfig(["/etc/dtnrm-site-fe.conf"])
+    config = getConfig()
     for sitename in config.get('general', 'sites').split(','):
         if config.has_option(sitename, "database"):
             dbConn[sitename] = dbinterface(config.get(sitename, "database"))

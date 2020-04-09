@@ -190,7 +190,7 @@ class ProvisioningService(object):
 def execute(config=None, logger=None, args=None):
     """Main Execute"""
     if not config:
-        config = getConfig(["/etc/dtnrm-site-fe.conf"])
+        config = getConfig()
     if not logger:
         component = 'LookUpService'
         logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), component), config.get(component, 'logLevel'))
