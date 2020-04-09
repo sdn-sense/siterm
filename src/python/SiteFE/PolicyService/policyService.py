@@ -41,6 +41,7 @@ from SiteFE.PolicyService.stateMachine import StateMachine
 
 
 def getError(ex):
+    """ Get Error from Exception """
     errors = {IOError: -1, KeyError: -2, AttributeError: -3, IndentationError: -4,
               ValueError: -5, BadSyntax: -6, HostNotFound: -7, UnrecognizedDeltaOption: -8}
     errType = 'Unrecognized'
@@ -52,7 +53,8 @@ def getError(ex):
             "errorNo": errNo,
             "errMsg": ex.message}
 
-def getConnInfo(bidPort, prefixSite, output, nostore = False):
+
+def getConnInfo(bidPort, prefixSite, output, nostore=False):
     """ Get Connection Info. Mainly ports. """
     nName = filter(None, bidPort[len(prefixSite):].split(':'))
     print nName
@@ -102,9 +104,9 @@ class PolicyService(object):
         return foundItems
 
     def getTimeScheduling(self, out, gIn, prefixes):
-        # This is for identifying LIFETIME! In case it fails to get correct timestamp,
-        # resources will be provisioned right away
-        # ======================================================
+        """ This is for identifying LIFETIME! In case it fails to get correct timestamp,
+            resources will be provisioned right away
+        """
         for timeline in out:
             times = {}
             for timev in ['end', 'start']:
@@ -142,25 +144,25 @@ class PolicyService(object):
         return out
 
     def __parsel3Request(self, inFileName, allKnownHosts, sitename, prefixes, gIn):
-        outall = {'hosts':{}}
+        """ Parse Layer 3 Delta Request """
+        del inFileName, sitename
+        outall = {'hosts': {}}
         for hostname in allKnownHosts.keys():
             connectionID = None
             outall['hosts'].setdefault(hostname, {})
             prefixes['mainrst'] = URIRef("%s:%s:service+rst" % (prefixes['site'], hostname))
             self.logger.info('Lets try to get connection ID subject for %s' % prefixes['mainrst'])
-            out = self.queryGraph(gIn, prefixes['mainrst'], search= URIRef('%s%s' % (prefixes['mrs'], 'providesRoutingTable')))
+            out = self.queryGraph(gIn, prefixes['mainrst'],
+                                  search=URIRef('%s%s' % (prefixes['mrs'], 'providesRoutingTable')))
             if not out:
                 msg = 'Connection ID was not received. Something is wrong...'
                 self.logger.info(msg)
                 return {}
-                continue
             if len(out) > 1:
                 self.logger.info(out)
                 msg = 'Received multiple connection IDs. Something is wrong...'
                 self.logger.info(msg)
                 return {}
-                continue
-            print out
             outall['connectionID'] = str(out[0])
             outall['hosts'][hostname]['routes'] = []
             connectionID = out[0]
@@ -176,7 +178,6 @@ class PolicyService(object):
                     out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['mrs'], flag)))
                     if not out:
                         continue
-                    #print prefixes
                     for item in out:
                         outt = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'type')))
                         outv = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'value')))
@@ -185,15 +186,16 @@ class PolicyService(object):
                         route[flag]['type'] = str(outt[0])
                         route[flag]['value'] = str(outv[0])
                 outall['hosts'][hostname]['routes'].append(route)
-                #output['hosts'][connInfo]['params'].append(serviceparams)
-        print outall
+        self.logger.debug('L3 Parse output: %s', outall)
         return outall
 
     def __parsel2Request(self, inFileName, allKnownHosts, sitename, prefixes, gIn):
+        """ Parse L2 request """
+        del inFileName, sitename
         output = {}
         self.logger.info('Lets try to get connection ID subject for %s' % prefixes['main'])
         connectionID = None
-        out = self.queryGraph(gIn, prefixes['main'], search= URIRef('%s%s' % (prefixes['mrs'], 'providesSubnet')))
+        out = self.queryGraph(gIn, prefixes['main'], search=URIRef('%s%s' % (prefixes['mrs'], 'providesSubnet')))
         if not out:
             msg = 'Connection ID was not received. Something is wrong...'
             self.logger.info(msg)
@@ -238,7 +240,6 @@ class PolicyService(object):
             out = self.queryGraph(gIn, out[0], search=URIRef('%s%s' % (prefixes['nml'], 'value')))
             output['hosts'][connInfo]['vlan'] = str(out[0])
             # Now Let's get IP
-            # 
             out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['mrs'], 'hasNetworkAddress')))
             for item in out:
                 outtype = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'type')))
@@ -262,6 +263,7 @@ class PolicyService(object):
         return output
 
     def reductionCompare(self, sitename, redID):
+        """ Compare reductions with reduction in database """
         dbobj = getVal(self.dbI, sitename=sitename)
         out = dbobj.get('deltas', search=[['connectionid', redID]])
         if out:
@@ -272,6 +274,7 @@ class PolicyService(object):
         return None
 
     def startwork(self):
+        """ Start Policy Service """
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started")
         for siteName in self.config.get('general', 'sites').split(','):
@@ -356,6 +359,7 @@ class PolicyService(object):
             self.logger.info("Starting check on %s deltas" % job[0])
             job[1](dbobj)
 
+
 def execute(config=None, logger=None, args=None):
     """Main Execute"""
     if not config:
@@ -367,7 +371,7 @@ def execute(config=None, logger=None, args=None):
 
     policer = PolicyService(config, logger)
     if args:
-        # TODO: Remove hostname enforcement here.
+        # This is only for debugging purposes.
         print policer.parseDeltaRequest(args[1], {'180-134.research.maxgigapop.net': []}, args[2])
     else:
         policer.startwork()

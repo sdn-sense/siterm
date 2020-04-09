@@ -24,15 +24,14 @@ import ipaddress
 from DTNRMLibs.MainUtilities import execute
 
 
-def getBroadCast(inIP, logger):
+def getBroadCast(inIP):
     """ Return broadcast IP """
-    logger.info('Getting boardcast IP info')
-    my_net = ipaddress.ip_network(unicode(inIP), strict=False)
-    logger.info('Broadcast for %s is set to %s' % (inIP, str(my_net.broadcast_address)))
-    return str(my_net.broadcast_address)
+    myNet = ipaddress.ip_network(unicode(inIP), strict=False)
+    return str(myNet.broadcast_address)
 
 
 def identifyL23(addition):
+    """ Check if it is L2 or L3 delta request """
     return 'L3' if 'routes' in addition.keys() else 'L2'
 
 
@@ -47,8 +46,8 @@ class VInterfaces(object):
         if identifyL23(vlan) == 'L2':
             self.logger.info('Called VInterface add L2 for %s' % str(vlan))
             command = "ip link add link %s name vlan.%s type vlan id %s" % (vlan['destport'],
-                                                                          vlan['vlan'],
-                                                                          vlan['vlan'])
+                                                                            vlan['vlan'],
+                                                                            vlan['vlan'])
             return execute(command, self.logger, raiseError)
         return None
 
@@ -57,8 +56,9 @@ class VInterfaces(object):
         if identifyL23(vlan) == 'L2':
             if 'ip' in vlan.keys():
                 self.logger.info('Called VInterface setup L2 for %s' % str(vlan))
-                command = "ip addr add %s broadcast %s dev vlan.%s" % (vlan['ip'], getBroadCast(vlan['ip'], self.logger),
-                                                                     vlan['vlan'])
+                command = "ip addr add %s broadcast %s dev vlan.%s" % (vlan['ip'],
+                                                                       getBroadCast(vlan['ip']),
+                                                                       vlan['vlan'])
                 return execute(command, self.logger, raiseError)
             else:
                 self.logger.info('Called VInterface setup for %s, but ip key is not present.' % str(vlan))

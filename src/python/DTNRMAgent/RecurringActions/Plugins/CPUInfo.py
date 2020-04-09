@@ -33,6 +33,7 @@ NAME = 'CPUInfo'
 
 def get(config):
     """Get lscpu information"""
+    del config
     cpuInfo = {}
     tmpOut = externalCommand('lscpu')
     for item in tmpOut:

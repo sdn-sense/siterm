@@ -29,6 +29,7 @@ from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import getDataFromSiteFE
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 
+
 class ProvisioningService(object):
     """ Provisioning service communicates with Local controllers and applies network changes. """
     def __init__(self, config, logger, args):
@@ -98,7 +99,6 @@ class ProvisioningService(object):
             return newDelta['ParsedDelta'][inKey][switchHostName]
         return {}
 
-
     def checkdeltas(self, switchHostname, inJson):
         """Check which ones are assigned to any of switch"""
         newDeltas = []
@@ -132,8 +132,8 @@ class ProvisioningService(object):
         out = []
         if not switches:
             return out
-        for _switchName, switchPort in switches['vlans'].items():
-            for _portName, portDict in switchPort.items():
+        for _, switchPort in switches['vlans'].items():
+            for _, portDict in switchPort.items():
                 if 'isAlias' in portDict:
                     tmp = portDict['isAlias'].split(':')[-3:]
                     out.append(tmp[0])

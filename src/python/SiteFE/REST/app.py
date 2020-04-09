@@ -44,22 +44,18 @@ import importlib
 from SiteFE.REST.FEApis import FrontendRM
 import SiteFE.REST.AppCalls as AllCalls
 from DTNRMLibs.x509 import CertHandler
-from DTNRMLibs.RESTInteractions import getContent
 from DTNRMLibs.RESTInteractions import get_match_regex
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getHeaders
 from DTNRMLibs.MainUtilities import getUrlParams
 from DTNRMLibs.MainUtilities import read_input_data
 from DTNRMLibs.MainUtilities import getCustomOutMsg
-from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import HTTPResponses
-from DTNRMLibs.CustomExceptions import WrongInputError
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.CustomExceptions import NotSupportedArgument
 from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
 from DTNRMLibs.CustomExceptions import DeltaNotFound
 from DTNRMLibs.CustomExceptions import ModelNotFound
-from DTNRMLibs.CustomExceptions import WrongDeltaStatusTransition
 
 # Initialization is done only 1 time
 _INITIALIZED = None
@@ -67,6 +63,7 @@ _INITIALIZED = None
 _CP = None
 # Frontend Resource manager
 _FRONTEND_RM = FrontendRM()
+
 
 # TODO Separate app and put to correct locations AppCalls and Models.
 # TODO Return should check what is return type so that it returns json dump or text.
@@ -82,10 +79,15 @@ def check_initialized(environ):
         _CP = getConfig()
         _INITIALIZED = True
 
+# =====================================================================================================================
+# =====================================================================================================================
+
 _FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata)$')
 _FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata},
                      'PUT': {'addhost': _FRONTEND_RM.addhost,
                              'updatehost': _FRONTEND_RM.updatehost}}
+
+
 def frontend(environ, **kwargs):
     """Frontend information. Information which is stored in the frontend for
        backend communications.
@@ -125,19 +127,13 @@ if '__all__' in dir(AllCalls):
         else:
             continue
 
-# TODO
-# Remove headers from a call;
-# Remove GET/POST/DELETE Methods and they have to be in function.
+
 def internallCall(caller, environ, **kwargs):
     """ Delta internal call which catches all exception """
     returnDict = {}
     exception = ""
     try:
         return caller(environ, **kwargs)
-    #except (WrongDeltaStatusTransition, NotFoundError, WrongInputError) as ex:
-    #    exception = '%s: Received Exception: %s' % (caller, ex)
-    #    kwargs['http_respond'].ret_400('application/json', kwargs['start_response'], None)
-    #    returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=400)
     except (ModelNotFound, DeltaNotFound) as ex:
         exception = '%s: Received Exception: %s' % (caller, ex)
         kwargs['http_respond'].ret_404('application/json', kwargs['start_response'], None)
@@ -157,7 +153,7 @@ def application(environ, start_response):
     which will check if call is allowed.
     """
     # HTTP responses var
-    _HTTP_RESPOND = HTTPResponses()
+    httpResponder = HTTPResponses()
     check_initialized(environ)
     certHandler = CertHandler()
     try:
@@ -165,7 +161,7 @@ def application(environ, start_response):
         print environ['CERTINFO']
         certHandler.validateCertificate(environ)
     except Exception as ex:
-        _HTTP_RESPOND.ret_401('application/json', start_response, None)
+        httpResponder.ret_401('application/json', start_response, None)
         return [json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=401))]
     path = environ.get('PATH_INFO', '').lstrip('/')
     sitename = environ.get('REQUEST_URI', '').split('/')[1]  # TODO. DO Check for SiteName in conf
@@ -174,7 +170,7 @@ def application(environ, start_response):
         if match:
             regMatch = get_match_regex(environ, regex)
             if environ['REQUEST_METHOD'].upper() not in methods:
-                _HTTP_RESPOND.ret_405('application/json', start_response, [('Location', '/')])
+                httpResponder.ret_405('application/json', start_response, [('Location', '/')])
                 return [json.dumps(getCustomOutMsg(errMsg="Method %s is not supported in %s" % (environ['REQUEST_METHOD'].upper(),
                                                                                                 callback), errCode=405))]
             environ['jobview.url_args'] = match.groups()
@@ -189,20 +185,16 @@ def application(environ, start_response):
                     # Any others have option to overwrite it.
                 if acceptheader:
                     if headers['ACCEPT'] not in acceptheader:
-                        _HTTP_RESPOND.ret_406('application/json', start_response, None)
+                        httpResponder.ret_406('application/json', start_response, None)
                         return [json.dumps(getCustomOutMsg(errMsg="Not Acceptable Header. Provided: %s, Acceptable: %s" % (headers['ACCEPT'], acceptheader), errCode=406))]
-                # TODO. Find better way for browser check
-                # elif headers['ACCEPT'] != 'application/json':
-                #    _HTTP_RESPOND.ret_406('application/json', start_response, None)
-                #    return [json.dumps(getCustomOutMsg(errMsg="Header was not accepted. Provided: %s, Acceptable: %s" % (headers['ACCEPT'], 'application/json'), errCode=406))]
                 return [json.dumps(internallCall(caller=callback, environ=environ, start_response=start_response,
-                                                 mReg=regMatch, http_respond=_HTTP_RESPOND,
+                                                 mReg=regMatch, http_respond=httpResponder,
                                                  urlParams=getUrlParams(environ, params),
                                                  headers=headers, sitename=sitename))]
             except (NotSupportedArgument, TooManyArgumentalValues) as ex:
                 print 'Send 400 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400))
-                _HTTP_RESPOND.ret_400('application/json', start_response, None)
+                httpResponder.ret_400('application/json', start_response, None)
                 return [json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400))]
     print 'Send 501 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg="Such API does not exist. Not Implemented", errCode=501))
-    _HTTP_RESPOND.ret_501('application/json', start_response, [('Location', '/')])
+    httpResponder.ret_501('application/json', start_response, [('Location', '/')])
     return [json.dumps(getCustomOutMsg(errMsg="Such API does not exist. Not Implemented", errCode=501))]

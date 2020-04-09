@@ -63,13 +63,15 @@ def parseOut(tmpOut, storageInfo):
             storageInfo["Values"][oneLine[0]][key] = oneLine[countNum]
     return storageInfo, True
 
+
 def get(config):
     """Get storage mount points information"""
+    del config
     storageInfo = {"Values": {}}
     tmpOut = externalCommand('df -P -h')
-    storageInfo, success = parseOut(tmpOut, dict(storageInfo))
+    storageInfo, _ = parseOut(tmpOut, dict(storageInfo))
     tmpOut = externalCommand('df -i -P')
-    storageInfo, success = parseOut(tmpOut, dict(storageInfo))
+    storageInfo, _ = parseOut(tmpOut, dict(storageInfo))
     outStorage = {"FileSystems": {}, "total_gb": 0, "app": "FileSystem"}
 
     totalSum = 0

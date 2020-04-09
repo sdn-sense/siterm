@@ -33,6 +33,7 @@ def linuxDistr():
 
 def printInfo(logger=None):
     """ Print information about sytem before start setup """
+    del logger
     print "System Information:"
     print "-" * 100
     print "Python version: %s" % sys.version.split('\n')

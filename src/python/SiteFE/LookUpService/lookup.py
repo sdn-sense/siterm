@@ -19,9 +19,7 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
-import sys
 import os
-import time
 import tempfile
 import datetime
 import importlib
@@ -40,6 +38,7 @@ from DTNRMLibs.FECalls import getAllHosts
 from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import getUTCnow
+
 
 class prefixDB(object):
     """ This generates all known default prefixes """
@@ -154,6 +153,7 @@ class LookUpService(object):
                                     [value])
 
     def _deltaReduction(self, dbObj, delta, mainGraphName):
+        """ Delta reduction from  """
         delta['content'] = evaldict(delta['content'])
         self.logger.info('Working on %s delta reduction in state' % delta['uid'])
         mainGraph = Graph()
@@ -188,7 +188,6 @@ class LookUpService(object):
         if updateState:
             dbObj.update('deltasmod', [{'uid': delta['uid'], 'updatedate': getUTCnow(), 'modadd': 'added'}])
         return mainGraph
-
 
     def appendDeltas(self, dbObj, mainGraphName):
         """ Append all deltas to Model """
@@ -235,12 +234,6 @@ class LookUpService(object):
         dbObj = getVal(self.dbI, **{'sitename': self.sitename})
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
-        currentModel = dbObj.get('models', orderby=['insertdate', 'DESC'], limit=1)
-        self.newGraph = Graph()
-        #if currentModel:
-        #    try:
-        #        self.newGraph.parse(currentModel[0]['fileloc'], format='turtle')
-        #    except IOError:
         self.newGraph = Graph()
         jOut = getAllHosts(self.sitename, self.logger)
         # Get switch information...
@@ -285,7 +278,7 @@ class LookUpService(object):
                            self.prefixDB.genUriRef('nml', 'encoding'),
                            self.prefixDB.genUriRef('schema')))
         hosts = {}
-        for _nodeName, nodeDict in jOut.items():
+        for _, nodeDict in jOut.items():
             # Define node
             self.newGraph.add((self.prefixDB.genUriRef('site'),
                                self.prefixDB.genUriRef('nml', 'hasNode'),
@@ -335,7 +328,6 @@ class LookUpService(object):
 
             for tablegress in['table+defaultIngress', 'table+defaultEgress']:
                 routingtable = ":%s:%s" % (nodeDict['hostname'], tablegress)
-                print routingtable 
                 self.newGraph.add((self.prefixDB.genUriRef('site', ':%s:service+rst' % nodeDict['hostname']),
                                    self.prefixDB.genUriRef('mrs', 'providesRoutingTable'),
                                    self.prefixDB.genUriRef('site', routingtable)))
@@ -375,7 +367,7 @@ class LookUpService(object):
                                             ['mrs', 'NetworkAddress'])
                             self.addToGraph(['site', '%s:%s' % (routename, vals[0])],
                                             ['mrs', 'type'],
-                                           [vals[1]])
+                                            [vals[1]])
                             self.addToGraph(['site', '%s:%s' % (routename, vals[0])],
                                             ['mrs', 'value'],
                                             [vals[2]])
@@ -398,13 +390,6 @@ class LookUpService(object):
                                         ['mrs', 'value'],
                                         ['%s/%s' % (routeinfo['RTA_DST'], routeinfo['dst_len'])])
 
-
-            #for routeinfo in hostinfo['NetInfo']["routes"]:
-            #    for tablegress in['table+defaultIngress', 'table+defaultEgress']:
-            #        self.newGraph.add((self.prefixDB.genUriRef('site', ":%s:%s" % (nodeDict['hostname'], tablegress)),
-            #                           self.prefixDB.genUriRef('mrs', 'RoutingTable'),
-            #                           self.prefixDB.genUriRef('site', ":%s:%s" % (nodeDict['hostname'], tablegress))))
-            # Add network interfaces for that specific node
             for intfKey, intfDict in hostinfo['NetInfo']["interfaces"].items():
                 # We exclude QoS interfaces from adding them to MRML.
                 # Even so, I still want to have this inside DB for debugging purposes

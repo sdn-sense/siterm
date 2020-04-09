@@ -21,11 +21,13 @@ import subprocess
 import shlex
 import psutil
 
+
 def externalCommand(command):
     """Execute External Commands and return stdout and stderr"""
     command = shlex.split(command)
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return proc.communicate()
+
 
 def tryConvertToNumeric(value):
     """Convert str to float or int. Returns what should be expected, t.y.:
@@ -44,6 +46,7 @@ def tryConvertToNumeric(value):
         return floatVal if floatVal else value
     return intVal
 
+
 def runPipedCmd(cmd1, cmd2):
     """ Run two commands, in which second is executed after first.
         Like in bash | t.y.: ls -l | grep '123' """
@@ -53,6 +56,7 @@ def runPipedCmd(cmd1, cmd2):
     proc2 = subprocess.Popen(cmd2, stdin=proc1.stdout, stdout=subprocess.PIPE)
     proc1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
     return proc2.communicate()
+
 
 def getProcInfo(procID):
     """ Get Process informationa about specific process """

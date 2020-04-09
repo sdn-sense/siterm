@@ -261,9 +261,7 @@ class GitConfig(object):
             return
 
     def getGitConfig(self):
-        """https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/main.yaml
-
-        {'SITENAME': 'T2_US_Caltech', 'GIT_REPO': 'sdn-sense/rm-configs', 'BRANCH': 'master', 'MD5': '8feb35ed655904aa30d466658756a87f'}"""
+        """get git config from configured github repo."""
         if not self.config:
             self.getLocalConfig()
         mapping = yload(getWebContentFromURL("%s/mapping.yaml" % self.getFullGitUrl()).text)
@@ -416,12 +414,6 @@ VALIDATION = {"addhost": [{"key": "hostname", "type": basestring},
                              {"key": "updateTime", "type": int},
                              {"key": "status", "type": basestring,
                               "values": ["benchmark", "maintenance", "operational"]}]}
-
-
-def validateInput(inputDict, validationKey):
-    """Validate input with VALIDATION predefined config.
-       In case of issue raises NotFoundError or WrongInputError"""
-    return
 
 
 def generateHash(inText):

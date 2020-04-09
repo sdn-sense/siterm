@@ -19,7 +19,6 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
-from time import time
 from tempfile import NamedTemporaryFile
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
@@ -35,6 +34,7 @@ from DTNRMLibs.CustomExceptions import ModelNotFound
 from DTNRMLibs.CustomExceptions import WrongDeltaStatusTransition
 from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getVal
+
 
 class frontendDeltaModels(object):
     """ Delta Actions through Frontend interface """

@@ -20,7 +20,6 @@ Email 			: justas.balcas (at) cern.ch
 Date			: 2017/09/26
 """
 import re
-import time
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getStreamLogger
 from DTNRMLibs.MainUtilities import httpdate
@@ -45,6 +44,8 @@ DELTABACKEND = frontendDeltaModels(logger=LOGGER, config=CONFIG)
 # =====================================================================================================================
 # =====================================================================================================================
 _DELTAS_RE = re.compile(r'^/*v1/deltas/?$')
+
+
 def deltas(environ, **kwargs):
     """
     API Call associated with deltas
@@ -95,10 +96,10 @@ def deltas(environ, **kwargs):
     # ======================================================
     # POST
     out = {}
-    post_request = False
+    postRequest = False
     if environ['REQUEST_METHOD'].upper() == 'POST':
-        post_request = is_post_request(environ)
-    if not post_request:
+        postRequest = is_post_request(environ)
+    if not postRequest:
         if is_application_json(environ):
             out = get_json_post_form(environ)
         else:
@@ -128,6 +129,8 @@ def deltas(environ, **kwargs):
 # =====================================================================================================================
 
 _DELTAS_ID_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/?$')
+
+
 def deltas_id(environ, **kwargs):
     """
     API Call associated with specific delta
@@ -170,6 +173,8 @@ def deltas_id(environ, **kwargs):
     return [current]
 
 _DELTAS_ID_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/actions/commit/?$')
+
+
 def deltas_action(environ, **kwargs):
     """
     API Call for commiting delta or tiering down.
@@ -189,6 +194,8 @@ def deltas_action(environ, **kwargs):
 # =====================================================================================================================
 
 _MODELS_RE = re.compile(r'^/*v1/models/?$')
+
+
 def models(environ, **kwargs):
     """
     Returns a collection of available model resources within the Resource Manager
@@ -238,6 +245,8 @@ def models(environ, **kwargs):
 # =====================================================================================================================
 
 _MODELS_ID_RE = re.compile(r'^/*v1/models/([-_A-Za-z0-9]+)/?$')
+
+
 def models_id(environ, **kwargs):
     """
     API Call for getting specific model and associated deltas;
@@ -267,6 +276,8 @@ def models_id(environ, **kwargs):
 # =====================================================================================================================
 
 _DELTA_INTERNAL_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_\.A-Za-z0-9]+)/(cancel|active|failed)/?$')
+
+
 def delta_internal_actions(environ, **kwargs):
     """
     API Call for internalactions. This is only allowed from same host or dtnrm-site-fe.
@@ -284,6 +295,8 @@ def delta_internal_actions(environ, **kwargs):
     return msgOut
 
 _DELTA_HOSTNAME_IDS_RE = re.compile(r'^/*v1/hostnameids/([-_\.A-Za-z0-9]+)/(activating|active)/?$')
+
+
 def delta_hostname_ids(environ, **kwargs):
     """
     API Call for returning all Hostname IDs states; This is needed for internal action check

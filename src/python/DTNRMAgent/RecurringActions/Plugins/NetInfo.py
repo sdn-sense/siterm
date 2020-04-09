@@ -25,12 +25,13 @@ from pyroute2 import IPRoute
 from DTNRMAgent.RecurringActions.Utilities import externalCommand
 from DTNRMLibs.MainUtilities import getConfig
 
+
 def str2bool(val):
+    """ Check if str is true boolean """
     return val.lower() in ("yes", "true", "t", "1")
 
 NAME = 'NetInfo'
-# Custom Functions append values to Summary part of dictionary
-#CUSTOM_FUNCTIONS = {'vlan_count': getVlanCount}
+
 
 def get(config):
     """Get all network information"""
@@ -38,29 +39,29 @@ def get(config):
     interfaces = config.get('agent', "interfaces").split(",")
     for intf in interfaces:
         nicInfo = netInfo.setdefault(intf, {})
-        vlan_range = config.get(intf, "vlans")
-        vlan_min = config.get(intf, "vlan_min")
-        vlan_max = config.get(intf, "vlan_max")
-        switch_port = config.get(intf, "port")
+        vlanRange = config.get(intf, "vlans")
+        vlanMin = config.get(intf, "vlan_min")
+        vlanMax = config.get(intf, "vlan_max")
+        switchPort = config.get(intf, "port")
         switch = config.get(intf, "switch")
-        shared_interface = config.get(intf, "shared")
+        sharedInterface = config.get(intf, "shared")
         if config.has_option(intf, 'isAlias'):
             nicInfo['isAlias'] = config.get(intf, 'isAlias')
         if config.has_option(intf, "ips"):
             nicInfo['ipv4-floatingip-pool'] = config.get(intf, "ips")
-        nicInfo['vlan_range'] = vlan_range
-        nicInfo['min_bandwidth'] = int(vlan_min)
-        nicInfo['max_bandwidth'] = int(vlan_max)
-        nicInfo['switch_port'] = str(switch_port).replace('/', '_')
+        nicInfo['vlan_range'] = vlanRange
+        nicInfo['min_bandwidth'] = int(vlanMin)
+        nicInfo['max_bandwidth'] = int(vlanMax)
+        nicInfo['switch_port'] = str(switchPort).replace('/', '_')
         nicInfo['switch'] = str(switch)
-        nicInfo['shared'] = str2bool(shared_interface)
+        nicInfo['shared'] = str2bool(sharedInterface)
         nicInfo['vlans'] = {}
         # TODO. It should calculate available capacity, depending on installed vlans.
         # Currently we set it same as max_bandwidth.
-        nicInfo['available_bandwidth'] = int(vlan_max)  # TODO
+        nicInfo['available_bandwidth'] = int(vlanMax)  # TODO
         # TODO. It should also calculate reservable capacity depending on installed vlans;
         # Currently we set it to max available;
-        nicInfo['reservable_bandwidth'] = int(vlan_max)  # TODO
+        nicInfo['reservable_bandwidth'] = int(vlanMax)  # TODO
     print netInfo
     tmpifAddr = psutil.net_if_addrs()
     tmpifStats = psutil.net_if_stats()
@@ -93,7 +94,8 @@ def get(config):
                     elif isinstance(ipwithnetmask, ipaddress.IPv6Interface):
                         familyInfo["ipv6-address"] = str(ipwithnetmask)
                     else:
-                        print "This type was not understood by the system. Type: %s and value: %s" % (type(ipwithnetmask), str(ipwithnetmask))
+                        print "This type was not understood by the system. Type: %s and value: %s" %  \
+                              (type(ipwithnetmask), str(ipwithnetmask))
                 except ValueError as ex:
                     print 'Got an exception %s' % ex
             elif int(vals.family) in [17]:
@@ -135,8 +137,10 @@ def get(config):
     outputForFE["routes"] = getRoutes(config)
     return outputForFE
 
+
 def getRoutes(config):
-    # Get Routing Information
+    """ Get Routing information from host """
+    del config
     routes = []
     with IPRoute() as ipr:
         for route in ipr.get_routes(table=254, family=2):
@@ -148,12 +152,13 @@ def getRoutes(config):
     print routes
     return routes
 
+
 def getVlanCount(config):
     """ Custom function to get vlanCount """
     # Count all vlans as if there are multiple interfaces it can have different on each
     out = get(config)
     vlanCount = 0
-    for intfName, intfDict in out.iteritems():
+    for _, intfDict in out.iteritems():
         if not isinstance(intfDict, dict):
             continue
         if not intfDict['provisioned']:

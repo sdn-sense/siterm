@@ -28,6 +28,7 @@ def exceptionCode(excName):
         return exCodes[excName]
     return -100
 
+
 class ExceptionTemplate(Exception):
     """ Exception template """
     def __call__(self, *args):
@@ -41,9 +42,11 @@ class NotFoundError(ExceptionTemplate):
     """ Not Found error """
     pass
 
+
 class WrongInputError(ExceptionTemplate):
     """ Wrong Input Error """
     pass
+
 
 class FailedToParseError(ExceptionTemplate):
     """ Failed to parse correct type """
@@ -53,69 +56,86 @@ class BadRequestError(ExceptionTemplate):
     """Bad Request Error """
     pass
 
+
 class ValidityFailure(ExceptionTemplate):
     """ Failed Validation of type """
     pass
+
 
 class NoOptionError(ExceptionTemplate):
     """ No option available in configuration """
     pass
 
+
 class NoSectionError(ExceptionTemplate):
     """ No section available in configuration """
     pass
+
 
 class WrongDeltaStatusTransition(ExceptionTemplate):
     """ Delta is now allowed to be changed to that specific state """
     pass
 
+
 class DeltaNotFound(ExceptionTemplate):
     """ Delta with this specific ID was not found in the system"""
     pass
+
 
 class ModelNotFound(ExceptionTemplate):
     """ Model with this specific ID was not found in the system"""
     pass
 
+
 class HostNotFound(ExceptionTemplate):
     """ Host wwas not found in the system. """
     pass
+
 
 class ExceededCapacity(ExceptionTemplate):
     """ Exceeded possible node capacity """
     pass
 
+
 class ExceededLinkCapacity(ExceptionTemplate):
     """ Exceeded possible Link capacity """
     pass
+
 
 class ExceededSwitchCapacity(ExceptionTemplate):
     """ Exceeded possible Link capacity """
     pass
 
+
 class DeltaKeyMissing(ExceptionTemplate):
     """ Mandatory key is not present """
     pass
+
 
 class UnrecognizedDeltaOption(ExceptionTemplate):
     """ Unrecognized Delta Options """
     pass
 
+
 class FailedInterfaceCommand(ExceptionTemplate):
     """ Failed to execute Interface command """
     pass
+
 
 class TooManyArgumentalValues(ExceptionTemplate):
     """ Too many argumental values """
     pass
 
+
 class NotSupportedArgument(ExceptionTemplate):
     """ Argument value is not supported """
     pass
 
+
 class PluginException(Exception):
     """Plugin Exception"""
     pass
+
 
 class HTTPResponses(object):
     """ Frontend HTTP Responses """
