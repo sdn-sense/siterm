@@ -2,7 +2,7 @@ FROM centos:7.7.1908
 
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
 ENV GITREPO siterm
-ENV GITORG juztas
+ENV GITORG sdn-sense
 
 RUN adduser apache -U -u 48
 
