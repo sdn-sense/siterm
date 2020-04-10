@@ -218,6 +218,28 @@ class GitConfig(object):
                          'MD5':        {'optional': False}}
         self.logger = getStreamLogger()
 
+    def _gitConfigCache(self, name, url):
+        """ Precache file for 1 hour from git and use cached file """
+        output = None
+        datetimeNow = datetime.datetime.now()
+        filename = '/tmp/%s-%s.yaml' % (datetimeNow.strftime('%Y-%m-%d-%H'), name)
+        if os.path.isfile(filename):
+            self.logger.debug('Using cached configuration file %s', filename)
+            with open(filename, 'r') as fd:
+                output = yload(fd.read())
+        else:
+            datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
+            prevfilename = '/tmp/%s-%s.yaml' % (datetimelasthour.strftime('%Y-%m-%d-%H'), name)
+            if os.path.isfile(prevfilename):
+                self.logger.debug('Remove previous old cache file %s', prevfilename)
+                os.remove(prevfilename)
+            self.logger.debug('Receiving new file from GIT for %s', name)
+            outyaml = getWebContentFromURL(url).text
+            with open(filename, 'w') as fd:
+                fd.write(outyaml)
+            output = yload(outyaml)
+        return output
+
     def getFullGitUrl(self, customAdds=None):
         """ Get Full Git URL """
         urlJoinList = [self.config['GIT_URL'], self.config['GIT_REPO'],
@@ -249,7 +271,7 @@ class GitConfig(object):
         """
         if self.config['MAPPING']['type'] == 'Agent':
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
-            self.config['MAIN'] = yload(getWebContentFromURL(url).text)
+            self.config['MAIN'] = self._gitConfigCache('Agent-main', url)
             return
 
     def getGitFEConfig(self):
@@ -258,10 +280,12 @@ class GitConfig(object):
         https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/main.yaml
         """
         if self.config['MAPPING']['type'] == 'FE':
+            cacheFilePath = '/tmp/%s-%s.yaml' % (datetime.datetime.now().strftime('%Y-%m-%d-%H'), 'FE-main')
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
-            self.config['MAIN'] = yload(getWebContentFromURL(url).text)
+            self.config['MAIN'] = self._gitConfigCache('FE-main', url)
+            cacheFilePath = '/tmp/%s-%s.yaml' % (datetime.datetime.now().strftime('%Y-%m-%d-%H'), 'FE-auth')
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'auth.yaml'])
-            self.config['AUTH'] = yload(getWebContentFromURL(url).text)
+            self.config['AUTH'] = self._gitConfigCache('FE-auth', url)
             return
 
     def getGitConfig(self):

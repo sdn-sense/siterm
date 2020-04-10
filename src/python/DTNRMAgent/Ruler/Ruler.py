@@ -36,7 +36,7 @@ COMPONENT = 'Ruler'
 class Ruler(object):
     """ Ruler class to create interfaces on the system """
     def __init__(self, config, logger):
-        self.config = config if config else getConfig("")
+        self.config = config if config else getConfig()
         self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
                                                       self.config.get('general', 'logLevel'))
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
