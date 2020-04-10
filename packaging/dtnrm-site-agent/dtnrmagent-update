@@ -10,10 +10,13 @@ Changes applied to this code:
 import sys
 import time
 from DTNRMLibs.Daemonizer import Daemon
-from DTNRMLibs.MainUtilities import getDefaultConfigAgent
+from DTNRMLibs.MainUtilities import getConfig, getLogger, getStreamLogger
 from DTNRMAgent.RecurringActions import DTNMain
 
-CONFIG, LOGGER = getDefaultConfigAgent('agent')
+CONFIG = getConfig()
+COMPONENT = 'Agent'
+LOGGER = getLogger("%s/%s/" % (CONFIG.get('general', 'logDir'), COMPONENT), CONFIG.get('general', 'logLevel'))
+
 
 class MyDaemon(Daemon):
     """ My own Deamon override """
@@ -26,19 +29,18 @@ class MyDaemon(Daemon):
             except:
                 LOGGER.info('There was uncaught exception')
                 excType, excValue = sys.exc_info()[:2]
-                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))
+                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
                 time.sleep(20)
 
 if __name__ == "__main__":
-    DAEMON = None
-    if len(sys.argv) == 3:
-        CONFIG, LOGGER = getDefaultConfigAgent('agent', confloc='/etc/dtnrm/main-%s.conf' % str(sys.argv[2]))
-        DAEMON = MyDaemon('/tmp/dtnrmagent-update-%s.pid' % str(sys.argv[2]))
-    else:
-        DAEMON = MyDaemon('/tmp/dtnrmagent-update.pid')
-    if len(sys.argv) > 1:
+    DAEMON = MyDaemon('/tmp/dtnrmagent-update.pid')
+    options = ['start', 'stop', 'restart', 'startforeground', 'status']
+    if len(sys.argv) != 2:
+        print 'ERROR: Options available: %s ' % options
+        exit(1)
+    if sys.argv[1] in options:
         if sys.argv[1] == 'startforeground':
-            CONFIG, LOGGER = getDefaultConfigAgent('Ruler', streamLogger=True)
+            LOGGER = getStreamLogger()
         DAEMON.command(sys.argv[1], sys.argv[0])
     else:
         DAEMON.command('', sys.argv[0])

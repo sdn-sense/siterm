@@ -21,10 +21,7 @@ Date			: 2017/09/26
 import os
 import sys
 import platform
-import ConfigParser
 
-import platform
-import sys
 
 def linuxDistr():
     """ Return linux distribution name. Otherwise Unknown """
@@ -33,8 +30,10 @@ def linuxDistr():
     except:
         return "Unknown"
 
+
 def printInfo(logger=None):
     """ Print information about sytem before start setup """
+    del logger
     print "System Information:"
     print "-" * 100
     print "Python version: %s" % sys.version.split('\n')
@@ -108,39 +107,3 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
 def get_py_modules(modulesDirs):
     """ Get py modules for setup.py """
     return list_packages(modulesDirs, pyFiles=True)
-
-
-def readFile(fileName):
-    """Read all file lines to a list and rstrips the ending"""
-    with open(fileName) as fd:
-        content = fd.readlines()
-    content = [x.rstrip() for x in content]
-    return content
-
-
-def createDirs(fullDirPath):
-    """Create dir if directory does not exist"""
-    if not os.path.isdir(fullDirPath):
-        try:
-            os.makedirs(fullDirPath)
-        except OSError as ex:
-            print 'Received exception creating %s directory. Exception: %s' % (fullDirPath, ex)
-    return
-
-def getConfig(locations):
-    """ Get parsed configuration """
-    tmpCp = ConfigParser.ConfigParser()
-    for fileName in locations:
-        if os.path.isfile(fileName):
-            tmpCp.read(fileName)
-            return tmpCp
-    return None
-
-def createAllDirsFromConfig(config, mainDir):
-    """ Create all directories from each configuration section: basedir, logDir, privateDir """
-    for section in config.sections():
-        if not config.has_option(section, 'basedir'):
-            createDirs("%s/%s/" % (mainDir, section))
-        for varName in ['basedir', 'logDir', 'privateDir']:
-            if config.has_option(section, varName):
-                createDirs(config.get(section, varName))

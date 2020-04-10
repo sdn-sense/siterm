@@ -20,15 +20,14 @@ Date			: 2019/05/01
 """
 
 import importlib
-from DTNRMLibs.CustomExceptions import FailedToParseError
-from DTNRMLibs.MainUtilities import getDataFromSiteFE
-from DTNRMLibs.MainUtilities import evaldict, getConfig
+from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.DBBackend import dbinterface
 
 
 def getDBConn():
+    """ Get datanase connection """
     dbConn = {}
-    config = getConfig(["/etc/dtnrm-site-fe.conf"])
+    config = getConfig()
     for sitename in config.get('general', 'sites').split(','):
         if config.has_option(sitename, "database"):
             dbConn[sitename] = dbinterface(config.get(sitename, "database"))
@@ -36,13 +35,17 @@ def getDBConn():
 
 
 def getAllHosts(sitename, logger):
+    """ Get all hosts from database """
+    logger.info('Get all hosts for %s', sitename)
     dbObj = getDBConn()[sitename]
     jOut = {}
     for site in dbObj.get('hosts'):
         jOut[site['hostname']] = site
     return jOut
 
+
 def getSwitches(config, sitename, nodes, logger):
+    """ Get Switches plugin """
     switchPlugin = config.get(sitename, 'plugin')
     logger.info('Will load %s switch plugin' % switchPlugin)
     method = importlib.import_module("SiteFE.LookUpService.Plugins.%s" % switchPlugin.lower())

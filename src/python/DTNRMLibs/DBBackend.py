@@ -23,6 +23,8 @@ Date			: 2019/05/01
 import os
 import sqlite3
 import DTNRMLibs.dbcalls as dbcalls
+from DTNRMLibs.MainUtilities import createDirs
+
 
 class DBBackend(object):
     """ Database Backend class """
@@ -30,6 +32,7 @@ class DBBackend(object):
         self.dbfile = configFile
         createdb = False
         if not os.path.isfile(self.dbfile):
+            createDirs(self.dbfile)
             createdb = True
         self.conn = sqlite3.connect(self.dbfile)
         self.cursor = self.conn.cursor()
@@ -64,7 +67,6 @@ class DBBackend(object):
         self.initialize()
         alldata = []
         try:
-            #print 'Call %s' % query
             self.cursor.execute(query)
             colname = [tup[0] for tup in self.cursor.description]
             alldata = self.cursor.fetchall()
@@ -95,6 +97,7 @@ class DBBackend(object):
 
     def execute_del(self, query, values):
         """ DELETE Execute """
+        del values
         self.initialize()
         try:
             self.cursor.execute(query)
@@ -109,6 +112,7 @@ class DBBackend(object):
 
 
 class dbinterface(object):
+    """ Database interface """
     def __init__(self, configFile):
         self.db = DBBackend(configFile)
 

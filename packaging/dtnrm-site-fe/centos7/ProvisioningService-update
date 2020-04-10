@@ -11,13 +11,13 @@ import sys
 import time
 from DTNRMLibs.Daemonizer import Daemon
 from DTNRMLibs.MainUtilities import getLogger
+from DTNRMLibs.MainUtilities import getStreamLogger
 from DTNRMLibs.MainUtilities import getConfig
 from SiteFE.ProvisioningService import provisioningService as prsS
 
-CONFIG = getConfig(["/etc/dtnrm-site-fe.conf"])
+CONFIG = getConfig()
 COMPONENT = 'ProvisioningService'
 LOGGER = getLogger("%s/%s/" % (CONFIG.get('general', 'logDir'), COMPONENT), CONFIG.get(COMPONENT, 'logLevel'))
-
 
 
 class MyDaemon(Daemon):
@@ -32,12 +32,18 @@ class MyDaemon(Daemon):
             except:
                 LOGGER.info('There was uncaught exception')
                 excType, excValue = sys.exc_info()[:2]
-                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))
+                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
                 time.sleep(20)
 
 if __name__ == "__main__":
     DAEMON = MyDaemon('/tmp/dtnrm-ProvisioningService.pid')
-    if len(sys.argv) == 2:
+    options = ['start', 'stop', 'restart', 'startforeground', 'status']
+    if len(sys.argv) != 2:
+        print 'ERROR: Options available: %s ' % options
+        exit(1)
+    if sys.argv[1] in options:
+        if sys.argv[1] == 'startforeground':
+            LOGGER = getStreamLogger()
         DAEMON.command(sys.argv[1], sys.argv[0])
     else:
         DAEMON.command('', sys.argv[0])

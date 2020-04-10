@@ -12,14 +12,15 @@ from DTNRMLibs.FECalls import getDBConn
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteFE.PolicyService import policyService as polS
 
-config = getConfig(["/etc/dtnrm-site-fe.conf"])
+CONFIG = getConfig()
 LOGGER = getStreamLogger()
-stateMachine = StateMachine(LOGGER)
+STATEMACHINE = StateMachine(LOGGER)
+
 
 def getdeltaAll(sitename, deltaUID):
     dbI = getDBConn()
     dbobj = getVal(dbI, sitename=sitename)
-    policer = polS.PolicyService(config, LOGGER)
+    policer = polS.PolicyService(CONFIG, LOGGER)
     for delta in dbobj.get('deltas'):
         if delta['uid'] != deltaUID:
             continue

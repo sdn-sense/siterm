@@ -18,29 +18,28 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2019/10/01
 """
-import os
 import time
-from OpenSSL import crypto
 from datetime import datetime
+from OpenSSL import crypto
+from DTNRMLibs.MainUtilities import getGitConfig
+
 
 class CertHandler(object):
+    """ Cert handler """
     def __init__(self):
         self.allowedCerts = {}
         self.loadAuthorized()
 
     def loadAuthorized(self):
-        if os.path.isfile('/etc/dtnrm-auth.conf'):
-            lines = []
-            with open('/etc/dtnrm-auth.conf', 'r') as fd:
-                lines = fd.readlines()
-            for line in lines:
-                if line.startswith('#'):
-                    continue
-                auth = line.split("|")
-                if len(auth) == 3:
-                    self.allowedCerts[auth[0]] = {'username': auth[1], 'permissions': auth[2].strip()}
+        """ Load all authorized users for FE from git """
+        config = getGitConfig()
+        for user, userinfo in config['AUTH'].items():
+            self.allowedCerts.setdefault(userinfo['full_dn'], {})
+            self.allowedCerts[userinfo['full_dn']]['username'] = user
+            self.allowedCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
 
     def getCertInfo(self, environ):
+        """ Get certificate info """
         out = {}
         if 'SSL_CLIENT_CERT' not in environ:
             print 'Request without certificate. Unauthorized'

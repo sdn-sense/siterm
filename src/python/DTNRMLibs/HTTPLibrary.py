@@ -26,6 +26,7 @@ import urllib
 from DTNRMLibs.pycurl_manager import RequestHandler
 from DTNRMLibs.CustomExceptions import ValidityFailure
 
+
 def argValidity(arg, aType):
     """ Argument validation """
     if not arg:
@@ -91,6 +92,7 @@ def encodeRequest(configreq, listParams=None):
 class Requests(dict):
     """Make any type of HTTP(s) request"""
     def __init__(self, url='http://localhost', inputdict=None, config=None):
+        self.config = config
         if not inputdict:
             inputdict = {}
         # set up defaults
@@ -194,6 +196,7 @@ class Requests(dict):
         capath = getCAPathFromEnv()
         return capath
 
+
 def getKeyCertFromEnv():
     """
     gets key and certificate from environment variables
@@ -210,25 +213,21 @@ def getKeyCertFromEnv():
             # if it is found in env return key, cert
             return key, cert
 
-    # TODO: only in linux, unix case, add other os case
-    # look for proxy at default location /tmp/x509up_u$uid
     key = cert = '/tmp/x509up_u' + str(os.getuid())
     if os.path.exists(key):
         return key, cert
 
     if (os.environ.get('HOME') and
-        os.path.exists(os.environ['HOME'] + '/.globus/usercert.pem')  and
-        os.path.exists(os.environ['HOME'] + '/.globus/userkey.pem')):
+            os.path.exists(os.environ['HOME'] + '/.globus/usercert.pem') and
+            os.path.exists(os.environ['HOME'] + '/.globus/userkey.pem')):
 
         key = os.environ['HOME'] + '/.globus/userkey.pem'
         cert = os.environ['HOME'] + '/.globus/usercert.pem'
         return key, cert
     if (os.path.exists('/etc/grid-security/hostcert.pem') and
-             os.path.exists('/etc/grid-security/hostkey.pem')):
+            os.path.exists('/etc/grid-security/hostkey.pem')):
         return '/etc/grid-security/hostkey.pem', '/etc/grid-security/hostcert.pem'
-    else:
-        # couldn't find the key, cert files
-        return None, None
+    return None, None
 
 
 def getCAPathFromEnv():

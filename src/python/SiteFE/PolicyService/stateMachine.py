@@ -18,9 +18,9 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2018/11/26
 """
-import time
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
+
 
 def timeendcheck(delta, logger):
     """ Check delta timeEnd. if passed, returns True. """
@@ -49,6 +49,7 @@ class StateMachine(object):
         return
 
     def _stateChangerDelta(self, dbObj, newState, **kwargs):
+        """ Delta State change """
         tNow = getUTCnow()
         self.logger.info('Changing delta %s to %s' % (kwargs['uid'], newState))
         dbObj.update('deltas', [{'uid': kwargs['uid'],
@@ -59,19 +60,21 @@ class StateMachine(object):
                                  'insertdate': tNow}])
 
     def _modelstatechanger(self, dbObj, newState, **kwargs):
+        """ Model State change """
         tNow = getUTCnow()
         dbObj.update('deltasmod', [{'uid': kwargs['uid'],
                                     'modadd': newState,
                                     'updatedate': tNow}])
 
-
     def modelstatecancel(self, dbObj, **kwargs):
+        """ Cancel Model addition """
         if kwargs['modadd'] in ['idle']:
             self._modelstatechanger(dbObj, 'removed', **kwargs)
         elif kwargs['modadd'] in ['add', 'added']:
             self._modelstatechanger(dbObj, 'remove', **kwargs)
 
     def _stateChangerHost(self, dbObj, hid, **kwargs):
+        """ Change state for host """
         tNow = getUTCnow()
         self.logger.info('Changing delta %s hoststate %s to %s' %
                          (kwargs['deltaid'], kwargs['hostname'], kwargs['state']))
@@ -82,6 +85,7 @@ class StateMachine(object):
         dbObj.insert('hoststateshistory', [kwargs])
 
     def _newdelta(self, dbObj, delta, state):
+        """ Add new delta to db """
         dbOut = {'uid': delta['ID'],
                  'insertdate': int(delta['InsertTime']),
                  'updatedate': int(delta['UpdateTime']),
@@ -94,7 +98,7 @@ class StateMachine(object):
                  'reductionid': '' if 'ReductionID' not in delta.keys() else delta['ReductionID'],
                  'modadd': str(delta['modadd']),
                  'connectionid': str(delta['ConnID']),
-                 'error': '' if 'Error' not in delta.keys() else str(delta['Error'])} # TODO Use error
+                 'error': '' if 'Error' not in delta.keys() else str(delta['Error'])}
         dbObj.insert('deltas', [dbOut])
         dbOut['state'] = delta['State']
         self._stateChangerDelta(dbObj, delta['State'], **dbOut)

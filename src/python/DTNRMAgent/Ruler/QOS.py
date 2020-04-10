@@ -24,11 +24,14 @@ import json
 import tempfile
 import filecmp
 import shutil
-from DTNRMLibs.MainUtilities import getDefaultConfigAgent, createDirs, contentDB
+from DTNRMLibs.MainUtilities import createDirs, contentDB
 from DTNRMLibs.MainUtilities import execute as executeCmd
 from DTNRMLibs.MainUtilities import getStreamLogger
+from DTNRMLibs.MainUtilities import getLogger
+from DTNRMLibs.MainUtilities import getConfig
 
 COMPONENT = 'QOS'
+
 
 # bps, bytes per second
 # kbps, Kbps, kilobytes per second
@@ -41,6 +44,7 @@ COMPONENT = 'QOS'
 # Seems there are issues with QoS when we use really big bites and it complains about this.
 # Solution is to convert to next lower value...
 def convertToRate(inputRate, inputVal, logger):
+    """ Convert input to rate understandable to fireqos """
     logger.info('Converting rate for QoS. Input %s %s' % (inputRate, inputVal))
     outRate = -1
     outType = ''
@@ -58,10 +62,13 @@ def convertToRate(inputRate, inputVal, logger):
         return outRate, outType
     raise Exception('Unknown input rate parameter %s and %s' % (inputRate, inputVal))
 
+
 class QOS(object):
     """ QOS class to install new limit rules """
     def __init__(self, config, logger):
-        self.config, self.logger = getDefaultConfigAgent(COMPONENT, config, logger)
+        self.config = config if config else getConfig()
+        self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
+                                                      self.config.get('general', 'logLevel'))
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/QOS/"
         self.configDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         self.hostname = self.config.get('agent', 'hostname')
@@ -120,9 +127,9 @@ class QOS(object):
                                                               inputDict['destport'],
                                                               outrate, outtype))
                 tmpFile.write("interface vlan.%s %s input rate %s%s\n" % (inputDict['vlan'],
-                                                                        inputName, outrate, outtype))
+                                                                          inputName, outrate, outtype))
                 tmpFile.write("interface vlan.%s %s output rate %s%s\n" % (inputDict['vlan'],
-                                                                         outputName, outrate, outtype))
+                                                                           outputName, outrate, outtype))
                 totalAllocated += int(params['reservableCapacity'])
         intfName, maxThrgIntf = self.getMaxThrg()
         if intfName and maxThrgIntf:
@@ -152,6 +159,7 @@ class QOS(object):
         else:
             self.logger.info("QoS rules are equal. NTD")
             os.unlink(newFile)
+
 
 def execute(config=None, logger=None):
     """ Execute main script for DTN-RM Agent output preparation """

@@ -22,10 +22,12 @@ Date			: 2017/09/26
 from DTNRMLibs.MainUtilities import getConfig, getLogger, getStreamLogger
 from DTNRMLibs.MainUtilities import evaldict
 
+
 def getNodeDictVlans(nodesInfo, hostname, switchName):
+    """ Get Node dictionary """
     if not nodesInfo:
         return None, {}
-    for nodeIP, nodeDict in nodesInfo['nodes'].items():
+    for _, nodeDict in nodesInfo['nodes'].items():
         if nodeDict['hostname'] == hostname:
             for intf, intfDict in nodeDict['NetInfo'].items():
                 print intfDict
@@ -38,8 +40,7 @@ def getNodeDictVlans(nodesInfo, hostname, switchName):
 
 
 def getinfo(config, logger, nodesInfo=None, site=None):
-    # Each plugin has it's own definition how to represent and return information;
-    # All of them should return all ports, switch names and also nodes to which they are connected;
+    """ Get info about RAW plugin """
     output = {'switches': {}, 'vlans': {}}
     if not nodesInfo:
         logger.warning('This FE does not have any nodes defined.')
@@ -66,7 +67,7 @@ def getinfo(config, logger, nodesInfo=None, site=None):
             else:
                 output['vlans'][switch][port][key] = config.get(site, "port%s%s" % (port, key))
         output['switches'][switch][port] = config.get(site, 'port%shostname' % port)
-    for nodename, nodeDict in nodesInfo.items():
+    for _, nodeDict in nodesInfo.items():
         hostinfo = evaldict(nodeDict['hostinfo'])
         for intfKey, intfDict in hostinfo['NetInfo']["interfaces"].items():
             print intfKey, intfDict
@@ -95,7 +96,7 @@ def getinfo(config, logger, nodesInfo=None, site=None):
 
 if __name__ == '__main__':
     print 'WARNING!!!! This should not be used through main call. Only for testing purposes!!!'
-    CONFIG = getConfig(["/etc/dtnrm-site-fe.conf"])
+    CONFIG = getConfig()
     COMPONENT = 'LookUpService'
     LOGGER = getStreamLogger()
     for sitename in CONFIG.get('general', 'sites').split(','):

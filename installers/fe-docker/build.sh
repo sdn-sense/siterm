@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build -t sitefe .
+docker build  --no-cache -t sitefe .

@@ -33,6 +33,7 @@ NAME = 'CPUInfo'
 
 def get(config):
     """Get lscpu information"""
+    del config
     cpuInfo = {}
     tmpOut = externalCommand('lscpu')
     for item in tmpOut:
@@ -52,4 +53,4 @@ def get(config):
 
 if __name__ == "__main__":
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig(['/etc/dtnrm/main.conf', 'main.conf'])))
+    PRETTY.pprint(get(getConfig()))

@@ -13,6 +13,7 @@ import time
 import atexit
 from signal import SIGTERM
 
+
 class Daemon(object):
     """
     A generic daemon class.

@@ -26,15 +26,16 @@
 ##H  -P PORT        Time Series database repository port. No default;
 ##H  -I IP          Time Series database IP or hostname. No default;
 ##H  -U PROTOCOL    Time Series database protocol. By default tcp
-##H  -G GITREPO     Git Repo to use for installation. default sdn-sense
+##H  -G GITREPO     Git Repo to use for installation. default siterm
+##H  -O GITORG      Git Organization or user. default sdn-sense
 ##H  -D anyvalue    this flag tells that this is docker installation. It will skip copying config files
 ##H  -h             Display this help.
 
 # TODO also force to specify TSDB parameters it should get from FE.
 # TODO. data directory should come from configuration parameter
-datadir=/opt/config/fe/
+datadir=/opt/config/
 workdir=`pwd`
-packages="git autoconf automake curl gcc libmnl-devel libuuid-devel lm_sensors make MySQL-python nc pkgconfig python wget python-psycopg2 PyYAML zlib-devel python-devel httpd mod_wsgi mod_ssl"
+packages="git autoconf sudo libffi-devel openssl-devel pyOpenSSL automake curl gcc libmnl-devel libuuid-devel lm_sensors make MySQL-python nc pkgconfig python wget python-psycopg2 PyYAML zlib-devel python-devel httpd mod_wsgi mod_ssl"
 # Check if release is supported.
 # TODO. Support other releases also.
 case $(uname) in
@@ -58,6 +59,7 @@ while [ $# -ge 1 ]; do
     -I ) tsdip="$2"; shift; shift;;
     -U ) tsdp="$2"; shift; shift;;
     -G ) gitr="$2"; shift; shift;;
+    -O ) gito="$2"; shift; shift;;
     -D ) docker="$2"; shift; shift;;
     -h ) perl -ne '/^##H/ && do { s/^##H ?//; print }' < $0 1>&2; exit 1 ;;
     -* ) echo "$0: unrecognized option $1, use -h for help" 1>&2; exit 1 ;;
@@ -100,10 +102,14 @@ if [ X"$tsdip" = X ]; then
 fi
 
 if [ X"$gitr" = X ]; then
-  echo "WARNING: Git Repo not set. using default sdn-sense if not specified." 1>&2
-  gitr=sdn-sense
+  echo "WARNING: Git Repo not set. using default siterm is not specified." 1>&2
+  gitr=siterm
 fi
 
+if [ X"$gito" = X ]; then
+  echo "WARNING: Git Organization  not set. using default sdn-sense is not specified." 1>&2
+  gito=sdn-sense
+fi
 
 # =======================================================================
 # Checking if running as root
@@ -136,16 +142,17 @@ pip install --upgrade setuptools
 echo "==================================================================="
 echo "Cloning siterm and installing it"
 cd $rootdir
-rm -rf siterm
-git clone https://github.com/$gitr/siterm
-cd siterm
+rm -rf $gitr
+git clone https://github.com/$gito/$gitr
+
+cd $gitr
+
 if [ X"$docker" = X ]; then
   python setup-sitefe.py install || exit $?
 else
   python setup-sitefe.py install --docker || exit $?
 fi
 
-if [ X"$docker" = X ]; then
   echo "==================================================================="
   echo "Modifying ownership and permission rules for Site FE directories"
   echo "-------------------------------------------------------------------"
@@ -160,6 +167,8 @@ if [ X"$docker" = X ]; then
   # Dir permissions, recursive
   echo "3. Recursive directory permissions to 0755 in $datadir"
   find . -type d -exec chmod 0755 {} \;
+
+if [ X"$docker" = X ]; then
   # SELinux serve files off Apache, resursive
   echo "4. Apply SELinux rule to allow Apache serve files from $datadir"
   chcon -t httpd_sys_content_t $datadir -R
@@ -177,8 +186,7 @@ echo "                       INSTALLATION DONE                           "
 echo "==================================================================="
 echo "Please check the following things:"
 echo "   1. Configuration changes:"
-echo "        a) /etc/dtnrm-site-fe.conf file and that all parameters are correct"
-echo "        b) /etc/dtnrm-auth.conf - has to list all DNs allowed to query FE. Doc: https://github.com/sdn-sense/siterm-fe/wiki/HTTPS-and-Security"
+echo "      Your configuration is correct on GIT Repo."
 echo "   2. $netdataconf file and that all backend parameters are correct"
 echo "      It should report only to sense-service graphite listener. NOT to sense-dtn"
 echo "   3. Start httpd service"

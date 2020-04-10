@@ -1,15 +1,17 @@
 #!/usr/bin/env python
+""" List all deltas inFrontend """
 import sys
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import evaldict
-from SiteFE.PolicyService.stateMachine import StateMachine
-from DTNRMLibs.MainUtilities import getConfig, getLogger, getStreamLogger
+from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 from DTNRMLibs.FECalls import getDBConn
+from SiteFE.PolicyService.stateMachine import StateMachine
 
-#LOGGER = getStreamLogger()
-config = getConfig(["/etc/dtnrm-site-fe.conf"])
-LOGGER = getLogger("%s/%s/" % (config.get('general', 'logDir'), 'local'))
-stateMachine = StateMachine(LOGGER)
+
+LOGGER = getStreamLogger()
+CONFIG = getConfig()
+STATEMACHINE = StateMachine(LOGGER)
+
 
 def getdeltaAll(sitename):
     dbI = getDBConn()

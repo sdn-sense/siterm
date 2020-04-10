@@ -18,23 +18,21 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
-import time
-from DTNRMLibs.DBBackend import dbinterface
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import contentDB
-from DTNRMLibs.MainUtilities import validateInput
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.FECalls import getDBConn
+
 
 class FrontendRM(object):
     """ Site Frontend calls"""
     def __init__(self):
         self.dbI = getDBConn()
         self.initialized = False
-        self.config = getConfig(["/etc/dtnrm-site-fe.conf"])
+        self.config = getConfig()
         self.siteDB = contentDB()
 
     def getHosts(self, **kwargs):
@@ -57,7 +55,6 @@ class FrontendRM(object):
           Examples:
           GOOD: {"hostname": "dtn-rm.ultralight.org",
                  "ip": "1.2.3.4"} """
-        validateInput(inputDict, 'addhost')
         dbobj = getVal(self.dbI, **kwargs)
         host = dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
         if not host:
@@ -80,7 +77,6 @@ class FrontendRM(object):
                 GOOD: {"ip": "1.2.3.4", "site": "T2_US_Caltech", "status": "benchhmark",
                        "hostype": "gridftp", "port": 11234}"""
         # Validate that these entries are known...
-        validateInput(inputDict, 'updatehost')
         dbobj = getVal(self.dbI, **kwargs)
         host = dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
         if not host:

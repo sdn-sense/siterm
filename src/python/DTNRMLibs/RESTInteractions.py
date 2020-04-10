@@ -25,7 +25,9 @@ from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.MainUtilities import evaldict
 
+
 class getContent(object):
+    """ Get Content from url """
     def __init__(self):
         # We would want to add later more things to init,
         # for example https and security details from config.
@@ -44,23 +46,31 @@ class getContent(object):
             else:
                 raise BadRequestError
 
+
 def get_match_regex(environ, regexp):
     """ Matches regexp and return its type. This does not raise any error."""
     path = environ.get('PATH_INFO', '')
     mReg = regexp.match(path)
     return mReg
 
+
 def is_application_json(environ):
+    """ Check if environ has set content type to json """
     content_type = environ.get('CONTENT_TYPE', 'application/json')
     return content_type.startswith('application/json')
 
+
 def is_post_request(environ):
+    """ Check if environ has set it to POST method """
     if environ['REQUEST_METHOD'].upper() != 'POST':
         return False
     content_type = environ.get('CONTENT_TYPE', 'application/x-www-form-urlencoded')
-    return content_type.startswith('application/x-www-form-urlencoded') or content_type.startswith('multipart/form-data')
+    return content_type.startswith('application/x-www-form-urlencoded') or \
+           content_type.startswith('multipart/form-data')
+
 
 def get_json_post_form(environ):
+    """ Get Json from Post form """
     try:
         request_body_size = int(environ.get('CONTENT_LENGTH', 0))
     except ValueError:
@@ -97,7 +107,9 @@ def get_post_form(environ):
     environ['wsgi.input'] = new_input
     return fieldS
 
+
 class InputProcessed(object):
+    """ wsgi Input processing class """
     def read(self, *args):
         raise EOFError('The wsgi.input stream has already been consumed')
     readline = readlines = __iter__ = read

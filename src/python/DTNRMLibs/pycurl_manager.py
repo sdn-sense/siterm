@@ -55,6 +55,7 @@ import pycurl
 if sys.version.startswith('3.'):
     import io
 
+
 class ResponseHeader(object):
     """ResponseHeader parses HTTP response header"""
     def __init__(self, response):
@@ -84,6 +85,7 @@ class ResponseHeader(object):
                 self.header[key.strip()] = val.strip()
             except:
                 pass
+
 
 class RequestHandler(object):
     """
@@ -303,11 +305,13 @@ class RequestHandler(object):
 
 HTTP_PAT = re.compile("(https|http)://[-A-Za-z0-9_+&@#/%?=~_|!:,.;]*[-A-Za-z0-9+&@#/%=~_|]")
 
+
 def validate_url(url):
     "Validate URL"
     if HTTP_PAT.match(url):
         return True
     return False
+
 
 def pycurl_options():
     "Default set of options for pycurl"
@@ -322,11 +326,13 @@ def pycurl_options():
     }
     return opts
 
+
 def cern_sso_cookie(url, fname, cert, ckey):
     "Obtain cern SSO cookie and store it in given file name"
     cmd = 'cern-get-sso-cookie -cert %s -key %s -r -u %s -o %s' % (cert, ckey, url, fname)
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, env=os.environ)
     proc.wait()
+
 
 def getdata(urls, ckey, cert, headers=None, options=None, num_conn=100, cookie=None):
     """
@@ -432,6 +438,7 @@ def getdata(urls, ckey, cert, headers=None, options=None, num_conn=100, cookie=N
         mcurl.select(1.0)
 
     cleanup(mcurl)
+
 
 def cleanup(mcurl):
     "Clean-up MultiCurl handles"

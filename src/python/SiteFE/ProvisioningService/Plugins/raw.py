@@ -20,7 +20,9 @@ Email 			: justas.balcas (at) cern.ch
 Date			: 2017/09/26
 """
 
+
 class mainCaller(object):
+    """ Main call for RAW Plugin """
     def __init__(self):
         self.name = 'RAW'
 

@@ -1,15 +1,18 @@
 #!/usr/bin/env python
+""" Cancel all deltas in Site Frontend """
 import sys
 from DTNRMLibs.MainUtilities import getVal
-from SiteFE.PolicyService.stateMachine import StateMachine
-from DTNRMLibs.MainUtilities import getConfig, getLogger, getStreamLogger
+from DTNRMLibs.MainUtilities import getStreamLogger
 from DTNRMLibs.FECalls import getDBConn
+from SiteFE.PolicyService.stateMachine import StateMachine
+
 
 LOGGER = getStreamLogger()
-config = getConfig(["/etc/dtnrm-site-fe.conf"])
-stateMachine = StateMachine(LOGGER)
+STATEMACHINE = StateMachine(LOGGER)
+
 
 def deleteAll(sitename, deltaUID=None):
+    """ delete all deltas """
     dbI = getDBConn()
     dbobj = getVal(dbI, sitename=sitename)
     for delta in dbobj.get('deltas'):
@@ -17,7 +20,7 @@ def deleteAll(sitename, deltaUID=None):
             if delta['uid'] != deltaUID:
                 continue
         print 'Cancel %s' % delta['uid']
-        stateMachine._stateChangerDelta(dbobj, 'remove', **delta)
+        STATEMACHINE._stateChangerDelta(dbobj, 'remove', **delta)
 
 if __name__ == "__main__":
     print len(sys.argv)

@@ -4,4 +4,4 @@
 """
 DTN RM Site FE init
 """
-__all__ = ["ForwardingService", "LookUpService", "NotificationService", "ProvisioningService", "REST"]
+__all__ = ["LookUpService", "ProvisioningService", "REST"]
