@@ -30,10 +30,14 @@ class DBBackend(object):
     """ Database Backend class """
     def __init__(self, configFile):
         self.dbfile = configFile
+        createdb = False
         if not os.path.isfile(self.dbfile):
-            self._createdb()
+            createDirs(self.dbfile)
+            createdb = True
         self.conn = sqlite3.connect(self.dbfile)
         self.cursor = self.conn.cursor()
+        if createdb:
+            self._createdb()
 
     def destroy(self):
         """ Destroy connection """
@@ -44,7 +48,6 @@ class DBBackend(object):
 
     def _createdb(self):
         """ Create database """
-        createDirs(self.dbfile)
         for argname in dir(dbcalls):
             if argname.startswith('create_'):
                 print 'Call to create %s' % argname
