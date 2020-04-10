@@ -280,10 +280,8 @@ class GitConfig(object):
         https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/main.yaml
         """
         if self.config['MAPPING']['type'] == 'FE':
-            cacheFilePath = '/tmp/%s-%s.yaml' % (datetime.datetime.now().strftime('%Y-%m-%d-%H'), 'FE-main')
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
             self.config['MAIN'] = self._gitConfigCache('FE-main', url)
-            cacheFilePath = '/tmp/%s-%s.yaml' % (datetime.datetime.now().strftime('%Y-%m-%d-%H'), 'FE-auth')
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'auth.yaml'])
             self.config['AUTH'] = self._gitConfigCache('FE-auth', url)
             return
@@ -292,7 +290,8 @@ class GitConfig(object):
         """get git config from configured github repo."""
         if not self.config:
             self.getLocalConfig()
-        mapping = yload(getWebContentFromURL("%s/mapping.yaml" % self.getFullGitUrl()).text)
+        url = "%s/mapping.yaml" % self.getFullGitUrl()
+        mapping = self._gitConfigCache('mapping', url)
         if self.config['MD5'] not in mapping.keys():
             msg = 'Configuration is not available for this MD5 %s tag in GIT REPO %s' % \
                             (self.config['MD5'], self.config['GIT_REPO'])
