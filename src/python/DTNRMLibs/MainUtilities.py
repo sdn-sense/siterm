@@ -92,7 +92,8 @@ def getStreamLogger(logLevel='DEBUG'):
     formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
                                   datefmt="%a, %d %b %Y %H:%M:%S")
     handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if not logger.handlers:
+        logger.addHandler(handler)
     logger.setLevel(levels[logLevel])
     return logger
 
