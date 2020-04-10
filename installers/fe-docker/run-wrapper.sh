@@ -8,6 +8,21 @@ exec 1>log.out 2>&1
 
 set -x
 set -m
+
+
+datadir=/opt/config/
+echo "1. Making apache as owner of $datadir"
+chown apache:apache -R $datadir
+# File permissions, recursive
+echo "2. Recursive file permissions to 0644 in $datadir"
+find $datadir -type f -exec chmod 0644 {} \;
+# Dir permissions, recursive
+echo "3. Recursive directory permissions to 0755 in $datadir"
+find $datadir -type d -exec chmod 0755 {} \;
+# TODO:
+# Make a script which loops over the config on GIT and prepares
+# dirs and database. Now it requires to do it manually or restart docker
+
 # Start the first process
 /usr/sbin/httpd -k restart
 status=$?

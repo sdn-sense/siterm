@@ -49,7 +49,7 @@ fi
 
 
 
-if [ X"FQDN" = X ]; then
+if [ X"$FQDN" = X ]; then
 echo "What is the hostname of this endhost?"
 read FQDN
 fi
@@ -122,7 +122,7 @@ if [ "$certissuer" = "openssl" ]; then
       -nodes \
       -key certs/ca/my-root-ca.key.pem \
       -days 1024 \
-      -out certs/ca/my-root-ca.crt.pem \
+      -out certs/ca/my-root-ca.crt.pem
       -subj "/C=$countryname/ST=$statename/L=$localityname/O=$organizationname/CN=$FQDN"
 
     # Create a Device Certificate for each domain,
@@ -178,7 +178,9 @@ if [ "$certissuer" = "openssl" ]; then
     python cert-checker.py /etc/httpd/certs/cert.pem
   fi
 elif [ "$certissuer" = "letsencrypt" ]; then
+    if [ "$REWRITE" == "yes" ]; then
     sudo certbot-2 certonly --standalone -d $FQDN
+    fi
     if [ "$docker" = "yes" ]; then
       echo "What is the docker configuration directory? If you run this script from downloaded git repo, it is ../fe-docker/ or ../agent-docker/"
       read dockerdir

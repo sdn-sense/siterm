@@ -33,7 +33,7 @@
 
 # TODO also force to specify TSDB parameters it should get from FE.
 # TODO. data directory should come from configuration parameter
-datadir=/opt/config/fe/
+datadir=/opt/config/
 workdir=`pwd`
 packages="git autoconf sudo libffi-devel openssl-devel pyOpenSSL automake curl gcc libmnl-devel libuuid-devel lm_sensors make MySQL-python nc pkgconfig python wget python-psycopg2 PyYAML zlib-devel python-devel httpd mod_wsgi mod_ssl"
 # Check if release is supported.
@@ -153,7 +153,6 @@ else
   python setup-sitefe.py install --docker || exit $?
 fi
 
-if [ X"$docker" = X ]; then
   echo "==================================================================="
   echo "Modifying ownership and permission rules for Site FE directories"
   echo "-------------------------------------------------------------------"
@@ -168,6 +167,8 @@ if [ X"$docker" = X ]; then
   # Dir permissions, recursive
   echo "3. Recursive directory permissions to 0755 in $datadir"
   find . -type d -exec chmod 0755 {} \;
+
+if [ X"$docker" = X ]; then
   # SELinux serve files off Apache, resursive
   echo "4. Apply SELinux rule to allow Apache serve files from $datadir"
   chcon -t httpd_sys_content_t $datadir -R
