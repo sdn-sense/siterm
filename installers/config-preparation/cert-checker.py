@@ -22,7 +22,8 @@ def getCertInfo(certLocation):
     print('Certificate Issuer:      ', out['issuer'])
     print('Certificate Full DN:     ', out['fullDN'])
     print('-'*80)
-    print('INFO: Please ensure that Certificate full DN is entered to /etc/dtnrm-auth.conf file.')
+    print('INFO: Please ensure that Certificate full DN is entered in GIT Repo for the Frontend.')
+    print('INFO: In case it is custom certificate, you will need to put ca in Fronend to trust local issued certificate')
     print('-'*80)
 
 if __name__ == '__main__':

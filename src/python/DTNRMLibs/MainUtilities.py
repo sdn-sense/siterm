@@ -165,11 +165,14 @@ def execute(command, logger, raiseError=True):
 
 def createDirs(fullDirPath):
     """ Create Directories on fullDirPath"""
-    if not os.path.isdir(fullDirPath):
+    dirname = os.path.dirname(fullDirPath)
+    if not os.path.isdir(dirname):
         try:
-            os.makedirs(fullDirPath)
+            os.makedirs(dirname)
         except OSError as ex:
-            print 'Received exception creating %s directory. Exception: %s' % (fullDirPath, ex)
+            print 'Received exception creating %s directory. Exception: %s' % (dirname, ex)
+            if not os.path.isdir(dirname):
+                raise
     return
 
 

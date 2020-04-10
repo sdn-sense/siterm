@@ -45,7 +45,7 @@ if "--docker" not in sys.argv:
         keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
         package_dir={'': 'src/python/'},
         packages=['SiteFE', 'DTNRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/DTNRMLibs/']),
-        install_requires=['rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5', 'pyaml'],
+        install_requires=['rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5', 'pyaml', 'requests'],
         data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
                     ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
                                             "packaging/dtnrm-site-fe/welcome.conf"])],
@@ -65,7 +65,7 @@ else:
         keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
         package_dir={'': 'src/python/'},
         packages=['SiteFE', 'DTNRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/DTNRMLibs/']),
-        install_requires=['pyparsing==1.5.7', 'rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5', 'pyyaml'],
+        install_requires=['pyparsing==1.5.7', 'rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5', 'pyyaml', 'requests'],
         data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"])],
         py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
         scripts=SCRIPTS

@@ -3,7 +3,7 @@ FROM centos:7
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
 
 ENV GITREPO siterm
-ENV GITORG sdn-sense
+ENV GITORG juztas
 
 RUN mkdir -p /opt/ && mkdir -p /opt/{config,dtnrmcode}
 RUN  yum -y install git sudo

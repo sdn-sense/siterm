@@ -1,8 +1,8 @@
-FROM centos:7
+FROM centos:7.7.1908
 
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
 ENV GITREPO siterm
-ENV GITORG sdn-sense
+ENV GITORG juztas
 
 RUN adduser apache -U -u 48
 
@@ -10,7 +10,7 @@ RUN mkdir -p /opt/ && mkdir -p /opt/config/fe/ && mkdir -p /opt/dtnrmcode
 RUN mkdir -p /etc/httpd/certs/ && mkdir -p /etc/httpd/conf.d/
 RUN yum -y install git sudo && yum clean all
 RUN cd /opt/dtnrmcode && git clone https://github.com/$GITORG/$GITREPO
-RUN cd /opt/dtnrmcode/$GITREPO/installers/ && sudo sh ./fresh-siterm-fe-install.sh -R /opt/ -D yes -G $GITREPO  -O $GITORG
+RUN cd /opt/dtnrmcode/$GITREPO/installers/ && sudo sh ./fresh-siterm-fe-install.sh -R /opt/ -D yes -G $GITREPO -O $GITORG
 
 RUN mkdir -p /opt/config/fe/{LookUpService,PolicyService,ProvisioningService}
 RUN find /opt/config/fe/ -type f -exec chmod 0644 {} \;
