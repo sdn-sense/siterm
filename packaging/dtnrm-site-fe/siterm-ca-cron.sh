@@ -10,7 +10,7 @@ git clone https://github.com/$GIT_REPO .
 cd $TMP_DIR/CAs/
 for fname in `ls *.pem`; do
   cp $fname $CA_DIR/
-  hash=$(openssl x509 -hash -in "$CA_DIR$/$fname" |head -n 1)
+  hash=$(openssl x509 -hash -in "$CA_DIR/$fname" |head -n 1)
   ln -sf $CA_DIR$/$fname $hash.0
 done
 
