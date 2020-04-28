@@ -9,6 +9,8 @@ exec 1>log.out 2>&1
 set -x
 set -m
 
+# As first run, Run Custom CA prefetch and add them to CAs dir.
+sh /etc/cron-scripts/siterm-ca-cron.sh
 
 datadir=/opt/config/
 echo "1. Making apache as owner of $datadir"

@@ -411,6 +411,9 @@ class LookUpService(object):
                 self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
                                    self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
                                    self.prefixDB.genUriRef('site', newuri)))
+                self.newGraph.add((self.prefixDB.genUriRef('site', ":%s:service+rst" % nodeDict['hostname']),
+                                   self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
+                                   self.prefixDB.genUriRef('site', newuri)))
                 # Specific node information.
                 self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                    self.prefixDB.genUriRef('rdf', 'type'),

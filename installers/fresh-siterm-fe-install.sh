@@ -35,7 +35,7 @@
 # TODO. data directory should come from configuration parameter
 datadir=/opt/config/
 workdir=`pwd`
-packages="git autoconf sudo libffi-devel openssl-devel pyOpenSSL automake curl gcc libmnl-devel libuuid-devel lm_sensors make MySQL-python nc pkgconfig python wget python-psycopg2 PyYAML zlib-devel python-devel httpd mod_wsgi mod_ssl"
+packages="git autoconf sudo libffi-devel openssl-devel pyOpenSSL automake curl gcc libmnl-devel libuuid-devel lm_sensors make MySQL-python nc pkgconfig python wget python-psycopg2 PyYAML zlib-devel python-devel httpd mod_wsgi mod_ssl cronie"
 # Check if release is supported.
 # TODO. Support other releases also.
 case $(uname) in
