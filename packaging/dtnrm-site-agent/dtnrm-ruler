@@ -10,7 +10,7 @@ Changes applied to this code:
 import sys
 import time
 from DTNRMLibs.Daemonizer import Daemon
-from DTNRMLibs.MainUtilities import getConfig, getLogger, getStreamLogger
+from DTNRMLibs.MainUtilities import getConfig, reCacheConfig, getStreamLogger, getLogger
 from DTNRMAgent.Ruler import Ruler
 
 CONFIG = getConfig()
@@ -22,24 +22,33 @@ class MyDaemon(Daemon):
     """ My own Deamon override """
     def run(self):
         """ Run main execution """
+        timeeq, currentHour = reCacheConfig(None)
         rulerAgent = Ruler.Ruler(CONFIG, LOGGER)
         while True:
             time.sleep(5)
             try:
                 rulerAgent.start()
-            except Exception:
-                LOGGER.info('There was uncaught exception')
+            except KeyboardInterrupt as ex:
+                LOGGER.critical("Received KeyboardInterrupt: %s ", ex)
+                exit(3)
+            except:
+                # TODO. Have a way to report this upstream that there was an unknown type except.
+                # In this case we can solve these issues if there ar some with any service.
                 excType, excValue = sys.exc_info()[:2]
                 LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
-                time.sleep(5)
+                time.sleep(20)
+            timeeq, currentHour = reCacheConfig(currentHour)
+            if not timeeq:
+                LOGGER.info('Re initiating Policer Service with new configuration from GIT')
+                del rulerAgent
+                rulerAgent = Ruler.Ruler(getConfig(), LOGGER)
 
 if __name__ == "__main__":
     DAEMON = MyDaemon('/tmp/dtnrm-ruler-update.pid')
-    options = ['start', 'stop', 'restart', 'startforeground', 'status']
     if len(sys.argv) != 2:
-        print 'ERROR: Options available: %s ' % options
+        print 'ERROR: Options available: %s ' % DAEMON.availableCommands
         exit(1)
-    if sys.argv[1] in options:
+    if sys.argv[1] in DAEMON.availableCommands:
         if sys.argv[1] == 'startforeground':
             LOGGER = getStreamLogger()
         DAEMON.command(sys.argv[1], sys.argv[0])
