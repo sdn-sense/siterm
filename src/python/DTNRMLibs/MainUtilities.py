@@ -207,6 +207,13 @@ def getWebContentFromURL(url):
     return out
 
 
+def reCacheConfig(prevHour=None):
+    """ Return prevHour == currentHour, currentHour
+        and used in Service Object re-initiation """
+    datetimeNow = datetime.datetime.now()
+    currentHour = datetimeNow.strftime('%H')
+    return prevHour == currentHour, currentHour
+
 class GitConfig(object):
     """ Git based configuration class """
     def __init__(self):
