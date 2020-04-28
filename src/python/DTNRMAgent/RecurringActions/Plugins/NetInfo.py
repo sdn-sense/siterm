@@ -40,8 +40,11 @@ def getVlansOnSystem(config, logger):
     rulerObj = Ruler(config, logger)
     vlansProvs = rulerObj.vlansProvisioned()
     for item in vlansProvs:
-        for _, hostdict in item['hosts'].items():
-            out['vlan.%s' % hostdict['vlan']] = hostdict['destport']
+        if 'hosts' in item.keys():
+            for _, hostdict in item['hosts'].items():
+                if 'vlan' not in hostdict.keys() or 'destport' not in hostdict.keys():
+                    continue
+                out['vlan.%s' % hostdict['vlan']] = hostdict['destport']
     return out
 
 
