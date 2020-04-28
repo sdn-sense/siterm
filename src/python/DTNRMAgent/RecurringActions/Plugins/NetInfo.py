@@ -23,7 +23,8 @@ import pprint
 import psutil
 from pyroute2 import IPRoute
 from DTNRMAgent.RecurringActions.Utilities import externalCommand
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMAgent.Ruler.Ruler import Ruler
+from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 
 
 def str2bool(val):
@@ -33,8 +34,19 @@ def str2bool(val):
 NAME = 'NetInfo'
 
 
-def get(config):
+def getVlansOnSystem(config, logger):
+    """ Get All VLANs provisioned already """
+    out = {}
+    rulerObj = Ruler(config, logger)
+    vlansProvs = rulerObj.vlansProvisioned()
+    for item in vlansProvs:
+        for hostname, hostdict in item['hosts'].items():
+            out['vlan.%s' % hostdict['vlan']] = hostdict['destport']
+    return out
+
+def get(config, logger):
     """Get all network information"""
+    vlansON = getVlansOnSystem(config, logger)
     netInfo = {}
     interfaces = config.get('agent', "interfaces").split(",")
     for intf in interfaces:
@@ -62,7 +74,6 @@ def get(config):
         # TODO. It should also calculate reservable capacity depending on installed vlans;
         # Currently we set it to max available;
         nicInfo['reservable_bandwidth'] = int(vlanMax)  # TODO
-    print netInfo
     tmpifAddr = psutil.net_if_addrs()
     tmpifStats = psutil.net_if_stats()
     tmpIOCount = psutil.net_io_counters(pernic=True)
@@ -130,9 +141,19 @@ def get(config):
     for intfName, intfDict in netInfo.iteritems():
         if intfName.split('.')[0] not in foundInterfaces:
             print 'This interface was defined in configuration, but not available. Will not add it to final output'
-            print intfName, intfDict
         else:
             outputForFE["interfaces"][intfName] = intfDict
+    print vlansON
+    for intfName, intfDict in netInfo.iteritems():
+        if intfName.split('.')[0] == 'vlan':
+            for vlankey, vlandict in intfDict['vlans'].items():
+                if vlankey in vlansON.keys():
+                    mainInf = vlansON[vlankey]
+                    outputForFE["interfaces"].setdefault(mainInf, {'vlans': {}})
+                    outputForFE["interfaces"][mainInf]['vlans'][vlankey] = vlandict
+        else:
+            print 'This interface was defined in configuration, but not available. Will not add it to final output'
+            print intfName, intfDict
     # Get Routing Information
     outputForFE["routes"] = getRoutes(config)
     return outputForFE
@@ -167,4 +188,4 @@ def getVlanCount(config):
 
 if __name__ == "__main__":
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig()))
+    PRETTY.pprint(get(getConfig(), getStreamLogger()))

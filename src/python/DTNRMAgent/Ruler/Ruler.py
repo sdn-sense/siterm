@@ -61,6 +61,14 @@ class Ruler(object):
         self.logger.info('End function checkdeltas')
         return evaldict(out[0])
 
+    def vlansProvisioned(self):
+        """ Get all VLANs provisioned and already in place """
+        out = []
+        for fileName in glob.glob("%s/*.json" % self.workDir):
+            inputDict = getFileContentAsJson(fileName)
+            out.append(inputDict)
+        return out
+
     def getHostStates(self, state):
         """ Get All HostStates from Frontend """
         return self.getData("/sitefe/v1/hostnameids/%s/%s" % (self.hostname, state))
@@ -171,7 +179,6 @@ class Ruler(object):
     def checkAllFiles(self):
         """Check All deltas active on the host"""
         self.logger.info('Started function start')
-        # THIS IS TODO
         for fileName in glob.glob("%s/*.json" % self.workDir):
             inputDict = getFileContentAsJson(fileName)
             if 'uid' not in inputDict.keys():

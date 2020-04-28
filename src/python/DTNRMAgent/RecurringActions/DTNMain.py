@@ -48,7 +48,7 @@ def prepareJsonOut(config, logger):
                     msg = '%s name is already defined in output dictionary' % method.NAME
                     logger.error(msg)
                     raise KeyError(msg)
-                tmp = method.get(config)
+                tmp = method.get(config, logger)
                 if not isinstance(tmp, dict):
                     msg = 'Returned output from %s method is not a dictionary. Type: %s' % (method.Name, type(tmp))
                     logger.error(msg)
