@@ -9,7 +9,7 @@ docker run \
        -v $(pwd)/conf/etc/httpd/certs/fullchain.pem:/etc/httpd/certs/fullchain.pem \
        -v $(pwd)/conf/etc/grid-security/hostcert.pem:/etc/grid-security/hostcert.pem \
        -v $(pwd)/conf/etc/grid-security/hostkey.pem:/etc/grid-security/hostkey.pem \
-       -v $(pwd)/conf/opt/config/fe/:/opt/config/fe/ \
+       -v $(pwd)/conf/opt/config/:/opt/config/ \
        -p 8080:80 \
        -p 8443:443 \
        sitefe
