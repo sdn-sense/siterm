@@ -40,9 +40,10 @@ def getVlansOnSystem(config, logger):
     rulerObj = Ruler(config, logger)
     vlansProvs = rulerObj.vlansProvisioned()
     for item in vlansProvs:
-        for hostname, hostdict in item['hosts'].items():
+        for _, hostdict in item['hosts'].items():
             out['vlan.%s' % hostdict['vlan']] = hostdict['destport']
     return out
+
 
 def get(config, logger):
     """Get all network information"""
@@ -173,18 +174,6 @@ def getRoutes(config):
     print routes
     return routes
 
-
-def getVlanCount(config):
-    """ Custom function to get vlanCount """
-    # Count all vlans as if there are multiple interfaces it can have different on each
-    out = get(config)
-    vlanCount = 0
-    for _, intfDict in out.iteritems():
-        if not isinstance(intfDict, dict):
-            continue
-        if not intfDict['provisioned']:
-            vlanCount += len(intfDict['vlans'])
-    return vlanCount
 
 if __name__ == "__main__":
     PRETTY = pprint.PrettyPrinter(indent=4)
