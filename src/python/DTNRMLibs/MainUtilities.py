@@ -214,6 +214,7 @@ def reCacheConfig(prevHour=None):
     currentHour = datetimeNow.strftime('%H')
     return prevHour == currentHour, currentHour
 
+
 class GitConfig(object):
     """ Git based configuration class """
     def __init__(self):
@@ -370,16 +371,19 @@ class contentDB(object):
         self.config = config
         self.logger = logger
 
-    def getFileContentAsJson(self, inputFile):
+    @staticmethod
+    def getFileContentAsJson(inputFile):
         """ Get file content as json """
         return getFileContentAsJson(inputFile)
 
-    def getHash(self, inputText):
+    @staticmethod
+    def getHash(inputText):
         """ Get UUID4 hash """
         newuuid4 = str(uuid.uuid4())
         return str(newuuid4 + inputText)
 
-    def dumpFileContentAsJson(self, outFile, content, newHash=None):
+    @staticmethod
+    def dumpFileContentAsJson(outFile, content, newHash=None):
         """ Dump File content with locks """
         del newHash
         tmpoutFile = outFile + '.tmp'
@@ -393,7 +397,8 @@ class contentDB(object):
         newHash = self.getHash("This-to-replace-with-date-and-Service-Name")
         return self.dumpFileContentAsJson(destFileName, outputDict, newHash)
 
-    def removeFile(self, fileLoc):
+    @staticmethod
+    def removeFile(fileLoc):
         """ Remove file """
         if os.path.isfile(fileLoc):
             os.unlink(fileLoc)

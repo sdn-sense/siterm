@@ -19,7 +19,7 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
-from DTNRMLibs.MainUtilities import getConfig, getLogger, getStreamLogger
+from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 from DTNRMLibs.MainUtilities import evaldict
 
 
@@ -66,7 +66,8 @@ def getinfo(config, logger, nodesInfo=None, site=None):
                 output['vlans'][switch][port][key] = 'UNDEFINED'
             else:
                 output['vlans'][switch][port][key] = config.get(site, "port%s%s" % (port, key))
-        output['switches'][switch][port] = config.get(site, 'port%shostname' % port)
+        if config.has_option(site, "port%shostname" % port):
+            output['switches'][switch][port] = config.get(site, 'port%shostname' % port)
     for _, nodeDict in nodesInfo.items():
         hostinfo = evaldict(nodeDict['hostinfo'])
         for intfKey, intfDict in hostinfo['NetInfo']["interfaces"].items():
@@ -74,12 +75,13 @@ def getinfo(config, logger, nodesInfo=None, site=None):
             breakLoop = False
             for key in ['switch_port', 'switch', 'vlan_range', 'available_bandwidth']:
                 if key not in intfDict.keys():
+                    logger.debug('key %s is not available in intf dict git config', key)
                     breakLoop = True
             if breakLoop:
                 continue
             if intfDict['switch'] in output['switches'].keys():
-                if intfDict['switch_port'] in output['switches'][intfDict['switch']].keys():
-                    logger.info('Datanode is misconfigured. It defines same interface. Will not add to ')
+                if intfDict['switch_port'] not in output['switches'][intfDict['switch']].keys():
+                    logger.debug('Frontend Config is not configured to use this Port %s', intfDict['switch_port'])
                     continue
                 output['switches'][intfDict['switch']][intfDict['switch_port']] = nodeDict['hostname']
                 output['vlans'][intfDict['switch']][intfDict['switch_port']] = {}
@@ -88,6 +90,7 @@ def getinfo(config, logger, nodesInfo=None, site=None):
                 output['vlans'][intfDict['switch']][intfDict['switch_port']]['desttype'] = 'server'
                 output['vlans'][intfDict['switch']][intfDict['switch_port']]['vlan_range'] = intfDict['vlan_range']
                 output['vlans'][intfDict['switch']][intfDict['switch_port']]['capacity'] = intfDict['available_bandwidth']
+                output['vlans'][intfDict['switch']][intfDict['switch_port']]['isAlias'] = 'UNDEFINED'
     if config.has_option(site, "l3_routing_map"):
         routingMap = config.get(site, "l3_routing_map")
         output['l3_routing'] = evaldict(routingMap)

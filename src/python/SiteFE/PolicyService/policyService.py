@@ -284,6 +284,7 @@ class PolicyService(object):
             self.startworkmain(siteName)
 
     def acceptDelta(self, deltapath, sitename):
+        """ Accept delta """
         jOut = getAllHosts(sitename, self.logger)
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
         os.unlink(deltapath)  # File is not needed anymore.
