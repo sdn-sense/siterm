@@ -115,12 +115,12 @@ class LookUpService(object):
         mappings = {}
         if main:
             mappings = {'2': ['address', 'MTU', 'UP', 'broadcast', 'txqueuelen',
-                              'duplex', 'netmask', 'speed'],
+                              'duplex', 'netmask', 'speed', 'ipv4-address', 'ipv6-address'],
                         '10': ['address', 'broadcast', 'netmask'],
                         '17': ['address', 'broadcast', 'netmask', 'mac-address']}
         else:
             mappings = {'2': ['address', 'MTU', 'UP', 'broadcast', 'duplex',
-                              'netmask', 'speed', 'txqueuelen'],
+                              'netmask', 'speed', 'txqueuelen', 'ipv4-address', 'ipv6-address'],
                         '10': ['address', 'broadcast', 'netmask'],
                         '17': ['address', 'broadcast', 'netmask']}
         for dKey, dMappings in mappings.items():
