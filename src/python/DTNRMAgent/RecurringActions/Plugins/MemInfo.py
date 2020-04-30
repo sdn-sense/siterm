@@ -20,12 +20,12 @@ Date			: 2017/09/26
 """
 import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 
 NAME = 'MemInfo'
 
 
-def get(config):
+def get(config, logger):
     """Get memory info from /proc/meminfo"""
     del config
     memInfo = {}
@@ -47,4 +47,4 @@ def get(config):
 
 if __name__ == "__main__":
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig()))
+    PRETTY.pprint(get(getConfig(), getStreamLogger()))
