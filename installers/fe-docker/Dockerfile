@@ -3,6 +3,7 @@ FROM centos:7.7.1908
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
 ENV GITREPO siterm
 ENV GITORG sdn-sense
+ENV GITBR master
 
 RUN adduser apache -U -u 48
 
@@ -12,7 +13,7 @@ RUN yum -y install git sudo && yum clean all
 RUN yum -y install https://repo.opensciencegrid.org/osg/3.5/osg-3.5-el7-release-latest.rpm
 RUN yum -y install osg-ca-certs fetch-crl
 RUN cd /opt/dtnrmcode && git clone https://github.com/$GITORG/$GITREPO
-RUN cd /opt/dtnrmcode/$GITREPO/installers/ && sudo sh ./fresh-siterm-fe-install.sh -R /opt/ -D yes -G $GITREPO -O $GITORG
+RUN cd /opt/dtnrmcode/$GITREPO/installers/ && sudo sh ./fresh-siterm-fe-install.sh -R /opt/ -D yes -G $GITREPO -O $GITORG -B GITBR
 
 RUN mkdir -p /opt/config/fe/{LookUpService,PolicyService,ProvisioningService}
 RUN find /opt/config/fe/ -type f -exec chmod 0644 {} \;

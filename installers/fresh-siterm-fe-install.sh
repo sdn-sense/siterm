@@ -23,11 +23,9 @@
 ##H  -R DIR         ROOT directory for installation;
 ##H  -T DIR         TMP Directory for temporary data;
 ##H  -H HOST        Hostname of this node; By default uses `hostname -f` output
-##H  -P PORT        Time Series database repository port. No default;
-##H  -I IP          Time Series database IP or hostname. No default;
-##H  -U PROTOCOL    Time Series database protocol. By default tcp
 ##H  -G GITREPO     Git Repo to use for installation. default siterm
 ##H  -O GITORG      Git Organization or user. default sdn-sense
+##H  -B GITBR       Git Branch to use. default master
 ##H  -D anyvalue    this flag tells that this is docker installation. It will skip copying config files
 ##H  -h             Display this help.
 
@@ -53,13 +51,10 @@ while [ $# -ge 1 ]; do
   case $1 in
     -R ) rootdir="$2"; shift; shift ;;
     -T ) tmpdir="$2"; shift; shift;;
-    -N ) netdatarelease="$2"; shift; shift;;
     -H ) hostname="$2"; shift; shift;;
-    -P ) tsdport="$2"; shift; shift;;
-    -I ) tsdip="$2"; shift; shift;;
-    -U ) tsdp="$2"; shift; shift;;
     -G ) gitr="$2"; shift; shift;;
     -O ) gito="$2"; shift; shift;;
+    -B ) gitb="$2"; shift; shift;;
     -D ) docker="$2"; shift; shift;;
     -h ) perl -ne '/^##H/ && do { s/^##H ?//; print }' < $0 1>&2; exit 1 ;;
     -* ) echo "$0: unrecognized option $1, use -h for help" 1>&2; exit 1 ;;
@@ -78,27 +73,8 @@ if [ X"$tmpdir" = X ]; then
     tmpdir=/tmp/foo/
 fi
 
-if [ X"$netdatarelease" = X ]; then
-    netdatarelease=1.8.0
-fi
-
 if [ X"$hostname" = X ]; then
     hostname=`hostname -f`
-fi
-
-HISTORYDB=true
-if [ X"$tsdport" = X ]; then
-  echo "WARNING: Repository port is not specified." 1>&2
-  HISTORYDB=false
-fi
-
-if [ X"$tsdp" = X ]; then
-  tsdp=tcp
-fi
-
-if [ X"$tsdip" = X ]; then
-  echo "WARNING: Repository ip is not specified." 1>&2
-  HISTORYDB=false
 fi
 
 if [ X"$gitr" = X ]; then
@@ -107,8 +83,13 @@ if [ X"$gitr" = X ]; then
 fi
 
 if [ X"$gito" = X ]; then
-  echo "WARNING: Git Organization  not set. using default sdn-sense is not specified." 1>&2
+  echo "WARNING: Git Organization not set. using default sdn-sense is not specified." 1>&2
   gito=sdn-sense
+fi
+
+if [ X"$gitb" = X ]; then
+  echo "WARNING: Git Branch not set. using default master is not specified." 1>&2
+  gitb=master
 fi
 
 # =======================================================================
@@ -146,6 +127,7 @@ rm -rf $gitr
 git clone https://github.com/$gito/$gitr
 
 cd $gitr
+git checkout $gitb
 
 if [ X"$docker" = X ]; then
   python setup-sitefe.py install || exit $?
@@ -187,12 +169,10 @@ echo "==================================================================="
 echo "Please check the following things:"
 echo "   1. Configuration changes:"
 echo "      Your configuration is correct on GIT Repo."
-echo "   2. $netdataconf file and that all backend parameters are correct"
-echo "      It should report only to sense-service graphite listener. NOT to sense-dtn"
-echo "   3. Start httpd service"
-echo "   4. Execute all services and see if they work (While it is fresh install, just see if there is no obvious errors):"
+echo "   2. Start httpd service"
+echo "   3. Execute all services and see if they work (While it is fresh install, just see if there is no obvious errors):"
 echo "        a) LookUpService-update: MRML template preparation about all DTNs and Switches. "
 echo "        b) PolicyService-update: That deltas are accepted and it works"
 echo "        c) ProvisioningService-Update: That provisions deltas."
-echo "   5. Make sure firewalld is not running or open port 80/tcp or 443/tcp"
+echo "   4. Make sure firewalld has port 443/tcp"
 exit 0
