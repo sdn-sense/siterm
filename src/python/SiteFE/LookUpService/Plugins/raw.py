@@ -19,6 +19,7 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
+import copy
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 from DTNRMLibs.MainUtilities import evaldict
 
@@ -62,12 +63,23 @@ def getinfo(config, logger, nodesInfo=None, site=None):
         output['vlans'][switch][port] = {}
         for key in ['hostname', 'isAlias', 'vlan_range', 'capacity', 'desttype', 'destport']:
             if not config.has_option(site, "port%s%s" % (port, key)):
-                logger.info('Option %s is not defined for Port.' % key)
-                output['vlans'][switch][port][key] = 'UNDEFINED'
+                logger.info('Option %s is not defined for Port %s' % (key, port))
             else:
                 output['vlans'][switch][port][key] = config.get(site, "port%s%s" % (port, key))
+        output['switches'][switch][port] = ""
         if config.has_option(site, "port%shostname" % port):
             output['switches'][switch][port] = config.get(site, 'port%shostname' % port)
+        else:
+            if config.has_option(site, "port%sisAlias" % port):
+                # Means this is the definition of isAlias to another network:
+                # And we only do this for keys in UNDEFINED
+                spltAlias = config.get(site, 'port%sisAlias' % port).split(':')
+                output['switches'][switch][port] = spltAlias[-2]
+                output['vlans'][switch][port]['desttype'] = 'switch'
+                if 'destport' not in output['vlans'][switch][port].keys():
+                    output['vlans'][switch][port]['destport'] = spltAlias[-1]
+                if 'hostname' not in output['vlans'][switch][port].keys():
+                    output['vlans'][switch][port]['hostname'] = spltAlias[-2]
     for _, nodeDict in nodesInfo.items():
         hostinfo = evaldict(nodeDict['hostinfo'])
         for intfKey, intfDict in hostinfo['NetInfo']["interfaces"].items():
@@ -90,12 +102,25 @@ def getinfo(config, logger, nodesInfo=None, site=None):
                 output['vlans'][intfDict['switch']][intfDict['switch_port']]['desttype'] = 'server'
                 output['vlans'][intfDict['switch']][intfDict['switch_port']]['vlan_range'] = intfDict['vlan_range']
                 output['vlans'][intfDict['switch']][intfDict['switch_port']]['capacity'] = intfDict['available_bandwidth']
-                output['vlans'][intfDict['switch']][intfDict['switch_port']]['isAlias'] = 'UNDEFINED'
+                if 'isAlias' in intfDict.keys():
+                    output['vlans'][intfDict['switch']][intfDict['switch_port']]['isAlias'] = intfDict['isAlias']
     if config.has_option(site, "l3_routing_map"):
         routingMap = config.get(site, "l3_routing_map")
         output['l3_routing'] = evaldict(routingMap)
     print output
-    return output
+    # Final check to remove empty listings.
+    # e.g. Frontend defined port - but no hosts registered to this port;
+    tmpOut = copy.deepcopy(output)
+    for sw, swd in output['switches'].items():
+        if not swd:
+            del tmpOut['switches'][sw]
+            continue
+        for swp, swpVal in output['switches'][sw].items():
+            if not swpVal:
+                del tmpOut['switches'][sw][swp]
+                continue
+    print tmpOut
+    return tmpOut
 
 if __name__ == '__main__':
     print 'WARNING!!!! This should not be used through main call. Only for testing purposes!!!'
