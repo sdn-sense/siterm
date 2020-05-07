@@ -2,13 +2,13 @@ FROM centos:7.7.1908
 
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
 ENV GITREPO siterm
-ENV GITORG juztas
-ENV GITBR updatefixes
+ENV GITORG sdn-sense
+ENV GITBR master
 
 RUN adduser apache -U -u 48
 
 RUN mkdir -p /opt/ && mkdir -p /opt/config/fe/ && mkdir -p /opt/dtnrmcode
-RUN mkdir -p /etc/httpd/certs/ && mkdir -p /etc/httpd/conf.d/
+RUN mkdir -p /etc/httpd/certs/ && mkdir -p /etc/httpd/conf.d/ && mkdir -p /etc/grid-security/certificates
 RUN yum -y install git sudo && yum clean all
 RUN cd /opt/dtnrmcode && git clone -b $GITBR https://github.com/$GITORG/$GITREPO
 RUN cd /opt/dtnrmcode/$GITREPO/installers/ && sudo sh ./fresh-siterm-fe-install.sh -R /opt/ -D yes -G $GITREPO -O $GITORG -B $GITBR
