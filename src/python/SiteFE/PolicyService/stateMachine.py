@@ -34,8 +34,6 @@ def timeendcheck(delta, logger):
                 return True
             else:
                 logger.info('Time did not passed yet.')
-        else:
-            logger.info('There is no timeend defined inside the Parsed Delta')
     except:
         logger.info('This delta had an error checking endtime. Leaving state as it is.')
     return False
