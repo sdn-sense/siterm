@@ -38,7 +38,8 @@ class CertHandler(object):
             self.allowedCerts[userinfo['full_dn']]['username'] = user
             self.allowedCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
 
-    def getCertInfo(self, environ):
+    @staticmethod
+    def getCertInfo(environ):
         """ Get certificate info """
         out = {}
         if 'SSL_CLIENT_CERT' not in environ:
@@ -46,15 +47,18 @@ class CertHandler(object):
             raise Exception('Unauthorized access')
         cert = crypto.load_certificate(crypto.FILETYPE_PEM, environ['SSL_CLIENT_CERT'])
         subject = cert.get_subject()
-        out['subject'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode()) for name, value in subject.get_components())
+        out['subject'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode())
+                                 for name, value in subject.get_components())
         out['notAfter'] = int(time.mktime(datetime.strptime(str(cert.get_notAfter()), '%Y%m%d%H%M%SZ').timetuple()))
         out['notBefore'] = int(time.mktime(datetime.strptime(str(cert.get_notBefore()), '%Y%m%d%H%M%SZ').timetuple()))
-        out['issuer'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode()) for name, value in cert.get_issuer().get_components())
+        out['issuer'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode())
+                                for name, value in cert.get_issuer().get_components())
         out['fullDN'] = "%s%s" % (out['issuer'], out['subject'])
         print 'Cert Info: %s' % out
         return out
 
     def validateCertificate(self, environ):
+        """ Validate certification validity """
         now = datetime.utcnow()
         timestamp = int(time.mktime(now.timetuple()))
         if 'CERTINFO' not in environ:
@@ -65,11 +69,11 @@ class CertHandler(object):
                 raise Exception('Unauthorized access')
         # Check time before
         if environ['CERTINFO']['notBefore'] > timestamp:
-            print 'Certificate Invalid. Current Timestamp: %s NotBefore: %s' % (timestamp, environ['CERTINFO']['notBefore'])
+            print 'Certificate Invalid. Current Time: %s NotBefore: %s' % (timestamp, environ['CERTINFO']['notBefore'])
             raise Exception('Certificate Invalid')
         # Check time after
         if environ['CERTINFO']['notAfter'] < timestamp:
-            print 'Certificate Invalid. Current Timestamp: %s NotAfter: %s' % (timestamp, environ['CERTINFO']['notAfter'])
+            print 'Certificate Invalid. Current Time: %s NotAfter: %s' % (timestamp, environ['CERTINFO']['notAfter'])
             raise Exception('Certificate Invalid')
         # Check DN in authorized list
         if environ['CERTINFO']['fullDN'] not in self.allowedCerts.keys():

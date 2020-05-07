@@ -10,9 +10,7 @@ Changes applied to this code:
 import sys
 import time
 from DTNRMLibs.Daemonizer import Daemon
-from DTNRMLibs.MainUtilities import getLogger
-from DTNRMLibs.MainUtilities import getStreamLogger
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getConfig, reCacheConfig, getStreamLogger, getLogger
 from SiteFE.ProvisioningService import provisioningService as prsS
 
 CONFIG = getConfig()
@@ -24,24 +22,33 @@ class MyDaemon(Daemon):
     """ My own Deamon override """
     def run(self):
         """ Run main execution """
-        provisioner = prsS.ProvisioningService(config=CONFIG, logger=LOGGER, args=None)
+        timeeq, currentHour = reCacheConfig(None)
+        provisioner = prsS.ProvisioningService(config=getConfig(), logger=LOGGER, args=None)
         while True:
             try:
                 time.sleep(20)
                 provisioner.startwork()
+            except KeyboardInterrupt as ex:
+                LOGGER.critical("Received KeyboardInterrupt: %s ", ex)
+                exit(3)
             except:
-                LOGGER.info('There was uncaught exception')
+                # TODO. Have a way to report this upstream that there was an unknown type except.
+                # In this case we can solve these issues if there ar some with any service.
                 excType, excValue = sys.exc_info()[:2]
                 LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
                 time.sleep(20)
+            timeeq, currentHour = reCacheConfig(currentHour)
+            if not timeeq:
+                LOGGER.info('Re initiating Provisioning Service with new configuration from GIT')
+                del provisioner
+                provisioner = prsS.ProvisioningService(config=getConfig(), logger=LOGGER, args=None)
 
 if __name__ == "__main__":
     DAEMON = MyDaemon('/tmp/dtnrm-ProvisioningService.pid')
-    options = ['start', 'stop', 'restart', 'startforeground', 'status']
     if len(sys.argv) != 2:
-        print 'ERROR: Options available: %s ' % options
+        print 'ERROR: Options available: %s ' % DAEMON.availableCommands
         exit(1)
-    if sys.argv[1] in options:
+    if sys.argv[1] in DAEMON.availableCommands:
         if sys.argv[1] == 'startforeground':
             LOGGER = getStreamLogger()
         DAEMON.command(sys.argv[1], sys.argv[0])

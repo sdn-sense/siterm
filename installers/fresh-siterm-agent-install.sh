@@ -23,16 +23,12 @@
 ##H  -R DIR         ROOT directory for installation;
 ##H  -T DIR         TMP Directory for temporary data;
 ##H  -H HOST        Hostname of this node; By default uses `hostname -f` output
-##H  -P PORT        Time Series database repository port. No default;
-##H  -I IP          Time Series database IP or hostname. No default;
-##H  -U PROTOCOL    Time Series database protocol. By default tcp
 ##H  -G GITREPO     Git Repo to use for installation. default siterm
 ##H  -O GITORG      Git Organization or user. default sdn-sense
+##H  -B GITBR       Git Branch to use. default master
 ##H  -D anyvalue    this flag tells that this is docker installation. It will skip copying config files
 ##H  -h             Display this help.
 
-# TODO also force to specify FE URL, FE Port; TSDB parameters it should get from FE.
-# Other configuration users have to specify by himself.
 workdir=`pwd`
 packages="git autoconf automake sudo libffi-devel openssl-devel curl gcc traceroute libmnl-devel libuuid-devel lm_sensors ipset make MySQL-python nc pkgconfig python python-psycopg2 PyYAML zlib-devel python-devel wget vconfig tcpdump jq iproute"
 # Check if release is supported.
@@ -52,13 +48,10 @@ while [ $# -ge 1 ]; do
   case $1 in
     -R ) rootdir="$2"; shift; shift ;;
     -T ) tmpdir="$2"; shift; shift;;
-    -N ) netdatarelease="$2"; shift; shift;;
     -H ) hostname="$2"; shift; shift;;
-    -P ) tsdport="$2"; shift; shift;;
-    -I ) tsdip="$2"; shift; shift;;
-    -U ) tsdp="$2"; shift; shift;;
     -G ) gitr="$2"; shift; shift;;
     -O ) gito="$2"; shift; shift;;
+    -B ) gitb="$2"; shift; shift;;
     -D ) docker="$2": shift; shift;;
     -h ) perl -ne '/^##H/ && do { s/^##H ?//; print }' < $0 1>&2; exit 1 ;;
     -* ) echo "$0: unrecognized option $1, use -h for help" 1>&2; exit 1 ;;
@@ -77,27 +70,8 @@ if [ X"$tmpdir" = X ]; then
     tmpdir=/tmp/foo/
 fi
 
-if [ X"$netdatarelease" = X ]; then
-    netdatarelease=1.8.0
-fi
-
 if [ X"$hostname" = X ]; then
     hostname=`hostname -f`
-fi
-
-HISTORYDB=true
-if [ X"$tsdport" = X ]; then
-  HISTORYDB=false
-  echo "WARNING: Repository port is not specified." 1>&2
-fi
-
-if [ X"$tsdp" = X ]; then
-  tsdp=tcp
-fi
-
-if [ X"$tsdip" = X ]; then
-  HISTORYDB=false
-  echo "WARNING: Repository ip is not specified." 1>&2
 fi
 
 if [ X"$gitr" = X ]; then
@@ -106,10 +80,14 @@ if [ X"$gitr" = X ]; then
 fi
 
 if [ X"$gito" = X ]; then
-  echo "WARNING: Git Organization  not set. using default sdn-sense is not specified." 1>&2
+  echo "WARNING: Git Organization not set. using default sdn-sense is not specified." 1>&2
   gito=sdn-sense
 fi
 
+if [ X"$gitb" = X ]; then
+  echo "WARNING: Git Branch not set. using default master is not specified." 1>&2
+  gitb=master
+fi
 
 # =======================================================================
 # Checking if running as root
@@ -135,28 +113,6 @@ cd $tmpdir
 wget https://bootstrap.pypa.io/get-pip.py
 python get-pip.py
 
-# Check if netdata is already installed. If it is skip re-installing
-service netdata status
-netdataExit=$?
-if [ "$netdataExit" -ne 0 ]; then
-  echo "==================================================================="
-  echo "Installing netdata release $netdatarelease"
-  # Receive netdata release and also untar it
-  rm -rf $tmpdir/netdata-$netdatarelease
-  cd $tmpdir
-  [ -f netdata-$netdatarelease.tar.gz ] || wget https://github.com/firehol/netdata/releases/download/v$netdatarelease/netdata-$netdatarelease.tar.gz || exit $?
-  tar -xf netdata-$netdatarelease.tar.gz -C $tmpdir || exit $?
-  cd $tmpdir/netdata-$netdatarelease
-  ./netdata-installer.sh --dont-wait --install $rootdir || exit $?
-  cd ..
-  rm -rf $tmpdir/netdata-$netdatarelease
-  # Append few configs so that netdata consumes less memory
-  echo 1 >/sys/kernel/mm/ksm/run
-  echo 1000 >/sys/kernel/mm/ksm/sleep_millisecs
-else
-  echo "Netdata is already installed. Skipping re-installation"
-fi
-
 echo "==================================================================="
 echo "We need latest setuptools to be able to install dtnrm package. Updating setuptools"
 pip install --upgrade setuptools
@@ -165,45 +121,13 @@ echo "==================================================================="
 echo "Cloning siterm and installing it"
 cd $rootdir
 rm -rf $gitr
-git clone https://github.com/$gito/$gitr
+git clone -b $gitb https://github.com/$gito/$gitr
 cd $gitr
+
 if [ X"$docker" = X ]; then
   python setup-agent.py install || exit $?
 else
   python setup-agent.py install --docker || exit $?
-fi
-
-echo "==================================================================="
-if [ "$HISTORYDB" = true ] ; then
-  echo "Copying netdata configuration file and modifying it"
-  netdataconf=$rootdir/netdata/etc/netdata/netdata.conf
-  if [ -f $netdataconf ]; then
-    echo "Current config file:"
-    cat $netdataconf
-    echo ""
-    echo "-------------------------------------------------------------------"
-  fi
-  if [ -f packaging/netdata.conf ]; then
-    echo "Overwriting with temporary config file:"
-    cat packaging/netdata.conf
-    cp packaging/netdata.conf $netdataconf
-    echo ""
-    echo "-------------------------------------------------------------------"
-  fi
-  perl -pi -e "s/##HOSTNAME##/$hostname/g" $netdataconf
-  perl -pi -e "s/##REPOPORT##/$tsdport/g" $netdataconf
-  perl -pi -e "s/##REPOIP##/$tsdip/g" $netdataconf
-  perl -pi -e "s/##REPOPROT##/$tsdp/g" $netdataconf
-  echo "Final configuration file:"
-  cat $netdataconf
-  echo ""
-  echo "==================================================================="
-  echo "Restarting netdata"
-  # SLC6 is still missing this: https://github.com/firehol/netdata/pull/2805
-  sudo service netdata restart
-else
-  echo "WARNING: Netdata configuration was not modified. you will have to do it by hand."
-  echo "-------------------------------------------------------------------"
 fi
 
 for x in iprange firehol
@@ -246,9 +170,7 @@ echo "                       INSTALLATION DONE                           "
 echo "==================================================================="
 echo "Please check the following things:"
 echo "   1. Make sure your GIT Config is ok in official GIT Repo"
-echo "   2. $netdataconf file and that all backend parameters are correct if want to backup endhost metrics."
-echo "      It should report only to sensedtn opentsdb listener"
-echo "   3. Service to start:"
+echo "   2. Service to start:"
 echo "         a) 'dtnrmagent-update start' which updates about all information of DTN"
 echo "         b) 'dtnrm-ruler start' which looks for new requests and applies rules"
 echo "         c) 'dtnrm-nettester start' (OPTIONAL) This is network tester which will start transfers automatically"

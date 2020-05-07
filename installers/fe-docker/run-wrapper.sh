@@ -9,6 +9,13 @@ exec 1>log.out 2>&1
 set -x
 set -m
 
+# Remove yaml files to prefetch from scratch;
+rm -f /tmp/*-mapping.yaml
+rm -f /tmp/*-FE-main.yaml
+rm -f /tmp/*-FE-auth.yaml
+# Remove any PID files left afer reboot/stop.
+rm -f /tmp/dtnrm*.pid
+
 # As first run, Run Custom CA prefetch and add them to CAs dir.
 sh /etc/cron-scripts/siterm-ca-cron.sh
 
@@ -33,38 +40,40 @@ if [ $status -ne 0 ]; then
   echo "Failed to start httpd: $status"
   exit_code=1
 fi
-sleep 30
+
 # Start the second process
-sudo -u root /usr/bin/LookUpService-update startforeground &
+sudo -u root /usr/bin/LookUpService-update restart &
 status=$?
 if [ $status -ne 0 ]; then
-  echo "Failed to start LookUpService-update: $status"
+  echo "Failed to restart LookUpService-update: $status"
   exit_code=2
 fi
 sleep 5
 # Start the third process
-sudo -u root /usr/bin/PolicyService-update startforeground &
+sudo -u root /usr/bin/PolicyService-update restart &
 status=$?
 if [ $status -ne 0 ]; then
-  echo "Failed to start PolicyService-update: $status"
+  echo "Failed to restart PolicyService-update: $status"
   exit_code=3
 fi
 sleep 5
 # Start the fourth process
-sudo -u root /usr/bin/ProvisioningService-update startforeground &
+sudo -u root /usr/bin/ProvisioningService-update restart &
 status=$?
 if [ $status -ne 0 ]; then
-  echo "Failed to start ProvisioningService-update: $status"
+  echo "Failed to restart ProvisioningService-update: $status"
   exit_code=4
 fi
-sleep 5
 # Naive check runs checks once a minute to see if either of the processes exited.
 # This illustrates part of the heavy lifting you need to do if you want to run
 # more than one service in a container. The container exits with an error
 # if it detects that either of the processes has exited.
 # Otherwise it loops forever, waking up every 60 seconds
+sleep 5
+echo "Making apache as owner of $datadir"
+chown apache:apache -R $datadir
 
-while sleep 10; do
+while sleep 30; do
   ps aux |grep httpd |grep -q -v grep
   PROCESS_1_STATUS=$?
   ps aux |grep LookUpService-update |grep -q -v grep
@@ -86,4 +95,4 @@ while sleep 10; do
   fi
 done
 echo "We just got break. Endlessly sleep for debugging purpose."
-while true; do sleep 1; done
+while true; do sleep 120; done

@@ -127,7 +127,8 @@ class ProvisioningService(object):
             return {}
         return evaldict(agents[0])
 
-    def getAllAliases(self, switches):
+    @staticmethod
+    def getAllAliases(switches):
         """ Get All Aliases """
         out = []
         if not switches:
@@ -149,6 +150,7 @@ class ProvisioningService(object):
             self.startworkmain()
 
     def startworkmain(self):
+        """ Start Provisioning Service main worker """
         fullURL = getFullUrl(self.config, sitename=self.sitename)
         jOut = self.getData(fullURL, "/sitefe/json/frontend/getdata")
         workDir = self.config.get('general', 'privatedir') + "/ProvisioningService/"

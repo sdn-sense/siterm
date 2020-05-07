@@ -8,21 +8,28 @@ exec 1>log.out 2>&1
 
 set -x
 set -m
+
+# Remove yaml files to prefetch from scratch;
+rm -f /tmp/*-mapping.yaml
+rm -f /tmp/*Agent-main.yaml
+# Remove any PID files left from reboot/stop.
+rm -f /tmp/dtnrm*-update.pid
+
 chown -R apache:apache  /opt/siterm/config/
 # Start the first process
-sudo -u root /usr/bin/dtnrmagent-update start
+sudo -u root /usr/bin/dtnrmagent-update restart
 status=$?
 exit_code=0
 if [ $status -ne 0 ]; then
-  echo "Failed to start dtnrmagent-update: $status"
+  echo "Failed to restart dtnrmagent-update: $status"
   exit_code=1
 fi
 sleep 5
 # Start the second process
-sudo -u root /usr/bin/dtnrm-ruler start
+sudo -u root /usr/bin/dtnrm-ruler restart
 status=$?
 if [ $status -ne 0 ]; then
-  echo "Failed to start dtnrm-ruler: $status"
+  echo "Failed to restart dtnrm-ruler: $status"
   exit_code=2
 fi
 # Naive check runs checks once a minute to see if either of the processes exited.
@@ -31,7 +38,7 @@ fi
 # if it detects that either of the processes has exited.
 # Otherwise it loops forever, waking up every 60 seconds
 
-while sleep 10; do
+while sleep 30; do
   ps aux |grep dtnrmagent-update |grep -q -v grep
   PROCESS_1_STATUS=$?
   ps aux |grep dtnrm-ruler |grep -q -v grep
@@ -47,4 +54,4 @@ while sleep 10; do
   fi
 done
 echo "We just got break. Endlessly sleep for debugging purpose."
-while true; do sleep 1; done
+while true; do sleep 120; done
