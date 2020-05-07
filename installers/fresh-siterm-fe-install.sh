@@ -124,10 +124,9 @@ echo "==================================================================="
 echo "Cloning siterm and installing it"
 cd $rootdir
 rm -rf $gitr
-git clone https://github.com/$gito/$gitr
+git clone -b $gitb https://github.com/$gito/$gitr
 
 cd $gitr
-git checkout $gitb
 
 if [ X"$docker" = X ]; then
   python setup-sitefe.py install || exit $?
