@@ -65,7 +65,13 @@ def getinfo(config, logger, nodesInfo=None, site=None):
             if not config.has_option(site, "port%s%s" % (port, key)):
                 logger.info('Option %s is not defined for Port %s' % (key, port))
             else:
-                output['vlans'][switch][port][key] = config.get(site, "port%s%s" % (port, key))
+                if key == 'capacity':
+                    # TODO. Allow in future to specify in terms of G,M,B. For now only G
+                    # and we change it to bits
+                    tmpVal = int(config.get(site, "port%s%s" % (port, key)))
+                    output['vlans'][switch][port][key] = tmpVal * 1000000000
+                else:
+                    output['vlans'][switch][port][key] = config.get(site, "port%s%s" % (port, key))
         output['switches'][switch][port] = ""
         if config.has_option(site, "port%shostname" % port):
             output['switches'][switch][port] = config.get(site, 'port%shostname' % port)
