@@ -57,7 +57,6 @@ def getError(ex):
 def getConnInfo(bidPort, prefixSite, output, nostore=False):
     """ Get Connection Info. Mainly ports. """
     nName = filter(None, bidPort[len(prefixSite):].split(':'))
-    print nName
     if nostore:
         return nName[2], output
     output.setdefault('hosts', {})
@@ -146,35 +145,38 @@ class PolicyService(object):
     def __parsel3Request(self, inFileName, allKnownHosts, sitename, prefixes, gIn):
         """ Parse Layer 3 Delta Request """
         del inFileName, sitename
-        outall = {'hosts': {}}
+        outall = {}
+        found = False
         for hostname in allKnownHosts.keys():
+            if found:
+                self.logger.info('Currently it supports only single L3 Request. L3 Request was already found. Skipping search for %s' % hostname)
+                continue
             connectionID = None
-            outall['hosts'].setdefault(hostname, {})
             prefixes['mainrst'] = URIRef("%s:%s:service+rst" % (prefixes['site'], hostname))
             self.logger.info('Lets try to get connection ID subject for %s' % prefixes['mainrst'])
             out = self.queryGraph(gIn, prefixes['mainrst'],
                                   search=URIRef('%s%s' % (prefixes['mrs'], 'providesRoutingTable')))
             if not out:
-                msg = 'Connection ID was not received. Something is wrong...'
+                msg = 'Connection ID was not received. Continue'
                 self.logger.info(msg)
-                return {}
+                continue
             if len(out) > 1:
                 self.logger.info(out)
                 msg = 'Received multiple connection IDs. Something is wrong...'
                 self.logger.info(msg)
-                return {}
+                continue
+            outall.setdefault('hosts', {})
+            outall['hosts'].setdefault(hostname, {})
             outall['connectionID'] = str(out[0])
             outall['hosts'][hostname]['routes'] = []
             connectionID = out[0]
             self.logger.info('This is our connection ID: %s' % connectionID)
             self.logger.info('Now lets get all info what it wants to do. Mainly nextHop, routeFrom, routeTo')
             bidPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['mrs'], 'hasRoute')))
-            print bidPorts
             for bidPort in bidPorts:
                 route = {}
                 for flag in ['nextHop', 'routeFrom', 'routeTo']:
                     route.setdefault(flag, {})
-                    print bidPort, flag
                     out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['mrs'], flag)))
                     if not out:
                         continue
@@ -223,13 +225,11 @@ class PolicyService(object):
         for bidPort in bidPorts:
             # Get first which labels it has. # This provides us info about vlan tag
             connInfo, output = getConnInfo(bidPort, prefixes['site'], output, nostore=True)
-            print connInfo, allKnownHosts.keys()
             if connInfo not in allKnownHosts:
                 print 'Ignore %s' % connInfo
                 continue
             connInfo, output = getConnInfo(bidPort, prefixes['site'], output)
             alias = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['nml'], 'isAlias')))
-            print alias, bidPorts
             if alias and alias[0] not in bidPorts:
                 self.logger.info('Received alias for %s to %s' % (bidPort, alias))
                 bidPorts.append(alias[0])
@@ -254,12 +254,10 @@ class PolicyService(object):
             if out:
                 for key in ['availableCapacity', 'granularity', 'maximumCapacity',
                             'priority', 'reservableCapacity', 'type', 'unit']:
-                    print key
                     tmpout = self.queryGraph(gIn, out[0], search=URIRef('%s%s' % (prefixes['mrs'], key)))
                     if len(tmpout) >= 1:
                         serviceparams[key] = str(tmpout[0])
             output['hosts'][connInfo]['params'].append(serviceparams)
-        print output
         return output
 
     def reductionCompare(self, sitename, redID):
@@ -327,7 +325,6 @@ class PolicyService(object):
                 # If key is reduction. Find out which one.
                 # So this check will not be needed anymore.
                 dtype = key
-                print outputDict
                 connID = outputDict[key]['connectionID']
                 if key == 'reduction':
                     if "ReductionID" not in outputDict.keys():
@@ -385,7 +382,6 @@ if __name__ == '__main__':
     print 'Otherwise, it will check frontend for new deltas'
     print sys.argv
     if len(sys.argv) == 3:
-        print 'CUSTOM'
         execute(args=sys.argv, logger=getStreamLogger())
     else:
         execute(logger=getStreamLogger())
