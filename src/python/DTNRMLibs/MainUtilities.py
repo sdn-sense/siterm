@@ -229,23 +229,30 @@ class GitConfig(object):
     def _gitConfigCache(self, name, url):
         """ Precache file for 1 hour from git and use cached file """
         output = None
-        datetimeNow = datetime.datetime.now()
-        filename = '/tmp/%s-%s.yaml' % (datetimeNow.strftime('%Y-%m-%d-%H'), name)
-        if os.path.isfile(filename):
-            self.logger.debug('Using cached configuration file %s', filename)
+        if os.path.isfile('/tmp/dtnrm-no-config-fetch.yaml'):
+            filename = '/tmp/dtnrm-link-%s.yaml' % name
             with open(filename, 'r') as fd:
                 output = yload(fd.read())
         else:
-            datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
-            prevfilename = '/tmp/%s-%s.yaml' % (datetimelasthour.strftime('%Y-%m-%d-%H'), name)
-            if os.path.isfile(prevfilename):
-                self.logger.debug('Remove previous old cache file %s', prevfilename)
-                os.remove(prevfilename)
-            self.logger.debug('Receiving new file from GIT for %s', name)
-            outyaml = getWebContentFromURL(url).text
-            with open(filename, 'w') as fd:
-                fd.write(outyaml)
-            output = yload(outyaml)
+            datetimeNow = datetime.datetime.now()
+            filename = '/tmp/%s-%s.yaml' % (datetimeNow.strftime('%Y-%m-%d-%H'), name)
+            if os.path.isfile(filename):
+                self.logger.debug('Using cached configuration file %s', filename)
+                with open(filename, 'r') as fd:
+                    output = yload(fd.read())
+            else:
+                datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
+                prevfilename = '/tmp/%s-%s.yaml' % (datetimelasthour.strftime('%Y-%m-%d-%H'), name)
+                if os.path.isfile(prevfilename):
+                    self.logger.debug('Remove previous old cache file %s', prevfilename)
+                    os.remove(prevfilename)
+                    os.remove('/tmp/dtnrm-link-%s.yaml' % name)
+                self.logger.debug('Receiving new file from GIT for %s', name)
+                outyaml = getWebContentFromURL(url).text
+                with open(filename, 'w') as fd:
+                    fd.write(outyaml)
+                os.symlink(filename, '/tmp/dtnrm-link-%s.yaml' % name)
+                output = yload(outyaml)
         return output
 
     def getFullGitUrl(self, customAdds=None):
