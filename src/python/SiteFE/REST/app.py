@@ -63,7 +63,7 @@ _INITIALIZED = None
 _CP = None
 # Frontend Resource manager
 _FRONTEND_RM = FrontendRM()
-
+_SITES = []
 
 # TODO Separate app and put to correct locations AppCalls and Models.
 # TODO Return should check what is return type so that it returns json dump or text.
@@ -75,8 +75,11 @@ def check_initialized(environ):
     """Env and configuration initialization"""
     global _INITIALIZED
     global _CP
+    global _SITES
     if not _INITIALIZED:
         _CP = getConfig()
+        for sitename in _CP.get('general', 'sites').split(','):
+            _SITES.append(sitename)
         _INITIALIZED = True
 
 # =====================================================================================================================
@@ -155,6 +158,7 @@ def application(environ, start_response):
     # HTTP responses var
     httpResponder = HTTPResponses()
     check_initialized(environ)
+    global _SITES
     certHandler = CertHandler()
     try:
         environ['CERTINFO'] = certHandler.getCertInfo(environ)
@@ -164,7 +168,10 @@ def application(environ, start_response):
         httpResponder.ret_401('application/json', start_response, None)
         return [json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=401))]
     path = environ.get('PATH_INFO', '').lstrip('/')
-    sitename = environ.get('REQUEST_URI', '').split('/')[1]  # TODO. DO Check for SiteName in conf
+    sitename = environ.get('REQUEST_URI', '').split('/')[1]
+    if sitename not in _SITES:
+        httpResponder.ret_404('application/json', start_response, None)
+        return [json.dumps(getCustomOutMsg(errMsg="Sitename %s is not configured. Contact Support." % sitename, errCode=404))]
     for regex, callback, methods, params, acceptheader in URLS:
         match = regex.match(path)
         if match:
