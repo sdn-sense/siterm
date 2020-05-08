@@ -23,36 +23,20 @@ import sys
 from setuptools import setup
 from setupUtilities import list_packages, get_py_modules
 
-if "--docker" not in sys.argv:
-    setup(
-        name='DTNRMAgent',
-        version="0.1",
-        long_description="DTN-RM Agent installation",
-        author="Justas Balcas",
-        author_email="justas.balcas@cern.ch",
-        url="https://hep.caltech.edu",
-        download_url="https://github.com/sdn-sense/siterm",
-        keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
-        package_dir={'': 'src/python/'},
-        packages=['DTNRMAgent', 'DTNRMLibs'] + list_packages(['src/python/DTNRMAgent/', 'src/python/DTNRMLibs/']),
-        install_requires=['importlib==1.0.4', 'psutil==5.2.2', 'potsdb', 'ipaddress', 'pyroute2', 'pyaml', 'requests', 'netifaces'],
-        py_modules=get_py_modules(['src/python/DTNRMAgent', 'src/python/DTNRMLibs']),
-        scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler"]
-    )
-else:
+if "--docker" in sys.argv:
     sys.argv.remove("--docker")
-    setup(
-        name='DTNRMAgent',
-        version="0.1",
-        long_description="DTN-RM Agent installation",
-        author="Justas Balcas",
-        author_email="justas.balcas@cern.ch",
-        url="https://hep.caltech.edu",
-        download_url="https://github.com/sdn-sense/siterm",
-        keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
-        package_dir={'': 'src/python/'},
-        packages=['DTNRMAgent', 'DTNRMLibs'] + list_packages(['src/python/DTNRMAgent/', 'src/python/DTNRMLibs/']),
-        install_requires=['importlib==1.0.4', 'psutil==5.2.2', 'potsdb', 'ipaddress', 'pyroute2', 'pyyaml', 'requests', 'netifaces'],
-        py_modules=get_py_modules(['src/python/DTNRMAgent', 'src/python/DTNRMLibs']),
-        scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler"]
-    )
+setup(
+    name='DTNRMAgent',
+    version="0.1",
+    long_description="DTN-RM Agent installation",
+    author="Justas Balcas",
+    author_email="justas.balcas@cern.ch",
+    url="https://hep.caltech.edu",
+    download_url="https://github.com/sdn-sense/siterm",
+    keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
+    package_dir={'': 'src/python/'},
+    packages=['DTNRMAgent', 'DTNRMLibs'] + list_packages(['src/python/DTNRMAgent/', 'src/python/DTNRMLibs/']),
+    install_requires=['importlib==1.0.4', 'psutil==5.2.2', 'potsdb', 'ipaddress', 'pyroute2', 'pyaml', 'requests', 'netifaces'],
+    py_modules=get_py_modules(['src/python/DTNRMAgent', 'src/python/DTNRMLibs']),
+    scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler"]
+)

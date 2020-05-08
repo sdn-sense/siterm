@@ -31,46 +31,25 @@ SCRIPTS = []
 for sectionName in ['LookUpService', 'PolicyService', 'ProvisioningService']:
     SCRIPTS.append('packaging/dtnrm-site-fe/centos7/%s-update' % sectionName)
 
-#  This is bare metal instalation which means config files should be added,
-#  while it is not done for docker as they are on HOST os.
-if "--docker" not in sys.argv:
-    setup(
-        name='DTNRMSiteFE',
-        version="0.1",
-        long_description="DTN-RM Site installation",
-        author="Justas Balcas",
-        author_email="justas.balcas@cern.ch",
-        url="https://hep.caltech.edu",
-        download_url="https://github.com/juztas/dtnrm/tarball/0.1",
-        keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
-        package_dir={'': 'src/python/'},
-        packages=['SiteFE', 'DTNRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/DTNRMLibs/']),
-        install_requires=['rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5', 'pyaml', 'requests'],
-        data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
-                    ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
-                                            "packaging/dtnrm-site-fe/welcome.conf"]),
-                    ("/etc/cron.d/", ["packaging/dtnrm-site-fe/siterm-ca-cron"]),
-                    ("/etc/cron-scripts/", ["packaging/dtnrm-site-fe/siterm-ca-cron.sh"])],
-        py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
-        scripts=SCRIPTS
-    )
-else:
+if "--docker" in sys.argv:
     sys.argv.remove("--docker")
-    setup(
-        name='DTNRMSiteFE',
-        version="0.1",
-        long_description="DTN-RM Site installation",
-        author="Justas Balcas",
-        author_email="justas.balcas@cern.ch",
-        url="https://hep.caltech.edu",
-        download_url="https://github.com/juztas/dtnrm/tarball/0.1",
-        keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
-        package_dir={'': 'src/python/'},
-        packages=['SiteFE', 'DTNRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/DTNRMLibs/']),
-        install_requires=['pyparsing==1.5.7', 'rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5', 'pyyaml', 'requests'],
-        data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
-                    ("/etc/cron.d/", ["packaging/dtnrm-site-fe/siterm-ca-cron"]),
-                    ("/etc/cron-scripts/", ["packaging/dtnrm-site-fe/siterm-ca-cron.sh"])],
-        py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
-        scripts=SCRIPTS
-    )
+setup(
+    name='DTNRMSiteFE',
+    version="0.1",
+    long_description="DTN-RM Site installation",
+    author="Justas Balcas",
+    author_email="justas.balcas@cern.ch",
+    url="https://hep.caltech.edu",
+    download_url="https://github.com/sdn-sense/siterm/tarball/0.1",
+    keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
+    package_dir={'': 'src/python/'},
+    packages=['SiteFE', 'DTNRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/DTNRMLibs/']),
+    install_requires=['pyparsing==1.5.7', 'rdflib==4.2.2', 'importlib==1.0.4', 'setuptools==39.1.0', 'python-dateutil==2.7.5', 'pyaml', 'requests'],
+    data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
+                ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
+                                        "packaging/dtnrm-site-fe/welcome.conf"]),
+                ("/etc/cron.d/", ["packaging/dtnrm-site-fe/siterm-ca-cron"]),
+                ("/etc/cron-scripts/", ["packaging/dtnrm-site-fe/siterm-ca-cron.sh"])],
+    py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
+    scripts=SCRIPTS
+)
