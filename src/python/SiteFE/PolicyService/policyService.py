@@ -303,8 +303,7 @@ class PolicyService(object):
                         tmpFile.write(decodebase64(toDict["Content"][key]))
                     tmpFile.close()
                     outputDict[key] = self.parseDeltaRequest(tmpFile.name, jOut, sitename)
-                    self.logger.info("For %s this is delta location %s" % (key, tmpFile.name))
-                    # os.unlink(tmpFile.name)
+                    os.unlink(tmpFile.name)
         except (IOError, KeyError, AttributeError, IndentationError, ValueError,
                 BadSyntax, HostNotFound, UnrecognizedDeltaOption) as ex:
             outputDict = getError(ex)
