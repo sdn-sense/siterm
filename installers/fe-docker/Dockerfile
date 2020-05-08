@@ -18,6 +18,7 @@ RUN find /opt/config/fe/ -type f -exec chmod 0644 {} \;
 RUN find /opt/config/fe/ -type d -exec chmod 0755 {} \;
 RUN chown apache:apache -R /opt/config/fe/
 COPY sqlite.db /opt/config/fe/
+RUN rm -f /etc/httpd/conf.d/ssl.conf
 
 EXPOSE 80 443
 COPY run-wrapper.sh /usr/local/bin/run-wrapper.sh
