@@ -1,0 +1,17 @@
+version: "3.5"
+services:
+  siterm-agent:
+    build:
+      context: .
+      args:
+        - GITREPO=siterm
+        - GITORG=sdn-sense
+        - GITBR=master
+    volumes:
+      - ./conf/etc/dtnrm.yaml:/etc/dtnrm.yaml
+      - ./conf/etc/grid-security/hostcert.pem:/etc/grid-security/hostcert.pem
+      - ./conf/etc/grid-security/hostkey.pem:/etc/grid-security/hostkey.pem
+      - ./conf/opt/config/:/opt/config/
+    cap_add:
+      - NET_ADMIN
+    network_mode: host
