@@ -1,0 +1,21 @@
+version: "3.5"
+services:
+  sitefe:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - GITREPO=siterm
+        - GITORG=sdn-sense
+        - GITBR=master
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./conf/etc/dtnrm.yaml:/etc/dtnrm.yaml
+      - ./conf/etc/httpd/certs/cert.pem:/etc/httpd/certs/cert.pem
+      - ./conf/etc/httpd/certs/privkey.pem:/etc/httpd/certs/privkey.pem
+      - ./conf/etc/httpd/certs/fullchain.pem:/etc/httpd/certs/fullchain.pem
+      - ./conf/etc/grid-security/hostcert.pem:/etc/grid-security/hostcert.pem
+      - ./conf/etc/grid-security/hostkey.pem:/etc/grid-security/hostkey.pem
+      - ./conf/opt/config/:/opt/config/
