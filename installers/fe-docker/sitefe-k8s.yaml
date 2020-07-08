@@ -1,0 +1,127 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.21.0 (992df58d8)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: sitefe
+  name: sitefe
+spec:
+  ports:
+  - name: "8080"
+    port: 8080
+    targetPort: 80
+  - name: "8443"
+    port: 8443
+    targetPort: 443
+  selector:
+    io.kompose.service: sitefe
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.21.0 (992df58d8)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: sitefe
+  name: sitefe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: sitefe
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert
+        kompose.version: 1.21.0 (992df58d8)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: sitefe
+    spec:
+      containers:
+      - image: sdnsense/site-rm-sense:latest
+        imagePullPolicy: ""
+        name: sitefe
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        resources: {}
+        volumeMounts:
+        - mountPath: /etc/dtnrm.yaml
+          name: sitermfe
+          subPath: sense-siterm-fe.yaml
+        - mountPath: /etc/grid-security/hostcert.pem
+          name: hostcert
+          readOnly: true
+          subPath: hostcert.pem
+        - mountPath: /etc/grid-security/hostkey.pem
+          name: hostkey
+          readOnly: true
+          subPath: hostkey.pem
+        - mountPath: /etc/httpd/certs/cert.pem
+          name: httpdcert
+          readOnly: true
+          subPath: httpdcert.pem
+        - mountPath: /etc/httpd/certs/privkey.pem
+          name: httpdprivkey
+          readOnly: true
+          subPath: httpdprivkey.pem
+        - mountPath: /etc/httpd/certs/fullchain.pem
+          name: httpdfullchain
+          readOnly: true
+          subPath: httpdfullchain.pem
+      restartPolicy: Always
+      serviceAccountName: ""
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: sense-siterm-fe
+            path: sense-siterm-fe.yaml
+          name: sense-siterm-fe-yaml
+        name: sitermfe
+      - name: httpdcert
+        secret:
+          secretName: sense-httpdcert
+          items:
+          - key: httpdcert
+            path: httpdcert.pem
+          defaultMode: 0600
+      - name: httpdprivkey
+        secret:
+          secretName: sense-httpdprivkey
+          items:
+          - key: httpdprivkey
+            path: httpdprivkey.pem
+          defaultMode: 0600
+      - name: httpdfullchain
+        secret:
+          secretName: sense-httpdfullchain
+          items:
+          - key: httpdfullchain
+            path: httpdfullchain.pem
+          defaultMode: 0600
+      - name: hostcert
+        secret:
+          secretName: sense-hostcert
+          items:
+          - key: hostcert
+            path: hostcert.pem
+          defaultMode: 0600
+      - name: hostkey
+        secret:
+          secretName: sense-hostkey
+          items:
+          - key: hostkey
+            path: hostkey.pem
+          defaultMode: 0600
+status: {}
