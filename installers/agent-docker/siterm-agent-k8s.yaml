@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.21.0 (992df58d8)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: siterm-agent
+  name: siterm-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: siterm-agent
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert
+        kompose.version: 1.21.0 (992df58d8)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: siterm-agent
+    spec:
+      hostNetwork: true
+      containers:
+      - image: sdnsense/site-agent-sense:latest
+        imagePullPolicy: ""
+        name: siterm-agent
+        resources: {}
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+        volumeMounts:
+        - mountPath: /etc/dtnrm.yaml
+          name: sitermagent
+          subPath: sense-siterm-agent.yaml
+        - mountPath: /etc/grid-security/hostcert.pem
+          name: agent-hostcert
+          readOnly: true
+          subPath: hostcert.pem
+        - mountPath: /etc/grid-security/hostkey.pem
+          name: agent-hostkey
+          readOnly: true
+          subPath: hostkey.pem
+      restartPolicy: Always
+      serviceAccountName: ""
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: sense-siterm-agent
+            path: sense-siterm-agent.yaml
+          name: sense-siterm-agent-yaml
+        name: sitermagent
+      - name: agent-hostcert
+        secret:
+          secretName: sense-agent-hostcert
+          items:
+          - key: agent-hostcert
+            path: hostcert.pem
+          defaultMode: 0600
+      - name: agent-hostkey
+        secret:
+          secretName: sense-agent-hostkey
+          items:
+          - key: agent-hostkey
+            path: hostkey.pem
+          defaultMode: 0600
+status: {}
