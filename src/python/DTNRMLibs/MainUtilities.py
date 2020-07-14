@@ -245,13 +245,19 @@ class GitConfig(object):
                 prevfilename = '/tmp/%s-%s.yaml' % (datetimelasthour.strftime('%Y-%m-%d-%H'), name)
                 if os.path.isfile(prevfilename):
                     self.logger.debug('Remove previous old cache file %s', prevfilename)
-                    os.remove(prevfilename)
-                    os.remove('/tmp/dtnrm-link-%s.yaml' % name)
+                    try:
+                        os.remove(prevfilename)
+                        os.remove('/tmp/dtnrm-link-%s.yaml' % name)
+                    except OSError:
+                        pass
                 self.logger.debug('Receiving new file from GIT for %s', name)
                 outyaml = getWebContentFromURL(url).text
                 with open(filename, 'w') as fd:
                     fd.write(outyaml)
-                os.symlink(filename, '/tmp/dtnrm-link-%s.yaml' % name)
+                try:
+                    os.symlink(filename, '/tmp/dtnrm-link-%s.yaml' % name)
+                except OSError:
+                    pass
                 output = yload(outyaml)
         return output
 
