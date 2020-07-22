@@ -1,10 +1,10 @@
 FROM centos:7
 
-MAINTAINER Justas Balcas <jbalcas@caltech.edu>
+ARG GITREPO=siterm
+ARG GITORG=sdn-sense
+ARG GITBR=master
 
-ENV GITREPO siterm
-ENV GITORG sdn-sense
-ENV GITBR master
+MAINTAINER Justas Balcas <jbalcas@caltech.edu>
 
 RUN mkdir -p /opt/ && mkdir -p /opt/{config,dtnrmcode}
 RUN  yum -y install git sudo
