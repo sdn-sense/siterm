@@ -1,9 +1,10 @@
 FROM centos:7.7.1908
 
+ARG GITREPO=siterm
+ARG GITORG=sdn-sense
+ARG GITBR=master
+
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
-ENV GITREPO siterm
-ENV GITORG sdn-sense
-ENV GITBR master
 
 RUN adduser apache -U -u 48
 

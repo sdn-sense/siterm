@@ -1,5 +1,5 @@
 docker run \
-       -dit --name site-agent-sense \
+       -dit --name siteagent \
        -v $(pwd)/conf/etc/dtnrm.yaml:/etc/dtnrm.yaml \
        -v $(pwd)/conf/etc/grid-security/hostcert.pem:/etc/grid-security/hostcert.pem \
        -v $(pwd)/conf/etc/grid-security/hostkey.pem:/etc/grid-security/hostkey.pem \
