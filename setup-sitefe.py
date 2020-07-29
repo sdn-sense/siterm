@@ -48,8 +48,9 @@ setup(
     data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
                 ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
                                         "packaging/dtnrm-site-fe/welcome.conf"]),
-                ("/etc/cron.d/", ["packaging/dtnrm-site-fe/siterm-ca-cron"]),
-                ("/etc/cron-scripts/", ["packaging/dtnrm-site-fe/siterm-ca-cron.sh"])],
+                ("/etc/cron.d/", ["packaging/dtnrm-site-fe/siterm-crons"]),
+                ("/etc/cron-scripts/", ["packaging/dtnrm-site-fe/siterm-ca-cron.sh",
+                                        "packaging/dtnrm-site-fe/siterm-dbchowner.py"])],
     py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
     scripts=SCRIPTS
 )
