@@ -6,3 +6,4 @@ enabled = true
 
   [analyzers.meta]
   runtime_version = "2.x.x"
+  max_line_length = 160
