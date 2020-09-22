@@ -18,7 +18,8 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2019 California Institute of Technology
 Date			: 2019/05/01
 """
-create_models = "CREATE TABLE models(id INTEGER PRIMARY KEY AUTOINCREMENT, uid text NOT NULL, insertdate INTEGER NOT NULL, fileloc text NOT NULL, content text NOT NULL)"
+create_models = """CREATE TABLE models(id INTEGER PRIMARY KEY AUTOINCREMENT, uid text NOT NULL,
+                                       insertdate INTEGER NOT NULL, fileloc text NOT NULL, content text NOT NULL)"""
 create_deltas = """CREATE TABLE deltas(id INTEGER PRIMARY KEY AUTOINCREMENT,
                                        uid text NOT NULL,
                                        insertdate INTEGER NOT NULL,
@@ -32,12 +33,17 @@ create_deltas = """CREATE TABLE deltas(id INTEGER PRIMARY KEY AUTOINCREMENT,
                                        reductionid text,
                                        modadd text,
                                        connectionid text NOT NULL)"""
-create_delta_connections = """CREATE TABLE delta_connections(id INTEGER PRIMARY KEY AUTOINCREMENT, deltaid text NOT NULL, connectionid text NOT NULL, state text NOT NULL)"""
-create_states = "CREATE TABLE states(id INTEGER PRIMARY KEY AUTOINCREMENT, deltaid text NOT NULL, state text NOT NULL, insertdate INTEGER NOT NULL)"
-create_hoststates = "CREATE TABLE hoststates(id INTEGER PRIMARY KEY AUTOINCREMENT, deltaid text NOT NULL, state text NOT NULL, insertdate INTEGER NOT NULL, updatedate INTEGER NOT NULL, hostname text NOT NULL)"
-create_hoststateshistory = "CREATE TABLE hoststateshistory(id INTEGER PRIMARY KEY AUTOINCREMENT, deltaid text NOT NULL, state text NOT NULL, insertdate INTEGER NOT NULL, hostname text NOT NULL)"
+create_delta_connections = """CREATE TABLE delta_connections(id INTEGER PRIMARY KEY AUTOINCREMENT, deltaid text NOT NULL,
+                                                             connectionid text NOT NULL, state text NOT NULL)"""
+create_states = """CREATE TABLE states(id INTEGER PRIMARY KEY AUTOINCREMENT, deltaid text NOT NULL,
+                                     state text NOT NULL, insertdate INTEGER NOT NULL)"""
+create_hoststates = """CREATE TABLE hoststates(id INTEGER PRIMARY KEY AUTOINCREMENT, deltaid text NOT NULL, state text NOT NULL,
+                                             insertdate INTEGER NOT NULL, updatedate INTEGER NOT NULL, hostname text NOT NULL)"""
+create_hoststateshistory = """CREATE TABLE hoststateshistory(id INTEGER PRIMARY KEY AUTOINCREMENT, deltaid text NOT NULL, state text NOT NULL,
+                                                           insertdate INTEGER NOT NULL, hostname text NOT NULL)"""
 create_parsed = "CREATE TABLE parsed(id INTEGER PRIMARY KEY AUTOINCREMENT, deltaid text NOT NULL, vals text NOT NULL, insertdate INTEGER NOT NULL)"
-create_hosts = "CREATE TABLE hosts(id INTEGER PRIMARY KEY AUTOINCREMENT, ip text NOT NULL, hostname text NOT NULL, insertdate INTEGER NOT NULL, updatedate INTEGER NOT NULL, hostinfo text NOT NULL)"
+create_hosts = """CREATE TABLE hosts(id INTEGER PRIMARY KEY AUTOINCREMENT, ip text NOT NULL, hostname text NOT NULL,
+                                   insertdate INTEGER NOT NULL, updatedate INTEGER NOT NULL, hostinfo text NOT NULL)"""
 
 
 insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(:uid, :insertdate, :fileloc, :content)"

@@ -91,9 +91,7 @@ class ConnectionMachine(object):
 
     @staticmethod
     def activated(dbObj, delta):
-        """ Change specific delta connection id state to activated.
-            if delta is reduction - it will change addition delta
-            connections to cancelled """
+        """ Change specific delta connection id state to activated. Reduction - cancelled """
         if delta['deltat'] == 'addition':
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
