@@ -136,9 +136,11 @@ class StateMachine(object):
     def committed(self, dbObj):
         """ Committing state Check """
         for delta in dbObj.get('deltas', search=[['state', 'committed']]):
-            if 'addition' in delta.keys() and delta['addition']:
+            self.logger.info(delta['uid'])
+            import pprint
+            self.logger.info(pprint.pprint(delta))
+            if 'addition' ==  delta['deltat'] and delta['addition']:
                 delta['addition'] = evaldict(delta['addition'])
-                self.logger.info(delta['addition'])
                 # Check the times...
                 # TODO: Need to check with SENSE-O if it can provide different start times
                 # for different connections.
@@ -177,37 +179,27 @@ class StateMachine(object):
                     self.logger.info('This delta %s does not have yet actionKey defined.' % delta['uid'])
                     continue
                 for connDelta in delta[actionKey]:
-                    if connDelta.keys() and delta['deltat'] == 'addition':
-                        hostStates = {}
-                        if 'hosts' not in connDelta.keys():
-                            self.logger.info('This delta %s does not have yet hosts defined.' % delta['uid'])
-                            continue
-                        for hostname in connDelta['hosts'].keys():
-                            host = dbObj.get('hoststates', search=[['deltaid', delta['uid']], ['hostname', hostname]])
-                            if host:
-                                hostStates[host[0]['state']] = hostname
-                            else:
-                                self._newhoststate(dbObj, **{'hostname': hostname,
-                                                             'state': 'activating',
-                                                             'deltaid': delta['uid']})
-                                hostStates['unset'] = hostname
-                if actionKey == 'reduction' and delta['deltat'] == 'reduction':
-                    tmpID = delta['reductionid']
-                    self.logger.info('Reduction for %s....' % tmpID)
-                    for delta1 in dbObj.get('deltas', search=[['uid', tmpID]], limit=1):
-                        currentState = delta1["state"]
-                        if currentState not in ['removing', 'remove', 'cancel']:
-                            self._stateChangerDelta(dbObj, 'removing', **delta1)
-                        self._stateChangerDelta(dbObj, 'activated', **delta)
-                elif actionKey == 'addition' and delta['deltat'] == 'addition':
-                    self.logger.info('Delta %s host states are: %s' % (delta['uid'], hostStates))
-                    if timeendcheck(delta, self.logger):
-                        self._stateChangerDelta(dbObj, 'cancel', **delta)
-                        self.modelstatecancel(dbObj, **delta)
-                    if hostStates.keys() == ['active']:
-                        self._stateChangerDelta(dbObj, 'activated', **delta)
-                    elif 'failed' in hostStates.keys():
-                        self._stateChangerDelta(dbObj, 'failed', **delta)
+                    hostStates = {}
+                    if 'hosts' not in connDelta.keys():
+                        self.logger.info('This delta %s does not have yet hosts defined.' % delta['uid'])
+                        continue
+                    for hostname in connDelta['hosts'].keys():
+                        host = dbObj.get('hoststates', search=[['deltaid', delta['uid']], ['hostname', hostname]])
+                        if host:
+                            hostStates[host[0]['state']] = hostname
+                        else:
+                            self._newhoststate(dbObj, **{'hostname': hostname,
+                                                         'state': 'activating',
+                                                         'deltaid': delta['uid']})
+                            hostStates['unset'] = hostname
+                self.logger.info('Delta %s host states are: %s' % (delta['uid'], hostStates))
+                if timeendcheck(delta, self.logger):
+                    self._stateChangerDelta(dbObj, 'cancel', **delta)
+                    self.modelstatecancel(dbObj, **delta)
+                if hostStates.keys() == ['active']:
+                    self._stateChangerDelta(dbObj, 'activated', **delta)
+                elif 'failed' in hostStates.keys():
+                    self._stateChangerDelta(dbObj, 'failed', **delta)
 
     def activated(self, dbObj):
         """ Check on all activated state deltas """
