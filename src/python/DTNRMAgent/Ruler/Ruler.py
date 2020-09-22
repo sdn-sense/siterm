@@ -143,6 +143,7 @@ class Ruler(object):
 
     def cancelResources(self, addition, deltaID):
         """Remove resources (Remove interfaces, remove ips, L3 routes) """
+        self.logger.info('Cancelling resources for %s delta' % deltaID)
         if not self.noRules:
             self.logger.info("Removing virtual interface rules")
             self.vInterface.stop(addition['hosts'][self.hostname])
@@ -175,7 +176,7 @@ class Ruler(object):
         """Check All deltas active on the host"""
         self.logger.info('Started function checkAllFiles start')
         # TODO: Need smarter consistency check with frontend.
-        #for fileName in glob.glob("%s/*.json" % self.workDir):
+        # for fileName in glob.glob("%s/*.json" % self.workDir):
         #    inputDict = getFileContentAsJson(fileName)
         #    if 'uid' not in inputDict.keys():
         #        self.logger.info('Seems this dictionary is custom delta. Ignoring it.')
@@ -204,8 +205,8 @@ class Ruler(object):
         # Need smarter way to do consistency check with frontend
         # Checking all active states:
         # ===========================================================================================
-        #states = self.getHostStates('active')
-        #for state in states:
+        # states = self.getHostStates('active')
+        # for state in states:
         #    deltaInfo = self.getDeltaInfo(state['deltaid'])
         #    if not deltaInfo:
         #        self.logger.debug('FE did not return anything for %s' % state['deltaid'])

@@ -222,7 +222,6 @@ class LookUpService(object):
                 if delta['deltat'] == 'reduction':
                     if delta['state'] == 'failed':
                         continue
-                    #if delta['state'] in ['remove', 'removed', 'activated'] and delta['modadd'] in ['add', 'remove']:
                     mainGraph = self._deltaReduction(dbObj, delta, mainGraphName)
                     writeFile = True
                 elif delta['deltat'] == 'addition':
@@ -235,6 +234,7 @@ class LookUpService(object):
 
     @staticmethod
     def getCurrentModel(dbObj):
+        """ Get Current Model from DB """
         currentModel = dbObj.get('models', orderby=['insertdate', 'DESC'], limit=1)
         currentGraph = Graph()
         if currentModel:
@@ -628,7 +628,7 @@ class LookUpService(object):
         dbObj = getVal(self.dbI, **{'sitename': self.sitename})
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
-        _currentModel, self.newGraph = "", Graph() #self.getCurrentModel(dbObj)
+        self.newGraph = Graph()
         jOut = getAllHosts(self.sitename, self.logger)
         # ==================================================================================
         # 1. Define Basic MRML Prefixes
@@ -670,7 +670,8 @@ class LookUpService(object):
 
         self.logger.info('Checking if new model is different from previous')
         modelsEqual, modelinDB = self.checkForModelDiff(dbObj, saveName)
-        lastKnownModel = {'uid': hashNum, 'insertdate': getUTCnow(), 'fileloc': saveName,  'content': str(self.newGraph.serialize(format='turtle'))}
+        lastKnownModel = {'uid': hashNum, 'insertdate': getUTCnow(),
+                          'fileloc': saveName, 'content': str(self.newGraph.serialize(format='turtle'))}
         if modelsEqual:
             if modelinDB[0]['insertdate'] < int(getUTCnow() - 3600):
                 # Force to update model every hour, Even there is no update;
