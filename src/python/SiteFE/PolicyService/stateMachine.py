@@ -40,12 +40,14 @@ def timeendcheck(delta, logger):
                 logger.info('CurrentTime %s TimeStart %s. TimeLeft %s'
                             % (getUTCnow(), connDelta['timeend'], timeleft))
                 if connDelta['timeend'] < getUTCnow():
-                    logger.info('This delta already passed timeend mark. Setting state to cancel')
+                    logger.info('This delta already passed timeend mark. \
+                                Setting state to cancel')
                     connEnded = True
                 else:
                     logger.info('Time did not passed yet.')
         except IOError:
-            logger.info('This delta had an error checking endtime. Leaving state as it is.')
+            logger.info('This delta had an error checking endtime. \
+                        Leaving state as it is.')
     return connEnded
 
 
@@ -54,7 +56,8 @@ class ConnectionMachine(object):
     def __init__(self, logger):
         self.logger = logger
 
-    def accepted(self, dbObj, delta):
+    @staticmethod
+    def accepted(dbObj, delta):
         """ If delta addition and accepted - add connection entry in DB """
         if delta['deltat'] == 'addition' and delta['state'] in ['accepting', 'accepted']:
             for connid in evaldict(delta['connectionid']):
@@ -64,7 +67,8 @@ class ConnectionMachine(object):
                 dbObj.insert('delta_connections', [dbOut])
         return
 
-    def committed(self, dbObj, delta):
+    @staticmethod
+    def committed(dbObj, delta):
         """ Change specific delta connection id state to commited """
         if delta['deltat'] == 'addition':
             for connid in evaldict(delta['connectionid']):
@@ -74,7 +78,8 @@ class ConnectionMachine(object):
                 dbObj.update('delta_connections', [dbOut])
         return
 
-    def activating(self, dbObj, delta):
+    @staticmethod
+    def activating(dbObj, delta):
         """ Change specific delta connection id state to commited """
         if delta['deltat'] == 'addition':
             for connid in evaldict(delta['connectionid']):
@@ -84,11 +89,11 @@ class ConnectionMachine(object):
                 dbObj.update('delta_connections', [dbOut])
         return
 
-    def activated(self, dbObj, delta):
+    @staticmethod
+    def activated(dbObj, delta):
         """ Change specific delta connection id state to activated.
             if delta is reduction - it will change addition delta
             connections to cancelled """
-        self.logger.info(delta)
         if delta['deltat'] == 'addition':
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
@@ -124,7 +129,8 @@ class StateMachine(object):
                                  'state': newState,
                                  'insertdate': tNow}])
 
-    def _modelstatechanger(self, dbObj, newState, **kwargs):
+    @staticmethod
+    def _modelstatechanger(dbObj, newState, **kwargs):
         """ Model State change """
         tNow = getUTCnow()
         dbObj.update('deltasmod', [{'uid': kwargs['uid'],
@@ -169,7 +175,8 @@ class StateMachine(object):
         dbOut['state'] = delta['State']
         self._stateChangerDelta(dbObj, delta['State'], **dbOut)
 
-    def _newhoststate(self, dbObj, **kwargs):
+    @staticmethod
+    def _newhoststate(dbObj, **kwargs):
         """ Private to add new host states. """
         tNow = getUTCnow()
         kwargs['insertdate'] = tNow
