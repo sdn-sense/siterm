@@ -216,17 +216,17 @@ class LookUpService(object):
 
     def appendDeltas(self, dbObj, mainGraphName):
         """ Append all deltas to Model """
-        for modstate in ['add', 'remove']:
+        for modstate in ['added', 'add', 'remove']:
             for delta in dbObj.get('deltas', search=[['modadd', modstate]], limit=10):
                 writeFile = False
                 if delta['deltat'] == 'reduction':
                     if delta['state'] == 'failed':
                         continue
-                    if delta['modadd'] in ['add', 'remove']:
-                        mainGraph = self._deltaReduction(dbObj, delta, mainGraphName)
-                        writeFile = True
+                    #if delta['state'] in ['remove', 'removed', 'activated'] and delta['modadd'] in ['add', 'remove']:
+                    mainGraph = self._deltaReduction(dbObj, delta, mainGraphName)
+                    writeFile = True
                 elif delta['deltat'] == 'addition':
-                    if delta['modadd'] == 'add':
+                    if delta['modadd'] in ['add'] or delta['state'] in ['activated']:
                         mainGraph = self._deltaAddition(dbObj, delta, mainGraphName)
                         writeFile = True
                 if writeFile:
@@ -628,7 +628,7 @@ class LookUpService(object):
         dbObj = getVal(self.dbI, **{'sitename': self.sitename})
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
-        _currentModel, self.newGraph = self.getCurrentModel(dbObj)
+        _currentModel, self.newGraph = "", Graph() #self.getCurrentModel(dbObj)
         jOut = getAllHosts(self.sitename, self.logger)
         # ==================================================================================
         # 1. Define Basic MRML Prefixes

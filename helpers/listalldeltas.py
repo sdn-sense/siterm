@@ -38,6 +38,8 @@ def getdeltaAll(sitename):
             continue
         if not isinstance(delta[delta['deltat']], list):
             conns = [delta[delta['deltat']]]
+        else:
+            conns = delta[delta['deltat']]
         for conn in conns:
             if 'hosts' not in conn.keys():
                 print 'SOMETHING WRONG WITH THIS DELTA. It does not have any hosts defined.'
@@ -52,6 +54,11 @@ def getdeltaAll(sitename):
                     print 'Host State History'
                     for hstatehistory in dbobj.get('hoststateshistory', search=[['deltaid', delta['uid']], ['hostname', hostname]]):
                         print 'State: %s, Date: %s' % (hstatehistory['state'], hstatehistory['insertdate'])
+        print '-'*20
+        print 'Connection details'
+        for conn in conns:
+            for dConn in dbobj.get('delta_connections', search=[['connectionid', conn['connectionID']]]):
+                print dConn
 
 if __name__ == "__main__":
     getdeltaAll(sys.argv[1])

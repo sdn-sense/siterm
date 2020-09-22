@@ -246,17 +246,6 @@ class PolicyService(object):
             returnout.append(output)
         return returnout
 
-    def reductionCompare(self, sitename, redID):
-        """ Compare reductions with reduction in database """
-        dbobj = getVal(self.dbI, sitename=sitename)
-        out = dbobj.get('deltas', search=[['connectionid', redID]])
-        if out:
-            for item in out:
-                self.logger.info('Reduction compare %s' % item)
-                if item['state'] == 'activated' and item['deltat'] == 'addition':
-                    return item['uid']
-        return None
-
     def startwork(self):
         """ Start Policy Service """
         self.logger.info("=" * 80)
@@ -313,12 +302,7 @@ class PolicyService(object):
                 connID = []
                 for item in outputDict[key]:
                     connID.append(item['connectionID'])
-                    if key == 'reduction':
-                        if "ReductionID" not in item.keys():
-                            self.logger.info('Trying to identify which to delete')
-                            reductionIDMap = self.reductionCompare(sitename, item['connectionID'])
-                            toDict["ReductionID"] = reductionIDMap
-                toDict['ConnID'] = str(connID)
+                toDict['ConnID'] = connID
                 toDict['modadd'] = 'idle'
                 self.stateMachine.accepted(dbobj, toDict)
             # =================================
@@ -335,7 +319,8 @@ class PolicyService(object):
                     ['activated', self.stateMachine.activated],
                     ['remove', self.stateMachine.remove],
                     ['removing', self.stateMachine.removing],
-                    ['cancel', self.stateMachine.cancel]]:
+                    ['cancel', self.stateMachine.cancel],
+                    ['cancelConn', self.stateMachine.cancelledConnections]]:
             self.logger.info("Starting check on %s deltas" % job[0])
             job[1](dbobj)
 
