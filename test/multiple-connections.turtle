@@ -1,0 +1,273 @@
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3610>
+        a       <http://schemas.ogf.org/nml/2013/03/base#BidirectionalPort> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#hasNetworkAddress>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3610:ipv4-address+172.31.14.202_24> ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#tag>
+                "l2path+urn:ogf:network:service+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links:Connection_1" ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasLabel>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3610:label+3610> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasService>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3610:service+bw> ;
+        <http://schemas.ogf.org/nml/2013/03/base#isAlias>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3610> .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3610:label+3610>
+        a       <http://schemas.ogf.org/nml/2013/03/base#Label> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/nml/2013/03/base#labeltype>
+                <http://schemas.ogf.org/nml/2012/10/ethernet#vlan> ;
+        <http://schemas.ogf.org/nml/2013/03/base#value>
+                "3610" .
+
+<urn:ogf:network:ultralight.org:2013:service+vsw>
+        <http://schemas.ogf.org/mrs/2013/12/topology#providesSubnet>
+                <urn:ogf:network:ultralight.org:2013:service+vsw:conn+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links-Connection_2:vlan+3617> , <urn:ogf:network:ultralight.org:2013:service+vsw:conn+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links-Connection_1:vlan+3610> .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3610:service+bw>
+        a       rdfs:Resource , <http://schemas.ogf.org/mrs/2013/12/topology#BandwidthService> , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#availableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#granularity>
+                "1000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#maximumCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#priority>
+                "0" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#reservableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#type>
+                "guaranteedCapped" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#unit>
+                "bps" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3617:service+bw>
+        a       owl:Thing , rdfs:Resource , <http://schemas.ogf.org/mrs/2013/12/topology#BandwidthService> ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#availableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#granularity>
+                "1000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#maximumCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#priority>
+                "0" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#reservableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#type>
+                "guaranteedCapped" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#unit>
+                "bps" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0>
+        <http://schemas.ogf.org/nml/2013/03/base#hasBidirectionalPort>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3610> , <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3617> .
+
+<urn:ogf:network:ultralight.org:2013:service+vsw:conn+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links-Connection_2:vlan+3617>
+        a       <http://schemas.ogf.org/mrs/2013/12/topology#SwitchingSubnet> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#tag>
+                "l2path+urn:ogf:network:service+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links:Connection_2" ;
+        <http://schemas.ogf.org/nml/2013/03/base#belongsTo>
+                <urn:ogf:network:ultralight.org:2013:service+vsw> ;
+        <http://schemas.ogf.org/nml/2013/03/base#encoding>
+                <http://schemas.ogf.org/nml/2012/10/ethernet#vlan> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasBidirectionalPort>
+                <urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3617> , <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3617> ;
+        <http://schemas.ogf.org/nml/2013/03/base#labelSwapping>
+                "false" .
+
+<urn:ogf:network:ultralight.org:2013:service+vsw:conn+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links-Connection_1:vlan+3610>
+        a       <http://schemas.ogf.org/mrs/2013/12/topology#SwitchingSubnet> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#tag>
+                "l2path+urn:ogf:network:service+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links:Connection_1" ;
+        <http://schemas.ogf.org/nml/2013/03/base#belongsTo>
+                <urn:ogf:network:ultralight.org:2013:service+vsw> ;
+        <http://schemas.ogf.org/nml/2013/03/base#encoding>
+                <http://schemas.ogf.org/nml/2012/10/ethernet#vlan> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasBidirectionalPort>
+                <urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3610> , <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3610> ;
+        <http://schemas.ogf.org/nml/2013/03/base#labelSwapping>
+                "false" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3617>
+        a       <http://schemas.ogf.org/nml/2013/03/base#BidirectionalPort> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#tag>
+                "l2path+urn:ogf:network:service+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links:Connection_2" ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasLabel>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3617:label+3617> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasService>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3617:service+bw> ;
+        <http://schemas.ogf.org/nml/2013/03/base#isAlias>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3617> .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3617:label+3617>
+        a       <http://schemas.ogf.org/nml/2013/03/base#Label> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/nml/2013/03/base#labeltype>
+                <http://schemas.ogf.org/nml/2012/10/ethernet#vlan> ;
+        <http://schemas.ogf.org/nml/2013/03/base#value>
+                "3617" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3610:ipv4-address+172.31.14.202_24>
+        a       <http://schemas.ogf.org/mrs/2013/12/topology#NetworkAddress> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#type>
+                "unverifiable" , "ipv4-address" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#value>
+                "172.31.14.202/24" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3610>
+        a       <http://schemas.ogf.org/nml/2013/03/base#BidirectionalPort> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#tag>
+                "l2path+urn:ogf:network:service+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links:Connection_1" ;
+        <http://schemas.ogf.org/nml/2013/03/base#belongsTo>
+                <urn:ogf:network:ultralight.org:2013:service+vsw:conn+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links-Connection_1:vlan+3610> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasLabel>
+                <urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3610:label+3610> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasService>
+                <urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3610:service+bw> ;
+        <http://schemas.ogf.org/nml/2013/03/base#isAlias>
+                <urn:ogf:network:lsanca.pacificwave.net:2016:pw-losa2-1:ultralight:vlanport+3610> .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3610:label+3610>
+        a       <http://schemas.ogf.org/nml/2013/03/base#Label> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/nml/2013/03/base#labeltype>
+                <http://schemas.ogf.org/nml/2012/10/ethernet#vlan> ;
+        <http://schemas.ogf.org/nml/2013/03/base#value>
+                "3610" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3610:service+bw>
+        a       <http://schemas.ogf.org/mrs/2013/12/topology#BandwidthService> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#availableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#granularity>
+                "1000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#maximumCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#priority>
+                "0" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#reservableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#type>
+                "guaranteedCapped" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#unit>
+                "bps" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1>
+        <http://schemas.ogf.org/nml/2013/03/base#hasBidirectionalPort>
+                <urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3617> , <urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3610> .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3617:service+bw>
+        a       rdfs:Resource , owl:Thing , <http://schemas.ogf.org/mrs/2013/12/topology#BandwidthService> ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#availableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#granularity>
+                "1000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#maximumCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#priority>
+                "0" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#reservableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#type>
+                "guaranteedCapped" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#unit>
+                "bps" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3617:label+3617>
+        a       <http://schemas.ogf.org/nml/2013/03/base#Label> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/nml/2013/03/base#labeltype>
+                <http://schemas.ogf.org/nml/2012/10/ethernet#vlan> ;
+        <http://schemas.ogf.org/nml/2013/03/base#value>
+                "3617" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3617>
+        a       <http://schemas.ogf.org/nml/2013/03/base#BidirectionalPort> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#tag>
+                "l2path+urn:ogf:network:service+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links:Connection_2" ;
+        <http://schemas.ogf.org/nml/2013/03/base#belongsTo>
+                <urn:ogf:network:ultralight.org:2013:service+vsw:conn+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links-Connection_2:vlan+3617> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasLabel>
+                <urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3617:label+3617> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasService>
+                <urn:ogf:network:ultralight.org:2013:s0:1_1:pw-losa2-1:vlanport+3617:service+bw> ;
+        <http://schemas.ogf.org/nml/2013/03/base#isAlias>
+                <urn:ogf:network:lsanca.pacificwave.net:2016:pw-losa2-1:ultralight:vlanport+3617> .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3610>
+        a       <http://schemas.ogf.org/nml/2013/03/base#BidirectionalPort> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#tag>
+                "l2path+urn:ogf:network:service+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links:Connection_1" ;
+        <http://schemas.ogf.org/nml/2013/03/base#belongsTo>
+                <urn:ogf:network:ultralight.org:2013:service+vsw:conn+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links-Connection_1:vlan+3610> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasLabel>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3610:label+3610> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasService>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3610:service+bw> ;
+        <http://schemas.ogf.org/nml/2013/03/base#isAlias>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3610> .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3610:label+3610>
+        a       <http://schemas.ogf.org/nml/2013/03/base#Label> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/nml/2013/03/base#labeltype>
+                <http://schemas.ogf.org/nml/2012/10/ethernet#vlan> ;
+        <http://schemas.ogf.org/nml/2013/03/base#value>
+                "3610" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3610:service+bw>
+        a       rdfs:Resource , <http://schemas.ogf.org/mrs/2013/12/topology#BandwidthService> , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#availableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#granularity>
+                "1000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#maximumCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#priority>
+                "0" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#reservableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#type>
+                "guaranteedCapped" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#unit>
+                "bps" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3617:service+bw>
+        a       owl:Thing , rdfs:Resource , <http://schemas.ogf.org/mrs/2013/12/topology#BandwidthService> ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#availableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#granularity>
+                "1000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#maximumCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#priority>
+                "0" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#reservableCapacity>
+                "1000000000"^^xsd:long ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#type>
+                "guaranteedCapped" ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#unit>
+                "bps" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2>
+        <http://schemas.ogf.org/nml/2013/03/base#hasBidirectionalPort>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3610> , <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3617> .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3617:label+3617>
+        a       <http://schemas.ogf.org/nml/2013/03/base#Label> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/nml/2013/03/base#labeltype>
+                <http://schemas.ogf.org/nml/2012/10/ethernet#vlan> ;
+        <http://schemas.ogf.org/nml/2013/03/base#value>
+                "3617" .
+
+<urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3617>
+        a       <http://schemas.ogf.org/nml/2013/03/base#BidirectionalPort> , rdfs:Resource , owl:Thing ;
+        <http://schemas.ogf.org/mrs/2013/12/topology#tag>
+                "l2path+urn:ogf:network:service+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links:Connection_2" ;
+        <http://schemas.ogf.org/nml/2013/03/base#belongsTo>
+                <urn:ogf:network:ultralight.org:2013:service+vsw:conn+4078ad44-2d1c-42f6-8463-e1df44005e9b:resource+links-Connection_2:vlan+3617> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasLabel>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3617:label+3617> ;
+        <http://schemas.ogf.org/nml/2013/03/base#hasService>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:vlanport+3617:service+bw> ;
+        <http://schemas.ogf.org/nml/2013/03/base#isAlias>
+                <urn:ogf:network:ultralight.org:2013:s0:1_2:sdn-dtn-1-7.tier2:enp143s0:vlanport+3617> .

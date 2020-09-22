@@ -18,7 +18,7 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2019 California Institute of Technology
 Date			: 2019/05/01
 """
-create_models = "CREATE TABLE models(id INTEGER PRIMARY KEY AUTOINCREMENT, uid text NOT NULL, insertdate INTEGER NOT NULL, fileloc text NOT NULL)"
+create_models = "CREATE TABLE models(id INTEGER PRIMARY KEY AUTOINCREMENT, uid text NOT NULL, insertdate INTEGER NOT NULL, fileloc text NOT NULL, content text NOT NULL)"
 create_deltas = """CREATE TABLE deltas(id INTEGER PRIMARY KEY AUTOINCREMENT,
                                        uid text NOT NULL,
                                        insertdate INTEGER NOT NULL,
@@ -39,7 +39,7 @@ create_parsed = "CREATE TABLE parsed(id INTEGER PRIMARY KEY AUTOINCREMENT, delta
 create_hosts = "CREATE TABLE hosts(id INTEGER PRIMARY KEY AUTOINCREMENT, ip text NOT NULL, hostname text NOT NULL, insertdate INTEGER NOT NULL, updatedate INTEGER NOT NULL, hostinfo text NOT NULL)"
 
 
-insert_models = "INSERT INTO models(uid, insertdate, fileloc) VALUES(:uid, :insertdate, :fileloc)"
+insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(:uid, :insertdate, :fileloc, :content)"
 insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, reduction, addition, reductionid, modadd, connectionid)
                    VALUES(:uid, :insertdate, :updatedate, :state, :deltat, :content, :modelid, :reduction, :addition, :reductionid, :modadd, :connectionid)"""
 insert_states = "INSERT INTO states(deltaid, state, insertdate) VALUES(:deltaid, :state, :insertdate)"
@@ -48,7 +48,7 @@ insert_hoststateshistory = "INSERT INTO hoststateshistory(deltaid, state, insert
 insert_parsed = "INSERT INTO parsed(deltaid, vals, insertdate) VALUES(:deltaid, :vals, :insertdate)"
 insert_hosts = "INSERT INTO hosts(ip, hostname, insertdate, updatedate, hostinfo) VALUES(:ip, :hostname, :insertdate, :updatedate, :hostinfo)"
 
-get_models = "SELECT id, uid, insertdate, fileloc FROM models"
+get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
 get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, reduction, addition, reductionid, modadd, connectionid FROM deltas"
 get_states = "SELECT id, deltaid, state, insertdate FROM states"
 get_hoststates = "SELECT id, deltaid, state, insertdate, updatedate, hostname FROM hoststates"

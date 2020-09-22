@@ -12,11 +12,11 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title             : dtnrm
+Author            : Justas Balcas
+Email             : justas.balcas (at) cern.ch
+@Copyright        : Copyright (C) 2016 California Institute of Technology
+Date            : 2017/09/26
 """
 import os
 import glob
@@ -192,9 +192,11 @@ class Ruler(object):
             if deltaInfo[0]['deltat'] == 'reduction':
                 raise Exception('This should not happen. Host not allowed to have reduction set.')
             if deltaInfo[0]['state'] in ['activating', 'activated']:
-                self.checkResources(deltaInfo[0]['addition'], inputDict['uid'])
+                for connDelta in deltaInfo[0]['addition']:
+                    self.checkResources(connDelta, inputDict['uid'])
             elif deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
-                self.cancelResources(deltaInfo[0]['addition'], inputDict['uid'])
+                for connDelta in deltaInfo[0]['addition']:
+                    self.cancelResources(connDelta, inputDict['uid'])
                 self.setHostState('cancel', inputDict['uid'])
 
     def checkHostStates(self):
@@ -211,10 +213,12 @@ class Ruler(object):
                 raise Exception('This should not happen. Host not allowed to have reduction set.')
             deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
             if deltaInfo[0]['state'] in ['activating', 'activated']:
-                self.checkResources(deltaInfo[0]['addition'], state['deltaid'])
-            elif deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
-                self.cancelResources(deltaInfo[0]['addition'], state['deltaid'])
-                self.setHostState('cancel', state['deltaid'])
+                for connDelta in deltaInfo[0]['addition']:
+                    self.checkResources(connDelta, state['deltaid'])
+            if deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
+                for connDelta in deltaInfo[0]['addition']:
+                    self.cancelResources(connDelta, state['deltaid'])
+                    self.setHostState('cancel', state['deltaid'])
             else:
                 self.logger.info('Weird delta state. Check Frontend for delta %s' % state['deltaid'])
 
@@ -239,19 +243,20 @@ class Ruler(object):
                     self.logger.info(deltaInfo[0])
                     # self.setHostState('failed', state['deltaid'])
                     continue
-                outExit, message = self.activateResources(deltaInfo[0]['addition'], state['deltaid'])
-                self.logger.info(deltaInfo[0])
+                outExit = False
+                for connDelta in deltaInfo[0]['addition']:
+                    outExit, message = self.activateResources(connDelta, state['deltaid'])
+                    self.logger.info("Exit: %s, Message: %s" % (outExit, message))
                 if outExit:
                     self.setHostState('active', state['deltaid'])
                 else:
                     # TODO. Have ability to save message in Frontend.
-                    print 'we should change state to failed', outExit, message
-                    self.logger.info('Adding resources failed. Setting Host State to Failed Exit: %s, Message %s'
-                                     % (outExit, message))
                     self.setHostState('failed', state['deltaid'])
+            # TODO: This is questionable if I should do that...
             elif deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
-                self.cancelResources(deltaInfo[0]['addition'], state['deltaid'])
-                self.setHostState('cancel', state['deltaid'])
+                for connDelta in deltaInfo[0]['addition']:
+                    self.cancelResources(connDelta, state['deltaid'])
+                    self.setHostState('cancel', state['deltaid'])
             else:
                 self.logger.info('Weird delta state. Check Frontend for delta %s' % state['deltaid'])
 

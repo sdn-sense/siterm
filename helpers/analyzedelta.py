@@ -37,6 +37,8 @@ def getdeltaAll(sitename, deltaUID):
         print 'Delta connID: ', delta['connectionid']
         print 'Delta Deltatype: ', delta['deltat']
         print '-' * 20
+        import pprint
+        pprint.pprint(delta)
         print 'Delta times'
         for deltatimes in dbobj.get('states', search=[['deltaid', delta['uid']]]):
             print 'State: %s Date: %s' % (deltatimes['state'], deltatimes['insertdate'])
