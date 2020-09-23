@@ -134,24 +134,17 @@ class PolicyService(object):
         prefixes['mrs'] = self.config.get('prefixes', 'mrs')
         gIn = Graph()
         gIn.parse(inFileName, format='turtle')
-        out = {}
+        out = []
         self.logger.info('Trying to parse L2 info from delta')
-        out = self.__parsel2Request(inFileName, allKnownHosts, sitename, prefixes, gIn)
-        if not out:
-            self.logger.info('L2 parsed output is empty. Trying to parse L3 info from delta')
-            out = self.__parsel3Request(inFileName, allKnownHosts, sitename, prefixes, gIn)
+        out = self.__parsel2Request(inFileName, allKnownHosts, sitename, prefixes, gIn, out)
+        self.logger.info('Trying to parse L3 info from delta')
+        out = self.__parsel3Request(inFileName, allKnownHosts, sitename, prefixes, gIn, out)
         return out
 
-    def __parsel3Request(self, inFileName, allKnownHosts, sitename, prefixes, gIn):
+    def __parsel3Request(self, inFileName, allKnownHosts, sitename, prefixes, gIn, returnout):
         """ Parse Layer 3 Delta Request """
         del inFileName, sitename
-        outall = {}
-        found = False
         for hostname in allKnownHosts.keys():
-            if found:
-                self.logger.info('Currently it supports only single L3 Request. L3 Request was already found. Skipping search for %s' % hostname)
-                continue
-            connectionID = None
             prefixes['mainrst'] = URIRef("%s:%s:service+rst" % (prefixes['site'], hostname))
             self.logger.info('Lets try to get connection ID subject for %s' % prefixes['mainrst'])
             out = self.queryGraph(gIn, prefixes['mainrst'],
@@ -160,116 +153,98 @@ class PolicyService(object):
                 msg = 'Connection ID was not received. Continue'
                 self.logger.info(msg)
                 continue
-            if len(out) > 1:
-                self.logger.info(out)
-                msg = 'Received multiple connection IDs. Something is wrong...'
-                self.logger.info(msg)
-                continue
+            outall = {}
             outall.setdefault('hosts', {})
             outall['hosts'].setdefault(hostname, {})
-            outall['connectionID'] = str(out[0])
-            outall['hosts'][hostname]['routes'] = []
-            connectionID = out[0]
-            self.logger.info('This is our connection ID: %s' % connectionID)
-            self.logger.info('Now lets get all info what it wants to do. Mainly nextHop, routeFrom, routeTo')
-            bidPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['mrs'], 'hasRoute')))
-            for bidPort in bidPorts:
-                route = {}
-                for flag in ['nextHop', 'routeFrom', 'routeTo']:
-                    route.setdefault(flag, {})
-                    out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['mrs'], flag)))
-                    if not out:
-                        continue
-                    for item in out:
-                        outt = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'type')))
-                        outv = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'value')))
-                        if not outt or not outv:
+            for connectionID in out:
+                outall['connectionID'] = str(connectionID)
+                outall['hosts'][hostname]['routes'] = []
+                self.logger.info('This is our connection ID: %s' % connectionID)
+                self.logger.info('Now lets get all info what it wants to do. Mainly nextHop, routeFrom, routeTo')
+                bidPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['mrs'], 'hasRoute')))
+                for bidPort in bidPorts:
+                    route = {}
+                    for flag in ['nextHop', 'routeFrom', 'routeTo']:
+                        route.setdefault(flag, {})
+                        out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['mrs'], flag)))
+                        if not out:
                             continue
-                        route[flag]['type'] = str(outt[0])
-                        route[flag]['value'] = str(outv[0])
-                outall['hosts'][hostname]['routes'].append(route)
-        self.logger.debug('L3 Parse output: %s', outall)
-        return outall
+                        for item in out:
+                            outt = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'type')))
+                            outv = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'value')))
+                            if not outt or not outv:
+                                continue
+                            route[flag]['type'] = str(outt[0])
+                            route[flag]['value'] = str(outv[0])
+                    outall['hosts'][hostname]['routes'].append(route)
+                returnout.append(outall)
+                self.logger.debug('L3 Parse output: %s', outall)
+        return returnout
 
-    def __parsel2Request(self, inFileName, allKnownHosts, sitename, prefixes, gIn):
+    def __parsel2Request(self, inFileName, allKnownHosts, sitename, prefixes, gIn, returnout):
         """ Parse L2 request """
         del inFileName, sitename
-        output = {}
         self.logger.info('Lets try to get connection ID subject for %s' % prefixes['main'])
         connectionID = None
         out = self.queryGraph(gIn, prefixes['main'], search=URIRef('%s%s' % (prefixes['mrs'], 'providesSubnet')))
         if not out:
             msg = 'Connection ID was not received. Something is wrong...'
             self.logger.info(msg)
-            return {}
-        if len(out) > 1:
-            self.logger.info(out)
-            msg = 'Received multiple connection IDs. Something is wrong...'
-            self.logger.info(msg)
-            return {}
-        output['connectionID'] = str(out[0])
-        connectionID = out[0]
-        self.logger.info('This is our connection ID: %s' % connectionID)
-        self.logger.info('Now lets get all info what it wants to do. Mainly bidPorts and labelSwapping flag')
-        bidPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'], 'hasBidirectionalPort')))
-        out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'], 'labelSwapping')))
-        output['labelSwapping'] = str(out[0])
-        out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'], 'existsDuring')))
-        out = self.getTimeScheduling(out, gIn, prefixes)
-        if len(out.keys()) == 2:
-            output['timestart'] = out['start']
-            output['timeend'] = out['end']
-        # =======================================================
-        self.logger.info('Now lets get all info for each bidirectionalPort, like vlan, ip, serviceInfo ')
-        # We need mainly hasLabel, hasNetworkAddress
-        for bidPort in bidPorts:
-            # Get first which labels it has. # This provides us info about vlan tag
-            connInfo, output = getConnInfo(bidPort, prefixes['site'], output, nostore=True)
-            if connInfo not in allKnownHosts:
-                print 'Ignore %s' % connInfo
-                continue
-            connInfo, output = getConnInfo(bidPort, prefixes['site'], output)
-            alias = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['nml'], 'isAlias')))
-            if alias and alias[0] not in bidPorts:
-                self.logger.info('Received alias for %s to %s' % (bidPort, alias))
-                bidPorts.append(alias[0])
-            # Now let's get vlan ID
-            out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['nml'], 'hasLabel')))
-            if not out:
-                continue
-            out = self.queryGraph(gIn, out[0], search=URIRef('%s%s' % (prefixes['nml'], 'value')))
-            output['hosts'][connInfo]['vlan'] = str(out[0])
-            # Now Let's get IP
-            out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['mrs'], 'hasNetworkAddress')))
-            for item in out:
-                outtype = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'type')))
-                outval = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'value')))
-                if Literal('ipv4-address') in outtype:
-                    if len(outval[0].split('/')) == 2:
-                        output['hosts'][connInfo]['ip'] = str(outval[0])
-            # Now lets get service Info and what was requested.
-            out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['nml'], 'hasService')))
-            output['hosts'][connInfo].setdefault('params', [])
-            serviceparams = {}
-            if out:
-                for key in ['availableCapacity', 'granularity', 'maximumCapacity',
-                            'priority', 'reservableCapacity', 'type', 'unit']:
-                    tmpout = self.queryGraph(gIn, out[0], search=URIRef('%s%s' % (prefixes['mrs'], key)))
-                    if len(tmpout) >= 1:
-                        serviceparams[key] = str(tmpout[0])
-            output['hosts'][connInfo]['params'].append(serviceparams)
-        return output
-
-    def reductionCompare(self, sitename, redID):
-        """ Compare reductions with reduction in database """
-        dbobj = getVal(self.dbI, sitename=sitename)
-        out = dbobj.get('deltas', search=[['connectionid', redID]])
-        if out:
-            for item in out:
-                self.logger.info('Reduction compare %s' % item)
-                if item['state'] == 'activated' and item['deltat'] == 'addition':
-                    return item['uid']
-        return None
+            return []
+        for connectionID in out:
+            output = {}
+            output['connectionID'] = str(connectionID)
+            self.logger.info('This is our connection ID: %s' % connectionID)
+            self.logger.info('Now lets get all info what it wants to do. Mainly bidPorts and labelSwapping flag')
+            bidPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'], 'hasBidirectionalPort')))
+            out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'], 'labelSwapping')))
+            output['labelSwapping'] = str(out[0])
+            out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'], 'existsDuring')))
+            out = self.getTimeScheduling(out, gIn, prefixes)
+            if len(out.keys()) == 2:
+                output['timestart'] = out['start']
+                output['timeend'] = out['end']
+            # =======================================================
+            self.logger.info('Now lets get all info for each bidirectionalPort, like vlan, ip, serviceInfo ')
+            # We need mainly hasLabel, hasNetworkAddress
+            for bidPort in bidPorts:
+                # Get first which labels it has. # This provides us info about vlan tag
+                connInfo, output = getConnInfo(bidPort, prefixes['site'], output, nostore=True)
+                if connInfo not in allKnownHosts:
+                    print 'Ignore %s' % connInfo
+                    continue
+                connInfo, output = getConnInfo(bidPort, prefixes['site'], output)
+                alias = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['nml'], 'isAlias')))
+                if alias and alias[0] not in bidPorts:
+                    self.logger.info('Received alias for %s to %s' % (bidPort, alias))
+                    bidPorts.append(alias[0])
+                # Now let's get vlan ID
+                out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['nml'], 'hasLabel')))
+                if not out:
+                    continue
+                out = self.queryGraph(gIn, out[0], search=URIRef('%s%s' % (prefixes['nml'], 'value')))
+                output['hosts'][connInfo]['vlan'] = str(out[0])
+                # Now Let's get IP
+                out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['mrs'], 'hasNetworkAddress')))
+                for item in out:
+                    outtype = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'type')))
+                    outval = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'value')))
+                    if Literal('ipv4-address') in outtype:
+                        if len(outval[0].split('/')) == 2:
+                            output['hosts'][connInfo]['ip'] = str(outval[0])
+                # Now lets get service Info and what was requested.
+                out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['nml'], 'hasService')))
+                output['hosts'][connInfo].setdefault('params', [])
+                serviceparams = {}
+                if out:
+                    for key in ['availableCapacity', 'granularity', 'maximumCapacity',
+                                'priority', 'reservableCapacity', 'type', 'unit']:
+                        tmpout = self.queryGraph(gIn, out[0], search=URIRef('%s%s' % (prefixes['mrs'], key)))
+                        if len(tmpout) >= 1:
+                            serviceparams[key] = str(tmpout[0])
+                output['hosts'][connInfo]['params'].append(serviceparams)
+            returnout.append(output)
+        return returnout
 
     def startwork(self):
         """ Start Policy Service """
@@ -315,29 +290,21 @@ class PolicyService(object):
             self.stateMachine.failed(dbobj, toDict)
         else:
             toDict["State"] = "accepted"
-            toDict["ParsedDelta"] = outputDict
-            dtype = None
             connID = None
             for key in outputDict:
+                toDict["State"] = "accepted"
                 if not outputDict[key]:
                     continue
-                # If key is reduction. Find out which one.
-                # So this check will not be needed anymore.
-                dtype = key
-                connID = outputDict[key]['connectionID']
-                if key == 'reduction':
-                    if "ReductionID" not in outputDict.keys():
-                        self.logger.info('Trying to identify which to delete')
-                        reductionIDMap = self.reductionCompare(sitename, outputDict[key]['connectionID'])
-                        toDict["ReductionID"] = reductionIDMap
-                    else:
-                        self.logger.info('ReductionID is already defined.')
-            if not dtype:
-                raise Exception('dtype not identified %s' % toDict["ParsedDelta"])
-            toDict['Type'] = dtype
-            toDict['ConnID'] = connID
-            toDict['modadd'] = 'idle'
-            self.stateMachine.accepted(dbobj, toDict)
+                toDict['dtype'] = key
+                toDict['Type'] = key
+                self.logger.info('%s' % str(outputDict[key]))
+                toDict["ParsedDelta"] = outputDict
+                connID = []
+                for item in outputDict[key]:
+                    connID.append(item['connectionID'])
+                toDict['ConnID'] = connID
+                toDict['modadd'] = 'idle'
+                self.stateMachine.accepted(dbobj, toDict)
             # =================================
         return toDict
 
@@ -352,7 +319,8 @@ class PolicyService(object):
                     ['activated', self.stateMachine.activated],
                     ['remove', self.stateMachine.remove],
                     ['removing', self.stateMachine.removing],
-                    ['cancel', self.stateMachine.cancel]]:
+                    ['cancel', self.stateMachine.cancel],
+                    ['cancelConn', self.stateMachine.cancelledConnections]]:
             self.logger.info("Starting check on %s deltas" % job[0])
             job[1](dbobj)
 
@@ -369,7 +337,7 @@ def execute(config=None, logger=None, args=None):
     policer = PolicyService(config, logger)
     if args:
         # This is only for debugging purposes.
-        print policer.parseDeltaRequest(args[1], {'180-134.research.maxgigapop.net': []}, args[2])
+        print policer.parseDeltaRequest(args[1], {args[2]: []}, args[3])
     else:
         policer.startwork()
 
@@ -377,10 +345,11 @@ def execute(config=None, logger=None, args=None):
 if __name__ == '__main__':
     print 'WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.'
     print 'If argv[1] is specified it will try to parse custom delta request. It should be a filename.'
-    print 'argv[2] has to be sitename which is configured in this frontend'
+    print '2nd argument is hostname. You can find hostname inside the delta'
+    print '3rd argument has to be sitename which is configured in this frontend'
     print 'Otherwise, it will check frontend for new deltas'
     print sys.argv
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 4:
         execute(args=sys.argv, logger=getStreamLogger())
     else:
         execute(logger=getStreamLogger())

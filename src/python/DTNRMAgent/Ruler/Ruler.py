@@ -12,11 +12,11 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title             : dtnrm
+Author            : Justas Balcas
+Email             : justas.balcas (at) cern.ch
+@Copyright        : Copyright (C) 2016 California Institute of Technology
+Date            : 2017/09/26
 """
 import os
 import glob
@@ -143,16 +143,12 @@ class Ruler(object):
 
     def cancelResources(self, addition, deltaID):
         """Remove resources (Remove interfaces, remove ips, L3 routes) """
-        newvlanFile = self.workDir + "/%s.json" % deltaID
-        addition['uid'] = deltaID
-        if os.path.isfile(newvlanFile):
-            if not self.noRules:
-                self.logger.info("Removing virtual interface rules")
-                self.vInterface.stop(addition['hosts'][self.hostname])
-                self.vInterface.remove(addition['hosts'][self.hostname])
-            os.unlink(newvlanFile)
-            return True, ""
-        return False, "Called cancel resources, but file did not existed..."
+        self.logger.info('Cancelling resources for %s delta' % deltaID)
+        if not self.noRules:
+            self.logger.info("Removing virtual interface rules")
+            self.vInterface.stop(addition['hosts'][self.hostname])
+            self.vInterface.remove(addition['hosts'][self.hostname])
+        return True, ""
 
     def start(self):
         """ Start execution and get new requests from FE """
@@ -178,48 +174,62 @@ class Ruler(object):
 
     def checkAllFiles(self):
         """Check All deltas active on the host"""
-        self.logger.info('Started function start')
-        for fileName in glob.glob("%s/*.json" % self.workDir):
-            inputDict = getFileContentAsJson(fileName)
-            if 'uid' not in inputDict.keys():
-                self.logger.info('Seems this dictionary is custom delta. Ignoring it.')
-                continue
-            deltaInfo = self.getDeltaInfo(inputDict['uid'])
-            if not deltaInfo:
-                self.logger.debug('FE did not return anything for %s' % inputDict['uid'])
-                continue
-            deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
-            if deltaInfo[0]['deltat'] == 'reduction':
-                raise Exception('This should not happen. Host not allowed to have reduction set.')
-            if deltaInfo[0]['state'] in ['activating', 'activated']:
-                self.checkResources(deltaInfo[0]['addition'], inputDict['uid'])
-            elif deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
-                self.cancelResources(deltaInfo[0]['addition'], inputDict['uid'])
-                self.setHostState('cancel', inputDict['uid'])
+        self.logger.info('Started function checkAllFiles start')
+        # TODO: Need smarter consistency check with frontend.
+        # for fileName in glob.glob("%s/*.json" % self.workDir):
+        #    inputDict = getFileContentAsJson(fileName)
+        #    if 'uid' not in inputDict.keys():
+        #        self.logger.info('Seems this dictionary is custom delta. Ignoring it.')
+        #        continue
+        #    deltaInfo = self.getDeltaInfo(inputDict['uid'])
+        #    if not deltaInfo:
+        #        self.logger.debug('FE did not return anything for %s' % inputDict['uid'])
+        #        continue
+        #    deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
+        #    if deltaInfo[0]['deltat'] == 'reduction':
+        #        raise Exception('This should not happen. Host not allowed to have reduction set.')
+        #    if deltaInfo[0]['state'] in ['activating', 'activated']:
+        #        if isinstance(deltaInfo[0]['addition'], dict):
+        #            self.checkResources(deltaInfo[0]['addition'], inputDict['uid'])
+        #        else:
+        #            for connDelta in deltaInfo[0]['addition']:
+        #                self.checkResources(connDelta, inputDict['uid'])
+        #    elif deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
+        #        for connDelta in deltaInfo[0]['addition']:
+        #            self.cancelResources(connDelta, inputDict['uid'])
+        #        self.setHostState('cancel', inputDict['uid'])
 
     def checkHostStates(self):
         """ Check Host State deltas """
+        # TODO:
+        # Need smarter way to do consistency check with frontend
         # Checking all active states:
         # ===========================================================================================
-        states = self.getHostStates('active')
-        for state in states:
-            deltaInfo = self.getDeltaInfo(state['deltaid'])
-            if not deltaInfo:
-                self.logger.debug('FE did not return anything for %s' % state['deltaid'])
-                continue
-            if deltaInfo[0]['deltat'] == 'reduction':
-                raise Exception('This should not happen. Host not allowed to have reduction set.')
-            deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
-            if deltaInfo[0]['state'] in ['activating', 'activated']:
-                self.checkResources(deltaInfo[0]['addition'], state['deltaid'])
-            elif deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
-                self.cancelResources(deltaInfo[0]['addition'], state['deltaid'])
-                self.setHostState('cancel', state['deltaid'])
-            else:
-                self.logger.info('Weird delta state. Check Frontend for delta %s' % state['deltaid'])
-
+        # states = self.getHostStates('active')
+        # for state in states:
+        #    deltaInfo = self.getDeltaInfo(state['deltaid'])
+        #    if not deltaInfo:
+        #        self.logger.debug('FE did not return anything for %s' % state['deltaid'])
+        #        continue
+        #    if deltaInfo[0]['deltat'] == 'reduction':
+        #        raise Exception('This should not happen. Host not allowed to have reduction set.')
+        #    deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
+        #    if deltaInfo[0]['state'] in ['activating', 'activated']:
+        #        if isinstance(deltaInfo[0]['addition'], dict):
+        #            self.checkResources(deltaInfo[0]['addition'], state['deltaid'])
+        #        else:
+        #            for connDelta in deltaInfo[0]['addition']:
+        #                self.checkResources(connDelta, state['deltaid'])
+        #    if deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
+        #        for connDelta in deltaInfo[0]['addition']:
+        #            self.cancelResources(connDelta, state['deltaid'])
+        #            self.setHostState('cancel', state['deltaid'])
+        #    else:
+        #        self.logger.info('Weird delta state. Check Frontend for delta %s' % state['deltaid'])
+        #
         # Checking all which are in activating:
         # ===========================================================================================
+
     def checkActivatingDeltas(self):
         """ Check all deltas in activating states """
         states = self.getHostStates('activating')
@@ -230,30 +240,28 @@ class Ruler(object):
                 self.logger.debug('FE did not return anything for %s' % state['deltaid'])
                 continue
             if deltaInfo[0]['deltat'] == 'reduction':
-                raise Exception('This should not happen. Host not allowed to have reduction set.')
-            deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
-            if deltaInfo[0]['state'] in ['activating', 'activated']:
-                self.logger.info('Activating delta %s' % state['deltaid'])
-                if not deltaInfo[0]['addition']:
-                    self.logger.info('Failing delta %s. No addition parsed' % state['deltaid'])
-                    self.logger.info(deltaInfo[0])
-                    # self.setHostState('failed', state['deltaid'])
-                    continue
-                outExit, message = self.activateResources(deltaInfo[0]['addition'], state['deltaid'])
-                self.logger.info(deltaInfo[0])
-                if outExit:
+                deltaInfo[0]['reduction'] = evaldict(deltaInfo[0]['reduction'])
+                for connDelta in deltaInfo[0]['reduction']:
+                    self.cancelResources(connDelta, state['deltaid'])
                     self.setHostState('active', state['deltaid'])
-                else:
-                    # TODO. Have ability to save message in Frontend.
-                    print 'we should change state to failed', outExit, message
-                    self.logger.info('Adding resources failed. Setting Host State to Failed Exit: %s, Message %s'
-                                     % (outExit, message))
-                    self.setHostState('failed', state['deltaid'])
-            elif deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
-                self.cancelResources(deltaInfo[0]['addition'], state['deltaid'])
-                self.setHostState('cancel', state['deltaid'])
-            else:
-                self.logger.info('Weird delta state. Check Frontend for delta %s' % state['deltaid'])
+            elif deltaInfo[0]['deltat'] == 'addition':
+                deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
+                if deltaInfo[0]['state'] in ['activating', 'activated']:
+                    self.logger.info('Activating delta %s' % state['deltaid'])
+                    if not deltaInfo[0]['addition']:
+                        self.logger.info('Failing delta %s. No addition parsed' % state['deltaid'])
+                        self.logger.info(deltaInfo[0])
+                        # self.setHostState('failed', state['deltaid'])
+                        continue
+                    outExit = False
+                    for connDelta in deltaInfo[0]['addition']:
+                        outExit, message = self.activateResources(connDelta, state['deltaid'])
+                        self.logger.info("Exit: %s, Message: %s" % (outExit, message))
+                    if outExit:
+                        self.setHostState('active', state['deltaid'])
+                    else:
+                        # TODO. Have ability to save message in Frontend.
+                        self.setHostState('failed', state['deltaid'])
 
 
 def execute(config=None, logger=None):

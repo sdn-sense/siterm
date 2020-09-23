@@ -24,19 +24,88 @@ from DTNRMLibs.MainUtilities import getUTCnow
 
 def timeendcheck(delta, logger):
     """ Check delta timeEnd. if passed, returns True. """
-    try:
-        if 'timeend' in delta['addition'].keys():
-            timeleft = getUTCnow() - int(delta['addition']['timeend'])
-            logger.info('CurrentTime %s TimeStart %s. TimeLeft %s'
-                        % (getUTCnow(), delta['addition']['timeend'], timeleft))
-            if delta['addition']['timeend'] < getUTCnow():
-                logger.info('This delta already passed timeend mark. Setting state to cancel')
-                return True
-            else:
-                logger.info('Time did not passed yet.')
-    except:
-        logger.info('This delta had an error checking endtime. Leaving state as it is.')
-    return False
+    conns = []
+    # ------------------------------------
+    # This is for backwards support. Can be deleted after all RMs deltas re-initiated.
+    if isinstance(delta['addition'], dict):
+        conns.append(delta['addition'])
+    else:
+        conns = delta['addition']
+    # ------------------------------------
+    connEnded = False
+    for connDelta in conns:
+        try:
+            if 'timeend' in connDelta.keys():
+                timeleft = getUTCnow() - int(connDelta['timeend'])
+                logger.info('CurrentTime %s TimeStart %s. TimeLeft %s'
+                            % (getUTCnow(), connDelta['timeend'], timeleft))
+                if connDelta['timeend'] < getUTCnow():
+                    logger.info('This delta already passed timeend mark. \
+                                Setting state to cancel')
+                    connEnded = True
+                else:
+                    logger.info('Time did not passed yet.')
+        except IOError:
+            logger.info('This delta had an error checking endtime. \
+                        Leaving state as it is.')
+    return connEnded
+
+
+class ConnectionMachine(object):
+    """ Connection State machine. Maps Deltas with 1 to N connections """
+    def __init__(self, logger):
+        self.logger = logger
+
+    @staticmethod
+    def accepted(dbObj, delta):
+        """ If delta addition and accepted - add connection entry in DB """
+        if delta['deltat'] == 'addition' and delta['state'] in ['accepting', 'accepted']:
+            for connid in evaldict(delta['connectionid']):
+                dbOut = {'deltaid': delta['uid'],
+                         'connectionid': connid,
+                         'state': 'accepted'}
+                dbObj.insert('delta_connections', [dbOut])
+        return
+
+    @staticmethod
+    def committed(dbObj, delta):
+        """ Change specific delta connection id state to commited """
+        if delta['deltat'] == 'addition':
+            for connid in evaldict(delta['connectionid']):
+                dbOut = {'deltaid': delta['uid'],
+                         'connectionid': connid,
+                         'state': 'committed'}
+                dbObj.update('delta_connections', [dbOut])
+        return
+
+    @staticmethod
+    def activating(dbObj, delta):
+        """ Change specific delta connection id state to commited """
+        if delta['deltat'] == 'addition':
+            for connid in evaldict(delta['connectionid']):
+                dbOut = {'deltaid': delta['uid'],
+                         'connectionid': connid,
+                         'state': 'activating'}
+                dbObj.update('delta_connections', [dbOut])
+        return
+
+    @staticmethod
+    def activated(dbObj, delta):
+        """ Change specific delta connection id state to activated. Reduction - cancelled """
+        if delta['deltat'] == 'addition':
+            for connid in evaldict(delta['connectionid']):
+                dbOut = {'deltaid': delta['uid'],
+                         'connectionid': connid,
+                         'state': 'activated'}
+                dbObj.update('delta_connections', [dbOut])
+        elif delta['deltat'] == 'reduction':
+            for connid in evaldict(delta['connectionid']):
+                for dConn in dbObj.get('delta_connections', search=[['connectionid', connid], ['state', 'activated']]):
+                    dbOut = {'deltaid': dConn['deltaid'],
+                             'connectionid': dConn['connectionid'],
+                             'state': 'cancelled'}
+                    dbObj.update('delta_connections', [dbOut])
+        return
 
 
 class StateMachine(object):
@@ -44,6 +113,7 @@ class StateMachine(object):
     def __init__(self, logger):
         self.logger = logger
         self.limit = 100
+        self.connMgr = ConnectionMachine(logger)
         return
 
     def _stateChangerDelta(self, dbObj, newState, **kwargs):
@@ -57,7 +127,8 @@ class StateMachine(object):
                                  'state': newState,
                                  'insertdate': tNow}])
 
-    def _modelstatechanger(self, dbObj, newState, **kwargs):
+    @staticmethod
+    def _modelstatechanger(dbObj, newState, **kwargs):
         """ Model State change """
         tNow = getUTCnow()
         dbObj.update('deltasmod', [{'uid': kwargs['uid'],
@@ -98,10 +169,12 @@ class StateMachine(object):
                  'connectionid': str(delta['ConnID']),
                  'error': '' if 'Error' not in delta.keys() else str(delta['Error'])}
         dbObj.insert('deltas', [dbOut])
+        self.connMgr.accepted(dbObj, dbOut)
         dbOut['state'] = delta['State']
         self._stateChangerDelta(dbObj, delta['State'], **dbOut)
 
-    def _newhoststate(self, dbObj, **kwargs):
+    @staticmethod
+    def _newhoststate(dbObj, **kwargs):
         """ Private to add new host states. """
         tNow = getUTCnow()
         kwargs['insertdate'] = tNow
@@ -121,29 +194,36 @@ class StateMachine(object):
         for delta in dbObj.get('deltas', search=[['state', 'committing']]):
             self._stateChangerDelta(dbObj, 'committed', **delta)
             self._modelstatechanger(dbObj, 'add', **delta)
+            self.connMgr.committed(dbObj, delta)
         return
 
     def committed(self, dbObj):
         """ Committing state Check """
         for delta in dbObj.get('deltas', search=[['state', 'committed']]):
-            if 'addition' in delta.keys() and delta['addition']:
+            if delta['deltat'] == 'addition' and delta['addition']:
                 delta['addition'] = evaldict(delta['addition'])
                 # Check the times...
-                try:
-                    if 'timestart' in delta['addition'].keys():
-                        timeleft = int(delta['addition']['timestart']) - getUTCnow()
-                        self.logger.info('CurrentTime %s TimeStart %s. Seconds Left %s' %
-                                         (getUTCnow(), delta['addition']['timestart'], timeleft))
-                        if delta['addition']['timestart'] < getUTCnow():
-                            self.logger.info('This delta already passed timestart mark. Setting state to activating')
-                            self._stateChangerDelta(dbObj, 'activating', **delta)
-                        else:
-                            self.logger.info('This delta %s did not passed timestart mark. Leaving state as it is' % delta['uid'])
-                    else:
-                        self.logger.info('This delta %s do not have timestart. Setting state to activating' % delta['uid'])
+                delayStart = False
+                for connDelta in delta['addition']:
+                    try:
+                        if 'timestart' in connDelta.keys():
+                            timeleft = int(connDelta['timestart']) - getUTCnow()
+                            self.logger.info('CurrentTime %s TimeStart %s. Seconds Left %s' %
+                                             (getUTCnow(), connDelta['timestart'], timeleft))
+                            if connDelta['timestart'] < getUTCnow():
+                                self.logger.info('This delta already passed timestart mark. \
+                                                 Setting state to activating')
+                                delayStart = False if delayStart is not True else True
+                            else:
+                                self.logger.info('This delta %s did not passed timestart mark. \
+                                                 Leaving state as it is' % delta['uid'])
+                                delayStart = True
+                    except:
+                        self.logger.info('This delta %s had an error checking starttime. \
+                                         Leaving state as it is.' % delta['uid'])
+                    if not delayStart:
                         self._stateChangerDelta(dbObj, 'activating', **delta)
-                except:
-                    self.logger.info('This delta %s had an error checking starttime. Leaving state as it is.' % delta['uid'])
+                        self.connMgr.activating(dbObj, delta)
             else:
                 self.logger.info('This delta %s is in committed. Setting state to activating.' % delta['uid'])
                 self._stateChangerDelta(dbObj, 'activating', **delta)
@@ -151,21 +231,23 @@ class StateMachine(object):
     def activating(self, dbObj):
         """ Check on all deltas in state activating. """
         for delta in dbObj.get('deltas', search=[['state', 'activating']]):
+            hostStates = {}
             delta['addition'] = evaldict(delta['addition'])
             delta['reduction'] = evaldict(delta['reduction'])
             for actionKey in ['reduction', 'addition']:
                 if actionKey not in delta.keys():
+                    self.logger.info('This delta %s does not have yet actionKey %s defined.'
+                                     % (delta['uid'], actionKey))
+                    continue
+                if not isinstance(delta[actionKey], list):
                     self.logger.info('This delta %s does not have yet actionKey defined.' % delta['uid'])
                     continue
-                if not isinstance(delta[actionKey], dict):
-                    self.logger.info('This delta %s does not have yet actionKey defined.' % delta['uid'])
-                    continue
-                if delta[actionKey].keys() and delta['deltat'] == 'addition':
+                for connDelta in delta[actionKey]:
                     hostStates = {}
-                    if 'hosts' not in delta[actionKey].keys():
+                    if 'hosts' not in connDelta.keys():
                         self.logger.info('This delta %s does not have yet hosts defined.' % delta['uid'])
                         continue
-                    for hostname in delta[actionKey]['hosts'].keys():
+                    for hostname in connDelta['hosts'].keys():
                         host = dbObj.get('hoststates', search=[['deltaid', delta['uid']], ['hostname', hostname]])
                         if host:
                             hostStates[host[0]['state']] = hostname
@@ -174,22 +256,15 @@ class StateMachine(object):
                                                          'state': 'activating',
                                                          'deltaid': delta['uid']})
                             hostStates['unset'] = hostname
-                if actionKey == 'reduction' and delta['deltat'] == 'reduction':
-                    tmpID = delta['reductionid']
-                    self.logger.info('Reduction for %s....' % tmpID)
-                    for delta1 in dbObj.get('deltas', search=[['uid', tmpID]], limit=1):
-                        currentState = delta1["state"]
-                        if currentState not in ['removing', 'remove', 'cancel']:
-                            self._stateChangerDelta(dbObj, 'removing', **delta1)
-                        self._stateChangerDelta(dbObj, 'activated', **delta)
-                elif actionKey == 'addition' and delta['deltat'] == 'addition':
-                    if timeendcheck(delta, self.logger):
-                        self._stateChangerDelta(dbObj, 'cancel', **delta)
-                        self.modelstatecancel(dbObj, **delta)
-                    if hostStates.keys() == ['active']:
-                        self._stateChangerDelta(dbObj, 'activated', **delta)
-                    elif 'failed' in hostStates.keys():
-                        self._stateChangerDelta(dbObj, 'failed', **delta)
+                self.logger.info('Delta %s host states are: %s' % (delta['uid'], hostStates))
+                if timeendcheck(delta, self.logger):
+                    self._stateChangerDelta(dbObj, 'cancel', **delta)
+                    self.modelstatecancel(dbObj, **delta)
+                if hostStates.keys() == ['active']:
+                    self._stateChangerDelta(dbObj, 'activated', **delta)
+                    self.connMgr.activated(dbObj, delta)
+                elif 'failed' in hostStates.keys():
+                    self._stateChangerDelta(dbObj, 'failed', **delta)
 
     def activated(self, dbObj):
         """ Check on all activated state deltas """
@@ -225,6 +300,16 @@ class StateMachine(object):
             self._stateChangerDelta(dbObj, 'remove', **delta)
             self.modelstatecancel(dbObj, **delta)
 
+    def cancelledConnections(self, dbObj):
+        """ Check if connections are in cancel """
+        for delta in dbObj.get('deltas', search=[['state', 'activated']]):
+            connStates = []
+            for dConn in dbObj.get('delta_connections', search=[['deltaid', delta['uid']]]):
+                connStates.append(dConn['state'])
+            self.logger.debug('Delta %s Connection states: %s' % (delta['uid'], connStates))
+            if list(set(connStates)) == ['cancelled']:
+                self._stateChangerDelta(dbObj, 'cancel', **delta)
+
     def failed(self, dbObj, delta):
         """ Marks delta as failed. This is only during submission """
-        self._newdelta(dbObj, delta, 'accepting')
+        self._newdelta(dbObj, delta, 'failed')

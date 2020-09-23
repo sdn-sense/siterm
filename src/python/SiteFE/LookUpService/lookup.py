@@ -216,33 +216,25 @@ class LookUpService(object):
 
     def appendDeltas(self, dbObj, mainGraphName):
         """ Append all deltas to Model """
-        for modstate in ['add', 'added', 'remove']:
+        for modstate in ['added', 'add', 'remove']:
             for delta in dbObj.get('deltas', search=[['modadd', modstate]], limit=10):
                 writeFile = False
                 if delta['deltat'] == 'reduction':
                     if delta['state'] == 'failed':
                         continue
-                    if delta['modadd'] in ['add', 'added', 'remove']:
-                        mainGraph = self._deltaReduction(dbObj, delta, mainGraphName)
-                        writeFile = True
+                    mainGraph = self._deltaReduction(dbObj, delta, mainGraphName)
+                    writeFile = True
                 elif delta['deltat'] == 'addition':
-                    if delta['modadd'] == 'add':
+                    if delta['modadd'] in ['add'] or delta['state'] in ['activated']:
                         mainGraph = self._deltaAddition(dbObj, delta, mainGraphName)
-                        writeFile = True
-                    if delta['modadd'] == 'remove':
-                        mainGraph = self._deltaReduction(dbObj, delta, mainGraphName)
-                        writeFile = True
-                    if delta['modadd'] == 'added' and delta['state'] == 'activated':
-                        mainGraph = self._deltaAddition(dbObj, delta, mainGraphName, False)
                         writeFile = True
                 if writeFile:
                     with open(mainGraphName, "w") as fd:
                         fd.write(mainGraph.serialize(format='turtle'))
 
     @staticmethod
-    def checkForModelDiff(dbObj, saveName):
-        """ Check if models are different """
-        # Check new model with current model inside DB.
+    def getCurrentModel(dbObj):
+        """ Get Current Model from DB """
         currentModel = dbObj.get('models', orderby=['insertdate', 'DESC'], limit=1)
         currentGraph = Graph()
         if currentModel:
@@ -250,10 +242,14 @@ class LookUpService(object):
                 currentGraph.parse(currentModel[0]['fileloc'], format='turtle')
             except IOError:
                 currentGraph = Graph()
-            newGraph = Graph()
-            newGraph.parse(saveName, format='turtle')
-            return isomorphic(currentGraph, newGraph), currentModel
-        return False, currentModel
+        return currentModel, currentGraph
+
+    def checkForModelDiff(self, dbObj, saveName):
+        """ Check if models are different """
+        currentModel, currentGraph = self.getCurrentModel(dbObj)
+        newGraph = Graph()
+        newGraph.parse(saveName, format='turtle')
+        return isomorphic(currentGraph, newGraph), currentModel
 
     def getModelSavePath(self):
         """ Get Model Save Location """
@@ -674,7 +670,8 @@ class LookUpService(object):
 
         self.logger.info('Checking if new model is different from previous')
         modelsEqual, modelinDB = self.checkForModelDiff(dbObj, saveName)
-        lastKnownModel = {'uid': hashNum, 'insertdate': getUTCnow(), 'fileloc': saveName}
+        lastKnownModel = {'uid': hashNum, 'insertdate': getUTCnow(),
+                          'fileloc': saveName, 'content': str(self.newGraph.serialize(format='turtle'))}
         if modelsEqual:
             if modelinDB[0]['insertdate'] < int(getUTCnow() - 3600):
                 # Force to update model every hour, Even there is no update;
