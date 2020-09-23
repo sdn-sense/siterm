@@ -585,7 +585,7 @@ class LookUpService(object):
                     # '2' is for ipv4 information
                     vlanName = vlanName.split('.')
                     vlanuri = ":%s:%s:%s:%s:vlanport+%s" % (switchName, switchPort,
-                                                            nodeDict['hostname'], vlanName[0], vlanName[1])
+                                                            nodeDict['hostname'], intfKey, vlanName[1])
                     self.newGraph.add((self.prefixDB.genUriRef('site', vlanuri),
                                        self.prefixDB.genUriRef('rdf', 'type'),
                                        self.prefixDB.genUriRef('nml', 'BidirectionalPort')))
