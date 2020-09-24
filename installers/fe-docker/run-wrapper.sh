@@ -33,6 +33,7 @@ find $datadir -type d -exec chmod 0755 {} \;
 # dirs and database. Now it requires to do it manually or restart docker
 
 # Start the first process
+mkdir -p /run/httpd
 /usr/sbin/httpd -k restart
 status=$?
 exit_code=0
