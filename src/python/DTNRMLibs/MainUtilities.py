@@ -237,7 +237,6 @@ class GitConfig(object):
             datetimeNow = datetime.datetime.now()
             filename = '/tmp/%s-%s.yaml' % (datetimeNow.strftime('%Y-%m-%d-%H'), name)
             if os.path.isfile(filename):
-                self.logger.debug('Using cached configuration file %s', filename)
                 with open(filename, 'r') as fd:
                     output = yload(fd.read())
             else:
@@ -343,7 +342,6 @@ def getConfig(locations=None):
         return None
     for key, item in config['MAIN'].items():
         tmpCp.add_section(key)
-        print item, key
         for key1, item1 in item.items():
             out = item1
             if isinstance(item1, list):

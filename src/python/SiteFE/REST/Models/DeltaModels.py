@@ -44,7 +44,10 @@ class frontendDeltaModels(object):
         if config:
             self.config = config
         self.logger = logger
-        self.policer = polS.PolicyService(self.config, self.logger)
+        self.policer = {}
+        for sitename in self.config.get('general', 'sites').split(','):
+            policer = polS.PolicyService(config, logger, sitename)
+            self.policer[sitename] = policer
         self.stateM = stateM.StateMachine(self.logger)
         self.siteDB = contentDB(logger=self.logger, config=self.config)
 
@@ -67,7 +70,7 @@ class frontendDeltaModels(object):
                       "State": "accepting",
                       "modelId": uploadContent['modelId']}
         self.siteDB.saveContent(tmpfd.name, outContent)
-        out = self.policer.acceptDelta(tmpfd.name, kwargs['sitename'])
+        out = self.policer[kwargs['sitename']].acceptDelta(tmpfd.name)
         outDict = {'id': hashNum,
                    'lastModified': convertTSToDatetime(outContent['UpdateTime']),
                    'href': "%s/%s" % (environ['SCRIPT_URI'], hashNum),

@@ -22,11 +22,10 @@ from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import reportServiceStatus
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.FECalls import getDBConn
-
+from DTNRMLibs.FECalls import reportServiceStatus
 
 class FrontendRM(object):
     """ Site Frontend calls"""
@@ -94,7 +93,7 @@ class FrontendRM(object):
         """ Set Service State in DB """
         # Only 2 Services are supported to report via URL
         # DTNRM-Agent and DTNRM-Ruler
-        if inputDict['servicename'] not in ['DTNRM-Agent', 'DTNRM-Ruler']:
+        if inputDict['servicename'] not in ['Agent', 'Ruler']:
             raise NotFoundError('This Service %s is not supported by Frontend' % inputDict['servicename'])
         reportServiceStatus(inputDict['servicename'], inputDict['servicestate'],
                             kwargs['sitename'], None, inputDict['hostname'])
