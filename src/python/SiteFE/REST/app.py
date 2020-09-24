@@ -85,10 +85,11 @@ def check_initialized(environ):
 # =====================================================================================================================
 # =====================================================================================================================
 
-_FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata)$')
+_FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata|servicestate)$')
 _FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata},
                      'PUT': {'addhost': _FRONTEND_RM.addhost,
-                             'updatehost': _FRONTEND_RM.updatehost}}
+                             'updatehost': _FRONTEND_RM.updatehost,
+                             'servicestate': _FRONTEND_RM.servicestate}}
 
 
 def frontend(environ, **kwargs):
@@ -162,7 +163,6 @@ def application(environ, start_response):
     certHandler = CertHandler()
     try:
         environ['CERTINFO'] = certHandler.getCertInfo(environ)
-        print environ['CERTINFO']
         certHandler.validateCertificate(environ)
     except Exception as ex:
         httpResponder.ret_401('application/json', start_response, None)

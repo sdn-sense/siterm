@@ -22,6 +22,7 @@ from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import reportServiceStatus
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.FECalls import getDBConn
@@ -46,7 +47,7 @@ class FrontendRM(object):
         return dbobj.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
 
     def addhost(self, inputDict, **kwargs):
-        """Adding new host to mem cache. After adding calls writing to a file.
+        """Adding new host to DB.
            Must provide dictionary with:
                 hostname -> hostname of new host
                 ip       -> ip of new host
@@ -70,7 +71,7 @@ class FrontendRM(object):
         return
 
     def updatehost(self, inputDict, **kwargs):
-        """ Update Host in mem cache. After update calls writing to a file
+        """ Update Host in DB. 
             Must provide dictionary with:
                 ip       -> ip of new host
             Example:
@@ -88,3 +89,12 @@ class FrontendRM(object):
                'hostinfo': str(inputDict)}
         dbobj.update('hosts', [out])
         return
+
+    def servicestate(self, inputDict, **kwargs):
+        """ Set Service State in DB """
+        # Only 2 Services are supported to report via URL
+        # DTNRM-Agent and DTNRM-Ruler
+        if inputDict['servicename'] not in ['DTNRM-Agent', 'DTNRM-Ruler']:
+            raise NotFoundError('This Service %s is not supported by Frontend' % inputDict['servicename'])
+        reportServiceStatus(inputDict['servicename'], inputDict['servicestate'],
+                            kwargs['sitename'], None, inputDict['hostname'])

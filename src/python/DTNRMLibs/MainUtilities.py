@@ -20,6 +20,7 @@ Date			: 2017/09/26
 """
 import os
 import os.path
+import sys
 import cgi
 import pwd
 import shutil
@@ -49,7 +50,6 @@ from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
 from DTNRMLibs.CustomExceptions import NotSupportedArgument
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 from DTNRMLibs.HTTPLibrary import Requests
-
 
 def getUTCnow():
     """ Get UTC Time"""
@@ -577,3 +577,14 @@ def decodebase64(inputStr, decodeFlag=True):
     if decodeFlag and inputStr:
         return base64.b64decode(inputStr)
     return inputStr
+
+def pubStateRemote(config, dic):
+    """ Publish state from remote services """
+    try:
+        fullUrl = getFullUrl(config)
+        fullUrl += '/sitefe'
+        outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
+    except:
+        excType, excValue = sys.exc_info()[:2]
+        logger.critical("Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
+

@@ -9,8 +9,10 @@ Changes applied to this code:
 """
 import sys
 import time
+import socket
 from DTNRMLibs.Daemonizer import Daemon
 from DTNRMLibs.MainUtilities import getConfig, reCacheConfig, getStreamLogger, getLogger
+from DTNRMLibs.MainUtilities import pubStateRemote
 from DTNRMAgent.Ruler import Ruler
 
 CONFIG = getConfig()
@@ -23,17 +25,24 @@ class MyDaemon(Daemon):
     def run(self):
         """ Run main execution """
         timeeq, currentHour = reCacheConfig(None)
-        rulerAgent = Ruler.Ruler(CONFIG, LOGGER)
+        config = CONFIG
+        # This dic is used for State reporting
+        outDict = {'servicename': COMPONENT, 'hostname': socket.gethostname()}
+        rulerAgent = Ruler.Ruler(config, LOGGER)
         while True:
             time.sleep(5)
             try:
                 rulerAgent.start()
+                outDict['servicestate'] = 'OK'
+                pubStateRemote(config, outDict)
             except KeyboardInterrupt as ex:
+                outDict['servicestate'] = 'KEYBOARDINTERRUPT'
+                pubStateRemote(config, outDict)
                 LOGGER.critical("Received KeyboardInterrupt: %s ", ex)
                 exit(3)
             except:
-                # TODO. Have a way to report this upstream that there was an unknown type except.
-                # In this case we can solve these issues if there ar some with any service.
+                outDict['servicestate'] = 'FAILED'
+                pubStateRemote(config, outDict)
                 excType, excValue = sys.exc_info()[:2]
                 LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
                 time.sleep(20)
@@ -41,7 +50,8 @@ class MyDaemon(Daemon):
             if not timeeq:
                 LOGGER.info('Re initiating Policer Service with new configuration from GIT')
                 del rulerAgent
-                rulerAgent = Ruler.Ruler(getConfig(), LOGGER)
+                config = getConfig()
+                rulerAgent = Ruler.Ruler(config, LOGGER)
 
 if __name__ == "__main__":
     DAEMON = MyDaemon('/tmp/dtnrm-ruler-update.pid')

@@ -73,7 +73,8 @@ def getConnInfo(bidPort, prefixSite, output, nostore=False):
 
 class PolicyService(object):
     """ Policy Service to accept deltas """
-    def __init__(self, config, logger):
+    def __init__(self, config, logger, sitename):
+        self.sitename = sitename
         self.logger = logger
         self.config = config
         self.siteDB = contentDB(logger=self.logger, config=self.config)
@@ -122,13 +123,13 @@ class PolicyService(object):
                 return times
         return {}
 
-    def parseDeltaRequest(self, inFileName, allKnownHosts, sitename):
+    def parseDeltaRequest(self, inFileName, allKnownHosts):
         """Parse delta request to json"""
         self.logger.info("Parsing delta request %s ", inFileName)
         prefixes = {}
         prefixes['site'] = "%s:%s:%s" % (self.config.get('prefixes', 'site'),
-                                         self.config.get(sitename, 'domain'),
-                                         self.config.get(sitename, 'year'))
+                                         self.config.get(self.sitename, 'domain'),
+                                         self.config.get(self.sitename, 'year'))
         prefixes['main'] = URIRef("%s:service+vsw" % prefixes['site'])
         prefixes['nml'] = self.config.get('prefixes', 'nml')
         prefixes['mrs'] = self.config.get('prefixes', 'mrs')
@@ -136,14 +137,13 @@ class PolicyService(object):
         gIn.parse(inFileName, format='turtle')
         out = []
         self.logger.info('Trying to parse L2 info from delta')
-        out = self.__parsel2Request(inFileName, allKnownHosts, sitename, prefixes, gIn, out)
+        out = self.__parsel2Request(inFileName, allKnownHosts, prefixes, gIn, out)
         self.logger.info('Trying to parse L3 info from delta')
-        out = self.__parsel3Request(inFileName, allKnownHosts, sitename, prefixes, gIn, out)
+        out = self.__parsel3Request(inFileName, allKnownHosts, prefixes, gIn, out)
         return out
 
-    def __parsel3Request(self, inFileName, allKnownHosts, sitename, prefixes, gIn, returnout):
+    def __parsel3Request(self, inFileName, allKnownHosts, prefixes, gIn, returnout):
         """ Parse Layer 3 Delta Request """
-        del inFileName, sitename
         for hostname in allKnownHosts.keys():
             prefixes['mainrst'] = URIRef("%s:%s:service+rst" % (prefixes['site'], hostname))
             self.logger.info('Lets try to get connection ID subject for %s' % prefixes['mainrst'])
@@ -181,9 +181,8 @@ class PolicyService(object):
                 self.logger.debug('L3 Parse output: %s', outall)
         return returnout
 
-    def __parsel2Request(self, inFileName, allKnownHosts, sitename, prefixes, gIn, returnout):
+    def __parsel2Request(self, inFileName, allKnownHosts, prefixes, gIn, returnout):
         """ Parse L2 request """
-        del inFileName, sitename
         self.logger.info('Lets try to get connection ID subject for %s' % prefixes['main'])
         connectionID = None
         out = self.queryGraph(gIn, prefixes['main'], search=URIRef('%s%s' % (prefixes['mrs'], 'providesSubnet')))
@@ -256,9 +255,9 @@ class PolicyService(object):
             self.logger.info('Working on Site %s' % siteName)
             self.startworkmain(siteName)
 
-    def acceptDelta(self, deltapath, sitename):
+    def acceptDelta(self, deltapath):
         """ Accept delta """
-        jOut = getAllHosts(sitename, self.logger)
+        jOut = getAllHosts(self.sitename, self.logger)
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
         os.unlink(deltapath)  # File is not needed anymore.
         toDict = dict(fileContent)
@@ -277,12 +276,12 @@ class PolicyService(object):
                         self.logger.info('Received ValueError. More details %s. Try to write normally with decode', ex)
                         tmpFile.write(decodebase64(toDict["Content"][key]))
                     tmpFile.close()
-                    outputDict[key] = self.parseDeltaRequest(tmpFile.name, jOut, sitename)
+                    outputDict[key] = self.parseDeltaRequest(tmpFile.name, jOut, self.sitename)
                     os.unlink(tmpFile.name)
         except (IOError, KeyError, AttributeError, IndentationError, ValueError,
                 BadSyntax, HostNotFound, UnrecognizedDeltaOption) as ex:
             outputDict = getError(ex)
-        dbobj = getVal(self.dbI, sitename=sitename)
+        dbobj = getVal(self.dbI, sitename=self.sitename)
         if 'errorType' in outputDict.keys():
             toDict["State"] = "failed"
             toDict["Error"] = outputDict
@@ -308,11 +307,12 @@ class PolicyService(object):
             # =================================
         return toDict
 
-    def startworkmain(self, sitename):
+    def startwork(self):
         """Main start """
         # Committed to activating...
         # committing, committed, activating, activated, remove, removing, cancel
-        dbobj = getVal(self.dbI, sitename=sitename)
+        dbobj = getVal(self.dbI, sitename=self.sitename)
+
         for job in [['committing', self.stateMachine.committing],
                     ['committed', self.stateMachine.committed],
                     ['activating', self.stateMachine.activating],
@@ -334,7 +334,7 @@ def execute(config=None, logger=None, args=None):
         logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), component),
                            config.get(component, 'logLevel'), True)
 
-    policer = PolicyService(config, logger)
+    policer = PolicyService(config, logger, args[3])
     if args:
         # This is only for debugging purposes.
         print policer.parseDeltaRequest(args[1], {args[2]: []}, args[3])

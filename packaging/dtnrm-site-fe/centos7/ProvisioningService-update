@@ -11,37 +11,51 @@ import sys
 import time
 from DTNRMLibs.Daemonizer import Daemon
 from DTNRMLibs.MainUtilities import getConfig, reCacheConfig, getStreamLogger, getLogger
+from DTNRMLibs.FECalls import reportServiceStatus
 from SiteFE.ProvisioningService import provisioningService as prsS
 
 CONFIG = getConfig()
 COMPONENT = 'ProvisioningService'
 LOGGER = getLogger("%s/%s/" % (CONFIG.get('general', 'logDir'), COMPONENT), CONFIG.get(COMPONENT, 'logLevel'))
 
+def getThreads(config):
+    outThreads = {}
+    for sitename in config.get('general', 'sites').split(','):
+        provS = prsS.ProvisioningService(config, LOGGER, sitename)
+        outThreads[sitename] = provS
+    return outThreads
 
 class MyDaemon(Daemon):
     """ My own Deamon override """
     def run(self):
         """ Run main execution """
         timeeq, currentHour = reCacheConfig(None)
-        provisioner = prsS.ProvisioningService(config=getConfig(), logger=LOGGER, args=None)
+        provThreads = getThreads(CONFIG)
         while True:
+            hadFailure = False
             try:
-                time.sleep(20)
-                provisioner.startwork()
+                for sitename, provt in provThreads.items():
+                    LOGGER.info('Start worker for %s site', sitename)
+                    try:
+                        provt.startwork()
+                        reportServiceStatus(COMPONENT, 'OK', sitename, LOGGER)
+                    except:
+                        hadFailure = True
+                        reportServiceStatus(COMPONENT, 'FAILED', sitename, LOGGER)
+                        excType, excValue = sys.exc_info()[:2]
+                        LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
+                time.sleep(10)
             except KeyboardInterrupt as ex:
                 LOGGER.critical("Received KeyboardInterrupt: %s ", ex)
+                reportServiceStatus(COMPONENT, 'KEYBOARDINTERRUPT', sitename, LOGGER)
                 exit(3)
-            except:
-                # TODO. Have a way to report this upstream that there was an unknown type except.
-                # In this case we can solve these issues if there ar some with any service.
-                excType, excValue = sys.exc_info()[:2]
-                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
-                time.sleep(20)
+            if hadFailure:
+                LOGGER.info('Had Runtime Failure. Sleep for 30 seconds')
+                time.sleep(30)
             timeeq, currentHour = reCacheConfig(currentHour)
             if not timeeq:
                 LOGGER.info('Re initiating Provisioning Service with new configuration from GIT')
-                del provisioner
-                provisioner = prsS.ProvisioningService(config=getConfig(), logger=LOGGER, args=None)
+                provThreads = getThreads(getConfig())
 
 if __name__ == "__main__":
     DAEMON = MyDaemon('/tmp/dtnrm-ProvisioningService.pid')
