@@ -167,12 +167,7 @@ def returnBasedOnHeaders(out, headers):
     """ Return output based on AcceptHeader"""
     if headers['USER_AGENT'].startswith('Prometheus'):
         return out
-    elif 'application/json' in headers['ACCEPT'].split(','):
-        return json.dumps([out])
-    elif 'text/html' in headers['ACCEPT'].split(','):
-        return out
-    print 'Unknown return type. Returning as is'
-    return out
+    return json.dumps(out)
 
 
 def application(environ, start_response):

@@ -253,8 +253,6 @@ class PolicyService(object):
         for siteName in self.config.get('general', 'sites').split(','):
             workDir = self.config.get(siteName, 'privatedir') + "/PolicyService/"
             createDirs(workDir)
-            self.logger.info('Working on Site %s' % siteName)
-            self.startworkmain(siteName)
         # Committed to activating...
         # committing, committed, activating, activated, remove, removing, cancel
         dbobj = getVal(self.dbI, sitename=self.sitename)

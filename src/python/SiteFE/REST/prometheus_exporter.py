@@ -53,8 +53,8 @@ class PrometheusAPI(object):
 
     def metrics(self, **kwargs):
         """ Return all available Hosts, where key is IP address """
-        registry = self._cleanRegistry()
-        self._getServiceStates(registry, **kwargs)
+        registry = self.cleanRegistry()
+        self.getServiceStates(registry, **kwargs)
         data = generate_latest(registry)
         kwargs['http_respond'].ret_200(CONTENT_TYPE_LATEST, kwargs['start_response'], None)
         return iter([data])

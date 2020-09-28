@@ -228,7 +228,7 @@ def models(environ, **kwargs):
         if not kwargs['urlParams']['summary']:
             current['model'] = encodebase64(DELTABACKEND.getmodel(outmodels[0]['uid'], content=True, **kwargs), kwargs['urlParams']['encode'])
         outM['models'].append(current)
-        print 'Requested only current model. Return 200. Last Model %s' % outmodels[0]
+        print 'Requested only current model. Return 200. Last Model %s' % outmodels[0]['uid']
         return [current]
     elif not kwargs['urlParams']['current']:
         for model in outmodels:
