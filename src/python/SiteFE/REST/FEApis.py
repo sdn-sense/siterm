@@ -97,3 +97,5 @@ class FrontendRM(object):
             raise NotFoundError('This Service %s is not supported by Frontend' % inputDict['servicename'])
         reportServiceStatus(inputDict['servicename'], inputDict['servicestate'],
                             kwargs['sitename'], None, inputDict['hostname'])
+
+

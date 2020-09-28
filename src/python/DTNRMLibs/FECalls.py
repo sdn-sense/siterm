@@ -75,3 +75,4 @@ def reportServiceStatus(servicename, status, sitename, logger, hostname = ""):
     except:
         excType, excValue = sys.exc_info()[:2]
         logger.critical("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
+
