@@ -9,8 +9,10 @@ Changes applied to this code:
 """
 import sys
 import time
+import socket
 from DTNRMLibs.Daemonizer import Daemon
 from DTNRMLibs.MainUtilities import getConfig, reCacheConfig, getStreamLogger, getLogger
+from DTNRMLibs.MainUtilities import pubStateRemote
 from DTNRMAgent.RecurringActions import DTNMain
 
 CONFIG = getConfig()
@@ -24,16 +26,22 @@ class MyDaemon(Daemon):
         """ Run main execution """
         timeeq, currentHour = reCacheConfig(None)
         config = CONFIG
+        # This dic is used for State reporting
+        outDict = {'servicename': COMPONENT, 'hostname': socket.gethostname()}
         while True:
             time.sleep(20)
             try:
                 DTNMain.execute(config=CONFIG, logger=LOGGER)
+                outDict['servicestate'] = 'OK'
+                pubStateRemote(config, outDict)
             except KeyboardInterrupt as ex:
+                outDict['servicestate'] = 'KEYBOARDINTERRUPT'
+                pubStateRemote(config, outDict)
                 LOGGER.critical("Received KeyboardInterrupt: %s ", ex)
                 exit(3)
             except:
-                # TODO. Have a way to report this upstream that there was an unknown type except.
-                # In this case we can solve these issues if there ar some with any service.
+                outDict['servicestate'] = 'FAILED'
+                pubStateRemote(config, outDict)
                 excType, excValue = sys.exc_info()[:2]
                 LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
                 time.sleep(20)

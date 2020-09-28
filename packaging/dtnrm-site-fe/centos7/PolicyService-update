@@ -11,6 +11,7 @@ import sys
 import time
 from DTNRMLibs.Daemonizer import Daemon
 from DTNRMLibs.MainUtilities import getConfig, reCacheConfig, getStreamLogger, getLogger
+from DTNRMLibs.FECalls import reportServiceStatus
 from SiteFE.PolicyService import policyService as polS
 
 CONFIG = getConfig()
@@ -18,30 +19,44 @@ COMPONENT = 'PolicyService'
 LOGGER = getLogger("%s/%s/" % (CONFIG.get('general', 'logDir'), COMPONENT), CONFIG.get('general', 'logLevel'))
 
 
+def getThreads(config):
+    outThreads = {}
+    for sitename in config.get('general', 'sites').split(','):
+        policer = polS.PolicyService(config, LOGGER, sitename)
+        outThreads[sitename] = policer
+    return outThreads
+
 class MyDaemon(Daemon):
     """ My own Deamon override """
     def run(self):
         """ Run main execution """
         timeeq, currentHour = reCacheConfig(None)
-        policer = polS.PolicyService(getConfig(), LOGGER)
+        polThreads = getThreads(CONFIG)
         while True:
+            hadFailure = False
             try:
-                policer.startwork()
-                time.sleep(2)
+                for sitename, polt in polThreads.items():
+                    LOGGER.info('Start worker for %s site', sitename)
+                    try:
+                        polt.startwork()
+                        reportServiceStatus(COMPONENT, 'OK', sitename, LOGGER)
+                    except:
+                        hadFailure = True
+                        reportServiceStatus(COMPONENT, 'FAILED', sitename, LOGGER)
+                        excType, excValue = sys.exc_info()[:2]
+                        LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
+                time.sleep(10)
             except KeyboardInterrupt as ex:
                 LOGGER.critical("Received KeyboardInterrupt: %s ", ex)
+                reportServiceStatus(COMPONENT, 'KEYBOARDINTERRUPT', sitename, LOGGER)
                 exit(3)
-            except:
-                # TODO. Have a way to report this upstream that there was an unknown type except.
-                # In this case we can solve these issues if there ar some with any service.
-                excType, excValue = sys.exc_info()[:2]
-                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
-                time.sleep(20)
+            if hadFailure:
+                LOGGER.info('Had Runtime Failure. Sleep for 30 seconds')
+                time.sleep(30)
             timeeq, currentHour = reCacheConfig(currentHour)
             if not timeeq:
                 LOGGER.info('Re initiating Policer Service with new configuration from GIT')
-                del policer
-                policer = polS.PolicyService(getConfig(), LOGGER)
+                polThreads = getThreads(getConfig())
 
 
 if __name__ == "__main__":

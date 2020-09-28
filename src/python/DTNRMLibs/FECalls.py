@@ -18,9 +18,12 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2019 California Institute of Technology
 Date			: 2019/05/01
 """
-
+import sys
+import socket
 import importlib
 from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.DBBackend import dbinterface
 
 
@@ -51,3 +54,25 @@ def getSwitches(config, sitename, nodes, logger):
     method = importlib.import_module("SiteFE.LookUpService.Plugins.%s" % switchPlugin.lower())
     switchInfo = method.getinfo(config, logger, nodes, sitename)
     return switchInfo
+
+
+def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
+    """ Report service state to DB """
+    try:
+        if not hostname:
+            hostname = socket.gethostname()
+        dbOut = {'hostname': hostname,
+                 'servicestate': status,
+                 'servicename': servicename,
+                 'updatedate': getUTCnow()}
+        dbI = getDBConn()
+        dbobj = getVal(dbI, **{'sitename': sitename})
+        services = dbobj.get('servicestates', search=[['hostname', hostname], ['servicename', servicename]])
+        if not services:
+            dbobj.insert('servicestates', [dbOut])
+        else:
+            dbobj.update('servicestates', [dbOut])
+    except Exception:
+        excType, excValue = sys.exc_info()[:2]
+        logger.critical("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
+                        str(excType.__name__), excValue)

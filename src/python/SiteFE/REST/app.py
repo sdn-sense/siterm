@@ -42,6 +42,7 @@ import re
 import json
 import importlib
 from SiteFE.REST.FEApis import FrontendRM
+from SiteFE.REST.prometheus_exporter import PrometheusAPI
 import SiteFE.REST.AppCalls as AllCalls
 from DTNRMLibs.x509 import CertHandler
 from DTNRMLibs.RESTInteractions import get_match_regex
@@ -63,10 +64,12 @@ _INITIALIZED = None
 _CP = None
 # Frontend Resource manager
 _FRONTEND_RM = FrontendRM()
+_PROMETHEUS = PrometheusAPI()
 _SITES = []
+_HTTPRESPONDER = HTTPResponses()
+_CERTHANDLER = CertHandler()
 
-# TODO Separate app and put to correct locations AppCalls and Models.
-# TODO Return should check what is return type so that it returns json dump or text.
+
 # This would also allow to move all catches to here... and get all errors in one place
 # ==============================================
 #              DEFAULT Functions
@@ -85,10 +88,11 @@ def check_initialized(environ):
 # =====================================================================================================================
 # =====================================================================================================================
 
-_FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata)$')
+_FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata|servicestate)$')
 _FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata},
                      'PUT': {'addhost': _FRONTEND_RM.addhost,
-                             'updatehost': _FRONTEND_RM.updatehost}}
+                             'updatehost': _FRONTEND_RM.updatehost,
+                             'servicestate': _FRONTEND_RM.servicestate}}
 
 
 def frontend(environ, **kwargs):
@@ -117,7 +121,16 @@ def frontend(environ, **kwargs):
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     return {"Status": 'OK'}
 
-URLS = [(_FRONTEND_RE, frontend, ['GET', 'PUT'], [], [])]
+_PROMETHEUS_RE = re.compile(r'^/*json/frontend/metrics$')
+
+
+def prometheus(environ, **kwargs):
+    """ Return prometheus stats """
+    return _PROMETHEUS.metrics(**kwargs)
+
+
+URLS = [(_FRONTEND_RE, frontend, ['GET', 'PUT'], [], []),
+        (_PROMETHEUS_RE, prometheus, ['GET'], [], [])]
 
 if '__all__' in dir(AllCalls):
     for callableF in AllCalls.__all__:
@@ -150,36 +163,47 @@ def internallCall(caller, environ, **kwargs):
     return returnDict
 
 
+def returnBasedOnHeaders(out, headers):
+    """ Return output based on AcceptHeader"""
+    if headers['USER_AGENT'].startswith('Prometheus'):
+        return out
+    elif 'application/json' in headers['ACCEPT'].split(','):
+        return json.dumps([out])
+    elif 'text/html' in headers['ACCEPT'].split(','):
+        return out
+    print 'Unknown return type. Returning as is'
+    return out
+
+
 def application(environ, start_response):
     """
     Main start. WSGI will always call this function,
     which will check if call is allowed.
     """
     # HTTP responses var
-    httpResponder = HTTPResponses()
     check_initialized(environ)
     global _SITES
-    certHandler = CertHandler()
     try:
-        environ['CERTINFO'] = certHandler.getCertInfo(environ)
-        print environ['CERTINFO']
-        certHandler.validateCertificate(environ)
+        environ['CERTINFO'] = _CERTHANDLER.getCertInfo(environ)
+        _CERTHANDLER.validateCertificate(environ)
     except Exception as ex:
-        httpResponder.ret_401('application/json', start_response, None)
+        _HTTPRESPONDER.ret_401('application/json', start_response, None)
         return [json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=401))]
     path = environ.get('PATH_INFO', '').lstrip('/')
     sitename = environ.get('REQUEST_URI', '').split('/')[1]
     if sitename not in _SITES:
-        httpResponder.ret_404('application/json', start_response, None)
-        return [json.dumps(getCustomOutMsg(errMsg="Sitename %s is not configured. Contact Support." % sitename, errCode=404))]
+        _HTTPRESPONDER.ret_404('application/json', start_response, None)
+        return [json.dumps(getCustomOutMsg(errMsg="Sitename %s is not configured. Contact Support."
+                                           % sitename, errCode=404))]
     for regex, callback, methods, params, acceptheader in URLS:
         match = regex.match(path)
         if match:
             regMatch = get_match_regex(environ, regex)
             if environ['REQUEST_METHOD'].upper() not in methods:
-                httpResponder.ret_405('application/json', start_response, [('Location', '/')])
-                return [json.dumps(getCustomOutMsg(errMsg="Method %s is not supported in %s" % (environ['REQUEST_METHOD'].upper(),
-                                                                                                callback), errCode=405))]
+                _HTTPRESPONDER.ret_405('application/json', start_response, [('Location', '/')])
+                return [json.dumps(getCustomOutMsg(errMsg="Method %s is not supported in %s"
+                                                   % (environ['REQUEST_METHOD'].upper(),
+                                                      callback), errCode=405))]
             environ['jobview.url_args'] = match.groups()
             try:
                 headers = getHeaders(environ)
@@ -188,20 +212,25 @@ def application(environ, start_response):
                 # Preference is to keep them inside URL definitions.
                 if 'ACCEPT' not in headers:
                     headers['ACCEPT'] = 'application/json'
-                    # Even it is not specified, we work only with application/json.
-                    # Any others have option to overwrite it.
                 if acceptheader:
                     if headers['ACCEPT'] not in acceptheader:
-                        httpResponder.ret_406('application/json', start_response, None)
-                        return [json.dumps(getCustomOutMsg(errMsg="Not Acceptable Header. Provided: %s, Acceptable: %s" % (headers['ACCEPT'], acceptheader), errCode=406))]
-                return [json.dumps(internallCall(caller=callback, environ=environ, start_response=start_response,
-                                                 mReg=regMatch, http_respond=httpResponder,
-                                                 urlParams=getUrlParams(environ, params),
-                                                 headers=headers, sitename=sitename))]
+                        _HTTPRESPONDER.ret_406('application/json', start_response, None)
+                        return [json.dumps(getCustomOutMsg(errMsg="Not Acceptable Header. Provided: %s, Acceptable: %s"
+                                                           % (headers['ACCEPT'], acceptheader), errCode=406))]
+                out = internallCall(caller=callback, environ=environ, start_response=start_response,
+                                    mReg=regMatch, http_respond=_HTTPRESPONDER,
+                                    urlParams=getUrlParams(environ, params),
+                                    headers=headers, sitename=sitename)
+                return returnBasedOnHeaders(out, headers)
             except (NotSupportedArgument, TooManyArgumentalValues) as ex:
                 print 'Send 400 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400))
-                httpResponder.ret_400('application/json', start_response, None)
+                _HTTPRESPONDER.ret_400('application/json', start_response, None)
                 return [json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400))]
-    print 'Send 501 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg="Such API does not exist. Not Implemented", errCode=501))
-    httpResponder.ret_501('application/json', start_response, [('Location', '/')])
-    return [json.dumps(getCustomOutMsg(errMsg="Such API does not exist. Not Implemented", errCode=501))]
+            except Exception as ex:
+                print 'Send 500 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500))
+                _HTTPRESPONDER.ret_500('application/json', start_response, None)
+                return [json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500))]
+    errMsg = "Such API does not exist. Not Implemented"
+    print 'Send 501 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501))
+    _HTTPRESPONDER.ret_501('application/json', start_response, [('Location', '/')])
+    return [json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501))]

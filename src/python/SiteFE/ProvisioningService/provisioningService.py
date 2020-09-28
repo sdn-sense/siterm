@@ -32,12 +32,11 @@ from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 
 class ProvisioningService(object):
     """ Provisioning service communicates with Local controllers and applies network changes. """
-    def __init__(self, config, logger, args):
+    def __init__(self, config, logger, sitename):
         self.logger = logger
         self.config = config
-        self.args = args
         self.siteDB = contentDB(logger=self.logger, config=self.config)
-        self.sitename = None
+        self.sitename = sitename
 
     def pushInternalAction(self, url, state, deltaID, hostname):
         """ Push Internal action and return dict """
@@ -141,15 +140,6 @@ class ProvisioningService(object):
         return out
 
     def startwork(self):
-        """Main start """
-        for siteName in self.config.get('general', 'sites').split(','):
-            workDir = self.config.get(siteName, 'privatedir') + "/ProvisioningService/"
-            createDirs(workDir)
-            self.sitename = siteName
-            self.logger.info('Working on Site %s' % self.sitename)
-            self.startworkmain()
-
-    def startworkmain(self):
         """ Start Provisioning Service main worker """
         fullURL = getFullUrl(self.config, sitename=self.sitename)
         jOut = self.getData(fullURL, "/sitefe/json/frontend/getdata")
