@@ -51,6 +51,7 @@ from DTNRMLibs.CustomExceptions import NotSupportedArgument
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 from DTNRMLibs.HTTPLibrary import Requests
 
+
 def getUTCnow():
     """ Get UTC Time"""
     now = datetime.datetime.utcnow()
@@ -226,7 +227,7 @@ class GitConfig(object):
                          'MD5':        {'optional': False}}
         self.logger = getStreamLogger()
 
-    def _gitConfigCache(self, name, url):
+    def gitConfigCache(self, name, url):
         """ Precache file for 1 hour from git and use cached file """
         output = None
         if os.path.isfile('/tmp/dtnrm-no-config-fetch.yaml'):
@@ -291,7 +292,7 @@ class GitConfig(object):
         """
         if self.config['MAPPING']['type'] == 'Agent':
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
-            self.config['MAIN'] = self._gitConfigCache('Agent-main', url)
+            self.config['MAIN'] = self.gitConfigCache('Agent-main', url)
             return
 
     def getGitFEConfig(self):
@@ -301,9 +302,9 @@ class GitConfig(object):
         """
         if self.config['MAPPING']['type'] == 'FE':
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
-            self.config['MAIN'] = self._gitConfigCache('FE-main', url)
+            self.config['MAIN'] = self.gitConfigCache('FE-main', url)
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'auth.yaml'])
-            self.config['AUTH'] = self._gitConfigCache('FE-auth', url)
+            self.config['AUTH'] = self.gitConfigCache('FE-auth', url)
             return
 
     def getGitConfig(self):
@@ -311,7 +312,7 @@ class GitConfig(object):
         if not self.config:
             self.getLocalConfig()
         url = "%s/mapping.yaml" % self.getFullGitUrl()
-        mapping = self._gitConfigCache('mapping', url)
+        mapping = self.gitConfigCache('mapping', url)
         if self.config['MD5'] not in mapping.keys():
             msg = 'Configuration is not available for this MD5 %s tag in GIT REPO %s' % \
                             (self.config['MD5'], self.config['GIT_REPO'])
@@ -492,7 +493,6 @@ def getUrlParams(environ, paramsList):
         return {}
     if environ['REQUEST_METHOD'].upper() in ['POST']:
         # POST will handle by himself
-        # TODO. It should set back the correct methods and input so that multiple places can use it.
         return {}
     form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ)
     outParams = {}
@@ -576,13 +576,13 @@ def decodebase64(inputStr, decodeFlag=True):
         return base64.b64decode(inputStr)
     return inputStr
 
+
 def pubStateRemote(config, dic):
     """ Publish state from remote services """
     try:
         fullUrl = getFullUrl(config)
         fullUrl += '/sitefe'
-        outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
-    except:
+        publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
+    except Exception:
         excType, excValue = sys.exc_info()[:2]
-        logger.critical("Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
-
+        print "Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue)

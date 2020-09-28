@@ -39,10 +39,8 @@ Email 			: justas.balcas (at) cern.ch
 Date			: 2017/09/26
 """
 import re
-import sys
 import json
 import importlib
-from DTNRMLibs.FECalls import getDBConn
 from SiteFE.REST.FEApis import FrontendRM
 from SiteFE.REST.prometheus_exporter import PrometheusAPI
 import SiteFE.REST.AppCalls as AllCalls
@@ -71,8 +69,7 @@ _SITES = []
 _HTTPRESPONDER = HTTPResponses()
 _CERTHANDLER = CertHandler()
 
-# TODO Separate app and put to correct locations AppCalls and Models.
-# TODO Return should check what is return type so that it returns json dump or text.
+
 # This would also allow to move all catches to here... and get all errors in one place
 # ==============================================
 #              DEFAULT Functions
@@ -126,9 +123,11 @@ def frontend(environ, **kwargs):
 
 _PROMETHEUS_RE = re.compile(r'^/*json/frontend/metrics$')
 
+
 def prometheus(environ, **kwargs):
     """ Return prometheus stats """
     return _PROMETHEUS.metrics(**kwargs)
+
 
 URLS = [(_FRONTEND_RE, frontend, ['GET', 'PUT'], [], []),
         (_PROMETHEUS_RE, prometheus, ['GET'], [], [])]
@@ -194,15 +193,17 @@ def application(environ, start_response):
     sitename = environ.get('REQUEST_URI', '').split('/')[1]
     if sitename not in _SITES:
         _HTTPRESPONDER.ret_404('application/json', start_response, None)
-        return [json.dumps(getCustomOutMsg(errMsg="Sitename %s is not configured. Contact Support." % sitename, errCode=404))]
+        return [json.dumps(getCustomOutMsg(errMsg="Sitename %s is not configured. Contact Support."
+                                           % sitename, errCode=404))]
     for regex, callback, methods, params, acceptheader in URLS:
         match = regex.match(path)
         if match:
             regMatch = get_match_regex(environ, regex)
             if environ['REQUEST_METHOD'].upper() not in methods:
                 _HTTPRESPONDER.ret_405('application/json', start_response, [('Location', '/')])
-                return [json.dumps(getCustomOutMsg(errMsg="Method %s is not supported in %s" % (environ['REQUEST_METHOD'].upper(),
-                                                                                                callback), errCode=405))]
+                return [json.dumps(getCustomOutMsg(errMsg="Method %s is not supported in %s"
+                                                   % (environ['REQUEST_METHOD'].upper(),
+                                                      callback), errCode=405))]
             environ['jobview.url_args'] = match.groups()
             try:
                 headers = getHeaders(environ)
@@ -214,7 +215,8 @@ def application(environ, start_response):
                 if acceptheader:
                     if headers['ACCEPT'] not in acceptheader:
                         _HTTPRESPONDER.ret_406('application/json', start_response, None)
-                        return [json.dumps(getCustomOutMsg(errMsg="Not Acceptable Header. Provided: %s, Acceptable: %s" % (headers['ACCEPT'], acceptheader), errCode=406))]
+                        return [json.dumps(getCustomOutMsg(errMsg="Not Acceptable Header. Provided: %s, Acceptable: %s"
+                                                           % (headers['ACCEPT'], acceptheader), errCode=406))]
                 out = internallCall(caller=callback, environ=environ, start_response=start_response,
                                     mReg=regMatch, http_respond=_HTTPRESPONDER,
                                     urlParams=getUrlParams(environ, params),
@@ -228,6 +230,7 @@ def application(environ, start_response):
                 print 'Send 500 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500))
                 _HTTPRESPONDER.ret_500('application/json', start_response, None)
                 return [json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500))]
-    print 'Send 501 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg="Such API does not exist. Not Implemented", errCode=501))
+    errMsg = "Such API does not exist. Not Implemented"
+    print 'Send 501 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501))
     _HTTPRESPONDER.ret_501('application/json', start_response, [('Location', '/')])
-    return [json.dumps(getCustomOutMsg(errMsg="Such API does not exist. Not Implemented", errCode=501))]
+    return [json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501))]

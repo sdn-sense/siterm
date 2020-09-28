@@ -22,29 +22,34 @@ from DTNRMLibs.MainUtilities import getUTCnow
 from prometheus_client import generate_latest, CollectorRegistry
 from prometheus_client import Enum, CONTENT_TYPE_LATEST
 
+
 class PrometheusAPI(object):
     """ Prometheus exporter class"""
     def __init__(self):
         self.dbI = getDBConn()
 
-    def _cleanRegistry(self):
+    @staticmethod
+    def cleanRegistry():
+        """ Get new/clean prometheus registry """
         registry = CollectorRegistry()
         return registry
 
-    def _getServiceStates(self, registry, **kwargs):
-        service_state = Enum('service_state', 'Description of enum',
-                     labelnames=['servicename'],
-                     states=['OK', 'UNKNOWN', 'FAILED', 'KEYBOARDINTERRUPT'],
-                     registry=registry)
+    def getServiceStates(self, registry, **kwargs):
+        """ Get all Services states """
+        serviceState = Enum('service_state', 'Description of enum',
+                            labelnames=['servicename'],
+                            states=['OK', 'UNKNOWN', 'FAILED', 'KEYBOARDINTERRUPT'],
+                            registry=registry)
         services = self.dbI[kwargs['sitename']].get('servicestates')
-        # {'servicestate': u'OK', 'hostname': u'4df8c7b989d1', 'servicename': u'LookUpService', 'id': 1, 'updatedate': 1601047007}
+        # {'servicestate': u'OK', 'hostname': u'4df8c7b989d1',
+        #  'servicename': u'LookUpService', 'id': 1, 'updatedate': 1601047007}
         timenow = int(getUTCnow())
         for service in services:
             state = 'UNKNOWN'
             if int(timenow - service['updatedate']) < 120:
                 # If we are not getting service state for 2 mins, leave state as unknown
                 state = service['servicestate']
-            service_state.labels(servicename=service['servicename']).state(state)
+            serviceState.labels(servicename=service['servicename']).state(state)
 
     def metrics(self, **kwargs):
         """ Return all available Hosts, where key is IP address """

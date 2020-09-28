@@ -116,7 +116,7 @@ class PolicyService(object):
                     temptime = int(time.mktime(parser.parse(str(tout[0])).timetuple()))
                     if time.daylight:
                         temptime -= 3600
-                except:
+                except Exception:
                     continue
                 times[timev] = temptime
             if len(times.keys()) == 2:
@@ -137,12 +137,12 @@ class PolicyService(object):
         gIn.parse(inFileName, format='turtle')
         out = []
         self.logger.info('Trying to parse L2 info from delta')
-        out = self.__parsel2Request(inFileName, allKnownHosts, prefixes, gIn, out)
+        out = self.parsel2Request(allKnownHosts, prefixes, gIn, out)
         self.logger.info('Trying to parse L3 info from delta')
-        out = self.__parsel3Request(inFileName, allKnownHosts, prefixes, gIn, out)
+        out = self.parsel3Request(allKnownHosts, prefixes, gIn, out)
         return out
 
-    def __parsel3Request(self, inFileName, allKnownHosts, prefixes, gIn, returnout):
+    def parsel3Request(self, allKnownHosts, prefixes, gIn, returnout):
         """ Parse Layer 3 Delta Request """
         for hostname in allKnownHosts.keys():
             prefixes['mainrst'] = URIRef("%s:%s:service+rst" % (prefixes['site'], hostname))
@@ -181,7 +181,7 @@ class PolicyService(object):
                 self.logger.debug('L3 Parse output: %s', outall)
         return returnout
 
-    def __parsel2Request(self, inFileName, allKnownHosts, prefixes, gIn, returnout):
+    def parsel2Request(self, allKnownHosts, prefixes, gIn, returnout):
         """ Parse L2 request """
         self.logger.info('Lets try to get connection ID subject for %s' % prefixes['main'])
         connectionID = None
@@ -195,7 +195,8 @@ class PolicyService(object):
             output['connectionID'] = str(connectionID)
             self.logger.info('This is our connection ID: %s' % connectionID)
             self.logger.info('Now lets get all info what it wants to do. Mainly bidPorts and labelSwapping flag')
-            bidPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'], 'hasBidirectionalPort')))
+            bidPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'],
+                                                                                  'hasBidirectionalPort')))
             out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'], 'labelSwapping')))
             output['labelSwapping'] = str(out[0])
             out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'], 'existsDuring')))
@@ -254,6 +255,19 @@ class PolicyService(object):
             createDirs(workDir)
             self.logger.info('Working on Site %s' % siteName)
             self.startworkmain(siteName)
+        # Committed to activating...
+        # committing, committed, activating, activated, remove, removing, cancel
+        dbobj = getVal(self.dbI, sitename=self.sitename)
+        for job in [['committing', self.stateMachine.committing],
+                    ['committed', self.stateMachine.committed],
+                    ['activating', self.stateMachine.activating],
+                    ['activated', self.stateMachine.activated],
+                    ['remove', self.stateMachine.remove],
+                    ['removing', self.stateMachine.removing],
+                    ['cancel', self.stateMachine.cancel],
+                    ['cancelConn', self.stateMachine.cancelledConnections]]:
+            self.logger.info("Starting check on %s deltas" % job[0])
+            job[1](dbobj)
 
     def acceptDelta(self, deltapath):
         """ Accept delta """
@@ -306,23 +320,6 @@ class PolicyService(object):
                 self.stateMachine.accepted(dbobj, toDict)
             # =================================
         return toDict
-
-    def startwork(self):
-        """Main start """
-        # Committed to activating...
-        # committing, committed, activating, activated, remove, removing, cancel
-        dbobj = getVal(self.dbI, sitename=self.sitename)
-
-        for job in [['committing', self.stateMachine.committing],
-                    ['committed', self.stateMachine.committed],
-                    ['activating', self.stateMachine.activating],
-                    ['activated', self.stateMachine.activated],
-                    ['remove', self.stateMachine.remove],
-                    ['removing', self.stateMachine.removing],
-                    ['cancel', self.stateMachine.cancel],
-                    ['cancelConn', self.stateMachine.cancelledConnections]]:
-            self.logger.info("Starting check on %s deltas" % job[0])
-            job[1](dbobj)
 
 
 def execute(config=None, logger=None, args=None):

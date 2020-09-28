@@ -56,7 +56,7 @@ def getSwitches(config, sitename, nodes, logger):
     return switchInfo
 
 
-def reportServiceStatus(servicename, status, sitename, logger, hostname = ""):
+def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
     """ Report service state to DB """
     try:
         if not hostname:
@@ -72,7 +72,7 @@ def reportServiceStatus(servicename, status, sitename, logger, hostname = ""):
             dbobj.insert('servicestates', [dbOut])
         else:
             dbobj.update('servicestates', [dbOut])
-    except:
+    except Exception:
         excType, excValue = sys.exc_info()[:2]
-        logger.critical("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
-
+        logger.critical("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
+                        str(excType.__name__), excValue)
