@@ -18,7 +18,8 @@ rm -rf $TMP_DIR
 # Also get Let's Encrypt CAs
 TMP_DIR=$(mktemp -d)
 cd $TMP_DIR/
-git clone https://github.com/cilogon/letsencrypt-certificates.git
+# Copy of https://github.com/cilogon/letsencrypt-certificates.git
+git clone https://github.com/sdn-sense/letsencrypt-certificates.git
 cd letsencrypt-certificates/
 make check
 make install

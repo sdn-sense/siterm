@@ -21,13 +21,13 @@ Date            : 2017/09/26
 """
 import sys
 from setuptools import setup
-from setupUtilities import list_packages, get_py_modules
+from setupUtilities import list_packages, get_py_modules, VERSION
 
 if "--docker" in sys.argv:
     sys.argv.remove("--docker")
 setup(
     name='DTNRMAgent',
-    version="0.1",
+    version="%s" % VERSION,
     long_description="DTN-RM Agent installation",
     author="Justas Balcas",
     author_email="justas.balcas@cern.ch",
@@ -36,7 +36,11 @@ setup(
     keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
     package_dir={'': 'src/python/'},
     packages=['DTNRMAgent', 'DTNRMLibs'] + list_packages(['src/python/DTNRMAgent/', 'src/python/DTNRMLibs/']),
-    install_requires=['importlib==1.0.4', 'psutil==5.2.2', 'potsdb', 'ipaddress', 'pyroute2', 'pyaml', 'requests', 'netifaces'],
+    install_requires=['importlib==1.0.4', 'psutil==5.2.2', 'potsdb', 'ipaddress',
+                      'pyroute2', 'pyaml', 'requests', 'netifaces'],
+    data_files=[("/etc/cron.d/", ["packaging/dtnrm-site-agent/siterm-crons"]),
+                ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh",
+                                        "packaging/general/siterm-autoupdate.py"])],
     py_modules=get_py_modules(['src/python/DTNRMAgent', 'src/python/DTNRMLibs']),
     scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler"]
 )

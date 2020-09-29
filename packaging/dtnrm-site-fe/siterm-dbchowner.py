@@ -40,4 +40,3 @@ if __name__ == "__main__":
             if username != DEFAULT_USERNAME or group != DEFAULT_GROUP:
                 print 'Chowning database file. New Site? %s' % sitename
                 os.chown(dbname, DEFAULT_UID, DEFAULT_GID)
-
