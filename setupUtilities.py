@@ -86,7 +86,7 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
             for dirpath, dummyDirnames, dummyFilenames in os.walk('%s' % aDir, topdown=True):
                 pathelements = dirpath.split('/')
                 # If any part of pathelements is in the ignore_these set skip the path
-                if list(set(pathelements) & ignoreThese):
+                if not list(set(pathelements) & ignoreThese):
                     relPath = os.path.relpath(dirpath, get_path_to_root())
                     relPath = relPath.split('/')[2:]
                     if not pyFiles:
