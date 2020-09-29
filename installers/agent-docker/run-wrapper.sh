@@ -16,6 +16,7 @@ rm -f /tmp/*Agent-main.yaml
 rm -f /tmp/dtnrm*-update.pid
 
 # Start crond
+touch /var/log/cron.log
 /usr/sbin/crond
 crontab /etc/cron.d/siterm-crons
 
