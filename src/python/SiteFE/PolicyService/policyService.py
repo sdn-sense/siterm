@@ -288,7 +288,7 @@ class PolicyService(object):
                         self.logger.info('Received ValueError. More details %s. Try to write normally with decode', ex)
                         tmpFile.write(decodebase64(toDict["Content"][key]))
                     tmpFile.close()
-                    outputDict[key] = self.parseDeltaRequest(tmpFile.name, jOut, self.sitename)
+                    outputDict[key] = self.parseDeltaRequest(tmpFile.name, jOut)
                     os.unlink(tmpFile.name)
         except (IOError, KeyError, AttributeError, IndentationError, ValueError,
                 BadSyntax, HostNotFound, UnrecognizedDeltaOption) as ex:
@@ -332,7 +332,7 @@ def execute(config=None, logger=None, args=None):
     policer = PolicyService(config, logger, args[3])
     if args:
         # This is only for debugging purposes.
-        print policer.parseDeltaRequest(args[1], {args[2]: []}, args[3])
+        print policer.parseDeltaRequest(args[1], {args[2]: []})
     else:
         policer.startwork()
 
