@@ -28,7 +28,8 @@ import platform
 # src/python/SiteFE/__init__.py
 # src/python/DTNRMAgent/__init__.py
 # src/python/DTNRMLibs/__init__.py
-VERSION='200929'
+VERSION = '200929'
+
 
 def linuxDistr():
     """ Return linux distribution name. Otherwise Unknown """
@@ -85,7 +86,7 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
             for dirpath, dummyDirnames, dummyFilenames in os.walk('%s' % aDir, topdown=True):
                 pathelements = dirpath.split('/')
                 # If any part of pathelements is in the ignore_these set skip the path
-                if len(set(pathelements) & ignoreThese) == 0:
+                if list(set(pathelements) & ignoreThese):
                     relPath = os.path.relpath(dirpath, get_path_to_root())
                     relPath = relPath.split('/')[2:]
                     if not pyFiles:
