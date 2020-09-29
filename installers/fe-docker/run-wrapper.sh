@@ -32,6 +32,10 @@ find $datadir -type d -exec chmod 0755 {} \;
 # Make a script which loops over the config on GIT and prepares
 # dirs and database. Now it requires to do it manually or restart docker
 
+# Run crond
+/usr/sbin/crond
+crontab /etc/cron.d/siterm-crons
+
 # Start the first process
 mkdir -p /run/httpd
 /usr/sbin/httpd -k restart

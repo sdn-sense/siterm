@@ -22,6 +22,13 @@ import os
 import sys
 import platform
 
+# IMPORTANT Be aware if you update version here, please update it also in:
+# setupUtilities.py
+# src/python/__init__.py
+# src/python/SiteFE/__init__.py
+# src/python/DTNRMAgent/__init__.py
+# src/python/DTNRMLibs/__init__.py
+VERSION='200929'
 
 def linuxDistr():
     """ Return linux distribution name. Otherwise Unknown """

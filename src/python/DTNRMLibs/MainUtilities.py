@@ -324,7 +324,7 @@ class GitConfig(object):
 
 
 def getGitConfig():
-    """ Wrapper before git config class. Retirns dictionary """
+    """ Wrapper before git config class. Returns dictionary """
     gitConf = GitConfig()
     gitConf.getGitConfig()
     return gitConf.config

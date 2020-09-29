@@ -21,7 +21,7 @@ Date            : 2017/09/26
 """
 import sys
 from setuptools import setup
-from setupUtilities import list_packages, get_py_modules
+from setupUtilities import list_packages, get_py_modules, VERSION
 
 # Cronjobs which are running also have to be prepared with correct timing.
 # Also another cronjob, which monitors config file and modifies cronjobs if needed.
@@ -35,7 +35,7 @@ if "--docker" in sys.argv:
     sys.argv.remove("--docker")
 setup(
     name='DTNRMSiteFE',
-    version="0.1",
+    version="%s" % VERSION,
     long_description="DTN-RM Site installation",
     author="Justas Balcas",
     author_email="justas.balcas@cern.ch",
@@ -50,8 +50,9 @@ setup(
                 ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
                                         "packaging/dtnrm-site-fe/welcome.conf"]),
                 ("/etc/cron.d/", ["packaging/dtnrm-site-fe/siterm-crons"]),
-                ("/etc/cron-scripts/", ["packaging/dtnrm-site-fe/siterm-ca-cron.sh",
-                                        "packaging/dtnrm-site-fe/siterm-dbchowner.py"])],
+                ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh",
+                                        "packaging/dtnrm-site-fe/siterm-dbchowner.py",
+                                        "packaging/general/siterm-autoupdate.py"])],
     py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
     scripts=SCRIPTS
 )

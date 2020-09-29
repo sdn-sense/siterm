@@ -15,7 +15,10 @@ rm -f /tmp/*Agent-main.yaml
 # Remove any PID files left from reboot/stop.
 rm -f /tmp/dtnrm*-update.pid
 
-chown -R apache:apache  /opt/siterm/config/
+# Start crond
+/usr/sbin/crond
+crontab /etc/cron.d/siterm-crons
+
 # Start the first process
 sudo -u root /usr/bin/dtnrmagent-update restart
 status=$?
