@@ -170,7 +170,7 @@ def returnBasedOnHeaders(out, headers):
     elif 'application/json' in headers['ACCEPT'].split(','):
         return json.dumps(out)
     elif 'text/html' in headers['ACCEPT'].split(','):
-        return out
+        return str(out)
     return json.dumps(out)
 
 
