@@ -58,8 +58,12 @@ def get(config, logger):
         vlanRange = config.get(intf, "vlans")
         vlanMin = config.get(intf, "vlan_min")
         vlanMax = config.get(intf, "vlan_max")
-        switchPort = config.get(intf, "port")
-        switch = config.get(intf, "switch")
+        if config.has_option(intf, 'port'):
+            switchPort = config.get(intf, "port")
+            nicInfo['switch_port'] = str(switchPort).replace('/', '_')
+        if config.has_option(intf, 'switch'):
+            switch = config.get(intf, "switch")
+            nicInfo['switch'] = str(switch)
         sharedInterface = config.get(intf, "shared")
         if config.has_option(intf, 'isAlias'):
             nicInfo['isAlias'] = config.get(intf, 'isAlias')
@@ -68,8 +72,6 @@ def get(config, logger):
         nicInfo['vlan_range'] = vlanRange
         nicInfo['min_bandwidth'] = int(vlanMin)
         nicInfo['max_bandwidth'] = int(vlanMax)
-        nicInfo['switch_port'] = str(switchPort).replace('/', '_')
-        nicInfo['switch'] = str(switch)
         nicInfo['shared'] = str2bool(sharedInterface)
         nicInfo['vlans'] = {}
         # TODO. It should calculate available capacity, depending on installed vlans.
