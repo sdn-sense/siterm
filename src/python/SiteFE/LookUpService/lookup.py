@@ -408,9 +408,13 @@ class LookUpService(object):
         """ Add All Switch information from switch lookup plugin"""
         # Get switch information...
         switchPlugin = self.config.get(self.sitename, 'plugin')
-        self.logger.info('Will load %s switch plugin' % switchPlugin)
-        method = importlib.import_module("SiteFE.LookUpService.Plugins.%s" % switchPlugin.lower())
-        switchInfo = method.getinfo(self.config, self.logger, jOut, self.sitename)
+        switchInfo = {'switches': {}, 'vlans': {}}
+        if switchPlugin in ['raw', 'odl']:
+            self.logger.info('Will load %s switch plugin' % switchPlugin)
+            method = importlib.import_module("SiteFE.LookUpService.Plugins.%s" % switchPlugin.lower())
+            switchInfo = method.getinfo(self.config, self.logger, jOut, self.sitename)
+        else:
+           self.logger.info('This switch plugin %s is either not supported or not implemented' % switchPlugin)
         # Add Switch information to MRML
         for switchName, switchDict in switchInfo['switches'].items():
             print switchName, switchDict
@@ -486,9 +490,6 @@ class LookUpService(object):
             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                self.prefixDB.genUriRef('nml', 'hasService'),
                                self.prefixDB.genUriRef('site', "%s:%s" % (newuri, 'bandwidthService'))))
-            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                               self.prefixDB.genUriRef('nml', 'isAlias'),
-                               self.prefixDB.genUriRef('site', ":%s:%s:+" % (switchName, switchPort))))
             # BANDWIDTH Service for INTERFACE
             # ==========================================================================================
             bws = "%s:%s" % (newuri, 'bandwidthService')
@@ -567,6 +568,13 @@ class LookUpService(object):
             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                self.prefixDB.genUriRef('rdf', 'type'),
                                self.prefixDB.genUriRef('nml', 'BidirectionalPort')))
+            if 'isAlias' in intfDict.keys():
+                alias = intfDict['isAlias']
+            else:
+                alias = ":%s:%s:+" % (switchName, switchPort)
+            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
+                               self.prefixDB.genUriRef('nml', 'isAlias'),
+                               self.prefixDB.genUriRef('', custom=alias)))
             # =====================================================================
             # Add most of the agent configuration to MRML
             # =====================================================================
@@ -639,7 +647,6 @@ class LookUpService(object):
         # ==================================================================================
         self.defineMRMLServices()
         self.hosts = {}
-
         for _, nodeDict in jOut.items():
             # ==================================================================================
             # 3. Define Node inside yaml
