@@ -33,7 +33,7 @@ def callCommand(command):
 
 def getLatestVersion():
     """ Get Latest version name from Github repo """
-    callCommand("git pull /opt/dtnrmcode/siterm/")
+    callCommand("cd /opt/dtnrmcode/siterm/ && git pull")
     sys.path.append('/opt/dtnrmcode/siterm/')
     import setupUtilities
     return setupUtilities.VERSION
