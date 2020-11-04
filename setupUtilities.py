@@ -28,7 +28,7 @@ import platform
 # src/python/SiteFE/__init__.py
 # src/python/DTNRMAgent/__init__.py
 # src/python/DTNRMLibs/__init__.py
-VERSION = '2010301'
+VERSION = '201104'
 
 
 def linuxDistr():
