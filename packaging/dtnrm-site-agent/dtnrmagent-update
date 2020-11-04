@@ -31,7 +31,7 @@ class MyDaemon(Daemon):
         while True:
             time.sleep(20)
             try:
-                DTNMain.execute(config=CONFIG, logger=LOGGER)
+                DTNMain.execute(config=config, logger=LOGGER)
                 outDict['servicestate'] = 'OK'
                 pubStateRemote(config, outDict)
             except KeyboardInterrupt as ex:
