@@ -26,7 +26,7 @@ from prometheus_client import Enum, CONTENT_TYPE_LATEST
 class PrometheusAPI(object):
     """ Prometheus exporter class"""
     def __init__(self):
-        self.dbI = getDBConn()
+        self.dbI = getDBConn('Prometheus')
 
     @staticmethod
     def cleanRegistry():

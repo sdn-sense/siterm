@@ -14,7 +14,7 @@ STATEMACHINE = StateMachine(LOGGER)
 
 
 def getdeltaAll(sitename):
-    dbI = getDBConn()
+    dbI = getDBConn('listalldeltas')
     dbobj = getVal(dbI, sitename=sitename)
     for delta in dbobj.get('deltas'):
         delta['addition'] = evaldict(delta['addition'])

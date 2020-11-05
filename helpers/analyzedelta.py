@@ -18,7 +18,7 @@ STATEMACHINE = StateMachine(LOGGER)
 
 
 def getdeltaAll(sitename, deltaUID):
-    dbI = getDBConn()
+    dbI = getDBConn('analyzedelta')
     dbobj = getVal(dbI, sitename=sitename)
     policer = polS.PolicyService(CONFIG, LOGGER)
     for delta in dbobj.get('deltas'):

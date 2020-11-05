@@ -27,20 +27,20 @@ from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.DBBackend import dbinterface
 
 
-def getDBConn():
+def getDBConn(serviceName=''):
     """ Get datanase connection """
     dbConn = {}
     config = getConfig()
     for sitename in config.get('general', 'sites').split(','):
         if config.has_option(sitename, "database"):
-            dbConn[sitename] = dbinterface(config.get(sitename, "database"))
+            dbConn[sitename] = dbinterface(config.get(sitename, "database"), serviceName, config, sitename)
     return dbConn
 
 
 def getAllHosts(sitename, logger):
     """ Get all hosts from database """
     logger.info('Get all hosts for %s', sitename)
-    dbObj = getDBConn()[sitename]
+    dbObj = getDBConn('getAllHosts')[sitename]
     jOut = {}
     for site in dbObj.get('hosts'):
         jOut[site['hostname']] = site
@@ -65,7 +65,7 @@ def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
                  'servicestate': status,
                  'servicename': servicename,
                  'updatedate': getUTCnow()}
-        dbI = getDBConn()
+        dbI = getDBConn(servicename)
         dbobj = getVal(dbI, **{'sitename': sitename})
         services = dbobj.get('servicestates', search=[['hostname', hostname], ['servicename', servicename]])
         if not services:
