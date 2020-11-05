@@ -78,7 +78,7 @@ class PolicyService(object):
         self.logger = logger
         self.config = config
         self.siteDB = contentDB(logger=self.logger, config=self.config)
-        self.dbI = getDBConn()
+        self.dbI = getDBConn('PolicyService')
         self.stateMachine = StateMachine(self.logger)
 
     def queryGraph(self, graphIn, sub=None, pre=None, obj=None, search=None):

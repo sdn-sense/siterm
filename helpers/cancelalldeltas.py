@@ -13,7 +13,7 @@ STATEMACHINE = StateMachine(LOGGER)
 
 def deleteAll(sitename, deltaUID=None):
     """ delete all deltas """
-    dbI = getDBConn()
+    dbI = getDBConn('cancelalldeltas')
     dbobj = getVal(dbI, sitename=sitename)
     for delta in dbobj.get('deltas'):
         if deltaUID:

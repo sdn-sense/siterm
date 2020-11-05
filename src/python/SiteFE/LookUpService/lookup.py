@@ -91,7 +91,7 @@ class LookUpService(object):
         self.logger = logger
         self.config = config
         self.prefixDB = prefixDB(config, sitename)
-        self.dbI = getDBConn()
+        self.dbI = getDBConn('LookUpService')
         self.newGraph = None
         self.shared = False
         self.hosts = {}

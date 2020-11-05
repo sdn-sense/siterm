@@ -42,7 +42,7 @@ def getdeltainfo(sitename, deltaUID):
     """ Get all delta information.
         INPUT: sitename  - str mandatory
                deltaUID  - str mandatory"""
-    dbI = getDBConn()
+    dbI = getDBConn('acceptdelta')
     dbobj = getVal(dbI, sitename=sitename)
     for delta in dbobj.get('deltas'):
         if delta['uid'] != deltaUID:
