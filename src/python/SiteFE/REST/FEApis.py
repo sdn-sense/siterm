@@ -31,7 +31,7 @@ from DTNRMLibs.FECalls import reportServiceStatus
 class FrontendRM(object):
     """ Site Frontend calls"""
     def __init__(self):
-        self.dbI = getDBConn()
+        self.dbI = getDBConn('REST-Frontend')
         self.initialized = False
         self.config = getConfig()
         self.siteDB = contentDB()
