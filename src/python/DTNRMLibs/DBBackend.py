@@ -21,9 +21,11 @@ Date			: 2019/05/01
 """
 
 import os
+import time
 import sqlite3
 import DTNRMLibs.dbcalls as dbcalls
 from DTNRMLibs.MainUtilities import createDirs, getLogger
+
 
 class DBBackend(object):
     """ Database Backend class """
@@ -63,11 +65,11 @@ class DBBackend(object):
 
     def execute_get(self, query):
         """ GET Execution """
-        self.initialize()
         alldata = []
-        callname = []
+        colname = []
         callExit = ''
         try:
+            self.initialize()
             self.cursor.execute(query)
             colname = [tup[0] for tup in self.cursor.description]
             alldata = self.cursor.fetchall()
@@ -81,9 +83,9 @@ class DBBackend(object):
 
     def execute_ins(self, query, values):
         """ INSERT Execute """
-        self.initialize()
         callExit = ''
         try:
+            self.initialize()
             for item in values:
                 self.cursor.execute(query, item)
             self.conn.commit()
@@ -105,14 +107,14 @@ class DBBackend(object):
     def execute_del(self, query, values):
         """ DELETE Execute """
         del values
-        self.initialize()
         callExit = ''
         try:
+            self.initialize()
             self.cursor.execute(query)
             self.conn.commit()
             callExit = 'OK'
         except Exception as ex:
-           callExit = 'Exception'
+            callExit = 'Exception'
             self.logger.debug('Got Exception %s ' % ex)
             self.conn.rollback()
             raise ex
@@ -126,24 +128,28 @@ class dbinterface(object):
     def __init__(self, dbFile, serviceName, config, sitename):
         self.db = DBBackend(dbFile)
         self.config = config
-        self.sitename =  sitename
+        self.sitename = sitename
         self.serviceName = serviceName
         self.logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), 'db'),
-                                            config.get('general', 'logLevel'))
+                                config.get('general', 'logLevel'))
         self.callStart = None
         self.callEnd = None
 
     def _setStartCallTime(self, calltype):
+        """ Set Call Start timer """
+        del calltype
         self.callStart = float(time.time())
 
-    def _setEndCallTime(self, calltype):
+    def _setEndCallTime(self, calltype, callExit):
+        """ Set Call End timer """
         self.callEnd = float(time.time())
-        self._calldiff(calltype)
+        self._calldiff(calltype, callExit)
 
-    def _calldiff(self, calltype):
-         diff = self.callEnd - self.callStart
-         msg = "DB: %s %s %s" % (self.serviceName, calltype, str(diff))
-         self.logger.info(msg)
+    def _calldiff(self, calltype, callExit):
+        """ Log timing for call """
+        diff = self.callEnd - self.callStart
+        msg = "DB: %s %s %s %s" % (self.serviceName, calltype, str(diff), callExit)
+        self.logger.info(msg)
 
     def getcall(self, callaction, calltype):
         """ Get call from ALL available ones """
@@ -151,7 +157,7 @@ class dbinterface(object):
         try:
             callquery = getattr(dbcalls, '%s_%s' % (callaction, calltype))
         except AttributeError as ex:
-            self.logger.debug('Called %s_%s, but got exception %s' % (callaction, calltype, ex))
+            self.logger.debug('Called %s_%s, but got exception %s', callaction, calltype, ex)
             raise ex
         return callquery
 
@@ -160,6 +166,7 @@ class dbinterface(object):
     # =====================================================
 
     def _caller(self, origquery, limit=None, orderby=None, search=None):
+        """ Modifies get call and include WHER/ORDER/LIMIT """
         query = ""
         if search:
             first = True
@@ -180,12 +187,12 @@ class dbinterface(object):
     def get(self, calltype, limit=None, search=None, orderby=None, mapping=True):
         """ GET Call for APPs """
         self._setStartCallTime(calltype)
-        dbout = self._caller(self.getcall('get', calltype), limit, orderby, search)
-        self._setEndCallTime(calltype)
+        callExit, colname, dbout = self._caller(self.getcall('get', calltype), limit, orderby, search)
+        self._setEndCallTime(calltype, callExit)
         out = []
         if mapping:
-            for item in dbout[1]:
-                out.append(dict(zip(dbout[0], list(item))))
+            for item in dbout:
+                out.append(dict(zip(colname, list(item))))
             return out
         return dbout
 
@@ -196,8 +203,8 @@ class dbinterface(object):
     def insert(self, calltype, values):
         """ INSERT call for APPs """
         self._setStartCallTime(calltype)
-        dbOut = self.db.execute_ins(self.getcall('insert', calltype), values)
-        self._setEndCallTime(calltype)
+        callExit, _, _ = self.db.execute_ins(self.getcall('insert', calltype), values)
+        self._setEndCallTime(calltype, callExit)
 
     # =====================================================
     #  HERE GOES UPDATE CALLS
@@ -206,8 +213,8 @@ class dbinterface(object):
     def update(self, calltype, values):
         """ UPDATE Call for APPs """
         self._setStartCallTime(calltype)
-        return self.db.execute_ins(self.getcall('update', calltype), values)
-        self._setEndCallTime(calltype)
+        callExit, _, _ = self.db.execute_ins(self.getcall('update', calltype), values)
+        self._setEndCallTime(calltype, callExit)
 
     # =====================================================
     #  HERE GOES DELETE CALLS
@@ -226,5 +233,5 @@ class dbinterface(object):
                 query += '%s = "%s" ' % (item[0], item[1])
         fullquery = "%s %s" % (self.getcall('delete', calltype), query)
         self._setStartCallTime(calltype)
-        self.db.execute_del(fullquery, None)
-        self._setEndCallTime(calltype)
+        callExit, _, _ = self.db.execute_del(fullquery, None)
+        self._setEndCallTime(calltype, callExit)
