@@ -29,8 +29,9 @@ from DTNRMLibs.MainUtilities import createDirs, getLogger
 
 class DBBackend(object):
     """ Database Backend class """
-    def __init__(self, configFile):
+    def __init__(self, configFile, logger):
         self.dbfile = configFile
+        self.logger = logger
         createdb = False
         if not os.path.isfile(self.dbfile):
             createDirs(self.dbfile)
@@ -126,12 +127,12 @@ class DBBackend(object):
 class dbinterface(object):
     """ Database interface """
     def __init__(self, dbFile, serviceName, config, sitename):
-        self.db = DBBackend(dbFile)
         self.config = config
         self.sitename = sitename
         self.serviceName = serviceName
         self.logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), 'db'),
                                 config.get('general', 'logLevel'))
+        self.db = DBBackend(dbFile, self.logger)
         self.callStart = None
         self.callEnd = None
 
