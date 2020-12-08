@@ -63,6 +63,7 @@ def getinfo(config, logger, nodesInfo=None, site=None):
         output['vlans'][switch][port] = {}
         for key in ['hostname', 'isAlias', 'vlan_range', 'capacity', 'desttype', 'destport']:
             if not config.has_option(site, "port%s%s" % (port, key)):
+                logger.debug('Option %s is not defined for Port %s' % (key, port))
                 continue
             else:
                 if key == 'capacity':

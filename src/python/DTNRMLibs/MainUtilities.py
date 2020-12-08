@@ -113,8 +113,8 @@ def getLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='mi
     formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
                                   datefmt="%a, %d %b %Y %H:%M:%S")
     handler.setFormatter(formatter)
+    handler.setLevel(levels[logLevel])
     logger.addHandler(handler)
-    logger.setLevel(levels[logLevel])
     return logger
 
 
