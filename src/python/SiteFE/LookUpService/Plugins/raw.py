@@ -49,7 +49,7 @@ def getinfo(config, logger, nodesInfo=None, site=None):
     if not config.has_section(site):
         logger.info('SiteName %s is not defined' % site)
         return output
-    logger.info('Looking for switch config for %s site' % site)
+    logger.debug('Looking for switch config for %s site' % site)
     # These config parameters are mandatory. In case not available, return empty list
     for key in ['plugin', 'ports', 'switch']:
         if not config.has_option(site, key):
@@ -63,7 +63,7 @@ def getinfo(config, logger, nodesInfo=None, site=None):
         output['vlans'][switch][port] = {}
         for key in ['hostname', 'isAlias', 'vlan_range', 'capacity', 'desttype', 'destport']:
             if not config.has_option(site, "port%s%s" % (port, key)):
-                logger.info('Option %s is not defined for Port %s' % (key, port))
+                continue
             else:
                 if key == 'capacity':
                     # TODO. Allow in future to specify in terms of G,M,B. For now only G
@@ -93,7 +93,6 @@ def getinfo(config, logger, nodesInfo=None, site=None):
             breakLoop = False
             for key in ['switch_port', 'switch', 'vlan_range', 'available_bandwidth']:
                 if key not in intfDict.keys():
-                    logger.debug('key %s is not available in intf dict git config', key)
                     breakLoop = True
             if breakLoop:
                 continue
