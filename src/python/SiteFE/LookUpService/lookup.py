@@ -278,7 +278,7 @@ class LookUpService(object):
         try:
             labelswap = self.config.get(self.sitename, 'labelswapping')
         except ConfigParser.NoOptionError:
-            self.logger.info('Labelswapping parameter is not defined. By default it is set to False.')
+            self.logger.debug('Labelswapping parameter is not defined. By default it is set to False.')
         self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw'),
                            self.prefixDB.genUriRef('nml', 'labelSwapping'),
                            self.prefixDB.genLiteral(labelswap)))
@@ -684,12 +684,11 @@ class LookUpService(object):
         else:
             self.logger.info('Models are different. Update DB')
             dbObj.insert('models', [lastKnownModel])
-        self.logger.info('Last Known Model: %s' % str(lastKnownModel))
 
         # Clean Up old models (older than 24h.)
         for model in dbObj.get('models', limit=100, orderby=['insertdate', 'ASC']):
             if model['insertdate'] < int(getUTCnow() - 86400):
-                self.logger.info('delete %s', model)
+                self.logger.debug('delete %s', model)
                 try:
                     os.unlink(model['fileloc'])
                 except OSError as ex:

@@ -24,14 +24,13 @@ import os
 import time
 import sqlite3
 import DTNRMLibs.dbcalls as dbcalls
-from DTNRMLibs.MainUtilities import createDirs, getLogger
+from DTNRMLibs.MainUtilities import createDirs 
 
 
 class DBBackend(object):
     """ Database Backend class """
-    def __init__(self, configFile, logger):
+    def __init__(self, configFile):
         self.dbfile = configFile
-        self.logger = logger
         createdb = False
         if not os.path.isfile(self.dbfile):
             createDirs(self.dbfile)
@@ -98,7 +97,7 @@ class DBBackend(object):
             raise ex
         except Exception as ex:
             callExit = 'Exception'
-            self.logger.debug('Got Exception %s ' % ex)
+            print('Got Exception %s ' % ex)
             self.conn.rollback()
             raise ex
         finally:
@@ -116,7 +115,7 @@ class DBBackend(object):
             callExit = 'OK'
         except Exception as ex:
             callExit = 'Exception'
-            self.logger.debug('Got Exception %s ' % ex)
+            print('Got Exception %s ' % ex)
             self.conn.rollback()
             raise ex
         finally:
@@ -130,9 +129,7 @@ class dbinterface(object):
         self.config = config
         self.sitename = sitename
         self.serviceName = serviceName
-        self.logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), 'db'),
-                                config.get('general', 'logLevel'))
-        self.db = DBBackend(dbFile, self.logger)
+        self.db = DBBackend(dbFile)
         self.callStart = None
         self.callEnd = None
 
@@ -150,7 +147,7 @@ class dbinterface(object):
         """ Log timing for call """
         diff = self.callEnd - self.callStart
         msg = "DB: %s %s %s %s" % (self.serviceName, calltype, str(diff), callExit)
-        self.logger.info(msg)
+        print(msg)
 
     def getcall(self, callaction, calltype):
         """ Get call from ALL available ones """
@@ -158,7 +155,7 @@ class dbinterface(object):
         try:
             callquery = getattr(dbcalls, '%s_%s' % (callaction, calltype))
         except AttributeError as ex:
-            self.logger.debug('Called %s_%s, but got exception %s', callaction, calltype, ex)
+            print('Called %s_%s, but got exception %s', callaction, calltype, ex)
             raise ex
         return callquery
 
