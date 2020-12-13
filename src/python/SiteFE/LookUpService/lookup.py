@@ -410,7 +410,8 @@ class LookUpService(object):
         switchPlugin = self.config.get(self.sitename, 'plugin')
         self.logger.info('Will load %s switch plugin' % switchPlugin)
         method = importlib.import_module("SiteFE.LookUpService.Plugins.%s" % switchPlugin.lower())
-        switchInfo = method.getinfo(self.config, self.logger, jOut, self.sitename)
+        switchCall = method.Switch(self.config, self.logger, jOut, self.sitename)
+        switchInfo = switchCall.getinfo()
         # Add Switch information to MRML
         for switchName, switchDict in switchInfo['switches'].items():
             print switchName, switchDict
