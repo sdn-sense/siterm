@@ -63,16 +63,14 @@ class Switch(object):
                 self.logger.info('Option %s is not defined in Site Config. Return' % key)
                 return {}
         switch = self.config.get(self.site, 'switch')
-        olddef = False
-        if len(switch.split(',')) == 1:
-            olddef = True
         for switchn in switch.split(','):
-            self.switchInfo(olddef, switchn)
+            self.switchInfo(switchn)
         self.nodeinfo()
         return self.cleanupEmpty()
 
     def cleanupEmpty(self):
         """  Final check remove empty dicts/lists inside output """
+        print self.output
         tmpOut = copy.deepcopy(self.output)
         for sw, swd in self.output['switches'].items():
             if not swd:
@@ -84,7 +82,7 @@ class Switch(object):
                     continue
         return tmpOut
 
-    def getValFromConfig(self, switch, olddef, port, key):
+    def getValFromConfig(self, switch, port, key):
         """ Get val from config."""
         tmpVal = self.config.get(switch, "port%s%s" % (port, key))
         try:
@@ -93,7 +91,7 @@ class Switch(object):
             pass
         return tmpVal
 
-    def switchInfo(self, olddef, switch):
+    def switchInfo(self, switch):
         """ Get all switch info from FE main yaml file. """
         self.output['switches'][switch] = {}
         self.output['vlans'][switch] = {}
@@ -102,25 +100,27 @@ class Switch(object):
             self.output['vlans'][switch][port] = {}
             for key in ['hostname', 'isAlias', 'vlan_range', 'capacity', 'desttype', 'destport']:
                 if not self.config.has_option(switch, "port%s%s" % (port, key)):
-                    self.logger.debug('Option %s is not defined for Port %s' % (key, port))
+                    self.logger.debug('Option %s is not defined for Switch %s and Port %s' % (key, switch, port))
                     continue
                 else:
-                    tmpVal = self.getValFromConfig(switch, olddef, port, key)
+                    tmpVal = self.getValFromConfig(switch, port, key)
                     if key == 'capacity':
                         # TODO. Allow in future to specify in terms of G,M,B. For now only G
                         # and we change it to bits
                         self.output['vlans'][switch][port][key] = tmpVal * 1000000000
                     else:
                         self.output['vlans'][switch][port][key] = tmpVal
-                    if key == 'isAlias':
-                        self.output['switches'][switch][port] = ""
-                        spltAlias = tmpVal.split(':')
-                        self.output['switches'][switch][port] = spltAlias[-2]
-                        self.output['vlans'][switch][port]['desttype'] = 'switch'
-                        if 'destport' not in self.output['vlans'][switch][port].keys():
-                            self.output['vlans'][switch][port]['destport'] = spltAlias[-1]
-                        if 'hostname' not in self.output['vlans'][switch][port].keys():
-                            self.output['vlans'][switch][port]['hostname'] = spltAlias[-2]
+            self.output['switches'][switch][port] = ""
+            if self.config.has_option(switch, "port%shostname" % port):
+                self.output['switches'][switch][port] = self.getValFromConfig(switch, port, 'hostname')
+            elif self.config.has_option(switch, "port%sisAlias" % port):
+                spltAlias = self.getValFromConfig(switch, port, 'isAlias').split(':')
+                self.output['switches'][switch][port] = spltAlias[-2]
+                self.output['vlans'][switch][port]['desttype'] = 'switch'
+                if 'destport' not in self.output['vlans'][switch][port].keys():
+                    self.output['vlans'][switch][port]['destport'] = spltAlias[-1]
+                if 'hostname' not in self.output['vlans'][switch][port].keys():
+                    self.output['vlans'][switch][port]['hostname'] = spltAlias[-2]
 
     def nodeinfo(self):
         """ put  all node information from node reported stats """
@@ -162,4 +162,3 @@ if __name__ == '__main__':
         print 'Working on %s' % sitename
         method = Switch(CONFIG, LOGGER, None, sitename)
         print method.getinfo()
-

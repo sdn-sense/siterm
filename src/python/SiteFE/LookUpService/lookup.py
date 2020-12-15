@@ -266,26 +266,32 @@ class LookUpService(object):
                            self.prefixDB.genUriRef('rdf', 'type'),
                            self.prefixDB.genUriRef('nml', 'Topology')))
         # Add Service
-        self.newGraph.add((self.prefixDB.genUriRef('site'),
-                           self.prefixDB.genUriRef('nml', 'hasService'),
-                           self.prefixDB.genUriRef('site', ':service+vsw')))
-        self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw'),
-                           self.prefixDB.genUriRef('rdf', 'type'),
-                           self.prefixDB.genUriRef('nml', 'SwitchingService')))
+        for switchName in self.config.get(self.sitename, 'switch').split(','):
+            try:
+                vsw = self.config.get(switchName, 'vsw')
+            except ConfigParser.NoOptionError:
+                self.logger.debug('ERROR: vsw parameter is not defined for %s.', switchName)
+                continue
+            self.newGraph.add((self.prefixDB.genUriRef('site'),
+                               self.prefixDB.genUriRef('nml', 'hasService'),
+                               self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw)))
+            self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
+                               self.prefixDB.genUriRef('rdf', 'type'),
+                               self.prefixDB.genUriRef('nml', 'SwitchingService')))
 
-        # Add lableSwapping flag
-        labelswap = "false"
-        try:
-            labelswap = self.config.get(self.sitename, 'labelswapping')
-        except ConfigParser.NoOptionError:
-            self.logger.debug('Labelswapping parameter is not defined. By default it is set to False.')
-        self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw'),
-                           self.prefixDB.genUriRef('nml', 'labelSwapping'),
-                           self.prefixDB.genLiteral(labelswap)))
-        # Add base encoding for service
-        self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw'),
-                           self.prefixDB.genUriRef('nml', 'encoding'),
-                           self.prefixDB.genUriRef('schema')))
+            # Add lableSwapping flag
+            labelswap = "false"
+            try:
+                labelswap = self.config.get(switchName, 'labelswapping')
+            except ConfigParser.NoOptionError:
+                self.logger.debug('Labelswapping parameter is not defined. By default it is set to False.')
+            self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
+                               self.prefixDB.genUriRef('nml', 'labelSwapping'),
+                               self.prefixDB.genLiteral(labelswap)))
+            # Add base encoding for service
+            self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
+                               self.prefixDB.genUriRef('nml', 'encoding'),
+                               self.prefixDB.genUriRef('schema')))
 
     def defineMRMLPrefixes(self):
         """ Define all known prefixes """
@@ -414,13 +420,18 @@ class LookUpService(object):
         switchInfo = switchCall.getinfo()
         # Add Switch information to MRML
         for switchName, switchDict in switchInfo['switches'].items():
-            print switchName, switchDict
+            self.logger.debug('Working on %s and %s' % (switchName, switchDict))
+            try:
+                vsw = self.config.get(switchName, 'vsw')
+            except ConfigParser.NoOptionError:
+                self.logger.debug('ERROR: vsw parameter is not defined for %s.', switchName)
+                continue
             for portName, portSwitch in switchDict.items():
                 newuri = ":%s:%s:%s" % (switchName, portName, portSwitch)
                 self.newGraph.add((self.prefixDB.genUriRef('site'),
                                    self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
                                    self.prefixDB.genUriRef('site', newuri)))
-                self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw'),
+                self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
                                    self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
                                    self.prefixDB.genUriRef('site', newuri)))
                 self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
