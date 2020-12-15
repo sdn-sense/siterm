@@ -127,20 +127,37 @@ class PolicyService(object):
         """Parse delta request to json"""
         self.logger.info("Parsing delta request %s ", inFileName)
         prefixes = {}
+        allOutput = []
         prefixes['site'] = "%s:%s:%s" % (self.config.get('prefixes', 'site'),
                                          self.config.get(self.sitename, 'domain'),
                                          self.config.get(self.sitename, 'year'))
-        prefixes['main'] = URIRef("%s:service+vsw" % prefixes['site'])
-        prefixes['nml'] = self.config.get('prefixes', 'nml')
-        prefixes['mrs'] = self.config.get('prefixes', 'mrs')
-        gIn = Graph()
-        gIn.parse(inFileName, format='turtle')
-        out = []
-        self.logger.info('Trying to parse L2 info from delta')
-        out = self.parsel2Request(allKnownHosts, prefixes, gIn, out)
-        self.logger.info('Trying to parse L3 info from delta')
-        out = self.parsel3Request(allKnownHosts, prefixes, gIn, out)
-        return out
+        for switchName in self.config.get(self.sitename, 'switch').split(','):
+            try:
+                vsw = self.config.get(switchName, 'vsw')
+            except ConfigParser.NoOptionError:
+                self.logger.debug('ERROR: vsw parameter is not defined for %s.', switchName)
+                continue 
+            prefixes['main'] = URIRef("%s:service+vsw:%s" % (prefixes['site'], vsw))
+            prefixes['nml'] = self.config.get('prefixes', 'nml')
+            prefixes['mrs'] = self.config.get('prefixes', 'mrs')
+            gIn = Graph()
+            gIn.parse(inFileName, format='turtle')
+            out = []
+            self.logger.info('Trying to parse L2 info from delta')
+            out = self.parsel2Request(allKnownHosts, prefixes, gIn, out)
+            self.logger.info('Trying to parse L3 info from delta')
+            out = self.parsel3Request(allKnownHosts, prefixes, gIn, out)
+            allOutput.append(out)
+        allOutput = list(filter(None, allOutput))
+        if len(allOutput) > 1:
+            msg = 'Got multiple Service definitions. Not Supported. Output: %s' % allOutput
+            self.logger.info(msg)
+            return {"errorType": 'MultipleDefs',
+                    "errorNo": '-9',
+                    "errMsg": msg}
+        elif not allOutput:
+            return []
+        return allOutput[0]
 
     def parsel3Request(self, allKnownHosts, prefixes, gIn, returnout):
         """ Parse Layer 3 Delta Request """
@@ -208,6 +225,7 @@ class PolicyService(object):
             self.logger.info('Now lets get all info for each bidirectionalPort, like vlan, ip, serviceInfo ')
             # We need mainly hasLabel, hasNetworkAddress
             for bidPort in bidPorts:
+                print bidPort
                 # Get first which labels it has. # This provides us info about vlan tag
                 connInfo, output = getConnInfo(bidPort, prefixes['site'], output, nostore=True)
                 if connInfo not in allKnownHosts:
@@ -329,12 +347,14 @@ def execute(config=None, logger=None, args=None):
         logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), component),
                            config.get(component, 'logLevel'), True)
 
-    policer = PolicyService(config, logger, args[3])
     if args:
+        policer = PolicyService(config, logger, args[3])
         # This is only for debugging purposes.
         print policer.parseDeltaRequest(args[1], {args[2]: []})
     else:
-        policer.startwork()
+        for sitename in config.get('general', 'sites').split(','):
+            policer = PolicyService(config, logger, sitename)
+            policer.startwork()
 
 
 if __name__ == '__main__':
