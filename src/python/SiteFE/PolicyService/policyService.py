@@ -22,6 +22,7 @@ import os
 import sys
 import tempfile
 import time
+import ConfigParser
 from rdflib import Graph
 from rdflib import URIRef, Literal
 from rdflib.plugins.parsers.notation3 import BadSyntax
@@ -136,7 +137,7 @@ class PolicyService(object):
                 vsw = self.config.get(switchName, 'vsw')
             except ConfigParser.NoOptionError:
                 self.logger.debug('ERROR: vsw parameter is not defined for %s.', switchName)
-                continue 
+                continue
             prefixes['main'] = URIRef("%s:service+vsw:%s" % (prefixes['site'], vsw))
             prefixes['nml'] = self.config.get('prefixes', 'nml')
             prefixes['mrs'] = self.config.get('prefixes', 'mrs')
