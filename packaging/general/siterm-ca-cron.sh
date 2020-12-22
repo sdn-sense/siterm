@@ -23,3 +23,4 @@ git clone https://github.com/sdn-sense/letsencrypt-certificates.git
 cd letsencrypt-certificates/
 make check
 make install
+rm -rf $TMP_DIR
