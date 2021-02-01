@@ -2,6 +2,8 @@ version: "3.5"
 services:
   sitefe:
     build:
+      env_file:
+       - ./conf/environment
       context: .
       dockerfile: ./Dockerfile
       args:

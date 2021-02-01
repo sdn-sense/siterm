@@ -33,7 +33,7 @@
 # TODO. data directory should come from configuration parameter
 datadir=/opt/config/
 workdir=`pwd`
-packages="git autoconf sudo libffi-devel openssl-devel pyOpenSSL automake curl gcc libmnl-devel libuuid-devel lm_sensors make MySQL-python nc pkgconfig python wget python-psycopg2 PyYAML zlib-devel python-devel httpd mod_wsgi mod_ssl cronie"
+packages="git autoconf sudo libcurl-devel libffi-devel openssl-devel pyOpenSSL automake curl gcc libmnl-devel libuuid-devel lm_sensors make MySQL-python nc pkgconfig python3 wget PyYAML zlib-devel python3-devel httpd httpd-devel python3-mod_wsgi mod_ssl cronie python3-pip MariaDB-server MariaDB-client MariaDB-shared MariaDB-devel"
 # Check if release is supported.
 # TODO. Support other releases also.
 case $(uname) in
@@ -111,14 +111,9 @@ yum install -y $packages
 # Also make a tmp directory
 [ -d $tmpdir ] || mkdir -p $tmpdir || exit $?
 
-echo 'Installing and upgrading pip.'
-cd $tmpdir
-wget https://bootstrap.pypa.io/get-pip.py
-python get-pip.py
-
 echo "==================================================================="
 echo "We need latest setuptools to be able to install dtnrm package. Updating setuptools"
-pip install --upgrade setuptools
+pip3 install --upgrade setuptools
 
 echo "==================================================================="
 echo "Cloning siterm and installing it"
@@ -129,10 +124,15 @@ git clone -b $gitb https://github.com/$gito/$gitr
 cd $gitr
 
 if [ X"$docker" = X ]; then
-  python setup-sitefe.py install || exit $?
+  python3 setup-sitefe.py install || exit $?
 else
-  python setup-sitefe.py install --docker || exit $?
+  python3 setup-sitefe.py install --docker || exit $?
 fi
+
+echo "==================================================================="
+echo "Configure wsgi python3 httpd module"
+mod_wsgi-express install-module > /etc/httpd/conf.modules.d/02-wsgi.conf
+
 
   echo "==================================================================="
   echo "Modifying ownership and permission rules for Site FE directories"

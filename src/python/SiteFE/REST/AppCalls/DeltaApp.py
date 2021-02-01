@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 # pylint: disable=line-too-long, bad-whitespace
 """
 All Deltas and models APIS
@@ -19,6 +19,7 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
+from __future__ import print_function
 import re
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getStreamLogger
@@ -62,14 +63,14 @@ def deltas(environ, **kwargs):
         modTime = getModTime(kwargs['headers'])
         outdeltas = DELTABACKEND.getdelta(None, **kwargs)
         if kwargs['urlParams']['oldview']:
-            print 'Return All deltas. 200 OK'
+            print('Return All deltas. 200 OK')
             kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
             return outdeltas
         outM = {"deltas": []}
         if not outdeltas:
             kwargs['http_respond'].ret_204('application/json', kwargs['start_response'],
                                            [('Last-Modified', httpdate(getUTCnow()))])
-            print 'Return empty list. There are no deltas on the system'
+            print('Return empty list. There are no deltas on the system')
             return []
         updateTimestamp = 0
         for delta in outdeltas:
@@ -91,7 +92,7 @@ def deltas(environ, **kwargs):
             return []
         kwargs['http_respond'].ret_200('application/json', kwargs['start_response'],
                                        [('Last-Modified', httpdate(updateTimestamp))])
-        print 'Return Last Delta. 200 OK'
+        print('Return Last Delta. 200 OK')
         return outM["deltas"]
     # ======================================================
     # POST
@@ -105,22 +106,22 @@ def deltas(environ, **kwargs):
         else:
             kwargs['http_respond'].ret_400('application/json', kwargs['start_response'], None)
             customErr = getCustomOutMsg(errMsg='You did POST method, but provided CONTENT_TYPE is not correct', errCode=400)
-            print 'Return 400. More details: %s' % customErr
+            print('Return 400. More details: %s' % customErr)
             return customErr
     if not out:
         out = get_post_form(environ)
     newDelta = {}
-    for key in out.keys():
+    for key in list(out.keys()):
         newDelta[key] = out.get(key, "")
     for key in ['modelId', 'id']:
         if not newDelta[key]:
             customErr = getCustomOutMsg(errMsg='You did POST method, %s is not specified' % key, errCode=400)
-            print 'Wrong delta: %s. Parsed:%s Error: %s' % (out, newDelta, customErr)
+            print('Wrong delta: %s. Parsed:%s Error: %s' % (out, newDelta, customErr))
             kwargs['http_respond'].ret_400('application/json', kwargs['start_response'], None)
             return customErr
     if not newDelta['reduction'] and not newDelta['addition']:
         customErr = getCustomOutMsg(errMsg='You did POST method, but nor reduction, nor addition is present', errCode=400)
-        print 'Wrong delta: %s. Parsed:%s Error: %s' % (out, newDelta, customErr)
+        print('Wrong delta: %s. Parsed:%s Error: %s' % (out, newDelta, customErr))
         kwargs['http_respond'].ret_400('application/json', kwargs['start_response'], None)
         return customErr
     return DELTABACKEND.addNewDelta(newDelta, environ, **kwargs)
@@ -141,18 +142,18 @@ def deltas_id(environ, **kwargs):
     # METHOD DELETE!!!!! TODO
     if environ['REQUEST_METHOD'].upper() == 'DELETE':
         kwargs['http_respond'].ret_405('application/json', kwargs['start_response'], ('Location', '/'))
-        print 'DELETE Method is not supported yet. Return 405'
+        print('DELETE Method is not supported yet. Return 405')
         return [getCustomOutMsg(errMsg="Method %s is not supported in %s" % environ['REQUEST_METHOD'].upper(), errCode=405)]
     modTime = getModTime(kwargs['headers'])
-    print 'Delta Status query for %s' % kwargs['mReg'].groups()[0]
+    print('Delta Status query for %s' % kwargs['mReg'].groups()[0])
     delta = DELTABACKEND.getdelta(kwargs['mReg'].groups()[0], **kwargs)
     if not delta:
         kwargs['http_respond'].ret_204('application/json', kwargs['start_response'],
                                        [('Last-Modified', httpdate(getUTCnow()))])
-        print 'Return empty list. There are no deltas on the system'
+        print('Return empty list. There are no deltas on the system')
         return []
     if modTime > delta['updatedate']:
-        print 'Delta with ID %s was not updated so far. Time request comparison requested' % kwargs['mReg'].groups()[0]
+        print('Delta with ID %s was not updated so far. Time request comparison requested' % kwargs['mReg'].groups()[0])
         kwargs['http_respond'].ret_304('application/json', kwargs['start_response'], ('Last-Modified', httpdate(delta['updatedate'])))
         return []
     if kwargs['urlParams']['oldview']:
@@ -167,8 +168,8 @@ def deltas_id(environ, **kwargs):
     if not kwargs['urlParams']['summary']:
         current['addition'] = encodebase64(delta['addition'], kwargs['urlParams']['encode'])
         current['reduction'] = encodebase64(delta['reduction'], kwargs['urlParams']['encode'])
-    print 'Returning delta %s information. Few details: ModelID: %s, State: %s, LastModified: %s' % \
-          (current["id"], current["modelId"], current["state"], current["lastModified"])
+    print('Returning delta %s information. Few details: ModelID: %s, State: %s, LastModified: %s' % \
+          (current["id"], current["modelId"], current["state"], current["lastModified"]))
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], [('Last-Modified', httpdate(delta['updatedate']))])
     return [current]
 
@@ -187,7 +188,7 @@ def deltas_action(environ, **kwargs):
     del environ
     msgOut = DELTABACKEND.commitdelta(kwargs['mReg'].groups()[0], **kwargs)
     kwargs['http_respond'].ret_204('application/json', kwargs['start_response'], None)
-    print 'Delta %s commited. Return 204' % kwargs['mReg'].groups()[0]
+    print('Delta %s commited. Return 204' % kwargs['mReg'].groups()[0])
     return msgOut
 
 # =====================================================================================================================
@@ -208,27 +209,27 @@ def models(environ, **kwargs):
     outmodels = DELTABACKEND.getmodel(**kwargs)
     if not outmodels:
         kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
-        print 'LastModel does not exist in dictionary. First time run? See documentation'
+        print('LastModel does not exist in dictionary. First time run? See documentation')
         return getCustomOutMsg(errMsg="No models are available...", errCode=500)
     outmodels = [outmodels] if isinstance(outmodels, dict) else outmodels
     outM = {"models": []}
     current = {"id": outmodels[0]['uid'],
                "creationTime": convertTSToDatetime(outmodels[0]['insertdate']),
                "href": "%s/%s" % (environ['SCRIPT_URI'], outmodels[0]['uid'])}
-    print outmodels[0]['insertdate'], modTime, getUTCnow()
+    print(outmodels[0]['insertdate'], modTime, getUTCnow())
     if outmodels[0]['insertdate'] < modTime:
-        print '%s and %s' % (outmodels[0]['insertdate'], modTime)
+        print('%s and %s' % (outmodels[0]['insertdate'], modTime))
         kwargs['http_respond'].ret_304('application/json', kwargs['start_response'], ('Last-Modified', httpdate(outmodels[0]['insertdate'])))
         return []
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], [('Last-Modified', httpdate(outmodels[0]['insertdate']))])
     if kwargs['urlParams']['oldview']:
-        print 'Requested oldview model output. Return 200'
+        print('Requested oldview model output. Return 200')
         return outmodels
     elif kwargs['urlParams']['current']:
         if not kwargs['urlParams']['summary']:
             current['model'] = encodebase64(DELTABACKEND.getmodel(outmodels[0]['uid'], content=True, **kwargs), kwargs['urlParams']['encode'])
         outM['models'].append(current)
-        print 'Requested only current model. Return 200. Last Model %s' % outmodels[0]['uid']
+        print('Requested only current model. Return 200. Last Model %s' % outmodels[0]['uid'])
         return [current]
     elif not kwargs['urlParams']['current']:
         for model in outmodels:
@@ -238,7 +239,7 @@ def models(environ, **kwargs):
             if not kwargs['urlParams']['summary']:
                 tmpDict['model'] = encodebase64(DELTABACKEND.getmodel(model['uid'], content=True, **kwargs), kwargs['urlParams']['encode'])
             outM['models'].append(tmpDict)
-        print 'Returning all models known to the system. Return 200'
+        print('Returning all models known to the system. Return 200')
         return outM['models']
 
 # =====================================================================================================================
@@ -259,7 +260,7 @@ def models_id(environ, **kwargs):
     outmodels = DELTABACKEND.getmodel(modelID, **kwargs)
     model = outmodels if isinstance(outmodels, dict) else outmodels[0]
     if modTime > model['insertdate']:
-        print 'Model with ID %s was not updated so far. Time request comparison requested' % modelID
+        print('Model with ID %s was not updated so far. Time request comparison requested' % modelID)
         kwargs['http_respond'].ret_304('application/json', kwargs['start_response'], ('Last-Modified', httpdate(model['insertdate'])))
         return []
     current = {"id": model['uid'],
@@ -267,7 +268,7 @@ def models_id(environ, **kwargs):
                "href": "%s/%s" % (environ['SCRIPT_URI'], model['uid'])}
     if not kwargs['urlParams']['summary']:
         current['model'] = encodebase64(DELTABACKEND.getmodel(model['uid'], content=True, **kwargs), kwargs['urlParams']['encode'])
-    print 'Requested a specific model with id %s' % modelID
+    print('Requested a specific model with id %s' % modelID)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], [('Last-Modified', httpdate(model['insertdate']))])
     return current
     # Deltas are not associated with model. Not clear use case. If deltas is there Return all deltas.
@@ -275,7 +276,7 @@ def models_id(environ, **kwargs):
 # =====================================================================================================================
 # =====================================================================================================================
 
-_DELTA_INTERNAL_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_\.A-Za-z0-9]+)/(cancel|active|failed)/?$')
+_DELTA_INTERNAL_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_\.A-Za-z0-9]+)/(cancel|active|activated|failed)/?$')
 
 
 def delta_internal_actions(environ, **kwargs):
@@ -283,13 +284,13 @@ def delta_internal_actions(environ, **kwargs):
     API Call for internalactions. This is only allowed from same host or dtnrm-site-fe.
     Method: GET
     Output: application/json
-    Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/(cancel|active|failed)
+    Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/(cancel|active|activated|failed)
     """
     del environ
     deltaID = kwargs['mReg'].groups()[0]
     hostname = kwargs['mReg'].groups()[1]
     newState = kwargs['mReg'].groups()[2]
-    print 'Internal action. For %s and %s to %s' % (deltaID, hostname, newState)
+    print('Internal action. For %s and %s to %s' % (deltaID, hostname, newState))
     msgOut = DELTABACKEND.commitdelta(deltaID, newState, internal=True, hostname=hostname, **kwargs)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     return msgOut
@@ -308,7 +309,7 @@ def delta_hostname_ids(environ, **kwargs):
     hostname = ""
     hostname = kwargs['mReg'].groups()[0]
     state = kwargs['mReg'].groups()[1]
-    print 'Called to get all ids assigned to %s hostname' % hostname
+    print('Called to get all ids assigned to %s hostname' % hostname)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     return DELTABACKEND.getHostNameIDs(hostname, state, **kwargs)
 

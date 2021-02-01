@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 """
 Site FE call functions
 
@@ -18,6 +18,9 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
+from __future__ import print_function
+from builtins import str
+from builtins import object
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import contentDB
@@ -66,7 +69,7 @@ class FrontendRM(object):
                    'hostinfo': str(inputDict)}
             dbobj.insert('hosts', [out])
         else:
-            print 'This host is already in db. Why to add several times?'
+            print('This host is already in db. Why to add several times?')
             raise BadRequestError('This host is already in db. Why to add several times?')
         return
 

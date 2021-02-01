@@ -19,6 +19,9 @@ rm -f /tmp/dtnrm*.pid
 # As first run, Run Custom CA prefetch and add them to CAs dir.
 sh /etc/cron-scripts/siterm-ca-cron.sh
 
+# Start MariaDB
+sh /root/mariadb.sh
+
 datadir=/opt/config/
 echo "1. Making apache as owner of $datadir"
 chown apache:apache -R $datadir
@@ -48,7 +51,7 @@ if [ $status -ne 0 ]; then
 fi
 
 # Start the second process
-sudo -u root /usr/bin/LookUpService-update restart &
+sudo -u root /usr/local/bin/LookUpService-update restart &
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to restart LookUpService-update: $status"
@@ -56,7 +59,7 @@ if [ $status -ne 0 ]; then
 fi
 sleep 5
 # Start the third process
-sudo -u root /usr/bin/PolicyService-update restart &
+sudo -u root /usr/local/bin/PolicyService-update restart &
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to restart PolicyService-update: $status"
@@ -64,7 +67,7 @@ if [ $status -ne 0 ]; then
 fi
 sleep 5
 # Start the fourth process
-sudo -u root /usr/bin/ProvisioningService-update restart &
+sudo -u root /usr/local/bin/ProvisioningService-update restart &
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to restart ProvisioningService-update: $status"

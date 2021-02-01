@@ -30,7 +30,7 @@
 ##H  -h             Display this help.
 
 workdir=`pwd`
-packages="git autoconf automake sudo libffi-devel openssl-devel curl gcc traceroute libmnl-devel libuuid-devel lm_sensors ipset make MySQL-python nc pkgconfig python python-psycopg2 PyYAML zlib-devel python-devel wget vconfig tcpdump jq iproute cronie"
+packages="git autoconf automake sudo libcurl-devel libffi-devel openssl-devel curl gcc traceroute libmnl-devel libuuid-devel lm_sensors ipset make MySQL-python nc pkgconfig python3 python-psycopg2 PyYAML zlib-devel python3-devel wget vconfig tcpdump jq iproute cronie python3-pip"
 # Check if release is supported.
 # TODO. Support other releases also.
 case $(uname) in
@@ -108,14 +108,9 @@ yum install -y $packages
 # Also make a tmp directory
 [ -d $tmpdir ] || mkdir -p $tmpdir || exit $?
 
-echo 'Installing and upgrading pip.'
-cd $tmpdir
-wget https://bootstrap.pypa.io/get-pip.py
-python get-pip.py
-
 echo "==================================================================="
 echo "We need latest setuptools to be able to install dtnrm package. Updating setuptools"
-pip install --upgrade setuptools
+pip3 install --upgrade setuptools
 
 echo "==================================================================="
 echo "Cloning siterm and installing it"
@@ -125,9 +120,9 @@ git clone -b $gitb https://github.com/$gito/$gitr
 cd $gitr
 
 if [ X"$docker" = X ]; then
-  python setup-agent.py install || exit $?
+  python3 setup-agent.py install || exit $?
 else
-  python setup-agent.py install --docker || exit $?
+  python3 setup-agent.py install --docker || exit $?
 fi
 
 for x in iprange firehol

@@ -21,7 +21,7 @@ touch /var/log/cron.log
 crontab /etc/cron.d/siterm-crons
 
 # Start the first process
-sudo -u root /usr/bin/dtnrmagent-update restart
+sudo -u root /usr/local/bin/dtnrmagent-update restart
 status=$?
 exit_code=0
 if [ $status -ne 0 ]; then
@@ -30,7 +30,7 @@ if [ $status -ne 0 ]; then
 fi
 sleep 5
 # Start the second process
-sudo -u root /usr/bin/dtnrm-ruler restart
+sudo -u root /usr/local/bin/dtnrm-ruler restart
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to restart dtnrm-ruler: $status"

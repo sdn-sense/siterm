@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Everything goes here when they do not fit anywhere else
 
@@ -18,8 +18,15 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 import os
 import os.path
+import io
 import sys
 import cgi
 import pwd
@@ -28,22 +35,22 @@ import ast
 import time
 import shlex
 import uuid
-import json
 import copy
-import httplib
+import http.client
 import base64
 import datetime
 import subprocess
 import email.utils as eut
-import ConfigParser
-from cStringIO import StringIO
+import configparser
+import simplejson as json
+from io import StringIO
 import logging
 from logging import StreamHandler
 from logging.handlers import TimedRotatingFileHandler
 # Custom exceptions imports
 import pycurl
 import requests
-from yaml import load as yload
+from yaml import safe_load as yload
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import WrongInputError
 from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
@@ -61,13 +68,13 @@ def getUTCnow():
 
 def getVal(conDict, **kwargs):
     """ Get value from configuration """
-    if 'sitename' in kwargs.keys():
-        if kwargs['sitename'] in conDict.keys():
+    if 'sitename' in list(kwargs.keys()):
+        if kwargs['sitename'] in list(conDict.keys()):
             return conDict[kwargs['sitename']]
         else:
             raise Exception('This SiteName is not configured on the Frontend. Contact Support')
     else:
-        print kwargs
+        print(kwargs)
         raise Exception('This Call Should not happen. Contact Support')
 
 
@@ -120,20 +127,22 @@ def getLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='mi
 
 def evaldict(inputDict):
     """Output from the server needs to be evaluated"""
+    if isinstance(inputDict, (list, dict)):
+        return inputDict
     out = {}
     try:
-        out = ast.literal_eval(str(inputDict).encode('utf-8'))
+        out = ast.literal_eval(inputDict)
     except ValueError as ex:
-        print "Failed to literal eval dict. Err:%s " % ex
+        print("Failed to literal eval dict. Err:%s " % ex)
     except SyntaxError as ex:
-        print "Failed to literal eval dict. Err:%s " % ex
+        print("Failed to literal eval dict. Err:%s " % ex)
     return out
 
 
 def readFile(fileName):
     """Read all file lines to a list and rstrips the ending"""
     try:
-        with open(fileName) as fd:
+        with open(fileName, 'r') as fd:
             content = fd.readlines()
         content = [x.rstrip() for x in content]
         return content
@@ -157,10 +166,10 @@ def execute(command, logger, raiseError=True):
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
     msg = 'Command: %s, Out: %s, Err: %s, ReturnCode: %s' % (command, out.rstrip(), err.rstrip(), cmdOut.returncode)
-    logger.info(command)
     if cmdOut.returncode != 0 and raiseError:
         raise FailedInterfaceCommand(msg)
     elif cmdOut.returncode != 0:
+        logger.debug("RaiseError is False, but command failed. Only logging Errmsg: %s" % msg)
         return False
     return True
 
@@ -172,7 +181,7 @@ def createDirs(fullDirPath):
         try:
             os.makedirs(dirname)
         except OSError as ex:
-            print 'Received exception creating %s directory. Exception: %s' % (dirname, ex)
+            print('Received exception creating %s directory. Exception: %s' % (dirname, ex))
             if not os.path.isdir(dirname):
                 raise
     return
@@ -183,8 +192,8 @@ def publishToSiteFE(inputDict, host, url):
     req = Requests(host, {})
     try:
         out = req.makeRequest(url, verb='PUT', data=json.dumps(inputDict))
-    except httplib.HTTPException as ex:
-        return (ex.message, ex.status, 'FAILED', True)
+    except http.client.HTTPException as ex:
+        return (ex.reason, ex.status, 'FAILED', True)
     except pycurl.error as ex:
         return (ex.args[1], ex.args[0], 'FAILED', False)
     return out
@@ -195,8 +204,8 @@ def getDataFromSiteFE(inputDict, host, url):
     req = Requests(host, {})
     try:
         out = req.makeRequest(url, verb='GET', data=inputDict)
-    except httplib.HTTPException as ex:
-        return (ex.message, ex.status, 'FAILED', True)
+    except http.client.HTTPException as ex:
+        return (ex.reason, ex.status, 'FAILED', True)
     except pycurl.error as ex:
         return (ex.args[1], ex.args[0], 'FAILED', False)
     return out
@@ -277,8 +286,8 @@ class GitConfig(object):
             raise Exception('Config file /etc/dtnrm.yaml does not exist.')
         with open('/etc/dtnrm.yaml', 'r') as fd:
             self.config = yload(fd.read())
-        for key, requirement in self.defaults.items():
-            if key not in self.config.keys():
+        for key, requirement in list(self.defaults.items()):
+            if key not in list(self.config.keys()):
                 # Check if it is optional or not;
                 if not requirement['optional']:
                     self.logger.debug('Configuration /etc/dtnrm.yaml missing non optional config parameter %s', key)
@@ -313,7 +322,7 @@ class GitConfig(object):
             self.getLocalConfig()
         url = "%s/mapping.yaml" % self.getFullGitUrl()
         mapping = self.gitConfigCache('mapping', url)
-        if self.config['MD5'] not in mapping.keys():
+        if self.config['MD5'] not in list(mapping.keys()):
             msg = 'Configuration is not available for this MD5 %s tag in GIT REPO %s' % \
                             (self.config['MD5'], self.config['GIT_REPO'])
             self.logger.debug(msg)
@@ -337,13 +346,13 @@ def getConfig(locations=None):
     """
     del locations
     config = getGitConfig()
-    tmpCp = ConfigParser.ConfigParser()
+    tmpCp = configparser.ConfigParser()
     if not isinstance(config, dict):
         print('ERROR: Config from Git returned not dictionary. Malformed yaml?')
         return None
-    for key, item in config['MAIN'].items():
+    for key, item in list(config['MAIN'].items()):
         tmpCp.add_section(key)
-        for key1, item1 in item.items():
+        for key1, item1 in list(item.items()):
             out = item1
             if isinstance(item1, list):
                 out = ",".join(item1)
@@ -359,7 +368,7 @@ def getFileContentAsJson(inputFile):
             try:
                 out = json.load(fd)
             except ValueError:
-                print fd.seek(0)
+                print(fd.seek(0))
                 out = evaldict(fd.read())
     return out
 
@@ -425,14 +434,14 @@ def delete(inputObj, delObj):
         try:
             tmpList.remove(delObj)
         except ValueError as ex:
-            print 'Delete object %s is not in inputObj %s list. Err: %s' % (delObj, tmpList, ex)
+            print('Delete object %s is not in inputObj %s list. Err: %s' % (delObj, tmpList, ex))
         return tmpList
     elif isinstance(inputObj, dict):
         tmpDict = copy.deepcopy(inputObj)
         try:
             del tmpDict[delObj]
         except KeyError as ex:
-            print 'Delete object %s is not in inputObj %s dict. Err: %s' % (delObj, tmpList, ex)
+            print('Delete object %s is not in inputObj %s dict. Err: %s' % (delObj, tmpList, ex))
         return tmpDict
     # This should not happen
     raise WrongInputError('Provided input type is not available for deletion. Type %s' % type(inputObj))
@@ -443,13 +452,16 @@ def read_input_data(environ):
     length = int(environ.get('CONTENT_LENGTH', 0))
     if length == 0:
         raise WrongInputError('Content input length is 0.')
-    body = StringIO(environ['wsgi.input'].read(length))
+    if sys.version.startswith('3.'):
+        body = io.BytesIO(environ['wsgi.input'].read(length))
+    else:
+        body = StringIO(environ['wsgi.input'].read(length))
     outjson = {}
     try:
         outjson = json.loads(body.getvalue())
     except ValueError as ex:
         errMsg = 'Failed to parse json input: %s, Err: %s. Did caller used json.dumps?' % (body.getvalue(), ex)
-        print errMsg
+        print(errMsg)
         raise WrongInputError(errMsg)
     return outjson
 
@@ -517,14 +529,14 @@ def getUrlParams(environ, paramsList):
                                                (param['key'], outVals[0], param['options']))
         elif not outVals:
             outParams[param['key']] = param['default']
-    print outParams
+    print(outParams)
     return outParams
 
 
 def getHeaders(environ):
     """ Get all Headers and return them back as dictionary """
     headers = {}
-    for key in environ.keys():
+    for key in list(environ.keys()):
         if key.startswith('HTTP_'):
             headers[key[5:]] = environ.get(key)
     return headers
@@ -585,4 +597,4 @@ def pubStateRemote(config, dic):
         publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
     except Exception:
         excType, excValue = sys.exc_info()[:2]
-        print "Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue)
+        print("Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))

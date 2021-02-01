@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
     LookUpService gets all information and prepares MRML schema.
     TODO: Append switch information;
@@ -19,11 +19,18 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
+from __future__ import print_function
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.utils import old_div
+from builtins import object
 import os
 import tempfile
 import datetime
 import importlib
-import ConfigParser
+import configparser
 from rdflib import Graph
 from rdflib import URIRef, Literal
 from rdflib.compare import isomorphic
@@ -44,9 +51,9 @@ def ignoreInterface(intfKey, intfDict):
     returnMsg = False
     if intfKey.endswith('-ifb'):
         returnMsg = True
-    elif 'switch' not in intfDict.keys():
+    elif 'switch' not in list(intfDict.keys()):
         returnMsg = True
-    elif 'switch_port' not in intfDict.keys():
+    elif 'switch_port' not in list(intfDict.keys()):
         returnMsg = True
     return returnMsg
 
@@ -98,7 +105,7 @@ class LookUpService(object):
 
     def generateHostIsalias(self, **kwargs):
         """ Generate Host Alias from configuration """
-        if kwargs['portSwitch'] in self.hosts.keys():
+        if kwargs['portSwitch'] in list(self.hosts.keys()):
             for item in self.hosts[kwargs['portSwitch']]:
                 if item['switchName'] == kwargs['switchName']:
                     if item['switchPort'] == kwargs['portName']:
@@ -148,11 +155,11 @@ class LookUpService(object):
                               'netmask', 'speed', 'txqueuelen', 'ipv4-address', 'ipv6-address'],
                         '10': ['address', 'broadcast', 'netmask'],
                         '17': ['address', 'broadcast', 'netmask']}
-        for dKey, dMappings in mappings.items():
+        for dKey, dMappings in list(mappings.items()):
             for mapping in dMappings:
-                if dKey not in inputDict.keys():
+                if dKey not in list(inputDict.keys()):
                     continue
-                if mapping in inputDict[dKey].keys() and inputDict[dKey][mapping]:
+                if mapping in list(inputDict[dKey].keys()) and inputDict[dKey][mapping]:
                     mName = mapping
                     value = inputDict[dKey][mapping]
                     if dKey == '10':
@@ -184,7 +191,7 @@ class LookUpService(object):
         mainGraph = Graph()
         mainGraph.parse(mainGraphName, format='turtle')
         reduction = delta['content']['reduction']
-        tmpFile = tempfile.NamedTemporaryFile(delete=False)
+        tmpFile = tempfile.NamedTemporaryFile(delete=False, mode="w+")
         tmpFile.write(reduction)
         tmpFile.close()
         tmpGraph = Graph()
@@ -202,7 +209,7 @@ class LookUpService(object):
         mainGraph = Graph()
         mainGraph.parse(mainGraphName, format='turtle')
         addition = delta['content']['addition']
-        tmpFile = tempfile.NamedTemporaryFile(delete=False)
+        tmpFile = tempfile.NamedTemporaryFile(delete=False, mode="w+")
         tmpFile.write(addition)
         tmpFile.close()
         tmpGraph = Graph()
@@ -229,7 +236,7 @@ class LookUpService(object):
                         mainGraph = self._deltaAddition(dbObj, delta, mainGraphName)
                         writeFile = True
                 if writeFile:
-                    with open(mainGraphName, "w") as fd:
+                    with open(mainGraphName, "wb") as fd:
                         fd.write(mainGraph.serialize(format='turtle'))
 
     @staticmethod
@@ -269,7 +276,7 @@ class LookUpService(object):
         for switchName in self.config.get(self.sitename, 'switch').split(','):
             try:
                 vsw = self.config.get(switchName, 'vsw')
-            except ConfigParser.NoOptionError:
+            except configparser.NoOptionError:
                 self.logger.debug('ERROR: vsw parameter is not defined for %s.', switchName)
                 continue
             self.newGraph.add((self.prefixDB.genUriRef('site'),
@@ -283,7 +290,7 @@ class LookUpService(object):
             labelswap = "false"
             try:
                 labelswap = self.config.get(switchName, 'labelswapping')
-            except ConfigParser.NoOptionError:
+            except configparser.NoOptionError:
                 self.logger.debug('Labelswapping parameter is not defined. By default it is set to False.')
             self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
                                self.prefixDB.genUriRef('nml', 'labelSwapping'),
@@ -295,7 +302,7 @@ class LookUpService(object):
 
     def defineMRMLPrefixes(self):
         """ Define all known prefixes """
-        for prefix, val in self.prefixDB.prefixes.items():
+        for prefix, val in list(self.prefixDB.prefixes.items()):
             self.newGraph.bind(prefix, val)
 
     def defineNodeInformation(self, nodeDict):
@@ -322,7 +329,7 @@ class LookUpService(object):
             self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
                                self.prefixDB.genUriRef('nml', 'longitude'),
                                self.prefixDB.genLiteral(self.config.get(self.sitename, 'longitude'))))
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             self.logger.debug('Either one or both (latitude,longitude) are not defined. Continuing as normal')
 
     def defineLayer3MRML(self, nodeDict):
@@ -353,18 +360,17 @@ class LookUpService(object):
             self.newGraph.add((self.prefixDB.genUriRef('site', routingtable),
                                self.prefixDB.genUriRef('rdf', 'type'),
                                self.prefixDB.genUriRef('mrs', 'RoutingTable')))
-
             for routeinfo in hostinfo['NetInfo']["routes"]:
                 routename = ""
-                if 'RTA_DST' in routeinfo.keys() and routeinfo['RTA_DST'] == '169.254.0.0':
+                if 'RTA_DST' in list(routeinfo.keys()) and routeinfo['RTA_DST'] == '169.254.0.0':
                     # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.
                     # We do not need this information inside the routed template
                     continue
-                if 'RTA_GATEWAY' in routeinfo.keys():
+                if 'RTA_GATEWAY' in list(routeinfo.keys()):
                     routename = routingtable + ":route+default"
                 else:
                     # Ignore unreachable routes from preparing inside the model
-                    if 'RTA_PREFSRC' not in routeinfo.keys():
+                    if 'RTA_PREFSRC' not in list(routeinfo.keys()):
                         continue
                     routename = routingtable + ":route+%s_%s" % (routeinfo['RTA_PREFSRC'], routeinfo['dst_len'])
                 self.newGraph.add((self.prefixDB.genUriRef('site', routename),
@@ -373,7 +379,7 @@ class LookUpService(object):
                 self.newGraph.add((self.prefixDB.genUriRef('site', routingtable),
                                    self.prefixDB.genUriRef('mrs', 'hasRoute'),
                                    self.prefixDB.genUriRef('site', routename)))
-                if 'RTA_GATEWAY' in routeinfo.keys():
+                if 'RTA_GATEWAY' in list(routeinfo.keys()):
                     self.newGraph.add((self.prefixDB.genUriRef('site', routename),
                                        self.prefixDB.genUriRef('mrs', 'routeTo'),
                                        self.prefixDB.genUriRef('site', '%s:%s' % (routename, 'to'))))
@@ -419,28 +425,32 @@ class LookUpService(object):
         switchCall = method.Switch(self.config, self.logger, jOut, self.sitename)
         switchInfo = switchCall.getinfo()
         # Add Switch information to MRML
-        for switchName, switchDict in switchInfo['switches'].items():
+        for switchName, switchDict in list(switchInfo['switches'].items()):
             self.logger.debug('Working on %s and %s' % (switchName, switchDict))
             try:
                 vsw = self.config.get(switchName, 'vsw')
-            except ConfigParser.NoOptionError:
+            except configparser.NoOptionError:
                 self.logger.debug('ERROR: vsw parameter is not defined for %s.', switchName)
                 continue
-            for portName, portSwitch in switchDict.items():
-                newuri = ":%s:%s:%s" % (switchName, portName, portSwitch)
+            for portName, portSwitch in list(switchDict.items()):
+                if portSwitch:
+                    newuri = ":%s:%s:%s" % (switchName, portName, portSwitch)
+                else:
+                    newuri = ":%s:%s" % (switchName, portName)
                 self.newGraph.add((self.prefixDB.genUriRef('site'),
                                    self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
                                    self.prefixDB.genUriRef('site', newuri)))
+                print(newuri)
                 self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
                                    self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
                                    self.prefixDB.genUriRef('site', newuri)))
                 self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                    self.prefixDB.genUriRef('rdf', 'type'),
                                    self.prefixDB.genUriRef('nml', 'BidirectionalPort')))
-                if switchName in switchInfo['vlans'].keys():
-                    if portName in switchInfo['vlans'][switchName].keys():
+                if switchName in list(switchInfo['vlans'].keys()):
+                    if portName in list(switchInfo['vlans'][switchName].keys()):
                         # Add information about bidirection switch port
-                        if 'vlan_range' in switchInfo['vlans'][switchName][portName].keys() and \
+                        if 'vlan_range' in list(switchInfo['vlans'][switchName][portName].keys()) and \
                            switchInfo['vlans'][switchName][portName]['vlan_range']:
                             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                                self.prefixDB.genUriRef('nml', 'hasLabelGroup'),
@@ -454,18 +464,18 @@ class LookUpService(object):
                             self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri),
                                                self.prefixDB.genUriRef('nml', 'values'),
                                                self.prefixDB.genLiteral(switchInfo['vlans'][switchName][portName]['vlan_range'])))
-                        if 'capacity' in switchInfo['vlans'][switchName][portName].keys() and \
+                        if 'capacity' in list(switchInfo['vlans'][switchName][portName].keys()) and \
                            switchInfo['vlans'][switchName][portName]['capacity']:
                             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                                self.prefixDB.genUriRef('mrs', 'capacity'),
                                                self.prefixDB.genLiteral(switchInfo['vlans'][switchName][portName]['capacity'])))
-                        if 'isAlias' in switchInfo['vlans'][switchName][portName].keys() and \
+                        if 'isAlias' in list(switchInfo['vlans'][switchName][portName].keys()) and \
                            switchInfo['vlans'][switchName][portName]['isAlias']:
                             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                                self.prefixDB.genUriRef('nml', 'isAlias'),
                                                self.prefixDB.genUriRef('', custom=switchInfo['vlans'][switchName][portName]['isAlias'])))
                         else:
-                            print 'TODO Automatic isAlias Generation'
+                            print('TODO Automatic isAlias Generation')
                             self.generateHostIsalias(portSwitch=portSwitch, switchName=switchName,
                                                      portName=portName, newuri=newuri)
                     else:
@@ -479,7 +489,7 @@ class LookUpService(object):
         switchPort = intfDict['switch_port']
         # Add floating ip pool list for interface from the agent
         # ==========================================================================================
-        if 'ipv4-floatingip-pool' in intfDict.keys():
+        if 'ipv4-floatingip-pool' in list(intfDict.keys()):
             self.addToGraph(['site', newuri],
                             ['mrs', 'hasNetworkAddress'],
                             ['site', "%s:%s" % (newuri, 'ipv4-floatingip-pool')])
@@ -494,7 +504,7 @@ class LookUpService(object):
                             [str(intfDict["ipv4-floatingip-pool"])])
         # Add vlan range for interface from the agent
         # ==========================================================================================
-        if 'vlan_range' in intfDict.keys():
+        if 'vlan_range' in list(intfDict.keys()):
             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                self.prefixDB.genUriRef('nml', 'hasService'),
                                self.prefixDB.genUriRef('site', "%s:%s" % (newuri, 'bandwidthService'))))
@@ -518,21 +528,21 @@ class LookUpService(object):
                          ['reservable_bandwidth', 'reservableCapacity', 10000000000],
                          ['min_bandwidth', 'minReservableCapacity', 10000000000]]:
                 value = item[2]
-                if item[0] in intfDict.keys():
+                if item[0] in list(intfDict.keys()):
                     value = intfDict[item[0]]
                 try:
-                    value = int(int(value) / 1000000)
+                    value = int(old_div(int(value), 1000000))
                 except ValueError:
                     value = str(value)
                 self.newGraph.add((self.prefixDB.genUriRef('site', bws),
                                    self.prefixDB.genUriRef('mrs', item[1]),
                                    self.prefixDB.genLiteral(value)))
             # ==========================================================================================
-        if 'capacity' in intfDict.keys():
+        if 'capacity' in list(intfDict.keys()):
             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                self.prefixDB.genUriRef('mrs', 'capacity'),
                                self.prefixDB.genLiteral(intfDict['capacity'])))
-        if 'vlan_range' in intfDict.keys():
+        if 'vlan_range' in list(intfDict.keys()):
             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                self.prefixDB.genUriRef('nml', 'hasLabelGroup'),
                                self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri)))
@@ -546,7 +556,7 @@ class LookUpService(object):
                                self.prefixDB.genUriRef('nml', 'values'),
                                self.prefixDB.genLiteral(intfDict['vlan_range'])))
         self.shared = False
-        if 'shared' in intfDict.keys():
+        if 'shared' in list(intfDict.keys()):
             self.shared = 'notshared'
             if intfDict['shared']:
                 self.shared = 'shared'
@@ -557,7 +567,7 @@ class LookUpService(object):
     def defineHostInfo(self, nodeDict):
         """ Define Host information inside MRML. Add All interfaces info. """
         hostinfo = evaldict(nodeDict['hostinfo'])
-        for intfKey, intfDict in hostinfo['NetInfo']["interfaces"].items():
+        for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
             # We exclude QoS interfaces from adding them to MRML.
             # Even so, I still want to have this inside DB for debugging purposes
             if ignoreInterface(intfKey, intfDict):
@@ -586,8 +596,8 @@ class LookUpService(object):
             # Now lets also list all interface information to MRML
             self.addIntfInfo(intfDict, newuri)
             # List each VLAN:
-            if 'vlans' in intfDict.keys():
-                for vlanName, vlanDict in intfDict['vlans'].items():
+            if 'vlans' in list(intfDict.keys()):
+                for vlanName, vlanDict in list(intfDict['vlans'].items()):
                     # We exclude QoS interfaces from adding them to MRML.
                     # Even so, I still want to have this inside DB for debugging purposes
                     if vlanName.endswith('-ifb'):
@@ -617,7 +627,7 @@ class LookUpService(object):
                     self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                        self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
                                        self.prefixDB.genUriRef('site', vlanuri)))
-                    if 'vlanid' in vlanDict.keys():
+                    if 'vlanid' in list(vlanDict.keys()):
                         self.newGraph.add((self.prefixDB.genUriRef('site', vlanuri),
                                            self.prefixDB.genUriRef('nml', 'hasLabel'),
                                            self.prefixDB.genUriRef('site', "%s:vlan" % vlanuri)))
@@ -652,7 +662,7 @@ class LookUpService(object):
         self.defineMRMLServices()
         self.hosts = {}
 
-        for _, nodeDict in jOut.items():
+        for _, nodeDict in list(jOut.items()):
             # ==================================================================================
             # 3. Define Node inside yaml
             # ==================================================================================
@@ -671,7 +681,7 @@ class LookUpService(object):
         self.addSwitchInfo(jOut)
 
         saveName = self.getModelSavePath()
-        with open(saveName, "w") as fd:
+        with open(saveName, "wb") as fd:
             fd.write(self.newGraph.serialize(format='turtle'))
         hashNum = generateHash(self.newGraph.serialize(format='turtle'))
 
@@ -697,7 +707,6 @@ class LookUpService(object):
             self.logger.info('Models are different. Update DB')
             dbObj.insert('models', [lastKnownModel])
 
-        self.logger.debug('Last Known Model: %s' % str(lastKnownModel))
         # Clean Up old models (older than 24h.)
         for model in dbObj.get('models', limit=100, orderby=['insertdate', 'ASC']):
             if model['insertdate'] < int(getUTCnow() - 86400):

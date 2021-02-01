@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # IMPORTANT Be aware if you update version here, please update it also in:
 # setupUtilities.py
 # src/python/__init__.py

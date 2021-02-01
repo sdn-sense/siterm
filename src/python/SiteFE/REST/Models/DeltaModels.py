@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 # pylint: disable=line-too-long, bad-whitespace
 """
 Site FE call functions
@@ -19,6 +19,8 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
+from __future__ import print_function
+from builtins import object
 from tempfile import NamedTemporaryFile
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
@@ -60,7 +62,7 @@ class frontendDeltaModels(object):
             msg = 'Something weird has happened... Check server logs; Same ID is already in DB'
             kwargs['http_respond'].ret_409('application/json', kwargs['start_response'], None)
             return getCustomOutMsg(errMsg=msg, errCode=409)
-        tmpfd = NamedTemporaryFile(delete=False)
+        tmpfd = NamedTemporaryFile(delete=False, mode="w+")
         tmpfd.close()
         self.getmodel(uploadContent['modelId'], **kwargs)
         outContent = {"ID": hashNum,
@@ -78,7 +80,7 @@ class frontendDeltaModels(object):
                    'state': out['State'],
                    'reduction': out['ParsedDelta']['reduction'],
                    'addition': out['ParsedDelta']['addition']}
-        print 'Delta was %s. Returning info %s' % (out['State'], outDict)
+        print('Delta was %s. Returning info %s' % (out['State'], outDict))
         if out['State'] in ['accepted']:
             kwargs['http_respond'].ret_201('application/json', kwargs['start_response'],
                                            [('Last-Modified', httpdate(out['UpdateTime'])),
@@ -86,10 +88,10 @@ class frontendDeltaModels(object):
             return outDict
         else:
             kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
-            if 'Error' in out.keys():
+            if 'Error' in list(out.keys()):
                 errMsg = ""
                 for key in ['errorNo', 'errorType', 'errMsg']:
-                    if key in out['Error'].keys():
+                    if key in list(out['Error'].keys()):
                         errMsg += " %s: %s" % (key, out['Error'][key])
             return getCustomOutMsg(errMsg=errMsg, exitCode=500)
 
@@ -135,11 +137,11 @@ class frontendDeltaModels(object):
             return getCustomOutMsg(msg='Internal State change approved', exitCode=200)
         else:
             delta = self.getdelta(deltaID, **kwargs)
-            print 'Commit Action for delta %s' % delta
+            print('Commit Action for delta %s' % delta)
             # Now we go directly to commited in case of commit
             if delta['state'] != 'accepted':
                 msg = "Delta    state in the system is not in accepted state. \
                       State on the system: %s. Not allowed to change." % delta['state']
-                print msg
+                print(msg)
                 raise WrongDeltaStatusTransition(msg)
             self.stateM.commit(dbobj, {'uid': deltaID, 'state': 'committing'})

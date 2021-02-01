@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Frontend Calls to get Sitenames, databases configured in Frontend.
 
@@ -18,6 +18,7 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2019 California Institute of Technology
 Date			: 2019/05/01
 """
+from builtins import str
 import sys
 import socket
 import importlib
@@ -32,8 +33,7 @@ def getDBConn(serviceName=''):
     dbConn = {}
     config = getConfig()
     for sitename in config.get('general', 'sites').split(','):
-        if config.has_option(sitename, "database"):
-            dbConn[sitename] = dbinterface(config.get(sitename, "database"), serviceName, config, sitename)
+        dbConn[sitename] = dbinterface(serviceName, config, sitename)
     return dbConn
 
 

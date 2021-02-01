@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Certificate loading and validation tool
 
@@ -18,6 +18,9 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2019/10/01
 """
+from __future__ import print_function
+from builtins import str
+from builtins import object
 import time
 from datetime import datetime
 from OpenSSL import crypto
@@ -33,7 +36,7 @@ class CertHandler(object):
     def loadAuthorized(self):
         """ Load all authorized users for FE from git """
         config = getGitConfig()
-        for user, userinfo in config['AUTH'].items():
+        for user, userinfo in list(config['AUTH'].items()):
             self.allowedCerts.setdefault(userinfo['full_dn'], {})
             self.allowedCerts[userinfo['full_dn']]['username'] = user
             self.allowedCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
@@ -43,18 +46,18 @@ class CertHandler(object):
         """ Get certificate info """
         out = {}
         if 'SSL_CLIENT_CERT' not in environ:
-            print 'Request without certificate. Unauthorized'
+            print('Request without certificate. Unauthorized')
             raise Exception('Unauthorized access')
         cert = crypto.load_certificate(crypto.FILETYPE_PEM, environ['SSL_CLIENT_CERT'])
         subject = cert.get_subject()
         out['subject'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode())
                                  for name, value in subject.get_components())
-        out['notAfter'] = int(time.mktime(datetime.strptime(str(cert.get_notAfter()), '%Y%m%d%H%M%SZ').timetuple()))
-        out['notBefore'] = int(time.mktime(datetime.strptime(str(cert.get_notBefore()), '%Y%m%d%H%M%SZ').timetuple()))
+        out['notAfter'] = int(time.mktime(datetime.strptime(cert.get_notAfter().decode('UTF-8'), '%Y%m%d%H%M%SZ').timetuple()))
+        out['notBefore'] = int(time.mktime(datetime.strptime(cert.get_notBefore().decode('UTF-8'), '%Y%m%d%H%M%SZ').timetuple()))
         out['issuer'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode())
                                 for name, value in cert.get_issuer().get_components())
         out['fullDN'] = "%s%s" % (out['issuer'], out['subject'])
-        print 'Cert Info: %s' % out
+        print('Cert Info: %s' % out)
         return out
 
     def validateCertificate(self, environ):
@@ -64,19 +67,19 @@ class CertHandler(object):
         if 'CERTINFO' not in environ:
             raise Exception('Certificate not found. Unauthorized')
         for key in ['subject', 'notAfter', 'notBefore', 'issuer', 'fullDN']:
-            if key not in environ['CERTINFO'].keys():
-                print '%s not available in certificate retrieval' % key
+            if key not in list(environ['CERTINFO'].keys()):
+                print('%s not available in certificate retrieval' % key)
                 raise Exception('Unauthorized access')
         # Check time before
         if environ['CERTINFO']['notBefore'] > timestamp:
-            print 'Certificate Invalid. Current Time: %s NotBefore: %s' % (timestamp, environ['CERTINFO']['notBefore'])
+            print('Certificate Invalid. Current Time: %s NotBefore: %s' % (timestamp, environ['CERTINFO']['notBefore']))
             raise Exception('Certificate Invalid')
         # Check time after
         if environ['CERTINFO']['notAfter'] < timestamp:
-            print 'Certificate Invalid. Current Time: %s NotAfter: %s' % (timestamp, environ['CERTINFO']['notAfter'])
+            print('Certificate Invalid. Current Time: %s NotAfter: %s' % (timestamp, environ['CERTINFO']['notAfter']))
             raise Exception('Certificate Invalid')
         # Check DN in authorized list
-        if environ['CERTINFO']['fullDN'] not in self.allowedCerts.keys():
-            print 'User DN %s is not in authorized list' % environ['CERTINFO']['fullDN']
+        if environ['CERTINFO']['fullDN'] not in list(self.allowedCerts.keys()):
+            print('User DN %s is not in authorized list' % environ['CERTINFO']['fullDN'])
             raise Exception('Unauthorized access')
         return self.allowedCerts[environ['CERTINFO']['fullDN']]

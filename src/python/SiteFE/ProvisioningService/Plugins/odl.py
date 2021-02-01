@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
     ODL switch configuration. Means all rules should be configured
     using OVS COMMANDS
@@ -22,6 +22,7 @@ Date			: 2017/09/26
 """
 
 
+from builtins import object
 class mainCaller(object):
     """ Main call for ODL plugin """
     def __init__(self):

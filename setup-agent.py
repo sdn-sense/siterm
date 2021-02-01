@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 """
 Setup tools script for DTN-RM Site Agent.
 To Install:
@@ -36,8 +36,8 @@ setup(
     keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
     package_dir={'': 'src/python/'},
     packages=['DTNRMAgent', 'DTNRMLibs'] + list_packages(['src/python/DTNRMAgent/', 'src/python/DTNRMLibs/']),
-    install_requires=['importlib==1.0.4', 'psutil==5.2.2', 'potsdb', 'ipaddress',
-                      'pyroute2', 'pyaml', 'requests', 'netifaces'],
+    install_requires=['importlib', 'psutil', 'ipaddress', 'pyroute2', 'pyaml',
+                      'pycurl', 'requests', 'netifaces', 'future', 'simplejson'],
     data_files=[("/etc/cron.d/", ["packaging/dtnrm-site-agent/siterm-crons"]),
                 ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh",
                                         "packaging/general/siterm-autoupdate.py"])],

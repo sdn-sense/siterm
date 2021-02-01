@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Custom Exceptions for Sense Site FE
 
@@ -20,11 +20,12 @@ Date			: 2017/09/26
 """
 
 
+from builtins import object
 def exceptionCode(excName):
     """ Return Exception code. Mainly used by DTN-RM Agent """
     exCodes = {IOError: -1, KeyError: -2, AttributeError: -3, IndentationError: -4,
                ValueError: -5, PluginException: -6, NameError: -7}
-    if excName in exCodes.keys():
+    if excName in list(exCodes.keys()):
         return exCodes[excName]
     return -100
 
@@ -140,8 +141,8 @@ class PluginException(Exception):
 class HTTPResponses(object):
     """ Frontend HTTP Responses """
     def __init__(self):
-        self.cacheHeaders = [('Cache-Control', 'no-cache, no-store, must-revalidate'),
-                             ('Pragma', 'no-cache'), ('Expires', '0')]
+        self.cacheHeaders = [(u'Cache-Control', u'no-cache, no-store, must-revalidate'),
+                             (u'Pragma', u'no-cache'), (u'Expires', u'0')]
         return
 
     def _header_append(self, headers, head_append, nocache=True):
@@ -152,7 +153,7 @@ class HTTPResponses(object):
             outheaders = self.cacheHeaders
         if outheaders:
             for item in outheaders:
-                headers.append((item[0].encode("ISO-8859-1"), item[1].encode("ISO-8859-1")))
+                headers.append((item[0], item[1]))
         return headers
 
     def ret_200(self, content_type, start_response, head_append):

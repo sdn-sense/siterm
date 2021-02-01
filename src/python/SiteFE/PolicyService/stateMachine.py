@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Everything goes here when they do not fit anywhere else
 
@@ -18,6 +18,8 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2018/11/26
 """
+from builtins import str
+from builtins import object
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 
@@ -35,7 +37,7 @@ def timeendcheck(delta, logger):
     connEnded = False
     for connDelta in conns:
         try:
-            if 'timeend' in connDelta.keys():
+            if 'timeend' in list(connDelta.keys()):
                 timeleft = getUTCnow() - int(connDelta['timeend'])
                 logger.info('CurrentTime %s TimeStart %s. TimeLeft %s'
                             % (getUTCnow(), connDelta['timeend'], timeleft))
@@ -164,10 +166,10 @@ class StateMachine(object):
                  'modelid': str(delta['modelId']),
                  'reduction': str(delta['ParsedDelta']['reduction']),
                  'addition': str(delta['ParsedDelta']['addition']),
-                 'reductionid': '' if 'ReductionID' not in delta.keys() else delta['ReductionID'],
+                 'reductionid': '' if 'ReductionID' not in list(delta.keys()) else delta['ReductionID'],
                  'modadd': str(delta['modadd']),
                  'connectionid': str(delta['ConnID']),
-                 'error': '' if 'Error' not in delta.keys() else str(delta['Error'])}
+                 'error': '' if 'Error' not in list(delta.keys()) else str(delta['Error'])}
         dbObj.insert('deltas', [dbOut])
         self.connMgr.accepted(dbObj, dbOut)
         dbOut['state'] = delta['State']
@@ -206,7 +208,7 @@ class StateMachine(object):
                 delayStart = False
                 for connDelta in delta['addition']:
                     try:
-                        if 'timestart' in connDelta.keys():
+                        if 'timestart' in list(connDelta.keys()):
                             timeleft = int(connDelta['timestart']) - getUTCnow()
                             self.logger.info('CurrentTime %s TimeStart %s. Seconds Left %s' %
                                              (getUTCnow(), connDelta['timestart'], timeleft))
@@ -235,7 +237,7 @@ class StateMachine(object):
             delta['addition'] = evaldict(delta['addition'])
             delta['reduction'] = evaldict(delta['reduction'])
             for actionKey in ['reduction', 'addition']:
-                if actionKey not in delta.keys():
+                if actionKey not in list(delta.keys()):
                     self.logger.info('This delta %s does not have yet actionKey %s defined.'
                                      % (delta['uid'], actionKey))
                     continue
@@ -244,10 +246,10 @@ class StateMachine(object):
                     continue
                 for connDelta in delta[actionKey]:
                     hostStates = {}
-                    if 'hosts' not in connDelta.keys():
+                    if 'hosts' not in list(connDelta.keys()):
                         self.logger.info('This delta %s does not have yet hosts defined.' % delta['uid'])
                         continue
-                    for hostname in connDelta['hosts'].keys():
+                    for hostname in list(connDelta['hosts'].keys()):
                         host = dbObj.get('hoststates', search=[['deltaid', delta['uid']], ['hostname', hostname]])
                         if host:
                             hostStates[host[0]['state']] = hostname
@@ -260,10 +262,10 @@ class StateMachine(object):
                 if timeendcheck(delta, self.logger):
                     self._stateChangerDelta(dbObj, 'cancel', **delta)
                     self.modelstatecancel(dbObj, **delta)
-                if hostStates.keys() == ['active']:
+                if list(hostStates.keys()) == ['active']:
                     self._stateChangerDelta(dbObj, 'activated', **delta)
                     self.connMgr.activated(dbObj, delta)
-                elif 'failed' in hostStates.keys():
+                elif 'failed' in list(hostStates.keys()):
                     self._stateChangerDelta(dbObj, 'failed', **delta)
 
     def activated(self, dbObj):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 HTTP library for HTTP(s) communication
 Parts of code are taken from dmwm/WMCore (CMS)
@@ -19,10 +19,14 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import map
 import os
 import base64
-import urlparse
-import urllib
+import urllib.parse
+import urllib.request, urllib.parse, urllib.error
 from DTNRMLibs.pycurl_manager import RequestHandler
 from DTNRMLibs.CustomExceptions import ValidityFailure
 
@@ -54,13 +58,13 @@ def sanitizeURL(url):
        username and password in dict format
        ':' is not supported in username or password.
     """
-    endpointComponents = urlparse.urlparse(url)
+    endpointComponents = urllib.parse.urlparse(url)
     if endpointComponents.port:
         netloc = '%s:%s' % (endpointComponents.hostname,
                             endpointComponents.port)
     else:
         netloc = endpointComponents.hostname
-    url = urlparse.urlunparse(
+    url = urllib.parse.urlunparse(
         [endpointComponents.scheme,
          netloc,
          endpointComponents.path,
@@ -83,9 +87,9 @@ def encodeRequest(configreq, listParams=None):
     for lparam in listParams:
         if lparam in configreq:
             if len(configreq[lparam]) > 0:
-                encodedLists += ('&%s=' % lparam) + ('&%s=' % lparam).join(map(urllib.quote, configreq[lparam]))
+                encodedLists += ('&%s=' % lparam) + ('&%s=' % lparam).join(map(urllib.parse.quote, configreq[lparam]))
             del configreq[lparam]
-    encoded = urllib.urlencode(configreq) + encodedLists
+    encoded = urllib.parse.urlencode(configreq) + encodedLists
     return str(encoded)
 
 
@@ -109,7 +113,7 @@ class Requests(dict):
 
         self.setdefault("host", url)
         self.update(inputdict)
-        self['endpoint_components'] = urlparse.urlparse(self['host'])
+        self['endpoint_components'] = urllib.parse.urlparse(self['host'])
 
         check_server_url(self['host'])
 
@@ -170,7 +174,7 @@ class Requests(dict):
         headers = {"Content-type": contentType,
                    "User-agent": "DTN-RM",
                    "Accept": self['accept_type']}
-        for key, value in self.additionalHeaders.items():
+        for key, value in list(self.additionalHeaders.items()):
             headers[key] = value
         # And now overwrite any headers that have been passed into the call:
         headers.update(incoming_headers)

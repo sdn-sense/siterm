@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Plugin which produces all info from lscpu
 It produces:
@@ -24,6 +24,7 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
+from __future__ import print_function
 import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
@@ -37,18 +38,18 @@ def get(config, logger):
     cpuInfo = {}
     tmpOut = externalCommand('lscpu')
     for item in tmpOut:
-        for desc in item.split('\n'):
+        for desc in item.decode('UTF-8').split('\n'):
             vals = desc.split(':')
             if len(vals) == 2:
                 cpuInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
             else:
-                print 'CpuInfo: Skipped this item: ', vals
+                print('CpuInfo: Skipped this item: ', vals)
     cpuInfo['num_cores'] = 1
     if 'Socket(s)' in cpuInfo and 'Core(s) per socket':
         try:
             cpuInfo['num_cores'] = int(cpuInfo['Socket(s)']) * int(cpuInfo['Core(s) per socket'])
         except Exception:
-            print 'Failed to calculate num_cores from %s. will set to 1' % cpuInfo
+            print('Failed to calculate num_cores from %s. will set to 1' % cpuInfo)
     return cpuInfo
 
 if __name__ == "__main__":

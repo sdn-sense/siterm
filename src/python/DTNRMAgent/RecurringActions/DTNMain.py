@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 """
 DTN Main Agent code, which executes all Plugins and publishes values to FE
 
@@ -18,10 +18,12 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
+from __future__ import absolute_import
+from builtins import str
 import sys
 import pprint
 import importlib
-import Plugins
+from DTNRMAgent.RecurringActions import Plugins
 from DTNRMLibs.MainUtilities import publishToSiteFE, createDirs
 from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import contentDB
@@ -44,7 +46,7 @@ def prepareJsonOut(config, logger):
                     tmpName = method.NAME
                 else:
                     tmpName = callableF
-                if method.NAME in outputDict.keys():
+                if method.NAME in list(outputDict.keys()):
                     msg = '%s name is already defined in output dictionary' % method.NAME
                     logger.error(msg)
                     raise KeyError(msg)
@@ -59,7 +61,7 @@ def prepareJsonOut(config, logger):
                     continue
                 # Here wer check if there is any CUSTOM_FUNCTIONS
                 if hasattr(method, 'CUSTOM_FUNCTIONS'):
-                    for funcOutName, funcCallable in method.CUSTOM_FUNCTIONS.items():
+                    for funcOutName, funcCallable in list(method.CUSTOM_FUNCTIONS.items()):
                         outputDict['Summary'][method.NAME] = {}
                         tmpOut = funcCallable(config)
                         outputDict['Summary'][method.NAME][funcOutName] = tmpOut
@@ -69,7 +71,7 @@ def prepareJsonOut(config, logger):
                                        "errorNo": -100,  # TODO Use exception definition from utilities
                                        "errMsg": str(excValue),
                                        "exception": str(ex)}
-            if 'errorType' in outputDict[tmpName].keys():
+            if 'errorType' in list(outputDict[tmpName].keys()):
                 logger.critical("%s received %s. Exception details: %s", tmpName,
                                 outputDict[tmpName]['errorType'], outputDict[tmpName])
     return outputDict

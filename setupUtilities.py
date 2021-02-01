@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 """
 Utilities which are used in any setup script
 
@@ -18,6 +18,8 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
+from __future__ import print_function
+from builtins import str
 import os
 import sys
 import platform
@@ -42,17 +44,17 @@ def linuxDistr():
 def printInfo(logger=None):
     """ Print information about sytem before start setup """
     del logger
-    print "System Information:"
-    print "-" * 100
-    print "Python version: %s" % sys.version.split('\n')
-    print "Dist: %s" % str(platform.dist())
-    print "Linux Distribution: %s" % linuxDistr()
-    print "System: %s" % platform.system()
-    print "Machine: %s" % platform.machine()
-    print "Platform: %s" % platform.platform()
-    print 'Uname: %s' % platform.uname()
-    print 'Version: %s' % platform.version()
-    print 'Mac version: %s' % platform.mac_ver()
+    print("System Information:")
+    print("-" * 100)
+    print("Python version: %s" % sys.version.split('\n'))
+    print("Dist: %s" % str(platform.dist()))
+    print("Linux Distribution: %s" % linuxDistr())
+    print("System: %s" % platform.system())
+    print("Machine: %s" % platform.machine())
+    print("Platform: %s" % platform.platform())
+    print('Uname: %s' % platform.uname())
+    print('Version: %s' % platform.version())
+    print('Mac version: %s' % platform.mac_ver())
 
 
 def get_path_to_root(appendLocation=None):

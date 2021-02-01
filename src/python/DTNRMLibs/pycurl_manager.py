@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: ISO-8859-1 -*-
 # pylint: disable=R0913,W0702,R0914,R0912,R0201
 """
@@ -39,14 +39,20 @@ for row in data:
 from __future__ import print_function
 
 # system modules
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from past.builtins import basestring
+from builtins import object
 import os
 import re
 import sys
-import cStringIO as StringIO
-import httplib
-import json
+from io import StringIO
+import http.client
+import simplejson as json
 import logging
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import subprocess
 # 3d-party libraries
 import pycurl
@@ -67,7 +73,7 @@ class ResponseHeader(object):
 
     def parse(self, response):
         """Parse response header and assign class member data"""
-        for row in response.split('\r'):
+        for row in response.decode("UTF-8").split('\r'):
             row = row.replace('\n', '')
             if not row:
                 continue
@@ -116,7 +122,7 @@ class RequestHandler(object):
         # data is not encoded, we need to do that
         if verb in ['GET', 'HEAD']:
             if params:
-                encoded_data = urllib.urlencode(params, doseq=doseq)
+                encoded_data = urllib.parse.urlencode(params, doseq=doseq)
             else:
                 return ''
         else:
@@ -168,9 +174,13 @@ class RequestHandler(object):
         curl.setopt(pycurl.URL, str(url))
         if headers:
             curl.setopt(pycurl.HTTPHEADER,
-                        ["%s: %s" % (k, v) for k, v in headers.items()])
-        bbuf = StringIO.StringIO()
-        hbuf = StringIO.StringIO()
+                        ["%s: %s" % (k, v) for k, v in list(headers.items())])
+        if sys.version.startswith('3.'):
+            bbuf = io.BytesIO()
+            hbuf = io.BytesIO()
+        else:
+            bbuf = StringIO.StringIO()
+            hbuf = StringIO.StringIO()
         curl.setopt(pycurl.WRITEFUNCTION, bbuf.write)
         curl.setopt(pycurl.HEADERFUNCTION, hbuf.write)
         if capath:
@@ -234,7 +244,7 @@ class RequestHandler(object):
         else:
             data = bbuf.getvalue()
             msg = 'url=%s, code=%s, reason=%s, headers=%s' % (url, header.status, header.reason, header.header)
-            exc = httplib.HTTPException(msg)
+            exc = http.client.HTTPException(msg)
             setattr(exc, 'req_data', params)
             setattr(exc, 'req_headers', headers)
             setattr(exc, 'url', url)
@@ -356,14 +366,14 @@ def getdata(urls, ckey, cert, headers=None, options=None, num_conn=100, cookie=N
     for _ in range(num_conn):
         curl = pycurl.Curl()
         curl.fp = None
-        for key, val in options.items():
+        for key, val in list(options.items()):
             curl.setopt(getattr(pycurl, key), val)
         curl.setopt(pycurl.SSLKEY, ckey)
         curl.setopt(pycurl.SSLCERT, cert)
         mcurl.handles.append(curl)
         if headers:
             curl.setopt(pycurl.HTTPHEADER,
-                        ["%s: %s" % (k, v) for k, v in headers.items()])
+                        ["%s: %s" % (k, v) for k, v in list(headers.items())])
 
     # Main loop
     freelist = mcurl.handles[:]

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 # pylint: disable=line-too-long
 """
 Copyright 2020 California Institute of Technology
@@ -17,6 +17,7 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2020 California Institute of Technology
 Date                    : 2020/09/25
 """
+from builtins import object
 from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getUTCnow
 from prometheus_client import generate_latest, CollectorRegistry

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This part of code is taken from:
    https://web.archive.org/web/20160305151936/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
@@ -7,6 +7,9 @@ Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
+from __future__ import print_function
+from builtins import str
+from builtins import object
 import os
 import sys
 import time
@@ -38,7 +41,7 @@ class Daemon(object):
             if pid > 0:
                 # exit first parent
                 sys.exit(0)
-        except OSError, e:
+        except OSError as e:
             sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
             sys.exit(1)
 
@@ -53,24 +56,25 @@ class Daemon(object):
             if pid > 0:
                 # exit from second parent
                 sys.exit(0)
-        except OSError, e:
+        except OSError as e:
             sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
             sys.exit(1)
 
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
-        fdsi = file(self.stdin, 'r')
-        fdso = file(self.stdout, 'a+')
-        fdse = file(self.stderr, 'a+', 0)
-        os.dup2(fdsi.fileno(), sys.stdin.fileno())
-        os.dup2(fdso.fileno(), sys.stdout.fileno())
-        os.dup2(fdse.fileno(), sys.stderr.fileno())
+        with open(self.stdin, 'r') as fd:
+            os.dup2(fd.fileno(), sys.stdin.fileno())
+        with open(self.stdout, 'a+') as fd:
+            os.dup2(fd.fileno(), sys.stdout.fileno())
+        with open(self.stderr, 'a+') as fd:
+            os.dup2(fd.fileno(), sys.stderr.fileno())
 
         # write pidfile
         atexit.register(self.delpid)
         pid = str(os.getpid())
-        file(self.pidfile, 'w+').write("%s\n" % pid)
+        with open(self.pidfile, 'w+') as fd:
+            fd.write("%s\n" % pid)
 
     def delpid(self):
         """
@@ -124,13 +128,13 @@ class Daemon(object):
             while 1:
                 os.kill(pid, SIGTERM)
                 time.sleep(0.1)
-        except OSError, err:
+        except OSError as err:
             err = str(err)
             if err.find("No such process") > 0:
                 if os.path.exists(self.pidfile):
                     os.remove(self.pidfile)
             else:
-                print str(err)
+                print(str(err))
                 sys.exit(1)
 
     def restart(self):
@@ -145,13 +149,12 @@ class Daemon(object):
         Daemon status
         """
         try:
-            pidf = file(self.pidfile, 'r')
-            pid = int(pidf.read().strip())
-            print 'Application info: PID %s' % pid
-            pidf.close()
+            with open(self.pidfile, 'r') as fd:
+                pid = int(fd.read().strip())
+                print('Application info: PID %s' % pid)
         except IOError:
             pid = None
-            print 'Is application running?'
+            print('Is application running?')
             sys.exit(1)
 
     def command(self, command, daemonName):
@@ -168,11 +171,11 @@ class Daemon(object):
             elif command == 'status':
                 self.status()
             else:
-                print "Unknown command"
+                print("Unknown command")
                 sys.exit(2)
             sys.exit(0)
         else:
-            print "usage: %s %s" % (daemonName, "|".join(self.availableCommands))
+            print("usage: %s %s" % (daemonName, "|".join(self.availableCommands)))
             sys.exit(2)
 
     def run(self):
