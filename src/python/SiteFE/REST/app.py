@@ -231,11 +231,10 @@ def application(environ, start_response):
                 # Preference is to keep them inside URL definitions.
                 if 'ACCEPT' not in headers:
                     headers['ACCEPT'] = 'application/json'
-                if acceptheader:
-                    if headers['ACCEPT'] not in acceptheader:
-                        _HTTPRESPONDER.ret_406('application/json', start_response, None)
-                        return [bytes(json.dumps(getCustomOutMsg(errMsg="Not Acceptable Header. Provided: %s, Acceptable: %s"
-                                                           % (headers['ACCEPT'], acceptheader), errCode=406)), 'UTF-8')]
+                if acceptheader and headers['ACCEPT'] not in acceptheader:
+                    _HTTPRESPONDER.ret_406('application/json', start_response, None)
+                    return [bytes(json.dumps(getCustomOutMsg(errMsg="Not Acceptable Header. Provided: %s, Acceptable: %s"
+                                                       % (headers['ACCEPT'], acceptheader), errCode=406)), 'UTF-8')]
                 out = internallCall(caller=callback, environ=environ, start_response=start_response,
                                     mReg=regMatch, http_respond=_HTTPRESPONDER,
                                     urlParams=getUrlParams(environ, params),

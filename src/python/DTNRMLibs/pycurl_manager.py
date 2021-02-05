@@ -43,9 +43,9 @@ from future import standard_library
 standard_library.install_aliases()
 from past.builtins import basestring
 import os
+import io
 import re
 import sys
-from io import StringIO
 import http.client
 import simplejson as json
 import logging
@@ -55,10 +55,6 @@ import urllib.error
 import subprocess
 # 3d-party libraries
 import pycurl
-
-# python3
-if sys.version.startswith('3.'):
-    import io
 
 
 class ResponseHeader():
@@ -177,8 +173,8 @@ class RequestHandler():
             bbuf = io.BytesIO()
             hbuf = io.BytesIO()
         else:
-            bbuf = StringIO.StringIO()
-            hbuf = StringIO.StringIO()
+            bbuf = io.StringIO()
+            hbuf = io.StringIO()
         curl.setopt(pycurl.WRITEFUNCTION, bbuf.write)
         curl.setopt(pycurl.HEADERFUNCTION, hbuf.write)
         if capath:
@@ -388,8 +384,8 @@ def getdata(urls, ckey, cert, headers=None, options=None, num_conn=100, cookie=N
                 bbuf = io.BytesIO()
                 hbuf = io.BytesIO()
             else:
-                bbuf = StringIO.StringIO()
-                hbuf = StringIO.StringIO()
+                bbuf = io.StringIO()
+                hbuf = io.StringIO()
             curl.setopt(pycurl.WRITEFUNCTION, bbuf.write)
             curl.setopt(pycurl.HEADERFUNCTION, hbuf.write)
             mcurl.add_handle(curl)

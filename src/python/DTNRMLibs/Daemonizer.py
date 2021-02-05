@@ -138,7 +138,6 @@ class Daemon():
                 pid = int(fd.read().strip())
                 print('Application info: PID %s' % pid)
         except IOError:
-            pid = None
             print('Is application running?')
             sys.exit(1)
 

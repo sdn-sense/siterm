@@ -71,9 +71,9 @@ def getConnInfo(bidPort, prefixSite, output, nostore=False):
     output['hosts'][nName[2]]['sourceswitch'] = nName[0]
     if len(nName) == 5:
         output['hosts'][nName[2]]['destport'] = nName[3]
-    elif len(nName[-1].split('.')) == 2:
-        if 'destport' not in list(output[nName[2]].keys()):
-            output['hosts'][nName[2]]['destport'] = nName[-1].split('.')[0]
+    elif len(nName[-1].split('.')) == 2 and \
+    'destport' not in list(output[nName[2]].keys()):
+        output['hosts'][nName[2]]['destport'] = nName[-1].split('.')[0]
     return nName[2], output
 
 
@@ -255,9 +255,8 @@ class PolicyService():
                 for item in out:
                     outtype = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'type')))
                     outval = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'value')))
-                    if Literal('ipv4-address') in outtype:
-                        if len(outval[0].split('/')) == 2:
-                            output['hosts'][connInfo]['ip'] = str(outval[0])
+                    if Literal('ipv4-address') in outtype and len(outval[0].split('/')) == 2:
+                        output['hosts'][connInfo]['ip'] = str(outval[0])
                 # Now lets get service Info and what was requested.
                 out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['nml'], 'hasService')))
                 output['hosts'][connInfo].setdefault('params', [])

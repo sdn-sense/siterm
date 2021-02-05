@@ -25,7 +25,6 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import str
 from past.utils import old_div
-from builtins import object
 import os
 import tempfile
 import datetime
@@ -58,7 +57,7 @@ def ignoreInterface(intfKey, intfDict):
     return returnMsg
 
 
-class prefixDB(object):
+class prefixDB():
     """This generates all known default prefixes."""
     def __init__(self, config, sitename):
         self.config = config
@@ -91,7 +90,7 @@ class prefixDB(object):
         return Literal(value)
 
 
-class LookUpService(object):
+class LookUpService():
     """Lookup Service prepares MRML model about the system."""
     def __init__(self, config, logger, sitename):
         self.sitename = sitename
@@ -107,12 +106,11 @@ class LookUpService(object):
         """Generate Host Alias from configuration."""
         if kwargs['portSwitch'] in list(self.hosts.keys()):
             for item in self.hosts[kwargs['portSwitch']]:
-                if item['switchName'] == kwargs['switchName']:
-                    if item['switchPort'] == kwargs['portName']:
-                        suri = "%s:%s" % (kwargs['newuri'], item['intfKey'])
-                        self.newGraph.add((self.prefixDB.genUriRef('site', kwargs['newuri']),
-                                           self.prefixDB.genUriRef('nml', 'isAlias'),
-                                           self.prefixDB.genUriRef('site', suri)))
+                if item['switchName'] == kwargs['switchName'] and item['switchPort'] == kwargs['portName']:
+                    suri = "%s:%s" % (kwargs['newuri'], item['intfKey'])
+                    self.newGraph.add((self.prefixDB.genUriRef('site', kwargs['newuri']),
+                                       self.prefixDB.genUriRef('nml', 'isAlias'),
+                                       self.prefixDB.genUriRef('site', suri)))
 
     def addToGraph(self, sub, pred, obj):
         """Add to graph new info.
@@ -233,10 +231,10 @@ class LookUpService(object):
                         continue
                     mainGraph = self._deltaReduction(dbObj, delta, mainGraphName)
                     writeFile = True
-                elif delta['deltat'] == 'addition':
-                    if delta['modadd'] in ['add'] or delta['state'] in ['activated']:
-                        mainGraph = self._deltaAddition(dbObj, delta, mainGraphName)
-                        writeFile = True
+                elif delta['deltat'] == 'addition' and \
+                (delta['modadd'] in ['add'] or delta['state'] in ['activated']):
+                    mainGraph = self._deltaAddition(dbObj, delta, mainGraphName)
+                    writeFile = True
                 if writeFile:
                     with open(mainGraphName, "wb") as fd:
                         fd.write(mainGraph.serialize(format='turtle'))

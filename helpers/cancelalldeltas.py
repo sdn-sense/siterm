@@ -17,9 +17,8 @@ def deleteAll(sitename, deltaUID=None):
     dbI = getDBConn('cancelalldeltas')
     dbobj = getVal(dbI, sitename=sitename)
     for delta in dbobj.get('deltas'):
-        if deltaUID:
-            if delta['uid'] != deltaUID:
-                continue
+        if deltaUID and delta['uid'] != deltaUID:
+            continue
         print('Cancel %s' % delta['uid'])
         STATEMACHINE._stateChangerDelta(dbobj, 'remove', **delta)
 

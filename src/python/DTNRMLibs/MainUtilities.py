@@ -40,10 +40,7 @@ import subprocess
 import email.utils as eut
 import configparser
 import simplejson as json
-from io import StringIO
 import logging
-from logging import StreamHandler
-from logging.handlers import TimedRotatingFileHandler
 # Custom exceptions imports
 import pycurl
 import requests
@@ -93,7 +90,7 @@ def getStreamLogger(logLevel='DEBUG'):
               'INFO': logging.INFO,
               'DEBUG': logging.DEBUG}
     logger = logging.getLogger()
-    handler = StreamHandler()
+    handler = logging.StreamHandler()
     formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
                                   datefmt="%a, %d %b %Y %H:%M:%S")
     handler.setFormatter(formatter)
@@ -113,7 +110,7 @@ def getLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='mi
     logger = logging.getLogger()
     createDirs(logFile)
     logFile += logOutName
-    handler = TimedRotatingFileHandler(logFile, when=rotateTime, backupCount=backupCount)
+    handler = logging.handlers.TimedRotatingFileHandler(logFile, when=rotateTime, backupCount=backupCount)
     formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
                                   datefmt="%a, %d %b %Y %H:%M:%S")
     handler.setFormatter(formatter)
@@ -453,7 +450,7 @@ def read_input_data(environ):
     if sys.version.startswith('3.'):
         body = io.BytesIO(environ['wsgi.input'].read(length))
     else:
-        body = StringIO(environ['wsgi.input'].read(length))
+        body = io.StringIO(environ['wsgi.input'].read(length))
     outjson = {}
     try:
         outjson = json.loads(body.getvalue())
@@ -520,10 +517,9 @@ def getUrlParams(environ, paramsList):
                 else:
                     raise NotSupportedArgument("Parameter %s value not acceptable. Allowed options: [tT]rue,[fF]alse" %
                                                param['key'])
-            elif param['type'] == str:
-                if outVals[0] not in param['options']:
-                    raise NotSupportedArgument("Server does not support parameter %s=%s. Supported: %s" %
-                                               (param['key'], outVals[0], param['options']))
+            elif param['type'] == str and outVals[0] not in param['options']:
+                raise NotSupportedArgument("Server does not support parameter %s=%s. Supported: %s" %
+                                           (param['key'], outVals[0], param['options']))
         elif not outVals:
             outParams[param['key']] = param['default']
     print(outParams)

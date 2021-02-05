@@ -104,10 +104,9 @@ def startWork(config=None, logger=None):
     fullUrl += '/sitefe'
     outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/updatehost')
     logger.debug('Update Host result %s', outVals)
-    if outVals[2] != 'OK' or outVals[1] != 200:
-        if outVals[3]:
-            outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/addhost')
-            logger.debug('Update Host result %s', outVals)
+    if outVals[2] != 'OK' or outVals[1] != 200 and outVals[3]:
+        outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/addhost')
+        logger.debug('Update Host result %s', outVals)
 
 
 def execute(config, logger):

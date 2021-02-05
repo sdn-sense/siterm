@@ -189,10 +189,9 @@ class Ruler():
             if deltaInfo[0]['state'] in ['remove', 'removing', 'removed', 'cancel', 'failed']:
                 if os.path.isfile(fileName):
                     os.remove(fileName)
-            elif deltaInfo[0]['state'] in ['activating', 'activated']:
-                if deltaInfo[0]['deltat'] == 'addition':
-                    deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
-                    self.checkResources(deltaInfo[0]['addition'][0], inputDict['uid'])
+            elif deltaInfo[0]['state'] in ['activating', 'activated'] and deltaInfo[0]['deltat'] == 'addition':
+                deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
+                self.checkResources(deltaInfo[0]['addition'][0], inputDict['uid'])
 
     def checkHostStates(self):
         """Check Host State deltas."""
