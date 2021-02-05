@@ -111,6 +111,7 @@ class DBBackend(object):
             self.initialize()
             self.cursor.execute(query)
             self.conn.commit()
+            callExit = 'OK'
         except Exception as ex:
             print('Got Exception %s ' % ex)
             self.conn.rollback()
@@ -153,7 +154,7 @@ class dbinterface(object):
         try:
             callquery = getattr(dbcalls, '%s_%s' % (callaction, calltype))
         except AttributeError as ex:
-            print(('Called %s_%s, but got exception %s', callaction, calltype, ex))
+            print('Called %s_%s, but got exception %s', callaction, calltype, ex)
             raise ex
         return callquery
 

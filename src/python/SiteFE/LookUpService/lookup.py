@@ -707,6 +707,7 @@ class LookUpService(object):
             self.logger.info('Models are different. Update DB')
             dbObj.insert('models', [lastKnownModel])
 
+        self.logger.debug('Last Known Model: %s' % str(lastKnownModel))
         # Clean Up old models (older than 24h.)
         for model in dbObj.get('models', limit=100, orderby=['insertdate', 'ASC']):
             if model['insertdate'] < int(getUTCnow() - 86400):
