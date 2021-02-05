@@ -25,18 +25,18 @@ from prometheus_client import Enum, CONTENT_TYPE_LATEST
 
 
 class PrometheusAPI(object):
-    """ Prometheus exporter class"""
+    """Prometheus exporter class."""
     def __init__(self):
         self.dbI = getDBConn('Prometheus')
 
     @staticmethod
     def cleanRegistry():
-        """ Get new/clean prometheus registry """
+        """Get new/clean prometheus registry."""
         registry = CollectorRegistry()
         return registry
 
     def getServiceStates(self, registry, **kwargs):
-        """ Get all Services states """
+        """Get all Services states."""
         serviceState = Enum('service_state', 'Description of enum',
                             labelnames=['servicename'],
                             states=['OK', 'UNKNOWN', 'FAILED', 'KEYBOARDINTERRUPT'],
@@ -53,7 +53,7 @@ class PrometheusAPI(object):
             serviceState.labels(servicename=service['servicename']).state(state)
 
     def metrics(self, **kwargs):
-        """ Return all available Hosts, where key is IP address """
+        """Return all available Hosts, where key is IP address."""
         registry = self.cleanRegistry()
         self.getServiceStates(registry, **kwargs)
         data = generate_latest(registry)

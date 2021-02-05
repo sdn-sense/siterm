@@ -47,7 +47,7 @@ from DTNRMLibs.MainUtilities import getUTCnow
 
 
 def ignoreInterface(intfKey, intfDict):
-    """ Check if ignore interface for putting it inside model """
+    """Check if ignore interface for putting it inside model."""
     returnMsg = False
     if intfKey.endswith('-ifb'):
         returnMsg = True
@@ -59,7 +59,7 @@ def ignoreInterface(intfKey, intfDict):
 
 
 class prefixDB(object):
-    """ This generates all known default prefixes """
+    """This generates all known default prefixes."""
     def __init__(self, config, sitename):
         self.config = config
         self.sitename = sitename
@@ -67,7 +67,7 @@ class prefixDB(object):
         self.getSavedPrefixes()
 
     def getSavedPrefixes(self):
-        """Get Saved prefixes from a configuration file"""
+        """Get Saved prefixes from a configuration file."""
         prefixes = {}
         for key in ['mrs', 'nml', 'owl', 'rdf', 'xml', 'xsd', 'rdfs', 'schema', 'sd']:
             prefixes[key] = self.config.get('prefixes', key)
@@ -78,7 +78,7 @@ class prefixDB(object):
         self.prefixes = prefixes
 
     def genUriRef(self, prefix, add=None, custom=None):
-        """ Generate URIRef and return """
+        """Generate URIRef and return."""
         if custom:
             return URIRef(custom)
         if not add:
@@ -87,12 +87,12 @@ class prefixDB(object):
 
     @staticmethod
     def genLiteral(value):
-        """ Returns simple Literal RDF out """
+        """Returns simple Literal RDF out."""
         return Literal(value)
 
 
 class LookUpService(object):
-    """ Lookup Service prepares MRML model about the system """
+    """Lookup Service prepares MRML model about the system."""
     def __init__(self, config, logger, sitename):
         self.sitename = sitename
         self.logger = logger
@@ -104,7 +104,7 @@ class LookUpService(object):
         self.hosts = {}
 
     def generateHostIsalias(self, **kwargs):
-        """ Generate Host Alias from configuration """
+        """Generate Host Alias from configuration."""
         if kwargs['portSwitch'] in list(self.hosts.keys()):
             for item in self.hosts[kwargs['portSwitch']]:
                 if item['switchName'] == kwargs['switchName']:
@@ -115,10 +115,12 @@ class LookUpService(object):
                                            self.prefixDB.genUriRef('site', suri)))
 
     def addToGraph(self, sub, pred, obj):
-        """ Add to graph new info. Input:
-            sub (list) max len 2
-            pred (list) max len 2
-            obj (list) max len 2 if 1 will use Literal value
+        """Add to graph new info.
+
+        Input:
+        sub (list) max len 2
+        pred (list) max len 2
+        obj (list) max len 2 if 1 will use Literal value
         """
         if len(obj) == 1 and len(sub) == 1:
             self.newGraph.add((self.prefixDB.genUriRef(sub[0]),
@@ -140,7 +142,7 @@ class LookUpService(object):
             raise Exception('Failing to add object to graph due to mismatch')
 
     def addIntfInfo(self, inputDict, prefixuri, main=True):
-        """ This will add all information about specific interface """
+        """This will add all information about specific interface."""
         # '2' is for ipv4 information
         # Also can be added bytes_received, bytes_sent, dropin, dropout
         # errin, errout, packets_recv, packets_sent
@@ -185,7 +187,7 @@ class LookUpService(object):
                                     [value])
 
     def _deltaReduction(self, dbObj, delta, mainGraphName):
-        """ Delta reduction """
+        """Delta reduction."""
         delta['content'] = evaldict(delta['content'])
         self.logger.info('Working on %s delta reduction in state' % delta['uid'])
         mainGraph = Graph()
@@ -203,7 +205,7 @@ class LookUpService(object):
         return mainGraph
 
     def _deltaAddition(self, dbObj, delta, mainGraphName, updateState=True):
-        """ Delta addition lookup """
+        """Delta addition lookup."""
         delta['content'] = evaldict(delta['content'])
         self.logger.info('Working on %s delta addition in state' % delta['uid'])
         mainGraph = Graph()
@@ -222,7 +224,7 @@ class LookUpService(object):
         return mainGraph
 
     def appendDeltas(self, dbObj, mainGraphName):
-        """ Append all deltas to Model """
+        """Append all deltas to Model."""
         for modstate in ['added', 'add', 'remove']:
             for delta in dbObj.get('deltas', search=[['modadd', modstate]], limit=10):
                 writeFile = False
@@ -241,7 +243,7 @@ class LookUpService(object):
 
     @staticmethod
     def getCurrentModel(dbObj):
-        """ Get Current Model from DB """
+        """Get Current Model from DB."""
         currentModel = dbObj.get('models', orderby=['insertdate', 'DESC'], limit=1)
         currentGraph = Graph()
         if currentModel:
@@ -252,14 +254,14 @@ class LookUpService(object):
         return currentModel, currentGraph
 
     def checkForModelDiff(self, dbObj, saveName):
-        """ Check if models are different """
+        """Check if models are different."""
         currentModel, currentGraph = self.getCurrentModel(dbObj)
         newGraph = Graph()
         newGraph.parse(saveName, format='turtle')
         return isomorphic(currentGraph, newGraph), currentModel
 
     def getModelSavePath(self):
-        """ Get Model Save Location """
+        """Get Model Save Location."""
         now = datetime.datetime.now()
         saveDir = "%s/%s" % (self.config.get(self.sitename, "privatedir"), "LookUpService")
         createDirs(saveDir)
@@ -267,7 +269,7 @@ class LookUpService(object):
                                               now.day, now.hour, now.minute, now.second)
 
     def defineMRMLServices(self):
-        """ Defined Topology and Main Services available. """
+        """Defined Topology and Main Services available."""
         # Add main Topology
         self.newGraph.add((self.prefixDB.genUriRef('site'),
                            self.prefixDB.genUriRef('rdf', 'type'),
@@ -301,12 +303,12 @@ class LookUpService(object):
                                self.prefixDB.genUriRef('schema')))
 
     def defineMRMLPrefixes(self):
-        """ Define all known prefixes """
+        """Define all known prefixes."""
         for prefix, val in list(self.prefixDB.prefixes.items()):
             self.newGraph.bind(prefix, val)
 
     def defineNodeInformation(self, nodeDict):
-        """ Define node information """
+        """Define node information."""
         self.hosts[nodeDict['hostname']] = []
         self.newGraph.add((self.prefixDB.genUriRef('site'),
                            self.prefixDB.genUriRef('nml', 'hasNode'),
@@ -333,7 +335,7 @@ class LookUpService(object):
             self.logger.debug('Either one or both (latitude,longitude) are not defined. Continuing as normal')
 
     def defineLayer3MRML(self, nodeDict):
-        """ Define Layer 3 Routing Service """
+        """Define Layer 3 Routing Service."""
         hostinfo = evaldict(nodeDict['hostinfo'])
         self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
                            self.prefixDB.genUriRef('nml', 'hasService'),
@@ -417,7 +419,7 @@ class LookUpService(object):
                                     ['%s/%s' % (routeinfo['RTA_DST'], routeinfo['dst_len'])])
 
     def addSwitchInfo(self, jOut):
-        """ Add All Switch information from switch lookup plugin"""
+        """Add All Switch information from switch lookup plugin."""
         # Get switch information...
         switchPlugin = self.config.get(self.sitename, 'plugin')
         self.logger.info('Will load %s switch plugin' % switchPlugin)
@@ -484,7 +486,7 @@ class LookUpService(object):
                     self.logger.debug('switchName $%s is not in switchInfo' % switchName)
 
     def addAgentConfigtoMRML(self, intfDict, newuri):
-        """ Agent Configuration params to Model """
+        """Agent Configuration params to Model."""
         switchName = intfDict['switch']
         switchPort = intfDict['switch_port']
         # Add floating ip pool list for interface from the agent
@@ -565,7 +567,10 @@ class LookUpService(object):
                                self.prefixDB.genLiteral(self.shared)))
 
     def defineHostInfo(self, nodeDict):
-        """ Define Host information inside MRML. Add All interfaces info. """
+        """Define Host information inside MRML.
+
+        Add All interfaces info.
+        """
         hostinfo = evaldict(nodeDict['hostinfo'])
         for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
             # We exclude QoS interfaces from adding them to MRML.
@@ -645,7 +650,7 @@ class LookUpService(object):
                     self.addIntfInfo(vlanDict, vlanuri, False)
 
     def startwork(self):
-        """Main start """
+        """Main start."""
         self.logger.info('Started LookupService work')
         dbObj = getVal(self.dbI, **{'sitename': self.sitename})
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
@@ -720,7 +725,7 @@ class LookUpService(object):
 
 
 def execute(config=None, logger=None):
-    """Main Execute"""
+    """Main Execute."""
     if not config:
         config = getConfig()
     if not logger:

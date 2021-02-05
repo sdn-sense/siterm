@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""
-Plugin which produces all info from lscpu
-It produces:
+"""Plugin which produces all info from lscpu It produces:
+
 {'CPU(s)': 2, 'L1d cache': '32K', 'CPU op-mode(s)': '32-bit, 64-bit', 'NUMA node0 CPU(s)': '0,1',
  'Hypervisor vendor': 'VMware', 'L2 cache': '256K', 'L1i cache': '32K', 'CPU MHz': 3392.164,
  'Core(s) per socket': 1, 'Virtualization type': 'full', 'Thread(s) per core': 1, 'On-line CPU(s) list': '0,1',
@@ -18,11 +17,11 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
 from __future__ import print_function
 import pprint
@@ -33,7 +32,7 @@ NAME = 'CPUInfo'
 
 
 def get(config, logger):
-    """Get lscpu information"""
+    """Get lscpu information."""
     cpuInfo = {}
     tmpOut = externalCommand('lscpu')
     for item in tmpOut:

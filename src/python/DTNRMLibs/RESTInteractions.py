@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-To be changed with HTTPLibrary...
+"""To be changed with HTTPLibrary...
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +11,11 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
 from __future__ import print_function
 from future import standard_library
@@ -33,14 +32,14 @@ from DTNRMLibs.MainUtilities import evaldict
 
 
 class getContent(object):
-    """ Get Content from url """
+    """Get Content from url."""
     def __init__(self):
         # We would want to add later more things to init,
         # for example https and security details from config.
         self.initialized = True
 
     def get_method(self, url):
-        """Only used inside the site for forwardning requests..."""
+        """Only used inside the site for forwardning requests."""
         try:
             req = urllib.request.Request(url)
             response = urllib.request.urlopen(req)
@@ -54,20 +53,23 @@ class getContent(object):
 
 
 def get_match_regex(environ, regexp):
-    """ Matches regexp and return its type. This does not raise any error."""
+    """Matches regexp and return its type.
+
+    This does not raise any error.
+    """
     path = environ.get('PATH_INFO', '')
     mReg = regexp.match(path)
     return mReg
 
 
 def is_application_json(environ):
-    """ Check if environ has set content type to json """
+    """Check if environ has set content type to json."""
     content_type = environ.get('CONTENT_TYPE', 'application/json')
     return content_type.startswith('application/json')
 
 
 def is_post_request(environ):
-    """ Check if environ has set it to POST method """
+    """Check if environ has set it to POST method."""
     if environ['REQUEST_METHOD'].upper() != 'POST':
         return False
     content_type = environ.get('CONTENT_TYPE', 'application/x-www-form-urlencoded')
@@ -76,7 +78,7 @@ def is_post_request(environ):
 
 
 def get_json_post_form(environ):
-    """ Get Json from Post form """
+    """Get Json from Post form."""
     try:
         request_body_size = int(environ.get('CONTENT_LENGTH', 0))
     except ValueError:
@@ -96,7 +98,7 @@ def get_json_post_form(environ):
 
 
 def get_post_form(environ):
-    """ Get content submitted through POST method """
+    """Get content submitted through POST method."""
     # assert is_post_request(environ)
     postEnv = environ.copy()
     postEnv['QUERY_STRING'] = ''
@@ -115,7 +117,7 @@ def get_post_form(environ):
 
 
 class InputProcessed(object):
-    """ wsgi Input processing class """
+    """wsgi Input processing class."""
     def read(self, *args):
         raise EOFError('The wsgi.input stream has already been consumed')
     readline = readlines = __iter__ = read

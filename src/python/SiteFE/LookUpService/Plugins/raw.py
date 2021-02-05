@@ -27,7 +27,7 @@ from DTNRMLibs.MainUtilities import evaldict
 
 
 def getNodeDictVlans(nodesInfo, hostname, switchName):
-    """ Get Node dictionary """
+    """Get Node dictionary."""
     if not nodesInfo:
         return None, {}
     for _, nodeDict in list(nodesInfo['nodes'].items()):
@@ -43,7 +43,10 @@ def getNodeDictVlans(nodesInfo, hostname, switchName):
 
 
 class Switch(object):
-    """ RAW Switch plugin. All info comes from yaml files. """
+    """RAW Switch plugin.
+
+    All info comes from yaml files.
+    """
     def __init__(self, config, logger, nodesInfo, site):
         self.config = config
         self.logger = logger
@@ -54,7 +57,7 @@ class Switch(object):
         self.output = {'switches': {}, 'vlans': {}}
 
     def getinfo(self):
-        """ Get info about RAW plugin """
+        """Get info about RAW plugin."""
         if not self.config.has_section(self.site):
             self.logger.info('SiteName %s is not defined' % self.site)
             return self.output
@@ -71,7 +74,7 @@ class Switch(object):
         return self.cleanupEmpty()
 
     def cleanupEmpty(self):
-        """  Final check remove empty dicts/lists inside output """
+        """Final check remove empty dicts/lists inside output."""
         tmpOut = copy.deepcopy(self.output)
         for sw, swd in list(self.output['switches'].items()):
             if not swd:
@@ -84,7 +87,7 @@ class Switch(object):
         return tmpOut
 
     def getValFromConfig(self, switch, port, key):
-        """ Get val from config."""
+        """Get val from config."""
         tmpVal = self.config.get(switch, "port%s%s" % (port, key))
         try:
             tmpVal = int(tmpVal)
@@ -93,7 +96,7 @@ class Switch(object):
         return tmpVal
 
     def switchInfo(self, switch):
-        """ Get all switch info from FE main yaml file. """
+        """Get all switch info from FE main yaml file."""
         self.output['switches'][switch] = {}
         self.output['vlans'][switch] = {}
         for port in self.config.get(switch, 'ports').split(','):
@@ -124,7 +127,7 @@ class Switch(object):
                     self.output['vlans'][switch][port]['hostname'] = spltAlias[-2]
 
     def nodeinfo(self):
-        """ put  all node information from node reported stats """
+        """put  all node information from node reported stats."""
         for _, nodeDict in list(self.nodesInfo.items()):
             hostinfo = evaldict(nodeDict['hostinfo'])
             for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):

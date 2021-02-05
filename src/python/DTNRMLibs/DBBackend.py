@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""
-DB Backend for communication with database. Mainly we use mariadb,
-but in near future can be any other database
+"""DB Backend for communication with database. Mainly we use mariadb, but in
+near future can be any other database.
 
 Copyright 2019 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,43 +12,39 @@ Copyright 2019 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2019 California Institute of Technology
-Date			: 2019/05/01
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2019 California Institute of Technology
+Date                    : 2019/05/01
 """
 from __future__ import print_function
-
-from builtins import str
-from builtins import zip
-from builtins import object
 import os
 import time
 import mariadb
 import DTNRMLibs.dbcalls as dbcalls
 
 
-class DBBackend(object):
-    """ Database Backend class """
+class DBBackend():
+    """Database Backend class."""
     def __init__(self):
         self.mpass = os.getenv('MARIA_DB_PASSWORD')
         self.muser = os.getenv('MARIA_DB_USER', 'root')
         self.mhost = os.getenv('MARIA_DB_HOST', 'localhost')
-        self.mport = int(os.getenv('MARIA_DB_PORT', 3306))
+        self.mport = int(os.getenv('MARIA_DB_PORT', '3306'))
         self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
         self.conn = None
         self.cursor = None
 
     def destroy(self):
-        """ Destroy connection """
+        """Destroy connection."""
         if self.conn:
             self.conn.close()
         self.conn = None
         self.cursor = None
 
     def _createdb(self):
-        """ Create database """
+        """Create database."""
         self.initialize()
         for argname in dir(dbcalls):
             if argname.startswith('create_'):
@@ -59,7 +54,7 @@ class DBBackend(object):
         self.destroy()
 
     def initialize(self):
-        """ Initialize mariadb connection """
+        """Initialize mariadb connection."""
         if not self.conn:
             self.conn = mariadb.connect(user=self.muser,
                                         password=self.mpass,
@@ -70,7 +65,7 @@ class DBBackend(object):
             self.cursor = self.conn.cursor()
 
     def execute_get(self, query):
-        """ GET Execution """
+        """GET Execution."""
         alldata = []
         colname = []
         try:
@@ -81,11 +76,11 @@ class DBBackend(object):
         except Exception as ex:
             raise ex
         finally:
-             self.destroy()
+            self.destroy()
         return 'OK', colname, alldata
 
     def execute_ins(self, query, values):
-        """ INSERT Execute """
+        """INSERT Execute."""
         try:
             self.initialize()
             for item in values:
@@ -100,28 +95,27 @@ class DBBackend(object):
             self.conn.rollback()
             raise ex
         finally:
-             self.destroy()
+            self.destroy()
         return 'OK', '', ''
 
     def execute_del(self, query, values):
-        """ DELETE Execute """
+        """DELETE Execute."""
         try:
             self.initialize()
             self.cursor.execute(query)
             self.conn.commit()
-            callExit = 'OK'
         except Exception as ex:
             print('Got Exception %s ' % ex)
             self.conn.rollback()
             self.destroy()
             raise ex
         finally:
-             self.destroy()
+            self.destroy()
         return 'OK', '', ''
 
 
-class dbinterface(object):
-    """ Database interface """
+class dbinterface():
+    """Database interface."""
     def __init__(self, serviceName, config, sitename):
         self.config = config
         self.sitename = sitename
@@ -131,22 +125,22 @@ class dbinterface(object):
         self.callEnd = None
 
     def _setStartCallTime(self, calltype):
-        """ Set Call Start timer """
+        """Set Call Start timer."""
         self.callStart = float(time.time())
 
     def _setEndCallTime(self, calltype, callExit):
-        """ Set Call End timer """
+        """Set Call End timer."""
         self.callEnd = float(time.time())
         self._calldiff(calltype, callExit)
 
     def _calldiff(self, calltype, callExit):
-        """ Log timing for call """
+        """Log timing for call."""
         diff = self.callEnd - self.callStart
         msg = "DB: %s %s %s %s" % (self.serviceName, calltype, str(diff), callExit)
         print(msg)
 
     def getcall(self, callaction, calltype):
-        """ Get call from ALL available ones """
+        """Get call from ALL available ones."""
         callquery = ""
         try:
             callquery = getattr(dbcalls, '%s_%s' % (callaction, calltype))
@@ -160,7 +154,7 @@ class dbinterface(object):
     # =====================================================
 
     def _caller(self, origquery, limit=None, orderby=None, search=None):
-        """ Modifies get call and include WHER/ORDER/LIMIT """
+        """Modifies get call and include WHER/ORDER/LIMIT."""
         query = ""
         if search:
             first = True
@@ -179,7 +173,7 @@ class dbinterface(object):
         return self.db.execute_get(fullquery)
 
     def get(self, calltype, limit=None, search=None, orderby=None, mapping=True):
-        """ GET Call for APPs """
+        """GET Call for APPs."""
         self._setStartCallTime(calltype)
         callExit, colname, dbout = self._caller(self.getcall('get', calltype), limit, orderby, search)
         self._setEndCallTime(calltype, callExit)
@@ -195,7 +189,7 @@ class dbinterface(object):
     # =====================================================
 
     def insert(self, calltype, values):
-        """ INSERT call for APPs """
+        """INSERT call for APPs."""
         self._setStartCallTime(calltype)
         callExit, _, _ = self.db.execute_ins(self.getcall('insert', calltype), values)
         self._setEndCallTime(calltype, callExit)
@@ -205,7 +199,7 @@ class dbinterface(object):
     # =====================================================
 
     def update(self, calltype, values):
-        """ UPDATE Call for APPs """
+        """UPDATE Call for APPs."""
         self._setStartCallTime(calltype)
         callExit, _, _ = self.db.execute_ins(self.getcall('update', calltype), values)
         self._setEndCallTime(calltype, callExit)
@@ -215,7 +209,7 @@ class dbinterface(object):
     # =====================================================
 
     def delete(self, calltype, values):
-        """ DELETE Call for APPs """
+        """DELETE Call for APPs."""
         query = ""
         if values:
             first = True

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Everything goes here when they do not fit anywhere else
+"""Everything goes here when they do not fit anywhere else.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +11,16 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
 from __future__ import print_function
 from future import standard_library
 standard_library.install_aliases()
-from builtins import str
 from past.builtins import basestring
-from builtins import object
 import os
 import os.path
 import io
@@ -60,14 +57,14 @@ from DTNRMLibs.HTTPLibrary import Requests
 
 
 def getUTCnow():
-    """ Get UTC Time"""
+    """Get UTC Time."""
     now = datetime.datetime.utcnow()
     timestamp = int(time.mktime(now.timetuple()))
     return timestamp
 
 
 def getVal(conDict, **kwargs):
-    """ Get value from configuration """
+    """Get value from configuration."""
     if 'sitename' in list(kwargs.keys()):
         if kwargs['sitename'] in list(conDict.keys()):
             return conDict[kwargs['sitename']]
@@ -79,7 +76,7 @@ def getVal(conDict, **kwargs):
 
 
 def getFullUrl(config, sitename=None):
-    """ Prepare full URL from Config """
+    """Prepare full URL from Config."""
     webdomain = config.get('general', 'webdomain')
     if not sitename:
         sitename = config.get('general', 'sitename')
@@ -89,7 +86,7 @@ def getFullUrl(config, sitename=None):
 
 
 def getStreamLogger(logLevel='DEBUG'):
-    """ Get Stream Logger """
+    """Get Stream Logger."""
     levels = {'FATAL': logging.FATAL,
               'ERROR': logging.ERROR,
               'WARNING': logging.WARNING,
@@ -107,7 +104,7 @@ def getStreamLogger(logLevel='DEBUG'):
 
 
 def getLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='midnight', backupCount=10):
-    """ Get new Logger for logging """
+    """Get new Logger for logging."""
     levels = {'FATAL': logging.FATAL,
               'ERROR': logging.ERROR,
               'WARNING': logging.WARNING,
@@ -126,7 +123,7 @@ def getLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='mi
 
 
 def evaldict(inputDict):
-    """Output from the server needs to be evaluated"""
+    """Output from the server needs to be evaluated."""
     if isinstance(inputDict, (list, dict)):
         return inputDict
     out = {}
@@ -140,7 +137,7 @@ def evaldict(inputDict):
 
 
 def readFile(fileName):
-    """Read all file lines to a list and rstrips the ending"""
+    """Read all file lines to a list and rstrips the ending."""
     try:
         with open(fileName, 'r') as fd:
             content = fd.readlines()
@@ -152,7 +149,7 @@ def readFile(fileName):
 
 
 def externalCommand(command, communicate=True):
-    """Execute External Commands and return stdout and stderr"""
+    """Execute External Commands and return stdout and stderr."""
     command = shlex.split(str(command))
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if communicate:
@@ -161,7 +158,7 @@ def externalCommand(command, communicate=True):
 
 
 def execute(command, logger, raiseError=True):
-    """ Execute interfaces commands. """
+    """Execute interfaces commands."""
     logger.info('Asked to execute %s command' % command)
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
@@ -175,7 +172,7 @@ def execute(command, logger, raiseError=True):
 
 
 def createDirs(fullDirPath):
-    """ Create Directories on fullDirPath"""
+    """Create Directories on fullDirPath."""
     dirname = os.path.dirname(fullDirPath)
     if not os.path.isdir(dirname):
         try:
@@ -188,7 +185,7 @@ def createDirs(fullDirPath):
 
 
 def publishToSiteFE(inputDict, host, url):
-    """Put JSON to the Site FE"""
+    """Put JSON to the Site FE."""
     req = Requests(host, {})
     try:
         out = req.makeRequest(url, verb='PUT', data=json.dumps(inputDict))
@@ -200,7 +197,7 @@ def publishToSiteFE(inputDict, host, url):
 
 
 def getDataFromSiteFE(inputDict, host, url):
-    """Get data from Site FE"""
+    """Get data from Site FE."""
     req = Requests(host, {})
     try:
         out = req.makeRequest(url, verb='GET', data=inputDict)
@@ -212,21 +209,21 @@ def getDataFromSiteFE(inputDict, host, url):
 
 
 def getWebContentFromURL(url):
-    """ TODO: Add some catches in future """
+    """TODO: Add some catches in future."""
     out = requests.get(url)
     return out
 
 
 def reCacheConfig(prevHour=None):
-    """ Return prevHour == currentHour, currentHour
-        and used in Service Object re-initiation """
+    """Return prevHour == currentHour, currentHour and used in Service Object
+    re-initiation."""
     datetimeNow = datetime.datetime.now()
     currentHour = datetimeNow.strftime('%H')
     return prevHour == currentHour, currentHour
 
 
 class GitConfig(object):
-    """ Git based configuration class """
+    """Git based configuration class."""
     def __init__(self):
         self.config = {}
         self.defaults = {'SITENAME':   {'optional': False},
@@ -237,7 +234,7 @@ class GitConfig(object):
         self.logger = getStreamLogger()
 
     def gitConfigCache(self, name, url):
-        """ Precache file for 1 hour from git and use cached file """
+        """Precache file for 1 hour from git and use cached file."""
         output = None
         if os.path.isfile('/tmp/dtnrm-no-config-fetch.yaml'):
             filename = '/tmp/dtnrm-link-%s.yaml' % name
@@ -271,7 +268,7 @@ class GitConfig(object):
         return output
 
     def getFullGitUrl(self, customAdds=None):
-        """ Get Full Git URL """
+        """Get Full Git URL."""
         urlJoinList = [self.config['GIT_URL'], self.config['GIT_REPO'],
                        self.config['GIT_BRANCH'], self.config['SITENAME']]
         if customAdds:
@@ -280,7 +277,7 @@ class GitConfig(object):
         return "/".join(urlJoinList)
 
     def getLocalConfig(self):
-        """ Get local config for info where all configs are kept in git """
+        """Get local config for info where all configs are kept in git."""
         if not os.path.isfile('/etc/dtnrm.yaml'):
             self.logger.debug('Config file /etc/dtnrm.yaml does not exist.')
             raise Exception('Config file /etc/dtnrm.yaml does not exist.')
@@ -296,19 +293,18 @@ class GitConfig(object):
                     self.config[key] = requirement['default']
 
     def getGitAgentConfig(self):
-        """
-        https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/Agent01/main.yaml
-        """
+        """https://raw.githubusercontent.com/sdn-sense/rm-
+        configs/master/T2_US_Caltech/Agent01/main.yaml."""
         if self.config['MAPPING']['type'] == 'Agent':
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
             self.config['MAIN'] = self.gitConfigCache('Agent-main', url)
             return
 
     def getGitFEConfig(self):
-        """
-        https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/auth.yaml
-        https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/main.yaml
-        """
+        """https://raw.githubusercontent.com/sdn-sense/rm-
+        configs/master/T2_US_Caltech/FE/auth.yaml
+        https://raw.githubusercontent.com/sdn-sense/rm-
+        configs/master/T2_US_Caltech/FE/main.yaml."""
         if self.config['MAPPING']['type'] == 'FE':
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
             self.config['MAIN'] = self.gitConfigCache('FE-main', url)
@@ -317,7 +313,7 @@ class GitConfig(object):
             return
 
     def getGitConfig(self):
-        """get git config from configured github repo."""
+        """Get git config from configured github repo."""
         if not self.config:
             self.getLocalConfig()
         url = "%s/mapping.yaml" % self.getFullGitUrl()
@@ -333,16 +329,20 @@ class GitConfig(object):
 
 
 def getGitConfig():
-    """ Wrapper before git config class. Returns dictionary """
+    """Wrapper before git config class.
+
+    Returns dictionary.
+    """
     gitConf = GitConfig()
     gitConf.getGitConfig()
     return gitConf.config
 
 
 def getConfig(locations=None):
-    """ Get parsed configuration in ConfigParser Format.
-        This is used till everyone move to YAML based config.
-        TODO: Move all to getGitConfig
+    """Get parsed configuration in ConfigParser Format.
+
+    This is used till everyone move to YAML based config.
+    TODO: Move all to getGitConfig.
     """
     config = getGitConfig()
     tmpCp = configparser.ConfigParser()
@@ -360,7 +360,7 @@ def getConfig(locations=None):
 
 
 def getFileContentAsJson(inputFile):
-    """ Get file content as json """
+    """Get file content as json."""
     out = {}
     if os.path.isfile(inputFile):
         with open(inputFile, 'r') as fd:
@@ -373,7 +373,7 @@ def getFileContentAsJson(inputFile):
 
 
 def getAllFileContent(inputFile):
-    """ Get all file content as a string """
+    """Get all file content as a string."""
     if os.path.isfile(inputFile):
         with open(inputFile, 'r') as fd:
             return fd.read()
@@ -381,30 +381,30 @@ def getAllFileContent(inputFile):
 
 
 def getUsername():
-    """Return current username"""
+    """Return current username."""
     return pwd.getpwuid(os.getuid())[0]
 
 
 class contentDB(object):
-    """ File Saver, loader class """
+    """File Saver, loader class."""
     def __init__(self, logger=None, config=None):
         self.config = config
         self.logger = logger
 
     @staticmethod
     def getFileContentAsJson(inputFile):
-        """ Get file content as json """
+        """Get file content as json."""
         return getFileContentAsJson(inputFile)
 
     @staticmethod
     def getHash(inputText):
-        """ Get UUID4 hash """
+        """Get UUID4 hash."""
         newuuid4 = str(uuid.uuid4())
         return str(newuuid4 + inputText)
 
     @staticmethod
     def dumpFileContentAsJson(outFile, content, newHash=None):
-        """ Dump File content with locks """
+        """Dump File content with locks."""
         tmpoutFile = outFile + '.tmp'
         with open(tmpoutFile, 'w+') as fd:
             json.dump(content, fd)
@@ -412,13 +412,13 @@ class contentDB(object):
         return True
 
     def saveContent(self, destFileName, outputDict):
-        """ Saves all content to a file """
+        """Saves all content to a file."""
         newHash = self.getHash("This-to-replace-with-date-and-Service-Name")
         return self.dumpFileContentAsJson(destFileName, outputDict, newHash)
 
     @staticmethod
     def removeFile(fileLoc):
-        """ Remove file """
+        """Remove file."""
         if os.path.isfile(fileLoc):
             os.unlink(fileLoc)
             return True
@@ -426,7 +426,7 @@ class contentDB(object):
 
 
 def delete(inputObj, delObj):
-    """ Delete function which covers exceptions"""
+    """Delete function which covers exceptions."""
     if isinstance(inputObj, list):
         tmpList = copy.deepcopy(inputObj)
         try:
@@ -446,7 +446,7 @@ def delete(inputObj, delObj):
 
 
 def read_input_data(environ):
-    """Read input data from environ, which can be used for PUT or POST"""
+    """Read input data from environ, which can be used for PUT or POST."""
     length = int(environ.get('CONTENT_LENGTH', 0))
     if length == 0:
         raise WrongInputError('Content input length is 0.')
@@ -478,12 +478,12 @@ VALIDATION = {"addhost": [{"key": "hostname", "type": basestring},
 
 
 def generateHash(inText):
-    """ Generate unique using uuid """
+    """Generate unique using uuid."""
     return str(uuid.uuid1())
 
 
 def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):
-    """ Create custom return dictionary """
+    """Create custom return dictionary."""
     newOut = {}
     if errMsg:
         newOut['error_description'] = errMsg
@@ -497,7 +497,7 @@ def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):
 
 
 def getUrlParams(environ, paramsList):
-    """ Get URL parameters and return them in dictionary """
+    """Get URL parameters and return them in dictionary."""
     if not paramsList:
         return {}
     if environ['REQUEST_METHOD'].upper() in ['POST']:
@@ -531,7 +531,7 @@ def getUrlParams(environ, paramsList):
 
 
 def getHeaders(environ):
-    """ Get all Headers and return them back as dictionary """
+    """Get all Headers and return them back as dictionary."""
     headers = {}
     for key in list(environ.keys()):
         if key.startswith('HTTP_'):
@@ -540,14 +540,13 @@ def getHeaders(environ):
 
 
 def convertTSToDatetime(inputTS):
-    """ Convert timestamp to datetime """
+    """Convert timestamp to datetime."""
     return datetime.datetime.fromtimestamp(int(inputTS)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
 
 def httpdate(timestamp):
-    """
-    Return a string representation of a date according to RFC 1123 (HTTP/1.1).
-    """
+    """Return a string representation of a date according to RFC 1123
+    (HTTP/1.1)."""
     dat = datetime.datetime.fromtimestamp(int(timestamp))
     weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][dat.weekday()]
     month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep",
@@ -557,15 +556,13 @@ def httpdate(timestamp):
 
 
 def httptimestamp(inhttpdate):
-    """
-    Return timestamp from RFC1123 (HTTP/1.1).
-    """
+    """Return timestamp from RFC1123 (HTTP/1.1)."""
     dat = datetime.datetime(*eut.parsedate(inhttpdate)[:5])
     return int(time.mktime(dat.timetuple()))
 
 
 def getModTime(headers):
-    """ Get modification time from the headers """
+    """Get modification time from the headers."""
     modTime = 0
     if 'IF_MODIFIED_SINCE' in headers:
         modTime = httptimestamp(headers['IF_MODIFIED_SINCE'])
@@ -573,21 +570,21 @@ def getModTime(headers):
 
 
 def encodebase64(inputStr, encodeFlag=True):
-    """ Encode str to base64 """
+    """Encode str to base64."""
     if encodeFlag and inputStr:
         return base64.b64encode(inputStr)
     return inputStr
 
 
 def decodebase64(inputStr, decodeFlag=True):
-    """ Decode base64 to real format """
+    """Decode base64 to real format."""
     if decodeFlag and inputStr:
         return base64.b64decode(inputStr)
     return inputStr
 
 
 def pubStateRemote(config, dic):
-    """ Publish state from remote services """
+    """Publish state from remote services."""
     try:
         fullUrl = getFullUrl(config)
         fullUrl += '/sitefe'

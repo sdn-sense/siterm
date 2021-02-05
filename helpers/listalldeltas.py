@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" List all deltas inFrontend """
+"""List all deltas inFrontend."""
 from __future__ import print_function
 import sys
 from DTNRMLibs.MainUtilities import getVal

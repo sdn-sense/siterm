@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # pylint: disable=line-too-long
-"""
-All APIS and regural expresions for url requests.
-Code style example:
+"""All APIS and regural expresions for url requests. Code style example:
+
 ===== Function
 _request_re = re.compile(r'^/*([-_A-Za-z0-9]+)/?$')
 def request(environ, start_response):
@@ -32,17 +31,16 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
 from __future__ import print_function
-from builtins import str
 import re
-import simplejson as json
 import importlib
+import simplejson as json
 from SiteFE.REST.FEApis import FrontendRM
 from SiteFE.REST.prometheus_exporter import PrometheusAPI
 import SiteFE.REST.AppCalls as AllCalls
@@ -77,7 +75,7 @@ _CERTHANDLER = CertHandler()
 #              DEFAULT Functions
 # ==============================================
 def check_initialized(environ):
-    """Env and configuration initialization"""
+    """Env and configuration initialization."""
     global _INITIALIZED
     global _CP
     global _SITES
@@ -98,16 +96,19 @@ _FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata},
 
 
 def frontend(environ, **kwargs):
-    """Frontend information. Information which is stored in the frontend for
-       backend communications.
-       Method: GET
-       Calls: ips | actions | getdata
-       Output: application/json
-       Examples: https://server-host/json/frontend/getdata # Will return info about all hosts hosts
-       Method: PUT
-       Calls: addhost | removehost | updatehost | addaction | updateaction | removeaction
-       Output: application/json
-       Examples: https://server-host/json/frontend/addhost # Will add new host. Raises error if it is already there"""
+    """Frontend information.
+
+    Information which is stored in the frontend for
+    backend communications.
+    Method: GET
+    Calls: ips | actions | getdata
+    Output: application/json
+    Examples: https://server-host/json/frontend/getdata # Will return info about all hosts hosts
+    Method: PUT
+    Calls: addhost | removehost | updatehost | addaction | updateaction | removeaction
+    Output: application/json
+    Examples: https://server-host/json/frontend/addhost # Will add new host. Raises error if it is already there
+    """
     query = None
     if kwargs['mReg'].groups()[0]:
         query = kwargs['mReg'].groups()[0]
@@ -127,7 +128,7 @@ _PROMETHEUS_RE = re.compile(r'^/*json/frontend/metrics$')
 
 
 def prometheus(environ, **kwargs):
-    """ Return prometheus stats """
+    """Return prometheus stats."""
     return _PROMETHEUS.metrics(**kwargs)
 
 
@@ -147,7 +148,7 @@ if '__all__' in dir(AllCalls):
 
 
 def internallCall(caller, environ, **kwargs):
-    """ Delta internal call which catches all exception """
+    """Delta internal call which catches all exception."""
     returnDict = {}
     exception = ""
     try:
@@ -164,6 +165,7 @@ def internallCall(caller, environ, **kwargs):
         print(exception)
     return returnDict
 
+
 def dumplist(out):
     if isinstance(out, list):
         for i in range(0, len(out)):
@@ -173,13 +175,14 @@ def dumplist(out):
                 out[i] = out[i].encode('UTF-8')
     return out
 
+
 def returnBasedOnHeaders(out, headers):
-    """ Return output based on AcceptHeader"""
+    """Return output based on AcceptHeader."""
     if headers['USER_AGENT'].startswith('Prometheus'):
         return [out.encode('UTF-8')]
-    elif 'application/json' in headers['ACCEPT'].split(','):
+    if 'application/json' in headers['ACCEPT'].split(','):
         return [json.dumps(out).encode('UTF-8')]
-    elif 'text/html' in headers['ACCEPT'].split(','):
+    if 'text/html' in headers['ACCEPT'].split(','):
         print(out)
         if isinstance(out, list):
             return dumplist(out)
@@ -191,9 +194,10 @@ def returnBasedOnHeaders(out, headers):
 
 
 def application(environ, start_response):
-    """
-    Main start. WSGI will always call this function,
-    which will check if call is allowed.
+    """Main start.
+
+    WSGI will always call this function, which will check if call is
+    allowed.
     """
     # HTTP responses var
     check_initialized(environ)
@@ -242,7 +246,7 @@ def application(environ, start_response):
                 print('Send 400 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400)))
                 _HTTPRESPONDER.ret_400('application/json', start_response, None)
                 return [bytes(json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400)), 'UTF-8')]
-            except IOError as ex: #Exception as ex:
+            except IOError as ex: # Exception as ex:
                 print('Send 500 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500)))
                 _HTTPRESPONDER.ret_500('application/json', start_response, None)
                 return [bytes(json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500)), 'UTF-8')]

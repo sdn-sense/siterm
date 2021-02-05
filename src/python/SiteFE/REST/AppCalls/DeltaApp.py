@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # pylint: disable=line-too-long, bad-whitespace
-"""
-All Deltas and models APIS
+"""All Deltas and models APIS.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +12,11 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
 from __future__ import print_function
 import re
@@ -279,8 +278,9 @@ _DELTA_INTERNAL_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/internala
 
 
 def delta_internal_actions(environ, **kwargs):
-    """
-    API Call for internalactions. This is only allowed from same host or dtnrm-site-fe.
+    """API Call for internalactions.
+
+    This is only allowed from same host or dtnrm-site-fe.
     Method: GET
     Output: application/json
     Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/(cancel|active|activated|failed)

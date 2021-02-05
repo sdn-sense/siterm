@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-    Ruler component pulls all actions from Site-FE and applies these rules on DTN
+"""Ruler component pulls all actions from Site-FE and applies these rules on
+DTN.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +12,13 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
 from __future__ import division
-from builtins import object
-from past.utils import old_div
 import os
 import glob
 import tempfile
@@ -47,18 +45,18 @@ COMPONENT = 'QOS'
 # Seems there are issues with QoS when we use really big bites and it complains about this.
 # Solution is to convert to next lower value...
 def convertToRate(inputRate, inputVal, logger):
-    """ Convert input to rate understandable to fireqos """
+    """Convert input to rate understandable to fireqos."""
     logger.info('Converting rate for QoS. Input %s %s' % (inputRate, inputVal))
     outRate = -1
     outType = ''
     if inputRate == 'bps':
-        outRate = int(old_div(inputVal, 1000000000))
+        outRate = int(inputVal // 1000000000)
         outType = 'gbit'
     if outRate == 0:
-        outRate = int(old_div(inputVal, 1000000))
+        outRate = int(inputVal // 1000000)
         outType = 'mbit'
     if outRate == 0:
-        outRate = int(old_div(inputVal, 1000))
+        outRate = int(inputVal // 1000)
         outType = 'bit'
     if outRate != -1:
         logger.info('Converted rate for QoS from %s %s to %s' % (inputRate, inputVal, outRate))
@@ -66,8 +64,8 @@ def convertToRate(inputRate, inputVal, logger):
     raise Exception('Unknown input rate parameter %s and %s' % (inputRate, inputVal))
 
 
-class QOS(object):
-    """ QOS class to install new limit rules """
+class QOS():
+    """QOS class to install new limit rules."""
     def __init__(self, config, logger):
         self.config = config if config else getConfig()
         self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
@@ -80,13 +78,13 @@ class QOS(object):
         self.agentdb = contentDB(logger=self.logger, config=self.config)
 
     def restartQos(self):
-        """ Restart QOS service """
+        """Restart QOS service ."""
         self.logger.info("Restarting fireqos rules")
         executeCmd("fireqos clear_all_qos", self.logger)
         executeCmd("fireqos start", self.logger)
 
     def getMaxThrg(self):
-        """ Get Maximum set throughput and add QoS on it """
+        """Get Maximum set throughput and add QoS on it."""
         if self.config.has_option('agent', 'public_intf') and self.config.has_option('agent', 'public_intf_max'):
             self.logger.info("Getting max interface throughput")
             intf = self.config.get('agent', 'public_intf')
@@ -96,7 +94,7 @@ class QOS(object):
         return None, None
 
     def getAllQOSed(self):
-        """ Read all configs and prepare qos doc """
+        """Read all configs and prepare qos doc."""
         self.logger.info("Getting All QoS rules.")
         tmpFile = tempfile.NamedTemporaryFile(delete=False, mode="w+")
         # {"ip": "10.0.0.54/24", "reservableCapacity": "1000000000", "vlan": "3610",
@@ -153,7 +151,7 @@ class QOS(object):
         return tmpFile.name
 
     def start(self):
-        """ Main Start """
+        """Main Start."""
         newFile = self.getAllQOSed()
         if not filecmp.cmp(newFile, '/etc/firehol/fireqos.conf'):
             self.logger.info("QoS rules are not equal. putting new config file")
@@ -165,7 +163,7 @@ class QOS(object):
 
 
 def execute(config=None, logger=None):
-    """ Execute main script for DTN-RM Agent output preparation """
+    """Execute main script for DTN-RM Agent output preparation."""
     qosruler = QOS(config, logger)
     qosruler.start()
 

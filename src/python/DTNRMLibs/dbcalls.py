@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-DB Backend SQL Calls to databses.
+"""DB Backend SQL Calls to databses.
 
 Copyright 2019 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +11,11 @@ Copyright 2019 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2019 California Institute of Technology
-Date			: 2019/05/01
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2019 California Institute of Technology
+Date                    : 2019/05/01
 """
 create_models = """CREATE TABLE IF NOT EXISTS models(
                           id int auto_increment,

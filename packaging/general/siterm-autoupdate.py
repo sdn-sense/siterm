@@ -27,13 +27,13 @@ from DTNRMLibs.MainUtilities import getGitConfig
 
 
 def callCommand(command):
-    """ Call *nix command """
+    """Call *nix command."""
     cmdCall = subprocess.Popen(command, shell=True)
     cmdCall.communicate()
 
 
 def getLatestVersion():
-    """ Get Latest version name from Github repo """
+    """Get Latest version name from Github repo."""
     callCommand("cd /opt/dtnrmcode/siterm/ && git pull")
     sys.path.append('/opt/dtnrmcode/siterm/')
     import setupUtilities
@@ -41,7 +41,10 @@ def getLatestVersion():
 
 
 def agentUpdater():
-    """ Update Agent. Restarts all services """
+    """Update Agent.
+
+    Restarts all services
+    """
     import DTNRMAgent
     installedVersion = DTNRMAgent.__version__
     latestVersion = getLatestVersion()
@@ -65,7 +68,10 @@ def agentUpdater():
 
 
 def feUpdater():
-    """ Frontend Update. Restarts all services """
+    """Frontend Update.
+
+    Restarts all services
+    """
     import SiteFE
     installedVersion = SiteFE.__version__
     latestVersion = getLatestVersion()
@@ -91,7 +97,7 @@ def feUpdater():
 
 
 def checkAutoUpdate(config):
-    """ Check if auto update is enabled in configuration """
+    """Check if auto update is enabled in configuration."""
     autoupdate = True
     if 'autoupdate' in list(config['MAIN']['general'].keys()):
         autoupdate = bool(config['MAIN']['general']['autoupdate'])

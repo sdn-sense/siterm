@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-DTN RM Site Agent Plugins init
-"""
+"""DTN RM Site Agent Plugins init."""
 import os
 import glob
 

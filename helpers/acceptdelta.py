@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Change delta state to activating """
+"""Change delta state to activating."""
 from builtins import str
 import sys
 import tempfile
@@ -18,9 +18,11 @@ STATEMACHINE = StateMachine(LOGGER)
 
 
 def getdeltaAll(sitename, deltaUID):
-    """ Get all deltas for specific Site.
-        INPUT: sitename  - str mandatory
-               deltaUID  - str mandatory"""
+    """Get all deltas for specific Site.
+
+    INPUT: sitename  - str mandatory
+           deltaUID  - str mandatory
+    """
     siteDB = contentDB(logger=LOGGER, config=CONFIG)
     policer = polS.PolicyService(CONFIG, LOGGER)
     delta, dbObj = getdeltainfo(sitename, deltaUID)
@@ -40,9 +42,11 @@ def getdeltaAll(sitename, deltaUID):
 
 
 def getdeltainfo(sitename, deltaUID):
-    """ Get all delta information.
-        INPUT: sitename  - str mandatory
-               deltaUID  - str mandatory"""
+    """Get all delta information.
+
+    INPUT: sitename  - str mandatory
+           deltaUID  - str mandatory
+    """
     dbI = getDBConn('acceptdelta')
     dbobj = getVal(dbI, sitename=sitename)
     for delta in dbobj.get('deltas'):

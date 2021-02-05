@@ -1,6 +1,4 @@
-"""
-DTN RM Site Frontend to list all API Call files
-"""
+"""DTN RM Site Frontend to list all API Call files."""
 import os
 import glob
 

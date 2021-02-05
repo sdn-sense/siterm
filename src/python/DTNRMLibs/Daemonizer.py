@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""
-This part of code is taken from:
-   https://web.archive.org/web/20160305151936/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+"""This part of code is taken from:
+
+https://web.archive.org/web/20160305151936/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
 Please respect developer (Sander Marechal) and always keep a reference to URL and also as kudos to him
 Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
 from __future__ import print_function
-from builtins import str
-from builtins import object
 import os
 import sys
 import time
@@ -17,11 +15,10 @@ import atexit
 from signal import SIGTERM
 
 
-class Daemon(object):
-    """
-    A generic daemon class.
+class Daemon():
+    """A generic daemon class.
 
-    Usage: subclass the Daemon class and override the run() method
+    Usage: subclass the Daemon class and override the run() method.
     """
     def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
         self.stdin = stdin
@@ -31,11 +28,9 @@ class Daemon(object):
         self.availableCommands = ['start', 'stop', 'restart', 'startforeground', 'status']
 
     def daemonize(self):
-        """
-        do the UNIX double-fork magic, see Stevens' "Advanced
-        Programming in the UNIX Environment" for details (ISBN 0201563177)
-        http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
-        """
+        """do the UNIX double-fork magic, see Stevens' "Advanced Programming in
+        the UNIX Environment" for details (ISBN 0201563177)
+        http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16."""
         try:
             pid = os.fork()
             if pid > 0:
@@ -77,15 +72,11 @@ class Daemon(object):
             fd.write("%s\n" % pid)
 
     def delpid(self):
-        """
-        Remove pid file
-        """
+        """Remove pid file."""
         os.remove(self.pidfile)
 
     def start(self):
-        """
-        Start the daemon
-        """
+        """Start the daemon."""
         # Check for a pidfile to see if the daemon already runs
         pid = None
         try:
@@ -107,9 +98,7 @@ class Daemon(object):
         self.run()
 
     def stop(self):
-        """
-        Stop the daemon
-        """
+        """Stop the daemon."""
         # Get the pid from the pidfile
         pid = None
         try:
@@ -138,16 +127,12 @@ class Daemon(object):
                 sys.exit(1)
 
     def restart(self):
-        """
-        Restart the daemon
-        """
+        """Restart the daemon."""
         self.stop()
         self.start()
 
     def status(self):
-        """
-        Daemon status
-        """
+        """Daemon status."""
         try:
             with open(self.pidfile, 'r') as fd:
                 pid = int(fd.read().strip())
@@ -158,7 +143,7 @@ class Daemon(object):
             sys.exit(1)
 
     def command(self, command, daemonName):
-        """ Execute a specific command to service """
+        """Execute a specific command to service."""
         if command in self.availableCommands:
             if command == 'start':
                 self.start()
@@ -179,7 +164,8 @@ class Daemon(object):
             sys.exit(2)
 
     def run(self):
-        """
-        You should override this method when you subclass Daemon. It will be called after the process has been
-        daemonized by start() or restart().
+        """You should override this method when you subclass Daemon.
+
+        It will be called after the process has been daemonized by
+        start() or restart().
         """

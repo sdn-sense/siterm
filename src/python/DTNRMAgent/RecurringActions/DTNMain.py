@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-DTN Main Agent code, which executes all Plugins and publishes values to FE
+"""DTN Main Agent code, which executes all Plugins and publishes values to FE.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +11,11 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
 from __future__ import absolute_import
 from builtins import str
@@ -35,7 +34,7 @@ COMPONENT = 'RecurringAction'
 
 
 def prepareJsonOut(config, logger):
-    """ Executes all plugins and prepares json output to FE """
+    """Executes all plugins and prepares json output to FE."""
     outputDict = {'Summary': {}}
     tmpName = None
     if '__all__' in dir(Plugins):
@@ -78,7 +77,7 @@ def prepareJsonOut(config, logger):
 
 
 def appendConfig(config, dic):
-    """Append to dic values from config and also dates"""
+    """Append to dic values from config and also dates."""
     dic['hostname'] = config.get('agent', 'hostname')
     dic['ip'] = config.get('general', 'ip')
     dic['insertTime'] = getUTCnow()
@@ -87,7 +86,7 @@ def appendConfig(config, dic):
 
 
 def startWork(config=None, logger=None):
-    """ Execute main script for DTN-RM Agent output preparation """
+    """Execute main script for DTN-RM Agent output preparation."""
 
     workDir = config.get('general', 'private_dir') + "/DTNRM/"
     createDirs(workDir)
@@ -112,7 +111,7 @@ def startWork(config=None, logger=None):
 
 
 def execute(config, logger):
-    """ Main Execute """
+    """Main Execute."""
     startWork(config, logger)
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Print delta information """
+"""Print delta information."""
 from __future__ import print_function
 from builtins import str
 import sys

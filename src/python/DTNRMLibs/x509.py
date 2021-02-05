@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Certificate loading and validation tool
+"""Certificate loading and validation tool.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,13 +26,13 @@ from DTNRMLibs.MainUtilities import getGitConfig
 
 
 class CertHandler(object):
-    """ Cert handler """
+    """Cert handler."""
     def __init__(self):
         self.allowedCerts = {}
         self.loadAuthorized()
 
     def loadAuthorized(self):
-        """ Load all authorized users for FE from git """
+        """Load all authorized users for FE from git."""
         config = getGitConfig()
         for user, userinfo in list(config['AUTH'].items()):
             self.allowedCerts.setdefault(userinfo['full_dn'], {})
@@ -42,7 +41,7 @@ class CertHandler(object):
 
     @staticmethod
     def getCertInfo(environ):
-        """ Get certificate info """
+        """Get certificate info."""
         out = {}
         if 'SSL_CLIENT_CERT' not in environ:
             print('Request without certificate. Unauthorized')
@@ -60,7 +59,7 @@ class CertHandler(object):
         return out
 
     def validateCertificate(self, environ):
-        """ Validate certification validity """
+        """Validate certification validity."""
         now = datetime.utcnow()
         timestamp = int(time.mktime(now.timetuple()))
         if 'CERTINFO' not in environ:

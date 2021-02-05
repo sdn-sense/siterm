@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Site FE call functions
+"""Site FE call functions.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +11,11 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
 from __future__ import print_function
 from builtins import str
@@ -32,7 +31,7 @@ from DTNRMLibs.FECalls import reportServiceStatus
 
 
 class FrontendRM(object):
-    """ Site Frontend calls"""
+    """Site Frontend calls."""
     def __init__(self):
         self.dbI = getDBConn('REST-Frontend')
         self.initialized = False
@@ -40,25 +39,27 @@ class FrontendRM(object):
         self.siteDB = contentDB()
 
     def getHosts(self, **kwargs):
-        """ Return all available Hosts, where key is IP address """
+        """Return all available Hosts, where key is IP address."""
         dbobj = getVal(self.dbI, **kwargs)
         return dbobj.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getdata(self, **kwargs):
-        """ Return all available Hosts data, where key is IP address """
+        """Return all available Hosts data, where key is IP address."""
         dbobj = getVal(self.dbI, **kwargs)
         return dbobj.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
 
     def addhost(self, inputDict, **kwargs):
         """Adding new host to DB.
-           Must provide dictionary with:
-                hostname -> hostname of new host
-                ip       -> ip of new host
-                lat      -> latitude, enought to provide approximately site location
-                lon      -> longitude, enought to provide approximately site location
-          Examples:
-          GOOD: {"hostname": "dtn-rm.ultralight.org",
-                 "ip": "1.2.3.4"} """
+
+        Must provide dictionary with:
+              hostname -> hostname of new host
+              ip       -> ip of new host
+              lat      -> latitude, enought to provide approximately site location
+              lon      -> longitude, enought to provide approximately site location
+        Examples:
+        GOOD: {"hostname": "dtn-rm.ultralight.org",
+               "ip": "1.2.3.4"}
+        """
         dbobj = getVal(self.dbI, **kwargs)
         host = dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
         if not host:
@@ -74,12 +75,14 @@ class FrontendRM(object):
         return
 
     def updatehost(self, inputDict, **kwargs):
-        """ Update Host in DB.
-            Must provide dictionary with:
-                ip       -> ip of new host
-            Example:
-                GOOD: {"ip": "1.2.3.4", "site": "T2_US_Caltech", "status": "benchhmark",
-                       "hostype": "gridftp", "port": 11234}"""
+        """Update Host in DB.
+
+        Must provide dictionary with:
+            ip       -> ip of new host
+        Example:
+            GOOD: {"ip": "1.2.3.4", "site": "T2_US_Caltech", "status": "benchhmark",
+                   "hostype": "gridftp", "port": 11234}
+        """
         # Validate that these entries are known...
         dbobj = getVal(self.dbI, **kwargs)
         host = dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
@@ -95,7 +98,7 @@ class FrontendRM(object):
 
     @staticmethod
     def servicestate(inputDict, **kwargs):
-        """ Set Service State in DB """
+        """Set Service State in DB."""
         # Only 2 Services are supported to report via URL
         # DTNRM-Agent and DTNRM-Ruler
         if inputDict['servicename'] not in ['Agent', 'Ruler']:

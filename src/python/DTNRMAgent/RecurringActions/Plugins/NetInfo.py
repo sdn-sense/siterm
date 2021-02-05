@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Plugin which gathers everything about all NICs
+"""Plugin which gathers everything about all NICs.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,14 +11,13 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
 from __future__ import print_function
-from builtins import str
 import ipaddress
 import pprint
 import psutil
@@ -30,14 +28,14 @@ from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 
 
 def str2bool(val):
-    """ Check if str is true boolean """
+    """Check if str is true boolean."""
     return val.lower() in ("yes", "true", "t", "1")
 
 NAME = 'NetInfo'
 
 
 def getVlansOnSystem(config, logger):
-    """ Get All VLANs provisioned already """
+    """Get All VLANs provisioned already."""
     out = {}
     rulerObj = Ruler(config, logger)
     vlansProvs = rulerObj.vlansProvisioned()
@@ -51,7 +49,7 @@ def getVlansOnSystem(config, logger):
 
 
 def get(config, logger):
-    """Get all network information"""
+    """Get all network information."""
     vlansON = getVlansOnSystem(config, logger)
     netInfo = {}
     interfaces = config.get('agent', "interfaces").split(",")
@@ -161,13 +159,12 @@ def get(config, logger):
             print('This interface was defined in configuration, but not available. Will not add it to final output')
             print(intfName, intfDict)
     # Get Routing Information
-    outputForFE["routes"] = getRoutes(config)
+    outputForFE["routes"] = getRoutes()
     return outputForFE
 
 
-def getRoutes(config):
-    """ Get Routing information from host """
-    del config
+def getRoutes():
+    """Get Routing information from host."""
     routes = []
     with IPRoute() as ipr:
         for route in ipr.get_routes(table=254, family=2):

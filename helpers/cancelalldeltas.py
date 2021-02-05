@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Cancel all deltas in Site Frontend """
+"""Cancel all deltas in Site Frontend."""
 from __future__ import print_function
 import sys
 from DTNRMLibs.MainUtilities import getVal
@@ -13,7 +13,7 @@ STATEMACHINE = StateMachine(LOGGER)
 
 
 def deleteAll(sitename, deltaUID=None):
-    """ delete all deltas """
+    """delete all deltas."""
     dbI = getDBConn('cancelalldeltas')
     dbobj = getVal(dbI, sitename=sitename)
     for delta in dbobj.get('deltas'):
