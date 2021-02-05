@@ -28,7 +28,6 @@ NAME = 'SystemKernelParams'
 
 def get(config, logger):
     """Get System kernel parameters information"""
-    del config
     kernelInfo = {}
     tmpOut = externalCommand('sysctl -a')
     for item in tmpOut:

@@ -344,7 +344,6 @@ def getConfig(locations=None):
         This is used till everyone move to YAML based config.
         TODO: Move all to getGitConfig
     """
-    del locations
     config = getGitConfig()
     tmpCp = configparser.ConfigParser()
     if not isinstance(config, dict):
@@ -406,7 +405,6 @@ class contentDB(object):
     @staticmethod
     def dumpFileContentAsJson(outFile, content, newHash=None):
         """ Dump File content with locks """
-        del newHash
         tmpoutFile = outFile + '.tmp'
         with open(tmpoutFile, 'w+') as fd:
             json.dump(content, fd)
@@ -481,7 +479,6 @@ VALIDATION = {"addhost": [{"key": "hostname", "type": basestring},
 
 def generateHash(inText):
     """ Generate unique using uuid """
-    del inText
     return str(uuid.uuid1())
 
 

@@ -26,7 +26,9 @@ from builtins import map
 import os
 import base64
 import urllib.parse
-import urllib.request, urllib.parse, urllib.error
+import urllib.request
+import urllib.parse
+import urllib.error
 from DTNRMLibs.pycurl_manager import RequestHandler
 from DTNRMLibs.CustomExceptions import ValidityFailure
 
@@ -165,7 +167,6 @@ class Requests(dict):
         Make HTTP(s) request via pycurl library. Stay complaint with
         makeRequest_httplib method.
         """
-        del encoder
         incoming_headers = argValidity(incoming_headers, dict)
         ckey, cert = self.getKeyCert()
         capath = self.getCAPath()

@@ -1,10 +1,7 @@
 from __future__ import print_function
-from builtins import str
 import sys
 import os
-import time
 from OpenSSL import crypto
-from datetime import datetime
 
 
 def getCertInfo(certLocation):

@@ -52,7 +52,9 @@ from io import StringIO
 import http.client
 import simplejson as json
 import logging
-import urllib.request, urllib.parse, urllib.error
+import urllib.request
+import urllib.parse
+import urllib.error
 import subprocess
 # 3d-party libraries
 import pycurl

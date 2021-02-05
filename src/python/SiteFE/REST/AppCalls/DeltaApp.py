@@ -185,7 +185,6 @@ def deltas_action(environ, **kwargs):
               # Will commit or remove specific delta. remove is allowed only from same host or
                 dtnrm-site-frontend
     """
-    del environ
     msgOut = DELTABACKEND.commitdelta(kwargs['mReg'].groups()[0], **kwargs)
     kwargs['http_respond'].ret_204('application/json', kwargs['start_response'], None)
     print('Delta %s commited. Return 204' % kwargs['mReg'].groups()[0])
@@ -286,7 +285,6 @@ def delta_internal_actions(environ, **kwargs):
     Output: application/json
     Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/(cancel|active|activated|failed)
     """
-    del environ
     deltaID = kwargs['mReg'].groups()[0]
     hostname = kwargs['mReg'].groups()[1]
     newState = kwargs['mReg'].groups()[2]
@@ -305,7 +303,6 @@ def delta_hostname_ids(environ, **kwargs):
     Output: application/json
     Examples: https://server-host/sitefe/v1/hostnameids/hostname.us.gov/(activating|active)
     """
-    del environ
     hostname = ""
     hostname = kwargs['mReg'].groups()[0]
     state = kwargs['mReg'].groups()[1]

@@ -67,7 +67,6 @@ def parseOut(tmpOut, storageInfo):
 
 def get(config, logger):
     """Get storage mount points information"""
-    del config
     storageInfo = {"Values": {}}
     tmpOut = externalCommand('df -P -h')
     storageInfo, _ = parseOut(tmpOut, dict(storageInfo))

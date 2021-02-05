@@ -30,7 +30,6 @@ NAME = 'MemInfo'
 
 def get(config, logger):
     """Get memory info from /proc/meminfo"""
-    del config
     memInfo = {}
     tmpOut = externalCommand('cat /proc/meminfo')
     for item in tmpOut:

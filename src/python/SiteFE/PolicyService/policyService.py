@@ -154,7 +154,7 @@ class PolicyService(object):
             self.logger.info('Trying to parse L3 info from delta')
             out = self.parsel3Request(allKnownHosts, prefixes, gIn, out)
             allOutput.append(out)
-        allOutput = list([_f for _f in allOutput if _f])
+        allOutput = [_f for _f in allOutput if _f]
         if len(allOutput) > 1:
             msg = 'Got multiple Service definitions. Not Supported. Output: %s' % allOutput
             self.logger.info(msg)

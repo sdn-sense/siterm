@@ -19,7 +19,6 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2019/10/01
 """
 from __future__ import print_function
-from builtins import str
 from builtins import object
 import time
 from datetime import datetime

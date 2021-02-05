@@ -28,7 +28,6 @@ import os
 import time
 import mariadb
 import DTNRMLibs.dbcalls as dbcalls
-from DTNRMLibs.MainUtilities import createDirs 
 
 
 class DBBackend(object):
@@ -106,7 +105,6 @@ class DBBackend(object):
 
     def execute_del(self, query, values):
         """ DELETE Execute """
-        del values
         try:
             self.initialize()
             self.cursor.execute(query)
@@ -134,7 +132,6 @@ class dbinterface(object):
 
     def _setStartCallTime(self, calltype):
         """ Set Call Start timer """
-        del calltype
         self.callStart = float(time.time())
 
     def _setEndCallTime(self, calltype, callExit):

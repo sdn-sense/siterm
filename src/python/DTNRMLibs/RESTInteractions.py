@@ -22,7 +22,9 @@ from __future__ import print_function
 from future import standard_library
 standard_library.install_aliases()
 from builtins import object
-import urllib.request, urllib.error, urllib.parse
+import urllib.request
+import urllib.error
+import urllib.parse
 import simplejson as json
 import cgi
 from DTNRMLibs.CustomExceptions import NotFoundError
