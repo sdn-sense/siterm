@@ -18,8 +18,7 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2017/09/26
 """
 from __future__ import print_function
-from builtins import str
-from builtins import object
+import json
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import contentDB
@@ -30,7 +29,7 @@ from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.FECalls import reportServiceStatus
 
 
-class FrontendRM(object):
+class FrontendRM():
     """Site Frontend calls."""
     def __init__(self):
         self.dbI = getDBConn('REST-Frontend')
@@ -67,7 +66,7 @@ class FrontendRM(object):
                    'ip': inputDict['ip'],
                    'insertdate': inputDict['insertTime'],
                    'updatedate': inputDict['updateTime'],
-                   'hostinfo': str(inputDict)}
+                   'hostinfo': json.dumps(inputDict)}
             dbobj.insert('hosts', [out])
         else:
             print('This host is already in db. Why to add several times?')
@@ -92,7 +91,7 @@ class FrontendRM(object):
                'hostname': inputDict['hostname'],
                'ip': inputDict['ip'],
                'updatedate': getUTCnow(),
-               'hostinfo': str(inputDict)}
+               'hostinfo': json.dumps(inputDict)}
         dbobj.update('hosts', [out])
         return
 
