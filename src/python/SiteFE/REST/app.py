@@ -40,6 +40,7 @@ Date                    : 2017/09/26
 from __future__ import print_function
 import re
 import importlib
+import collections
 import simplejson as json
 from SiteFE.REST.FEApis import FrontendRM
 from SiteFE.REST.prometheus_exporter import PrometheusAPI
@@ -175,21 +176,18 @@ def dumplist(out):
                 out[i] = out[i].encode('UTF-8')
     return out
 
+def isiterable(inVal):
+  return not isinstance(inVal, str) and isinstance(inVal, collections.Iterable)
 
-def returnBasedOnHeaders(out, headers):
-    """Return output based on AcceptHeader."""
-    if headers['USER_AGENT'].startswith('Prometheus'):
-        return [out.encode('UTF-8')]
-    if 'application/json' in headers['ACCEPT'].split(','):
-        return [json.dumps(out).encode('UTF-8')]
-    if 'text/html' in headers['ACCEPT'].split(','):
-        print(out)
-        if isinstance(out, list):
-            return dumplist(out)
-        if isinstance(out, dict):
-            return [json.dumps(out).encode('UTF-8')]
-        return [out.encode('UTF-8')]
-    return [json.dumps(out).encode('UTF-8')]
+def returnDump(out):
+    """Return output based on it's type."""
+    if isinstance(out, list):
+        out = dumplist(out)
+    elif isinstance(out, dict):
+        out = [json.dumps(out).encode('UTF-8')]
+    elif not isiterable(out):
+        out = [out.encode('UTF-8')]
+    return out
 
 
 
@@ -239,8 +237,7 @@ def application(environ, start_response):
                                     mReg=regMatch, http_respond=_HTTPRESPONDER,
                                     urlParams=getUrlParams(environ, params),
                                     headers=headers, sitename=sitename)
-                print(out)
-                return returnBasedOnHeaders(out, headers)
+                return returnDump(out)
             except (NotSupportedArgument, TooManyArgumentalValues) as ex:
                 print('Send 400 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400)))
                 _HTTPRESPONDER.ret_400('application/json', start_response, None)
