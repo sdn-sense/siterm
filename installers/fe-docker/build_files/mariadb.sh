@@ -27,6 +27,7 @@ if [ ! -f /var/lib/mysql/site-rm-db-initialization ]; then
   ps -wef | grep mysql | grep -v grep | awk '{print $2}' | xargs kill -9
 
   mysqld_safe --user mysql &> /var/log/mariadb/startup &
+  sleep 5s
 
   # Create all databases needed for SiteRM
   python3 -c 'from DTNRMLibs.DBBackend import DBBackend; db = DBBackend(); db._createdb()'
