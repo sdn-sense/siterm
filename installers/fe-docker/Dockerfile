@@ -17,8 +17,7 @@ RUN chmod +x /root/mariadb.sh
 
 # Configuration which repo to use for build
 ARG GITREPO=siterm
-#ARG GITORG=sdn-sense
-ARG GITORG=juztas
+ARG GITORG=sdn-sense
 ARG GITBR=master
 
 

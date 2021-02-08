@@ -1,8 +1,7 @@
 FROM centos:7
 
 ARG GITREPO=siterm
-#ARG GITORG=sdn-sense
-ARG GITORG=juztas
+ARG GITORG=sdn-sense
 ARG GITBR=master
 
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
