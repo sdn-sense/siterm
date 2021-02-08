@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-"""
-DTN RM Site FE ProvisioningService init
-"""
+#!/usr/bin/env python3
+"""DTN RM Site FE ProvisioningService init."""
 __all__ = []

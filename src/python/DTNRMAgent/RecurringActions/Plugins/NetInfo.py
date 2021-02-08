@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-"""
-Plugin which gathers everything about all NICs
+#!/usr/bin/env python3
+"""Plugin which gathers everything about all NICs.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +11,13 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
+from __future__ import print_function
 import ipaddress
 import pprint
 import psutil
@@ -28,28 +28,28 @@ from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 
 
 def str2bool(val):
-    """ Check if str is true boolean """
+    """Check if str is true boolean."""
     return val.lower() in ("yes", "true", "t", "1")
 
 NAME = 'NetInfo'
 
 
 def getVlansOnSystem(config, logger):
-    """ Get All VLANs provisioned already """
+    """Get All VLANs provisioned already."""
     out = {}
     rulerObj = Ruler(config, logger)
     vlansProvs = rulerObj.vlansProvisioned()
     for item in vlansProvs:
-        if 'hosts' in item.keys():
-            for _, hostdict in item['hosts'].items():
-                if 'vlan' not in hostdict.keys() or 'destport' not in hostdict.keys():
+        if 'hosts' in list(item.keys()):
+            for _, hostdict in list(item['hosts'].items()):
+                if 'vlan' not in list(hostdict.keys()) or 'destport' not in list(hostdict.keys()):
                     continue
                 out['vlan.%s' % hostdict['vlan']] = hostdict['destport']
     return out
 
 
 def get(config, logger):
-    """Get all network information"""
+    """Get all network information."""
     vlansON = getVlansOnSystem(config, logger)
     netInfo = {}
     interfaces = config.get('agent', "interfaces").split(",")
@@ -82,7 +82,7 @@ def get(config, logger):
     tmpifStats = psutil.net_if_stats()
     tmpIOCount = psutil.net_io_counters(pernic=True)
     foundInterfaces = []
-    for nic, addrs in tmpifAddr.items():
+    for nic, addrs in list(tmpifAddr.items()):
         # TODO: Check with configuration of which vlans are provisioned;
         # Currently it is a hack. if it is a vlan, I assume it is provisioned by orchestrator;
         nicSplit = nic.split('.')
@@ -95,13 +95,13 @@ def get(config, logger):
             nicInfo['provisioned'] = False
         foundInterfaces.append(nic)
         for vals in addrs:
-            familyInfo = nicInfo.setdefault(str(vals.family), {})
+            familyInfo = nicInfo.setdefault(str(vals.family.value), {})
             # vals - family=2, address='127.0.0.1', netmask='255.0.0.0', broadcast=None, ptp=None
             # For family more information look here: http://lxr.free-electrons.com/source/include/linux/socket.h#L160
-            familyInfo["family"] = vals.family
+            familyInfo["family"] = vals.family.value
             familyInfo["address"] = vals.address
             familyInfo["netmask"] = vals.netmask
-            if int(vals.family) in [2, 10] and vals.address and vals.netmask:
+            if int(vals.family.value) in [2, 10] and vals.address and vals.netmask:
                 try:
                     ipwithnetmask = ipaddress.ip_interface(u"%s/%s" % (vals.address, vals.netmask))
                     if isinstance(ipwithnetmask, ipaddress.IPv4Interface):
@@ -109,18 +109,18 @@ def get(config, logger):
                     elif isinstance(ipwithnetmask, ipaddress.IPv6Interface):
                         familyInfo["ipv6-address"] = str(ipwithnetmask)
                     else:
-                        print "This type was not understood by the system. Type: %s and value: %s" %  \
-                              (type(ipwithnetmask), str(ipwithnetmask))
+                        print("This type was not understood by the system. Type: %s and value: %s" %  \
+                              (type(ipwithnetmask), str(ipwithnetmask)))
                 except ValueError as ex:
-                    print 'Got an exception %s' % ex
-            elif int(vals.family) in [17]:
+                    print('Got an exception %s' % ex)
+            elif int(vals.family.value) in [17]:
                 familyInfo["mac-address"] = vals.address
             familyInfo["broadcast"] = vals.broadcast
             familyInfo["ptp"] = vals.ptp
             # tmpifStats - snicstats(isup=True, duplex=0, speed=0, mtu=1500)
-            if vals.family == 2:
+            if vals.family.value == 2:
                 familyInfo["UP"] = tmpifStats[nic].isup
-                familyInfo["duplex"] = tmpifStats[nic].duplex
+                familyInfo["duplex"] = tmpifStats[nic].duplex.value
                 familyInfo["speed"] = tmpifStats[nic].speed
                 familyInfo["MTU"] = tmpifStats[nic].mtu
                 # tmpIOCount - (bytes_sent=13839798, bytes_recv=690754706, packets_sent=151186,
@@ -142,30 +142,29 @@ def get(config, logger):
                 familyInfo["txqueuelen"] = txQueueLen[0].strip()
     # Check in the end which interfaces where defined in config but not available...
     outputForFE = {"interfaces": {}, "routes": []}
-    for intfName, intfDict in netInfo.iteritems():
+    for intfName, intfDict in netInfo.items():
         if intfName.split('.')[0] not in foundInterfaces:
-            print 'This interface was defined in configuration, but not available. Will not add it to final output'
+            print('This interface was defined in configuration, but not available. Will not add it to final output')
         else:
             outputForFE["interfaces"][intfName] = intfDict
-    print vlansON
-    for intfName, intfDict in netInfo.iteritems():
+    print(vlansON)
+    for intfName, intfDict in netInfo.items():
         if intfName.split('.')[0] == 'vlan':
-            for vlankey, vlandict in intfDict['vlans'].items():
-                if vlankey in vlansON.keys():
+            for vlankey, vlandict in list(intfDict['vlans'].items()):
+                if vlankey in list(vlansON.keys()):
                     mainInf = vlansON[vlankey]
                     outputForFE["interfaces"].setdefault(mainInf, {'vlans': {}})
                     outputForFE["interfaces"][mainInf]['vlans'][vlankey] = vlandict
         else:
-            print 'This interface was defined in configuration, but not available. Will not add it to final output'
-            print intfName, intfDict
+            print('This interface was defined in configuration, but not available. Will not add it to final output')
+            print(intfName, intfDict)
     # Get Routing Information
-    outputForFE["routes"] = getRoutes(config)
+    outputForFE["routes"] = getRoutes()
     return outputForFE
 
 
-def getRoutes(config):
-    """ Get Routing information from host """
-    del config
+def getRoutes():
+    """Get Routing information from host."""
     routes = []
     with IPRoute() as ipr:
         for route in ipr.get_routes(table=254, family=2):
@@ -174,7 +173,7 @@ def getRoutes(config):
                 if item[0] in ['RTA_GATEWAY', 'RTA_DST', 'RTA_PREFSRC']:
                     newroute[item[0]] = item[1]
             routes.append(newroute)
-    print routes
+    print(routes)
     return routes
 
 

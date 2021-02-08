@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-"""
-Policy Service which accepts deltas and applies them
+#!/usr/bin/env python3
+"""Policy Service which accepts deltas and applies them.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,24 +11,27 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
 import os
 import sys
 import tempfile
 import time
-import ConfigParser
+import configparser
 from rdflib import Graph
 from rdflib import URIRef, Literal
 from rdflib.plugins.parsers.notation3 import BadSyntax
 from dateutil import parser
+from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getStreamLogger
-from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import decodebase64
@@ -42,12 +44,12 @@ from SiteFE.PolicyService.stateMachine import StateMachine
 
 
 def getError(ex):
-    """ Get Error from Exception """
+    """Get Error from Exception."""
     errors = {IOError: -1, KeyError: -2, AttributeError: -3, IndentationError: -4,
               ValueError: -5, BadSyntax: -6, HostNotFound: -7, UnrecognizedDeltaOption: -8}
     errType = 'Unrecognized'
     errNo = '-100'
-    if ex.__class__ in errors.keys():
+    if ex.__class__ in list(errors.keys()):
         errType = str(ex.__class__)
         errNo = str(errors[ex.__class__])
     return {"errorType": errType,
@@ -56,8 +58,11 @@ def getError(ex):
 
 
 def getConnInfo(bidPort, prefixSite, output, nostore=False):
-    """ Get Connection Info. Mainly ports. """
-    nName = filter(None, bidPort[len(prefixSite):].split(':'))
+    """Get Connection Info.
+
+    Mainly ports.
+    """
+    nName = [_f for _f in bidPort[len(prefixSite):].split(':') if _f]
     if nostore:
         return nName[2], output
     output.setdefault('hosts', {})
@@ -66,14 +71,14 @@ def getConnInfo(bidPort, prefixSite, output, nostore=False):
     output['hosts'][nName[2]]['sourceswitch'] = nName[0]
     if len(nName) == 5:
         output['hosts'][nName[2]]['destport'] = nName[3]
-    elif len(nName[-1].split('.')) == 2:
-        if 'destport' not in output[nName[2]].keys():
-            output['hosts'][nName[2]]['destport'] = nName[-1].split('.')[0]
+    elif len(nName[-1].split('.')) == 2 and \
+    'destport' not in list(output[nName[2]].keys()):
+        output['hosts'][nName[2]]['destport'] = nName[-1].split('.')[0]
     return nName[2], output
 
 
-class PolicyService(object):
-    """ Policy Service to accept deltas """
+class PolicyService():
+    """Policy Service to accept deltas."""
     def __init__(self, config, logger, sitename):
         self.sitename = sitename
         self.logger = logger
@@ -83,7 +88,7 @@ class PolicyService(object):
         self.stateMachine = StateMachine(self.logger)
 
     def queryGraph(self, graphIn, sub=None, pre=None, obj=None, search=None):
-        """ Does search inside the graph based on provided parameters """
+        """Does search inside the graph based on provided parameters."""
         foundItems = []
         self.logger.debug('Searching for subject: %s predica: %s object: %s searchLine: %s' % (sub, pre, obj, search))
         for sIn, pIn, oIn in graphIn.triples((sub, pre, obj)):
@@ -105,8 +110,10 @@ class PolicyService(object):
         return foundItems
 
     def getTimeScheduling(self, out, gIn, prefixes):
-        """ This is for identifying LIFETIME! In case it fails to get correct timestamp,
-            resources will be provisioned right away
+        """This is for identifying LIFETIME!
+
+        In case it fails to get correct timestamp, resources will be
+        provisioned right away
         """
         for timeline in out:
             times = {}
@@ -120,12 +127,12 @@ class PolicyService(object):
                 except Exception:
                     continue
                 times[timev] = temptime
-            if len(times.keys()) == 2:
+            if len(list(times.keys())) == 2:
                 return times
         return {}
 
     def parseDeltaRequest(self, inFileName, allKnownHosts):
-        """Parse delta request to json"""
+        """Parse delta request to json."""
         self.logger.info("Parsing delta request %s ", inFileName)
         prefixes = {}
         allOutput = []
@@ -135,7 +142,7 @@ class PolicyService(object):
         for switchName in self.config.get(self.sitename, 'switch').split(','):
             try:
                 vsw = self.config.get(switchName, 'vsw')
-            except ConfigParser.NoOptionError:
+            except configparser.NoOptionError:
                 self.logger.debug('ERROR: vsw parameter is not defined for %s.', switchName)
                 continue
             prefixes['main'] = URIRef("%s:service+vsw:%s" % (prefixes['site'], vsw))
@@ -149,7 +156,7 @@ class PolicyService(object):
             self.logger.info('Trying to parse L3 info from delta')
             out = self.parsel3Request(allKnownHosts, prefixes, gIn, out)
             allOutput.append(out)
-        allOutput = list(filter(None, allOutput))
+        allOutput = [_f for _f in allOutput if _f]
         if len(allOutput) > 1:
             msg = 'Got multiple Service definitions. Not Supported. Output: %s' % allOutput
             self.logger.info(msg)
@@ -161,8 +168,8 @@ class PolicyService(object):
         return allOutput[0]
 
     def parsel3Request(self, allKnownHosts, prefixes, gIn, returnout):
-        """ Parse Layer 3 Delta Request """
-        for hostname in allKnownHosts.keys():
+        """Parse Layer 3 Delta Request."""
+        for hostname in list(allKnownHosts.keys()):
             prefixes['mainrst'] = URIRef("%s:%s:service+rst" % (prefixes['site'], hostname))
             self.logger.info('Lets try to get connection ID subject for %s' % prefixes['mainrst'])
             out = self.queryGraph(gIn, prefixes['mainrst'],
@@ -200,7 +207,7 @@ class PolicyService(object):
         return returnout
 
     def parsel2Request(self, allKnownHosts, prefixes, gIn, returnout):
-        """ Parse L2 request """
+        """Parse L2 request."""
         self.logger.info('Lets try to get connection ID subject for %s' % prefixes['main'])
         connectionID = None
         out = self.queryGraph(gIn, prefixes['main'], search=URIRef('%s%s' % (prefixes['mrs'], 'providesSubnet')))
@@ -219,18 +226,18 @@ class PolicyService(object):
             output['labelSwapping'] = str(out[0])
             out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (prefixes['nml'], 'existsDuring')))
             out = self.getTimeScheduling(out, gIn, prefixes)
-            if len(out.keys()) == 2:
+            if len(list(out.keys())) == 2:
                 output['timestart'] = out['start']
                 output['timeend'] = out['end']
             # =======================================================
             self.logger.info('Now lets get all info for each bidirectionalPort, like vlan, ip, serviceInfo ')
             # We need mainly hasLabel, hasNetworkAddress
             for bidPort in bidPorts:
-                print bidPort
+                print(bidPort)
                 # Get first which labels it has. # This provides us info about vlan tag
                 connInfo, output = getConnInfo(bidPort, prefixes['site'], output, nostore=True)
                 if connInfo not in allKnownHosts:
-                    print 'Ignore %s' % connInfo
+                    print('Ignore %s' % connInfo)
                     continue
                 connInfo, output = getConnInfo(bidPort, prefixes['site'], output)
                 alias = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['nml'], 'isAlias')))
@@ -248,9 +255,8 @@ class PolicyService(object):
                 for item in out:
                     outtype = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'type')))
                     outval = self.queryGraph(gIn, item, search=URIRef('%s%s' % (prefixes['mrs'], 'value')))
-                    if Literal('ipv4-address') in outtype:
-                        if len(outval[0].split('/')) == 2:
-                            output['hosts'][connInfo]['ip'] = str(outval[0])
+                    if Literal('ipv4-address') in outtype and len(outval[0].split('/')) == 2:
+                        output['hosts'][connInfo]['ip'] = str(outval[0])
                 # Now lets get service Info and what was requested.
                 out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (prefixes['nml'], 'hasService')))
                 output['hosts'][connInfo].setdefault('params', [])
@@ -266,7 +272,7 @@ class PolicyService(object):
         return returnout
 
     def startwork(self):
-        """ Start Policy Service """
+        """Start Policy Service."""
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started")
         for siteName in self.config.get('general', 'sites').split(','):
@@ -287,7 +293,7 @@ class PolicyService(object):
             job[1](dbobj)
 
     def acceptDelta(self, deltapath):
-        """ Accept delta """
+        """Accept delta."""
         jOut = getAllHosts(self.sitename, self.logger)
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
         os.unlink(deltapath)  # File is not needed anymore.
@@ -300,7 +306,7 @@ class PolicyService(object):
             for key in ['reduction', 'addition']:
                 if key in toDict["Content"] and toDict["Content"][key]:
                     self.logger.info('Got Content %s for key %s', toDict["Content"][key], key)
-                    tmpFile = tempfile.NamedTemporaryFile(delete=False)
+                    tmpFile = tempfile.NamedTemporaryFile(delete=False, mode="w+")
                     try:
                         tmpFile.write(toDict["Content"][key])
                     except ValueError as ex:
@@ -313,7 +319,7 @@ class PolicyService(object):
                 BadSyntax, HostNotFound, UnrecognizedDeltaOption) as ex:
             outputDict = getError(ex)
         dbobj = getVal(self.dbI, sitename=self.sitename)
-        if 'errorType' in outputDict.keys():
+        if 'errorType' in list(outputDict.keys()):
             toDict["State"] = "failed"
             toDict["Error"] = outputDict
             toDict['ParsedDelta'] = {'addition': '', 'reduction': ''}
@@ -340,7 +346,7 @@ class PolicyService(object):
 
 
 def execute(config=None, logger=None, args=None):
-    """Main Execute"""
+    """Main Execute."""
     if not config:
         config = getConfig()
     if not logger:
@@ -351,7 +357,7 @@ def execute(config=None, logger=None, args=None):
     if args:
         policer = PolicyService(config, logger, args[3])
         # This is only for debugging purposes.
-        print policer.parseDeltaRequest(args[1], {args[2]: []})
+        print(policer.parseDeltaRequest(args[1], {args[2]: []}))
     else:
         for sitename in config.get('general', 'sites').split(','):
             policer = PolicyService(config, logger, sitename)
@@ -359,12 +365,12 @@ def execute(config=None, logger=None, args=None):
 
 
 if __name__ == '__main__':
-    print 'WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.'
-    print 'If argv[1] is specified it will try to parse custom delta request. It should be a filename.'
-    print '2nd argument is hostname. You can find hostname inside the delta'
-    print '3rd argument has to be sitename which is configured in this frontend'
-    print 'Otherwise, it will check frontend for new deltas'
-    print sys.argv
+    print('WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.')
+    print('If argv[1] is specified it will try to parse custom delta request. It should be a filename.')
+    print('2nd argument is hostname. You can find hostname inside the delta')
+    print('3rd argument has to be sitename which is configured in this frontend')
+    print('Otherwise, it will check frontend for new deltas')
+    print(sys.argv)
     if len(sys.argv) == 4:
         execute(args=sys.argv, logger=getStreamLogger())
     else:

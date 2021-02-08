@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 TODO: Move all of these to MainUtilities, as it is not a place for it...
 
@@ -23,17 +24,19 @@ import psutil
 
 
 def externalCommand(command):
-    """Execute External Commands and return stdout and stderr"""
+    """Execute External Commands and return stdout and stderr."""
     command = shlex.split(command)
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return proc.communicate()
 
 
 def tryConvertToNumeric(value):
-    """Convert str to float or int. Returns what should be expected, t.y.:
-       if str is float, int will fail and float will be returned;
-       if str is int, float and int will succeed, returns int;
-       if any of these fail, returns value"""
+    """Convert str to float or int.
+
+    Returns what should be expected, t.y.: if str is float, int will
+    fail and float will be returned; if str is int, float and int will
+    succeed, returns int; if any of these fail, returns value.
+    """
     floatVal = None
     intVal = None
     try:
@@ -48,8 +51,10 @@ def tryConvertToNumeric(value):
 
 
 def runPipedCmd(cmd1, cmd2):
-    """ Run two commands, in which second is executed after first.
-        Like in bash | t.y.: ls -l | grep '123' """
+    """Run two commands, in which second is executed after first.
+
+    Like in bash | t.y.: ls -l | grep '123'.
+    """
     cmd1 = shlex.split(cmd1)
     cmd2 = shlex.split(cmd2)
     proc1 = subprocess.Popen(cmd1, stdout=subprocess.PIPE)
@@ -59,7 +64,7 @@ def runPipedCmd(cmd1, cmd2):
 
 
 def getProcInfo(procID):
-    """ Get Process informationa about specific process """
+    """Get Process informationa about specific process."""
     procOutInfo = {}
     procS = psutil.Process(int(procID))
     procOutInfo['CreateTime'] = procS.create_time()
@@ -86,7 +91,7 @@ def getProcInfo(procID):
     procOutInfo['MemUseInfo']['Swap'] = memInfo.swap
     procOutInfo['Connections'] = {}
     for item in procS.connections():
-        if item.status not in procOutInfo['Connections'].keys():
+        if item.status not in list(procOutInfo['Connections'].keys()):
             procOutInfo['Connections'][item.status] = 0
         procOutInfo['Connections'][item.status] += 1
     return procOutInfo

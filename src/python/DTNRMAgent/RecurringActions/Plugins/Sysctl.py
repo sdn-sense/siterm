@@ -1,6 +1,5 @@
-#!/usr/bin/python
-"""
-Plugin which gathers all sysctl parameters
+#!/usr/bin/env python3
+"""Plugin which gathers all sysctl parameters.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +11,13 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
+from __future__ import print_function
 import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
@@ -26,17 +26,16 @@ NAME = 'SystemKernelParams'
 
 
 def get(config, logger):
-    """Get System kernel parameters information"""
-    del config
+    """Get System kernel parameters information."""
     kernelInfo = {}
     tmpOut = externalCommand('sysctl -a')
     for item in tmpOut:
-        for desc in item.split('\n'):
+        for desc in item.decode('UTF-8').split('\n'):
             vals = desc.split(' = ')
             if len(vals) == 2:
                 kernelInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
             else:
-                print 'KernelParams: Skipped this item: ', vals
+                print('KernelParams: Skipped this item: ', vals)
     return kernelInfo
 
 if __name__ == "__main__":

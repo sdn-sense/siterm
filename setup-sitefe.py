@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 """
 Setup tools script for DTN-RM Site Frontend.
 To Install:
@@ -44,14 +44,14 @@ setup(
     keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
     package_dir={'': 'src/python/'},
     packages=['SiteFE', 'DTNRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/DTNRMLibs/']),
-    install_requires=['pyparsing==1.5.7', 'rdflib==5.0.0', 'importlib==1.0.4', 'setuptools',
-                      'prometheus-client==0.8.0', 'python-dateutil==2.7.5', 'pyaml', 'requests'],
+    install_requires=['pyparsing', 'rdflib', 'importlib', 'setuptools', 'future', 'simplejson', 'mod-wsgi',
+                      'prometheus-client', 'python-dateutil', 'pyaml', 'requests', 'pycurl', 'pyOpenSSL',
+                      'mariadb'],
     data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
                 ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
                                         "packaging/dtnrm-site-fe/welcome.conf"]),
                 ("/etc/cron.d/", ["packaging/dtnrm-site-fe/siterm-crons"]),
                 ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh",
-                                        "packaging/dtnrm-site-fe/siterm-dbchowner.py",
                                         "packaging/general/siterm-autoupdate.py"])],
     py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
     scripts=SCRIPTS

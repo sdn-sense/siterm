@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-"""
-Plugin which produces all info from lscpu
-It produces:
+#!/usr/bin/env python3
+"""Plugin which produces all info from lscpu It produces:
+
 {'CPU(s)': 2, 'L1d cache': '32K', 'CPU op-mode(s)': '32-bit, 64-bit', 'NUMA node0 CPU(s)': '0,1',
  'Hypervisor vendor': 'VMware', 'L2 cache': '256K', 'L1i cache': '32K', 'CPU MHz': 3392.164,
  'Core(s) per socket': 1, 'Virtualization type': 'full', 'Thread(s) per core': 1, 'On-line CPU(s) list': '0,1',
@@ -18,12 +17,13 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
+from __future__ import print_function
 import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
@@ -32,23 +32,22 @@ NAME = 'CPUInfo'
 
 
 def get(config, logger):
-    """Get lscpu information"""
-    del config
+    """Get lscpu information."""
     cpuInfo = {}
     tmpOut = externalCommand('lscpu')
     for item in tmpOut:
-        for desc in item.split('\n'):
+        for desc in item.decode('UTF-8').split('\n'):
             vals = desc.split(':')
             if len(vals) == 2:
                 cpuInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
             else:
-                print 'CpuInfo: Skipped this item: ', vals
+                print('CpuInfo: Skipped this item: ', vals)
     cpuInfo['num_cores'] = 1
     if 'Socket(s)' in cpuInfo and 'Core(s) per socket':
         try:
             cpuInfo['num_cores'] = int(cpuInfo['Socket(s)']) * int(cpuInfo['Core(s) per socket'])
         except Exception:
-            print 'Failed to calculate num_cores from %s. will set to 1' % cpuInfo
+            print('Failed to calculate num_cores from %s. will set to 1' % cpuInfo)
     return cpuInfo
 
 if __name__ == "__main__":

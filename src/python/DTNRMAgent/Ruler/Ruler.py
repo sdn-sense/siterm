@@ -1,6 +1,6 @@
-#!/usr/bin/env python
-"""
-    Ruler component pulls all actions from Site-FE and applies these rules on DTN
+#!/usr/bin/env python3
+"""Ruler component pulls all actions from Site-FE and applies these rules on
+DTN.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,23 +18,24 @@ Email             : justas.balcas (at) cern.ch
 @Copyright        : Copyright (C) 2016 California Institute of Technology
 Date            : 2017/09/26
 """
+from __future__ import absolute_import
 import os
 import glob
 import pprint
-from QOS import QOS
+from DTNRMAgent.Ruler.QOS import QOS
+from DTNRMAgent.Ruler.Components.VInterfaces import VInterfaces
 from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict, getStreamLogger
 from DTNRMLibs.MainUtilities import createDirs, getFullUrl, contentDB, getFileContentAsJson
 from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
-from Components.VInterfaces import VInterfaces
 
 
 COMPONENT = 'Ruler'
 
 
-class Ruler(object):
-    """ Ruler class to create interfaces on the system """
+class Ruler():
+    """Ruler class to create interfaces on the system."""
     def __init__(self, config, logger):
         self.config = config if config else getConfig()
         self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
@@ -48,7 +49,7 @@ class Ruler(object):
         self.vInterface = VInterfaces(self.config, self.logger)
 
     def getData(self, url):
-        """ Get data from FE """
+        """Get data from FE."""
         self.logger.info('Query: %s%s' % (self.fullURL, url))
         out = getDataFromSiteFE({}, self.fullURL, url)
         if out[2] != 'OK':
@@ -62,7 +63,7 @@ class Ruler(object):
         return evaldict(out[0])
 
     def vlansProvisioned(self):
-        """ Get all VLANs provisioned and already in place """
+        """Get all VLANs provisioned and already in place."""
         out = []
         for fileName in glob.glob("%s/*.json" % self.workDir):
             inputDict = getFileContentAsJson(fileName)
@@ -70,15 +71,15 @@ class Ruler(object):
         return out
 
     def getHostStates(self, state):
-        """ Get All HostStates from Frontend """
+        """Get All HostStates from Frontend."""
         return self.getData("/sitefe/v1/hostnameids/%s/%s" % (self.hostname, state))
 
     def getDeltaInfo(self, deltaid):
-        """ Get Delta information """
+        """Get Delta information."""
         return self.getData("/sitefe/v1/deltas/%s?oldview=true" % deltaid)
 
     def setHostState(self, state, deltaid):
-        """ Push Internal action and return dict """
+        """Push Internal action and return dict."""
         restOut = getDataFromSiteFE({}, self.fullURL, "/sitefe/v1/deltas/%s/internalaction/%s/%s" %
                                     (deltaid, self.hostname, state))
         if restOut[1] >= 400:
@@ -89,8 +90,8 @@ class Ruler(object):
         return restOut
 
     def vlanCheck(self, addition):
-        """ vlan parameters check and append """
-        if 'MTU' not in addition['hosts'][self.hostname].keys():
+        """Vlan parameters check and append."""
+        if 'MTU' not in list(addition['hosts'][self.hostname].keys()):
             addition['hosts'][self.hostname]['MTU'] = 9000
         if 'txqueuelen' not in addition['hosts'][self.hostname]:
             addition['hosts'][self.hostname]['txqueuelen'] = 10000
@@ -98,7 +99,10 @@ class Ruler(object):
         return addition
 
     def checkResources(self, addition, deltaID):
-        """ Check if IP, interfaces, routes are in place. if not, add's it. """
+        """Check if IP, interfaces, routes are in place.
+
+        if not, add's it.
+        """
         if not self.noRules:
             self.logger.info('Addition info %s' % addition)
             try:
@@ -112,10 +116,9 @@ class Ruler(object):
                 self.vInterface.add(addition['hosts'][self.hostname])
                 self.vInterface.setup(addition['hosts'][self.hostname])
                 self.vInterface.start(addition['hosts'][self.hostname])
-        return
 
     def activateResources(self, addition, deltaID):
-        """ Resources activation """
+        """Resources activation."""
         # Check if file present. If So, set failed and remove file!
         newvlanFile = self.workDir + "/%s.json" % deltaID
         addition['uid'] = deltaID
@@ -126,7 +129,7 @@ class Ruler(object):
                 self.vInterface.remove(addition['hosts'][self.hostname])
             os.unlink(newvlanFile)
             # return True, "This delta was already on the system. Cancel it."
-        if self.hostname not in addition['hosts'].keys():
+        if self.hostname not in list(addition['hosts'].keys()):
             return False, "Failed to find own hostname in dictionary"
         addition = self.vlanCheck(addition)
         self.logger.info("Saving file %s", deltaID)
@@ -142,7 +145,7 @@ class Ruler(object):
         return True, ""
 
     def cancelResources(self, addition, deltaID):
-        """Remove resources (Remove interfaces, remove ips, L3 routes) """
+        """Remove resources (Remove interfaces, remove ips, L3 routes)."""
         self.logger.info('Cancelling resources for %s delta' % deltaID)
         if not self.noRules:
             self.logger.info("Removing virtual interface rules")
@@ -151,7 +154,7 @@ class Ruler(object):
         return True, ""
 
     def start(self):
-        """ Start execution and get new requests from FE """
+        """Start execution and get new requests from FE."""
         # a) First check all the deltas on the system based on UID;
         #     1. If State is still activated; leave as it is;
         #     2. If State in remove, removing, cancel, failed do the following:
@@ -170,68 +173,51 @@ class Ruler(object):
         else:
             self.logger.info('Agent is not configured to apply QoS rules')
         self.logger.info('Ended function start')
-        return
 
     def checkAllFiles(self):
-        """Check All deltas active on the host"""
+        """Check All deltas active on the host."""
         self.logger.info('Started function checkAllFiles start')
-        # TODO: Need smarter consistency check with frontend.
-        # for fileName in glob.glob("%s/*.json" % self.workDir):
-        #    inputDict = getFileContentAsJson(fileName)
-        #    if 'uid' not in inputDict.keys():
-        #        self.logger.info('Seems this dictionary is custom delta. Ignoring it.')
-        #        continue
-        #    deltaInfo = self.getDeltaInfo(inputDict['uid'])
-        #    if not deltaInfo:
-        #        self.logger.debug('FE did not return anything for %s' % inputDict['uid'])
-        #        continue
-        #    deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
-        #    if deltaInfo[0]['deltat'] == 'reduction':
-        #        raise Exception('This should not happen. Host not allowed to have reduction set.')
-        #    if deltaInfo[0]['state'] in ['activating', 'activated']:
-        #        if isinstance(deltaInfo[0]['addition'], dict):
-        #            self.checkResources(deltaInfo[0]['addition'], inputDict['uid'])
-        #        else:
-        #            for connDelta in deltaInfo[0]['addition']:
-        #                self.checkResources(connDelta, inputDict['uid'])
-        #    elif deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
-        #        for connDelta in deltaInfo[0]['addition']:
-        #            self.cancelResources(connDelta, inputDict['uid'])
-        #        self.setHostState('cancel', inputDict['uid'])
+        for fileName in glob.glob("%s/*.json" % self.workDir):
+            inputDict = getFileContentAsJson(fileName)
+            if 'uid' not in inputDict.keys():
+                self.logger.info('Seems this dictionary is custom delta. Ignoring it.')
+                continue
+            deltaInfo = self.getDeltaInfo(inputDict['uid'])
+            if not deltaInfo:
+                self.logger.debug('FE did not return anything for %s' % inputDict['uid'])
+                continue
+            if deltaInfo[0]['state'] in ['remove', 'removing', 'removed', 'cancel', 'failed']:
+                if os.path.isfile(fileName):
+                    os.remove(fileName)
+            elif deltaInfo[0]['state'] in ['activating', 'activated'] and deltaInfo[0]['deltat'] == 'addition':
+                deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
+                self.checkResources(deltaInfo[0]['addition'][0], inputDict['uid'])
 
     def checkHostStates(self):
-        """ Check Host State deltas """
-        # TODO:
-        # Need smarter way to do consistency check with frontend
-        # Checking all active states:
+        """Check Host State deltas."""
+        # Checking all active host states and set to cancel only ones which deltas are in:
+        # for addition deltas - only removed state
+        # for reduction deltas - remove and removed
         # ===========================================================================================
-        # states = self.getHostStates('active')
-        # for state in states:
-        #    deltaInfo = self.getDeltaInfo(state['deltaid'])
-        #    if not deltaInfo:
-        #        self.logger.debug('FE did not return anything for %s' % state['deltaid'])
-        #        continue
-        #    if deltaInfo[0]['deltat'] == 'reduction':
-        #        raise Exception('This should not happen. Host not allowed to have reduction set.')
-        #    deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
-        #    if deltaInfo[0]['state'] in ['activating', 'activated']:
-        #        if isinstance(deltaInfo[0]['addition'], dict):
-        #            self.checkResources(deltaInfo[0]['addition'], state['deltaid'])
-        #        else:
-        #            for connDelta in deltaInfo[0]['addition']:
-        #                self.checkResources(connDelta, state['deltaid'])
-        #    if deltaInfo[0]['state'] in ['remove', 'removing', 'cancel', 'failed']:
-        #        for connDelta in deltaInfo[0]['addition']:
-        #            self.cancelResources(connDelta, state['deltaid'])
-        #            self.setHostState('cancel', state['deltaid'])
-        #    else:
-        #        self.logger.info('Weird delta state. Check Frontend for delta %s' % state['deltaid'])
-        #
-        # Checking all which are in activating:
-        # ===========================================================================================
+        states = self.getHostStates('active')
+        for state in states:
+            if state['state'] != 'active':
+                continue
+            deltaInfo = self.getDeltaInfo(state['deltaid'])
+            if not deltaInfo:
+                self.logger.debug('FE did not return anything for %s' % state['deltaid'])
+                continue
+            if deltaInfo[0]['state'] in ['remove', 'removed'] and deltaInfo[0]['deltat'] == 'addition':
+                self.cancelResources(evaldict(deltaInfo[0]['addition'])[0], state['deltaid'])
+                self.setHostState('cancel', state['deltaid'])
+            elif deltaInfo[0]['state'] in ['remove', 'removed'] and deltaInfo[0]['deltat'] == 'reduction':
+                self.cancelResources(evaldict(deltaInfo[0]['reduction'])[0], state['deltaid'])
+                self.setHostState('cancel', state['deltaid'])
+            elif deltaInfo[0]['state'] in ['activated'] and deltaInfo[0]['deltat'] == 'reduction':
+                self.setHostState('activated', state['deltaid'])
 
     def checkActivatingDeltas(self):
-        """ Check all deltas in activating states """
+        """Check all deltas in activating states."""
         states = self.getHostStates('activating')
         for state in states:
             # Check delta State;
@@ -265,7 +251,7 @@ class Ruler(object):
 
 
 def execute(config=None, logger=None):
-    """ Execute main script for DTN-RM Agent output preparation """
+    """Execute main script for DTN-RM Agent output preparation."""
     ruler = Ruler(config, logger)
     ruler.start()
 

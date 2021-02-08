@@ -1,0 +1,6 @@
+# Environment variables for MariaDB
+MARIA_DB_PASSWORD=!!!!##REPLACE_ME####!!!!
+MARIA_DB_USER=root
+MARIA_DB_HOST=localhost
+MARIA_DB_PORT=3306
+MARIA_DB_DATABASE=sitefe

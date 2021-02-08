@@ -1,7 +1,7 @@
-#!/usr/bin/env python
-"""
-    ODL switch configuration. Means all rules should be configured
-    using OVS COMMANDS
+#!/usr/bin/env python3
+"""ODL switch configuration. Means all rules should be configured using OVS
+COMMANDS.
+
     # TODO: Make ODL plugin, currently return everything is correct
 
 Copyright 2017 California Institute of Technology
@@ -14,21 +14,19 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
-
-
-class mainCaller(object):
-    """ Main call for ODL plugin """
+class mainCaller():
+    """Main call for ODL plugin."""
     def __init__(self):
         self.name = 'ODL'
 
     def mainCall(self, stateCall, inputDict, actionState):
-        """ Main caller function which calls specific state """
+        """Main caller function which calls specific state."""
         out = {}
         if stateCall == 'accepting':
             out = self.accepting(inputDict, actionState)
@@ -53,37 +51,37 @@ class mainCaller(object):
         return out
 
     def accepting(self, inputDict, actionState):
-        """ Accepting state actions """
+        """Accepting state actions."""
         return True
 
     def accepted(self, inputDict, actionState):
-        """ Accepted state actions """
+        """Accepted state actions."""
         return True
 
     def committing(self, inputDict, actionState):
-        """ Committing state actions """
+        """Committing state actions."""
         return True
 
     def committed(self, inputDict, actionState):
-        """ Committed state actions """
+        """Committed state actions."""
         return True
 
     def activating(self, inputDict, actionState):
-        """ Activating state actions """
+        """Activating state actions."""
         return True
 
     def active(self, inputDict, actionState):
-        """ Activating state actions """
+        """Activating state actions."""
         return True
 
     def activated(self, inputDict, actionState):
-        """ Activating state actions """
+        """Activating state actions."""
         return True
 
     def failed(self, inputDict, actionState):
-        """ Failed state actions """
+        """Failed state actions."""
         return True
 
     def remove(self, inputDict, actionState):
-        """ Remove state actions """
+        """Remove state actions."""
         return True

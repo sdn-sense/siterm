@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-"""
-Everything goes here when they do not fit anywhere else
+#!/usr/bin/env python3
+"""Everything goes here when they do not fit anywhere else.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +11,23 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2018/11/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2018/11/26
 """
+from builtins import str
+from builtins import object
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 
 
 def timeendcheck(delta, logger):
-    """ Check delta timeEnd. if passed, returns True. """
+    """Check delta timeEnd.
+
+    if passed, returns True.
+    """
     conns = []
     # ------------------------------------
     # This is for backwards support. Can be deleted after all RMs deltas re-initiated.
@@ -35,7 +39,7 @@ def timeendcheck(delta, logger):
     connEnded = False
     for connDelta in conns:
         try:
-            if 'timeend' in connDelta.keys():
+            if 'timeend' in list(connDelta.keys()):
                 timeleft = getUTCnow() - int(connDelta['timeend'])
                 logger.info('CurrentTime %s TimeStart %s. TimeLeft %s'
                             % (getUTCnow(), connDelta['timeend'], timeleft))
@@ -52,7 +56,10 @@ def timeendcheck(delta, logger):
 
 
 class ConnectionMachine(object):
-    """ Connection State machine. Maps Deltas with 1 to N connections """
+    """Connection State machine.
+
+    Maps Deltas with 1 to N connections
+    """
     def __init__(self, logger):
         self.logger = logger
 
@@ -69,7 +76,7 @@ class ConnectionMachine(object):
 
     @staticmethod
     def committed(dbObj, delta):
-        """ Change specific delta connection id state to commited """
+        """Change specific delta connection id state to commited."""
         if delta['deltat'] == 'addition':
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
@@ -80,7 +87,7 @@ class ConnectionMachine(object):
 
     @staticmethod
     def activating(dbObj, delta):
-        """ Change specific delta connection id state to commited """
+        """Change specific delta connection id state to commited."""
         if delta['deltat'] == 'addition':
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
@@ -91,7 +98,10 @@ class ConnectionMachine(object):
 
     @staticmethod
     def activated(dbObj, delta):
-        """ Change specific delta connection id state to activated. Reduction - cancelled """
+        """Change specific delta connection id state to activated.
+
+        Reduction - cancelled
+        """
         if delta['deltat'] == 'addition':
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
@@ -109,7 +119,7 @@ class ConnectionMachine(object):
 
 
 class StateMachine(object):
-    """ State machine for Frontend and policy service """
+    """State machine for Frontend and policy service."""
     def __init__(self, logger):
         self.logger = logger
         self.limit = 100
@@ -117,7 +127,7 @@ class StateMachine(object):
         return
 
     def _stateChangerDelta(self, dbObj, newState, **kwargs):
-        """ Delta State change """
+        """Delta State change."""
         tNow = getUTCnow()
         self.logger.info('Changing delta %s to %s' % (kwargs['uid'], newState))
         dbObj.update('deltas', [{'uid': kwargs['uid'],
@@ -129,21 +139,21 @@ class StateMachine(object):
 
     @staticmethod
     def _modelstatechanger(dbObj, newState, **kwargs):
-        """ Model State change """
+        """Model State change."""
         tNow = getUTCnow()
         dbObj.update('deltasmod', [{'uid': kwargs['uid'],
                                     'modadd': newState,
                                     'updatedate': tNow}])
 
     def modelstatecancel(self, dbObj, **kwargs):
-        """ Cancel Model addition """
+        """Cancel Model addition."""
         if kwargs['modadd'] in ['idle']:
             self._modelstatechanger(dbObj, 'removed', **kwargs)
         elif kwargs['modadd'] in ['add', 'added']:
             self._modelstatechanger(dbObj, 'remove', **kwargs)
 
     def _stateChangerHost(self, dbObj, hid, **kwargs):
-        """ Change state for host """
+        """Change state for host."""
         tNow = getUTCnow()
         self.logger.info('Changing delta %s hoststate %s to %s' %
                          (kwargs['deltaid'], kwargs['hostname'], kwargs['state']))
@@ -154,7 +164,7 @@ class StateMachine(object):
         dbObj.insert('hoststateshistory', [kwargs])
 
     def _newdelta(self, dbObj, delta, state):
-        """ Add new delta to db """
+        """Add new delta to db."""
         dbOut = {'uid': delta['ID'],
                  'insertdate': int(delta['InsertTime']),
                  'updatedate': int(delta['UpdateTime']),
@@ -164,10 +174,10 @@ class StateMachine(object):
                  'modelid': str(delta['modelId']),
                  'reduction': str(delta['ParsedDelta']['reduction']),
                  'addition': str(delta['ParsedDelta']['addition']),
-                 'reductionid': '' if 'ReductionID' not in delta.keys() else delta['ReductionID'],
+                 'reductionid': '' if 'ReductionID' not in list(delta.keys()) else delta['ReductionID'],
                  'modadd': str(delta['modadd']),
                  'connectionid': str(delta['ConnID']),
-                 'error': '' if 'Error' not in delta.keys() else str(delta['Error'])}
+                 'error': '' if 'Error' not in list(delta.keys()) else str(delta['Error'])}
         dbObj.insert('deltas', [dbOut])
         self.connMgr.accepted(dbObj, dbOut)
         dbOut['state'] = delta['State']
@@ -175,22 +185,22 @@ class StateMachine(object):
 
     @staticmethod
     def _newhoststate(dbObj, **kwargs):
-        """ Private to add new host states. """
+        """Private to add new host states."""
         tNow = getUTCnow()
         kwargs['insertdate'] = tNow
         kwargs['updatedate'] = tNow
         dbObj.insert('hoststates', [kwargs])
 
     def accepted(self, dbObj, delta):
-        """ Marks delta as accepting """
+        """Marks delta as accepting."""
         self._newdelta(dbObj, delta, 'accepting')
 
     def commit(self, dbObj, delta):
-        """ Marks delta as committing """
+        """Marks delta as committing."""
         self._stateChangerDelta(dbObj, 'committing', **delta)
 
     def committing(self, dbObj):
-        """ Committing state Check """
+        """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committing']]):
             self._stateChangerDelta(dbObj, 'committed', **delta)
             self._modelstatechanger(dbObj, 'add', **delta)
@@ -198,7 +208,7 @@ class StateMachine(object):
         return
 
     def committed(self, dbObj):
-        """ Committing state Check """
+        """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committed']]):
             if delta['deltat'] == 'addition' and delta['addition']:
                 delta['addition'] = evaldict(delta['addition'])
@@ -206,7 +216,7 @@ class StateMachine(object):
                 delayStart = False
                 for connDelta in delta['addition']:
                     try:
-                        if 'timestart' in connDelta.keys():
+                        if 'timestart' in list(connDelta.keys()):
                             timeleft = int(connDelta['timestart']) - getUTCnow()
                             self.logger.info('CurrentTime %s TimeStart %s. Seconds Left %s' %
                                              (getUTCnow(), connDelta['timestart'], timeleft))
@@ -229,13 +239,13 @@ class StateMachine(object):
                 self._stateChangerDelta(dbObj, 'activating', **delta)
 
     def activating(self, dbObj):
-        """ Check on all deltas in state activating. """
+        """Check on all deltas in state activating."""
         for delta in dbObj.get('deltas', search=[['state', 'activating']]):
             hostStates = {}
             delta['addition'] = evaldict(delta['addition'])
             delta['reduction'] = evaldict(delta['reduction'])
             for actionKey in ['reduction', 'addition']:
-                if actionKey not in delta.keys():
+                if actionKey not in list(delta.keys()):
                     self.logger.info('This delta %s does not have yet actionKey %s defined.'
                                      % (delta['uid'], actionKey))
                     continue
@@ -244,10 +254,10 @@ class StateMachine(object):
                     continue
                 for connDelta in delta[actionKey]:
                     hostStates = {}
-                    if 'hosts' not in connDelta.keys():
+                    if 'hosts' not in list(connDelta.keys()):
                         self.logger.info('This delta %s does not have yet hosts defined.' % delta['uid'])
                         continue
-                    for hostname in connDelta['hosts'].keys():
+                    for hostname in list(connDelta['hosts'].keys()):
                         host = dbObj.get('hoststates', search=[['deltaid', delta['uid']], ['hostname', hostname]])
                         if host:
                             hostStates[host[0]['state']] = hostname
@@ -260,14 +270,14 @@ class StateMachine(object):
                 if timeendcheck(delta, self.logger):
                     self._stateChangerDelta(dbObj, 'cancel', **delta)
                     self.modelstatecancel(dbObj, **delta)
-                if hostStates.keys() == ['active']:
+                if list(hostStates.keys()) == ['active']:
                     self._stateChangerDelta(dbObj, 'activated', **delta)
                     self.connMgr.activated(dbObj, delta)
-                elif 'failed' in hostStates.keys():
+                elif 'failed' in list(hostStates.keys()):
                     self._stateChangerDelta(dbObj, 'failed', **delta)
 
     def activated(self, dbObj):
-        """ Check on all activated state deltas """
+        """Check on all activated state deltas."""
         for delta in dbObj.get('deltas', search=[['state', 'activated']]):
             # Reduction
             if delta['deltat'] in ['reduction']:
@@ -281,7 +291,7 @@ class StateMachine(object):
                 self.modelstatecancel(dbObj, **delta)
 
     def remove(self, dbObj):
-        """ Check on all remove state deltas """
+        """Check on all remove state deltas."""
         for delta in dbObj.get('deltas', search=[['state', 'remove']]):
             if delta['updatedate'] < int(getUTCnow() - 600):
                 self._stateChangerDelta(dbObj, 'removed', **delta)
@@ -289,19 +299,25 @@ class StateMachine(object):
         return
 
     def removing(self, dbObj):
-        """ Check on all removing state deltas. Sets state remove """
+        """Check on all removing state deltas.
+
+        Sets state remove
+        """
         for delta in dbObj.get('deltas', search=[['state', 'removing']]):
             self._stateChangerDelta(dbObj, 'remove', **delta)
             self.modelstatecancel(dbObj, **delta)
 
     def cancel(self, dbObj):
-        """ Check on all cancel state deltas. Sets state remove """
+        """Check on all cancel state deltas.
+
+        Sets state remove
+        """
         for delta in dbObj.get('deltas', search=[['state', 'cancel']]):
             self._stateChangerDelta(dbObj, 'remove', **delta)
             self.modelstatecancel(dbObj, **delta)
 
     def cancelledConnections(self, dbObj):
-        """ Check if connections are in cancel """
+        """Check if connections are in cancel."""
         for delta in dbObj.get('deltas', search=[['state', 'activated']]):
             connStates = []
             for dConn in dbObj.get('delta_connections', search=[['deltaid', delta['uid']]]):
@@ -311,5 +327,8 @@ class StateMachine(object):
                 self._stateChangerDelta(dbObj, 'cancel', **delta)
 
     def failed(self, dbObj, delta):
-        """ Marks delta as failed. This is only during submission """
+        """Marks delta as failed.
+
+        This is only during submission
+        """
         self._newdelta(dbObj, delta, 'failed')

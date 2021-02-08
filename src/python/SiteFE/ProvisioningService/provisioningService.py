@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-"""
-    Provisioning service is provision everything on the switches;
+#!/usr/bin/env python3
+"""Provisioning service is provision everything on the switches;
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +11,21 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
+from __future__ import print_function
+from builtins import str
+from builtins import object
+import sys
 import importlib
 import time
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getLogger
+from DTNRMLibs.MainUtilities import getStreamLogger
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import getFullUrl
@@ -31,7 +35,8 @@ from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 
 
 class ProvisioningService(object):
-    """ Provisioning service communicates with Local controllers and applies network changes. """
+    """Provisioning service communicates with Local controllers and applies
+    network changes."""
     def __init__(self, config, logger, sitename):
         self.logger = logger
         self.config = config
@@ -39,7 +44,7 @@ class ProvisioningService(object):
         self.sitename = sitename
 
     def pushInternalAction(self, url, state, deltaID, hostname):
-        """ Push Internal action and return dict """
+        """Push Internal action and return dict."""
         newState = ""
         restOut = {}
         restOut = getDataFromSiteFE({}, url, "/sitefe/v1/deltas/%s/internalaction/%s/%s" % (deltaID, hostname, state))
@@ -58,7 +63,8 @@ class ProvisioningService(object):
         return evaldict(restOut)
 
     def deltaRemoval(self, newDelta, deltaID, newvlan, switchName, switchruler, fullURL):
-        """ Here goes all communication with component and also rest interface """
+        """Here goes all communication with component and also rest
+        interface."""
         self.logger.debug('I got REDUCTION!!!!!. Reduction only sets states until active.')
         if 'ReductionID' not in newDelta:
             # I dont know which one to set to removed...
@@ -68,7 +74,7 @@ class ProvisioningService(object):
         for stateChange in [{"accepting": "accepted"}, {"accepted": "committing"},
                             {"committing": "committed"}, {"committed": "activating"},
                             {"activating": "active"}, {"active": "remove"}, {"cancel": "remove"}]:
-            if deltaState == stateChange.keys()[0]:
+            if deltaState == list(stateChange.keys())[0]:
                 msg = 'Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState])
                 self.logger.debug(msg)
                 switchruler.mainCall(deltaState, newvlan, 'remove')
@@ -78,20 +84,22 @@ class ProvisioningService(object):
 
     # TODO merge these two functions
     def deltaCommit(self, newDelta, deltaID, newvlan, switchName, switchruler, fullURL):
-        """ Here goes all communication with component and also rest interface """
-        print 'Here goes all communication with component and also rest interface'
+        """Here goes all communication with component and also rest
+        interface."""
+        print('Here goes all communication with component and also rest interface')
         deltaState = newDelta['HOSTSTATE']
         for stateChange in [{"accepting": "accepted"}, {"accepted": "committing"},
                             {"committing": "committed"}, {"committed": "activating"}, {"activating": "active"}]:
-            if deltaState == stateChange.keys()[0]:
-                print 'Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState])
+            if deltaState == list(stateChange.keys())[0]:
+                print('Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState]))
                 switchruler.mainCall(deltaState, newvlan, 'add')
                 self.pushInternalAction(fullURL, stateChange[deltaState], deltaID, switchName)
                 deltaState = stateChange[deltaState]
         return True
 
     def getnewvlan(self, newDelta, deltaID, switchHostName, inKey):
-        """ Check all keys in vlan requimenet and return correct out for addition or deletion """
+        """Check all keys in vlan requimenet and return correct out for
+        addition or deletion."""
         self.logger.debug('Delta id %s' % deltaID)
         self.logger.debug('Got Parsed Delta %s' % newDelta['ParsedDelta'])
         if inKey in newDelta['ParsedDelta'] and newDelta['ParsedDelta'][inKey]:
@@ -99,9 +107,9 @@ class ProvisioningService(object):
         return {}
 
     def checkdeltas(self, switchHostname, inJson):
-        """Check which ones are assigned to any of switch"""
+        """Check which ones are assigned to any of switch."""
         newDeltas = []
-        if switchHostname in inJson['HostnameIDs'].keys():
+        if switchHostname in list(inJson['HostnameIDs'].keys()):
             for delta in inJson['HostnameIDs'][switchHostname]:
                 # print delta, self.hostname, inJson['ID'][delta]['State']
                 # 1) Filter out all which are not relevant.
@@ -118,7 +126,7 @@ class ProvisioningService(object):
         return newDeltas
 
     def getData(self, fullURL, URLPath):
-        """ Get data from FE """
+        """Get data from FE."""
         agents = getDataFromSiteFE({}, fullURL, URLPath)
         if agents[2] != 'OK':
             msg = 'Received a failure getting information from Site Frontend %s' % str(agents)
@@ -128,19 +136,19 @@ class ProvisioningService(object):
 
     @staticmethod
     def getAllAliases(switches):
-        """ Get All Aliases """
+        """Get All Aliases."""
         out = []
         if not switches:
             return out
-        for _, switchPort in switches['vlans'].items():
-            for _, portDict in switchPort.items():
+        for _, switchPort in list(switches['vlans'].items()):
+            for _, portDict in list(switchPort.items()):
                 if 'isAlias' in portDict:
                     tmp = portDict['isAlias'].split(':')[-3:]
                     out.append(tmp[0])
         return out
 
     def startwork(self):
-        """ Start Provisioning Service main worker """
+        """Start Provisioning Service main worker."""
         fullURL = getFullUrl(self.config, sitename=self.sitename)
         jOut = self.getData(fullURL, "/sitefe/json/frontend/getdata")
         workDir = self.config.get('general', 'privatedir') + "/ProvisioningService/"
@@ -158,8 +166,8 @@ class ProvisioningService(object):
         alliases = self.getAllAliases(switches)
         outputDict = {}
         allDeltas = self.getData(fullURL, "/sitefe/v1/deltas?oldview=true")
-        for switchName in list(switches['switches'].keys() + alliases):
-            print switchName
+        for switchName in list(list(switches['switches'].keys()) + alliases):
+            print(switchName)
             newDeltas = self.checkdeltas(switchName, allDeltas)
             for newDelta in newDeltas:
                 outputDict.setdefault(newDelta['ID'])
@@ -175,19 +183,31 @@ class ProvisioningService(object):
                             else:
                                 self.deltaCommit(newDelta, newDelta['ID'], newvlan, switchName, switchruler, fullURL)
                     except IOError as ex:
-                        print ex
+                        print(ex)
                         raise Exception('Received IOError')
 
 
 def execute(config=None, logger=None, args=None):
-    """Main Execute"""
+    """Main Execute."""
     if not config:
         config = getConfig()
     if not logger:
         component = 'LookUpService'
         logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), component), config.get(component, 'logLevel'))
-    provisioner = ProvisioningService(config, logger, args)
-    provisioner.startwork()
+    if args:
+        provisioner = ProvisioningService(config, logger, args[1])
+        provisioner.startwork()
+    else:
+        for sitename in config.get('general', 'sites').split(','):
+            provisioner = ProvisioningService(config, logger, sitename)
+            provisioner.startwork()
 
 if __name__ == '__main__':
-    execute()
+    print('WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.')
+    print('1st argument has to be sitename which is configured in this frontend')
+    print(sys.argv)
+    if len(sys.argv) == 2:
+        execute(args=sys.argv, logger=getStreamLogger())
+    else:
+        execute(logger=getStreamLogger())
+

@@ -1,10 +1,26 @@
 FROM centos:7.7.1908
 
+MAINTAINER Justas Balcas <jbalcas@caltech.edu>
+
+# Maria DB Configuration
+ADD build_files/mariadb.repo /etc/yum.repos.d/mariadb.repo
+ADD build_files/mariadb.sql /root/mariadb.sql
+ADD build_files/server.cnf /etc/my.cnf.d/server.cnf
+ADD build_files/mariadb.sh /root/mariadb.sh
+
+RUN yum -y install wget epel-release
+
+# Import GPG Keys for MariaDB and EPEL
+RUN cd /etc/pki/rpm-gpg/ && wget https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-MariaDB
+RUN chmod +x /root/mariadb.sh
+
+# Configuration which repo to use for build
 ARG GITREPO=siterm
-ARG GITORG=sdn-sense
+#ARG GITORG=sdn-sense
+ARG GITORG=juztas
 ARG GITBR=master
 
-MAINTAINER Justas Balcas <jbalcas@caltech.edu>
 
 RUN adduser apache -U -u 48
 

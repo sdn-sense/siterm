@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-"""
-Frontend Calls to get Sitenames, databases configured in Frontend.
+#!/usr/bin/env python3
+"""Frontend Calls to get Sitenames, databases configured in Frontend.
 
 Copyright 2019 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +11,11 @@ Copyright 2019 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2019 California Institute of Technology
-Date			: 2019/05/01
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2019 California Institute of Technology
+Date                    : 2019/05/01
 """
 import sys
 import socket
@@ -28,17 +27,16 @@ from DTNRMLibs.DBBackend import dbinterface
 
 
 def getDBConn(serviceName=''):
-    """ Get datanase connection """
+    """Get datanase connection."""
     dbConn = {}
     config = getConfig()
     for sitename in config.get('general', 'sites').split(','):
-        if config.has_option(sitename, "database"):
-            dbConn[sitename] = dbinterface(config.get(sitename, "database"), serviceName, config, sitename)
+        dbConn[sitename] = dbinterface(serviceName, config, sitename)
     return dbConn
 
 
 def getAllHosts(sitename, logger):
-    """ Get all hosts from database """
+    """Get all hosts from database."""
     logger.info('Get all hosts for %s', sitename)
     dbObj = getDBConn('getAllHosts')[sitename]
     jOut = {}
@@ -48,7 +46,7 @@ def getAllHosts(sitename, logger):
 
 
 def getSwitches(config, sitename, nodes, logger):
-    """ Get Switches plugin """
+    """Get Switches plugin."""
     switchPlugin = config.get(sitename, 'plugin')
     logger.info('Will load %s switch plugin' % switchPlugin)
     method = importlib.import_module("SiteFE.LookUpService.Plugins.%s" % switchPlugin.lower())
@@ -57,7 +55,7 @@ def getSwitches(config, sitename, nodes, logger):
 
 
 def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
-    """ Report service state to DB """
+    """Report service state to DB."""
     try:
         if not hostname:
             hostname = socket.gethostname()

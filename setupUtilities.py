@@ -1,6 +1,5 @@
-#!/usr/bin/python
-"""
-Utilities which are used in any setup script
+#!/usr/bin/env python3
+"""Utilities which are used in any setup script.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +11,14 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
+from __future__ import print_function
+from builtins import str
 import os
 import sys
 import platform
@@ -32,7 +33,10 @@ VERSION = '201222'
 
 
 def linuxDistr():
-    """ Return linux distribution name. Otherwise Unknown """
+    """Return linux distribution name.
+
+    Otherwise Unknown
+    """
     try:
         return platform.linux_distribution()
     except:
@@ -40,25 +44,25 @@ def linuxDistr():
 
 
 def printInfo(logger=None):
-    """ Print information about sytem before start setup """
-    del logger
-    print "System Information:"
-    print "-" * 100
-    print "Python version: %s" % sys.version.split('\n')
-    print "Dist: %s" % str(platform.dist())
-    print "Linux Distribution: %s" % linuxDistr()
-    print "System: %s" % platform.system()
-    print "Machine: %s" % platform.machine()
-    print "Platform: %s" % platform.platform()
-    print 'Uname: %s' % platform.uname()
-    print 'Version: %s' % platform.version()
-    print 'Mac version: %s' % platform.mac_ver()
+    """Print information about sytem before start setup."""
+    print("System Information:")
+    print("-" * 100)
+    print("Python version: %s" % sys.version.split('\n'))
+    print("Dist: %s" % str(platform.dist()))
+    print("Linux Distribution: %s" % linuxDistr())
+    print("System: %s" % platform.system())
+    print("Machine: %s" % platform.machine())
+    print("Platform: %s" % platform.platform())
+    print('Uname: %s' % platform.uname())
+    print('Version: %s' % platform.version())
+    print('Mac version: %s' % platform.mac_ver())
 
 
 def get_path_to_root(appendLocation=None):
-    """
-    Work out the path to the root from where the script is being run. Allows for
-    calling setup.py env from sub directories and directories outside the main dir
+    """Work out the path to the root from where the script is being run.
+
+    Allows for calling setup.py env from sub directories and directories
+    outside the main dir
     """
     fullPath = os.path.dirname(os.path.abspath(os.path.join(os.getcwd(), sys.argv[0])))
     if appendLocation:
@@ -67,10 +71,9 @@ def get_path_to_root(appendLocation=None):
 
 
 def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=False):
-    """
-    Take a list of directories and return a list of all packages under those directories,
-    Skipping 'CVS', '.svn', 'svn', '.git', '', 'dtnrmagent.egg-info' files.
-    """
+    """Take a list of directories and return a list of all packages under those
+    directories, Skipping 'CVS', '.svn', 'svn', '.git', '', 'dtnrmagent.egg-
+    info' files."""
     if not packageDirs:
         packageDirs = []
     if not ignoreThese:
@@ -113,5 +116,5 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
 
 
 def get_py_modules(modulesDirs):
-    """ Get py modules for setup.py """
+    """Get py modules for setup.py."""
     return list_packages(modulesDirs, pyFiles=True)

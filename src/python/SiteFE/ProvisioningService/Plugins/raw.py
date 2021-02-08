@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-"""
-    Raw switch configuration. Means all rules are in place and it always
-    succeed.
+#!/usr/bin/env python3
+"""Raw switch configuration. Means all rules are in place and it always
+succeed.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,21 +12,19 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
-
-
-class mainCaller(object):
-    """ Main call for RAW Plugin """
+class mainCaller():
+    """Main call for RAW Plugin."""
     def __init__(self):
         self.name = 'RAW'
 
     def mainCall(self, stateCall, inputDict, actionState):
-        """ Main caller function which calls specific state """
+        """Main caller function which calls specific state."""
         out = {}
         if stateCall == 'accepting':
             out = self.accepting(inputDict, actionState)
@@ -52,39 +49,39 @@ class mainCaller(object):
         return out
 
     def accepting(self, inputDict, actionState):
-        """ Accepting state actions """
+        """Accepting state actions."""
         return True
 
     def accepted(self, inputDict, actionState):
-        """ Accepted state actions """
+        """Accepted state actions."""
         return True
 
     def committing(self, inputDict, actionState):
-        """ Committing state actions """
+        """Committing state actions."""
         return True
 
     def committed(self, inputDict, actionState):
-        """ Committed state actions """
+        """Committed state actions."""
         return True
 
     def activating(self, inputDict, actionState):
-        """ Activating state actions """
+        """Activating state actions."""
         return True
 
     def active(self, inputDict, actionState):
-        """ Activating state actions """
+        """Activating state actions."""
         return True
 
     def activated(self, inputDict, actionState):
-        """ Activating state actions """
+        """Activating state actions."""
         return True
 
     def failed(self, inputDict, actionState):
-        """ Failed state actions """
+        """Failed state actions."""
         return True
 
     def remove(self, inputDict, actionState):
-        """ Remove state actions """
+        """Remove state actions."""
         return True
 
 

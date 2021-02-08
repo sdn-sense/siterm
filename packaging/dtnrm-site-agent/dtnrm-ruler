@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This part of code is taken from:
    https://web.archive.org/web/20160305151936/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
@@ -7,6 +7,8 @@ Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
+from __future__ import print_function
+from builtins import str
 import sys
 import time
 import socket
@@ -56,7 +58,7 @@ class MyDaemon(Daemon):
 if __name__ == "__main__":
     DAEMON = MyDaemon('/tmp/dtnrm-ruler-update.pid')
     if len(sys.argv) != 2:
-        print 'ERROR: Options available: %s ' % DAEMON.availableCommands
+        print('ERROR: Options available: %s ' % DAEMON.availableCommands)
         exit(1)
     if sys.argv[1] in DAEMON.availableCommands:
         if sys.argv[1] == 'startforeground':

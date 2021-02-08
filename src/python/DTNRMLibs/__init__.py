@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-"""
-DTN RM Libraries
-"""
+#!/usr/bin/env python3
+"""DTN RM Libraries."""
 __all__ = []
 # IMPORTANT Be aware if you update version here, please update it also in:
 # setupUtilities.py

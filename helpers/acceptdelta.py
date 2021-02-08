@@ -1,5 +1,6 @@
-#!/usr/bin/env python
-""" Change delta state to activating """
+#!/usr/bin/env python3
+"""Change delta state to activating."""
+from builtins import str
 import sys
 import tempfile
 import ast
@@ -17,13 +18,15 @@ STATEMACHINE = StateMachine(LOGGER)
 
 
 def getdeltaAll(sitename, deltaUID):
-    """ Get all deltas for specific Site.
-        INPUT: sitename  - str mandatory
-               deltaUID  - str mandatory"""
+    """Get all deltas for specific Site.
+
+    INPUT: sitename  - str mandatory
+           deltaUID  - str mandatory
+    """
     siteDB = contentDB(logger=LOGGER, config=CONFIG)
     policer = polS.PolicyService(CONFIG, LOGGER)
     delta, dbObj = getdeltainfo(sitename, deltaUID)
-    tmpFile = tempfile.NamedTemporaryFile(delete=False)
+    tmpFile = tempfile.NamedTemporaryFile(delete=False, mode="w+")
     tmpFile.close()
     outContent = {"ID": delta['uid'],
                   "InsertTime": delta['insertdate'],
@@ -39,9 +42,11 @@ def getdeltaAll(sitename, deltaUID):
 
 
 def getdeltainfo(sitename, deltaUID):
-    """ Get all delta information.
-        INPUT: sitename  - str mandatory
-               deltaUID  - str mandatory"""
+    """Get all delta information.
+
+    INPUT: sitename  - str mandatory
+           deltaUID  - str mandatory
+    """
     dbI = getDBConn('acceptdelta')
     dbobj = getVal(dbI, sitename=sitename)
     for delta in dbobj.get('deltas'):
@@ -64,7 +69,7 @@ def getdeltainfo(sitename, deltaUID):
         for deltatimes in dbobj.get('states', search=[['deltaid', delta['uid']]]):
             LOGGER.info('State: %s Date: %s', deltatimes['state'], deltatimes['insertdate'])
         if delta['deltat'] in ['reduction', 'addition']:
-            for hostname in delta[delta['deltat']]['hosts'].keys():
+            for hostname in list(delta[delta['deltat']]['hosts'].keys()):
                 LOGGER.info('-' * 20)
                 LOGGER.info('Host States %s', hostname)
                 for hoststate in dbobj.get('hoststates', search=[['deltaid', delta['uid']], ['hostname', hostname]]):

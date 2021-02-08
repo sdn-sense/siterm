@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 """
 Chown database file automatically. This is needed because we do
 our new site deployments automatically via git configurations.
@@ -18,6 +18,7 @@ Email             : justas.balcas (at) cern.ch
 @Copyright        : Copyright (C) 2020 California Institute of Technology
 Date            : 2020/09/29
 """
+from __future__ import print_function
 import os
 import sys
 import pprint
@@ -26,13 +27,13 @@ from DTNRMLibs.MainUtilities import getGitConfig
 
 
 def callCommand(command):
-    """ Call *nix command """
+    """Call *nix command."""
     cmdCall = subprocess.Popen(command, shell=True)
     cmdCall.communicate()
 
 
 def getLatestVersion():
-    """ Get Latest version name from Github repo """
+    """Get Latest version name from Github repo."""
     callCommand("cd /opt/dtnrmcode/siterm/ && git pull")
     sys.path.append('/opt/dtnrmcode/siterm/')
     import setupUtilities
@@ -40,15 +41,18 @@ def getLatestVersion():
 
 
 def agentUpdater():
-    """ Update Agent. Restarts all services """
+    """Update Agent.
+
+    Restarts all services
+    """
     import DTNRMAgent
     installedVersion = DTNRMAgent.__version__
     latestVersion = getLatestVersion()
     if installedVersion != latestVersion:
-        print 'Installed version: %s. Latest Version %s' % (installedVersion, latestVersion)
+        print('Installed version: %s. Latest Version %s' % (installedVersion, latestVersion))
         # Stop all services
         for service in ['dtnrmagent-update', 'dtnrm-ruler']:
-            print 'Stop %s' % service
+            print('Stop %s' % service)
             callCommand('%s stop' % service)
         # Install new code;
         callCommand('cd /opt/dtnrmcode/siterm/ && python setup-agent.py install')
@@ -57,23 +61,26 @@ def agentUpdater():
             callCommand('python /opt/dtnrmcode/siterm/update/agent-%s.py' % latestVersion)
         # Start all services
         for service in ['dtnrmagent-update', 'dtnrm-ruler']:
-            print 'Stop %s' % service
+            print('Stop %s' % service)
             callCommand('%s start' % service)
         # Update crontab entries
         callCommand("crontab /etc/cron.d/siterm-crons")
 
 
 def feUpdater():
-    """ Frontend Update. Restarts all services """
+    """Frontend Update.
+
+    Restarts all services
+    """
     import SiteFE
     installedVersion = SiteFE.__version__
     latestVersion = getLatestVersion()
     if installedVersion != latestVersion:
-        print 'Installed version: %s. Latest Version %s' % (installedVersion, latestVersion)
+        print('Installed version: %s. Latest Version %s' % (installedVersion, latestVersion))
         # Stop all services
         for service in ['/usr/sbin/httpd -k', 'LookUpService-update',
                         'PolicyService-update', 'ProvisioningService-update']:
-            print 'Stop %s' % service
+            print('Stop %s' % service)
             callCommand('%s stop' % service)
         # Install new code;
         callCommand('cd /opt/dtnrmcode/siterm/ && python setup-sitefe.py install')
@@ -83,26 +90,26 @@ def feUpdater():
         # Start all services
         for service in ['/usr/sbin/httpd -k', 'LookUpService-update',
                         'PolicyService-update', 'ProvisioningService-update']:
-            print 'Stop %s' % service
+            print('Stop %s' % service)
             callCommand('%s start' % service)
         # Update crontab entries
         callCommand("crontab /etc/cron.d/siterm-crons")
 
 
 def checkAutoUpdate(config):
-    """ Check if auto update is enabled in configuration """
+    """Check if auto update is enabled in configuration."""
     autoupdate = True
-    if 'autoupdate' in config['MAIN']['general'].keys():
+    if 'autoupdate' in list(config['MAIN']['general'].keys()):
         autoupdate = bool(config['MAIN']['general']['autoupdate'])
     if not autoupdate:
-        print 'Auto Update disabled in configuration. Skipping auto update'
+        print('Auto Update disabled in configuration. Skipping auto update')
         return
     if config['MAPPING']['type'] == 'Agent':
         agentUpdater()
     elif config['MAPPING']['type'] == 'FE':
         feUpdater()
     else:
-        print 'Unknown TYPE. Ignoring Auto Update.'
+        print('Unknown TYPE. Ignoring Auto Update.')
 
 
 if __name__ == '__main__':

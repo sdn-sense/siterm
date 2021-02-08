@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-"""
-DTN RM Site Agent init
-"""
+#!/usr/bin/env python3
+"""DTN RM Site Agent init."""
 __all__ = []

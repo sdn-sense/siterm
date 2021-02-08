@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 # pylint: disable=line-too-long
 """
 Copyright 2020 California Institute of Technology
@@ -17,6 +17,7 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2020 California Institute of Technology
 Date                    : 2020/09/25
 """
+from builtins import object
 from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getUTCnow
 from prometheus_client import generate_latest, CollectorRegistry
@@ -24,18 +25,18 @@ from prometheus_client import Enum, CONTENT_TYPE_LATEST
 
 
 class PrometheusAPI(object):
-    """ Prometheus exporter class"""
+    """Prometheus exporter class."""
     def __init__(self):
         self.dbI = getDBConn('Prometheus')
 
     @staticmethod
     def cleanRegistry():
-        """ Get new/clean prometheus registry """
+        """Get new/clean prometheus registry."""
         registry = CollectorRegistry()
         return registry
 
     def getServiceStates(self, registry, **kwargs):
-        """ Get all Services states """
+        """Get all Services states."""
         serviceState = Enum('service_state', 'Description of enum',
                             labelnames=['servicename'],
                             states=['OK', 'UNKNOWN', 'FAILED', 'KEYBOARDINTERRUPT'],
@@ -52,7 +53,7 @@ class PrometheusAPI(object):
             serviceState.labels(servicename=service['servicename']).state(state)
 
     def metrics(self, **kwargs):
-        """ Return all available Hosts, where key is IP address """
+        """Return all available Hosts, where key is IP address."""
         registry = self.cleanRegistry()
         self.getServiceStates(registry, **kwargs)
         data = generate_latest(registry)

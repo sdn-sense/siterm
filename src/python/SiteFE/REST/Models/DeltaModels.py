@@ -1,7 +1,6 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 # pylint: disable=line-too-long, bad-whitespace
-"""
-Site FE call functions
+"""Site FE call functions.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +12,14 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
+Title                   : dtnrm
+Author                  : Justas Balcas
+Email                   : justas.balcas (at) cern.ch
+@Copyright              : Copyright (C) 2016 California Institute of Technology
+Date                    : 2017/09/26
 """
+from __future__ import print_function
+from builtins import object
 from tempfile import NamedTemporaryFile
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
@@ -37,7 +38,7 @@ from DTNRMLibs.MainUtilities import getVal
 
 
 class frontendDeltaModels(object):
-    """ Delta Actions through Frontend interface """
+    """Delta Actions through Frontend interface."""
     def __init__(self, logger, config=None):
         self.dbI = getDBConn('REST-DELTA')
         self.config = getConfig()
@@ -52,7 +53,7 @@ class frontendDeltaModels(object):
         self.siteDB = contentDB(logger=self.logger, config=self.config)
 
     def addNewDelta(self, uploadContent, environ, **kwargs):
-        """ Add new delta """
+        """Add new delta."""
         dbobj = getVal(self.dbI, **kwargs)
         hashNum = uploadContent['id']
         if dbobj.get('deltas', search=[['uid', hashNum]], limit=1):
@@ -60,7 +61,7 @@ class frontendDeltaModels(object):
             msg = 'Something weird has happened... Check server logs; Same ID is already in DB'
             kwargs['http_respond'].ret_409('application/json', kwargs['start_response'], None)
             return getCustomOutMsg(errMsg=msg, errCode=409)
-        tmpfd = NamedTemporaryFile(delete=False)
+        tmpfd = NamedTemporaryFile(delete=False, mode="w+")
         tmpfd.close()
         self.getmodel(uploadContent['modelId'], **kwargs)
         outContent = {"ID": hashNum,
@@ -78,7 +79,7 @@ class frontendDeltaModels(object):
                    'state': out['State'],
                    'reduction': out['ParsedDelta']['reduction'],
                    'addition': out['ParsedDelta']['addition']}
-        print 'Delta was %s. Returning info %s' % (out['State'], outDict)
+        print('Delta was %s. Returning info %s' % (out['State'], outDict))
         if out['State'] in ['accepted']:
             kwargs['http_respond'].ret_201('application/json', kwargs['start_response'],
                                            [('Last-Modified', httpdate(out['UpdateTime'])),
@@ -86,15 +87,15 @@ class frontendDeltaModels(object):
             return outDict
         else:
             kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
-            if 'Error' in out.keys():
+            if 'Error' in list(out.keys()):
                 errMsg = ""
                 for key in ['errorNo', 'errorType', 'errMsg']:
-                    if key in out['Error'].keys():
+                    if key in list(out['Error'].keys()):
                         errMsg += " %s: %s" % (key, out['Error'][key])
             return getCustomOutMsg(errMsg=errMsg, exitCode=500)
 
     def getdelta(self, deltaID=None, **kwargs):
-        """ Get delta from file """
+        """Get delta from file."""
         dbobj = getVal(self.dbI, **kwargs)
         if not deltaID:
             return dbobj.get('deltas')
@@ -104,12 +105,12 @@ class frontendDeltaModels(object):
         return out[0]
 
     def getHostNameIDs(self, hostname, state, **kwargs):
-        """ Get Hostname IDs """
+        """Get Hostname IDs."""
         dbobj = getVal(self.dbI, **kwargs)
         return dbobj.get('hoststates', search=[['hostname', hostname], ['state', state]])
 
     def getmodel(self, modelID=None, content=False, **kwargs):
-        """ Get all models """
+        """Get all models."""
         dbobj = getVal(self.dbI, **kwargs)
         if not modelID:
             return dbobj.get('models', orderby=['insertdate', 'DESC'])
@@ -121,7 +122,7 @@ class frontendDeltaModels(object):
         return model[0]
 
     def commitdelta(self, deltaID, newState='UNKNOWN', internal=False, hostname=None, **kwargs):
-        """ Change delta state """
+        """Change delta state."""
         dbobj = getVal(self.dbI, **kwargs)
         if internal:
             out = dbobj.get('hoststates', search=[['deltaid', deltaID], ['hostname', hostname]])
@@ -135,11 +136,11 @@ class frontendDeltaModels(object):
             return getCustomOutMsg(msg='Internal State change approved', exitCode=200)
         else:
             delta = self.getdelta(deltaID, **kwargs)
-            print 'Commit Action for delta %s' % delta
+            print('Commit Action for delta %s' % delta)
             # Now we go directly to commited in case of commit
             if delta['state'] != 'accepted':
                 msg = "Delta    state in the system is not in accepted state. \
                       State on the system: %s. Not allowed to change." % delta['state']
-                print msg
+                print(msg)
                 raise WrongDeltaStatusTransition(msg)
             self.stateM.commit(dbobj, {'uid': deltaID, 'state': 'committing'})

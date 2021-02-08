@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
     LookUpService gets all information and prepares MRML schema.
     TODO: Append switch information;
@@ -19,29 +19,34 @@ Email             : justas.balcas (at) cern.ch
 @Copyright        : Copyright (C) 2016 California Institute of Technology
 Date            : 2017/09/26
 """
+from __future__ import print_function
+from builtins import object
 import copy
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 from DTNRMLibs.MainUtilities import evaldict
 
 
 def getNodeDictVlans(nodesInfo, hostname, switchName):
-    """ Get Node dictionary """
+    """Get Node dictionary."""
     if not nodesInfo:
         return None, {}
-    for _, nodeDict in nodesInfo['nodes'].items():
+    for _, nodeDict in list(nodesInfo['nodes'].items()):
         if nodeDict['hostname'] == hostname:
-            for intf, intfDict in nodeDict['NetInfo'].items():
-                print intfDict
+            for intf, intfDict in list(nodeDict['NetInfo'].items()):
+                print(intfDict)
                 if not isinstance(intfDict, dict):
-                    print 'Something is failing on agent. It did not sent dict!'
+                    print('Something is failing on agent. It did not sent dict!')
                     return None, {}
-                if 'switch' in intfDict.keys() and intfDict['switch'] == switchName:
+                if 'switch' in list(intfDict.keys()) and intfDict['switch'] == switchName:
                     return intf, intfDict
     return None, {}
 
 
 class Switch(object):
-    """ RAW Switch plugin. All info comes from yaml files. """
+    """RAW Switch plugin.
+
+    All info comes from yaml files.
+    """
     def __init__(self, config, logger, nodesInfo, site):
         self.config = config
         self.logger = logger
@@ -52,7 +57,7 @@ class Switch(object):
         self.output = {'switches': {}, 'vlans': {}}
 
     def getinfo(self):
-        """ Get info about RAW plugin """
+        """Get info about RAW plugin."""
         if not self.config.has_section(self.site):
             self.logger.info('SiteName %s is not defined' % self.site)
             return self.output
@@ -69,21 +74,20 @@ class Switch(object):
         return self.cleanupEmpty()
 
     def cleanupEmpty(self):
-        """  Final check remove empty dicts/lists inside output """
-        print self.output
+        """Final check remove empty dicts/lists inside output."""
         tmpOut = copy.deepcopy(self.output)
-        for sw, swd in self.output['switches'].items():
+        for sw, swd in list(self.output['switches'].items()):
             if not swd:
                 del tmpOut['switches'][sw]
                 continue
-            for swp, swpVal in self.output['switches'][sw].items():
-                if not swpVal:
+            for swp, swpVal in list(self.output['switches'][sw].items()):
+                if not swpVal and not self.output.get('vlans', {}).get(sw, {}).get(swp, {}).get('isAlias'):
                     del tmpOut['switches'][sw][swp]
                     continue
         return tmpOut
 
     def getValFromConfig(self, switch, port, key):
-        """ Get val from config."""
+        """Get val from config."""
         tmpVal = self.config.get(switch, "port%s%s" % (port, key))
         try:
             tmpVal = int(tmpVal)
@@ -92,7 +96,7 @@ class Switch(object):
         return tmpVal
 
     def switchInfo(self, switch):
-        """ Get all switch info from FE main yaml file. """
+        """Get all switch info from FE main yaml file."""
         self.output['switches'][switch] = {}
         self.output['vlans'][switch] = {}
         for port in self.config.get(switch, 'ports').split(','):
@@ -115,26 +119,26 @@ class Switch(object):
                 self.output['switches'][switch][port] = self.getValFromConfig(switch, port, 'hostname')
             elif self.config.has_option(switch, "port%sisAlias" % port):
                 spltAlias = self.getValFromConfig(switch, port, 'isAlias').split(':')
-                self.output['switches'][switch][port] = spltAlias[-2]
+                #self.output['switches'][switch][port] = spltAlias[-2]
                 self.output['vlans'][switch][port]['desttype'] = 'switch'
-                if 'destport' not in self.output['vlans'][switch][port].keys():
+                if 'destport' not in list(self.output['vlans'][switch][port].keys()):
                     self.output['vlans'][switch][port]['destport'] = spltAlias[-1]
-                if 'hostname' not in self.output['vlans'][switch][port].keys():
+                if 'hostname' not in list(self.output['vlans'][switch][port].keys()):
                     self.output['vlans'][switch][port]['hostname'] = spltAlias[-2]
 
     def nodeinfo(self):
-        """ put  all node information from node reported stats """
-        for _, nodeDict in self.nodesInfo.items():
+        """put  all node information from node reported stats."""
+        for _, nodeDict in list(self.nodesInfo.items()):
             hostinfo = evaldict(nodeDict['hostinfo'])
-            for intfKey, intfDict in hostinfo['NetInfo']["interfaces"].items():
+            for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
                 breakLoop = False
                 for key in ['switch_port', 'switch', 'vlan_range', 'available_bandwidth']:
-                    if key not in intfDict.keys():
+                    if key not in list(intfDict.keys()):
                         breakLoop = True
                 if breakLoop:
                     continue
-                if intfDict['switch'] in self.output['switches'].keys():
-                    if intfDict['switch_port'] not in self.output['switches'][intfDict['switch']].keys():
+                if intfDict['switch'] in list(self.output['switches'].keys()):
+                    if intfDict['switch_port'] not in list(self.output['switches'][intfDict['switch']].keys()):
                         self.logger.debug('Frontend Config is not configured to use this Port %s',
                                           intfDict['switch_port'])
                         continue
@@ -147,18 +151,18 @@ class Switch(object):
                     self.output['vlans'][switch][switchp]['desttype'] = 'server'
                     self.output['vlans'][switch][switchp]['vlan_range'] = intfDict['vlan_range']
                     self.output['vlans'][switch][switchp]['capacity'] = intfDict['available_bandwidth']
-                    if 'isAlias' in intfDict.keys():
+                    if 'isAlias' in list(intfDict.keys()):
                         self.output['vlans'][switch][switchp]['isAlias'] = intfDict['isAlias']
         if self.config.has_option(self.site, "l3_routing_map"):
             routingMap = self.config.get(self.site, "l3_routing_map")
             self.output['l3_routing'] = evaldict(routingMap)
 
 if __name__ == '__main__':
-    print 'WARNING!!!! This should not be used through main call. Only for testing purposes!!!'
+    print('WARNING!!!! This should not be used through main call. Only for testing purposes!!!')
     CONFIG = getConfig()
     COMPONENT = 'LookUpService'
     LOGGER = getStreamLogger()
     for sitename in CONFIG.get('general', 'sites').split(','):
-        print 'Working on %s' % sitename
+        print('Working on %s' % sitename)
         method = Switch(CONFIG, LOGGER, None, sitename)
-        print method.getinfo()
+        print(method.getinfo())

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
     LookUpService gets all information and prepares MRML schema.
     TODO: Append switch information;
