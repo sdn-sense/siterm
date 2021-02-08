@@ -122,6 +122,8 @@ def getLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='mi
 
 def evaldict(inputDict):
     """Output from the server needs to be evaluated."""
+    if not inputDict:
+        return {}
     if isinstance(inputDict, (list, dict)):
         return inputDict
     out = {}
