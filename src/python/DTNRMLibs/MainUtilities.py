@@ -128,10 +128,12 @@ def evaldict(inputDict):
     try:
         out = ast.literal_eval(inputDict)
     except ValueError as ex:
-        print("Failed to literal eval dict. Err:%s " % ex)
+        print("ValError: Failed to literal eval dict. Err:%s " % ex)
+        out = json.loads(inputDict)
     except SyntaxError as ex:
-        print("Failed to literal eval dict. Err:%s " % ex)
+        print("SyntaxError: Failed to literal eval dict. Err:%s " % ex)
     return out
+
 
 
 def readFile(fileName):
