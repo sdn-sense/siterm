@@ -167,28 +167,16 @@ def internallCall(caller, environ, **kwargs):
     return returnDict
 
 
-def dumplist(out):
-    if isinstance(out, list):
-        for i in range(0, len(out)):
-            if isinstance(out[i], dict):
-                out[i] = json.dumps(out[i]).encode('UTF-8')
-            elif isinstance(out[i], str):
-                out[i] = out[i].encode('UTF-8')
-    return out
-
 def isiterable(inVal):
   return not isinstance(inVal, str) and isinstance(inVal, collections.Iterable)
 
 def returnDump(out):
     """Return output based on it's type."""
-    if isinstance(out, list):
-        out = dumplist(out)
-    elif isinstance(out, dict):
+    if isinstance(out, (list, dict)):
         out = [json.dumps(out).encode('UTF-8')]
     elif not isiterable(out):
         out = [out.encode('UTF-8')]
     return out
-
 
 
 def application(environ, start_response):
