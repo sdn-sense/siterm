@@ -134,13 +134,14 @@ class frontendDeltaModels(object):
                                                                   'insertdate': getUTCnow(),
                                                                   'hostname': hostname})
             return getCustomOutMsg(msg='Internal State change approved', exitCode=200)
-        else:
-            delta = self.getdelta(deltaID, **kwargs)
-            print('Commit Action for delta %s' % delta)
-            # Now we go directly to commited in case of commit
-            if delta['state'] != 'accepted':
-                msg = "Delta    state in the system is not in accepted state. \
-                      State on the system: %s. Not allowed to change." % delta['state']
-                print(msg)
-                raise WrongDeltaStatusTransition(msg)
-            self.stateM.commit(dbobj, {'uid': deltaID, 'state': 'committing'})
+        delta = self.getdelta(deltaID, **kwargs)
+        print('Commit Action for delta %s' % delta)
+        # Now we go directly to commited in case of commit
+        if delta['state'] != 'accepted':
+            msg = "Delta    state in the system is not in accepted state. \
+                  State on the system: %s. Not allowed to change." % delta['state']
+            print(msg)
+            raise WrongDeltaStatusTransition(msg)
+        self.stateM.commit(dbobj, {'uid': deltaID, 'state': 'committing'})
+        return {'status': 'OK'}
+
