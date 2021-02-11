@@ -1,0 +1,221 @@
+<html lang="en"><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="assets/css/bootstrap.css" rel="stylesheet">
+    <script src="assets/js/jquery.min.js" type="text/javascript"></script>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+//<![CDATA[
+        google.load('visualization', '1', {packages:['table', 'controls']});
+        $(document).ready(function() {
+            load_data();
+            //setInterval(load_data, 300000);
+        });
+
+        function defineSites(data) {
+
+            sitesTab = $('<ul class="nav nav-pills" id="myTab" role="tablist"></ul>');
+            allSites = $('<div id="sites" class="tab-content"></div>');
+            for (i=0; i < data['general']['sites'].length; i++){
+                sitename = data['general']['sites'][i];
+                nName = sitename;
+                // FE Config
+                sitesTab.append('<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="'+ nName +'" aria-selected="false" id="tab_fe_'+ nName +'"  href="#view_fe_'+ nName +'">' + nName + ' FE</a></li>');
+                allSites.append('<div class="tab-pane fade" role="tabpanel" aria-labelledby="tab_fe_'+ nName +'" id="view_fe_'+ nName +'"></div>');
+                // All DTNs
+                for (j=0; j < data['hostinfo'][sitename].length; j++){
+                    dtns = data['hostinfo'][sitename][j];
+                    htmlhostname = dtns['hostname'].replace(/\./g,'_');
+                    nName = sitename + "_" + htmlhostname;
+                    sitesTab.append('<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="'+ nName +'" aria-selected="false" id="tab_'+ nName +'"  href="#view_'+ nName +'">' + dtns['hostname'] + '</a></li>');
+                    allSites.append('<div class="tab-pane fade row" role="tabpanel" aria-labelledby="tab_' + nName + '" id="view_'+ nName +'"></div>');
+                };
+            };
+            $("#sites_tab").append(sitesTab);
+            $("#main_tab").append(allSites);
+        }
+
+        function dumpData(data, configLine) {
+            if (Array.isArray(data)) {
+                for (i=0; i < data.length; i++){
+                    dumpData(data[i], configLine);
+                }}
+            else if ($.isPlainObject(data)) {
+                for (var key in data){
+                    configLine.append("<b>"+ key +":</b>  ");
+                    dumpData(data[key], configLine);
+                    configLine.append("</br>");
+                }}
+            else {
+                configLine.append(data + " ");
+            }
+        }
+
+        function defineDTNConfig(data, sitename, hostname) {
+          htmlhostname = hostname.replace(/\./g,'_');
+          menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"></div>');
+          cntDiv = $('<div class="tab-content" id="v-pills-tabContent"></div>');
+          for (var key in data['hostinfo']){
+             if ($.isPlainObject(data['hostinfo'][key])){
+               menCol.append('<a class="nav-link" id="v-pills-'+key+'-tab" data-toggle="pill" href="#v-pills-'+key+'" role="tab" aria-controls="v-pills-'+ key +'" aria-selected="true">'+ key +'</a>');
+               cntDiv.append('<div class="tab-pane fade" id="v-pills-'+key+'" role="tabpanel" aria-labelledby="v-pills-'+key+'-tab"></div>');
+             } 
+          }
+          nRow = $('<div class="row">');
+          menCol = $('<div class="col-3">').append(menCol);
+          cntDiv = $('<div class="col-6">').append(cntDiv);
+          nRow.append(menCol).append(cntDiv);
+          $('#view_'+sitename+'_'+ htmlhostname ).append(nRow);
+
+          for (var key in data['hostinfo']){
+            //if ($.isPlainObject(data['hostinfo'][key])){ continue;}
+            sitesConfig = $('<table id="agent_'+ htmlhostname +'_'+ key +'" class="table"></table>');
+            sitesConfig.append('<thead class="thead-dark"><tr><th scope="col">Parameter</th><th scope="col">Value</th></tr></thead>');
+            for (var key1 in data['hostinfo'][key]) {
+                line = $('<tr></tr>');
+                configLine = $('<td></td>');
+                line.append('<th scope="row">'+ key1 +'</th>');
+                dumpData(data['hostinfo'][key][key1], configLine);
+                line.append(configLine);
+                sitesConfig.append(line);
+            }
+            $('#v-pills-' + key).append(sitesConfig);
+          };
+       // $('#view_fe_'+ sitename).append(sitesConfig);
+}
+
+        function defineSitesConfig(data, sitename) {
+          sitesConfig = $('<table id="viewtb_'+ sitename +'" class="table"></table>');
+          sitesConfig.append('<thead class="thead-dark"><tr><th scope="col">Parameter</th><th scope="col">Value</th></tr></thead>');
+          for (var key in data){
+            if (key == 'hostinfo') {continue;}
+            line = $('<tr></tr>');
+            line.append('<th scope="row">'+ key +'</th>');
+            configLine = $('<td></td>');
+            dumpData(data[key], configLine);
+            line.append(configLine);
+            sitesConfig.append(line);
+         }
+        $('#view_fe_'+ sitename).append(sitesConfig);
+        }
+
+        function load_data() {
+            $.get('config.json', function(data){
+              data['hostinfo'] = {};
+              for (i=0; i < data['general']['sites'].length; i++){
+                sitename = data['general']['sites'][i];
+                $.ajax({url: data['general']['sites'][i] + '/sitefe/json/frontend/getdata', 
+                  dataType: 'json',
+                  data: data,
+                  async: false, 
+                  success: function(json){
+                      for (j=0; j < json.length; j++){
+                      var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
+                      json[j]['hostinfo'] = myObject;
+                    }
+                    data['hostinfo'][sitename] = json;
+                  }
+                });
+            defineSites(data);
+            for (i=0; i < data['general']['sites'].length; i++){
+                sitename = data['general']['sites'][i];
+                defineSitesConfig(data, sitename);
+                for (j=0; j < data['hostinfo'][sitename].length; j++){
+                  defineDTNConfig(data['hostinfo'][sitename][j], sitename, data['hostinfo'][sitename][j]['hostname']);
+                }
+            };
+            }}
+       )};
+//]]>
+        </script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/loader.js"></script>
+
+
+    <title>Hello, world!</title>
+  <link id="load-css-0" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/core/tooltip.css"><link id="load-css-1" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/util/util.css"><link id="load-css-2" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/table/table.css"><link id="load-css-3" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/util/format.css"><link id="load-css-4" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/controls/controls.css"><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_default_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_graphics_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_ui_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_table_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_controls_module.js"></script></head>
+  <body>
+
+<header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+  <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
+  <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+</header>
+
+<div class="container-fluid">
+  <div class="row">
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+      <div class="position-sticky pt-3">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="/index.html">
+              <span data-feather="home"></span>
+              Frontend Configuration
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <span data-feather="file"></span>
+              Orders
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <span data-feather="shopping-cart"></span>
+              Products
+            </a>
+          </li>
+        </ul>
+
+        <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+          <span>Debugging tools</span>
+          <a class="link-secondary" href="#" aria-label="Add a new report">
+            <span data-feather="plus-circle"></span>
+          </a>
+        </h6>
+        <ul class="nav flex-column mb-2">
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <span data-feather="file-text"></span>
+              TCP Dump
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <span data-feather="file-text"></span>
+              ARP Table
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">
+              <span data-feather="file-text"></span>
+              Ping
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Dashboard</h1>
+      </div>
+        <div class="row" id="maindiv">
+
+        </div>
+<div id="sites_tab"></div>
+<div id="main_tab"></div>
+
+    </main>
+  </div>
+</div>
+    <script src="assets/js/bootstrap.bundle.js"></script>
+    <script src="assets/js/bootstrap.js"></script>
+    <script>
+      $('#myTab a').click(function (e) {
+        e.preventDefault();
+        $(this).tab('show');
+      })
+    </script>
+
+
+</body></html>
