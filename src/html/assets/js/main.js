@@ -1,3 +1,31 @@
+var entityMap = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+  '/': '&#x2F;',
+  '`': '&#x60;',
+  '=': '&#x3D;',
+};
+
+function escapeHtml (string) {
+  return String(string).replace(/[&<>"'`=\/]/g, function (s) {
+    return entityMap[s];
+  });
+}
+
+      function mrmlSaver(dataIn, saveObj) {
+          modCod = $('<code></code>');
+          preCod = $('<pre></pre>');
+          splData = dataIn.split("\n");
+          for (line in splData){
+              preCod.append('<div class="row model-row">' + escapeHtml(splData[line]) + '</div>');
+          }
+          modCod.append(preCod);
+          saveObj.append(modCod);
+    }
+
         function defineSites(data, definehosts=true) {
             sitesTab = $('<ul class="nav nav-pills" id="myTab" role="tablist"></ul>');
             allSites = $('<div id="sites" class="tab-content"></div>');

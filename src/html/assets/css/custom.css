@@ -3,3 +3,7 @@
   margin-right: 0px;
 }
 
+#breakword {
+  word-wrap: break-word;
+  white-space: normal;
+}

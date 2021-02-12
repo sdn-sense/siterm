@@ -14,23 +14,6 @@
             //setInterval(load_data, 300000);
         });
 
-var entityMap = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-  '/': '&#x2F;',
-  '`': '&#x60;',
-  '=': '&#x3D;',
-};
-
-function escapeHtml (string) {
-  return String(string).replace(/[&<>"'`=\/]/g, function (s) {
-    return entityMap[s];
-  });
-}
-
        function loadModel(modelID, sitename)
        {
           var data;
@@ -44,18 +27,9 @@ function escapeHtml (string) {
               model.append('<div class="row"><b>Href: </b>' + json['href'] + '</div>');
               model.append('<div class="row"><b>ID: </b>' + json['id'] + '</div>');
               model.append('<div class="row"><b>Full Model:</b></div>');
-              modCod = $('<code></code>');
-              preCod = $('<pre></pre>');
-              splModel = json['model'].split("\n");
-              for (line in splModel){
-                  preCod.append('<div class="row model-row">' + escapeHtml(splModel[line]) + '</div>');
-              }
-              modCod.append(preCod);
-              model.append(modCod);
+              mrmlSaver(json['model'], model);
               $('#v-pills-' + modelID).append(model);
           }});
-
-          model = $('<div class="row"></div>');
        }
 
         function defineAllModels(data, sitename) {

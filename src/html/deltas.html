@@ -14,23 +14,6 @@
             //setInterval(load_data, 300000);
         });
 
-var entityMap = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-  '/': '&#x2F;',
-  '`': '&#x60;',
-  '=': '&#x3D;',
-};
-
-function escapeHtml (string) {
-  return String(string).replace(/[&<>"'`=\/]/g, function (s) {
-    return entityMap[s];
-  });
-}
-
        function loadModel(modelID, sitename)
        {
           var data;
@@ -39,21 +22,34 @@ function escapeHtml (string) {
             data: data,
             async: false,
             success: function(json){
-              console.log(json);
-              // TODO TODO TODO
+              json = json[0];
               model = $('<div></div>');
-              model.append('<div class="row"><b>Creation Time: </b>' + json['creationTime'] + '</div>');
-              model.append('<div class="row"><b>Href: </b>' + json['href'] + '</div>');
-              model.append('<div class="row"><b>ID: </b>' + json['id'] + '</div>');
-              model.append('<div class="row"><b>Full Model:</b></div>');
-              modCod = $('<code></code>');
-              preCod = $('<pre></pre>');
-              //splModel = json['model'].split("\n");
-              //for (line in splModel){
-              //    preCod.append('<div class="row model-row">' + escapeHtml(splModel[line]) + '</div>');
-              // }
-              modCod.append(preCod);
-              model.append(modCod);
+              model.append('<div class="row"><b>Delta UID: </b>' + json['uid'] + '</div>');
+              model.append('<div class="row"><b>Delta State: </b>' + json['state'] + '</div>');
+              model.append('<div class="row"><b>Insert Date: </b>' + json['insertdate'] + '</div>');
+              model.append('<div class="row"><b>Update Date: </b>' + json['updatedate'] + '</div>');
+              model.append('<div class="row"><b>Delta Type: </b>' + json['deltat'] + '</div>');
+              model.append('<div class="row"><b>Delta ModAdd: </b>' + json['modadd'] + '</div>');
+              model.append('<div class="row"><b>Delta ModelID: </b>' + json['modelid'] + '</div>');
+              model.append('<div class="row"><b>Delta ReductionID: </b>' + json['reductionid'] + '</div>');
+              model.append('<div class="row"><b>Delta ConnectionID: </b>' + json['connectionid'] + '</div>');
+              // addition json
+              model.append('<div class="row"><b>Delta Addition:</b></div>');
+              model.append('<div class="row"><code><pre id="breakword">'+json['addition']+'</pre></code></div>');
+              // reduction json
+              model.append('<div class="row"><b>Delta Reduction:</b></div>');
+              model.append('<div class="row"><code><pre id="breakword">'+json['reduction']+'</pre></code></div>');
+              // Delta Info From Orchestrator
+              model.append('<div class="row"><b>Full Delta Information From Orhestrator:</b></div>');
+              model.append('<div class="row">============================================</div>');
+              var myObject = (0, eval)('(' + json['content'] + ')');
+              model.append('<div class="row"><b>    Delta ID: </b>' + myObject['id'] + '</div>');
+              model.append('<div class="row"><b>    Last Modified: </b>' + myObject['lastModified'] + '</div>');
+              model.append('<div class="row"><b>    Model ID: </b>' + myObject['modelId'] + '</div>');
+              model.append('<div class="row"><b>    Model Addition: </b></div>');
+              mrmlSaver(myObject['addition'], model);
+              model.append('<div class="row"><b>    Model Reduction: </b></div>');
+              mrmlSaver(myObject['reduction'], model);
               $('#v-pills-' + modelID).append(model);
           }});
 
@@ -90,7 +86,6 @@ function escapeHtml (string) {
                    data: data,
                    async: false,
                    success: function(json){
-                     console.log(json);
                      data['deltas'][sitename] = json;
                   }});
               defineAllModels(data, sitename);
