@@ -14,10 +14,46 @@
             //setInterval(load_data, 300000);
         });
 
-       function loadModel(modelID, sitename)
+       function tableAdd(dataIn, dictkeys, saveObj){
+          tableTag = $('<table class="table"></table>');
+          theadTag = $('<thead class="thead-dark"></thead>');
+          trow = $('<tr></tr>');
+          for (key in dictkeys){
+              trow.append('<th scope="col">'+dictkeys[key]+'</th>');
+          }
+          theadTag.append(trow);
+          tableTag.append(theadTag);
+          for (rowid in dataIn){
+              trow = $('<tr></tr>');
+              for (key in dictkeys){trow.append('<td>'+dataIn[rowid][dictkeys[key]]+'</td>');}
+              tableTag.append(trow); 
+          }
+          saveObj.append(tableTag);
+       }
+       function deltaStates(deltaID, sitename, saveObj){
+          var data;
+          $.ajax({url: sitename + '/sitefe/v1/deltastates/'+ deltaID,
+            dataType: 'json', data: data, async: false,
+            success: function(json){
+                tableAdd(json, ['id', 'deltaid', 'insertdate', 'state'], saveObj);
+            }
+         });
+       }
+
+       function deltaHostStatesHistory(deltaID, sitename, saveObj){
+          var data;
+          $.ajax({url: sitename + '/sitefe/v1/deltahoststateshistory/'+ deltaID,
+            dataType: 'json', data: data, async: false,
+            success: function(json){
+                tableAdd(json, ['id', 'deltaid', 'hostname', 'insertdate', 'state'], saveObj);
+            }
+         });
+       }
+
+       function loadDelta(deltaID, sitename)
        {
           var data;
-          $.ajax({url: sitename + '/sitefe/v1/deltas/'+ modelID + '?encode=false&summary=false&oldview=true',
+          $.ajax({url: sitename + '/sitefe/v1/deltas/'+ deltaID + '?encode=false&summary=false&oldview=true',
             dataType: 'json',
             data: data,
             async: false,
@@ -50,10 +86,14 @@
               mrmlSaver(myObject['addition'], model);
               model.append('<div class="row"><b>    Model Reduction: </b></div>');
               mrmlSaver(myObject['reduction'], model);
-              $('#v-pills-' + modelID).append(model);
+              model.append('<div class="row"><b>DELTA STATES:</b></div>');
+              model.append('<div class="row">============================================</div>');
+              deltaStates(deltaID, sitename, model);
+              model.append('<div class="row"><b>DELTA HOST STATES:</b></div>');
+              model.append('<div class="row">============================================</div>');
+              deltaHostStatesHistory(deltaID, sitename, model);
+              $('#v-pills-' + deltaID).append(model);
           }});
-
-          model = $('<div class="row"></div>');
        }
 
         function defineAllModels(data, sitename) {
@@ -64,7 +104,7 @@
              if ($.isPlainObject(data['deltas'][sitename][key])){
                modID = data['deltas'][sitename][key]['id'];
                tagName = modID;
-               menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadModel(\''+modID+'\', \''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ tagName +'</a>');
+               menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadDelta(\''+modID+'\', \''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ tagName +'</a>');
                cntDiv.append('<div class="tab-pane fade" id="v-pills-'+modID+'" role="tabpanel" aria-labelledby="v-pills-'+modID+'-tab"></div>');
              }
           }

@@ -128,6 +128,57 @@ def deltas(environ, **kwargs):
 # =====================================================================================================================
 # =====================================================================================================================
 
+_DELTA_STATES_RE = re.compile(r'^/*v1/deltastates/([-_A-Za-z0-9]+)/?$')
+
+def delta_states(environ, **kwargs):
+    """
+    API Call for getting specific delta states information;
+    Method: GET
+    Output: application/json
+    Examples: https://server-host/sitefe/v1/deltastates/([-_A-Za-z0-9]+)/
+    """
+    deltaID = kwargs['mReg'].groups()[0]
+    print('Requested delta states for %s' % deltaID)
+    outstates = DELTABACKEND.getdeltastates(deltaID, **kwargs)
+    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
+    return outstates
+
+
+_DELTA_HOST_STATES_RE = re.compile(r'^/*v1/deltahoststates/([-_A-Za-z0-9]+)/?$')
+
+def delta_host_states(environ, **kwargs):
+    """
+    API Call for getting specific delta host states information;
+    Method: GET
+    Output: application/json
+    Examples: https://server-host/sitefe/v1/deltahoststates/([-_A-Za-z0-9]+)/
+    """
+    deltaID = kwargs['mReg'].groups()[0]
+    print('Requested delta host states for %s' % deltaID)
+    outstates = DELTABACKEND.getdeltahoststates(deltaID, **kwargs)
+    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
+    return outstates
+
+
+_DELTA_HOST_STATES_HISTORY_RE = re.compile(r'^/*v1/deltahoststateshistory/([-_A-Za-z0-9]+)/?$')
+
+def delta_host_states_history(environ, **kwargs):
+    """
+    API Call for getting specific delta host states history information;
+    Method: GET
+    Output: application/json
+    Examples: https://server-host/sitefe/v1/deltahoststateshistory/([-_A-Za-z0-9]+)/
+    """
+    deltaID = kwargs['mReg'].groups()[0]
+    print('Requested delta host states history for %s' % deltaID)
+    outstates = DELTABACKEND.getdeltahoststateshistory(deltaID, **kwargs)
+    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
+    return outstates
+
+
+# =====================================================================================================================
+# =====================================================================================================================
+
 _DELTAS_ID_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/?$')
 
 
@@ -330,4 +381,7 @@ CALLS = [(_DELTA_INTERNAL_ACTION_RE, delta_internal_actions, ['GET'], [], []),
                                                 {"key": "oldview", "default": False, "type": bool},
                                                 {"key": "encode", "default": True, "type": bool},
                                                 {"key": "model", "default": "turtle", "type": str, "options": ['turtle']}], []),
-         (_DELTA_HOSTNAME_IDS_RE, delta_hostname_ids, ['GET'], [], [])]
+         (_DELTA_HOSTNAME_IDS_RE, delta_hostname_ids, ['GET'], [], []),
+         (_DELTA_STATES_RE, delta_states, ['GET'], [], []),
+         (_DELTA_HOST_STATES_RE, delta_host_states, ['GET'], [], []),
+         (_DELTA_HOST_STATES_HISTORY_RE, delta_host_states_history, ['GET'], [], [])]
