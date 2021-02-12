@@ -71,6 +71,7 @@ function escapeHtml (string) {
           menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"></div>');
           cntDiv = $('<div class="tab-content" id="v-pills-tabContent"></div>');
           for (var key in data['hostinfo']){
+             if (key == 'Summary') {continue;}
              if ($.isPlainObject(data['hostinfo'][key])){
                menCol.append('<a class="nav-link" id="v-pills-'+key+'-tab" data-toggle="pill" href="#v-pills-'+key+'" role="tab" aria-controls="v-pills-'+ key +'" aria-selected="true">'+ key +'</a>');
                cntDiv.append('<div class="tab-pane fade" id="v-pills-'+key+'" role="tabpanel" aria-labelledby="v-pills-'+key+'-tab"></div>');
