@@ -573,7 +573,9 @@ def getModTime(headers):
 def encodebase64(inputStr, encodeFlag=True):
     """Encode str to base64."""
     if encodeFlag and inputStr:
-        return base64.b64encode(inputStr)
+        if isinstance(inputStr, bytes):
+            return base64.b64encode(inputStr.encode('UTF-8'))
+        return base64.b64encode(bytes(inputStr.encode('UTF-8')))
     return inputStr
 
 

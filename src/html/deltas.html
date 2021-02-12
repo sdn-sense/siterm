@@ -34,11 +34,13 @@ function escapeHtml (string) {
        function loadModel(modelID, sitename)
        {
           var data;
-          $.ajax({url: sitename + '/sitefe/v1/models/'+ modelID,
+          $.ajax({url: sitename + '/sitefe/v1/deltas/'+ modelID + '?encode=false&summary=false&oldview=true',
             dataType: 'json',
             data: data,
             async: false,
             success: function(json){
+              console.log(json);
+              // TODO TODO TODO
               model = $('<div></div>');
               model.append('<div class="row"><b>Creation Time: </b>' + json['creationTime'] + '</div>');
               model.append('<div class="row"><b>Href: </b>' + json['href'] + '</div>');
@@ -46,10 +48,10 @@ function escapeHtml (string) {
               model.append('<div class="row"><b>Full Model:</b></div>');
               modCod = $('<code></code>');
               preCod = $('<pre></pre>');
-              splModel = json['model'].split("\n");
-              for (line in splModel){
-                  preCod.append('<div class="row model-row">' + escapeHtml(splModel[line]) + '</div>');
-              }
+              //splModel = json['model'].split("\n");
+              //for (line in splModel){
+              //    preCod.append('<div class="row model-row">' + escapeHtml(splModel[line]) + '</div>');
+              // }
               modCod.append(preCod);
               model.append(modCod);
               $('#v-pills-' + modelID).append(model);
@@ -62,15 +64,10 @@ function escapeHtml (string) {
           menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"></div>');
           cntDiv = $('<div class="tab-content" id="v-pills-tabContent"></div>');
           latest = true;
-          for (var key in data['models'][sitename]){
-             if ($.isPlainObject(data['models'][sitename][key])){
-               modID = data['models'][sitename][key]['id'];
+          for (var key in data['deltas'][sitename]){
+             if ($.isPlainObject(data['deltas'][sitename][key])){
+               modID = data['deltas'][sitename][key]['id'];
                tagName = modID;
-               if (latest) {
-                   latest = false;
-                   tagName += " LATEST";
-               }
-                   
                menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadModel(\''+modID+'\', \''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ tagName +'</a>');
                cntDiv.append('<div class="tab-pane fade" id="v-pills-'+modID+'" role="tabpanel" aria-labelledby="v-pills-'+modID+'-tab"></div>');
              }
@@ -85,15 +82,16 @@ function escapeHtml (string) {
         function load_data() {
             $.get('config.json', function(data){
               defineSites(data, false);
-              data['models'] = {};
+              data['deltas'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
                  sitename = data['general']['sites'][i];
-                 $.ajax({url: sitename + '/sitefe/v1/models',
+                 $.ajax({url: sitename + '/sitefe/v1/deltas',
                    dataType: 'json',
                    data: data,
                    async: false,
                    success: function(json){
-                     data['models'][sitename] = json;
+                     console.log(json);
+                     data['deltas'][sitename] = json;
                   }});
               defineAllModels(data, sitename);
               }
