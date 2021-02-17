@@ -112,3 +112,44 @@ function escapeHtml (string) {
          }
         $('#view_fe_'+ sitename).append(sitesConfig);
         }
+
+        function doSiteUpdate(ids) {
+        strSite = document.getElementById(ids + "sitename").value;
+        $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
+            dataType: 'json', data: "", async: false,
+            success: function(json){
+                for (j=0; j < json.length; j++){
+                    addDropDown(json[j]['hostname'], $("#" + ids + "dtn"));
+                }
+            }
+        });
+        }
+
+        function doDTNUpdate(ids) {
+        strDTN = document.getElementById(ids + "dtn").value;
+        strSite = document.getElementById(ids + "sitename").value;
+        $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
+            dataType: 'json', data: "", async: false,
+            success: function(json){
+                for (j=0; j < json.length; j++){
+                    if (strDTN == json[j]['hostname']) {
+                        var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
+                        for (const [key, value] of Object.entries(myObject['NetInfo']['interfaces'])) {
+                            if (! $.isEmptyObject(value['vlans'])) {
+                              for (const [key1, value1] of Object.entries(value['vlans'])) {
+                                if (value1['provisioned']) {
+                                    addDropDown(key1, $("#" + ids + "interface"));
+                                }
+                              }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+      }
+
+        function addDropDown(dropdownVal, saveObj){
+          saveObj.append('<option>'+dropdownVal+'</option>');
+        }
+

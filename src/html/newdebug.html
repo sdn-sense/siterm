@@ -11,12 +11,58 @@
         google.load('visualization', '1', {packages:['table', 'controls']});
         $(document).ready(function() {
             load_data();
-            //setInterval(load_data, 300000);
         });
 
-        function load_data() {
-            var data;
+        function doSiteUpdate(ids) {
+        strSite = document.getElementById(ids + "sitename").value;
+        $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
+            dataType: 'json', data: "", async: false,
+            success: function(json){
+                for (j=0; j < json.length; j++){
+                    addDropDown(json[j]['hostname'], $("#" + ids + "dtn"));
+                }
+            }
+        });
         }
+
+        function doDTNUpdate(ids) {
+        strDTN = document.getElementById(ids + "dtn").value;
+        strSite = document.getElementById(ids + "sitename").value;
+        $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
+            dataType: 'json', data: "", async: false,
+            success: function(json){
+                for (j=0; j < json.length; j++){
+                    if (strDTN == json[j]['hostname']) {
+                        var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
+                        for (const [key, value] of Object.entries(myObject['NetInfo']['interfaces'])) {
+                            if (! $.isEmptyObject(value['vlans'])) {
+                              for (const [key1, value1] of Object.entries(value['vlans'])) {
+                                if (value1['provisioned']) {
+                                    addDropDown(key1, $("#" + ids + "interface"));
+                                }
+                              }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+      }
+
+        function addDropDown(dropdownVal, saveObj){
+          saveObj.append('<option>'+dropdownVal+'</option>');
+        }
+
+        function load_data() {
+          $.get('config.json', function(data){
+            for (i=0; i < data['general']['sites'].length; i++){
+              sitename = data['general']['sites'][i];
+              addDropDown(sitename, $("#f1_sitename"));
+              addDropDown(sitename, $("#f2_sitename"));
+              addDropDown(sitename, $("#f3_sitename"));
+            }
+          });
+       };
 //]]>
         </script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/loader.js"></script>
 
@@ -85,78 +131,105 @@
         <h1 class="h2">Dashboard</h1>
       </div>
         <div class="row" id="maindiv">
-<span class="border">
+
 <div class="row col-md-3">
-<form>
+<span class="border" style="width:100%">
+<h3 class="h3">Rapid Ping</h3>
+<form action="/T2_US_Caltech_Test1/sitefe/v1/rapidping">
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">Sitename</label>
+    <select class="form-control" id="f1_sitename" onchange="doSiteUpdate('f1_');" required>
+      <option value="">Choose Site</option>
+    </select>
+  </div>
+
   <div class="form-group">
     <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="exampleFormControlSelect1">
-      <option>1</option>
-      <option>2</option>
+    <select class="form-control" id="f1_dtn" onchange="doDTNUpdate('f1_');" required>
+      <option value="">Choose DTN</option>
     </select>
   </div>
     <div class="form-group">
-      <input class="form-control" type="text" placeholder="Default input">
+      <label for="exampleFormControlSelect1">IP to ping</label>
+      <input class="form-control" type="text" placeholder="IP to ping" id="f1_ip_ping" required>
     </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="exampleFormControlSelect1">
-      <option>1</option>
-      <option>2</option>
+    <select class="form-control" id="f1_interface" required>
+      <option value="">Choose Interface</option>
     </select>
   </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">Ping time</label>
-    <select class="form-control" id="exampleFormControlSelect1">
-      <option>1</option>
-      <option>2</option>
+    <select class="form-control" id="f1_time" required>
+      <option value="">Choose Ping time</option>
+      <option value="60">1 minute</option>
+      <option value="120">2 minutes</option>
+      <option value="300">5 minutes</option>
     </select>
   </div>
+<input type="submit">
 </form>
-</div>
 </span>
-<div class="row col-md-1"></div>
-<span class="border">
+</div>
+
+<div class="row col-md-2"></div>
+
 <div class="row col-md-3">
-<form>
+<span class="border" style="width:100%">
+<h3 class="h3">TCP Dump</h3>
+<form action="/T2_US_Caltech_Test1/sitefe/v1/tcpdump">
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">Sitename</label>
+    <select class="form-control" id="f2_sitename" onchange="doSiteUpdate('f2_');" required>
+      <option value="">Choose Site</option>
+    </select>
+  </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="exampleFormControlSelect1">
-      <option>1</option>
-      <option>2</option>
+    <select class="form-control" id="f2_dtn" onchange="doDTNUpdate('f2_');" required>
+      <option value="">Choose DTN</option>
     </select>
   </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="exampleFormControlSelect1">
-      <option>1</option>
-      <option>2</option>
+    <select class="form-control" id="f2_interface" required>
+      <option value="">Choose Interface</option>
     </select>
   </div>
+<input type="submit">
 </form>
-</div>
 </span>
-<div class="row col-md-1"></div>
-<span class="border">
+</div>
+
+<div class="row col-md-2"></div>
+
 <div class="row col-md-3">
-<form>
+<span class="border" style="width:100%">
+<h3 class="h3">ARP Table</h3>
+<form action="/T2_US_Caltech_Test1/sitefe/v1/arptable">
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">Sitename</label>
+    <select class="form-control" id="f3_sitename" onchange="doSiteUpdate('f3_');" required>
+      <option value="">Choose Site</option>
+    </select>
+  </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="exampleFormControlSelect1">
-      <option>1</option>
-      <option>2</option>
+    <select class="form-control" id="f3_dtn" onchange="doDTNUpdate('f3_');" required>
+      <option value="">Choose DTN</option>
     </select>
   </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="exampleFormControlSelect1">
-      <option>1</option>
-      <option>2</option>
+    <select class="form-control" id="f3_interface" required>
+      <option value="">Choose Interface</option>
     </select>
   </div>
+<input type="submit">
+</span>
 </form>
 </div>
-</span>
         </div>
     </main>
   </div>
@@ -169,6 +242,4 @@
         $(this).tab('show');
       })
     </script>
-
-
 </body></html>
