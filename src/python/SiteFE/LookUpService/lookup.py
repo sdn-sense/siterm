@@ -231,7 +231,7 @@ class LookUpService():
                         continue
                     mainGraph = self._deltaReduction(dbObj, delta, mainGraphName)
                     writeFile = True
-                elif delta['deltat'] == 'addition' and \
+                elif delta['deltat'] in ['addition', 'modify'] and \
                 (delta['modadd'] in ['add'] or delta['state'] in ['activated']):
                     mainGraph = self._deltaAddition(dbObj, delta, mainGraphName)
                     writeFile = True

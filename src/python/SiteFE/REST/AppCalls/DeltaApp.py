@@ -325,7 +325,7 @@ def models_id(environ, **kwargs):
 # =====================================================================================================================
 # =====================================================================================================================
 
-_DELTA_INTERNAL_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_\.A-Za-z0-9]+)/(cancel|active|activated|failed)/?$')
+_DELTA_INTERNAL_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_\.A-Za-z0-9]+)/(cancel|remove|active|activated|failed)/?$')
 
 
 def delta_internal_actions(environ, **kwargs):
@@ -334,7 +334,7 @@ def delta_internal_actions(environ, **kwargs):
     This is only allowed from same host or dtnrm-site-fe.
     Method: GET
     Output: application/json
-    Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/(cancel|active|activated|failed)
+    Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_\.A-Za-z0-9]+)/(cancel|remove|active|activated|failed)
     """
     deltaID = kwargs['mReg'].groups()[0]
     hostname = kwargs['mReg'].groups()[1]
@@ -342,6 +342,7 @@ def delta_internal_actions(environ, **kwargs):
     print('Internal action. For %s and %s to %s' % (deltaID, hostname, newState))
     msgOut = DELTABACKEND.commitdelta(deltaID, newState, internal=True, hostname=hostname, **kwargs)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
+    print(2)
     return msgOut
 
 _DELTA_HOSTNAME_IDS_RE = re.compile(r'^/*v1/hostnameids/([-_\.A-Za-z0-9]+)/(activating|active)/?$')

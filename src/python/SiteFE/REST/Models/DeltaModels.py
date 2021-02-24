@@ -157,6 +157,10 @@ class frontendDeltaModels(object):
                                                                   'state': newState,
                                                                   'insertdate': getUTCnow(),
                                                                   'hostname': hostname})
+            if newState == 'remove':
+                # Remove state comes only from modify and by agent itself
+                delta = self.getdelta(deltaID, **kwargs)
+                self.stateM.stateChange(dbobj, {'uid': deltaID, 'state': newState})
             return getCustomOutMsg(msg='Internal State change approved', exitCode=200)
         delta = self.getdelta(deltaID, **kwargs)
         print('Commit Action for delta %s' % delta)

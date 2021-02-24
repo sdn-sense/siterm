@@ -326,21 +326,24 @@ class PolicyService():
             self.stateMachine.failed(dbobj, toDict)
         else:
             toDict["State"] = "accepted"
-            connID = None
+            connID = []
+            toDict["ParsedDelta"] = outputDict
+            toDict['modadd'] = 'idle'
             for key in outputDict:
-                toDict["State"] = "accepted"
                 if not outputDict[key]:
                     continue
-                toDict['dtype'] = key
-                toDict['Type'] = key
-                self.logger.info('%s' % str(outputDict[key]))
-                toDict["ParsedDelta"] = outputDict
-                connID = []
-                for item in outputDict[key]:
-                    connID.append(item['connectionID'])
-                toDict['ConnID'] = connID
-                toDict['modadd'] = 'idle'
-                self.stateMachine.accepted(dbobj, toDict)
+                toDict['Type'] = 'modify' if 'Type' in toDict.keys() else key
+                # In case of modify, only addition connection IDs are stored;
+                # otherwise, corresponding type connectionIDs
+                if toDict['Type'] == 'modify':
+                    connID = []
+                    for item in outputDict['addition']:
+                        connID.append(item['connectionID'])
+                else:
+                    for item in outputDict[key]:
+                        connID.append(item['connectionID'])
+            toDict['ConnID'] = connID
+            self.stateMachine.accepted(dbobj, toDict)
             # =================================
         return toDict
 

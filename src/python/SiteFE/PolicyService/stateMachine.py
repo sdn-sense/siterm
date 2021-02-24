@@ -66,7 +66,7 @@ class ConnectionMachine(object):
     @staticmethod
     def accepted(dbObj, delta):
         """ If delta addition and accepted - add connection entry in DB """
-        if delta['deltat'] == 'addition' and delta['state'] in ['accepting', 'accepted']:
+        if delta['deltat'] in ['addition', 'modify'] and delta['state'] in ['accepting', 'accepted']:
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
                          'connectionid': connid,
@@ -77,7 +77,7 @@ class ConnectionMachine(object):
     @staticmethod
     def committed(dbObj, delta):
         """Change specific delta connection id state to commited."""
-        if delta['deltat'] == 'addition':
+        if delta['deltat'] in ['addition', 'modify']:
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
                          'connectionid': connid,
@@ -88,7 +88,7 @@ class ConnectionMachine(object):
     @staticmethod
     def activating(dbObj, delta):
         """Change specific delta connection id state to commited."""
-        if delta['deltat'] == 'addition':
+        if delta['deltat'] in ['addition', 'modify']:
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
                          'connectionid': connid,
@@ -102,7 +102,7 @@ class ConnectionMachine(object):
 
         Reduction - cancelled
         """
-        if delta['deltat'] == 'addition':
+        if delta['deltat'] in ['addition', 'modify']:
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
                          'connectionid': connid,
@@ -199,6 +199,11 @@ class StateMachine(object):
         """Marks delta as committing."""
         self._stateChangerDelta(dbObj, 'committing', **delta)
 
+    def stateChange(self, dbObj, delta):
+        """Set new state for delta."""
+        self._stateChangerDelta(dbObj, delta['state'], **delta)
+
+
     def committing(self, dbObj):
         """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committing']]):
@@ -210,7 +215,7 @@ class StateMachine(object):
     def committed(self, dbObj):
         """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committed']]):
-            if delta['deltat'] == 'addition' and delta['addition']:
+            if delta['deltat'] in ['addition', 'modify'] and delta['addition']:
                 delta['addition'] = evaldict(delta['addition'])
                 # Check the times...
                 delayStart = False
