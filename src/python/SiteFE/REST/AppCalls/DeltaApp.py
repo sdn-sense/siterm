@@ -342,7 +342,6 @@ def delta_internal_actions(environ, **kwargs):
     print('Internal action. For %s and %s to %s' % (deltaID, hostname, newState))
     msgOut = DELTABACKEND.commitdelta(deltaID, newState, internal=True, hostname=hostname, **kwargs)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
-    print(2)
     return msgOut
 
 _DELTA_HOSTNAME_IDS_RE = re.compile(r'^/*v1/hostnameids/([-_\.A-Za-z0-9]+)/(activating|active)/?$')

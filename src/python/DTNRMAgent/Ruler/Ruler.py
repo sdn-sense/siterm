@@ -276,9 +276,6 @@ class Ruler():
                 self.setHostState('remove', item['uid'])
                 return False
         self.addition(deltaInfo, state)
-        pretty = pprint.PrettyPrinter(indent=4)
-        pretty.pprint(evaldict(reduct))
-        pretty.pprint(evaldict(allProvisioned))
 
     def checkActivatingDeltas(self):
         """Check all deltas in activating states."""
