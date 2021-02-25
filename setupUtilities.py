@@ -29,7 +29,7 @@ import platform
 # src/python/SiteFE/__init__.py
 # src/python/DTNRMAgent/__init__.py
 # src/python/DTNRMLibs/__init__.py
-VERSION = '210210'
+VERSION = '210225'
 
 
 def linuxDistr():
