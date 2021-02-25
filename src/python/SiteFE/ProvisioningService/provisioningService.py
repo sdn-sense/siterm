@@ -23,6 +23,7 @@ from builtins import object
 import sys
 import importlib
 import time
+import pprint
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getStreamLogger
@@ -183,7 +184,7 @@ class ProvisioningService(object):
                         else:
                             self.logger.warning('Unknown delta state')
                             pretty = pprint.PrettyPrinter(indent=4)
-                            pretty.pprint(evaldict(newDelta)) 
+                            pretty.pprint(evaldict(newDelta))
                     except IOError as ex:
                         print(ex)
                         raise Exception('Received IOError')

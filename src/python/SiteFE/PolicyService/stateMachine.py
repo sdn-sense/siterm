@@ -203,7 +203,6 @@ class StateMachine(object):
         """Set new state for delta."""
         self._stateChangerDelta(dbObj, delta['state'], **delta)
 
-
     def committing(self, dbObj):
         """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committing']]):

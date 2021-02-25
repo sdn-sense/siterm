@@ -219,7 +219,7 @@ class Ruler():
                 self.setHostState('activated', state['deltaid'])
 
     def reduction(self, deltaInfo, state, informFE=True):
-        """ Reduction of resouces. """
+        """Reduction of resouces."""
         deltaInfo[0]['reduction'] = evaldict(deltaInfo[0]['reduction'])
         for connDelta in deltaInfo[0]['reduction']:
             self.cancelResources(connDelta, state['deltaid'])
@@ -228,7 +228,7 @@ class Ruler():
         return True
 
     def addition(self, deltaInfo, state, informFE=True):
-        """ Addition of resources. """
+        """Addition of resources."""
         retState = True
         deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
         if deltaInfo[0]['state'] in ['activating', 'activated']:
@@ -250,7 +250,7 @@ class Ruler():
         return retState
 
     def modify(self, deltaInfo, state, informFE=True):
-        """ Modify of resources. """
+        """Modify of resources."""
         # TODO: For now - this is very basic modify. Tier down what reduction told us to do
         # And do addition for new resources. In future we should check if it is same vlan
         # or what are the changes. Possible changes I can think of now are:
@@ -274,7 +274,7 @@ class Ruler():
                 #   if diff vlan, set only delta state to remove, and wait for tier down of resources
                 self.logger.info('Main delta based on conn ID is still active. Setting it to Remove state')
                 self.setHostState('remove', item['uid'])
-                return False
+                return
         self.addition(deltaInfo, state)
 
     def checkActivatingDeltas(self):
