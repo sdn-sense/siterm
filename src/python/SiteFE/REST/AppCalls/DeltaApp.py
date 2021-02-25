@@ -125,10 +125,9 @@ def deltas(environ, **kwargs):
         return customErr
     return DELTABACKEND.addNewDelta(newDelta, environ, **kwargs)
 
-# =====================================================================================================================
-# =====================================================================================================================
 
 _DELTA_STATES_RE = re.compile(r'^/*v1/deltastates/([-_A-Za-z0-9]+)/?$')
+
 
 def delta_states(environ, **kwargs):
     """
@@ -146,6 +145,7 @@ def delta_states(environ, **kwargs):
 
 _DELTA_HOST_STATES_RE = re.compile(r'^/*v1/deltahoststates/([-_A-Za-z0-9]+)/?$')
 
+
 def delta_host_states(environ, **kwargs):
     """
     API Call for getting specific delta host states information;
@@ -161,6 +161,7 @@ def delta_host_states(environ, **kwargs):
 
 
 _DELTA_HOST_STATES_HISTORY_RE = re.compile(r'^/*v1/deltahoststateshistory/([-_A-Za-z0-9]+)/?$')
+
 
 def delta_host_states_history(environ, **kwargs):
     """
@@ -334,7 +335,7 @@ def delta_internal_actions(environ, **kwargs):
     This is only allowed from same host or dtnrm-site-fe.
     Method: GET
     Output: application/json
-    Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_\.A-Za-z0-9]+)/(cancel|remove|active|activated|failed)
+    Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_.A-Za-z0-9]+)/(cancel|remove|active|activated|failed)
     """
     deltaID = kwargs['mReg'].groups()[0]
     hostname = kwargs['mReg'].groups()[1]
