@@ -217,7 +217,8 @@ class dbinterface():
                 if first:
                     query = "WHERE "
                 else:
-                    query += "AND"
+                    query += "AND "
+                first = False
                 query += '%s = "%s" ' % (item[0], item[1])
         fullquery = "%s %s" % (self.getcall('delete', calltype), query)
         self._setStartCallTime(calltype)
