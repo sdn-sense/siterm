@@ -125,6 +125,58 @@ def deltas(environ, **kwargs):
         return customErr
     return DELTABACKEND.addNewDelta(newDelta, environ, **kwargs)
 
+
+_DELTA_STATES_RE = re.compile(r'^/*v1/deltastates/([-_A-Za-z0-9]+)/?$')
+
+
+def delta_states(environ, **kwargs):
+    """
+    API Call for getting specific delta states information;
+    Method: GET
+    Output: application/json
+    Examples: https://server-host/sitefe/v1/deltastates/([-_A-Za-z0-9]+)/
+    """
+    deltaID = kwargs['mReg'].groups()[0]
+    print('Requested delta states for %s' % deltaID)
+    outstates = DELTABACKEND.getdeltastates(deltaID, **kwargs)
+    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
+    return outstates
+
+
+_DELTA_HOST_STATES_RE = re.compile(r'^/*v1/deltahoststates/([-_A-Za-z0-9]+)/?$')
+
+
+def delta_host_states(environ, **kwargs):
+    """
+    API Call for getting specific delta host states information;
+    Method: GET
+    Output: application/json
+    Examples: https://server-host/sitefe/v1/deltahoststates/([-_A-Za-z0-9]+)/
+    """
+    deltaID = kwargs['mReg'].groups()[0]
+    print('Requested delta host states for %s' % deltaID)
+    outstates = DELTABACKEND.getdeltahoststates(deltaID, **kwargs)
+    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
+    return outstates
+
+
+_DELTA_HOST_STATES_HISTORY_RE = re.compile(r'^/*v1/deltahoststateshistory/([-_A-Za-z0-9]+)/?$')
+
+
+def delta_host_states_history(environ, **kwargs):
+    """
+    API Call for getting specific delta host states history information;
+    Method: GET
+    Output: application/json
+    Examples: https://server-host/sitefe/v1/deltahoststateshistory/([-_A-Za-z0-9]+)/
+    """
+    deltaID = kwargs['mReg'].groups()[0]
+    print('Requested delta host states history for %s' % deltaID)
+    outstates = DELTABACKEND.getdeltahoststateshistory(deltaID, **kwargs)
+    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
+    return outstates
+
+
 # =====================================================================================================================
 # =====================================================================================================================
 
@@ -274,7 +326,7 @@ def models_id(environ, **kwargs):
 # =====================================================================================================================
 # =====================================================================================================================
 
-_DELTA_INTERNAL_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_\.A-Za-z0-9]+)/(cancel|active|activated|failed)/?$')
+_DELTA_INTERNAL_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_\.A-Za-z0-9]+)/(cancel|remove|active|activated|failed)/?$')
 
 
 def delta_internal_actions(environ, **kwargs):
@@ -283,7 +335,7 @@ def delta_internal_actions(environ, **kwargs):
     This is only allowed from same host or dtnrm-site-fe.
     Method: GET
     Output: application/json
-    Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/(cancel|active|activated|failed)
+    Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_.A-Za-z0-9]+)/(cancel|remove|active|activated|failed)
     """
     deltaID = kwargs['mReg'].groups()[0]
     hostname = kwargs['mReg'].groups()[1]
@@ -330,4 +382,7 @@ CALLS = [(_DELTA_INTERNAL_ACTION_RE, delta_internal_actions, ['GET'], [], []),
                                                 {"key": "oldview", "default": False, "type": bool},
                                                 {"key": "encode", "default": True, "type": bool},
                                                 {"key": "model", "default": "turtle", "type": str, "options": ['turtle']}], []),
-         (_DELTA_HOSTNAME_IDS_RE, delta_hostname_ids, ['GET'], [], [])]
+         (_DELTA_HOSTNAME_IDS_RE, delta_hostname_ids, ['GET'], [], []),
+         (_DELTA_STATES_RE, delta_states, ['GET'], [], []),
+         (_DELTA_HOST_STATES_RE, delta_host_states, ['GET'], [], []),
+         (_DELTA_HOST_STATES_HISTORY_RE, delta_host_states_history, ['GET'], [], [])]

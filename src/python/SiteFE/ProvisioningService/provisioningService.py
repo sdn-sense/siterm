@@ -23,6 +23,7 @@ from builtins import object
 import sys
 import importlib
 import time
+import pprint
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getStreamLogger
@@ -86,12 +87,11 @@ class ProvisioningService(object):
     def deltaCommit(self, newDelta, deltaID, newvlan, switchName, switchruler, fullURL):
         """Here goes all communication with component and also rest
         interface."""
-        print('Here goes all communication with component and also rest interface')
         deltaState = newDelta['HOSTSTATE']
         for stateChange in [{"accepting": "accepted"}, {"accepted": "committing"},
                             {"committing": "committed"}, {"committed": "activating"}, {"activating": "active"}]:
             if deltaState == list(stateChange.keys())[0]:
-                print('Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState]))
+                self.logger.info('Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState]))
                 switchruler.mainCall(deltaState, newvlan, 'add')
                 self.pushInternalAction(fullURL, stateChange[deltaState], deltaID, switchName)
                 deltaState = stateChange[deltaState]
@@ -167,7 +167,6 @@ class ProvisioningService(object):
         outputDict = {}
         allDeltas = self.getData(fullURL, "/sitefe/v1/deltas?oldview=true")
         for switchName in list(list(switches['switches'].keys()) + alliases):
-            print(switchName)
             newDeltas = self.checkdeltas(switchName, allDeltas)
             for newDelta in newDeltas:
                 outputDict.setdefault(newDelta['ID'])
@@ -182,6 +181,10 @@ class ProvisioningService(object):
                                 self.deltaRemoval(newDelta, newDelta['ID'], newvlan, switchName, switchruler, fullURL)
                             else:
                                 self.deltaCommit(newDelta, newDelta['ID'], newvlan, switchName, switchruler, fullURL)
+                        else:
+                            self.logger.warning('Unknown delta state')
+                            pretty = pprint.PrettyPrinter(indent=4)
+                            pretty.pprint(evaldict(newDelta))
                     except IOError as ex:
                         print(ex)
                         raise Exception('Received IOError')

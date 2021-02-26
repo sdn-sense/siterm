@@ -95,7 +95,7 @@ class frontendDeltaModels(object):
             return getCustomOutMsg(errMsg=errMsg, exitCode=500)
 
     def getdelta(self, deltaID=None, **kwargs):
-        """Get delta from file."""
+        """Get delta from database."""
         dbobj = getVal(self.dbI, **kwargs)
         if not deltaID:
             return dbobj.get('deltas')
@@ -103,6 +103,30 @@ class frontendDeltaModels(object):
         if not out:
             raise DeltaNotFound("Delta with %s id was not found in the system" % deltaID)
         return out[0]
+
+    def getdeltastates(self, deltaID, **kwargs):
+        """Get delta states from database."""
+        dbobj = getVal(self.dbI, **kwargs)
+        out = dbobj.get('states', search=[['deltaid', deltaID]])
+        if not out:
+            raise DeltaNotFound("Delta with %s id was not found in the system" % deltaID)
+        return out
+
+    def getdeltahoststates(self, deltaID, **kwargs):
+        """Get delta host states from database."""
+        dbobj = getVal(self.dbI, **kwargs)
+        out = dbobj.get('hoststates', search=[['deltaid', deltaID]])
+        if not out:
+            raise DeltaNotFound("Delta Host States with %s id was not found in the system" % deltaID)
+        return out
+
+    def getdeltahoststateshistory(self, deltaID, **kwargs):
+        """Get delta host states history from database."""
+        dbobj = getVal(self.dbI, **kwargs)
+        out = dbobj.get('hoststateshistory', search=[['deltaid', deltaID]])
+        if not out:
+            raise DeltaNotFound("Delta Host States with %s id was not found in the system" % deltaID)
+        return out
 
     def getHostNameIDs(self, hostname, state, **kwargs):
         """Get Hostname IDs."""
@@ -133,6 +157,9 @@ class frontendDeltaModels(object):
                                                                   'state': newState,
                                                                   'insertdate': getUTCnow(),
                                                                   'hostname': hostname})
+            if newState == 'remove':
+                # Remove state comes only from modify and by agent itself
+                self.stateM.stateChange(dbobj, {'uid': deltaID, 'state': newState})
             return getCustomOutMsg(msg='Internal State change approved', exitCode=200)
         delta = self.getdelta(deltaID, **kwargs)
         print('Commit Action for delta %s' % delta)

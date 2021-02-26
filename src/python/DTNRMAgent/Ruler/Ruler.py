@@ -189,9 +189,11 @@ class Ruler():
             if deltaInfo[0]['state'] in ['remove', 'removing', 'removed', 'cancel', 'failed']:
                 if os.path.isfile(fileName):
                     os.remove(fileName)
-            elif deltaInfo[0]['state'] in ['activating', 'activated'] and deltaInfo[0]['deltat'] == 'addition':
+            elif deltaInfo[0]['state'] in ['activating', 'activated'] and deltaInfo[0]['deltat'] in ['addition', 'modify']:
                 deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
                 self.checkResources(deltaInfo[0]['addition'][0], inputDict['uid'])
+            else:
+                self.logger.warning("Delta is unknown: %s" % deltaInfo)
 
     def checkHostStates(self):
         """Check Host State deltas."""
@@ -207,7 +209,7 @@ class Ruler():
             if not deltaInfo:
                 self.logger.debug('FE did not return anything for %s' % state['deltaid'])
                 continue
-            if deltaInfo[0]['state'] in ['remove', 'removed'] and deltaInfo[0]['deltat'] == 'addition':
+            if deltaInfo[0]['state'] in ['remove', 'removed'] and deltaInfo[0]['deltat'] in ['addition', 'modify']:
                 self.cancelResources(evaldict(deltaInfo[0]['addition'])[0], state['deltaid'])
                 self.setHostState('cancel', state['deltaid'])
             elif deltaInfo[0]['state'] in ['remove', 'removed'] and deltaInfo[0]['deltat'] == 'reduction':
@@ -215,6 +217,65 @@ class Ruler():
                 self.setHostState('cancel', state['deltaid'])
             elif deltaInfo[0]['state'] in ['activated'] and deltaInfo[0]['deltat'] == 'reduction':
                 self.setHostState('activated', state['deltaid'])
+
+    def reduction(self, deltaInfo, state, informFE=True):
+        """Reduction of resouces."""
+        deltaInfo[0]['reduction'] = evaldict(deltaInfo[0]['reduction'])
+        for connDelta in deltaInfo[0]['reduction']:
+            self.cancelResources(connDelta, state['deltaid'])
+            if informFE:
+                self.setHostState('active', state['deltaid'])
+        return True
+
+    def addition(self, deltaInfo, state, informFE=True):
+        """Addition of resources."""
+        retState = True
+        deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
+        if deltaInfo[0]['state'] in ['activating', 'activated']:
+            self.logger.info('Activating delta %s' % state['deltaid'])
+            if not deltaInfo[0]['addition']:
+                self.logger.info('Failing delta %s. No addition parsed' % state['deltaid'])
+                self.logger.info(deltaInfo[0])
+                return retState
+            outExit = False
+            for connDelta in deltaInfo[0]['addition']:
+                outExit, message = self.activateResources(connDelta, state['deltaid'])
+                self.logger.info("Exit: %s, Message: %s" % (outExit, message))
+                saveState = 'active' if outExit else 'failed'
+                if not outExit:
+                    retState = False
+                # TODO: Have ability to save message in the Frontend;
+                if informFE:
+                    self.setHostState(saveState, state['deltaid'])
+        return retState
+
+    def modify(self, deltaInfo, state, informFE=True):
+        """Modify of resources."""
+        # TODO: For now - this is very basic modify. Tier down what reduction told us to do
+        # And do addition for new resources. In future we should check if it is same vlan
+        # or what are the changes. Possible changes I can think of now are:
+        # Change routes;
+        # Change IP;
+        # Change VLAN - this will require to tier down and bring new interface;
+        # Change QoS
+
+        # First we try to identify which delta must be set into state remove
+        # This means that with a new state modify - agents can also change delta states
+        # while it was not possible before and was always done at FE Level.
+        reduct = evaldict(deltaInfo[0]['reduction'])
+        allProvisioned = self.vlansProvisioned()
+        for item in allProvisioned:
+            if item['connectionID'] == reduct[0]['connectionID']:
+                # Means vlan is still present; do remove in FE
+                # And return False, no further actions until previous delta removed
+                # TODO: Later it will do smarter things depending on action:
+                # Idea will be:
+                #   if same vlan, remove file, set delta state remove and host state - removed and apply changes
+                #   if diff vlan, set only delta state to remove, and wait for tier down of resources
+                self.logger.info('Main delta based on conn ID is still active. Setting it to Remove state')
+                self.setHostState('remove', item['uid'])
+                return
+        self.addition(deltaInfo, state)
 
     def checkActivatingDeltas(self):
         """Check all deltas in activating states."""
@@ -226,28 +287,13 @@ class Ruler():
                 self.logger.debug('FE did not return anything for %s' % state['deltaid'])
                 continue
             if deltaInfo[0]['deltat'] == 'reduction':
-                deltaInfo[0]['reduction'] = evaldict(deltaInfo[0]['reduction'])
-                for connDelta in deltaInfo[0]['reduction']:
-                    self.cancelResources(connDelta, state['deltaid'])
-                    self.setHostState('active', state['deltaid'])
+                self.reduction(deltaInfo, state)
             elif deltaInfo[0]['deltat'] == 'addition':
-                deltaInfo[0]['addition'] = evaldict(deltaInfo[0]['addition'])
-                if deltaInfo[0]['state'] in ['activating', 'activated']:
-                    self.logger.info('Activating delta %s' % state['deltaid'])
-                    if not deltaInfo[0]['addition']:
-                        self.logger.info('Failing delta %s. No addition parsed' % state['deltaid'])
-                        self.logger.info(deltaInfo[0])
-                        # self.setHostState('failed', state['deltaid'])
-                        continue
-                    outExit = False
-                    for connDelta in deltaInfo[0]['addition']:
-                        outExit, message = self.activateResources(connDelta, state['deltaid'])
-                        self.logger.info("Exit: %s, Message: %s" % (outExit, message))
-                    if outExit:
-                        self.setHostState('active', state['deltaid'])
-                    else:
-                        # TODO. Have ability to save message in Frontend.
-                        self.setHostState('failed', state['deltaid'])
+                self.addition(deltaInfo, state)
+            elif deltaInfo[0]['deltat'] == 'modify':
+                self.modify(deltaInfo, state)
+            else:
+                self.logger.warning("Delta is unknown: %s" % deltaInfo)
 
 
 def execute(config=None, logger=None):

@@ -19,6 +19,19 @@ rm -f /tmp/dtnrm*.pid
 # As first run, Run Custom CA prefetch and add them to CAs dir.
 sh /etc/cron-scripts/siterm-ca-cron.sh
 
+# Check if all env variables are available and set
+if [[ -z $MARIA_DB_HOST || -z $MARIA_DB_USER || -z $MARIA_DB_DATABASE || -z $MARIA_DB_PASSWORD || -z MARIA_DB_PORT ]]; then
+  if [ -f "/etc/siterm-mariadb" ]; then
+    set -a
+    source /etc/siterm-mariadb
+    set +a
+    env
+  else
+    echo 'DB Configuration file not available. exiting.'
+    exit 1
+  fi
+fi
+
 # Start MariaDB
 sh /root/mariadb.sh
 
