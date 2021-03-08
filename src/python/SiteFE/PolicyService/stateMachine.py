@@ -21,7 +21,7 @@ from builtins import str
 from builtins import object
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
-
+from SiteFE.PolicyService.newDeltaChecks import checkConflicts
 
 def timeendcheck(delta, logger):
     """Check delta timeEnd.
@@ -29,13 +29,6 @@ def timeendcheck(delta, logger):
     if passed, returns True.
     """
     conns = []
-    # ------------------------------------
-    # This is for backwards support. Can be deleted after all RMs deltas re-initiated.
-    if isinstance(delta['addition'], dict):
-        conns.append(delta['addition'])
-    else:
-        conns = delta['addition']
-    # ------------------------------------
     connEnded = False
     for connDelta in conns:
         try:
@@ -178,6 +171,12 @@ class StateMachine(object):
                  'modadd': str(delta['modadd']),
                  'connectionid': str(delta['ConnID']),
                  'error': '' if 'Error' not in list(delta.keys()) else str(delta['Error'])}
+        if dbOut['deltat'] == 'addition':
+            checkConflicts(dbObj, dbOut)
+        # SQL DB Requires this to be string, not dictionary.
+        dbOut['addition'] = str(dbOut['addition'])
+        # TODO: In future, we should also check modify and that modification
+        # does not exceed allocation times. If it does - do not allow modify.
         dbObj.insert('deltas', [dbOut])
         self.connMgr.accepted(dbObj, dbOut)
         dbOut['state'] = delta['State']
@@ -241,6 +240,12 @@ class StateMachine(object):
             else:
                 self.logger.info('This delta %s is in committed. Setting state to activating.' % delta['uid'])
                 self._stateChangerDelta(dbObj, 'activating', **delta)
+                if delta['deltat'] in ['reduction']:
+                    for connid in evaldict(delta['connectionid']):
+                         for dConn in dbObj.get('delta_connections', search=[['connectionid', connid]]):
+                             self.logger.info('This connection %s belongs to this delta: %s. Cancel delta' % (connid, dConn['deltaid']))
+                             deltaRem = {'uid': dConn['deltaid']}
+                             self._stateChangerDelta(dbObj, 'remove', **deltaRem)
 
     def activating(self, dbObj):
         """Check on all deltas in state activating."""

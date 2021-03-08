@@ -76,7 +76,7 @@ class prefixDB():
         prefixes['site'] = prefixSite
         self.prefixes = prefixes
 
-    def genUriRef(self, prefix, add=None, custom=None):
+    def genUriRef(self, prefix=None, add=None, custom=None):
         """Generate URIRef and return."""
         if custom:
             return URIRef(custom)
@@ -202,6 +202,31 @@ class LookUpService():
         dbObj.update('deltasmod', [{'uid': delta['uid'], 'updatedate': getUTCnow(), 'modadd': 'removed'}])
         return mainGraph
 
+    def _addDeltaStatesInModel(self, mainGraph, state, addition):
+        """Add Delta States into Model."""
+        # Issue details: https://github.com/sdn-sense/siterm/issues/73
+        for conn in addition:
+            if 'timestart' in list(conn.keys()) and state == 'committed':
+                if conn['timestart'] < getUTCnow():
+                    state = 'activating'
+                else:
+                    state = 'scheduled'
+                    print('scheduled')
+            elif 'timeend' in list(conn.keys()) and state == 'activated':
+                if connDelta['timeend'] < getUTCnow():
+                    state = 'deactivating'
+            # Add new State under SwitchSubnet
+            mainGraph.add((self.prefixDB.genUriRef(custom=conn['connectionID']),
+                           self.prefixDB.genUriRef('mrs', 'tag'),
+                           self.prefixDB.genLiteral('monitor:status:%s' % state)))
+            # If timed delta, add State under lifetime resource
+            if 'timestart' in list(conn.keys()) or 'timeend' in list(conn.keys()):
+                mainGraph.add((self.prefixDB.genUriRef(custom="%s:lifetime" % conn['connectionID']),
+                               self.prefixDB.genUriRef('mrs', 'tag'),
+                               self.prefixDB.genLiteral('monitor:status:%s' % state)))
+        return mainGraph
+
+
     def _deltaAddition(self, dbObj, delta, mainGraphName, updateState=True):
         """Delta addition lookup."""
         delta['content'] = evaldict(delta['content'])
@@ -217,6 +242,8 @@ class LookUpService():
         os.unlink(tmpFile.name)
         self.logger.info('Main Graph len: %s Addition Len: %s', len(mainGraph), len(tmpGraph))
         mainGraph += tmpGraph
+        #Add delta states for that specific delta
+        mainGraph = self._addDeltaStatesInModel(mainGraph, delta['state'], evaldict(delta['addition']))
         if updateState:
             dbObj.update('deltasmod', [{'uid': delta['uid'], 'updatedate': getUTCnow(), 'modadd': 'added'}])
         return mainGraph
@@ -232,7 +259,7 @@ class LookUpService():
                     mainGraph = self._deltaReduction(dbObj, delta, mainGraphName)
                     writeFile = True
                 elif delta['deltat'] in ['addition', 'modify'] and \
-                (delta['modadd'] in ['add'] or delta['state'] in ['activated']):
+                (delta['modadd'] in ['add'] or delta['state'] in ['activated', 'activating', 'committed']):
                     mainGraph = self._deltaAddition(dbObj, delta, mainGraphName)
                     writeFile = True
                 if writeFile:
