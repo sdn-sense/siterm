@@ -213,7 +213,7 @@ class LookUpService():
                     state = 'scheduled'
                     print('scheduled')
             elif 'timeend' in list(conn.keys()) and state == 'activated':
-                if connDelta['timeend'] < getUTCnow():
+                if conn['timeend'] < getUTCnow():
                     state = 'deactivating'
             # Add new State under SwitchSubnet
             mainGraph.add((self.prefixDB.genUriRef(custom=conn['connectionID']),
@@ -737,11 +737,11 @@ class LookUpService():
             self.logger.info('Models are different. Update DB')
             dbObj.insert('models', [lastKnownModel])
 
-        self.logger.debug('Last Known Model: %s' % str(lastKnownModel))
+        self.logger.debug('Last Known Model: %s' % str(lastKnownModel['fileloc']))
         # Clean Up old models (older than 24h.)
         for model in dbObj.get('models', limit=100, orderby=['insertdate', 'ASC']):
             if model['insertdate'] < int(getUTCnow() - 86400):
-                self.logger.debug('delete %s', model)
+                self.logger.debug('delete %s', model['fileloc'])
                 try:
                     os.unlink(model['fileloc'])
                 except OSError as ex:
