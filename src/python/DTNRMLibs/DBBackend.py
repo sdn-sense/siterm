@@ -159,6 +159,8 @@ class dbinterface():
         if search:
             first = True
             for item in search:
+                if not item:
+                    continue
                 if first:
                     query = "WHERE "
                     first = False

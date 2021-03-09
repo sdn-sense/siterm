@@ -104,3 +104,44 @@ class FrontendRM():
             raise NotFoundError('This Service %s is not supported by Frontend' % inputDict['servicename'])
         reportServiceStatus(inputDict['servicename'], inputDict['servicestate'],
                             kwargs['sitename'], None, inputDict['hostname'])
+
+
+    def getdebug(self, **kwargs):
+        """Get Debug action for specific ID."""
+        dbobj = getVal(self.dbI, **kwargs)
+        search = None
+        if kwargs['mReg'][1] != 'ALL':
+            search = [['id', kwargs['mReg'][1]]]
+        return dbobj.get('debugrequests', orderby=['insertdate', 'DESC'], search=search, limit=1000)
+
+    def getalldebugids(self, **kwargs):
+        """Get All Debug IDs."""
+        dbobj = getVal(self.dbI, **kwargs)
+        return dbobj.get('debugrequestsids', orderby=['updatedate', 'DESC'], limit=1000)
+
+    def getalldebughostname(self, **kwargs):
+        dbobj = getVal(self.dbI, **kwargs)
+        search = [['hostname', kwargs['mReg'][1]], ['state', 'new']]
+        return dbobj.get('debugrequests', orderby=['updatedate', 'DESC'], search=search, limit=1000)
+
+
+    def submitdebug(self, inputDict, **kwargs):
+        """Submit new debug action request."""
+        dbobj = getVal(self.dbI, **kwargs)
+        out = {'hostname': inputDict['dtn'],
+               'state': 'new',
+               'requestdict': json.dumps(inputDict),
+               'output': '',
+               'insertdate': getUTCnow(),
+               'updatedate': getUTCnow()}
+        dbobj.insert('debugrequests', [out])
+
+    def updatedebug(self, inputDict, **kwargs):
+        """Update debug action information."""
+        dbobj = getVal(self.dbI, **kwargs)
+        out = {'id': kwargs['mReg'][1],
+               'state': inputDict['state'],
+               'output': inputDict['output'],
+               'updatedate': getUTCnow()}
+        dbobj.update('debugrequests', [out])
+
