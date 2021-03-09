@@ -98,9 +98,9 @@ class FrontendRM():
     @staticmethod
     def servicestate(inputDict, **kwargs):
         """Set Service State in DB."""
-        # Only 2 Services are supported to report via URL
-        # DTNRM-Agent and DTNRM-Ruler
-        if inputDict['servicename'] not in ['Agent', 'Ruler']:
+        # Only 3 Services are supported to report via URL
+        # DTNRM-Agent | DTNRM-Ruler | DTNRM-Debugger
+        if inputDict['servicename'] not in ['Agent', 'Ruler', 'Debugger']:
             raise NotFoundError('This Service %s is not supported by Frontend' % inputDict['servicename'])
         reportServiceStatus(inputDict['servicename'], inputDict['servicestate'],
                             kwargs['sitename'], None, inputDict['hostname'])
