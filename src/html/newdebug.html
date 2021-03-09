@@ -60,6 +60,7 @@
               addDropDown(sitename, $("#f1_sitename"));
               addDropDown(sitename, $("#f2_sitename"));
               addDropDown(sitename, $("#f3_sitename"));
+              addDropDown(sitename, $("#f4_sitename"));
             }
           });
        };
@@ -135,33 +136,34 @@
 <div class="row col-md-3">
 <span class="border" style="width:100%">
 <h3 class="h3">Rapid Ping</h3>
-<form action="/T2_US_Caltech_Test1/sitefe/v1/rapidping">
+<form action="/T2_US_Caltech_Test1/sitefe/json/frontend/submitdebug/NEW"  method="post">
+  <input id="f1_type" name="type" type="hidden" value="rapidping">
   <div class="form-group">
     <label for="exampleFormControlSelect1">Sitename</label>
-    <select class="form-control" id="f1_sitename" onchange="doSiteUpdate('f1_');" required>
+    <select class="form-control" id="f1_sitename" name="sitename" onchange="doSiteUpdate('f1_');" required>
       <option value="">Choose Site</option>
     </select>
   </div>
 
   <div class="form-group">
     <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="f1_dtn" onchange="doDTNUpdate('f1_');" required>
+    <select class="form-control" id="f1_dtn" name="dtn" onchange="doDTNUpdate('f1_');" required>
       <option value="">Choose DTN</option>
     </select>
   </div>
     <div class="form-group">
       <label for="exampleFormControlSelect1">IP to ping</label>
-      <input class="form-control" type="text" placeholder="IP to ping" id="f1_ip_ping" required>
+      <input class="form-control" type="text" placeholder="IP to ping" id="f1_ip_ping" name="ip_ping" required>
     </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="f1_interface" required>
+    <select class="form-control" id="f1_interface" name="interface" required>
       <option value="">Choose Interface</option>
     </select>
   </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">Ping time</label>
-    <select class="form-control" id="f1_time" required>
+    <select class="form-control" id="f1_time" name="time" required>
       <option value="">Choose Ping time</option>
       <option value="60">1 minute</option>
       <option value="120">2 minutes</option>
@@ -178,22 +180,23 @@
 <div class="row col-md-3">
 <span class="border" style="width:100%">
 <h3 class="h3">TCP Dump</h3>
-<form action="/T2_US_Caltech_Test1/sitefe/v1/tcpdump">
+<form action="/T2_US_Caltech_Test1/sitefe/json/frontend/submitdebug/NEW"  method="post">
+  <input id="f2_type" name="type" type="hidden" value="tcpdump">
   <div class="form-group">
     <label for="exampleFormControlSelect1">Sitename</label>
-    <select class="form-control" id="f2_sitename" onchange="doSiteUpdate('f2_');" required>
+    <select class="form-control" id="f2_sitename" name="sitename" onchange="doSiteUpdate('f2_');" required>
       <option value="">Choose Site</option>
     </select>
   </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="f2_dtn" onchange="doDTNUpdate('f2_');" required>
+    <select class="form-control" id="f2_dtn" name="dtn" onchange="doDTNUpdate('f2_');" required>
       <option value="">Choose DTN</option>
     </select>
   </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="f2_interface" required>
+    <select class="form-control" id="f2_interface" name="interface" required>
       <option value="">Choose Interface</option>
     </select>
   </div>
@@ -207,22 +210,23 @@
 <div class="row col-md-3">
 <span class="border" style="width:100%">
 <h3 class="h3">ARP Table</h3>
-<form action="/T2_US_Caltech_Test1/sitefe/v1/arptable">
+<form action="/T2_US_Caltech_Test1/sitefe/json/frontend/submitdebug/NEW"  method="post">
+  <input id="f3_type" name="type" type="hidden" value="arptable">
   <div class="form-group">
     <label for="exampleFormControlSelect1">Sitename</label>
-    <select class="form-control" id="f3_sitename" onchange="doSiteUpdate('f3_');" required>
+    <select class="form-control" id="f3_sitename" name="sitename" onchange="doSiteUpdate('f3_');" required>
       <option value="">Choose Site</option>
     </select>
   </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="f3_dtn" onchange="doDTNUpdate('f3_');" required>
+    <select class="form-control" id="f3_dtn" name="dtn" onchange="doDTNUpdate('f3_');" required>
       <option value="">Choose DTN</option>
     </select>
   </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="f3_interface" required>
+    <select class="form-control" id="f3_interface" name="interface" required>
       <option value="">Choose Interface</option>
     </select>
   </div>
@@ -230,6 +234,51 @@
 </span>
 </form>
 </div>
+
+
+<div class="row col-md-3">
+<span class="border" style="width:100%">
+<h3 class="h3">IPerf</h3>
+<form action="/T2_US_Caltech_Test1/sitefe/json/frontend/submitdebug/NEW"  method="post">
+  <input id="f4_type" name="type" type="hidden" value="iperf">
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">Sitename</label>
+    <select class="form-control" id="f4_sitename" name="sitename" onchange="doSiteUpdate('f4_');" required>
+      <option value="">Choose Site</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">DTN</label>
+    <select class="form-control" id="f4_dtn" name="dtn" onchange="doDTNUpdate('f4_');" required>
+      <option value="">Choose DTN</option>
+    </select>
+  </div>
+
+    <div class="form-group">
+      <label for="exampleFormControlSelect1">IP to ping</label>
+      <input class="form-control" type="text" placeholder="IP to ping" id="f4_ip_ping" name="ip_ping" required>
+    </div>
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">Interface</label>
+    <select class="form-control" id="f4_interface" name="interface" required>
+      <option value="">Choose Interface</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">Runtime</label>
+    <select class="form-control" id="f4_time" name="time" required>
+      <option value="">Choose Ping time</option>
+      <option value="60">1 minute</option>
+      <option value="120">2 minutes</option>
+      <option value="300">5 minutes</option>
+    </select>
+  </div>
+<input type="submit">
+</span>
+</form>
+</div>
+
+
         </div>
     </main>
   </div>
