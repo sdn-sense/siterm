@@ -13,6 +13,29 @@
             load_data();
         });
 
+    function newAlert(alertMessage){
+        alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert"></div>');
+        alert.append(alertMessage);
+        alert.append('<button type="button" class="close" data-dismiss="alert" aria-label="Close">');
+        $('#alerts').append(alert);       
+}
+
+    function collectInputs(tagName) {
+        docObj =  document.getElementById(tagName);
+        var params = {};
+        for( var i=0; i<docObj.elements.length; i++ ){
+            var fieldName = docObj.elements[i].name;
+            var fieldValue = docObj.elements[i].value;
+            if (fieldName){
+                params[fieldName] = fieldValue;
+            }
+        }
+        $.post("/"+params['sitename']+"/sitefe/json/frontend/submitdebug/NEW", params, function(result){
+            newAlert("New debug action submit state:" + JSON.stringify(result));
+        });
+    }
+
+
         function doSiteUpdate(ids) {
         strSite = document.getElementById(ids + "sitename").value;
         $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
@@ -39,14 +62,7 @@
                               for (const [key1, value1] of Object.entries(value['vlans'])) {
                                 if (value1['provisioned']) {
                                     addDropDown(key1, $("#" + ids + "interface"));
-                                }
-                              }
-                            }
-                        }
-                    }
-                }
-            }
-        });
+        }}}}}}}});
       }
 
         function addDropDown(dropdownVal, saveObj){
@@ -61,6 +77,7 @@
               addDropDown(sitename, $("#f2_sitename"));
               addDropDown(sitename, $("#f3_sitename"));
               addDropDown(sitename, $("#f4_sitename"));
+              addDropDown(sitename, $("#f5_sitename"));
             }
           });
        };
@@ -69,8 +86,9 @@
 
 
     <title>Site-RM: Frontend Configuration</title>
-  <link id="load-css-0" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/core/tooltip.css"><link id="load-css-1" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/util/util.css"><link id="load-css-2" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/table/table.css"><link id="load-css-3" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/util/format.css"><link id="load-css-4" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/controls/controls.css"><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_default_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_graphics_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_ui_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_table_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_controls_module.js"></script></head>
+</head>
   <body>
+
 
 <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
   <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
@@ -133,10 +151,18 @@
       </div>
         <div class="row" id="maindiv">
 
-<div class="row col-md-3">
-<span class="border" style="width:100%">
+<div class="col-md-12" id="alertstop">
+</div>
+
+<div class="row col-md-12 border border-primary">
+<div class="row col-md-12">
 <h3 class="h3">Rapid Ping</h3>
-<form action="/T2_US_Caltech_Test1/sitefe/json/frontend/submitdebug/NEW"  method="post">
+</div>
+<div class="col-md-12" id="alertsrapid">
+</div>
+<div class="col">div6</div>
+<div class="col">
+<form onsubmit="collectInputs('f1');" id="f1">
   <input id="f1_type" name="type" type="hidden" value="rapidping">
   <div class="form-group">
     <label for="exampleFormControlSelect1">Sitename</label>
@@ -172,15 +198,19 @@
   </div>
 <input type="submit">
 </form>
-</span>
+</div>
 </div>
 
-<div class="row col-md-2"></div>
+<div class="row col-md-12 border border-secondary">
+<div class="row col-md-12">
+<h3 class="h3">TCPDump</h3>
+</div>
+<div class="col-md-12" id="alertstcpdump">
+</div>
+<div class="col">div6</div>
+<div class="col">
 
-<div class="row col-md-3">
-<span class="border" style="width:100%">
-<h3 class="h3">TCP Dump</h3>
-<form action="/T2_US_Caltech_Test1/sitefe/json/frontend/submitdebug/NEW"  method="post">
+<form onsubmit="collectInputs('f2');" id="f2">
   <input id="f2_type" name="type" type="hidden" value="tcpdump">
   <div class="form-group">
     <label for="exampleFormControlSelect1">Sitename</label>
@@ -202,15 +232,21 @@
   </div>
 <input type="submit">
 </form>
-</span>
+</div>
 </div>
 
-<div class="row col-md-2"></div>
+<div class="row col-md-12 border border-success">
+<div class="row col-md-12">
+<h3 class="h3">ARP Table</h3>
+</div>
+<div class="col-md-12" id="alertsarptable">
+</div>
+<div class="col">div6</div>
+<div class="col">
 
-<div class="row col-md-3">
 <span class="border" style="width:100%">
 <h3 class="h3">ARP Table</h3>
-<form action="/T2_US_Caltech_Test1/sitefe/json/frontend/submitdebug/NEW"  method="post">
+<form onsubmit="collectInputs('f3');" id="f3">
   <input id="f3_type" name="type" type="hidden" value="arptable">
   <div class="form-group">
     <label for="exampleFormControlSelect1">Sitename</label>
@@ -231,15 +267,21 @@
     </select>
   </div>
 <input type="submit">
-</span>
 </form>
+</div>
 </div>
 
 
-<div class="row col-md-3">
-<span class="border" style="width:100%">
-<h3 class="h3">IPerf</h3>
-<form action="/T2_US_Caltech_Test1/sitefe/json/frontend/submitdebug/NEW"  method="post">
+<div class="row col-md-12 border border-danger">
+<div class="row col-md-12">
+<h3 class="h3">IPerf Client</h3>
+</div>
+<div class="col-md-12" id="alertsiperf">
+</div>
+<div class="col">div6</div>
+<div class="col">
+
+<form onsubmit="collectInputs('f4');" id="f4">
   <input id="f4_type" name="type" type="hidden" value="iperf">
   <div class="form-group">
     <label for="exampleFormControlSelect1">Sitename</label>
@@ -258,6 +300,11 @@
       <label for="exampleFormControlSelect1">IP to ping</label>
       <input class="form-control" type="text" placeholder="IP to ping" id="f4_ip_ping" name="ip" required>
     </div>
+
+    <div class="form-group">
+      <label for="exampleFormControlSelect1">Port</label>
+      <input class="form-control" type="text" placeholder="Port" id="f4_port" name="port" required>
+    </div>
   <div class="form-group">
     <label for="exampleFormControlSelect1">Interface</label>
     <select class="form-control" id="f4_interface" name="interface" required>
@@ -274,9 +321,64 @@
     </select>
   </div>
 <input type="submit">
-</span>
 </form>
 </div>
+</div>
+
+<div class="row col-md-12 border border-warning">
+<div class="row col-md-12">
+<h3 class="h3">IPerf Server</h3>
+</div>
+<div class="col-md-12" id="alertsiperfserver">
+</div>
+<div class="col">div6</div>
+<div class="col">
+
+<form onsubmit="collectInputs('f5');" id="f5">
+  <input id="f5_type" name="type" type="hidden" value="iperfserver">
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">Sitename</label>
+    <select class="form-control" id="f5_sitename" name="sitename" onchange="doSiteUpdate('f5_');" required>
+      <option value="">Choose Site</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">DTN</label>
+    <select class="form-control" id="f5_dtn" name="dtn" onchange="doDTNUpdate('f5_');" required>
+      <option value="">Choose DTN</option>
+    </select>
+  </div>
+
+    <div class="form-group">
+      <label for="exampleFormControlSelect1">Port</label>
+      <input class="form-control" type="text" placeholder="Port" id="f5_port" name="port" required>
+    </div>
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">Interface</label>
+    <select class="form-control" id="f5_interface" name="interface" required>
+      <option value="">Choose Interface</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="exampleFormControlSelect1">Runtime</label>
+    <select class="form-control" id="f5_time" name="time" required>
+      <option value="">Choose Server Runtime</option>
+      <option value="60">1 minute</option>
+      <option value="120">2 minutes</option>
+      <option value="300">5 minutes</option>
+      <option value="600">10 minutes</option>
+    </select>
+  </div>
+  <div class="form-group">
+<input type="checkbox" id="f5_onetime" name="onetime" value="True">
+<label for="f5_onetime">Handle one client connection then exit</label><br>
+</div>
+
+<input type="submit">
+</form>
+</div>
+</div>
+
 
 
         </div>
