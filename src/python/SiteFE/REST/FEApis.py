@@ -134,7 +134,8 @@ class FrontendRM():
                'output': '',
                'insertdate': getUTCnow(),
                'updatedate': getUTCnow()}
-        dbobj.insert('debugrequests', [out])
+        return dbobj.insert('debugrequests', [out])
+ 
 
     def updatedebug(self, inputDict, **kwargs):
         """Update debug action information."""
@@ -143,5 +144,5 @@ class FrontendRM():
                'state': inputDict['state'],
                'output': inputDict['output'],
                'updatedate': getUTCnow()}
-        dbobj.update('debugrequests', [out])
+        return dbobj.update('debugrequests', [out])
 

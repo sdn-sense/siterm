@@ -14,21 +14,96 @@
             //setInterval(load_data, 300000);
         });
 
-       function loadModel(modelID, sitename)
+       function isString(x) {
+           return Object.prototype.toString.call(x) === "[object String]"
+       }
+
+       function tableAddKeyLine(dataIn, dictkeys, saveObj){
+          tableTag = $('<table class="table"></table>');
+          theadTag = $('<thead class="thead-dark"></thead>');
+          trow = $('<tr></tr>');
+          for (key in dictkeys){
+              trow.append('<th scope="col">'+dictkeys[key]+'</th>');
+          }
+          theadTag.append(trow);
+          tableTag.append(theadTag);
+          if (Array.isArray(dataIn)){
+              for (rowid in dataIn){
+                  console.log(rowid);
+                  trow = $('<tr></tr>');
+                  trow.append('<td>'+rowid+'</td>');
+                  console.log(dataIn[rowid]);
+                  if (isString(dataIn[rowid])){
+                      trow.append('<td>'+dataIn[rowid].replace(new RegExp('\r?\n','g'), '<br />')+'</td>');
+                  } else if (Array.isArray(dataIn[rowid])){
+                      trow.append('<td>Type:'+dataIn[rowid][2]+'<br />'+dataIn[rowid][3].replace(new RegExp('\r?\n','g'), '<br />')+'</td>');
+                  }
+                  tableTag.append(trow);
+              }
+          } else if (isString(dataIn)){
+              console.log(dataIn);
+              trow = $('<tr></tr>');
+              trow.append('<td colspan="2">'+dataIn.replace(new RegExp('\r?\n','g'), '<br />')+'</td>');
+              tableTag.append(trow);
+          }
+
+          saveObj.append(tableTag);
+       }
+
+       function tableAddKeyVal(dataIn, dictkeys, saveObj){
+          tableTag = $('<table class="table"></table>');
+          theadTag = $('<thead class="thead-dark"></thead>');
+          trow = $('<tr></tr>');
+          for (key in dictkeys){
+              trow.append('<th scope="col">'+dictkeys[key]+'</th>');
+          }
+          theadTag.append(trow);
+          tableTag.append(theadTag);
+          for (key in dataIn){
+               trow = $('<tr></tr>');
+               trow.append('<td>'+key+'</td>');
+               trow.append('<td>'+dataIn[key]+'</td>');
+               tableTag.append(trow); }
+          saveObj.append(tableTag);
+       }
+
+       function loadDebug(debugID, sitename)
        {
           var data;
-          $.ajax({url: sitename + '/sitefe/v1/models/'+ modelID,
+          $.ajax({url: sitename + '/sitefe/json/frontend/getdebug/'+ debugID,
             dataType: 'json',
             data: data,
             async: false,
             success: function(json){
+              json = json[0];
+              console.log(json);
               model = $('<div></div>');
-              model.append('<div class="row"><b>Creation Time: </b>' + json['creationTime'] + '</div>');
-              model.append('<div class="row"><b>Href: </b>' + json['href'] + '</div>');
-              model.append('<div class="row"><b>ID: </b>' + json['id'] + '</div>');
-              model.append('<div class="row"><b>Full Model:</b></div>');
-              mrmlSaver(json['model'], model);
-              $('#v-pills-' + modelID).append(model);
+              model.append('<div class="row"><b>Debug ID: </b>' + json['id'] + '</div>');
+              model.append('<div class="row"><b>Debug Hostname: </b>' + json['hostname'] + '</div>');
+              model.append('<div class="row"><b>Insert Date: </b>' + json['insertdate'] + '</div>');
+              model.append('<div class="row"><b>Update Date: </b>' + json['updatedate'] + '</div>');
+              model.append('<div class="row"><b>Debug State: </b>' + json['state'] + '</div>');
+              // Debug Request
+              model.append('<div class="row"><b>Debug Request:</b></div>');
+              var myObject = (0, eval)('(' + json['requestdict'] + ')');
+              tableAddKeyVal(myObject, ['Key', 'Value'], model);
+              // Debug Output
+              if (json['output']){
+                  var myObject = (0, eval)('(' + json['output'] + ')');
+                  console.log(myObject);
+                  if (myObject['exitCode']){
+                      model.append('<div class="row"><b>Runtime Exit Code: </b>' + myObject['exitCode'] + '</div>');
+                  }
+                  if (myObject['err']){
+                      model.append('<div class="row"><b>Debug Err:</b></div>');
+                      tableAddKeyLine(myObject['err'], ['LineNum', 'Value'], model);
+                  }
+                  if (myObject['out']){
+                      model.append('<div class="row"><b>Debug Output:</b></div>');
+                      tableAddKeyLine(myObject['out'], ['LineNum', 'Value'], model);
+                  }
+              }
+              $('#v-pills-' + debugID).append(model);
           }});
        }
 
@@ -36,16 +111,11 @@
           menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"></div>');
           cntDiv = $('<div class="tab-content" id="v-pills-tabContent"></div>');
           latest = true;
-          for (var key in data['models'][sitename]){
-             if ($.isPlainObject(data['models'][sitename][key])){
-               modID = data['models'][sitename][key]['id'];
+          for (var key in data['debug'][sitename]){
+             if ($.isPlainObject(data['debug'][sitename][key])){
+               modID = data['debug'][sitename][key]['id'];
                tagName = modID;
-               if (latest) {
-                   latest = false;
-                   tagName += " LATEST";
-               }
-                   
-               menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadModel(\''+modID+'\', \''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ tagName +'</a>');
+               menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadDebug(\''+modID+'\', \''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ tagName +'</a>');
                cntDiv.append('<div class="tab-pane fade" id="v-pills-'+modID+'" role="tabpanel" aria-labelledby="v-pills-'+modID+'-tab"></div>');
              }
           }
@@ -59,15 +129,16 @@
         function load_data() {
             $.get('config.json', function(data){
               defineSites(data, false);
-              data['models'] = {};
+              data['debug'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
                  sitename = data['general']['sites'][i];
-                 $.ajax({url: sitename + '/sitefe/v1/models',
+                 console.log(sitename);
+                 $.ajax({url: sitename + '/sitefe/json/frontend/getdebug/ALL',
                    dataType: 'json',
                    data: data,
                    async: false,
                    success: function(json){
-                     data['models'][sitename] = json;
+                     data['debug'][sitename] = json;
                   }});
               defineAllModels(data, sitename);
               }

@@ -121,8 +121,8 @@ def frontend(environ, **kwargs):
 _DEBUG_RE = re.compile(r'^/*json/frontend/(submitdebug|updatedebug|getdebug|getalldebughostname)/([-_\.A-Za-z0-9]+)$')
 _DEBUG_ACTIONS = {'GET': {'getdebug': _FRONTEND_RM.getdebug,
                           'getalldebughostname': _FRONTEND_RM.getalldebughostname},
-                   'POST': {'submitdebug': _FRONTEND_RM.submitdebug,
-                            'updatedebug': _FRONTEND_RM.updatedebug}}
+                   'POST': {'submitdebug': _FRONTEND_RM.submitdebug},
+                   'PUT':  {'updatedebug': _FRONTEND_RM.updatedebug}}
 
 def debug(environ, **kwargs):
     """Debug ations
@@ -138,8 +138,8 @@ def debug(environ, **kwargs):
         return command(**kwargs)
     # Get input data and pass it to function.
     inputDict = read_input_data(environ)
-    command(inputDict, **kwargs)
-    return {"Status": 'OK'}
+    out = command(inputDict, **kwargs)
+    return {"Status": out[0], 'ID': out[2]}
 
 _PROMETHEUS_RE = re.compile(r'^/*json/frontend/metrics$')
 
@@ -150,7 +150,7 @@ def prometheus(environ, **kwargs):
 
 
 URLS = [(_FRONTEND_RE, frontend, ['GET', 'PUT'], [], []),
-        (_DEBUG_RE, debug, ['GET', 'POST'], [], []),
+        (_DEBUG_RE, debug, ['GET', 'POST', 'PUT'], [], []),
         (_PROMETHEUS_RE, prometheus, ['GET'], [], [])]
 
 if '__all__' in dir(AllCalls):
