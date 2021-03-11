@@ -1,24 +1,27 @@
-<html lang="en"><head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="assets/css/bootstrap.css" rel="stylesheet">
-    <link href="assets/css/custom.css" rel="stylesheet">
-    <script src="assets/js/jquery.min.js" type="text/javascript"></script>
-    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
-    <script src="assets/js/main.js" type="text/javascript"></script>
-    <script type="text/javascript">
-//<![CDATA[
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.4.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="assets/css/bootstrap.css" rel="stylesheet">
+  <link href="assets/css/custom.css" rel="stylesheet">
+  <script src="assets/js/jquery.min.js" type="text/javascript"></script>
+  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  <script src="assets/js/main.js" type="text/javascript"></script>
+  <script type="text/javascript">
+  //<![CDATA[
         google.load('visualization', '1', {packages:['table', 'controls']});
         $(document).ready(function() {
             load_data();
         });
 
-    function newAlert(alertMessage){
-        alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert"></div>');
+    function newAlert(alertMessage, params){
+        alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert"><\/div>');
         alert.append(alertMessage);
         alert.append('<button type="button" class="close" data-dismiss="alert" aria-label="Close">');
-        $('#alerts').append(alert);       
-}
+        $('#alerts' + params['type']).append(alert);
+  }
 
     function collectInputs(tagName) {
         docObj =  document.getElementById(tagName);
@@ -30,8 +33,10 @@
                 params[fieldName] = fieldValue;
             }
         }
+        console.log(params);
         $.post("/"+params['sitename']+"/sitefe/json/frontend/submitdebug/NEW", params, function(result){
-            newAlert("New debug action submit state:" + JSON.stringify(result));
+            console.log(result);
+            newAlert("New debug action submit state:" + JSON.stringify(result), params);
         });
     }
 
@@ -66,7 +71,7 @@
       }
 
         function addDropDown(dropdownVal, saveObj){
-          saveObj.append('<option>'+dropdownVal+'</option>');
+          saveObj.append('<option>'+dropdownVal+'<\/option>');
         }
 
         function load_data() {
@@ -81,316 +86,301 @@
             }
           });
        };
-//]]>
-        </script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/loader.js"></script>
-
-
-    <title>Site-RM: Frontend Configuration</title>
+  //]]>
+  </script>
+  <script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/loader.js"></script>
+  <title>Site-RM: Frontend Configuration</title>
 </head>
-  <body>
-
-
-<header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-  <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
-  <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-    <span class="navbar-toggler-icon"></span>
-  </button>
-</header>
-
-<div class="container-fluid">
-  <div class="row">
-    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-      <div class="position-sticky pt-3">
-        <ul class="nav flex-column">
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="/index.html">
-              <span data-feather="fe-config"></span>
-              Frontend Configuration
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/models.html">
-              <span data-feather="models"></span>
-              Models
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/deltas.html">
-              <span data-feather="deltas"></span>
-              Deltas
-            </a>
-          </li>
-        </ul>
-
-        <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
-          <span>Debugging tools</span>
-          <a class="link-secondary" href="#" aria-label="Debugging tools">
-            <span data-feather="plus-circle"></span>
-          </a>
-        </h6>
-        <ul class="nav flex-column mb-2">
-          <li class="nav-item">
-            <a class="nav-link" href="/newdebug.html">
-              <span data-feather="file-text"></span>
-              Request new debug action
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/debughistory.html">
-              <span data-feather="file-text"></span>
-              Debug history
-            </a>
-          </li>
-        </ul>
-      </div>
-    </nav>
-
-    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2">Dashboard</h1>
-      </div>
-        <div class="row" id="maindiv">
-
-<div class="col-md-12" id="alertstop">
-</div>
-
-<div class="row col-md-12 border border-primary">
-<div class="row col-md-12">
-<h3 class="h3">Rapid Ping</h3>
-</div>
-<div class="col-md-12" id="alertsrapid">
-</div>
-<div class="col">div6</div>
-<div class="col">
-<form onsubmit="collectInputs('f1');" id="f1">
-  <input id="f1_type" name="type" type="hidden" value="rapidping">
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Sitename</label>
-    <select class="form-control" id="f1_sitename" name="sitename" onchange="doSiteUpdate('f1_');" required>
-      <option value="">Choose Site</option>
-    </select>
-  </div>
-
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="f1_dtn" name="dtn" onchange="doDTNUpdate('f1_');" required>
-      <option value="">Choose DTN</option>
-    </select>
-  </div>
-    <div class="form-group">
-      <label for="exampleFormControlSelect1">IP to ping</label>
-      <input class="form-control" type="text" placeholder="IP to ping" id="f1_ip_ping" name="ip" required>
-    </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="f1_interface" name="interface" required>
-      <option value="">Choose Interface</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Ping time</label>
-    <select class="form-control" id="f1_time" name="time" required>
-      <option value="">Choose Ping time</option>
-      <option value="60">1 minute</option>
-      <option value="120">2 minutes</option>
-      <option value="300">5 minutes</option>
-    </select>
-  </div>
-<input type="submit">
-</form>
-</div>
-</div>
-
-<div class="row col-md-12 border border-secondary">
-<div class="row col-md-12">
-<h3 class="h3">TCPDump</h3>
-</div>
-<div class="col-md-12" id="alertstcpdump">
-</div>
-<div class="col">div6</div>
-<div class="col">
-
-<form onsubmit="collectInputs('f2');" id="f2">
-  <input id="f2_type" name="type" type="hidden" value="tcpdump">
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Sitename</label>
-    <select class="form-control" id="f2_sitename" name="sitename" onchange="doSiteUpdate('f2_');" required>
-      <option value="">Choose Site</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="f2_dtn" name="dtn" onchange="doDTNUpdate('f2_');" required>
-      <option value="">Choose DTN</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="f2_interface" name="interface" required>
-      <option value="">Choose Interface</option>
-    </select>
-  </div>
-<input type="submit">
-</form>
-</div>
-</div>
-
-<div class="row col-md-12 border border-success">
-<div class="row col-md-12">
-<h3 class="h3">ARP Table</h3>
-</div>
-<div class="col-md-12" id="alertsarptable">
-</div>
-<div class="col">div6</div>
-<div class="col">
-
-<span class="border" style="width:100%">
-<h3 class="h3">ARP Table</h3>
-<form onsubmit="collectInputs('f3');" id="f3">
-  <input id="f3_type" name="type" type="hidden" value="arptable">
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Sitename</label>
-    <select class="form-control" id="f3_sitename" name="sitename" onchange="doSiteUpdate('f3_');" required>
-      <option value="">Choose Site</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="f3_dtn" name="dtn" onchange="doDTNUpdate('f3_');" required>
-      <option value="">Choose DTN</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="f3_interface" name="interface" required>
-      <option value="">Choose Interface</option>
-    </select>
-  </div>
-<input type="submit">
-</form>
-</div>
-</div>
-
-
-<div class="row col-md-12 border border-danger">
-<div class="row col-md-12">
-<h3 class="h3">IPerf Client</h3>
-</div>
-<div class="col-md-12" id="alertsiperf">
-</div>
-<div class="col">div6</div>
-<div class="col">
-
-<form onsubmit="collectInputs('f4');" id="f4">
-  <input id="f4_type" name="type" type="hidden" value="iperf">
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Sitename</label>
-    <select class="form-control" id="f4_sitename" name="sitename" onchange="doSiteUpdate('f4_');" required>
-      <option value="">Choose Site</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="f4_dtn" name="dtn" onchange="doDTNUpdate('f4_');" required>
-      <option value="">Choose DTN</option>
-    </select>
-  </div>
-
-    <div class="form-group">
-      <label for="exampleFormControlSelect1">IP to ping</label>
-      <input class="form-control" type="text" placeholder="IP to ping" id="f4_ip_ping" name="ip" required>
-    </div>
-
-    <div class="form-group">
-      <label for="exampleFormControlSelect1">Port</label>
-      <input class="form-control" type="text" placeholder="Port" id="f4_port" name="port" required>
-    </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="f4_interface" name="interface" required>
-      <option value="">Choose Interface</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Runtime</label>
-    <select class="form-control" id="f4_time" name="time" required>
-      <option value="">Choose Ping time</option>
-      <option value="60">1 minute</option>
-      <option value="120">2 minutes</option>
-      <option value="300">5 minutes</option>
-    </select>
-  </div>
-<input type="submit">
-</form>
-</div>
-</div>
-
-<div class="row col-md-12 border border-warning">
-<div class="row col-md-12">
-<h3 class="h3">IPerf Server</h3>
-</div>
-<div class="col-md-12" id="alertsiperfserver">
-</div>
-<div class="col">div6</div>
-<div class="col">
-
-<form onsubmit="collectInputs('f5');" id="f5">
-  <input id="f5_type" name="type" type="hidden" value="iperfserver">
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Sitename</label>
-    <select class="form-control" id="f5_sitename" name="sitename" onchange="doSiteUpdate('f5_');" required>
-      <option value="">Choose Site</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">DTN</label>
-    <select class="form-control" id="f5_dtn" name="dtn" onchange="doDTNUpdate('f5_');" required>
-      <option value="">Choose DTN</option>
-    </select>
-  </div>
-
-    <div class="form-group">
-      <label for="exampleFormControlSelect1">Port</label>
-      <input class="form-control" type="text" placeholder="Port" id="f5_port" name="port" required>
-    </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Interface</label>
-    <select class="form-control" id="f5_interface" name="interface" required>
-      <option value="">Choose Interface</option>
-    </select>
-  </div>
-  <div class="form-group">
-    <label for="exampleFormControlSelect1">Runtime</label>
-    <select class="form-control" id="f5_time" name="time" required>
-      <option value="">Choose Server Runtime</option>
-      <option value="60">1 minute</option>
-      <option value="120">2 minutes</option>
-      <option value="300">5 minutes</option>
-      <option value="600">10 minutes</option>
-    </select>
-  </div>
-  <div class="form-group">
-<input type="checkbox" id="f5_onetime" name="onetime" value="True">
-<label for="f5_onetime">Handle one client connection then exit</label><br>
-</div>
-
-<input type="submit">
-</form>
-</div>
-</div>
-
-
-
+<body>
+  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
+  </header>
+  <div class="container-fluid">
+    <div class="row">
+      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+        <div class="position-sticky pt-3">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="/index.html">Frontend Configuration</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/models.html">Models</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/deltas.html">Deltas</a>
+            </li>
+          </ul>
+          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"><span>Debugging tools</span> <a class="link-secondary" href="#" aria-label="Debugging tools"></a></h6>
+          <ul class="nav flex-column mb-2">
+            <li class="nav-item">
+              <a class="nav-link" href="/newdebug.html">Request new debug action</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/debughistory.html">Debug history</a>
+            </li>
+          </ul>
         </div>
-    </main>
-  </div>
-</div>
-    <script src="assets/js/bootstrap.bundle.js"></script>
-    <script src="assets/js/bootstrap.js"></script>
-    <script>
+      </nav>
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">Dashboard</h1>
+        </div>
+        <div class="row" id="maindiv">
+          <div class="col-md-12" id="alertstop"></div>
+          <div class="row col-md-12 border border-primary">
+            <div class="row col-md-12">
+              <h3 class="h3">Rapid Ping</h3>
+            </div>
+            <div class="col-md-12" id="alertsrapidping"></div>
+            <div class="col">
+              div6
+            </div>
+            <div class="col">
+              <form onsubmit="collectInputs('f1'); return false" id="f1" name="f1">
+                <input id="f1_type" name="type" type="hidden" value="rapidping">
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f1_sitename" name="sitename" onchange="doSiteUpdate('f1_');" required="">
+                    <option value="">
+                      Choose Site
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">DTN</label> <select class="form-control" id="f1_dtn" name="dtn" onchange="doDTNUpdate('f1_');" required="">
+                    <option value="">
+                      Choose DTN
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">IP to ping</label> <input class="form-control" type="text" placeholder="IP to ping" id="f1_ip_ping" name="ip" required="">
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Interface</label> <select class="form-control" id="f1_interface" name="interface" required="">
+                    <option value="">
+                      Choose Interface
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Ping time</label> <select class="form-control" id="f1_time" name="time" required="">
+                    <option value="">
+                      Choose Ping time
+                    </option>
+                    <option value="60">
+                      1 minute
+                    </option>
+                    <option value="120">
+                      2 minutes
+                    </option>
+                    <option value="300">
+                      5 minutes
+                    </option>
+                  </select>
+                </div><input type="submit">
+              </form>
+            </div>
+          </div>
+          <div class="row col-md-12 border border-secondary">
+            <div class="row col-md-12">
+              <h3 class="h3">TCPDump</h3>
+            </div>
+            <div class="col-md-12" id="alertstcpdump"></div>
+            <div class="col">
+              div6
+            </div>
+            <div class="col">
+              <form onsubmit="collectInputs('f2'); return false" id="f2" name="f2">
+                <input id="f2_type" name="type" type="hidden" value="tcpdump">
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f2_sitename" name="sitename" onchange="doSiteUpdate('f2_');" required="">
+                    <option value="">
+                      Choose Site
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">DTN</label> <select class="form-control" id="f2_dtn" name="dtn" onchange="doDTNUpdate('f2_');" required="">
+                    <option value="">
+                      Choose DTN
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Interface</label> <select class="form-control" id="f2_interface" name="interface" required="">
+                    <option value="">
+                      Choose Interface
+                    </option>
+                  </select>
+                </div><input type="submit">
+              </form>
+            </div>
+          </div>
+          <div class="row col-md-12 border border-success">
+            <div class="row col-md-12">
+              <h3 class="h3">ARP Table</h3>
+            </div>
+            <div class="col-md-12" id="alertsarptable"></div>
+            <div class="col">
+              div6
+            </div>
+            <div class="col">
+              <form onsubmit="collectInputs('f3'); return false" id="f3" name="f3">
+                <input id="f3_type" name="type" type="hidden" value="arptable">
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f3_sitename" name="sitename" onchange="doSiteUpdate('f3_');" required="">
+                    <option value="">
+                      Choose Site
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">DTN</label> <select class="form-control" id="f3_dtn" name="dtn" onchange="doDTNUpdate('f3_');" required="">
+                    <option value="">
+                      Choose DTN
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Interface</label> <select class="form-control" id="f3_interface" name="interface" required="">
+                    <option value="">
+                      Choose Interface
+                    </option>
+                  </select>
+                </div><input type="submit">
+              </form>
+            </div>
+          </div>
+          <div class="row col-md-12 border border-danger">
+            <div class="row col-md-12">
+              <h3 class="h3">IPerf Client</h3>
+            </div>
+            <div class="col-md-12" id="alertsiperf"></div>
+            <div class="col">
+              <span class="border" style="width:100%">div6</span>
+            </div>
+            <div class="col">
+              <form onsubmit="collectInputs('f4'); return false" id="f4" name="f4">
+                <input id="f4_type" name="type" type="hidden" value="iperf">
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f4_sitename" name="sitename" onchange="doSiteUpdate('f4_');" required="">
+                    <option value="">
+                      Choose Site
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">DTN</label> <select class="form-control" id="f4_dtn" name="dtn" onchange="doDTNUpdate('f4_');" required="">
+                    <option value="">
+                      Choose DTN
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">IP to ping</label> <input class="form-control" type="text" placeholder="IP to ping" id="f4_ip_ping" name="ip" required="">
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Port</label> <input class="form-control" type="text" placeholder="Port" id="f4_port" name="port" required="">
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Interface</label> <select class="form-control" id="f4_interface" name="interface" required="">
+                    <option value="">
+                      Choose Interface
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Runtime</label> <select class="form-control" id="f4_time" name="time" required="">
+                    <option value="">
+                      Choose Ping time
+                    </option>
+                    <option value="60">
+                      1 minute
+                    </option>
+                    <option value="120">
+                      2 minutes
+                    </option>
+                    <option value="300">
+                      5 minutes
+                    </option>
+                  </select>
+                </div><input type="submit">
+              </form>
+            </div>
+          </div>
+          <div class="row col-md-12 border border-warning">
+            <div class="row col-md-12">
+              <h3 class="h3">IPerf Server</h3>
+            </div>
+            <div class="col-md-12" id="alertsiperfserver"></div>
+            <div class="col">
+              <span class="border" style="width:100%">div6</span>
+            </div>
+            <div class="col">
+              <form onsubmit="collectInputs('f5'); return false" id="f5" name="f5">
+                <input id="f5_type" name="type" type="hidden" value="iperfserver">
+                <div class="form-group">
+                   <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f5_sitename" name="sitename" onchange="doSiteUpdate('f5_');" required="">
+                    <option value="">
+                      Choose Site
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">DTN</label> <select class="form-control" id="f5_dtn" name="dtn" onchange="doDTNUpdate('f5_');" required="">
+                    <option value="">
+                      Choose DTN
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Port</label> <input class="form-control" type="text" placeholder="Port" id="f5_port" name="port" required="">
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Interface</label> <select class="form-control" id="f5_interface" name="interface" required="">
+                    <option value="">
+                      Choose Interface
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Runtime</label> <select class="form-control" id="f5_time" name="time" required="">
+                    <option value="">
+                      Choose Server Runtime
+                    </option>
+                    <option value="60">
+                      1 minute
+                    </option>
+                    <option value="120">
+                      2 minutes
+                    </option>
+                    <option value="300">
+                      5 minutes
+                    </option>
+                    <option value="600">
+                      10 minutes
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <input type="checkbox" id="f5_onetime" name="onetime" value="True"> <label for="f5_onetime">Handle one client connection then exit</label><br>
+                </div><input type="submit">
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div><span class="border" style="width:100%">
+  <script src="assets/js/bootstrap.bundle.js"></script>
+  <script src="assets/js/bootstrap.js"></script>
+  <script>
+
+
       $('#myTab a').click(function (e) {
         e.preventDefault();
         $(this).tab('show');
       })
-    </script>
-</body></html>
+  </script></span>
+</body>
+</html>
