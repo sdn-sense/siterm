@@ -36,11 +36,11 @@ setup(
     keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
     package_dir={'': 'src/python/'},
     packages=['DTNRMAgent', 'DTNRMLibs'] + list_packages(['src/python/DTNRMAgent/', 'src/python/DTNRMLibs/']),
-    install_requires=['importlib', 'psutil', 'ipaddress', 'pyroute2', 'pyaml',
+    install_requires=['importlib', 'psutil', 'ipaddress', 'pyroute2', 'pyaml', 'pyshark', 'iperf3',
                       'pycurl', 'requests', 'netifaces', 'future', 'simplejson'],
     data_files=[("/etc/cron.d/", ["packaging/dtnrm-site-agent/siterm-crons"]),
                 ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh",
                                         "packaging/general/siterm-autoupdate.py"])],
     py_modules=get_py_modules(['src/python/DTNRMAgent', 'src/python/DTNRMLibs']),
-    scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler"]
+    scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler", "packaging/dtnrm-site-agent/dtnrm-debugger"]
 )

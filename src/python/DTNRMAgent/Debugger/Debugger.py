@@ -11,6 +11,7 @@ from DTNRMAgent.Debugger.Actions.arptable import arptable
 from DTNRMAgent.Debugger.Actions.iperf import iperf
 from DTNRMAgent.Debugger.Actions.rapidping import rapidping
 from DTNRMAgent.Debugger.Actions.tcpdump import tcpdump
+from DTNRMAgent.Debugger.Actions.iperfserver import iperfserver
 
 from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict, getStreamLogger
 from DTNRMLibs.MainUtilities import createDirs, getFullUrl, contentDB, getFileContentAsJson
@@ -42,8 +43,7 @@ class Debugger():
             return {}
         if self.config.getboolean('general', "debug"):
             pretty = pprint.PrettyPrinter(indent=4)
-            pretty.pprint(evaldict(out[0]))
-        self.logger.info('End function checkdeltas')
+            self.logger.debug(pretty.pprint(evaldict(out[0])))
         return evaldict(out[0])
 
     def getAllAssignedtoHost(self):
@@ -58,7 +58,7 @@ class Debugger():
         allWork = self.getAllAssignedtoHost()
         out, err, exitCode = "", "", 0
         for item in allWork:
-            print(item)
+            self.logger.debug("Work on: %s" % item)
             try:
                 item['requestdict'] = evaldict(item['requestdict']) 
                 if item['requestdict']['type'] == 'rapidping':
@@ -69,6 +69,8 @@ class Debugger():
                     out, err, exitCode = arptable(item['requestdict'])
                 elif item['requestdict']['type'] == 'iperf':
                     out, err, exitCode = iperf(item['requestdict'])
+                elif item['requestdict']['type'] == 'iperfserver':
+                    out, err, exitCode = iperfserver(item['requestdict'])
                 else:
                     err = "Unknown Request"
                     exitCode = 500
@@ -81,6 +83,7 @@ class Debugger():
                 item['state'] = 'failed'
             else:
                 item['state'] = 'finished'
+            self.logger.debug("Finish work on: %s" % item)
             self.publishToFE(item)
 
 

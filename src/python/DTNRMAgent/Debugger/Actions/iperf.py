@@ -15,4 +15,3 @@ def iperf(inputDict):
 if __name__ == "__main__":
     testData = {'type': 'iperf', 'sitename': 'T2_US_Caltech_Test1', 'dtn': 'sdn-sc-nodea.ultralight.org', 'ip': '1.2.3.4', 'interface': 'vlan.3604', 'time': '120'}
     print(iperf(testData))
-

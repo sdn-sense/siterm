@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""
+This part of code is taken from:
+   https://web.archive.org/web/20160305151936/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+Please respect developer (Sander Marechal) and always keep a reference to URL and also as kudos to him
+Changes applied to this code:
+    Dedention (Justas Balcas 07/12/2017)
+    pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
+"""
+from __future__ import print_function
+from builtins import str
+import sys
+import time
+import socket
+from DTNRMLibs.Daemonizer import Daemon
+from DTNRMLibs.MainUtilities import getConfig, reCacheConfig, getStreamLogger, getLogger
+from DTNRMLibs.MainUtilities import pubStateRemote
+from DTNRMAgent.Debugger import Debugger
+
+CONFIG = getConfig()
+COMPONENT = 'Debugger'
+LOGGER = getLogger("%s/%s/" % (CONFIG.get('general', 'logDir'), COMPONENT), CONFIG.get('general', 'logLevel'))
+
+
+class MyDaemon(Daemon):
+    """ My own Deamon override """
+    def run(self):
+        """ Run main execution """
+        timeeq, currentHour = reCacheConfig(None)
+        config = CONFIG
+        # This dic is used for State reporting
+        outDict = {'servicename': COMPONENT, 'hostname': socket.gethostname()}
+        debuggerAgent = Debugger.Debugger(config, LOGGER)
+        while True:
+            time.sleep(5)
+            try:
+                debuggerAgent.start()
+                outDict['servicestate'] = 'OK'
+                pubStateRemote(config, outDict)
+            except KeyboardInterrupt as ex:
+                outDict['servicestate'] = 'KEYBOARDINTERRUPT'
+                pubStateRemote(config, outDict)
+                LOGGER.critical("Received KeyboardInterrupt: %s ", ex)
+                exit(3)
+            except:
+                outDict['servicestate'] = 'FAILED'
+                pubStateRemote(config, outDict)
+                excType, excValue = sys.exc_info()[:2]
+                LOGGER.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
+                time.sleep(20)
+            timeeq, currentHour = reCacheConfig(currentHour)
+            if not timeeq:
+                LOGGER.info('Re initiating Policer Service with new configuration from GIT')
+                del debuggerAgent
+                config = getConfig()
+                debuggerAgent = Debugger.Debugger(config, LOGGER)
+
+if __name__ == "__main__":
+    DAEMON = MyDaemon('/tmp/dtnrm-debugger-update.pid')
+    if len(sys.argv) != 2:
+        print('ERROR: Options available: %s ' % DAEMON.availableCommands)
+        exit(1)
+    if sys.argv[1] in DAEMON.availableCommands:
+        if sys.argv[1] == 'startforeground':
+            LOGGER = getStreamLogger()
+        DAEMON.command(sys.argv[1], sys.argv[0])
+    else:
+        DAEMON.command('', sys.argv[0])
