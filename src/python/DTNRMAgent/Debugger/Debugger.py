@@ -51,7 +51,7 @@ class Debugger():
         return self.getData("/sitefe/json/frontend/getalldebughostname/%s" % self.hostname)
 
     def publishToFE(self, inDic):
-        outVals = publishToSiteFE(dic, fullUrl, '/sitefe/json/frontend/updatedebug/%s' % inDic['id'])
+        outVals = publishToSiteFE(inDic, self.fullURL, '/sitefe/json/frontend/updatedebug/%s' % inDic['id'])
 
     def start(self):
         """Start execution and get new requests from FE."""
@@ -81,22 +81,7 @@ class Debugger():
                 item['state'] = 'failed'
             else:
                 item['state'] = 'finished'
-
-            pretty = pprint.PrettyPrinter(indent=4)
-            pretty.pprint(item)
-
-#{   'hostname': 'sdn-sc-nodea.ultralight.org',
-#    'id': 5,
-#    'insertdate': 1615310026,
-#    'output': '',
-#    'requestdict': {   'dtn': 'sdn-sc-nodea.ultralight.org',
-#                       'interface': 'vlan.3604',
-#                       'ip_ping': '1.1.1.1',
-#                       'sitename': 'T2_US_Caltech_Test1',
-#                       'time': '120',
-#                       'type': 'iperf'},
-#    'state': 'new',
-#    'updatedate': 1615310026}
+            self.publishToFE(item)
 
 
 def execute(config=None, logger=None):
