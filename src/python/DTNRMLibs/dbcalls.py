@@ -91,8 +91,8 @@ create_debugrequests = """CREATE TABLE IF NOT EXISTS debugrequests(
                           id int auto_increment,
                           hostname text NOT NULL,
                           state text NOT NULL,
-                          requestdict text NOT NULL,
-                          output text NOT NULL,
+                          requestdict longtext NOT NULL,
+                          output longtext NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
                           primary key(id))"""
