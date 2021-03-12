@@ -23,6 +23,7 @@ from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 from SiteFE.PolicyService.newDeltaChecks import checkConflicts
 
+
 def timeendcheck(delta, logger):
     """Check delta timeEnd.
 
@@ -48,7 +49,7 @@ def timeendcheck(delta, logger):
     return connEnded
 
 
-class ConnectionMachine(object):
+class ConnectionMachine():
     """Connection State machine.
 
     Maps Deltas with 1 to N connections
@@ -65,7 +66,6 @@ class ConnectionMachine(object):
                          'connectionid': connid,
                          'state': 'accepted'}
                 dbObj.insert('delta_connections', [dbOut])
-        return
 
     @staticmethod
     def committed(dbObj, delta):
@@ -76,7 +76,6 @@ class ConnectionMachine(object):
                          'connectionid': connid,
                          'state': 'committed'}
                 dbObj.update('delta_connections', [dbOut])
-        return
 
     @staticmethod
     def activating(dbObj, delta):
@@ -87,7 +86,6 @@ class ConnectionMachine(object):
                          'connectionid': connid,
                          'state': 'activating'}
                 dbObj.update('delta_connections', [dbOut])
-        return
 
     @staticmethod
     def activated(dbObj, delta):
@@ -108,16 +106,14 @@ class ConnectionMachine(object):
                              'connectionid': dConn['connectionid'],
                              'state': 'cancelled'}
                     dbObj.update('delta_connections', [dbOut])
-        return
 
 
-class StateMachine(object):
+class StateMachine():
     """State machine for Frontend and policy service."""
     def __init__(self, logger):
         self.logger = logger
         self.limit = 100
         self.connMgr = ConnectionMachine(logger)
-        return
 
     def _stateChangerDelta(self, dbObj, newState, **kwargs):
         """Delta State change."""
@@ -208,7 +204,6 @@ class StateMachine(object):
             self._stateChangerDelta(dbObj, 'committed', **delta)
             self._modelstatechanger(dbObj, 'add', **delta)
             self.connMgr.committed(dbObj, delta)
-        return
 
     def committed(self, dbObj):
         """Committing state Check."""
@@ -226,7 +221,7 @@ class StateMachine(object):
                             if connDelta['timestart'] < getUTCnow():
                                 self.logger.info('This delta already passed timestart mark. \
                                                  Setting state to activating')
-                                delayStart = False if delayStart is not True else True
+                                delayStart = not delayStart
                             else:
                                 self.logger.info('This delta %s did not passed timestart mark. \
                                                  Leaving state as it is' % delta['uid'])
@@ -242,10 +237,11 @@ class StateMachine(object):
                 self._stateChangerDelta(dbObj, 'activating', **delta)
                 if delta['deltat'] in ['reduction']:
                     for connid in evaldict(delta['connectionid']):
-                         for dConn in dbObj.get('delta_connections', search=[['connectionid', connid]]):
-                             self.logger.info('This connection %s belongs to this delta: %s. Cancel delta' % (connid, dConn['deltaid']))
-                             deltaRem = {'uid': dConn['deltaid']}
-                             self._stateChangerDelta(dbObj, 'remove', **deltaRem)
+                        for dConn in dbObj.get('delta_connections', search=[['connectionid', connid]]):
+                            self.logger.info('This connection %s belongs to this delta: %s. Cancel delta'
+                                             % (connid, dConn['deltaid']))
+                            deltaRem = {'uid': dConn['deltaid']}
+                            self._stateChangerDelta(dbObj, 'remove', **deltaRem)
 
     def activating(self, dbObj):
         """Check on all deltas in state activating."""
@@ -305,7 +301,6 @@ class StateMachine(object):
             if delta['updatedate'] < int(getUTCnow() - 600):
                 self._stateChangerDelta(dbObj, 'removed', **delta)
                 self.modelstatecancel(dbObj, **delta)
-        return
 
     def removing(self, dbObj):
         """Check on all removing state deltas.

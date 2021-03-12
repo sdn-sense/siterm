@@ -87,13 +87,9 @@ def overlap_count(times1, times2):
     return overlap
 
 def compareTwoDeltaTimes(deltaInDB, deltaIN):
-    print('compare')
-    print(deltaInDB)
-    print(deltaIN)
     for dInhost, dInvlan in deltaIN['hosts'].items():
         if dInhost in deltaInDB['hosts'].keys() and deltaInDB['hosts'][dInhost] == dInvlan:
             overlap = overlap_count(deltaInDB['times'], deltaIN['times'])
             if overlap:
                 msg = 'New delta request overlaps with delta %s in %s state. Overlap time: %s' % (deltaInDB['uid'], deltaInDB['state'], overlap)
                 raise OverlapException(msg)
-

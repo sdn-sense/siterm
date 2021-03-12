@@ -1,11 +1,25 @@
 #!/usr/bin/env python3
 """Debugger component pulls all actions from Site-FE and do tests
+
+   Copyright 2021 California Institute of Technology
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+       http://www.apache.org/licenses/LICENSE-2.0
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+Title                   : siterm
+Author                  : Justas Balcas
+Email                   : jbalcas (at) caltech (dot) edu
+@Copyright              : Copyright (C) 2021 California Institute of Technology
+Date                    : 2021/03/12
 """
 from __future__ import absolute_import
-import os
 import json
 import traceback
-import glob
 import pprint
 from DTNRMAgent.Debugger.Actions.arptable import arptable
 from DTNRMAgent.Debugger.Actions.iperf import iperf
@@ -14,17 +28,17 @@ from DTNRMAgent.Debugger.Actions.tcpdump import tcpdump
 from DTNRMAgent.Debugger.Actions.iperfserver import iperfserver
 
 from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict, getStreamLogger
-from DTNRMLibs.MainUtilities import createDirs, getFullUrl, contentDB, getFileContentAsJson
+from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import publishToSiteFE
 from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getConfig
-from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 
 
 COMPONENT = 'Debugger'
 
 
 class Debugger():
+    """ Debugger main process """
     def __init__(self, config, logger):
         self.config = config if config else getConfig()
         self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
@@ -51,7 +65,8 @@ class Debugger():
         return self.getData("/sitefe/json/frontend/getalldebughostname/%s" % self.hostname)
 
     def publishToFE(self, inDic):
-        outVals = publishToSiteFE(inDic, self.fullURL, '/sitefe/json/frontend/updatedebug/%s' % inDic['id'])
+        """Publish debug runtime to FE."""
+        publishToSiteFE(inDic, self.fullURL, '/sitefe/json/frontend/updatedebug/%s' % inDic['id'])
 
     def start(self):
         """Start execution and get new requests from FE."""
@@ -60,7 +75,7 @@ class Debugger():
         for item in allWork:
             self.logger.debug("Work on: %s" % item)
             try:
-                item['requestdict'] = evaldict(item['requestdict']) 
+                item['requestdict'] = evaldict(item['requestdict'])
                 if item['requestdict']['type'] == 'rapidping':
                     out, err, exitCode = rapidping(item['requestdict'])
                 elif item['requestdict']['type'] == 'tcpdump':

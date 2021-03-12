@@ -197,7 +197,9 @@ def internallCall(caller, environ, **kwargs):
 
 
 def isiterable(inVal):
-  return not isinstance(inVal, str) and isinstance(inVal, collections.Iterable)
+    """Check if inVal is iterable"""
+    return not isinstance(inVal, str) and isinstance(inVal, collections.Iterable)
+
 
 def returnDump(out):
     """Return output based on it's type."""
