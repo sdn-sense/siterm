@@ -71,7 +71,6 @@ class FrontendRM():
         else:
             print('This host is already in db. Why to add several times?')
             raise BadRequestError('This host is already in db. Why to add several times?')
-        return
 
     def updatehost(self, inputDict, **kwargs):
         """Update Host in DB.
@@ -93,7 +92,6 @@ class FrontendRM():
                'updatedate': getUTCnow(),
                'hostinfo': json.dumps(inputDict)}
         dbobj.update('hosts', [out])
-        return
 
     @staticmethod
     def servicestate(inputDict, **kwargs):
@@ -104,7 +102,6 @@ class FrontendRM():
             raise NotFoundError('This Service %s is not supported by Frontend' % inputDict['servicename'])
         reportServiceStatus(inputDict['servicename'], inputDict['servicestate'],
                             kwargs['sitename'], None, inputDict['hostname'])
-
 
     def getdebug(self, **kwargs):
         """Get Debug action for specific ID."""
@@ -124,7 +121,6 @@ class FrontendRM():
         search = [['hostname', kwargs['mReg'][1]], ['state', 'new']]
         return dbobj.get('debugrequests', orderby=['updatedate', 'DESC'], search=search, limit=1000)
 
-
     def submitdebug(self, inputDict, **kwargs):
         """Submit new debug action request."""
         dbobj = getVal(self.dbI, **kwargs)
@@ -135,7 +131,6 @@ class FrontendRM():
                'insertdate': getUTCnow(),
                'updatedate': getUTCnow()}
         return dbobj.insert('debugrequests', [out])
- 
 
     def updatedebug(self, inputDict, **kwargs):
         """Update debug action information."""
@@ -145,4 +140,3 @@ class FrontendRM():
                'output': inputDict['output'],
                'updatedate': getUTCnow()}
         return dbobj.update('debugrequests', [out])
-

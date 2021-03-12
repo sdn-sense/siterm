@@ -116,8 +116,10 @@ class NotSupportedArgument(ExceptionTemplate):
 class PluginException(Exception):
     """Plugin Exception."""
 
+
 class OverlapException(Exception):
     """Overlap Exception."""
+
 
 class HTTPResponses():
     """Frontend HTTP Responses."""

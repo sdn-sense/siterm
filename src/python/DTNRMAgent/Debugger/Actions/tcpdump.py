@@ -19,6 +19,7 @@ Date                    : 2021/03/12
 import concurrent.futures._base
 import pyshark
 
+
 class ParsePackets():
     """Packet Parser"""
     def __init__(self):
@@ -33,13 +34,12 @@ class ParsePackets():
             self.out.append([self.stored, tlayer, hlayer, packet])
             self.stored += 1
 
-
     def sniff(self, inputDict):
         """Sniff packets on interface for 30 seconds."""
         self.stored = 0
         capture = pyshark.LiveCapture(interface=inputDict['interface'])
         try:
-            capture.apply_on_packets(self.packetProcess,timeout=30)
+            capture.apply_on_packets(self.packetProcess, timeout=30)
         except concurrent.futures._base.TimeoutError:
             pass
         capture.clear()

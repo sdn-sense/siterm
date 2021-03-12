@@ -32,24 +32,12 @@ import platform
 VERSION = '210225'
 
 
-def linuxDistr():
-    """Return linux distribution name.
-
-    Otherwise Unknown
-    """
-    try:
-        return platform.linux_distribution()
-    except:
-        return "Unknown"
-
-
 def printInfo(logger=None):
     """Print information about sytem before start setup."""
     print("System Information:")
     print("-" * 100)
     print("Python version: %s" % sys.version.split('\n'))
     print("Dist: %s" % str(platform.dist()))
-    print("Linux Distribution: %s" % linuxDistr())
     print("System: %s" % platform.system())
     print("Machine: %s" % platform.machine())
     print("Platform: %s" % platform.platform())
@@ -120,21 +108,20 @@ def get_py_modules(modulesDirs):
     return list_packages(modulesDirs, pyFiles=True)
 
 
-
 def get_web_files(rootdir='/var/www/html'):
     """Get all files to copy to html dir"""
     maindir = os.path.abspath(os.getcwd())
     htmldir = os.path.join(maindir, 'src/html/')
     htmldirs = [htmldir]
     out = []
-    for dir in htmldirs:
+    for dirN in htmldirs:
         allFiles = []
-        for fName in os.listdir(dir):
-            newpath = os.path.join(dir, fName)
+        for fName in os.listdir(dirN):
+            newpath = os.path.join(dirN, fName)
             if os.path.isdir(newpath):
                 htmldirs.append(newpath)
                 continue
             fPath = newpath[len(maindir)+1:]
             allFiles.append(fPath)
-        out.append((os.path.join(rootdir, dir[len(htmldir):]), allFiles))
+        out.append((os.path.join(rootdir, dirN[len(htmldir):]), allFiles))
     return out

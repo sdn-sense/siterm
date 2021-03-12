@@ -18,7 +18,6 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2018/11/26
 """
 from builtins import str
-from builtins import object
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 from SiteFE.PolicyService.newDeltaChecks import checkConflicts

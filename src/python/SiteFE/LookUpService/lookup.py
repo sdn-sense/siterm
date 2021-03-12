@@ -212,9 +212,8 @@ class LookUpService():
                 else:
                     state = 'scheduled'
                     print('scheduled')
-            elif 'timeend' in list(conn.keys()) and state == 'activated':
-                if conn['timeend'] < getUTCnow():
-                    state = 'deactivating'
+            elif 'timeend' in list(conn.keys()) and conn['timeend'] < getUTCnow() and state == 'activated':
+                state = 'deactivating'
             # Add new State under SwitchSubnet
             mainGraph.add((self.prefixDB.genUriRef(custom=conn['connectionID']),
                            self.prefixDB.genUriRef('mrs', 'tag'),
@@ -242,7 +241,7 @@ class LookUpService():
         os.unlink(tmpFile.name)
         self.logger.info('Main Graph len: %s Addition Len: %s', len(mainGraph), len(tmpGraph))
         mainGraph += tmpGraph
-        #Add delta states for that specific delta
+        # Add delta states for that specific delta
         mainGraph = self._addDeltaStatesInModel(mainGraph, delta['state'], evaldict(delta['addition']))
         if updateState:
             dbObj.update('deltasmod', [{'uid': delta['uid'], 'updatedate': getUTCnow(), 'modadd': 'added'}])

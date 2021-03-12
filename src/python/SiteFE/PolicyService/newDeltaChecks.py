@@ -25,6 +25,7 @@ from DTNRMLibs.CustomExceptions import OverlapException
 from DTNRMLibs.CustomExceptions import DeltaKeyMissing
 from DTNRMLibs.CustomExceptions import BadRequestError
 
+
 def checkConflicts(dbObj, delta):
     """Check conflicting resources and not allow them"""
     delta['addition'] = evaldict(delta['addition'])
@@ -40,12 +41,14 @@ def checkConflicts(dbObj, delta):
                         deltaInDB = getdeltaInfo(connDelta1, delta)
                         compareTwoDeltaTimes(deltaInDB, deltaIN)
 
+
 def checkNewDelta(deltaIn):
     """Check if new delta can be provisioned"""
     # We check only timing is ok here. All other cases are checked
     # by deltas comparison (vlan, host, timings)
     if getUTCnow() >= deltaIn['times'][1]:
         raise BadRequestError('New delta endtime is in the past. Nothing to configure.')
+
 
 def getdeltaInfo(deltaAd, delta):
     """Get Delta Info (timestart, timeend, vlan, hostname) for comparison."""
@@ -73,6 +76,7 @@ def getdeltaInfo(deltaAd, delta):
             raise DeltaKeyMissing('New delta request does not have vlan information. Failing')
     return out
 
+
 def overlap_count(times1, times2):
     """Find out if times overlap."""
     Range = namedtuple('Range', ['start', 'end'])
@@ -85,6 +89,7 @@ def overlap_count(times1, times2):
     if earliestEnd < latestStart:
         overlap = 0
     return overlap
+
 
 def compareTwoDeltaTimes(deltaInDB, deltaIN):
     for dInhost, dInvlan in deltaIN['hosts'].items():

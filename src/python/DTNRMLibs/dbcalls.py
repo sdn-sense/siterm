@@ -97,8 +97,6 @@ create_debugrequests = """CREATE TABLE IF NOT EXISTS debugrequests(
                           updatedate int NOT NULL,
                           primary key(id))"""
 
-
-
 insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s, %(content)s)"
 insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, reduction, addition, reductionid, modadd, connectionid)
                    VALUES(%(uid)s, %(insertdate)s, %(updatedate)s, %(state)s, %(deltat)s, %(content)s, %(modelid)s, %(reduction)s, %(addition)s, %(reductionid)s, %(modadd)s, %(connectionid)s)"""

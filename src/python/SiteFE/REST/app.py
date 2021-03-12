@@ -92,12 +92,12 @@ def check_initialized(environ):
 # =====================================================================================================================
 _FECONFIG_RE = re.compile(r'^/*json/frontend/configuration$')
 
+
 def feconfig(environ, **kwargs):
     """Returns Frontend configuration"""
     global _CP
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     return _CP['MAIN']
-
 
 
 _FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata|servicestate)$')
@@ -132,8 +132,9 @@ def frontend(environ, **kwargs):
 _DEBUG_RE = re.compile(r'^/*json/frontend/(submitdebug|updatedebug|getdebug|getalldebughostname)/([-_\.A-Za-z0-9]+)$')
 _DEBUG_ACTIONS = {'GET': {'getdebug': _FRONTEND_RM.getdebug,
                           'getalldebughostname': _FRONTEND_RM.getalldebughostname},
-                   'POST': {'submitdebug': _FRONTEND_RM.submitdebug},
-                   'PUT':  {'updatedebug': _FRONTEND_RM.updatedebug}}
+                  'POST': {'submitdebug': _FRONTEND_RM.submitdebug},
+                  'PUT':  {'updatedebug': _FRONTEND_RM.updatedebug}}
+
 
 def debug(environ, **kwargs):
     """Debug ations
