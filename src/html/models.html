@@ -60,7 +60,7 @@
         }
 
         function load_data() {
-            $.get('config.json', function(data){
+            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
               defineSites(data, false);
               data['models'] = {};
               for (i=0; i < data['general']['sites'].length; i++){

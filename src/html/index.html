@@ -14,11 +14,10 @@
         google.load('visualization', '1', {packages:['table', 'controls']});
         $(document).ready(function() {
             load_data();
-            //setInterval(load_data, 300000);
         });
 
         function load_data() {
-            $.get('config.json', function(data){
+            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
               data['hostinfo'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
                 sitename = data['general']['sites'][i];

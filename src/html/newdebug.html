@@ -75,7 +75,7 @@
         }
 
         function load_data() {
-          $.get('config.json', function(data){
+          $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
             for (i=0; i < data['general']['sites'].length; i++){
               sitename = data['general']['sites'][i];
               addDropDown(sitename, $("#f1_sitename"));
@@ -133,7 +133,7 @@
             </div>
             <div class="col-md-12" id="alertsrapidping"></div>
             <div class="col">
-              div6
+              DOCUMENTATION 
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f1'); return false" id="f1" name="f1">
@@ -187,7 +187,7 @@
             </div>
             <div class="col-md-12" id="alertstcpdump"></div>
             <div class="col">
-              div6
+             DOCUMENTATION 
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f2'); return false" id="f2" name="f2">
@@ -222,7 +222,7 @@
             </div>
             <div class="col-md-12" id="alertsarptable"></div>
             <div class="col">
-              div6
+             DOCUMENTATION 
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f3'); return false" id="f3" name="f3">
@@ -257,7 +257,7 @@
             </div>
             <div class="col-md-12" id="alertsiperf"></div>
             <div class="col">
-              <span class="border" style="width:100%">div6</span>
+              <span class="border" style="width:100%">DOCUMENTATION</span>
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f4'); return false" id="f4" name="f4">
@@ -314,7 +314,7 @@
             </div>
             <div class="col-md-12" id="alertsiperfserver"></div>
             <div class="col">
-              <span class="border" style="width:100%">div6</span>
+              <span class="border" style="width:100%">DOCUMENTATION</span>
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f5'); return false" id="f5" name="f5">

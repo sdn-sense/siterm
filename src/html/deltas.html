@@ -14,7 +14,6 @@
         google.load('visualization', '1', {packages:['table', 'controls']});
         $(document).ready(function() {
             load_data();
-            //setInterval(load_data, 300000);
         });
 
        function tableAdd(dataIn, dictkeys, saveObj){
@@ -119,7 +118,7 @@
         }
 
         function load_data() {
-            $.get('config.json', function(data){
+            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
               defineSites(data, false);
               data['deltas'] = {};
               for (i=0; i < data['general']['sites'].length; i++){

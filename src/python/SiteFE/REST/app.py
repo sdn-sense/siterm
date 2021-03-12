@@ -47,7 +47,7 @@ from SiteFE.REST.prometheus_exporter import PrometheusAPI
 import SiteFE.REST.AppCalls as AllCalls
 from DTNRMLibs.x509 import CertHandler
 from DTNRMLibs.RESTInteractions import get_match_regex
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getHeaders
 from DTNRMLibs.MainUtilities import getUrlParams
 from DTNRMLibs.MainUtilities import read_input_data
@@ -66,7 +66,10 @@ _CP = None
 # Frontend Resource manager
 _FRONTEND_RM = FrontendRM()
 _PROMETHEUS = PrometheusAPI()
-_SITES = []
+_SITES = ["MAIN"]
+# TODO: This is just a hack for now until we rewrite all
+# httpd application. We should have a separate API for normal calls
+# which do not require site name
 _HTTPRESPONDER = HTTPResponses()
 _CERTHANDLER = CertHandler()
 
@@ -81,13 +84,21 @@ def check_initialized(environ):
     global _CP
     global _SITES
     if not _INITIALIZED:
-        _CP = getConfig()
-        for sitename in _CP.get('general', 'sites').split(','):
-            _SITES.append(sitename)
+        _CP = getGitConfig()
+        _SITES += _CP['MAIN']['general']['sites']
         _INITIALIZED = True
 
 # =====================================================================================================================
 # =====================================================================================================================
+_FECONFIG_RE = re.compile(r'^/*json/frontend/configuration$')
+
+def feconfig(environ, **kwargs):
+    """Returns Frontend configuration"""
+    global _CP
+    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
+    return _CP['MAIN']
+
+
 
 _FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata|servicestate)$')
 _FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata},
@@ -149,7 +160,8 @@ def prometheus(environ, **kwargs):
     return _PROMETHEUS.metrics(**kwargs)
 
 
-URLS = [(_FRONTEND_RE, frontend, ['GET', 'PUT'], [], []),
+URLS = [(_FECONFIG_RE, feconfig, ['GET'], [], []),
+        (_FRONTEND_RE, frontend, ['GET', 'PUT'], [], []),
         (_DEBUG_RE, debug, ['GET', 'POST', 'PUT'], [], []),
         (_PROMETHEUS_RE, prometheus, ['GET'], [], [])]
 

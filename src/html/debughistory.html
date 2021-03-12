@@ -32,10 +32,8 @@
           tableTag.append(theadTag);
           if (Array.isArray(dataIn)){
               for (rowid in dataIn){
-                  console.log(rowid);
                   trow = $('<tr><\/tr>');
                   trow.append('<td>'+rowid+'<\/td>');
-                  console.log(dataIn[rowid]);
                   if (isString(dataIn[rowid])){
                       trow.append('<td>'+dataIn[rowid].replace(new RegExp('\r?\n','g'), '<br />')+'<\/td>');
                   } else if (Array.isArray(dataIn[rowid])){
@@ -44,7 +42,6 @@
                   tableTag.append(trow);
               }
           } else if (isString(dataIn)){
-              console.log(dataIn);
               trow = $('<tr><\/tr>');
               trow.append('<td colspan="2">'+dataIn.replace(new RegExp('\r?\n','g'), '<br />')+'<\/td>');
               tableTag.append(trow);
@@ -79,7 +76,6 @@
             async: false,
             success: function(json){
               json = json[0];
-              console.log(json);
               model = $('<div><\/div>');
               model.append('<div class="row"><b>Debug ID: <\/b>' + json['id'] + '<\/div>');
               model.append('<div class="row"><b>Debug Hostname: <\/b>' + json['hostname'] + '<\/div>');
@@ -93,7 +89,6 @@
               // Debug Output
               if (json['output']){
                   var myObject = (0, eval)('(' + json['output'] + ')');
-                  console.log(myObject);
                   if (myObject['exitCode']){
                       model.append('<div class="row"><b>Runtime Exit Code: <\/b>' + myObject['exitCode'] + '<\/div>');
                   }
@@ -130,12 +125,11 @@
         }
 
         function load_data() {
-            $.get('config.json', function(data){
+            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
               defineSites(data, false);
               data['debug'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
                  sitename = data['general']['sites'][i];
-                 console.log(sitename);
                  $.ajax({url: sitename + '/sitefe/json/frontend/getdebug/ALL',
                    dataType: 'json',
                    data: data,
