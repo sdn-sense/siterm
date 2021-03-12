@@ -94,6 +94,7 @@
               model.append('<div class="row"><b>DELTA HOST STATES:<\/b><\/div>');
               model.append('<div class="row">============================================<\/div>');
               deltaHostStatesHistory(deltaID, sitename, model);
+              $('#v-pills-' + deltaID).empty();
               $('#v-pills-' + deltaID).append(model);
           }});
        }

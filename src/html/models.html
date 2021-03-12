@@ -31,6 +31,7 @@
               model.append('<div class="row"><b>ID: <\/b>' + json['id'] + '<\/div>');
               model.append('<div class="row"><b>Full Model:<\/b><\/div>');
               mrmlSaver(json['model'], model);
+              $('#v-pills-' + modelID).empty();
               $('#v-pills-' + modelID).append(model);
           }});
        }

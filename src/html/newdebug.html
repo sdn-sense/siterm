@@ -67,6 +67,8 @@
                               for (const [key1, value1] of Object.entries(value['vlans'])) {
                                 if (value1['provisioned']) {
                                     addDropDown(key1, $("#" + ids + "interface"));
+                                if ('2' in value1 && 'address' in value1['2'] && ids === "f5_"){
+                                    addDropDown(value1['2']['address'], $("#" + ids + "ip"));}
         }}}}}}}});
       }
 
@@ -277,7 +279,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">IP to ping</label> <input class="form-control" type="text" placeholder="IP to ping" id="f4_ip_ping" name="ip" required="">
+                  <label for="exampleFormControlSelect1">IP to ping</label> <input class="form-control" type="text" placeholder="IP to ping" id="f4_ip" name="ip" required="">
                 </div>
                 <div class="form-group">
                   <label for="exampleFormControlSelect1">Port</label> <input class="form-control" type="text" placeholder="Port" id="f4_port" name="port" required="">
@@ -337,9 +339,9 @@
                   <label for="exampleFormControlSelect1">Port</label> <input class="form-control" type="text" placeholder="Port" id="f5_port" name="port" required="">
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Interface</label> <select class="form-control" id="f5_interface" name="interface" required="">
+                  <label for="exampleFormControlSelect1">IP</label> <select class="form-control" id="f5_ip" name="ip" required="">
                     <option value="">
-                      Choose Interface
+                      Choose IP Address
                     </option>
                   </select>
                 </div>
