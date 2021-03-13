@@ -6,4 +6,4 @@
 # src/python/SiteFE/__init__.py
 # src/python/DTNRMAgent/__init__.py
 # src/python/DTNRMLibs/__init__.py
-__version__ = '210225'
+__version__ = '210312'

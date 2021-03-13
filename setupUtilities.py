@@ -29,7 +29,7 @@ import platform
 # src/python/SiteFE/__init__.py
 # src/python/DTNRMAgent/__init__.py
 # src/python/DTNRMLibs/__init__.py
-VERSION = '210225'
+VERSION = '210312'
 
 
 def printInfo(logger=None):
