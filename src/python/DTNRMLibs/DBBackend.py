@@ -81,10 +81,12 @@ class DBBackend():
 
     def execute_ins(self, query, values):
         """INSERT Execute."""
+        lastID = -1
         try:
             self.initialize()
             for item in values:
                 self.cursor.execute(query, item)
+                lastID = self.cursor.lastrowid
             self.conn.commit()
         except mariadb.Error as ex:
             print('MariaDBError. Ex: %s' % ex)
@@ -96,7 +98,7 @@ class DBBackend():
             raise ex
         finally:
             self.destroy()
-        return 'OK', '', ''
+        return 'OK', '', lastID
 
     def execute_del(self, query, values):
         """DELETE Execute."""
@@ -159,6 +161,8 @@ class dbinterface():
         if search:
             first = True
             for item in search:
+                if not item:
+                    continue
                 if first:
                     query = "WHERE "
                     first = False
@@ -191,8 +195,9 @@ class dbinterface():
     def insert(self, calltype, values):
         """INSERT call for APPs."""
         self._setStartCallTime(calltype)
-        callExit, _, _ = self.db.execute_ins(self.getcall('insert', calltype), values)
-        self._setEndCallTime(calltype, callExit)
+        out = self.db.execute_ins(self.getcall('insert', calltype), values)
+        self._setEndCallTime(calltype, out[0])
+        return out
 
     # =====================================================
     #  HERE GOES UPDATE CALLS
@@ -201,8 +206,9 @@ class dbinterface():
     def update(self, calltype, values):
         """UPDATE Call for APPs."""
         self._setStartCallTime(calltype)
-        callExit, _, _ = self.db.execute_ins(self.getcall('update', calltype), values)
-        self._setEndCallTime(calltype, callExit)
+        out = self.db.execute_ins(self.getcall('update', calltype), values)
+        self._setEndCallTime(calltype, out[0])
+        return out
 
     # =====================================================
     #  HERE GOES DELETE CALLS
@@ -222,5 +228,6 @@ class dbinterface():
                 query += '%s = "%s" ' % (item[0], item[1])
         fullquery = "%s %s" % (self.getcall('delete', calltype), query)
         self._setStartCallTime(calltype)
-        callExit, _, _ = self.db.execute_del(fullquery, None)
-        self._setEndCallTime(calltype, callExit)
+        out = self.db.execute_del(fullquery, None)
+        self._setEndCallTime(calltype, out[0])
+        return out

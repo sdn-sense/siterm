@@ -21,7 +21,7 @@ Date            : 2017/09/26
 """
 import sys
 from setuptools import setup
-from setupUtilities import list_packages, get_py_modules, VERSION
+from setupUtilities import list_packages, get_py_modules, get_web_files, VERSION
 
 # Cronjobs which are running also have to be prepared with correct timing.
 # Also another cronjob, which monitors config file and modifies cronjobs if needed.
@@ -52,7 +52,7 @@ setup(
                                         "packaging/dtnrm-site-fe/welcome.conf"]),
                 ("/etc/cron.d/", ["packaging/dtnrm-site-fe/siterm-crons"]),
                 ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh",
-                                        "packaging/general/siterm-autoupdate.py"])],
+                                        "packaging/general/siterm-autoupdate.py"])] + get_web_files(),
     py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
     scripts=SCRIPTS
 )

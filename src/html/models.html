@@ -1,13 +1,16 @@
-<html lang="en"><head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="assets/css/bootstrap.css" rel="stylesheet">
-    <link href="assets/css/custom.css" rel="stylesheet">
-    <script src="assets/js/jquery.min.js" type="text/javascript"></script>
-    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
-    <script src="assets/js/main.js" type="text/javascript"></script>
-    <script type="text/javascript">
-//<![CDATA[
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.4.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="assets/css/bootstrap.css" rel="stylesheet">
+  <link href="assets/css/custom.css" rel="stylesheet">
+  <script src="assets/js/jquery.min.js" type="text/javascript"></script>
+  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  <script src="assets/js/main.js" type="text/javascript"></script>
+  <script type="text/javascript">
+  //<![CDATA[
         google.load('visualization', '1', {packages:['table', 'controls']});
         $(document).ready(function() {
             load_data();
@@ -22,19 +25,20 @@
             data: data,
             async: false,
             success: function(json){
-              model = $('<div></div>');
-              model.append('<div class="row"><b>Creation Time: </b>' + json['creationTime'] + '</div>');
-              model.append('<div class="row"><b>Href: </b>' + json['href'] + '</div>');
-              model.append('<div class="row"><b>ID: </b>' + json['id'] + '</div>');
-              model.append('<div class="row"><b>Full Model:</b></div>');
+              model = $('<div><\/div>');
+              model.append('<div class="row"><b>Creation Time: <\/b>' + json['creationTime'] + '<\/div>');
+              model.append('<div class="row"><b>Href: <\/b>' + json['href'] + '<\/div>');
+              model.append('<div class="row"><b>ID: <\/b>' + json['id'] + '<\/div>');
+              model.append('<div class="row"><b>Full Model:<\/b><\/div>');
               mrmlSaver(json['model'], model);
+              $('#v-pills-' + modelID).empty();
               $('#v-pills-' + modelID).append(model);
           }});
        }
 
         function defineAllModels(data, sitename) {
-          menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"></div>');
-          cntDiv = $('<div class="tab-content" id="v-pills-tabContent"></div>');
+          menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"><\/div>');
+          cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
           latest = true;
           for (var key in data['models'][sitename]){
              if ($.isPlainObject(data['models'][sitename][key])){
@@ -45,8 +49,8 @@
                    tagName += " LATEST";
                }
                    
-               menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadModel(\''+modID+'\', \''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ tagName +'</a>');
-               cntDiv.append('<div class="tab-pane fade" id="v-pills-'+modID+'" role="tabpanel" aria-labelledby="v-pills-'+modID+'-tab"></div>');
+               menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadModel(\''+modID+'\', \''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ tagName +'<\/a>');
+               cntDiv.append('<div class="tab-pane fade" id="v-pills-'+modID+'" role="tabpanel" aria-labelledby="v-pills-'+modID+'-tab"><\/div>');
              }
           }
           nRow = $('<div class="row">');
@@ -57,7 +61,7 @@
         }
 
         function load_data() {
-            $.get('config.json', function(data){
+            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
               defineSites(data, false);
               data['models'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
@@ -72,90 +76,58 @@
               defineAllModels(data, sitename);
               }
             })};
-//]]>
-        </script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/loader.js"></script>
-
-
-    <title>Site-RM: Frontend Configuration</title>
-  <link id="load-css-0" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/core/tooltip.css"><link id="load-css-1" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/util/util.css"><link id="load-css-2" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/table/table.css"><link id="load-css-3" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/util/format.css"><link id="load-css-4" rel="stylesheet" type="text/css" href="https://www.gstatic.com/charts/49/css/controls/controls.css"><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_default_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_graphics_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_ui_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_table_module.js"></script><script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/js/jsapi_compiled_controls_module.js"></script></head>
-  <body>
-
-<header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-  <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
-  <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-    <span class="navbar-toggler-icon"></span>
-  </button>
-</header>
-
-<div class="container-fluid">
-  <div class="row">
-    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-      <div class="position-sticky pt-3">
-        <ul class="nav flex-column">
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="/index.html">
-              <span data-feather="fe-config"></span>
-              Frontend Configuration
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/models.html">
-              <span data-feather="models"></span>
-              Models
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/deltas.html">
-              <span data-feather="deltas"></span>
-              Deltas
-            </a>
-          </li>
-        </ul>
-
-        <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
-          <span>Debugging tools</span>
-          <a class="link-secondary" href="#" aria-label="Debugging tools">
-            <span data-feather="plus-circle"></span>
-          </a>
-        </h6>
-        <ul class="nav flex-column mb-2">
-          <li class="nav-item">
-            <a class="nav-link" href="/newdebug.html">
-              <span data-feather="file-text"></span>
-              Request new debug action
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/arptable.html">
-              <span data-feather="file-text"></span>
-              Debug history
-            </a>
-          </li>
-        </ul>
-      </div>
-    </nav>
-
-    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2">Dashboard</h1>
-      </div>
-        <div class="row" id="maindiv">
-
+  //]]>
+  </script>
+  <title>Site-RM: Frontend Configuration</title>
+</head>
+<body>
+  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
+  </header>
+  <div class="container-fluid">
+    <div class="row">
+      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+        <div class="position-sticky pt-3">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="/index.html">Frontend Configuration</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/models.html">Models</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/deltas.html">Deltas</a>
+            </li>
+          </ul>
+          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"><span>Debugging tools</span> <a class="link-secondary" href="#" aria-label="Debugging tools"></a></h6>
+          <ul class="nav flex-column mb-2">
+            <li class="nav-item">
+              <a class="nav-link" href="/newdebug.html">Request new debug action</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/debughistory.html">Debug history</a>
+            </li>
+          </ul>
         </div>
-<div id="sites_tab"></div>
-<div id="main_tab"></div>
-
-    </main>
+      </nav>
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">Dashboard</h1>
+        </div>
+        <div class="row" id="maindiv"></div>
+        <div id="sites_tab"></div>
+        <div id="main_tab"></div>
+      </main>
+    </div>
   </div>
-</div>
-    <script src="assets/js/bootstrap.bundle.js"></script>
-    <script src="assets/js/bootstrap.js"></script>
-    <script>
+  <script src="assets/js/bootstrap.bundle.js"></script> 
+  <script src="assets/js/bootstrap.js"></script> 
+  <script>
+
       $('#myTab a').click(function (e) {
         e.preventDefault();
         $(this).tab('show');
       })
-    </script>
-
-
-</body></html>
+  </script>
+</body>
+</html>

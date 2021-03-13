@@ -446,6 +446,13 @@ def delete(inputObj, delObj):
     # This should not happen
     raise WrongInputError('Provided input type is not available for deletion. Type %s' % type(inputObj))
 
+def parse_gui_form_post(inputVal):
+    """Parse GUI Form Post and return dict."""
+    out = {}
+    for item in inputVal.split(b'&'):
+        tmpItem = item.split(b'=')
+        out[tmpItem[0].decode("utf-8")] = tmpItem[1].decode("utf-8")
+    return out
 
 def read_input_data(environ):
     """Read input data from environ, which can be used for PUT or POST."""
@@ -460,9 +467,11 @@ def read_input_data(environ):
     try:
         outjson = json.loads(body.getvalue())
     except ValueError as ex:
-        errMsg = 'Failed to parse json input: %s, Err: %s. Did caller used json.dumps?' % (body.getvalue(), ex)
-        print(errMsg)
-        raise WrongInputError(errMsg)
+        outjson = parse_gui_form_post(body.getvalue())
+        if not outjson:
+            errMsg = 'Failed to parse json input: %s, Err: %s.' % (body.getvalue(), ex)
+            print(errMsg)
+            raise WrongInputError(errMsg)
     return outjson
 
 VALIDATION = {"addhost": [{"key": "hostname", "type": basestring},

@@ -14,9 +14,14 @@
         google.load('visualization', '1', {packages:['table', 'controls']});
         $(document).ready(function() {
             load_data();
+            //setInterval(load_data, 300000);
         });
 
-       function tableAdd(dataIn, dictkeys, saveObj){
+       function isString(x) {
+           return Object.prototype.toString.call(x) === "[object String]"
+       }
+
+       function tableAddKeyLine(dataIn, dictkeys, saveObj){
           tableTag = $('<table class="table"><\/table>');
           theadTag = $('<thead class="thead-dark"><\/thead>');
           trow = $('<tr><\/tr>');
@@ -25,77 +30,79 @@
           }
           theadTag.append(trow);
           tableTag.append(theadTag);
-          for (rowid in dataIn){
+          if (Array.isArray(dataIn)){
+              for (rowid in dataIn){
+                  trow = $('<tr><\/tr>');
+                  trow.append('<td>'+rowid+'<\/td>');
+                  if (isString(dataIn[rowid])){
+                      trow.append('<td>'+dataIn[rowid].replace(new RegExp('\r?\n','g'), '<br />')+'<\/td>');
+                  } else if (Array.isArray(dataIn[rowid])){
+                      trow.append('<td>Type:'+dataIn[rowid][2]+'<br />'+dataIn[rowid][3].replace(new RegExp('\r?\n','g'), '<br />')+'<\/td>');
+                  }
+                  tableTag.append(trow);
+              }
+          } else if (isString(dataIn)){
               trow = $('<tr><\/tr>');
-              for (key in dictkeys){trow.append('<td>'+dataIn[rowid][dictkeys[key]]+'<\/td>');}
-              tableTag.append(trow); 
+              trow.append('<td colspan="2">'+dataIn.replace(new RegExp('\r?\n','g'), '<br />')+'<\/td>');
+              tableTag.append(trow);
           }
+
           saveObj.append(tableTag);
        }
-       function deltaStates(deltaID, sitename, saveObj){
-          var data;
-          $.ajax({url: sitename + '/sitefe/v1/deltastates/'+ deltaID,
-            dataType: 'json', data: data, async: false,
-            success: function(json){
-                tableAdd(json, ['id', 'deltaid', 'insertdate', 'state'], saveObj);
-            }
-         });
+
+       function tableAddKeyVal(dataIn, dictkeys, saveObj){
+          tableTag = $('<table class="table"><\/table>');
+          theadTag = $('<thead class="thead-dark"><\/thead>');
+          trow = $('<tr><\/tr>');
+          for (key in dictkeys){
+              trow.append('<th scope="col">'+dictkeys[key]+'<\/th>');
+          }
+          theadTag.append(trow);
+          tableTag.append(theadTag);
+          for (key in dataIn){
+               trow = $('<tr><\/tr>');
+               trow.append('<td>'+key+'<\/td>');
+               trow.append('<td>'+dataIn[key]+'<\/td>');
+               tableTag.append(trow); }
+          saveObj.append(tableTag);
        }
 
-       function deltaHostStatesHistory(deltaID, sitename, saveObj){
-          var data;
-          $.ajax({url: sitename + '/sitefe/v1/deltahoststateshistory/'+ deltaID,
-            dataType: 'json', data: data, async: false,
-            success: function(json){
-                tableAdd(json, ['id', 'deltaid', 'hostname', 'insertdate', 'state'], saveObj);
-            }
-         });
-       }
-
-       function loadDelta(deltaID, sitename)
+       function loadDebug(debugID, sitename)
        {
           var data;
-          $.ajax({url: sitename + '/sitefe/v1/deltas/'+ deltaID + '?encode=false&summary=false&oldview=true',
+          $.ajax({url: sitename + '/sitefe/json/frontend/getdebug/'+ debugID,
             dataType: 'json',
             data: data,
             async: false,
             success: function(json){
               json = json[0];
               model = $('<div><\/div>');
-              model.append('<div class="row"><b>Delta UID: <\/b>' + json['uid'] + '<\/div>');
-              model.append('<div class="row"><b>Delta State: <\/b>' + json['state'] + '<\/div>');
+              model.append('<div class="row"><b>Debug ID: <\/b>' + json['id'] + '<\/div>');
+              model.append('<div class="row"><b>Debug Hostname: <\/b>' + json['hostname'] + '<\/div>');
               model.append('<div class="row"><b>Insert Date: <\/b>' + json['insertdate'] + '<\/div>');
               model.append('<div class="row"><b>Update Date: <\/b>' + json['updatedate'] + '<\/div>');
-              model.append('<div class="row"><b>Delta Type: <\/b>' + json['deltat'] + '<\/div>');
-              model.append('<div class="row"><b>Delta ModAdd: <\/b>' + json['modadd'] + '<\/div>');
-              model.append('<div class="row"><b>Delta ModelID: <\/b>' + json['modelid'] + '<\/div>');
-              model.append('<div class="row"><b>Delta ReductionID: <\/b>' + json['reductionid'] + '<\/div>');
-              model.append('<div class="row"><b>Delta ConnectionID: <\/b>' + json['connectionid'] + '<\/div>');
-              // addition json
-              model.append('<div class="row"><b>Delta Addition:<\/b><\/div>');
-              model.append('<div class="row"><code><pre id="breakword">'+json['addition']+'<\/pre><\/code><\/div>');
-              // reduction json
-              model.append('<div class="row"><b>Delta Reduction:<\/b><\/div>');
-              model.append('<div class="row"><code><pre id="breakword">'+json['reduction']+'<\/pre><\/code><\/div>');
-              // Delta Info From Orchestrator
-              model.append('<div class="row"><b>Full Delta Information From Orhestrator:<\/b><\/div>');
-              model.append('<div class="row">============================================<\/div>');
-              var myObject = (0, eval)('(' + json['content'] + ')');
-              model.append('<div class="row"><b>    Delta ID: <\/b>' + myObject['id'] + '<\/div>');
-              model.append('<div class="row"><b>    Last Modified: <\/b>' + myObject['lastModified'] + '<\/div>');
-              model.append('<div class="row"><b>    Model ID: <\/b>' + myObject['modelId'] + '<\/div>');
-              model.append('<div class="row"><b>    Model Addition: <\/b><\/div>');
-              mrmlSaver(myObject['addition'], model);
-              model.append('<div class="row"><b>    Model Reduction: <\/b><\/div>');
-              mrmlSaver(myObject['reduction'], model);
-              model.append('<div class="row"><b>DELTA STATES:<\/b><\/div>');
-              model.append('<div class="row">============================================<\/div>');
-              deltaStates(deltaID, sitename, model);
-              model.append('<div class="row"><b>DELTA HOST STATES:<\/b><\/div>');
-              model.append('<div class="row">============================================<\/div>');
-              deltaHostStatesHistory(deltaID, sitename, model);
-              $('#v-pills-' + deltaID).empty();
-              $('#v-pills-' + deltaID).append(model);
+              model.append('<div class="row"><b>Debug State: <\/b>' + json['state'] + '<\/div>');
+              // Debug Request
+              model.append('<div class="row"><b>Debug Request:<\/b><\/div>');
+              var myObject = (0, eval)('(' + json['requestdict'] + ')');
+              tableAddKeyVal(myObject, ['Key', 'Value'], model);
+              // Debug Output
+              if (json['output']){
+                  var myObject = (0, eval)('(' + json['output'] + ')');
+                  if (myObject['exitCode']){
+                      model.append('<div class="row"><b>Runtime Exit Code: <\/b>' + myObject['exitCode'] + '<\/div>');
+                  }
+                  if (myObject['err']){
+                      model.append('<div class="row"><b>Debug Err:<\/b><\/div>');
+                      tableAddKeyLine(myObject['err'], ['LineNum', 'Value'], model);
+                  }
+                  if (myObject['out']){
+                      model.append('<div class="row"><b>Debug Output:<\/b><\/div>');
+                      tableAddKeyLine(myObject['out'], ['LineNum', 'Value'], model);
+                  }
+              }
+              $('#v-pills-' + debugID).empty();
+              $('#v-pills-' + debugID).append(model);
           }});
        }
 
@@ -103,11 +110,11 @@
           menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"><\/div>');
           cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
           latest = true;
-          for (var key in data['deltas'][sitename]){
-             if ($.isPlainObject(data['deltas'][sitename][key])){
-               modID = data['deltas'][sitename][key]['id'];
+          for (var key in data['debug'][sitename]){
+             if ($.isPlainObject(data['debug'][sitename][key])){
+               modID = data['debug'][sitename][key]['id'];
                tagName = modID;
-               menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadDelta(\''+modID+'\', \''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ tagName +'<\/a>');
+               menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadDebug(\''+modID+'\', \''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ tagName +'<\/a>');
                cntDiv.append('<div class="tab-pane fade" id="v-pills-'+modID+'" role="tabpanel" aria-labelledby="v-pills-'+modID+'-tab"><\/div>');
              }
           }
@@ -121,15 +128,15 @@
         function load_data() {
             $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
               defineSites(data, false);
-              data['deltas'] = {};
+              data['debug'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
                  sitename = data['general']['sites'][i];
-                 $.ajax({url: sitename + '/sitefe/v1/deltas',
+                 $.ajax({url: sitename + '/sitefe/json/frontend/getdebug/ALL',
                    dataType: 'json',
                    data: data,
                    async: false,
                    success: function(json){
-                     data['deltas'][sitename] = json;
+                     data['debug'][sitename] = json;
                   }});
               defineAllModels(data, sitename);
               }
@@ -181,6 +188,7 @@
   <script src="assets/js/bootstrap.bundle.js"></script>
   <script src="assets/js/bootstrap.js"></script>
   <script>
+
 
 
       $('#myTab a').click(function (e) {

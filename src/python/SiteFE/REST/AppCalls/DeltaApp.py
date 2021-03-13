@@ -136,7 +136,7 @@ def delta_states(environ, **kwargs):
     Output: application/json
     Examples: https://server-host/sitefe/v1/deltastates/([-_A-Za-z0-9]+)/
     """
-    deltaID = kwargs['mReg'].groups()[0]
+    deltaID = kwargs['mReg'][0]
     print('Requested delta states for %s' % deltaID)
     outstates = DELTABACKEND.getdeltastates(deltaID, **kwargs)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
@@ -153,7 +153,7 @@ def delta_host_states(environ, **kwargs):
     Output: application/json
     Examples: https://server-host/sitefe/v1/deltahoststates/([-_A-Za-z0-9]+)/
     """
-    deltaID = kwargs['mReg'].groups()[0]
+    deltaID = kwargs['mReg'][0]
     print('Requested delta host states for %s' % deltaID)
     outstates = DELTABACKEND.getdeltahoststates(deltaID, **kwargs)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
@@ -170,7 +170,7 @@ def delta_host_states_history(environ, **kwargs):
     Output: application/json
     Examples: https://server-host/sitefe/v1/deltahoststateshistory/([-_A-Za-z0-9]+)/
     """
-    deltaID = kwargs['mReg'].groups()[0]
+    deltaID = kwargs['mReg'][0]
     print('Requested delta host states history for %s' % deltaID)
     outstates = DELTABACKEND.getdeltahoststateshistory(deltaID, **kwargs)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
@@ -196,15 +196,15 @@ def deltas_id(environ, **kwargs):
         print('DELETE Method is not supported yet. Return 405')
         return [getCustomOutMsg(errMsg="Method %s is not supported in %s" % environ['REQUEST_METHOD'].upper(), errCode=405)]
     modTime = getModTime(kwargs['headers'])
-    print('Delta Status query for %s' % kwargs['mReg'].groups()[0])
-    delta = DELTABACKEND.getdelta(kwargs['mReg'].groups()[0], **kwargs)
+    print('Delta Status query for %s' % kwargs['mReg'][0])
+    delta = DELTABACKEND.getdelta(kwargs['mReg'][0], **kwargs)
     if not delta:
         kwargs['http_respond'].ret_204('application/json', kwargs['start_response'],
                                        [('Last-Modified', httpdate(getUTCnow()))])
         print('Return empty list. There are no deltas on the system')
         return []
     if modTime > delta['updatedate']:
-        print('Delta with ID %s was not updated so far. Time request comparison requested' % kwargs['mReg'].groups()[0])
+        print('Delta with ID %s was not updated so far. Time request comparison requested' % kwargs['mReg'][0])
         kwargs['http_respond'].ret_304('application/json', kwargs['start_response'], ('Last-Modified', httpdate(delta['updatedate'])))
         return []
     if kwargs['urlParams']['oldview']:
@@ -236,9 +236,9 @@ def deltas_action(environ, **kwargs):
               # Will commit or remove specific delta. remove is allowed only from same host or
                 dtnrm-site-frontend
     """
-    msgOut = DELTABACKEND.commitdelta(kwargs['mReg'].groups()[0], **kwargs)
+    msgOut = DELTABACKEND.commitdelta(kwargs['mReg'][0], **kwargs)
     kwargs['http_respond'].ret_204('application/json', kwargs['start_response'], None)
-    print('Delta %s commited. Return 204' % kwargs['mReg'].groups()[0])
+    print('Delta %s commited. Return 204' % kwargs['mReg'][0])
     return msgOut
 
 # =====================================================================================================================
@@ -306,7 +306,7 @@ def models_id(environ, **kwargs):
     Examples: https://server-host/sitefe/v1/models/([-_A-Za-z0-9]+)/ # Returns list of all models;
     """
     modTime = getModTime(kwargs['headers'])
-    modelID = kwargs['mReg'].groups()[0]
+    modelID = kwargs['mReg'][0]
     outmodels = DELTABACKEND.getmodel(modelID, **kwargs)
     model = outmodels if isinstance(outmodels, dict) else outmodels[0]
     if modTime > model['insertdate']:
@@ -337,9 +337,9 @@ def delta_internal_actions(environ, **kwargs):
     Output: application/json
     Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_.A-Za-z0-9]+)/(cancel|remove|active|activated|failed)
     """
-    deltaID = kwargs['mReg'].groups()[0]
-    hostname = kwargs['mReg'].groups()[1]
-    newState = kwargs['mReg'].groups()[2]
+    deltaID = kwargs['mReg'][0]
+    hostname = kwargs['mReg'][1]
+    newState = kwargs['mReg'][2]
     print('Internal action. For %s and %s to %s' % (deltaID, hostname, newState))
     msgOut = DELTABACKEND.commitdelta(deltaID, newState, internal=True, hostname=hostname, **kwargs)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
@@ -356,8 +356,8 @@ def delta_hostname_ids(environ, **kwargs):
     Examples: https://server-host/sitefe/v1/hostnameids/hostname.us.gov/(activating|active)
     """
     hostname = ""
-    hostname = kwargs['mReg'].groups()[0]
-    state = kwargs['mReg'].groups()[1]
+    hostname = kwargs['mReg'][0]
+    state = kwargs['mReg'][1]
     print('Called to get all ids assigned to %s hostname' % hostname)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     return DELTABACKEND.getHostNameIDs(hostname, state, **kwargs)

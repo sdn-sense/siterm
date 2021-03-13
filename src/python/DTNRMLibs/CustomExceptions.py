@@ -117,6 +117,10 @@ class PluginException(Exception):
     """Plugin Exception."""
 
 
+class OverlapException(Exception):
+    """Overlap Exception."""
+
+
 class HTTPResponses():
     """Frontend HTTP Responses."""
     def __init__(self):

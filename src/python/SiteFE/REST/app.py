@@ -47,7 +47,7 @@ from SiteFE.REST.prometheus_exporter import PrometheusAPI
 import SiteFE.REST.AppCalls as AllCalls
 from DTNRMLibs.x509 import CertHandler
 from DTNRMLibs.RESTInteractions import get_match_regex
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getHeaders
 from DTNRMLibs.MainUtilities import getUrlParams
 from DTNRMLibs.MainUtilities import read_input_data
@@ -66,7 +66,10 @@ _CP = None
 # Frontend Resource manager
 _FRONTEND_RM = FrontendRM()
 _PROMETHEUS = PrometheusAPI()
-_SITES = []
+_SITES = ["MAIN"]
+# TODO: This is just a hack for now until we rewrite all
+# httpd application. We should have a separate API for normal calls
+# which do not require site name
 _HTTPRESPONDER = HTTPResponses()
 _CERTHANDLER = CertHandler()
 
@@ -81,13 +84,21 @@ def check_initialized(environ):
     global _CP
     global _SITES
     if not _INITIALIZED:
-        _CP = getConfig()
-        for sitename in _CP.get('general', 'sites').split(','):
-            _SITES.append(sitename)
+        _CP = getGitConfig()
+        _SITES += _CP['MAIN']['general']['sites']
         _INITIALIZED = True
 
 # =====================================================================================================================
 # =====================================================================================================================
+_FECONFIG_RE = re.compile(r'^/*json/frontend/configuration$')
+
+
+def feconfig(environ, **kwargs):
+    """Returns Frontend configuration"""
+    global _CP
+    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
+    return _CP['MAIN']
+
 
 _FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata|servicestate)$')
 _FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata},
@@ -98,32 +109,49 @@ _FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata},
 
 def frontend(environ, **kwargs):
     """Frontend information.
-
-    Information which is stored in the frontend for
-    backend communications.
     Method: GET
     Calls: ips | actions | getdata
     Output: application/json
     Examples: https://server-host/json/frontend/getdata # Will return info about all hosts hosts
     Method: PUT
-    Calls: addhost | removehost | updatehost | addaction | updateaction | removeaction
+    Calls: addhost | updatehost | servicestate
     Output: application/json
     Examples: https://server-host/json/frontend/addhost # Will add new host. Raises error if it is already there
     """
-    query = None
-    if kwargs['mReg'].groups()[0]:
-        query = kwargs['mReg'].groups()[0]
     methodType = environ['REQUEST_METHOD'].upper()
-    command = None
-    command = _FRONTEND_ACTIONS[methodType][query]
+    command = _FRONTEND_ACTIONS[methodType][kwargs['mReg'][0]]
+    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     if methodType == 'GET':
-        kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
         return command(**kwargs)
     # Get input data and pass it to function.
     inputDict = read_input_data(environ)
     command(inputDict, **kwargs)
-    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     return {"Status": 'OK'}
+
+
+_DEBUG_RE = re.compile(r'^/*json/frontend/(submitdebug|updatedebug|getdebug|getalldebughostname)/([-_\.A-Za-z0-9]+)$')
+_DEBUG_ACTIONS = {'GET': {'getdebug': _FRONTEND_RM.getdebug,
+                          'getalldebughostname': _FRONTEND_RM.getalldebughostname},
+                  'POST': {'submitdebug': _FRONTEND_RM.submitdebug},
+                  'PUT':  {'updatedebug': _FRONTEND_RM.updatedebug}}
+
+
+def debug(environ, **kwargs):
+    """Debug ations
+    Method: GET; Calls: getdebug
+    Output: application/json
+    Method: PUT; Calls: submitdebug | updatedebug
+    Output: application/json
+    """
+    methodType = environ['REQUEST_METHOD'].upper()
+    command = _DEBUG_ACTIONS[methodType][kwargs['mReg'][0]]
+    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
+    if methodType == 'GET':
+        return command(**kwargs)
+    # Get input data and pass it to function.
+    inputDict = read_input_data(environ)
+    out = command(inputDict, **kwargs)
+    return {"Status": out[0], 'ID': out[2]}
 
 _PROMETHEUS_RE = re.compile(r'^/*json/frontend/metrics$')
 
@@ -133,7 +161,9 @@ def prometheus(environ, **kwargs):
     return _PROMETHEUS.metrics(**kwargs)
 
 
-URLS = [(_FRONTEND_RE, frontend, ['GET', 'PUT'], [], []),
+URLS = [(_FECONFIG_RE, feconfig, ['GET'], [], []),
+        (_FRONTEND_RE, frontend, ['GET', 'PUT'], [], []),
+        (_DEBUG_RE, debug, ['GET', 'POST', 'PUT'], [], []),
         (_PROMETHEUS_RE, prometheus, ['GET'], [], [])]
 
 if '__all__' in dir(AllCalls):
@@ -168,7 +198,9 @@ def internallCall(caller, environ, **kwargs):
 
 
 def isiterable(inVal):
-  return not isinstance(inVal, str) and isinstance(inVal, collections.Iterable)
+    """Check if inVal is iterable"""
+    return not isinstance(inVal, str) and isinstance(inVal, collections.Iterable)
+
 
 def returnDump(out):
     """Return output based on it's type."""
@@ -222,7 +254,7 @@ def application(environ, start_response):
                     return [bytes(json.dumps(getCustomOutMsg(errMsg="Not Acceptable Header. Provided: %s, Acceptable: %s"
                                                        % (headers['ACCEPT'], acceptheader), errCode=406)), 'UTF-8')]
                 out = internallCall(caller=callback, environ=environ, start_response=start_response,
-                                    mReg=regMatch, http_respond=_HTTPRESPONDER,
+                                    mReg=regMatch.groups(), http_respond=_HTTPRESPONDER,
                                     urlParams=getUrlParams(environ, params),
                                     headers=headers, sitename=sitename)
                 return returnDump(out)
