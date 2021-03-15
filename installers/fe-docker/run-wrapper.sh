@@ -9,6 +9,14 @@ exec 1>log.out 2>&1
 set -x
 set -m
 
+ARCH=`python -c 'import platform; print(platform.processor())'`
+if [[ $ARCH == 'ppc64le' ]]; then
+  # ppc64le keeps very old openssl. There is only one machine of this
+  # So not rebuilding whole ssl just for this. This is not needed
+  # for x86_64
+  export CRYPTOGRAPHY_ALLOW_OPENSSL_102=1
+fi
+
 # Remove yaml files to prefetch from scratch;
 rm -f /tmp/*-mapping.yaml
 rm -f /tmp/*-FE-main.yaml
