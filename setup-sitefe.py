@@ -46,7 +46,7 @@ setup(
     packages=['SiteFE', 'DTNRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/DTNRMLibs/']),
     install_requires=['pyparsing', 'rdflib', 'importlib', 'setuptools', 'future', 'simplejson', 'mod-wsgi',
                       'prometheus-client', 'python-dateutil', 'pyaml', 'requests', 'pycurl', 'pyOpenSSL',
-                      'mariadb', 'setuptools_rust'],
+                      'mariadb', 'cryptography==3.2.1', 'wheel'],
     data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
                 ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
                                         "packaging/dtnrm-site-fe/welcome.conf"]),

@@ -72,5 +72,9 @@ def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
             dbobj.update('servicestates', [dbOut])
     except Exception:
         excType, excValue = sys.exc_info()[:2]
-        logger.critical("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
-                        str(excType.__name__), excValue)
+        if logger:
+            logger.critical("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
+                            str(excType.__name__), excValue)
+        else:
+            print("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
+                  str(excType.__name__), excValue)
