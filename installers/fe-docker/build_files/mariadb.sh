@@ -39,4 +39,6 @@ else
   echo "Seems this is not the first time start. Will not create DB again"
   mysqld_safe --user mysql &> /var/log/mariadb/startup &
   sleep 5s
+  # Create all databases if not exists needed for SiteRM
+  python3 -c 'from DTNRMLibs.DBBackend import DBBackend; db = DBBackend(); db._createdb()'
 fi
