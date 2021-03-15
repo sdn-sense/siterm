@@ -168,14 +168,14 @@ if [ "$certissuer" = "openssl" ]; then
     cp certs/server/* $dockerdir/conf/etc/httpd/certs/
     cp certs/server/cert.pem $dockerdir/conf/etc/grid-security/hostcert.pem
     cp certs/server/privkey.pem $dockerdir/conf/etc/grid-security/hostkey.pem
-    python3 cert-checker.py $dockerdir/conf/etc/httpd/certs/cert.pem
+    python cert-checker.py $dockerdir/conf/etc/httpd/certs/cert.pem
   else
     mkdir -p /etc/httpd/certs/
     mkdir -p /etc/grid-security/
     cp certs/server/* /etc/httpd/certs/
     cp certs/server/cert.pem /etc/grid-security/hostcert.pem
     cp certs/server/privkey.pem /etc/grid-security/hostkey.pem
-    python3 cert-checker.py /etc/httpd/certs/cert.pem
+    python cert-checker.py /etc/httpd/certs/cert.pem
   fi
 elif [ "$certissuer" = "letsencrypt" ]; then
     if [ "$REWRITE" == "yes" ]; then
@@ -190,13 +190,13 @@ elif [ "$certissuer" = "letsencrypt" ]; then
       cp -L /etc/letsencrypt/live/$FQDN/* $dockerdir/conf/etc/httpd/certs/
       cp -L /etc/letsencrypt/live/$FQDN/cert.pem $dockerdir/conf/etc/grid-security/hostcert.pem
       cp -L /etc/letsencrypt/live/$FQDN/privkey.pem $dockerdir/conf/etc/grid-security/hostkey.pem
-      python3 cert-checker.py $dockerdir/conf/etc/httpd/certs/cert.pem
+      python cert-checker.py $dockerdir/conf/etc/httpd/certs/cert.pem
     else
       mkdir -p /etc/httpd/certs/
       mkdir -p /etc/grid-security/
       cp -L /etc/letsencrypt/live/$FQDN/* /etc/httpd/certs/
       cp -L /etc/letsencrypt/live/$FQDN/cert.pem /etc/grid-security/hostcert.pem
       cp -L /etc/letsencrypt/live/$FQDN/privkey.pem /etc/grid-security/hostkey.pem
-      python3 cert-checker.py /etc/httpd/certs/cert.pem
+      python cert-checker.py /etc/httpd/certs/cert.pem
    fi
 fi
