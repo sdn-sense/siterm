@@ -9,7 +9,7 @@ exec 1>log.out 2>&1
 set -x
 set -m
 
-ARCH=`python -c 'import platform; print(platform.processor())'`
+ARCH=`python3 -c 'import platform; print(platform.processor())'`
 if [[ $ARCH == 'ppc64le' ]]; then
   # ppc64le keeps very old openssl. There is only one machine of this
   # So not rebuilding whole ssl just for this. This is not needed

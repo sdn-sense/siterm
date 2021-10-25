@@ -30,7 +30,7 @@
 ##H  -h             Display this help.
 
 workdir=`pwd`
-packages="git autoconf automake sudo libcurl-devel libffi-devel python3-lxml openssl-devel curl gcc traceroute libmnl-devel libuuid-devel lm_sensors ipset make MySQL-python nc pkgconfig python3 python-psycopg2 PyYAML zlib-devel python3-devel wget vconfig tcpdump jq iproute cronie python3-pip wireshark iperf3"
+packages="git autoconf automake sudo libcurl-devel libffi-devel python3-lxml openssl-devel curl gcc traceroute libuuid-devel lm_sensors ipset make nc pkgconfig python38 python38-pyyaml zlib-devel python3-devel wget tcpdump jq iproute cronie python3-pip wireshark iperf3 tc diff"
 # Check if release is supported.
 # TODO. Support other releases also.
 case $(uname) in

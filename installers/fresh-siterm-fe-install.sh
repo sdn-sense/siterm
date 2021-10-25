@@ -33,19 +33,8 @@
 # TODO. data directory should come from configuration parameter
 datadir=/opt/config/
 workdir=`pwd`
-packages="git autoconf sudo libcurl-devel libffi-devel openssl-devel pyOpenSSL automake curl gcc libmnl-devel libuuid-devel lm_sensors make MySQL-python nc pkgconfig python3 wget PyYAML zlib-devel python3-devel httpd httpd-devel python3-mod_wsgi mod_ssl cronie python3-pip MariaDB-server MariaDB-client MariaDB-shared MariaDB-devel"
+packages="git autoconf sudo libcurl-devel libffi-devel openssl-devel automake curl gcc libuuid-devel lm_sensors make nc pkgconfig wget zlib-devel python3-devel httpd httpd-devel python3-mod_wsgi mod_ssl cronie python3-pip python38 python3-pyOpenSSL mariadb-server python38-pyyaml python3-mysql"
 # Check if release is supported.
-# TODO. Support other releases also.
-case $(uname) in
-  Linux  ) linuxmajor=$(egrep -o 'release [0-9]+{1}\.' /etc/redhat-release|cut -d" " -f2|tr -d .)
-           case $linuxmajor in
-             6 ) arch=slc6_amd64_gcc481 ;;
-             7 ) arch=slc7_amd64_gcc630 ;;
-           esac
-           xargsr="xargs -r"
-           ;;
-  *      ) echo "unsupported architecture" 1>&2; exit 1 ;;
-esac
 
 while [ $# -ge 1 ]; do
   case $1 in
@@ -138,6 +127,8 @@ mod_wsgi-express install-module > /etc/httpd/conf.modules.d/02-wsgi.conf
   echo "Modifying ownership and permission rules for Site FE directories"
   echo "-------------------------------------------------------------------"
 
+  # Remove ssl.conf - we have all defined inside the sitefe-httpd.conf
+  rm -f /etc/httpd/conf.d/ssl.conf
   # Ownership
   echo "1. Making apache as owner of $datadir"
   chown apache:apache -R $datadir

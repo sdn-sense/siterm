@@ -710,7 +710,7 @@ class LookUpService():
         self.addSwitchInfo(jOut)
 
         saveName = self.getModelSavePath()
-        with open(saveName, "wb") as fd:
+        with open(saveName, "w") as fd:
             fd.write(self.newGraph.serialize(format='turtle'))
         hashNum = generateHash(self.newGraph.serialize(format='turtle'))
 
