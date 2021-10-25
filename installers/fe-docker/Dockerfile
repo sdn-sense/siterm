@@ -1,15 +1,14 @@
-FROM centos:7.7.1908
+FROM centos:8
 
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
+
+RUN yum -y install wget epel-release
 
 # Maria DB Configuration
 ADD build_files/mariadb.repo /etc/yum.repos.d/mariadb.repo
 ADD build_files/mariadb.sql /root/mariadb.sql
 ADD build_files/server.cnf /etc/my.cnf.d/server.cnf
 ADD build_files/mariadb.sh /root/mariadb.sh
-
-RUN yum -y install wget epel-release
-
 # Import GPG Keys for MariaDB and EPEL
 RUN cd /etc/pki/rpm-gpg/ && wget https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
 RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-MariaDB
