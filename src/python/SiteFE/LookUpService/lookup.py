@@ -262,7 +262,7 @@ class LookUpService():
                     mainGraph = self._deltaAddition(dbObj, delta, mainGraphName)
                     writeFile = True
                 if writeFile:
-                    with open(mainGraphName, "wb") as fd:
+                    with open(mainGraphName, "w") as fd:
                         fd.write(mainGraph.serialize(format='turtle'))
 
     @staticmethod
