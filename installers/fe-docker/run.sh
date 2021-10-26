@@ -10,4 +10,5 @@ docker run \
        -p 8080:80 \
        -p 8443:443 \
        --env-file ./conf/environment \
+       --log-opt max-size=10m --log-opt max-file=10 \
        sitefe
