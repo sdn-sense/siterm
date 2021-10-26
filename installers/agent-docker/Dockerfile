@@ -1,4 +1,4 @@
-FROM centos:7
+FROM centos:8
 
 ARG GITREPO=siterm
 ARG GITORG=sdn-sense
@@ -13,5 +13,3 @@ RUN cd /opt/dtnrmcode/$GITREPO/installers/ && sudo sh ./fresh-siterm-agent-insta
 
 COPY run-wrapper.sh /usr/local/bin/run-wrapper.sh
 CMD /usr/local/bin/run-wrapper.sh
-
-
