@@ -30,19 +30,7 @@
 ##H  -h             Display this help.
 
 workdir=`pwd`
-packages="git autoconf automake sudo libcurl-devel libffi-devel python3-lxml openssl-devel curl gcc traceroute libuuid-devel lm_sensors ipset make nc pkgconfig python38 python38-pyyaml zlib-devel python3-devel wget tcpdump jq iproute cronie python3-pip wireshark iperf3 tc diffutils"
-# Check if release is supported.
-# TODO. Support other releases also.
-case $(uname) in
-  Linux  ) linuxmajor=$(egrep -o 'release [0-9]+{1}\.' /etc/redhat-release|cut -d" " -f2|tr -d .)
-           case $linuxmajor in
-             6 ) arch=slc6_amd64_gcc481 ;;
-             7 ) arch=slc7_amd64_gcc630 ;;
-           esac
-           xargsr="xargs -r"
-           ;;
-  *      ) echo "unsupported architecture" 1>&2; exit 1 ;;
-esac
+packages="git autoconf automake sudo libcurl-devel libffi-devel python3-lxml openssl-devel curl gcc traceroute libuuid-devel lm_sensors ipset make nc pkgconfig python38 python38-pyyaml zlib-devel python3-devel wget tcpdump jq iproute cronie python3-pip wireshark iperf3 tc diffutils fetch-crl"
 
 while [ $# -ge 1 ]; do
   case $1 in
