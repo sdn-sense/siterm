@@ -72,7 +72,7 @@ if [ $status -ne 0 ]; then
 fi
 
 # Start the second process
-sudo -u root /usr/local/bin/LookUpService-update restart &
+/usr/local/bin/LookUpService-update restart &
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to restart LookUpService-update: $status"
@@ -80,7 +80,7 @@ if [ $status -ne 0 ]; then
 fi
 sleep 5
 # Start the third process
-sudo -u root /usr/local/bin/PolicyService-update restart &
+/usr/local/bin/PolicyService-update restart &
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to restart PolicyService-update: $status"
@@ -88,7 +88,7 @@ if [ $status -ne 0 ]; then
 fi
 sleep 5
 # Start the fourth process
-sudo -u root /usr/local/bin/ProvisioningService-update restart &
+/usr/local/bin/ProvisioningService-update restart &
 status=$?
 if [ $status -ne 0 ]; then
   echo "Failed to restart ProvisioningService-update: $status"
