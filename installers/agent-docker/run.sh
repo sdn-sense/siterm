@@ -6,5 +6,5 @@ docker run \
        -v $(pwd)/conf/opt/config/:/opt/config/ \
        --cap-add=NET_ADMIN \
        --net=host \
-       --log-opt max-size=10m --log-opt max-file=10 \
+       --log-driver="json-file" --log-opt max-size=10m --log-opt max-file=10 \
        siteagent
