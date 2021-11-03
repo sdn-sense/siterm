@@ -7,6 +7,7 @@ docker run \
        -v $(pwd)/conf/etc/grid-security/hostcert.pem:/etc/grid-security/hostcert.pem \
        -v $(pwd)/conf/etc/grid-security/hostkey.pem:/etc/grid-security/hostkey.pem \
        -v $(pwd)/conf/opt/config/:/opt/config/ \
+       -v $(pwd)/conf/var/lib/mysql/:/var/lib/mysql/ \
        -p 8080:80 \
        -p 8443:443 \
        --env-file ./conf/environment \
