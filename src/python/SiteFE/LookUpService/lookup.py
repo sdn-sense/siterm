@@ -18,13 +18,10 @@ Author			: Justas Balcas
 Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
+UpdateDate      : 2021/11/08
 """
 from __future__ import print_function
 from __future__ import division
-from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-from past.utils import old_div
 import os
 import tempfile
 import datetime
@@ -101,6 +98,15 @@ class LookUpService():
         self.newGraph = None
         self.shared = False
         self.hosts = {}
+        self.renewSwitchConfig = True
+        self.switchConfig = {'out': {}, 'method': None}
+        self._getSwitchPlugin()
+
+    def _getSwitchPlugin(self):
+        switchPlugin = self.config.get(self.sitename, 'plugin')
+        self.logger.info('Will load %s switch plugin' % switchPlugin)
+        method = importlib.import_module("DTNRMLibs.Backends.%s" % switchPlugin.lower())
+        self.switchConfig['class'] = method(self.config, self.logger, {}, self.sitename)
 
     def generateHostIsalias(self, **kwargs):
         """Generate Host Alias from configuration."""
@@ -183,6 +189,12 @@ class LookUpService():
                     self.addToGraph(['site', "%s:%s" % (prefixuri, mName)],
                                     ['mrs', 'value'],
                                     [value])
+
+    def addSwitchIntfInfo(self, inputDict, prefixuri, main=True):
+        """ Add switch info (not for raw switches) """
+        # TODO
+        pass
+
 
     def _deltaReduction(self, dbObj, delta, mainGraphName):
         """Delta reduction."""
@@ -445,11 +457,13 @@ class LookUpService():
     def addSwitchInfo(self, jOut):
         """Add All Switch information from switch lookup plugin."""
         # Get switch information...
-        switchPlugin = self.config.get(self.sitename, 'plugin')
-        self.logger.info('Will load %s switch plugin' % switchPlugin)
-        method = importlib.import_module("SiteFE.LookUpService.Plugins.%s" % switchPlugin.lower())
-        switchCall = method.Switch(self.config, self.logger, jOut, self.sitename)
-        switchInfo = switchCall.getinfo()
+        switchInfo = self.switchConfig['out']
+        if self.renewSwitchConfig:
+            self.switchConfig['out'] = self.switchConfig['class'].getinfo(jOut, self.renewSwitchConfig)
+            switchInfo = self.switchConfig['out']
+            self.renewSwitchConfig = False
+        else:
+            self.logger.info('Will not reload switch configuration. Model has not changed last run.')
         # Add Switch information to MRML
         for switchName, switchDict in list(switchInfo['switches'].items()):
             self.logger.debug('Working on %s and %s' % (switchName, switchDict))
@@ -473,35 +487,40 @@ class LookUpService():
                 self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                    self.prefixDB.genUriRef('rdf', 'type'),
                                    self.prefixDB.genUriRef('nml', 'BidirectionalPort')))
-                if switchName in list(switchInfo['vlans'].keys()):
-                    if portName in list(switchInfo['vlans'][switchName].keys()):
+                if switchName in list(switchInfo['ports'].keys()):
+                    if portName in list(switchInfo['ports'][switchName].keys()):
                         # Add information about bidirection switch port
-                        if 'vlan_range' in list(switchInfo['vlans'][switchName][portName].keys()) and \
-                           switchInfo['vlans'][switchName][portName]['vlan_range']:
+                        if 'vlan_range' in list(switchInfo['ports'][switchName][portName].keys()) and \
+                           switchInfo['ports'][switchName][portName]['vlan_range']:
                             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                                self.prefixDB.genUriRef('nml', 'hasLabelGroup'),
                                                self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri)))
+
                             self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri),
                                                self.prefixDB.genUriRef('rdf', 'type'),
                                                self.prefixDB.genUriRef('nml', 'LabelGroup')))
+
                             self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri),
                                                self.prefixDB.genUriRef('nml', 'labeltype'),
                                                self.prefixDB.genUriRef('schema', '#vlan')))
+
                             self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri),
                                                self.prefixDB.genUriRef('nml', 'values'),
-                                               self.prefixDB.genLiteral(switchInfo['vlans'][switchName][portName]['vlan_range'])))
-                        if 'capacity' in list(switchInfo['vlans'][switchName][portName].keys()) and \
-                           switchInfo['vlans'][switchName][portName]['capacity']:
+                                               self.prefixDB.genLiteral(switchInfo['ports'][switchName][portName]['vlan_range'])))
+
+                        if 'capacity' in list(switchInfo['ports'][switchName][portName].keys()) and \
+                           switchInfo['ports'][switchName][portName]['capacity']:
                             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                                self.prefixDB.genUriRef('mrs', 'capacity'),
-                                               self.prefixDB.genLiteral(switchInfo['vlans'][switchName][portName]['capacity'])))
-                        if 'isAlias' in list(switchInfo['vlans'][switchName][portName].keys()) and \
-                           switchInfo['vlans'][switchName][portName]['isAlias']:
+                                               self.prefixDB.genLiteral(switchInfo['ports'][switchName][portName]['capacity'])))
+
+                        if 'isAlias' in list(switchInfo['ports'][switchName][portName].keys()) and \
+                           switchInfo['ports'][switchName][portName]['isAlias']:
                             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                                self.prefixDB.genUriRef('nml', 'isAlias'),
-                                               self.prefixDB.genUriRef('', custom=switchInfo['vlans'][switchName][portName]['isAlias'])))
+                                               self.prefixDB.genUriRef('', custom=switchInfo['ports'][switchName][portName]['isAlias'])))
+
                         else:
-                            print('TODO Automatic isAlias Generation')
                             self.generateHostIsalias(portSwitch=portSwitch, switchName=switchName,
                                                      portName=portName, newuri=newuri)
                     else:
@@ -557,7 +576,7 @@ class LookUpService():
                 if item[0] in list(intfDict.keys()):
                     value = intfDict[item[0]]
                 try:
-                    value = int(old_div(int(value), 1000000))
+                    value = int((int(value) // 1000000))
                 except ValueError:
                     value = str(value)
                 self.newGraph.add((self.prefixDB.genUriRef('site', bws),
@@ -728,6 +747,8 @@ class LookUpService():
                 # Force to update model every hour, Even there is no update;
                 self.logger.info('Forcefully update model in db as it is older than 1h')
                 dbObj.insert('models', [lastKnownModel])
+                # Also next run get new info from switch plugin
+                self.renewSwitchConfig = True
             else:
                 self.logger.info('Models are equal.')
                 lastKnownModel = modelinDB[0]
@@ -735,6 +756,8 @@ class LookUpService():
         else:
             self.logger.info('Models are different. Update DB')
             dbObj.insert('models', [lastKnownModel])
+            # Also next run get new info from switch plugin
+            self.renewSwitchConfig = True
 
         self.logger.debug('Last Known Model: %s' % str(lastKnownModel['fileloc']))
         # Clean Up old models (older than 24h.)

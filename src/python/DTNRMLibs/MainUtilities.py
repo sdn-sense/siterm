@@ -224,7 +224,19 @@ def reCacheConfig(prevHour=None):
     return prevHour == currentHour, currentHour
 
 
-class GitConfig(object):
+def getSwitchLoginDetails():
+    configLoc = os.getenv('SWITCH_CONFIG_FILE')
+    if not configLoc:
+        raise Exception('SWITCH_CONFIG_FILE env param not set')
+    output = {}
+    if os.path.isfile(configLoc):
+        with open(configLoc, 'r') as fd:
+            output = yload(fd.read())
+    else:
+        raise Exception('SWITCH_CONFIG_FILE file does not exist')
+    return output
+
+class GitConfig():
     """Git based configuration class."""
     def __init__(self):
         self.config = {}
@@ -291,8 +303,7 @@ class GitConfig(object):
                 if not requirement['optional']:
                     self.logger.debug('Configuration /etc/dtnrm.yaml missing non optional config parameter %s', key)
                     raise Exception('Configuration /etc/dtnrm.yaml missing non optional config parameter %s' % key)
-                else:
-                    self.config[key] = requirement['default']
+                self.config[key] = requirement['default']
 
     def getGitAgentConfig(self):
         """https://raw.githubusercontent.com/sdn-sense/rm-

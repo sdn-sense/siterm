@@ -49,7 +49,7 @@ def getSwitches(config, sitename, nodes, logger):
     """Get Switches plugin."""
     switchPlugin = config.get(sitename, 'plugin')
     logger.info('Will load %s switch plugin' % switchPlugin)
-    method = importlib.import_module("SiteFE.LookUpService.Plugins.%s" % switchPlugin.lower())
+    method = importlib.import_module("DTNRMLibs.Backends.%s" % switchPlugin.lower())
     switchInfo = method.getinfo(config, logger, nodes, sitename)
     return switchInfo
 

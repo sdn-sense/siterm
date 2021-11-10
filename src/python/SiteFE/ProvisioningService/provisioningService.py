@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Provisioning service is provision everything on the switches;
 
-Copyright 2017 California Institute of Technology
+Copyright 2021 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -11,15 +11,13 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title                   : dtnrm
+Title                   : siterm
 Author                  : Justas Balcas
 Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
+UpdateDate              : 2021/11/08
 """
-from __future__ import print_function
-from builtins import str
-from builtins import object
 import sys
 import importlib
 import time
@@ -35,7 +33,7 @@ from DTNRMLibs.MainUtilities import getDataFromSiteFE
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 
 
-class ProvisioningService(object):
+class ProvisioningService():
     """Provisioning service communicates with Local controllers and applies
     network changes."""
     def __init__(self, config, logger, sitename):
@@ -43,6 +41,15 @@ class ProvisioningService(object):
         self.config = config
         self.siteDB = contentDB(logger=self.logger, config=self.config)
         self.sitename = sitename
+        self.switchConfig = {'out': {}, 'method': None}
+        self._getSwitchPlugin()
+
+    def _getSwitchPlugin(self):
+        switchPlugin = self.config.get(self.sitename, 'plugin')
+        self.logger.info('Will load %s switch plugin' % switchPlugin)
+        method = importlib.import_module("DTNRMLibs.Backends.%s" % switchPlugin.lower())
+        self.switchConfig['class'] = method(self.config, self.logger, {}, self.sitename)
+
 
     def pushInternalAction(self, url, state, deltaID, hostname):
         """Push Internal action and return dict."""
@@ -63,7 +70,7 @@ class ProvisioningService(object):
             time.sleep(4)
         return evaldict(restOut)
 
-    def deltaRemoval(self, newDelta, deltaID, newvlan, switchName, switchruler, fullURL):
+    def deltaRemoval(self, newDelta, deltaID, newvlan, switchName, fullURL):
         """Here goes all communication with component and also rest
         interface."""
         self.logger.debug('I got REDUCTION!!!!!. Reduction only sets states until active.')
@@ -78,13 +85,12 @@ class ProvisioningService(object):
             if deltaState == list(stateChange.keys())[0]:
                 msg = 'Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState])
                 self.logger.debug(msg)
-                switchruler.mainCall(deltaState, newvlan, 'remove')
+                self.switchConfig['class'].mainCall(deltaState, newvlan, 'remove')
                 self.pushInternalAction(fullURL, stateChange[deltaState], deltaID, switchName)
                 deltaState = stateChange[deltaState]
         return True
 
-    # TODO merge these two functions
-    def deltaCommit(self, newDelta, deltaID, newvlan, switchName, switchruler, fullURL):
+    def deltaCommit(self, newDelta, deltaID, newvlan, switchName, fullURL):
         """Here goes all communication with component and also rest
         interface."""
         deltaState = newDelta['HOSTSTATE']
@@ -92,7 +98,7 @@ class ProvisioningService(object):
                             {"committing": "committed"}, {"committed": "activating"}, {"activating": "active"}]:
             if deltaState == list(stateChange.keys())[0]:
                 self.logger.info('Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState]))
-                switchruler.mainCall(deltaState, newvlan, 'add')
+                self.switchConfig['class'].mainCall(deltaState, newvlan, 'add')
                 self.pushInternalAction(fullURL, stateChange[deltaState], deltaID, switchName)
                 deltaState = stateChange[deltaState]
         return True
@@ -134,13 +140,10 @@ class ProvisioningService(object):
             return {}
         return evaldict(agents[0])
 
-    @staticmethod
-    def getAllAliases(switches):
+    def getAllAliases(self):
         """Get All Aliases."""
         out = []
-        if not switches:
-            return out
-        for _, switchPort in list(switches['vlans'].items()):
+        for _, switchPort in list(self.switchConfig['out']['ports'].items()):
             for _, portDict in list(switchPort.items()):
                 if 'isAlias' in portDict:
                     tmp = portDict['isAlias'].split(':')[-3:]
@@ -157,16 +160,11 @@ class ProvisioningService(object):
             self.logger.info('Seems server returned empty dictionary. Exiting.')
             return
         # Get switch information...
-        switchPlugin = self.config.get(self.sitename, 'plugin')
-        self.logger.info('Will load %s switch plugin' % switchPlugin)
-        method = importlib.import_module("SiteFE.ProvisioningService.Plugins.%s" % switchPlugin.lower())
-        switchruler = method.mainCaller()
-        topology = method.topology()
-        switches = topology.getTopology()
-        alliases = self.getAllAliases(switches)
+        self.switchConfig['out'] = self.switchConfig['class'].getinfo(jOut, False)
+        alliases = self.getAllAliases()
         outputDict = {}
         allDeltas = self.getData(fullURL, "/sitefe/v1/deltas?oldview=true")
-        for switchName in list(list(switches['switches'].keys()) + alliases):
+        for switchName in list(list(self.switchConfig['out']['switches'].keys()) + alliases):
             newDeltas = self.checkdeltas(switchName, allDeltas)
             for newDelta in newDeltas:
                 outputDict.setdefault(newDelta['ID'])
@@ -174,20 +172,20 @@ class ProvisioningService(object):
                     try:
                         newvlan = self.getnewvlan(newDelta, newDelta['ID'], switchName, actionKey)
                         if actionKey == 'reduction' and newDelta['ParsedDelta'][actionKey]:
-                            self.deltaRemoval(newDelta, newDelta['ID'], newvlan, switchName, switchruler, fullURL)
+                            self.deltaRemoval(newDelta, newDelta['ID'], newvlan, switchName, fullURL)
                         elif actionKey == 'addition' and newDelta['ParsedDelta'][actionKey]:
                             if newDelta['State'] in ['cancel']:
                                 newDelta['ReductionID'] = newDelta['ID']
-                                self.deltaRemoval(newDelta, newDelta['ID'], newvlan, switchName, switchruler, fullURL)
+                                self.deltaRemoval(newDelta, newDelta['ID'], newvlan, switchName, fullURL)
                             else:
-                                self.deltaCommit(newDelta, newDelta['ID'], newvlan, switchName, switchruler, fullURL)
+                                self.deltaCommit(newDelta, newDelta['ID'], newvlan, switchName, fullURL)
                         else:
                             self.logger.warning('Unknown delta state')
                             pretty = pprint.PrettyPrinter(indent=4)
                             pretty.pprint(evaldict(newDelta))
                     except IOError as ex:
-                        print(ex)
-                        raise Exception('Received IOError')
+                        self.logger.warning('IOError: %s', ex)
+                        raise Exception from IOError
 
 
 def execute(config=None, logger=None, args=None):
@@ -213,4 +211,3 @@ if __name__ == '__main__':
         execute(args=sys.argv, logger=getStreamLogger())
     else:
         execute(logger=getStreamLogger())
-

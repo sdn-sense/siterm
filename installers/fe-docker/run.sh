@@ -1,6 +1,7 @@
 docker run \
        -dit --name site-fe-sense \
        -v $(pwd)/conf/etc/dtnrm.yaml:/etc/dtnrm.yaml \
+       -v $(pwd)/conf/etc/siterm-switches:/etc/switches \
        -v $(pwd)/conf/etc/httpd/certs/cert.pem:/etc/httpd/certs/cert.pem \
        -v $(pwd)/conf/etc/httpd/certs/privkey.pem:/etc/httpd/certs/privkey.pem \
        -v $(pwd)/conf/etc/httpd/certs/fullchain.pem:/etc/httpd/certs/fullchain.pem \
