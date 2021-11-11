@@ -109,10 +109,12 @@ class LookUpService():
 
     def generateHostIsalias(self, **kwargs):
         """Generate Host Alias from configuration."""
-        if 'hostname' in kwargs['portSwitch']:
-            import pdb; pdb.set_trace()
-            print(kwargs)
-        if kwargs['portSwitch'] in list(self.hosts.keys()):
+        if 'isAlias' in kwargs['portSwitch'] and \
+           kwargs['portSwitch']['isAlias']:
+            self.newGraph.add((self.prefixDB.genUriRef('site', kwargs['newuri']),
+                               self.prefixDB.genUriRef('nml', 'isAlias'),
+                               self.prefixDB.genUriRef('', custom=kwargs['portSwitch']['isAlias'])))
+        elif kwargs['portSwitch'] in list(self.hosts.keys()):
             for item in self.hosts[kwargs['portSwitch']]:
                 if item['switchName'] == kwargs['switchName'] and item['switchPort'] == kwargs['portName']:
                     suri = "%s:%s" % (kwargs['newuri'], item['intfKey'])
@@ -192,11 +194,38 @@ class LookUpService():
                                     ['mrs', 'value'],
                                     [value])
 
-    def addSwitchIntfInfo(self, inputDict, prefixuri, main=True):
+    def addSwitchIntfInfo(self, switchName, portName, portSwitch, newuri):
         """ Add switch info (not for raw switches) """
-        # TODO
-        pass
-
+        if 'vlan_range' in list(portSwitch.keys()) and \
+           portSwitch['vlan_range']:
+            self.addToGraph(['site', newuri],
+                            ['nml', 'hasLabelGroup'],
+                            ['site', '%s:%s' % (newuri, "vlan-range")])
+            self.addToGraph(['site', '%s:%s' % (newuri, "vlan-range")],
+                            ['rdf', 'type'],
+                            ['nml', 'LabelGroup'])
+            self.addToGraph(['site', "%s:%s" % (newuri, "vlan-range")],
+                            ['nml', 'labeltype'],
+                            ['schema', '#vlan'])
+            self.addToGraph(['site', "%s:%s" % (newuri, "vlan-range")],
+                            ['nml', 'values'],
+                            [portSwitch['vlan_range']])
+            # Generate host alias or adds' isAlias
+            self.generateHostIsalias(portSwitch=portSwitch, switchName=switchName,
+                                     portName=portName, newuri=newuri)
+            for key, val in portSwitch.items():
+                self.addToGraph(['site', newuri],
+                                ['mrs', 'hasNetworkAddress'],
+                                ['site', '%s:%s' % (newuri, key)])
+                self.addToGraph(['site', '%s:%s' % (newuri, key)],
+                                ['rdf', 'type'],
+                                ['mrs', 'NetworkAddress'])
+                self.addToGraph(['site', "%s:%s" % (newuri, key)],
+                                ['mrs', 'type'],
+                                [key])
+                self.addToGraph(['site', "%s:%s" % (newuri, key)],
+                                ['mrs', 'value'],
+                                [val])
 
     def _deltaReduction(self, dbObj, delta, mainGraphName):
         """Delta reduction."""
@@ -475,7 +504,6 @@ class LookUpService():
                 continue
             for portName, portSwitch in list(switchDict.items()):
                 if 'hostname' in portSwitch and 'isAlias' not in portSwitch:
-                    # TODO: Check if hostname is needed if there is isAlias
                     newuri = ":%s:%s:%s" % (switchName, portName, portSwitch['hostname'])
                 else:
                     newuri = ":%s:%s" % (switchName, portName)
@@ -491,39 +519,7 @@ class LookUpService():
                 if switchName in list(switchInfo['ports'].keys()):
                     if portName in list(switchInfo['ports'][switchName].keys()):
                         # Add information about bidirection switch port
-                        if 'vlan_range' in list(switchInfo['ports'][switchName][portName].keys()) and \
-                           switchInfo['ports'][switchName][portName]['vlan_range']:
-                            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                                               self.prefixDB.genUriRef('nml', 'hasLabelGroup'),
-                                               self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri)))
-
-                            self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri),
-                                               self.prefixDB.genUriRef('rdf', 'type'),
-                                               self.prefixDB.genUriRef('nml', 'LabelGroup')))
-
-                            self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri),
-                                               self.prefixDB.genUriRef('nml', 'labeltype'),
-                                               self.prefixDB.genUriRef('schema', '#vlan')))
-
-                            self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri),
-                                               self.prefixDB.genUriRef('nml', 'values'),
-                                               self.prefixDB.genLiteral(switchInfo['ports'][switchName][portName]['vlan_range'])))
-
-                        if 'capacity' in list(switchInfo['ports'][switchName][portName].keys()) and \
-                           switchInfo['ports'][switchName][portName]['capacity']:
-                            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                                               self.prefixDB.genUriRef('mrs', 'capacity'),
-                                               self.prefixDB.genLiteral(switchInfo['ports'][switchName][portName]['capacity'])))
-
-                        if 'isAlias' in switchInfo['ports'][switchName][portName] and \
-                           switchInfo['ports'][switchName][portName]['isAlias']:
-                            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                                               self.prefixDB.genUriRef('nml', 'isAlias'),
-                                               self.prefixDB.genUriRef('', custom=switchInfo['ports'][switchName][portName]['isAlias'])))
-
-                        else:
-                            self.generateHostIsalias(portSwitch=portSwitch, switchName=switchName,
-                                                     portName=portName, newuri=newuri)
+                        self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
                     else:
                         self.logger.debug('Port %s is not in switchInfo' % portName)
                 else:
