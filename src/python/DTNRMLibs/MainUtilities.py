@@ -229,6 +229,7 @@ def getSwitchLoginDetails():
     if not configLoc:
         raise Exception('SWITCH_CONFIG_FILE env param not set')
     output = {}
+    print(configLoc)
     if os.path.isfile(configLoc):
         with open(configLoc, 'r') as fd:
             output = yload(fd.read())

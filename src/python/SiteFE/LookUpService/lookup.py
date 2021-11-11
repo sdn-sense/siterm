@@ -20,7 +20,6 @@ Email 			: justas.balcas (at) cern.ch
 Date			: 2017/09/26
 UpdateDate      : 2021/11/08
 """
-from __future__ import print_function
 from __future__ import division
 import os
 import tempfile
@@ -106,7 +105,7 @@ class LookUpService():
         switchPlugin = self.config.get(self.sitename, 'plugin')
         self.logger.info('Will load %s switch plugin' % switchPlugin)
         method = importlib.import_module("DTNRMLibs.Backends.%s" % switchPlugin.lower())
-        self.switchConfig['class'] = method(self.config, self.logger, {}, self.sitename)
+        self.switchConfig['class'] = method.Switch(self.config, self.logger, {}, self.sitename)
 
     def generateHostIsalias(self, **kwargs):
         """Generate Host Alias from configuration."""
@@ -223,7 +222,6 @@ class LookUpService():
                     state = 'activating'
                 else:
                     state = 'scheduled'
-                    print('scheduled')
             elif 'timeend' in list(conn.keys()) and conn['timeend'] < getUTCnow() and state == 'activated':
                 state = 'deactivating'
             # Add new State under SwitchSubnet
@@ -465,7 +463,7 @@ class LookUpService():
         else:
             self.logger.info('Will not reload switch configuration. Model has not changed last run.')
         # Add Switch information to MRML
-        for switchName, switchDict in list(switchInfo['switches'].items()):
+        for switchName, switchDict in list(switchInfo['ports'].items()):
             self.logger.debug('Working on %s and %s' % (switchName, switchDict))
             try:
                 vsw = self.config.get(switchName, 'vsw')
@@ -473,14 +471,14 @@ class LookUpService():
                 self.logger.debug('ERROR: vsw parameter is not defined for %s.', switchName)
                 continue
             for portName, portSwitch in list(switchDict.items()):
-                if portSwitch:
-                    newuri = ":%s:%s:%s" % (switchName, portName, portSwitch)
+                if 'hostname' in portSwitch and 'isAlias' not in portSwitch:
+                    # TODO: Check if hostname is needed if there is isAlias
+                    newuri = ":%s:%s:%s" % (switchName, portName, portSwitch['hostname'])
                 else:
                     newuri = ":%s:%s" % (switchName, portName)
                 self.newGraph.add((self.prefixDB.genUriRef('site'),
                                    self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
                                    self.prefixDB.genUriRef('site', newuri)))
-                print(newuri)
                 self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
                                    self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
                                    self.prefixDB.genUriRef('site', newuri)))
@@ -513,9 +511,10 @@ class LookUpService():
                             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                                self.prefixDB.genUriRef('mrs', 'capacity'),
                                                self.prefixDB.genLiteral(switchInfo['ports'][switchName][portName]['capacity'])))
-
-                        if 'isAlias' in list(switchInfo['ports'][switchName][portName].keys()) and \
+                        print(switchInfo['ports'][switchName][portName])
+                        if 'isAlias' in switchInfo['ports'][switchName][portName] and \
                            switchInfo['ports'][switchName][portName]['isAlias']:
+                            import pdb; pdb.set_trace()
                             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                                self.prefixDB.genUriRef('nml', 'isAlias'),
                                                self.prefixDB.genUriRef('', custom=switchInfo['ports'][switchName][portName]['isAlias'])))

@@ -38,7 +38,7 @@ PAGGING_LINE = "--More--"
 LT = "\n"
 
 # Command to get running config
-CMD_CONFIG = "show running config"
+CMD_CONFIG = "show running-config"
 
 # Command to enter configure mode
 CMD_CONFIGURE = "configure"

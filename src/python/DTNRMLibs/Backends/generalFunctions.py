@@ -47,9 +47,12 @@ def cleanupEmpty(output):
                 continue
     return tmpOut
 
-def getValFromConfig(config, switch, port, key):
+def getValFromConfig(config, switch, port, key, portKey="port%s%s"):
     """Get val from config."""
-    tmpVal = config.get(switch, "port%s%s" % (port, key))
+    # portKey - default is old in RAW plugin.
+    # This would require to update all agents to use new key format
+    # TODO: Update RAW plugin and all config files to use new config param
+    tmpVal = config.get(switch, portKey % (port, key))
     try:
         tmpVal = int(tmpVal)
     except ValueError:

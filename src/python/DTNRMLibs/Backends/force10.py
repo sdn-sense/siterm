@@ -58,9 +58,7 @@ def portSplitter(portName, inPorts):
     """
     outPorts = []
     for splPorts in inPorts.split(','):
-        print(splPorts)
         splRange = splPorts.split('-')
-        print(splRange)
         if len(splRange) == 2:
             start = splRange[0].split('/')
             end = splRange[1].split('/')
@@ -73,6 +71,8 @@ def portSplitter(portName, inPorts):
             elif portName == "Port-channel":
                 vCh = 0
                 apnd = "%s"
+            # 25G? TODO! - We do not have any of 25G
+            # 10G? TODO! - SDN Testbed no 10G
             else:
                 print("UNSUPPORTED!")
             for i in range(int(start[vCh]), int(end[vCh]) + 1):
@@ -110,7 +110,6 @@ def parseRouteLine(splLine):
         tmpRoute['ip'] = "%s/%s" % (tmpSplit[valId], tmpSplit[valId+1])
         valId += 2
     tmpVal = tmpSplit[valId]
-    print(tmpVal)
     if validIPAddress(tmpVal) in ["IPv4", "IPv6"]:
         tmpRoute['routerIP'] = tmpVal
         valId += 1
@@ -205,7 +204,7 @@ class DellOs9():
         self.jsonOut = {'ports': {}, 'routes': {}}
 
     def _clean(self):
-        self.jsonOut = {'ports': {}, 'routes': {}}
+        self.jsonOut = {'ports': {}, 'routes': {}, 'vlans': {}}
 
     def getMappedInterfaces(self, inLine, intfName):
         """ Get all Mapped interfaces """
@@ -221,7 +220,6 @@ class DellOs9():
 
     def parseIntfLine(self, inLine, intfName):
         """ Parse Intf Line """
-        print(inLine)
         if inLine == 'no shutdown':
             self.jsonOut['ports'][intfName]['shutdown'] = False
         elif inLine == 'shutdown':
@@ -257,6 +255,8 @@ class DellOs9():
         saveOut = False
         for line in inputLines:
             line = line.strip()
+            if isinstance(line, bytes):
+                line = line.decode('utf-8')
             if line == "!":
                 saveOut = False
             if saveOut:
@@ -269,7 +269,27 @@ class DellOs9():
                 splLine = line.split(' ')
                 self.jsonOut['routes'].setdefault(splLine[0], [])
                 self.jsonOut['routes'][splLine[0]].append(parseRouteLine(splLine[2:]))
+        return self.jsonOut
 
+
+def identifyPortSpeed(pDict, pName):
+    # Vlans do not have speed
+    if pName.startswith('Vlan'):
+        # No speed in vlan
+        return 0
+    # Port-channel - need to sum up and count
+    if pName.startswith('Port-channel'):
+        if 'channel-member' not in pDict:
+            return 0
+        pSpeed = 0
+        for member, memberV in pDict['channel-member'].items():
+            pSpeed += identifyPortSpeed({}, member) * len(memberV)
+        return pSpeed
+    mpn = {'hundredGigE': 100, 'fortyGigE': 40, 'twentyFiveGigE': 25, 'TenGigabitEthernet': 10}
+    for key, val in mpn.items():
+        if pName.startswith(key):
+            return 100
+    return 1
 
 
 ########################################
@@ -297,62 +317,108 @@ class Switch(DellOs9, mainCaller):
         if not self.nodesInfo:
             self.nodesInfo = {}
         self.site = site
-        self.output = {'switches': {}, 'ports': {}, 'vlans': {}, 'routes': {}}
+        self.output = {'ports': {}, 'vlans': {}, 'routes': {}}
 
     def _setDefaults(self, switchName):
         for key in self.output.keys():
             self.output[key][switchName] = {}
 
-    def getinfo(self, renew=False):
+    def getinfo(self, jOut={}, renew=False):
         """Get info from Dell Switch plugin."""
         # If config miss required options. return.
         # See error message for more details.
         if checkConfig(self.config, self.logger, self.site):
             return self.output
+        if jOut:
+            self.nodesInfo = jOut
+        if checkConfig(self.config, self.logger, self.site):
+            return self.output
         switch = self.config.get(self.site, 'switch')
         for switchn in switch.split(','):
             self.switchInfo(switchn, renew)
+            self.output['ports'][switchn] = self.sOut[switchn]['ports']
+            self.output['vlans'][switchn] = self.sOut[switchn]['vlans']
+            self.output['routes'][switchn] = self.sOut[switchn]['routes']
         nodeInfo = Node(self.config, self.logger, self.site)
         self.output = nodeInfo.nodeinfo(self.nodesInfo, self.output)
-        return cleanupEmpty(self.output)
+        return self.output
 
     def getRunningConfig(self, switch):
         if not switch in self.creds["conns"] or not self.creds["conns"][switch]:
             self.creds["conns"][switch] = RemoteConn(self.creds["creds"][switch], self.logger, Force10)
         out = self.creds["conns"][switch].sendCommand("%s%s" % (Force10.CMD_CONFIG, Force10.LT))
-        return out
+        return self.parser(out)
+
+    def getConfigParams(self, switch):
+        ports = []
+        vlanRange = ""
+        portsIgnore = []
+        if self.config.has_option(switch, 'allports') and self.config.get(switch, 'allports'):
+            ports = [*self.sOut[switch]['ports']]
+        elif self.config.has_option(switch, 'ports'):
+            ports = self.config.get(switch, 'ports').split(',')
+        if self.config.has_option(switch, 'vlan_range'):
+            vlanRange = self.config.get(switch, 'vlan_range')
+        if self.config.has_option(switch, 'ports_ignore'):
+            portsIgnore = self.config.get(switch, 'ports_ignore').split(',')
+        return ports, vlanRange, portsIgnore
 
     def switchInfo(self, switch, renew):
         """Get all switch info from Switch Itself"""
         self._setDefaults(switch)
         if renew or not switch in self.sOut or not self.sOut[switch]:
             self.sOut[switch] = self.getRunningConfig(switch)
-        # TODO !!!
-        for port in self.config.get(switch, 'ports').split(','):
-            # Each port has to have 4 things defined:
-            self.output['ports'][switch][port] = {}
-            for key in ['hostname', 'isAlias', 'vlan_range', 'capacity', 'desttype', 'destport']:
-                if not self.config.has_option(switch, "port%s%s" % (port, key)):
-                    self.logger.debug('Option %s is not defined for Switch %s and Port %s' % (key, switch, port))
+
+        ports, defVlans, portsIgn = self.getConfigParams(switch)
+        portKey = "port_%s_%s"
+        for port in ports:
+            # Spaces from port name are replaced with _
+            # Backslashes are replaced with dash
+            # Also - mrml does not expect to get string in nml. so need to replace all
+            # Inside the output of dictionary
+            nportName = port.replace(" ", "_").replace("/", "-")
+            if port in portsIgn:
+                del self.sOut[switch]['ports'][port]
+                continue
+            self.sOut[switch]['ports'][nportName] =  self.sOut[switch]['ports'].pop(port)
+            for key in ['hostname', 'vlan_range', 'destport']:
+                if not self.config.has_option(switch, portKey % (nportName, key)):
                     continue
-                tmpVal = getValFromConfig(self.config, switch, port, key)
-                if key == 'capacity':
-                    # TODO. Allow in future to specify in terms of G,M,B. For now only G
-                    # and we change it to bits
-                    self.output['ports'][switch][port][key] = tmpVal * 1000000000
-                else:
-                    self.output['ports'][switch][port][key] = tmpVal
-            self.output['switches'][switch][port] = ""
-            if self.config.has_option(switch, "port%shostname" % port):
-                self.output['switches'][switch][port] = getValFromConfig(self.config, switch, port, 'hostname')
-            elif self.config.has_option(switch, "port%sisAlias" % port):
-                spltAlias = getValFromConfig(self.config, switch, port, 'isAlias').split(':')
-                #self.output['switches'][switch][port] = spltAlias[-2]
-                self.output['ports'][switch][port]['desttype'] = 'switch'
-                if 'destport' not in list(self.output['ports'][switch][port].keys()):
-                    self.output['ports'][switch][port]['destport'] = spltAlias[-1]
-                if 'hostname' not in list(self.output['ports'][switch][port].keys()):
-                    self.output['ports'][switch][port]['hostname'] = spltAlias[-2]
+                self.sOut[switch]['ports'][nportName][key] = getValFromConfig(self.config, switch, nportName, key, portKey)
+
+            tmpVal = 0
+            # Get port speed from config or if not defined - identify based on interface Name
+            if self.config.has_option(switch, portKey % (nportName, 'capacity')):
+                tmpVal = getValFromConfig(self.config, switch, nportName, 'capacity', portKey)
+            else:
+                # Identify port speed automatically
+                tmpVal = identifyPortSpeed(self.sOut[switch]['ports'][nportName], nportName)
+            self.sOut[switch]['ports'][nportName]['capacity'] = tmpVal * 1000000000
+
+            # Check if vlan range defined in config for specific port. if not - will use the default (also from config)
+            if self.config.has_option(switch, portKey % (nportName, 'vlan_range')):
+                self.sOut[switch]['ports'][nportName]['vlan_range'] = getValFromConfig(self.config, switch, nportName, 'vlan_range', portKey)
+            else:
+                self.sOut[switch]['ports'][nportName]['vlan_range'] = defVlans
+
+            # if desttype defined (mainly to show switchport and reflect that in mrml) - add. Otherwise - check switch config
+            # and if switchport: True - define desttype
+            if self.config.has_option(switch, portKey % (nportName, 'desttype')):
+                self.sOut[switch]['ports'][nportName]['desttype'] = getValFromConfig(self.config, switch, nportName, 'desttype', portKey)
+            elif 'switchport' in self.sOut[switch]['ports'][nportName].keys() and self.sOut[switch]['ports'][nportName]['switchport']:
+                self.sOut[switch]['ports'][nportName]['desttype'] = 'switch'
+
+            if self.config.has_option(switch, portKey % (nportName, 'isAlias')):
+                self.sOut[switch]['ports'][nportName]['isAlias'] = getValFromConfig(self.config, switch, nportName, 'isAlias', portKey)
+                spltAlias = self.sOut[switch]['ports'][nportName]['isAlias'].split(':')
+                self.sOut[switch]['ports'][nportName]['desttype'] = 'switch'
+                if 'destport' not in list(self.sOut[switch]['ports'][nportName].keys()):
+                    self.sOut[switch]['ports'][nportName]['destport'] = spltAlias[-1]
+                if 'hostname' not in list(self.sOut[switch]['ports'][nportName].keys()):
+                    self.sOut[switch]['ports'][nportName]['hostname'] = spltAlias[-2]
+
+            if port.startswith('Vlan'):
+                self.sOut[switch]['vlans'][nportName] =  self.sOut[switch]['ports'].pop(nportName)
 
 if __name__ == '__main__':
     print('WARNING!!!! This should not be used through main call. Only for testing purposes!!!')

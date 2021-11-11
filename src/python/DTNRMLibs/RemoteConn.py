@@ -92,6 +92,8 @@ class RemoteConn():
         if not self.remoteConn or not self.remoteConnPre:
             self._terminate()  # Do full clean-up and connection close
             self._connect()  # Reconnect
+        if isinstance(cmd, bytes):
+            cmd = cmd.decode('utf-8')
         self.remoteConn.send(cmd)
         time.sleep(self.conn['timeout']*3) # It is getting output in chunks... we need to sleep a bit
         # read stdout/stderr in order to prevent read block hangs

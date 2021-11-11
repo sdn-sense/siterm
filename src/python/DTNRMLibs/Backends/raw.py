@@ -126,7 +126,7 @@ class Switch():
         for switchn in switch.split(','):
             self.switchInfo(switchn)
         nodeInfo = Node(self.config, self.logger, self.site)
-        self.output = nodeInfo.nodeinfo()
+        self.output = nodeInfo.nodeinfo(self.nodesInfo, self.output)
         return cleanupEmpty(self.output)
 
     def switchInfo(self, switch):
