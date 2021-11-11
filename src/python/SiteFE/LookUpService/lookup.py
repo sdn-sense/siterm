@@ -109,6 +109,9 @@ class LookUpService():
 
     def generateHostIsalias(self, **kwargs):
         """Generate Host Alias from configuration."""
+        if 'hostname' in kwargs['portSwitch']:
+            import pdb; pdb.set_trace()
+            print(kwargs)
         if kwargs['portSwitch'] in list(self.hosts.keys()):
             for item in self.hosts[kwargs['portSwitch']]:
                 if item['switchName'] == kwargs['switchName'] and item['switchPort'] == kwargs['portName']:
@@ -511,10 +514,9 @@ class LookUpService():
                             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                                self.prefixDB.genUriRef('mrs', 'capacity'),
                                                self.prefixDB.genLiteral(switchInfo['ports'][switchName][portName]['capacity'])))
-                        print(switchInfo['ports'][switchName][portName])
+
                         if 'isAlias' in switchInfo['ports'][switchName][portName] and \
                            switchInfo['ports'][switchName][portName]['isAlias']:
-                            import pdb; pdb.set_trace()
                             self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
                                                self.prefixDB.genUriRef('nml', 'isAlias'),
                                                self.prefixDB.genUriRef('', custom=switchInfo['ports'][switchName][portName]['isAlias'])))

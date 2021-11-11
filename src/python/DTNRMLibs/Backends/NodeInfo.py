@@ -38,14 +38,13 @@ class Node():
                         breakLoop = True
                 if breakLoop:
                     continue
-                if intfDict['switch'] in list(output['switches'].keys()):
-                    if intfDict['switch_port'] not in list(output['switches'][intfDict['switch']].keys()):
+                if intfDict['switch'] in list(output['ports'].keys()):
+                    if intfDict['switch_port'] not in list(output['ports'][intfDict['switch']].keys()):
                         self.logger.debug('Frontend Config is not configured to use this Port %s',
                                           intfDict['switch_port'])
                         continue
                     switch = intfDict['switch']
                     switchp = intfDict['switch_port']
-                    output['switches'][switch][switchp] = nodeDict['hostname']
                     output['ports'][switch][switchp] = {}
                     output['ports'][switch][switchp]['destport'] = intfKey
                     output['ports'][switch][switchp]['hostname'] = nodeDict['hostname']

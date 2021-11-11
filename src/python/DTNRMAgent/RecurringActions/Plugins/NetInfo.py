@@ -68,7 +68,7 @@ def get(config, logger):
         nicInfo['vlan_range'] = vlanRange
         nicInfo['min_bandwidth'] = int(vlanMin)
         nicInfo['max_bandwidth'] = int(vlanMax)
-        nicInfo['switch_port'] = str(switchPort).replace('/', '_')
+        nicInfo['switch_port'] = str(switchPort).replace('/', '-').replace(' ', '')
         nicInfo['switch'] = str(switch)
         nicInfo['shared'] = str2bool(sharedInterface)
         nicInfo['vlans'] = {}
