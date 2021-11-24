@@ -89,7 +89,7 @@ class Switch(mainCaller):
         for key in self.output.keys():
             self.output[key][switchName] = {}
 
-    def getinfo(self, jOut={}, renew=False):
+    def getinfo(self, jOut=None, renew=False):
         """Get info about switches"""
         # If config miss required options. return.
         # See error message for more details.

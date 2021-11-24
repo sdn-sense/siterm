@@ -10,7 +10,6 @@ from DTNRMLibs.Backends.generalFunctions import getValFromConfig
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 
 
-
 class Switch(Ansible, Raw):
     def __init__(self, config, logger, nodesInfo, site):
         self.config = config
@@ -35,7 +34,7 @@ class Switch(Ansible, Raw):
         for key in self.output.keys():
             self.output[key][switchName] = {}
 
-    def getinfo(self, jOut={}, renew=False):
+    def getinfo(self, jOut=None, renew=False):
         """Get info about RAW plugin."""
         # If config miss required options. return.
         # See error message for more details.

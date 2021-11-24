@@ -157,13 +157,3 @@ class Switch(mainCaller):
                     self.output['ports'][switch][port]['destport'] = spltAlias[-1]
                 if 'hostname' not in list(self.output['ports'][switch][port].keys()):
                     self.output['ports'][switch][port]['hostname'] = spltAlias[-2]
-
-if __name__ == '__main__':
-    print('WARNING!!!! This should not be used through main call. Only for testing purposes!!!')
-    CONFIG = getConfig()
-    COMPONENT = 'LookUpService'
-    LOGGER = getStreamLogger()
-    for sitename in CONFIG.get('general', 'sites').split(','):
-        print('Working on %s' % sitename)
-        method = Switch(CONFIG, LOGGER, None, sitename)
-        print(method.getinfo())
