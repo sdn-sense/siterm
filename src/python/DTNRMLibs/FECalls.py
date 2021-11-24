@@ -45,15 +45,6 @@ def getAllHosts(sitename, logger):
     return jOut
 
 
-def getSwitches(config, sitename, nodes, logger):
-    """Get Switches plugin."""
-    switchPlugin = config.get(sitename, 'plugin')
-    logger.info('Will load %s switch plugin' % switchPlugin)
-    method = importlib.import_module("DTNRMLibs.Backends.%s" % switchPlugin.lower())
-    switchInfo = method.getinfo(config, logger, nodes, sitename)
-    return switchInfo
-
-
 def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
     """Report service state to DB."""
     try:

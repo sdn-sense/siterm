@@ -214,6 +214,19 @@ class LookUpService():
             self.generateHostIsalias(portSwitch=portSwitch, switchName=switchName,
                                      portName=portName, newuri=newuri)
             for key, val in portSwitch.items():
+                if key == 'vlan_range':
+                    continue
+                if key == 'channel-member':
+                    # This is very specific to Dell Force 10. TODO: What about others providing
+                    # port channel? Might need to change it.
+                    # Are there any specifics how port channel and channel members should be
+                    # listed in mrml?
+                    # Based on discussions with Xi - it should be: nml:hasBidirectionalPort
+                    # TODO: Change to use of nml:hasBidirectionalPort
+                    tmpVal = ""
+                    for key1, val1 in val.items():
+                        tmpVal += ",".join(["%s_%s" % (key1, val2.replace("/", "-")) for val2 in val1])
+                    val = tmpVal
                 self.addToGraph(['site', newuri],
                                 ['mrs', 'hasNetworkAddress'],
                                 ['site', '%s:%s' % (newuri, key)])
@@ -401,7 +414,7 @@ class LookUpService():
             self.logger.debug('Either one or both (latitude,longitude) are not defined. Continuing as normal')
 
     def defineLayer3MRML(self, nodeDict):
-        """Define Layer 3 Routing Service."""
+        """Define Layer 3 Routing Service for hostname"""
         hostinfo = evaldict(nodeDict['hostinfo'])
         self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
                            self.prefixDB.genUriRef('nml', 'hasService'),
@@ -483,6 +496,19 @@ class LookUpService():
                     self.addToGraph(['site', '%s:%s' % (routename, 'to')],
                                     ['mrs', 'value'],
                                     ['%s/%s' % (routeinfo['RTA_DST'], routeinfo['dst_len'])])
+
+# Server routing dict
+#[{'dst_len': 0, 'RTA_GATEWAY': '198.32.43.1'},'dst_len': 23, 'RTA_DST': '172.16.0.0', 'RTA_PREFSRC': '172.16.1.38'},
+# {'dst_len': 16, 'RTA_DST': '172.17.0.0', 'RTA_PREFSRC': '172.17.0.1'},
+# {'dst_len': 24, 'RTA_DST': '198.32.43.0', 'RTA_PREFSRC': '198.32.43.14'}]
+
+# Swith rounting dict
+#{'s0': {'ip': [{'ip': '0.0.0.0/0', 'routerIP': '192.168.255.254'},
+#               {'vrf': 'lhcone', 'ip': '0.0.0.0/0', 'routerIP': '192.84.86.238'}],
+#        'ipv6': [{'vrf': 'lhcone', 'ip': '::/0', 'routerIP': '2605:d9c0:0:ff02::'},
+#                 {'vrf': 'lhcone', 'ip': '2605:d9c0:2::/48', 'routerIntf': 'NULL 0'}]}}
+
+
 
     def addSwitchInfo(self, jOut):
         """Add All Switch information from switch lookup plugin."""

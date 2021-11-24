@@ -94,7 +94,7 @@ class mainCaller():
         return True
 
 
-class Switch():
+class Switch(mainCaller):
     """RAW Switch plugin.
     All info comes from yaml files.
     """
@@ -157,14 +157,6 @@ class Switch():
                     self.output['ports'][switch][port]['destport'] = spltAlias[-1]
                 if 'hostname' not in list(self.output['ports'][switch][port].keys()):
                     self.output['ports'][switch][port]['hostname'] = spltAlias[-2]
-
-
-class topology():
-    def __init__(self):
-        self.name = 'RAW'
-
-    def getTopology(self):
-        return {'switches': {}, 'vlans': {}}
 
 if __name__ == '__main__':
     print('WARNING!!!! This should not be used through main call. Only for testing purposes!!!')

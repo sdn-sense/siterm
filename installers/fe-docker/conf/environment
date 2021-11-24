@@ -4,4 +4,3 @@ MARIA_DB_USER=root
 MARIA_DB_HOST=localhost
 MARIA_DB_PORT=3306
 MARIA_DB_DATABASE=sitefe
-SWITCH_CONFIG_FILE=/etc/siterm-switches

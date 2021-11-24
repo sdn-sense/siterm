@@ -17,10 +17,6 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-from past.builtins import basestring
 import os
 import os.path
 import io
@@ -223,19 +219,6 @@ def reCacheConfig(prevHour=None):
     currentHour = datetimeNow.strftime('%H')
     return prevHour == currentHour, currentHour
 
-
-def getSwitchLoginDetails():
-    configLoc = os.getenv('SWITCH_CONFIG_FILE')
-    if not configLoc:
-        raise Exception('SWITCH_CONFIG_FILE env param not set')
-    output = {}
-    print(configLoc)
-    if os.path.isfile(configLoc):
-        with open(configLoc, 'r') as fd:
-            output = yload(fd.read())
-    else:
-        raise Exception('SWITCH_CONFIG_FILE file does not exist')
-    return output
 
 class GitConfig():
     """Git based configuration class."""
