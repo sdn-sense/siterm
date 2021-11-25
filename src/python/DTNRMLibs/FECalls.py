@@ -27,7 +27,7 @@ from DTNRMLibs.DBBackend import dbinterface
 
 
 def getDBConn(serviceName=''):
-    """Get datanase connection."""
+    """Get database connection."""
     dbConn = {}
     config = getConfig()
     for sitename in config.get('general', 'sites').split(','):
@@ -44,6 +44,14 @@ def getAllHosts(sitename, logger):
         jOut[site['hostname']] = site
     return jOut
 
+def getAllSwitches(sitename, logger):
+    """Get all switches from database."""
+    logger.info('Get all switches for %s', sitename)
+    dbObj = getDBConn('getAllSwitches')[sitename]
+    jOut = {}
+    for site in dbObj.get('switches'):
+        jOut[site['hostname']] = site
+    return jOut
 
 def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
     """Report service state to DB."""

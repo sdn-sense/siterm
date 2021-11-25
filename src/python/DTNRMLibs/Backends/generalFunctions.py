@@ -60,6 +60,21 @@ def getValFromConfig(config, switch, port, key, portKey="port%s%s"):
     return tmpVal
 
 
+def getConfigParams(config, switch, switchOut):
+    ports = []
+    vlanRange = ""
+    portsIgnore = []
+    if config.has_option(switch, 'allports') and config.get(switch, 'allports'):
+        ports = config.get(switch, 'ports').split(',')  # TODO: This should get all ports from switchOut
+    elif config.has_option(switch, 'ports'):
+        ports = config.get(switch, 'ports').split(',')
+    if config.has_option(switch, 'vlan_range'):
+        vlanRange = config.get(switch, 'vlan_range')
+    if config.has_option(switch, 'ports_ignore'):
+        portsIgnore = config.get(switch, 'ports_ignore').split(',')
+    return ports, vlanRange, portsIgnore
+
+
 def validIPAddress(ipInput):
     """ Check if IP is valid.
         Input: str

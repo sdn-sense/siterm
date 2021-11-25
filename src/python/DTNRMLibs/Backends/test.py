@@ -24,6 +24,7 @@ class Ansible():
 
 class Main(Ansible, RAW):
     def __init__(self, name):
+        self.mainname = name
         if name == 'ansible':
             Ansible.__init__(self, name)
         elif name == 'raw':

@@ -1,8 +1,9 @@
+# pylint: disable=E1101
+""" DESCRIPTION """
+import ansible_runner
+import pprint
 from DTNRMLibs.Backends.NodeInfo import Node
-from DTNRMLibs.Backends.generalFunctions import checkConfig
-from DTNRMLibs.Backends.generalFunctions import cleanupEmpty
-from DTNRMLibs.Backends.generalFunctions import getValFromConfig
-from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
+from DTNRMLibs.Backends.generalFunctions import *
 
 # =======================
 #  Main caller - calls are done only by Provisioning Service
@@ -73,65 +74,80 @@ class mainCaller():
 
 
 class Switch(mainCaller):
-    """RAW Switch plugin.
-    All info comes from yaml files.
     """
-    def __init__(self, config, logger, nodesInfo, site):
-        self.config = config
-        self.logger = logger
-        self.nodesInfo = nodesInfo
-        if not self.nodesInfo:
-            self.nodesInfo = {}
-        self.site = site
-        self.output = {'switches': {}, 'ports': {}, 'vlans': {}, 'routes': {}}
+    Ansible Switch Module
+    """
 
     def _setDefaults(self, switchName):
         for key in self.output.keys():
             self.output[key][switchName] = {}
 
-    def getinfo(self, jOut=None, renew=False):
-        """Get info about switches"""
-        # If config miss required options. return.
-        # See error message for more details.
-        del renew # Renew False/True does not make sense in RAW plugin
-        # It can always get the latest config
-        if jOut:
-            self.nodesInfo = jOut
-        if checkConfig(self.config, self.logger, self.site):
-            return self.output
-        switch = self.config.get(self.site, 'switch')
-        for switchn in switch.split(','):
-            self.switchInfo(switchn)
-        nodeInfo = Node(self.config, self.logger, self.site)
-        self.output = nodeInfo.nodeinfo(self.nodesInfo, self.output)
-        return cleanupEmpty(self.output)
+    def _getFacts(self):
+        r = ansible_runner.run(private_data_dir='/etc/ansible/sense/',
+                               inventory='/etc/ansible/sense/inventory/inventory.yaml',
+                               playbook='getfacts.yaml')
+                               #debug = True,
+                               #ignore_logging = False)
+        import pdb; pdb.set_trace()
+        print(r.stats)
+        for host, _ in r.stats['ok'].items():
+            print("HOSTNAME: %s" % host)
+            print('-'*100)
+            for host_events in r.host_events(host):
+                if 'runner_on_ok' != host_events['event']:
+                    continue
+                if 'stdout_lines' in host_events['event_data']['res']:
+                    for line in host_events['event_data']['res']['stdout_lines'][0]:
+                        print(line)
+                elif 'ansible_facts' in host_events['event_data']['res'] and  \
+                     'ansible_net_interfaces' in host_events['event_data']['res']['ansible_facts']:
+                    action = host_events['event_data']['task_action']
+                    #if action in vlanToInterface.keys():
+                    #    tmpOut = vlanToInterface[action].parser(host_events)
+                    #    for portName, portVals in tmpOut.items():
+                    #        host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'].setdefault(portName, {})
+                    #        host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'][portName].update(portVals)
+                    pprint.pprint(host_events['event_data']['res']['ansible_facts'])
+                else:
+                    pprint.pprint(host_events)
+            print('-'*100)
+
+
+
+
 
     def switchInfo(self, switch):
-        """Get all switch info from FE main yaml file."""
+        "Get all switch info from Switch Itself"
         self._setDefaults(switch)
-        for port in self.config.get(switch, 'ports').split(','):
-            # Each port has to have 4 things defined:
-            self.output['ports'][switch][port] = {}
+        self._getFacts()
+        ports, defVlans, portsIgn = getConfigParams(self.config, switch, None)
+        portKey = "port_%s_%s"
+        for port in ports:
+            # Spaces from port name are replaced with _
+            # Backslashes are replaced with dash
+            # Also - mrml does not expect to get string in nml. so need to replace all
+            # Inside the output of dictionary
+            nportName = port.replace(" ", "_").replace("/", "-")
+            if port in portsIgn:
+                del self.sOut[switch]['ports'][port]
+                continue
+            portDict = self.output['ports'][switch].setdefault(nportName, {})
+            switchDict = self.output['switches'].setdefault(switch, {})
+            switchPortDict = switchDict.setdefault(nportName, {})
             for key in ['hostname', 'isAlias', 'vlan_range', 'capacity', 'desttype', 'destport']:
-                if not self.config.has_option(switch, "port%s%s" % (port, key)):
-                    self.logger.debug('Option %s is not defined for Switch %s and Port %s' % (key, switch, port))
+                if not self.config.has_option(switch, portKey % (nportName, key)):
+                    if key == 'vlan_range':
+                        portDict[key] = defVlans
+                    # if destType not defined, check if switchport available in switch config.
+                    # Then set it to switch
+            # elif 'switchport' in self.sOut[switch]['ports'][nportName].keys() and self.sOut[switch]['ports'][nportName]['switchport']:
+            #     self.sOut[switch]['ports'][nportName]['desttype'] = 'switch'
                     continue
-                tmpVal = getValFromConfig(self.config, switch, port, key)
-                if key == 'capacity':
-                    # TODO. Allow in future to specify in terms of G,M,B. For now only G
-                    # and we change it to bits
-                    self.output['ports'][switch][port][key] = tmpVal * 1000000000
-                else:
-                    self.output['ports'][switch][port][key] = tmpVal
-            self.output['switches'][switch][port] = ""
-            if self.config.has_option(switch, "port%shostname" % port):
-                self.output['switches'][switch][port] = getValFromConfig(self.config, switch, port, 'hostname')
-            elif self.config.has_option(switch, "port%sisAlias" % port):
-                spltAlias = getValFromConfig(self.config, switch, port, 'isAlias').split(':')
-                #self.output['switches'][switch][port] = spltAlias[-2]
-                self.output['ports'][switch][port]['desttype'] = 'switch'
-                if 'destport' not in list(self.output['ports'][switch][port].keys()):
-                    self.output['ports'][switch][port]['destport'] = spltAlias[-1]
-                if 'hostname' not in list(self.output['ports'][switch][port].keys()):
-                    self.output['ports'][switch][port]['hostname'] = spltAlias[-2]
+                portDict[key] = getValFromConfig(self.config, switch, nportName, key, portKey)
+                if key == 'isAlias':
+                    spltAlias = portDict[key].split(':')
+                    switchPortDict['isAlias'] = portDict[key]
+                    switchPortDict['desttype'] = 'switch'
+                    switchPortDict['destport'] = spltAlias[-1]
+                    switchPortDict['hostname'] = spltAlias[-2]
 

@@ -35,6 +35,7 @@ import datetime
 import subprocess
 import email.utils as eut
 import configparser
+from past.builtins import basestring
 import simplejson as json
 import logging
 import logging.handlers
@@ -171,6 +172,8 @@ def execute(command, logger, raiseError=True):
 
 def createDirs(fullDirPath):
     """Create Directories on fullDirPath."""
+    if not fullDirPath:
+        return
     dirname = os.path.dirname(fullDirPath)
     if not os.path.isdir(dirname):
         try:

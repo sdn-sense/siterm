@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101
 """
     Node information which was received from the agent.
 
@@ -19,16 +20,19 @@ Email             : justas.balcas (at) cern.ch
 Date            : 2021/11/08
 """
 from DTNRMLibs.MainUtilities import evaldict
+from DTNRMLibs.FECalls import getAllHosts
+
 
 class Node():
-    """ Parse node info sent by agent """
-    def __init__(self, config, logger, site):
-        self.config = config
-        self.site = site
-        self.logger = logger
+    """ Add Node information from Database which was sent
+        by the Agent running on it.
+    """
 
-    def nodeinfo(self, nodesInfo, output):
+    def nodeinfo(self, output=None):
         """put  all node information from node reported stats."""
+        nodesInfo = getAllHosts(self.site, self.logger)
+        if not output:
+            output = self.output
         for _, nodeDict in list(nodesInfo.items()):
             hostinfo = evaldict(nodeDict['hostinfo'])
             for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
