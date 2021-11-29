@@ -118,11 +118,6 @@ else
   python3 setup-sitefe.py install --docker || exit $?
 fi
 
-echo "==================================================================="
-echo "Configure wsgi python3 httpd module"
-mod_wsgi-express install-module > /etc/httpd/conf.modules.d/02-wsgi.conf
-
-
   echo "==================================================================="
   echo "Modifying ownership and permission rules for Site FE directories"
   echo "-------------------------------------------------------------------"
