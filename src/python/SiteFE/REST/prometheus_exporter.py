@@ -17,17 +17,16 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2020 California Institute of Technology
 Date                    : 2020/09/25
 """
-from builtins import object
 from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getUTCnow
 from prometheus_client import generate_latest, CollectorRegistry
 from prometheus_client import Enum, CONTENT_TYPE_LATEST
 
 
-class PrometheusAPI(object):
+class PrometheusAPI():
     """Prometheus exporter class."""
     def __init__(self):
-        self.dbI = getDBConn('Prometheus')
+        self.dbI = getDBConn('Prometheus', self)
 
     @staticmethod
     def cleanRegistry():

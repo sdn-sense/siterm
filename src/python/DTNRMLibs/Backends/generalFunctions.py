@@ -1,22 +1,12 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101
 """
-    General functions for Lookup Service Plugins
+General functions for Backends
 
-Copyright 2021 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title             : siterm
-Author            : Justas Balcas
-Email             : justas.balcas (at) cern.ch
-@Copyright        : Copyright (C) 2021 California Institute of Technology
-Date            : 2021/11/08
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/12/01
 """
 import copy
 from ipaddress import ip_address, IPv4Address
@@ -24,15 +14,12 @@ from ipaddress import ip_address, IPv4Address
 def checkConfig(config, logger, site):
     """Get info from config and ensure all params correct."""
     if not config.has_section(site):
-        logger.info('SiteName %s is not defined' % site)
-        return True
-    logger.debug('Looking for switch config for %s site' % site)
-    # These config parameters are mandatory. In case not available, return empty list
+        msg = 'SiteName %s is not defined' % site
+        raise Exception(msg)
     for key in ['plugin', 'switch']:
         if not config.has_option(site, key):
-            logger.info('Option %s is not defined in Site Config. Return' % key)
-            return True
-    return False
+            msg = 'Option %s is not defined in Site Config. Return' % key
+            raise Exception(msg)
 
 def cleanupEmpty(output):
     """Final check remove empty dicts/lists inside output."""
@@ -47,11 +34,8 @@ def cleanupEmpty(output):
                 continue
     return tmpOut
 
-def getValFromConfig(config, switch, port, key, portKey="port%s%s"):
+def getValFromConfig(config, switch, port, key, portKey="port_%s_%s"):
     """Get val from config."""
-    # portKey - default is old in RAW plugin.
-    # This would require to update all agents to use new key format
-    # TODO: Update RAW plugin and all config files to use new config param
     tmpVal = config.get(switch, portKey % (port, key))
     try:
         tmpVal = int(tmpVal)
@@ -60,12 +44,16 @@ def getValFromConfig(config, switch, port, key, portKey="port%s%s"):
     return tmpVal
 
 
-def getConfigParams(config, switch, switchOut):
+def getConfigParams(config, switch, cls=None):
+    """
+    Get config params from yaml. like what ports allowed to use
+    and which to ignore, which vlans for port, or what default vlan range to use
+    """
     ports = []
     vlanRange = ""
     portsIgnore = []
     if config.has_option(switch, 'allports') and config.get(switch, 'allports'):
-        ports = config.get(switch, 'ports').split(',')  # TODO: This should get all ports from switchOut
+        ports = cls.getports(cls.switches['output'][switch])
     elif config.has_option(switch, 'ports'):
         ports = config.get(switch, 'ports').split(',')
     if config.has_option(switch, 'vlan_range'):

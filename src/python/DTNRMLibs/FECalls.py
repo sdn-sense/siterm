@@ -26,16 +26,24 @@ from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.DBBackend import dbinterface
 
 
-def getDBConn(serviceName=''):
+def getDBConn(serviceName='', cls=None):
     """Get database connection."""
     dbConn = {}
-    config = getConfig()
+    if hasattr(cls, 'config'):
+        config = cls.config
+    else:
+        config = getConfig()
     for sitename in config.get('general', 'sites').split(','):
+        if hasattr(cls, 'dbI'):
+            if hasattr(cls.dbI, sitename):
+                # DB Object is already in place!
+                continue
         dbConn[sitename] = dbinterface(serviceName, config, sitename)
     return dbConn
 
 
 def getAllHosts(sitename, logger):
+    # TODO: Remove this and have dbConn passed.
     """Get all hosts from database."""
     logger.info('Get all hosts for %s', sitename)
     dbObj = getDBConn('getAllHosts')[sitename]
@@ -44,14 +52,6 @@ def getAllHosts(sitename, logger):
         jOut[site['hostname']] = site
     return jOut
 
-def getAllSwitches(sitename, logger):
-    """Get all switches from database."""
-    logger.info('Get all switches for %s', sitename)
-    dbObj = getDBConn('getAllSwitches')[sitename]
-    jOut = {}
-    for site in dbObj.get('switches'):
-        jOut[site['hostname']] = site
-    return jOut
 
 def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
     """Report service state to DB."""

@@ -18,7 +18,6 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2017/09/26
 """
 from __future__ import absolute_import
-from builtins import str
 import sys
 import pprint
 import importlib

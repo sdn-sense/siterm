@@ -3,21 +3,10 @@
 """
     Node information which was received from the agent.
 
-Copyright 2021 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title             : siterm
-Author            : Justas Balcas
-Email             : justas.balcas (at) cern.ch
-@Copyright        : Copyright (C) 2021 California Institute of Technology
-Date            : 2021/11/08
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/12/01
 """
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.FECalls import getAllHosts

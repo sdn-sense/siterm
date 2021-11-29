@@ -19,7 +19,6 @@ Date                    : 2017/09/26
 UpdateDate              : 2021/11/08
 """
 import sys
-import importlib
 import time
 import pprint
 from DTNRMLibs.MainUtilities import evaldict
@@ -31,7 +30,7 @@ from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import getDataFromSiteFE
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
-
+from DTNRMLibs.Backends.main import Switch
 
 class ProvisioningService():
     """Provisioning service communicates with Local controllers and applies
@@ -41,14 +40,7 @@ class ProvisioningService():
         self.config = config
         self.siteDB = contentDB(logger=self.logger, config=self.config)
         self.sitename = sitename
-        self.switchConfig = {'out': {}, 'method': None}
-        self._getSwitchPlugin()
-
-    def _getSwitchPlugin(self):
-        switchPlugin = self.config.get(self.sitename, 'plugin')
-        self.logger.info('Will load %s switch plugin' % switchPlugin)
-        method = importlib.import_module("DTNRMLibs.Backends.%s" % switchPlugin.lower())
-        self.switchConfig['class'] = method(self.config, self.logger, {}, self.sitename)
+        self.switch = Switch(config, logger, sitename)
 
 
     def pushInternalAction(self, url, state, deltaID, hostname):
@@ -85,7 +77,7 @@ class ProvisioningService():
             if deltaState == list(stateChange.keys())[0]:
                 msg = 'Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState])
                 self.logger.debug(msg)
-                self.switchConfig['class'].mainCall(deltaState, newvlan, 'remove')
+                self.switch.mainCall(deltaState, newvlan, 'remove')
                 self.pushInternalAction(fullURL, stateChange[deltaState], deltaID, switchName)
                 deltaState = stateChange[deltaState]
         return True
@@ -98,7 +90,7 @@ class ProvisioningService():
                             {"committing": "committed"}, {"committed": "activating"}, {"activating": "active"}]:
             if deltaState == list(stateChange.keys())[0]:
                 self.logger.info('Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState]))
-                self.switchConfig['class'].mainCall(deltaState, newvlan, 'add')
+                self.switch.mainCall(deltaState, newvlan, 'add')
                 self.pushInternalAction(fullURL, stateChange[deltaState], deltaID, switchName)
                 deltaState = stateChange[deltaState]
         return True
@@ -143,7 +135,7 @@ class ProvisioningService():
     def getAllAliases(self):
         """Get All Aliases."""
         out = []
-        for _, switchPort in list(self.switchConfig['out']['ports'].items()):
+        for _, switchPort in list(self.switch.output['ports'].items()):
             for _, portDict in list(switchPort.items()):
                 if 'isAlias' in portDict:
                     tmp = portDict['isAlias'].split(':')[-3:]
@@ -160,11 +152,11 @@ class ProvisioningService():
             self.logger.info('Seems server returned empty dictionary. Exiting.')
             return
         # Get switch information...
-        self.switchConfig['out'] = self.switchConfig['class'].getinfo(jOut, False)
+        self.switch.getinfo(jOut, False)
         alliases = self.getAllAliases()
         outputDict = {}
         allDeltas = self.getData(fullURL, "/sitefe/v1/deltas?oldview=true")
-        for switchName in list(list(self.switchConfig['out']['switches'].keys()) + alliases):
+        for switchName in list(list(self.switch.output['switches'].keys()) + alliases):
             newDeltas = self.checkdeltas(switchName, allDeltas)
             for newDelta in newDeltas:
                 outputDict.setdefault(newDelta['ID'])
@@ -193,7 +185,7 @@ def execute(config=None, logger=None, args=None):
     if not config:
         config = getConfig()
     if not logger:
-        component = 'LookUpService'
+        component = 'ProvisioningService'
         logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), component), config.get(component, 'logLevel'))
     if args:
         provisioner = ProvisioningService(config, logger, args[1])

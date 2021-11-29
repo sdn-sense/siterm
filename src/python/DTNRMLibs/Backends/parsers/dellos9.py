@@ -1,27 +1,20 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101, C0301
 """
-Copyright 2021 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title             : siterm
-Author            : Justas Balcas
-Email             : justas.balcas (at) cern.ch
-@Copyright        : Copyright (C) 2021 California Institute of Technology
-Date              : 2021/11/08
-UpdateDate        : 2021/11/08
+Dell OS9 Additional Parser.
+Ansible module does not parse vlans, channel members
+attached to interfaces. Needed for SENSE
+
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/12/01
 """
 import re
 
 class DellOS9():
     def __init__(self):
-        self.factName = 'dellos9_facts'
+        self.factName = ['dellos9_facts', 'dellos9_command']
         self.regexs = [r'tagged (.+) (.+)', r'untagged (.+) (.+)', r'channel-member (.+) (.+)']
 
 
@@ -52,7 +45,8 @@ class DellOS9():
                 # 25G? TODO! - We do not have any of 25G
                 # 10G? TODO! - SDN Testbed no 10G
                 else:
-                    print("UNSUPPORTED!")
+                    self.logger.debug("UNSUPPORTED port name %s %s" % (portName, splPorts))
+                    continue
                 for i in range(int(start[vCh]), int(end[vCh]) + 1):
                     outPorts.append(apnd % i)
             else:
@@ -65,6 +59,7 @@ class DellOS9():
             match = re.search(regex, line)
             if match:
                 return self._portSplitter(match.group(1), match.group(2))
+        return []
 
     def parser(self, ansibleOut):
         out = {}
@@ -87,7 +82,91 @@ class DellOS9():
                         out[key][line.split()[0]] = tmpOut
         return out
 
-# TODO ROUTING PARSING
+
+    def getinfo(self, ansibleOut):
+        """
+        Get info from ansible out, Mainly mac. Output example:
+        Stack MAC                  : 4c:76:25:e8:44:c0
+        Reload-Type                         : normal-reload [Next boot : normal-reload]
+
+        --  Unit 1 --
+        Unit Type                  : Management Unit
+        Status                     : online
+        Next Boot                  : online
+        Required Type              : Z9100-ON - 34-port TE/TF/FO/FI/HU G (Z9100-ON)
+        Current Type               : Z9100-ON - 34-port TE/TF/FO/FI/HU G (Z9100-ON)
+        Master priority            : NA
+        Hardware Rev               : 0.0
+        Num Ports                  : 130
+        Up Time                    : 4 wk, 6 day, 20 hr, 7 min
+        Dell Networking OS Version : 9.11(0.0P6)
+        Jumbo Capable              : yes
+        POE Capable                : no
+        FIPS Mode                  : disabled
+        Burned In MAC              : 4c:76:25:e8:44:c0
+        No Of MACs                 : 3
+        """
+        regexs = {'mac': r'^Stack MAC\s*:\s*(.+)'}
+        out = {}
+        for line in ansibleOut.split('\n'):
+            for regName, regex in regexs.items():
+                match = re.search(regex, line, re.M)
+                if match:
+                    out[regName] = match.group(1)
+        return out
+
+    def getlldpneighbors(self, ansibleOut):
+        """
+        Get all lldp neighbors. Each entry will contain:
+         Local Interface Hu 1/1 has 1 neighbor
+          Total Frames Out: 98232
+          Total Frames In: 98349
+          Total Neighbor information Age outs: 0
+          Total Multiple Neighbors Detected: 0
+          Total Frames Discarded: 0
+          Total In Error Frames: 0
+          Total Unrecognized TLVs: 0
+          Total TLVs Discarded: 0
+          Next packet will be sent after 7 seconds
+          The neighbors are given below:
+          -----------------------------------------------------------------------
+
+            Remote Chassis ID Subtype: Mac address (4)
+            Remote Chassis ID:  34:17:eb:4c:1e:80
+            Remote Port Subtype:  Interface name (5)
+            Remote Port ID:  hundredGigE 1/32
+            Local Port ID: hundredGigE 1/1
+            Locally assigned remote Neighbor Index: 2
+            Remote TTL:  120
+            Information valid for next 113 seconds
+            Time since last information change of this neighbor:  2w2d16h
+           ---------------------------------------------------------------------------
+        """
+        regexs = {'local_port_id': r'Local Port ID:\s*(.+)',
+                  'remote_system_name': r'Remote System Name:\s*(.+)',
+                  'remote_port_id': r'Remote Port ID:\s*(.+)',
+                  'remote_chassis_id': r'Remote Chassis ID:\s*(.+)'}
+        out = {}
+        for entry in ansibleOut.split('========================================================================'):
+            entryOut = {}
+            for regName, regex in regexs.items():
+                match = re.search(regex, entry, re.M)
+                if match:
+                    entryOut[regName] = match.group(1)
+            if 'local_port_id' in entryOut:
+                out[entryOut['local_port_id']] = entryOut
+        return out
+
+    def getIPv4Routing(self, ansibleOut):
+        print('Called get getIPv4Routing. TODO')
+        return {}
+
+    def getIPv6Routing(self, ansibleOut):
+        print('Called get getIPv6Routing. TODO')
+        return {}
+
+# TODO ROUTING PARSING - This is what I used with custom ssh parser
+# Leaving it here if needed to re-use.
 # def parseRouteLine(splLine):
 #     """
 #     ip route 0.0.0.0/0 192.168.1.1
@@ -126,134 +205,3 @@ class DellOS9():
 #     if tmpSplit[valId:]:
 #         tmpRoute['unparsed'] = tmpSplit[valId:]
 #     return tmpRoute
-
-
-
-
-########################################
-# It mainly produces output from Switch exactly
-# what LookupService expects to receive to produce the MRML
-# It also joins it with yaml file info, like isAlias, vlans.
-# Required functions inside the Switch class:
-# getInfo - this will be called by Lookup Service;
-#   Same can be used, only important to rewrite
-#    switchInfo function for Specific Switch<->LookupServiceOutput
-########################################
-
-
-# class Switch(DellOs9, mainCaller):
-#     """
-#     Dell Force10 Switch Plugin
-#     """
-#     def __init__(self, config, logger, nodesInfo, site):
-#         super().__init__()
-#         self.config = config
-#         self.creds = {"creds": getSwitchLoginDetails(), "conns": {}}
-#         self.sOut = {}
-#         self.logger = logger
-#         self.nodesInfo = nodesInfo
-#         if not self.nodesInfo:
-#             self.nodesInfo = {}
-#         self.site = site
-#         self.output = {'ports': {}, 'vlans': {}, 'routes': {}}
-# 
-#     def _setDefaults(self, switchName):
-#         for key in self.output.keys():
-#             self.output[key][switchName] = {}
-# 
-#     def getinfo(self, jOut={}, renew=False):
-#         """Get info from Dell Switch plugin."""
-#         # If config miss required options. return.
-#         # See error message for more details.
-#         if checkConfig(self.config, self.logger, self.site):
-#             return self.output
-#         if jOut:
-#             self.nodesInfo = jOut
-#         if checkConfig(self.config, self.logger, self.site):
-#             return self.output
-#         switch = self.config.get(self.site, 'switch')
-#         for switchn in switch.split(','):
-#             self.switchInfo(switchn, renew)
-#             self.output['ports'][switchn] = self.sOut[switchn]['ports']
-#             self.output['vlans'][switchn] = self.sOut[switchn]['vlans']
-#             self.output['routes'][switchn] = self.sOut[switchn]['routes']
-#         nodeInfo = Node(self.config, self.logger, self.site)
-#         self.output = nodeInfo.nodeinfo(self.nodesInfo, self.output)
-#         return self.output
-# 
-#     def getRunningConfig(self, switch):
-#         if not switch in self.creds["conns"] or not self.creds["conns"][switch]:
-#             self.creds["conns"][switch] = RemoteConn(self.creds["creds"][switch], self.logger, Force10)
-#         out = self.creds["conns"][switch].sendCommand("%s%s" % (Force10.CMD_CONFIG, Force10.LT))
-#         return self.parser(out)
-# 
-#     def getConfigParams(self, switch):
-#         ports = []
-#         vlanRange = ""
-#         portsIgnore = []
-#         if self.config.has_option(switch, 'allports') and self.config.get(switch, 'allports'):
-#             ports = [*self.sOut[switch]['ports']]
-#         elif self.config.has_option(switch, 'ports'):
-#             ports = self.config.get(switch, 'ports').split(',')
-#         if self.config.has_option(switch, 'vlan_range'):
-#             vlanRange = self.config.get(switch, 'vlan_range')
-#         if self.config.has_option(switch, 'ports_ignore'):
-#             portsIgnore = self.config.get(switch, 'ports_ignore').split(',')
-#         return ports, vlanRange, portsIgnore
-# 
-#     def switchInfo(self, switch, renew):
-#         """Get all switch info from Switch Itself"""
-#         self._setDefaults(switch)
-#         if renew or not switch in self.sOut or not self.sOut[switch]:
-#             self.sOut[switch] = self.getRunningConfig(switch)
-# 
-#         ports, defVlans, portsIgn = self.getConfigParams(switch)
-#         portKey = "port_%s_%s"
-#         for port in ports:
-#             # Spaces from port name are replaced with _
-#             # Backslashes are replaced with dash
-#             # Also - mrml does not expect to get string in nml. so need to replace all
-#             # Inside the output of dictionary
-#             nportName = port.replace(" ", "_").replace("/", "-")
-#             if port in portsIgn:
-#                 del self.sOut[switch]['ports'][port]
-#                 continue
-#             self.sOut[switch]['ports'][nportName] =  self.sOut[switch]['ports'].pop(port)
-#             for key in ['hostname', 'vlan_range', 'destport']:
-#                 if not self.config.has_option(switch, portKey % (nportName, key)):
-#                     continue
-#                 self.sOut[switch]['ports'][nportName][key] = getValFromConfig(self.config, switch, nportName, key, portKey)
-# 
-#             tmpVal = 0
-#             # Get port speed from config or if not defined - identify based on interface Name
-#             if self.config.has_option(switch, portKey % (nportName, 'capacity')):
-#                 tmpVal = getValFromConfig(self.config, switch, nportName, 'capacity', portKey)
-#             else:
-#                 # Identify port speed automatically
-#                 tmpVal = identifyPortSpeed(self.sOut[switch]['ports'][nportName], nportName)
-#             self.sOut[switch]['ports'][nportName]['capacity'] = tmpVal * 1000000000
-# 
-#             # Check if vlan range defined in config for specific port. if not - will use the default (also from config)
-#             if self.config.has_option(switch, portKey % (nportName, 'vlan_range')):
-#                 self.sOut[switch]['ports'][nportName]['vlan_range'] = getValFromConfig(self.config, switch, nportName, 'vlan_range', portKey)
-#             else:
-#                 self.sOut[switch]['ports'][nportName]['vlan_range'] = defVlans
-# 
-#             # if desttype defined (mainly to show switchport and reflect that in mrml) - add. Otherwise - check switch config
-#             # and if switchport: True - define desttype
-#             if self.config.has_option(switch, portKey % (nportName, 'desttype')):
-#                 self.sOut[switch]['ports'][nportName]['desttype'] = getValFromConfig(self.config, switch, nportName, 'desttype', portKey)
-#             elif 'switchport' in self.sOut[switch]['ports'][nportName].keys() and self.sOut[switch]['ports'][nportName]['switchport']:
-#                 self.sOut[switch]['ports'][nportName]['desttype'] = 'switch'
-# 
-#             if self.config.has_option(switch, portKey % (nportName, 'isAlias')):
-#                 self.sOut[switch]['ports'][nportName]['isAlias'] = getValFromConfig(self.config, switch, nportName, 'isAlias', portKey)
-#                 spltAlias = self.sOut[switch]['ports'][nportName]['isAlias'].split(':')
-#                 self.sOut[switch]['ports'][nportName]['desttype'] = 'switch'
-#                 if 'destport' not in list(self.sOut[switch]['ports'][nportName].keys()):
-#                     self.sOut[switch]['ports'][nportName]['destport'] = spltAlias[-1]
-#                 if 'hostname' not in list(self.sOut[switch]['ports'][nportName].keys()):
-#                     self.sOut[switch]['ports'][nportName]['hostname'] = spltAlias[-2]
-# 
-#             if port.startswith('Vlan'):
-#                 self.sOut[switch]['vlans'][nportName] =  self.sOut[switch]['ports'].pop(nportName)

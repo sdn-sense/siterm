@@ -17,21 +17,17 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-from builtins import object
+import cgi
 import urllib.request
 import urllib.error
 import urllib.parse
 import simplejson as json
-import cgi
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.MainUtilities import evaldict
 
 
-class getContent(object):
+class getContent():
     """Get Content from url."""
     def __init__(self):
         # We would want to add later more things to init,
@@ -47,9 +43,8 @@ class getContent(object):
             return thePage
         except urllib.error.HTTPError as ex:
             if ex.code == 404:
-                raise NotFoundError
-            else:
-                raise BadRequestError
+                raise NotFoundError from ex
+            raise BadRequestError from ex
 
 
 def get_match_regex(environ, regexp):
@@ -116,7 +111,7 @@ def get_post_form(environ):
     return fieldS
 
 
-class InputProcessed(object):
+class InputProcessed():
     """wsgi Input processing class."""
     def read(self, *args):
         raise EOFError('The wsgi.input stream has already been consumed')

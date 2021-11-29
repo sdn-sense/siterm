@@ -1,30 +1,17 @@
 #!/usr/bin/env python3
 """
     LookUpService gets all information and prepares MRML schema.
-    TODO: Append switch information;
 
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title 			: dtnrm
-Author			: Justas Balcas
-Email 			: justas.balcas (at) cern.ch
-@Copyright		: Copyright (C) 2016 California Institute of Technology
-Date			: 2017/09/26
-UpdateDate      : 2021/11/08
+
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/12/01
 """
 from __future__ import division
 import os
 import tempfile
 import datetime
-import importlib
 import configparser
 from rdflib import Graph
 from rdflib import URIRef, Literal
@@ -39,6 +26,7 @@ from DTNRMLibs.FECalls import getAllHosts
 from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.Backends.main import Switch
 
 
 def ignoreInterface(intfKey, intfDict):
@@ -53,13 +41,11 @@ def ignoreInterface(intfKey, intfDict):
     return returnMsg
 
 
-class prefixDB():
+class PrefixDB():
     """This generates all known default prefixes."""
-    def __init__(self, config, sitename):
-        self.config = config
-        self.sitename = sitename
+    # pylint: disable=E1101
+    def __init__(self):
         self.prefixes = {}
-        self.getSavedPrefixes()
 
     def getSavedPrefixes(self):
         """Get Saved prefixes from a configuration file."""
@@ -86,41 +72,34 @@ class prefixDB():
         return Literal(value)
 
 
-class LookUpService():
+class LookUpService(PrefixDB):
     """Lookup Service prepares MRML model about the system."""
     def __init__(self, config, logger, sitename):
         self.sitename = sitename
         self.logger = logger
         self.config = config
-        self.prefixDB = prefixDB(config, sitename)
-        self.dbI = getDBConn('LookUpService')
+        self.dbI = getDBConn('LookUpService', self)
         self.newGraph = None
         self.shared = False
         self.hosts = {}
         self.renewSwitchConfig = True
-        self.switchConfig = {'out': {}, 'method': None}
-        self._getSwitchPlugin()
-
-    def _getSwitchPlugin(self):
-        switchPlugin = self.config.get(self.sitename, 'plugin')
-        self.logger.info('Will load %s switch plugin' % switchPlugin)
-        method = importlib.import_module("DTNRMLibs.Backends.%s" % switchPlugin.lower())
-        self.switchConfig['class'] = method.Switch(self.config, self.logger, {}, self.sitename)
+        self.switch = Switch(config, logger, sitename)
+        self.getSavedPrefixes()
 
     def generateHostIsalias(self, **kwargs):
         """Generate Host Alias from configuration."""
         if 'isAlias' in kwargs['portSwitch'] and \
            kwargs['portSwitch']['isAlias']:
-            self.newGraph.add((self.prefixDB.genUriRef('site', kwargs['newuri']),
-                               self.prefixDB.genUriRef('nml', 'isAlias'),
-                               self.prefixDB.genUriRef('', custom=kwargs['portSwitch']['isAlias'])))
+            self.newGraph.add((self.genUriRef('site', kwargs['newuri']),
+                               self.genUriRef('nml', 'isAlias'),
+                               self.genUriRef('', custom=kwargs['portSwitch']['isAlias'])))
         elif kwargs['portSwitch'] in list(self.hosts.keys()):
             for item in self.hosts[kwargs['portSwitch']]:
                 if item['switchName'] == kwargs['switchName'] and item['switchPort'] == kwargs['portName']:
                     suri = "%s:%s" % (kwargs['newuri'], item['intfKey'])
-                    self.newGraph.add((self.prefixDB.genUriRef('site', kwargs['newuri']),
-                                       self.prefixDB.genUriRef('nml', 'isAlias'),
-                                       self.prefixDB.genUriRef('site', suri)))
+                    self.newGraph.add((self.genUriRef('site', kwargs['newuri']),
+                                       self.genUriRef('nml', 'isAlias'),
+                                       self.genUriRef('site', suri)))
 
     def addToGraph(self, sub, pred, obj):
         """Add to graph new info.
@@ -131,21 +110,21 @@ class LookUpService():
         obj (list) max len 2 if 1 will use Literal value
         """
         if len(obj) == 1 and len(sub) == 1:
-            self.newGraph.add((self.prefixDB.genUriRef(sub[0]),
-                               self.prefixDB.genUriRef(pred[0], pred[1]),
-                               self.prefixDB.genLiteral(obj[0])))
+            self.newGraph.add((self.genUriRef(sub[0]),
+                               self.genUriRef(pred[0], pred[1]),
+                               self.genLiteral(obj[0])))
         elif len(obj) == 1 and len(sub) == 2:
-            self.newGraph.add((self.prefixDB.genUriRef(sub[0], sub[1]),
-                               self.prefixDB.genUriRef(pred[0], pred[1]),
-                               self.prefixDB.genLiteral(obj[0])))
+            self.newGraph.add((self.genUriRef(sub[0], sub[1]),
+                               self.genUriRef(pred[0], pred[1]),
+                               self.genLiteral(obj[0])))
         elif len(obj) == 2 and len(sub) == 1:
-            self.newGraph.add((self.prefixDB.genUriRef(sub[0]),
-                               self.prefixDB.genUriRef(pred[0], pred[1]),
-                               self.prefixDB.genUriRef(obj[0], obj[1])))
+            self.newGraph.add((self.genUriRef(sub[0]),
+                               self.genUriRef(pred[0], pred[1]),
+                               self.genUriRef(obj[0], obj[1])))
         elif len(obj) == 2 and len(sub) == 2:
-            self.newGraph.add((self.prefixDB.genUriRef(sub[0], sub[1]),
-                               self.prefixDB.genUriRef(pred[0], pred[1]),
-                               self.prefixDB.genUriRef(obj[0], obj[1])))
+            self.newGraph.add((self.genUriRef(sub[0], sub[1]),
+                               self.genUriRef(pred[0], pred[1]),
+                               self.genUriRef(obj[0], obj[1])))
         else:
             raise Exception('Failing to add object to graph due to mismatch')
 
@@ -213,32 +192,29 @@ class LookUpService():
             # Generate host alias or adds' isAlias
             self.generateHostIsalias(portSwitch=portSwitch, switchName=switchName,
                                      portName=portName, newuri=newuri)
-            for key, val in portSwitch.items():
-                if key == 'vlan_range':
-                    continue
-                if key == 'channel-member':
-                    # This is very specific to Dell Force 10. TODO: What about others providing
-                    # port channel? Might need to change it.
-                    # Are there any specifics how port channel and channel members should be
-                    # listed in mrml?
-                    # Based on discussions with Xi - it should be: nml:hasBidirectionalPort
-                    # TODO: Change to use of nml:hasBidirectionalPort
-                    tmpVal = ""
-                    for key1, val1 in val.items():
-                        tmpVal += ",".join(["%s_%s" % (key1, val2.replace("/", "-")) for val2 in val1])
-                    val = tmpVal
-                self.addToGraph(['site', newuri],
-                                ['mrs', 'hasNetworkAddress'],
-                                ['site', '%s:%s' % (newuri, key)])
-                self.addToGraph(['site', '%s:%s' % (newuri, key)],
-                                ['rdf', 'type'],
-                                ['mrs', 'NetworkAddress'])
-                self.addToGraph(['site', "%s:%s" % (newuri, key)],
-                                ['mrs', 'type'],
-                                [key])
-                self.addToGraph(['site', "%s:%s" % (newuri, key)],
-                                ['mrs', 'value'],
-                                [val])
+        for key, val in portSwitch.items():
+            if key == 'vlan_range':
+                continue
+            if key == 'channel-member':
+                for value in val:
+                    switchuri = ":".join(newuri.split(':')[:-1])
+                    self.addToGraph(['site', newuri],
+                                    ['nml', 'hasBidirectionalPort'],
+                                    ['site', '%s:%s' % (switchuri, self.switch._getSystemValidPortName(value))])
+                continue
+
+            self.addToGraph(['site', newuri],
+                            ['mrs', 'hasNetworkAddress'],
+                            ['site', '%s:%s' % (newuri, key)])
+            self.addToGraph(['site', '%s:%s' % (newuri, key)],
+                            ['rdf', 'type'],
+                            ['mrs', 'NetworkAddress'])
+            self.addToGraph(['site', "%s:%s" % (newuri, key)],
+                            ['mrs', 'type'],
+                            [key])
+            self.addToGraph(['site', "%s:%s" % (newuri, key)],
+                            ['mrs', 'value'],
+                            [val])
 
     def _deltaReduction(self, dbObj, delta, mainGraphName):
         """Delta reduction."""
@@ -270,14 +246,14 @@ class LookUpService():
             elif 'timeend' in list(conn.keys()) and conn['timeend'] < getUTCnow() and state == 'activated':
                 state = 'deactivating'
             # Add new State under SwitchSubnet
-            mainGraph.add((self.prefixDB.genUriRef(custom=conn['connectionID']),
-                           self.prefixDB.genUriRef('mrs', 'tag'),
-                           self.prefixDB.genLiteral('monitor:status:%s' % state)))
+            mainGraph.add((self.genUriRef(custom=conn['connectionID']),
+                           self.genUriRef('mrs', 'tag'),
+                           self.genLiteral('monitor:status:%s' % state)))
             # If timed delta, add State under lifetime resource
             if 'timestart' in list(conn.keys()) or 'timeend' in list(conn.keys()):
-                mainGraph.add((self.prefixDB.genUriRef(custom="%s:lifetime" % conn['connectionID']),
-                               self.prefixDB.genUriRef('mrs', 'tag'),
-                               self.prefixDB.genLiteral('monitor:status:%s' % state)))
+                mainGraph.add((self.genUriRef(custom="%s:lifetime" % conn['connectionID']),
+                               self.genUriRef('mrs', 'tag'),
+                               self.genLiteral('monitor:status:%s' % state)))
         return mainGraph
 
 
@@ -350,22 +326,22 @@ class LookUpService():
     def defineMRMLServices(self):
         """Defined Topology and Main Services available."""
         # Add main Topology
-        self.newGraph.add((self.prefixDB.genUriRef('site'),
-                           self.prefixDB.genUriRef('rdf', 'type'),
-                           self.prefixDB.genUriRef('nml', 'Topology')))
+        self.newGraph.add((self.genUriRef('site'),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('nml', 'Topology')))
         # Add Service
         for switchName in self.config.get(self.sitename, 'switch').split(','):
             try:
                 vsw = self.config.get(switchName, 'vsw')
-            except configparser.NoOptionError:
-                self.logger.debug('ERROR: vsw parameter is not defined for %s.', switchName)
+            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+                self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
-            self.newGraph.add((self.prefixDB.genUriRef('site'),
-                               self.prefixDB.genUriRef('nml', 'hasService'),
-                               self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw)))
-            self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
-                               self.prefixDB.genUriRef('rdf', 'type'),
-                               self.prefixDB.genUriRef('nml', 'SwitchingService')))
+            self.newGraph.add((self.genUriRef('site'),
+                               self.genUriRef('nml', 'hasService'),
+                               self.genUriRef('site', ':service+vsw:%s' % vsw)))
+            self.newGraph.add((self.genUriRef('site', ':service+vsw:%s' % vsw),
+                               self.genUriRef('rdf', 'type'),
+                               self.genUriRef('nml', 'SwitchingService')))
 
             # Add lableSwapping flag
             labelswap = "false"
@@ -373,74 +349,75 @@ class LookUpService():
                 labelswap = self.config.get(switchName, 'labelswapping')
             except configparser.NoOptionError:
                 self.logger.debug('Labelswapping parameter is not defined. By default it is set to False.')
-            self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
-                               self.prefixDB.genUriRef('nml', 'labelSwapping'),
-                               self.prefixDB.genLiteral(labelswap)))
+            self.newGraph.add((self.genUriRef('site', ':service+vsw:%s' % vsw),
+                               self.genUriRef('nml', 'labelSwapping'),
+                               self.genLiteral(labelswap)))
             # Add base encoding for service
-            self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
-                               self.prefixDB.genUriRef('nml', 'encoding'),
-                               self.prefixDB.genUriRef('schema')))
+            self.newGraph.add((self.genUriRef('site', ':service+vsw:%s' % vsw),
+                               self.genUriRef('nml', 'encoding'),
+                               self.genUriRef('schema')))
 
     def defineMRMLPrefixes(self):
         """Define all known prefixes."""
-        for prefix, val in list(self.prefixDB.prefixes.items()):
+        self.getSavedPrefixes()
+        for prefix, val in list(self.prefixes.items()):
             self.newGraph.bind(prefix, val)
 
     def defineNodeInformation(self, nodeDict):
         """Define node information."""
         self.hosts[nodeDict['hostname']] = []
-        self.newGraph.add((self.prefixDB.genUriRef('site'),
-                           self.prefixDB.genUriRef('nml', 'hasNode'),
-                           self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname'])))
+        self.newGraph.add((self.genUriRef('site'),
+                           self.genUriRef('nml', 'hasNode'),
+                           self.genUriRef('site', ":%s" % nodeDict['hostname'])))
         # Node General description
-        self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
-                           self.prefixDB.genUriRef('nml', 'name'),
-                           self.prefixDB.genLiteral(nodeDict['hostname'])))
-        self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
-                           self.prefixDB.genUriRef('rdf', 'type'),
-                           self.prefixDB.genUriRef('nml', 'Node')))
-        self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
-                           self.prefixDB.genUriRef('nml', 'insertTime'),
-                           self.prefixDB.genLiteral(nodeDict['insertdate'])))
+        self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
+                           self.genUriRef('nml', 'name'),
+                           self.genLiteral(nodeDict['hostname'])))
+        self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('nml', 'Node')))
+        self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
+                           self.genUriRef('nml', 'insertTime'),
+                           self.genLiteral(nodeDict['insertdate'])))
         # Provide location information about site Frontend
         try:
-            self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
-                               self.prefixDB.genUriRef('nml', 'latitude'),
-                               self.prefixDB.genLiteral(self.config.get(self.sitename, 'latitude'))))
-            self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
-                               self.prefixDB.genUriRef('nml', 'longitude'),
-                               self.prefixDB.genLiteral(self.config.get(self.sitename, 'longitude'))))
+            self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
+                               self.genUriRef('nml', 'latitude'),
+                               self.genLiteral(self.config.get(self.sitename, 'latitude'))))
+            self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
+                               self.genUriRef('nml', 'longitude'),
+                               self.genLiteral(self.config.get(self.sitename, 'longitude'))))
         except configparser.NoOptionError:
             self.logger.debug('Either one or both (latitude,longitude) are not defined. Continuing as normal')
 
     def defineLayer3MRML(self, nodeDict):
         """Define Layer 3 Routing Service for hostname"""
         hostinfo = evaldict(nodeDict['hostinfo'])
-        self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
-                           self.prefixDB.genUriRef('nml', 'hasService'),
-                           self.prefixDB.genUriRef('site', ':%s:service+rst' % nodeDict['hostname'])))
-        self.newGraph.add((self.prefixDB.genUriRef('site', ':%s:service+rst' % nodeDict['hostname']),
-                           self.prefixDB.genUriRef('rdf', 'type'),
-                           self.prefixDB.genUriRef('mrs', 'RoutingService')))
+        self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
+                           self.genUriRef('nml', 'hasService'),
+                           self.genUriRef('site', ':%s:service+rst' % nodeDict['hostname'])))
+        self.newGraph.add((self.genUriRef('site', ':%s:service+rst' % nodeDict['hostname']),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('mrs', 'RoutingService')))
         # Service Definition for L3
-        self.newGraph.add((self.prefixDB.genUriRef('site', ":%s:service+rst" % nodeDict['hostname']),
-                           self.prefixDB.genUriRef('sd', 'hasServiceDefinition'),
-                           self.prefixDB.genUriRef('site', ':%s:sd:l3vpn' % nodeDict['hostname'])))
-        self.newGraph.add((self.prefixDB.genUriRef('site', ':%s:sd:l3vpn' % nodeDict['hostname']),
-                           self.prefixDB.genUriRef('rdf', 'type'),
-                           self.prefixDB.genUriRef('sd', 'ServiceDefinition')))
-        self.newGraph.add((self.prefixDB.genUriRef('site', ':%s:sd:l3vpn' % nodeDict['hostname']),
-                           self.prefixDB.genUriRef('sd', 'serviceType'),
-                           self.prefixDB.genLiteral('http://services.ogf.org/nsi/2019/08/descriptions/l3-vpn')))
+        self.newGraph.add((self.genUriRef('site', ":%s:service+rst" % nodeDict['hostname']),
+                           self.genUriRef('sd', 'hasServiceDefinition'),
+                           self.genUriRef('site', ':%s:sd:l3vpn' % nodeDict['hostname'])))
+        self.newGraph.add((self.genUriRef('site', ':%s:sd:l3vpn' % nodeDict['hostname']),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('sd', 'ServiceDefinition')))
+        self.newGraph.add((self.genUriRef('site', ':%s:sd:l3vpn' % nodeDict['hostname']),
+                           self.genUriRef('sd', 'serviceType'),
+                           self.genLiteral('http://services.ogf.org/nsi/2019/08/descriptions/l3-vpn')))
 
         for tablegress in['table+defaultIngress', 'table+defaultEgress']:
             routingtable = ":%s:%s" % (nodeDict['hostname'], tablegress)
-            self.newGraph.add((self.prefixDB.genUriRef('site', ':%s:service+rst' % nodeDict['hostname']),
-                               self.prefixDB.genUriRef('mrs', 'providesRoutingTable'),
-                               self.prefixDB.genUriRef('site', routingtable)))
-            self.newGraph.add((self.prefixDB.genUriRef('site', routingtable),
-                               self.prefixDB.genUriRef('rdf', 'type'),
-                               self.prefixDB.genUriRef('mrs', 'RoutingTable')))
+            self.newGraph.add((self.genUriRef('site', ':%s:service+rst' % nodeDict['hostname']),
+                               self.genUriRef('mrs', 'providesRoutingTable'),
+                               self.genUriRef('site', routingtable)))
+            self.newGraph.add((self.genUriRef('site', routingtable),
+                               self.genUriRef('rdf', 'type'),
+                               self.genUriRef('mrs', 'RoutingTable')))
             for routeinfo in hostinfo['NetInfo']["routes"]:
                 routename = ""
                 if 'RTA_DST' in list(routeinfo.keys()) and routeinfo['RTA_DST'] == '169.254.0.0':
@@ -454,19 +431,19 @@ class LookUpService():
                     if 'RTA_PREFSRC' not in list(routeinfo.keys()):
                         continue
                     routename = routingtable + ":route+%s_%s" % (routeinfo['RTA_PREFSRC'], routeinfo['dst_len'])
-                self.newGraph.add((self.prefixDB.genUriRef('site', routename),
-                                   self.prefixDB.genUriRef('rdf', 'type'),
-                                   self.prefixDB.genUriRef('mrs', 'Route')))
-                self.newGraph.add((self.prefixDB.genUriRef('site', routingtable),
-                                   self.prefixDB.genUriRef('mrs', 'hasRoute'),
-                                   self.prefixDB.genUriRef('site', routename)))
+                self.newGraph.add((self.genUriRef('site', routename),
+                                   self.genUriRef('rdf', 'type'),
+                                   self.genUriRef('mrs', 'Route')))
+                self.newGraph.add((self.genUriRef('site', routingtable),
+                                   self.genUriRef('mrs', 'hasRoute'),
+                                   self.genUriRef('site', routename)))
                 if 'RTA_GATEWAY' in list(routeinfo.keys()):
-                    self.newGraph.add((self.prefixDB.genUriRef('site', routename),
-                                       self.prefixDB.genUriRef('mrs', 'routeTo'),
-                                       self.prefixDB.genUriRef('site', '%s:%s' % (routename, 'to'))))
-                    self.newGraph.add((self.prefixDB.genUriRef('site', routename),
-                                       self.prefixDB.genUriRef('mrs', 'nextHop'),
-                                       self.prefixDB.genUriRef('site', '%s:%s' % (routename, 'black-hole'))))
+                    self.newGraph.add((self.genUriRef('site', routename),
+                                       self.genUriRef('mrs', 'routeTo'),
+                                       self.genUriRef('site', '%s:%s' % (routename, 'to'))))
+                    self.newGraph.add((self.genUriRef('site', routename),
+                                       self.genUriRef('mrs', 'nextHop'),
+                                       self.genUriRef('site', '%s:%s' % (routename, 'black-hole'))))
                     for vals in [['to', 'ipv4-prefix-list', '0.0.0.0/0'],
                                  ['black-hole', 'routing-policy', 'drop'],
                                  ['local', 'routing-policy', 'local']]:
@@ -481,12 +458,12 @@ class LookUpService():
                                         [vals[2]])
                 else:
                     defaultroutename = routingtable + ":route+default:local"
-                    self.newGraph.add((self.prefixDB.genUriRef('site', routename),
-                                       self.prefixDB.genUriRef('mrs', 'routeTo'),
-                                       self.prefixDB.genUriRef('site', '%s:%s' % (routename, 'to'))))
-                    self.newGraph.add((self.prefixDB.genUriRef('site', routename),
-                                       self.prefixDB.genUriRef('mrs', 'nextHop'),
-                                       self.prefixDB.genUriRef('site', defaultroutename)))
+                    self.newGraph.add((self.genUriRef('site', routename),
+                                       self.genUriRef('mrs', 'routeTo'),
+                                       self.genUriRef('site', '%s:%s' % (routename, 'to'))))
+                    self.newGraph.add((self.genUriRef('site', routename),
+                                       self.genUriRef('mrs', 'nextHop'),
+                                       self.genUriRef('site', defaultroutename)))
                     self.addToGraph(['site', '%s:%s' % (routename, 'to')],
                                     ['rdf', 'type'],
                                     ['mrs', 'NetworkAddress'])
@@ -509,47 +486,51 @@ class LookUpService():
 #                 {'vrf': 'lhcone', 'ip': '2605:d9c0:2::/48', 'routerIntf': 'NULL 0'}]}}
 
 
-
-    def addSwitchInfo(self, jOut):
-        """Add All Switch information from switch lookup plugin."""
-        # Get switch information...
-        switchInfo = self.switchConfig['out']
-        if self.renewSwitchConfig:
-            self.switchConfig['out'] = self.switchConfig['class'].getinfo(jOut, self.renewSwitchConfig)
-            switchInfo = self.switchConfig['out']
-            self.renewSwitchConfig = False
-        else:
-            self.logger.info('Will not reload switch configuration. Model has not changed last run.')
-        # Add Switch information to MRML
-        for switchName, switchDict in list(switchInfo['ports'].items()):
+    def _addSwitchPortInfo(self, key, switchInfo):
+        """ Add Switch Port Info for ports, vlans """
+        for switchName, switchDict in list(switchInfo[key].items()):
             self.logger.debug('Working on %s and %s' % (switchName, switchDict))
             try:
                 vsw = self.config.get(switchName, 'vsw')
-            except configparser.NoOptionError:
-                self.logger.debug('ERROR: vsw parameter is not defined for %s.', switchName)
+            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+                self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
             for portName, portSwitch in list(switchDict.items()):
                 if 'hostname' in portSwitch and 'isAlias' not in portSwitch:
                     newuri = ":%s:%s:%s" % (switchName, portName, portSwitch['hostname'])
                 else:
                     newuri = ":%s:%s" % (switchName, portName)
-                self.newGraph.add((self.prefixDB.genUriRef('site'),
-                                   self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
-                                   self.prefixDB.genUriRef('site', newuri)))
-                self.newGraph.add((self.prefixDB.genUriRef('site', ':service+vsw:%s' % vsw),
-                                   self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
-                                   self.prefixDB.genUriRef('site', newuri)))
-                self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                                   self.prefixDB.genUriRef('rdf', 'type'),
-                                   self.prefixDB.genUriRef('nml', 'BidirectionalPort')))
-                if switchName in list(switchInfo['ports'].keys()):
-                    if portName in list(switchInfo['ports'][switchName].keys()):
-                        # Add information about bidirection switch port
-                        self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
-                    else:
-                        self.logger.debug('Port %s is not in switchInfo' % portName)
-                else:
-                    self.logger.debug('switchName $%s is not in switchInfo' % switchName)
+                self.newGraph.add((self.genUriRef('site'),
+                                   self.genUriRef('nml', 'hasBidirectionalPort'),
+                                   self.genUriRef('site', newuri)))
+                self.newGraph.add((self.genUriRef('site', ':service+vsw:%s' % vsw),
+                                   self.genUriRef('nml', 'hasBidirectionalPort'),
+                                   self.genUriRef('site', newuri)))
+                self.newGraph.add((self.genUriRef('site', newuri),
+                                   self.genUriRef('rdf', 'type'),
+                                   self.genUriRef('nml', 'BidirectionalPort')))
+
+                self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
+
+    def _addSwitchLldpInfo(self, switchInfo):
+        return
+
+    def _addSwitchRoutes(self, switchInfo):
+        return
+
+    def addSwitchInfo(self):
+        """Add All Switch information from switch Backends plugin."""
+        # Get switch information...
+        switchInfo = self.switch.getinfo(self.renewSwitchConfig)
+        self.renewSwitchConfig  = False
+        # Add Switch information to MRML
+        import pdb; pdb.set_trace()
+        self._addSwitchPortInfo('ports', switchInfo)
+        self._addSwitchPortInfo('vlans', switchInfo)
+        self._addSwitchLldpInfo(switchInfo)
+        self._addSwitchRoutes(switchInfo)
+
+
 
     def addAgentConfigtoMRML(self, intfDict, newuri):
         """Agent Configuration params to Model."""
@@ -573,21 +554,21 @@ class LookUpService():
         # Add vlan range for interface from the agent
         # ==========================================================================================
         if 'vlan_range' in list(intfDict.keys()):
-            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                               self.prefixDB.genUriRef('nml', 'hasService'),
-                               self.prefixDB.genUriRef('site', "%s:%s" % (newuri, 'bandwidthService'))))
-            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                               self.prefixDB.genUriRef('nml', 'isAlias'),
-                               self.prefixDB.genUriRef('site', ":%s:%s:+" % (switchName, switchPort))))
+            self.newGraph.add((self.genUriRef('site', newuri),
+                               self.genUriRef('nml', 'hasService'),
+                               self.genUriRef('site', "%s:%s" % (newuri, 'bandwidthService'))))
+            self.newGraph.add((self.genUriRef('site', newuri),
+                               self.genUriRef('nml', 'isAlias'),
+                               self.genUriRef('site', ":%s:%s:+" % (switchName, switchPort))))
             # BANDWIDTH Service for INTERFACE
             # ==========================================================================================
             bws = "%s:%s" % (newuri, 'bandwidthService')
-            self.newGraph.add((self.prefixDB.genUriRef('site', bws),
-                               self.prefixDB.genUriRef('rdf', 'type'),
-                               self.prefixDB.genUriRef('mrs', 'BandwidthService')))
-            self.newGraph.add((self.prefixDB.genUriRef('site', bws),
-                               self.prefixDB.genUriRef('mrs', 'type'),
-                               self.prefixDB.genLiteral('guaranteedCapped')))
+            self.newGraph.add((self.genUriRef('site', bws),
+                               self.genUriRef('rdf', 'type'),
+                               self.genUriRef('mrs', 'BandwidthService')))
+            self.newGraph.add((self.genUriRef('site', bws),
+                               self.genUriRef('mrs', 'type'),
+                               self.genLiteral('guaranteedCapped')))
 
             for item in [['unit', 'unit', "mbps"],
                          ['max_bandwidth', 'maximumCapacity', 10000000000],
@@ -602,35 +583,35 @@ class LookUpService():
                     value = int((int(value) // 1000000))
                 except ValueError:
                     value = str(value)
-                self.newGraph.add((self.prefixDB.genUriRef('site', bws),
-                                   self.prefixDB.genUriRef('mrs', item[1]),
-                                   self.prefixDB.genLiteral(value)))
+                self.newGraph.add((self.genUriRef('site', bws),
+                                   self.genUriRef('mrs', item[1]),
+                                   self.genLiteral(value)))
             # ==========================================================================================
         if 'capacity' in list(intfDict.keys()):
-            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                               self.prefixDB.genUriRef('mrs', 'capacity'),
-                               self.prefixDB.genLiteral(intfDict['capacity'])))
+            self.newGraph.add((self.genUriRef('site', newuri),
+                               self.genUriRef('mrs', 'capacity'),
+                               self.genLiteral(intfDict['capacity'])))
         if 'vlan_range' in list(intfDict.keys()):
-            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                               self.prefixDB.genUriRef('nml', 'hasLabelGroup'),
-                               self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri)))
-            self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri),
-                               self.prefixDB.genUriRef('rdf', 'type'),
-                               self.prefixDB.genUriRef('nml', 'LabelGroup')))
-            self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri),
-                               self.prefixDB.genUriRef('nml', 'labeltype'),
-                               self.prefixDB.genUriRef('schema', '#vlan')))
-            self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan-range" % newuri),
-                               self.prefixDB.genUriRef('nml', 'values'),
-                               self.prefixDB.genLiteral(intfDict['vlan_range'])))
+            self.newGraph.add((self.genUriRef('site', newuri),
+                               self.genUriRef('nml', 'hasLabelGroup'),
+                               self.genUriRef('site', "%s:vlan-range" % newuri)))
+            self.newGraph.add((self.genUriRef('site', "%s:vlan-range" % newuri),
+                               self.genUriRef('rdf', 'type'),
+                               self.genUriRef('nml', 'LabelGroup')))
+            self.newGraph.add((self.genUriRef('site', "%s:vlan-range" % newuri),
+                               self.genUriRef('nml', 'labeltype'),
+                               self.genUriRef('schema', '#vlan')))
+            self.newGraph.add((self.genUriRef('site', "%s:vlan-range" % newuri),
+                               self.genUriRef('nml', 'values'),
+                               self.genLiteral(intfDict['vlan_range'])))
         self.shared = False
         if 'shared' in list(intfDict.keys()):
             self.shared = 'notshared'
             if intfDict['shared']:
                 self.shared = 'shared'
-            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                               self.prefixDB.genUriRef('mrs', 'type'),
-                               self.prefixDB.genLiteral(self.shared)))
+            self.newGraph.add((self.genUriRef('site', newuri),
+                               self.genUriRef('mrs', 'type'),
+                               self.genLiteral(self.shared)))
 
     def defineHostInfo(self, nodeDict):
         """Define Host information inside MRML.
@@ -650,16 +631,16 @@ class LookUpService():
                                                      'intfKey': intfKey})
             newuri = ":%s:%s:%s:%s" % (switchName, switchPort, nodeDict['hostname'], intfKey)
             # Create new host definition
-            self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
-                               self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
-                               self.prefixDB.genUriRef('site', newuri)))
-            self.newGraph.add((self.prefixDB.genUriRef('site', ":%s:service+rst" % nodeDict['hostname']),
-                               self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
-                               self.prefixDB.genUriRef('site', newuri)))
+            self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
+                               self.genUriRef('nml', 'hasBidirectionalPort'),
+                               self.genUriRef('site', newuri)))
+            self.newGraph.add((self.genUriRef('site', ":%s:service+rst" % nodeDict['hostname']),
+                               self.genUriRef('nml', 'hasBidirectionalPort'),
+                               self.genUriRef('site', newuri)))
             # Specific node information.
-            self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                               self.prefixDB.genUriRef('rdf', 'type'),
-                               self.prefixDB.genUriRef('nml', 'BidirectionalPort')))
+            self.newGraph.add((self.genUriRef('site', newuri),
+                               self.genUriRef('rdf', 'type'),
+                               self.genUriRef('nml', 'BidirectionalPort')))
             # =====================================================================
             # Add most of the agent configuration to MRML
             # =====================================================================
@@ -679,38 +660,38 @@ class LookUpService():
                     vlanName = vlanName.split('.')
                     vlanuri = ":%s:%s:%s:%s:vlanport+%s" % (switchName, switchPort,
                                                             nodeDict['hostname'], intfKey, vlanName[1])
-                    self.newGraph.add((self.prefixDB.genUriRef('site', vlanuri),
-                                       self.prefixDB.genUriRef('rdf', 'type'),
-                                       self.prefixDB.genUriRef('nml', 'BidirectionalPort')))
-                    self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                                       self.prefixDB.genUriRef('nml', 'hasService'),
-                                       self.prefixDB.genUriRef('site', "%s:%s" % (newuri, 'bandwidthService'))))
+                    self.newGraph.add((self.genUriRef('site', vlanuri),
+                                       self.genUriRef('rdf', 'type'),
+                                       self.genUriRef('nml', 'BidirectionalPort')))
+                    self.newGraph.add((self.genUriRef('site', newuri),
+                                       self.genUriRef('nml', 'hasService'),
+                                       self.genUriRef('site', "%s:%s" % (newuri, 'bandwidthService'))))
                     if self.shared:
-                        self.newGraph.add((self.prefixDB.genUriRef('site', vlanuri),
-                                           self.prefixDB.genUriRef('mrs', 'type'),
-                                           self.prefixDB.genLiteral(self.shared)))
-                    self.newGraph.add((self.prefixDB.genUriRef('site', ":%s" % nodeDict['hostname']),
-                                       self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
-                                       self.prefixDB.genUriRef('site', vlanuri)))
-                    self.newGraph.add((self.prefixDB.genUriRef('site', ":%s:service+rst" % nodeDict['hostname']),
-                                       self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
-                                       self.prefixDB.genUriRef('site', vlanuri)))
-                    self.newGraph.add((self.prefixDB.genUriRef('site', newuri),
-                                       self.prefixDB.genUriRef('nml', 'hasBidirectionalPort'),
-                                       self.prefixDB.genUriRef('site', vlanuri)))
+                        self.newGraph.add((self.genUriRef('site', vlanuri),
+                                           self.genUriRef('mrs', 'type'),
+                                           self.genLiteral(self.shared)))
+                    self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
+                                       self.genUriRef('nml', 'hasBidirectionalPort'),
+                                       self.genUriRef('site', vlanuri)))
+                    self.newGraph.add((self.genUriRef('site', ":%s:service+rst" % nodeDict['hostname']),
+                                       self.genUriRef('nml', 'hasBidirectionalPort'),
+                                       self.genUriRef('site', vlanuri)))
+                    self.newGraph.add((self.genUriRef('site', newuri),
+                                       self.genUriRef('nml', 'hasBidirectionalPort'),
+                                       self.genUriRef('site', vlanuri)))
                     if 'vlanid' in list(vlanDict.keys()):
-                        self.newGraph.add((self.prefixDB.genUriRef('site', vlanuri),
-                                           self.prefixDB.genUriRef('nml', 'hasLabel'),
-                                           self.prefixDB.genUriRef('site', "%s:vlan" % vlanuri)))
-                        self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan" % vlanuri),
-                                           self.prefixDB.genUriRef('rdf', 'type'),
-                                           self.prefixDB.genUriRef('nml', 'Label')))
-                        self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan" % vlanuri),
-                                           self.prefixDB.genUriRef('nml', 'labeltype'),
-                                           self.prefixDB.genUriRef('schema', '#vlan')))
-                        self.newGraph.add((self.prefixDB.genUriRef('site', "%s:vlan" % vlanuri),
-                                           self.prefixDB.genUriRef('nml', 'value'),
-                                           self.prefixDB.genLiteral(vlanDict['vlanid'])))
+                        self.newGraph.add((self.genUriRef('site', vlanuri),
+                                           self.genUriRef('nml', 'hasLabel'),
+                                           self.genUriRef('site', "%s:vlan" % vlanuri)))
+                        self.newGraph.add((self.genUriRef('site', "%s:vlan" % vlanuri),
+                                           self.genUriRef('rdf', 'type'),
+                                           self.genUriRef('nml', 'Label')))
+                        self.newGraph.add((self.genUriRef('site', "%s:vlan" % vlanuri),
+                                           self.genUriRef('nml', 'labeltype'),
+                                           self.genUriRef('schema', '#vlan')))
+                        self.newGraph.add((self.genUriRef('site', "%s:vlan" % vlanuri),
+                                           self.genUriRef('nml', 'value'),
+                                           self.genLiteral(vlanDict['vlanid'])))
                     # Add hasNetworkAddress for vlan
                     # Now the mapping of the interface information:
                     self.addIntfInfo(vlanDict, vlanuri, False)
@@ -749,7 +730,7 @@ class LookUpService():
         # ==================================================================================
         # 6. Define Switch information from Switch Lookup Plugin
         # ==================================================================================
-        self.addSwitchInfo(jOut)
+        self.addSwitchInfo()
 
         saveName = self.getModelSavePath()
         with open(saveName, "w") as fd:

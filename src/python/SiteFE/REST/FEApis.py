@@ -32,10 +32,10 @@ from DTNRMLibs.FECalls import reportServiceStatus
 class FrontendRM():
     """Site Frontend calls."""
     def __init__(self):
-        self.dbI = getDBConn('REST-Frontend')
         self.initialized = False
         self.config = getConfig()
         self.siteDB = contentDB()
+        self.dbI = getDBConn('REST-Frontend', self)
 
     def getHosts(self, **kwargs):
         """Return all available Hosts, where key is IP address."""

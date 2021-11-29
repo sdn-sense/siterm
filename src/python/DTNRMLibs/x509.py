@@ -18,14 +18,13 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2019/10/01
 """
 from __future__ import print_function
-from builtins import object
 import time
 from datetime import datetime
 from OpenSSL import crypto
 from DTNRMLibs.MainUtilities import getGitConfig
 
 
-class CertHandler(object):
+class CertHandler():
     """Cert handler."""
     def __init__(self):
         self.allowedCerts = {}

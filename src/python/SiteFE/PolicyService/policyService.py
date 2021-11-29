@@ -17,9 +17,9 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
+#from __future__ import print_function
+#from future import standard_library
+#standard_library.install_aliases()
 import os
 import sys
 import tempfile
@@ -84,7 +84,7 @@ class PolicyService():
         self.logger = logger
         self.config = config
         self.siteDB = contentDB(logger=self.logger, config=self.config)
-        self.dbI = getDBConn('PolicyService')
+        self.dbI = getDBConn('PolicyService', self)
         self.stateMachine = StateMachine(self.logger)
 
     def queryGraph(self, graphIn, sub=None, pre=None, obj=None, search=None):

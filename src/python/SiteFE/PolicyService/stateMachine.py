@@ -17,7 +17,6 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2018/11/26
 """
-from builtins import str
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 from SiteFE.PolicyService.newDeltaChecks import checkConflicts
@@ -28,9 +27,10 @@ def timeendcheck(delta, logger):
 
     if passed, returns True.
     """
+    # TODO: Check this. might be broken.
     conns = []
     connEnded = False
-    for connDelta in conns:
+    for connDelta in delta:
         try:
             if 'timeend' in list(connDelta.keys()):
                 timeleft = getUTCnow() - int(connDelta['timeend'])

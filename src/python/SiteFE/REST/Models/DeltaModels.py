@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=line-too-long, bad-whitespace
+# pylint: disable=line-too-long
 """Site FE call functions.
 
 Copyright 2017 California Institute of Technology
@@ -19,7 +19,6 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2017/09/26
 """
 from __future__ import print_function
-from builtins import object
 from tempfile import NamedTemporaryFile
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
@@ -37,10 +36,16 @@ from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 
 
-class frontendDeltaModels(object):
+class frontendDeltaModels():
     """Delta Actions through Frontend interface."""
     def __init__(self, logger, config=None):
-        self.dbI = getDBConn('REST-DELTA')
+        if config:
+            self.config = config
+        else:
+            self.config = getConfig()
+        self.logger = logger
+        self.policer = {}
+        self.dbI = getDBConn('REST-DELTA', self)
         self.config = getConfig()
         if config:
             self.config = config
@@ -85,14 +90,13 @@ class frontendDeltaModels(object):
                                            [('Last-Modified', httpdate(out['UpdateTime'])),
                                             ('Location', outDict['href'])])
             return outDict
-        else:
-            kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
-            if 'Error' in list(out.keys()):
-                errMsg = ""
-                for key in ['errorNo', 'errorType', 'errMsg']:
-                    if key in list(out['Error'].keys()):
-                        errMsg += " %s: %s" % (key, out['Error'][key])
-            return getCustomOutMsg(errMsg=errMsg, exitCode=500)
+        kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
+        if 'Error' in list(out.keys()):
+            errMsg = ""
+            for key in ['errorNo', 'errorType', 'errMsg']:
+                if key in list(out['Error'].keys()):
+                    errMsg += " %s: %s" % (key, out['Error'][key])
+        return getCustomOutMsg(errMsg=errMsg, exitCode=500)
 
     def getdelta(self, deltaID=None, **kwargs):
         """Get delta from database."""
@@ -171,4 +175,3 @@ class frontendDeltaModels(object):
             raise WrongDeltaStatusTransition(msg)
         self.stateM.commit(dbobj, {'uid': deltaID, 'state': 'committing'})
         return {'status': 'OK'}
-
