@@ -84,8 +84,10 @@ class Switch(Ansible, Raw, Node):
                 del self.output[key][switch][portname]
 
     def _getDBOut(self):
-        self.switches = self.dbI.get('switches', limit=1, search=[['sitename', self.site]])[0]
-        self.switches['output'] = json.loads(self.switches['output'])
+        tmp = self.dbI.get('switches', limit=1, search=[['sitename', self.site]])
+        if tmp:
+            self.switches = tmp[0]
+            self.switches['output'] = json.loads(self.switches['output'])
         if not self.switches:
             self.logger.debug('No switches in database.')
 

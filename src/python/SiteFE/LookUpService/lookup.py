@@ -524,7 +524,6 @@ class LookUpService(PrefixDB):
         switchInfo = self.switch.getinfo(self.renewSwitchConfig)
         self.renewSwitchConfig  = False
         # Add Switch information to MRML
-        import pdb; pdb.set_trace()
         self._addSwitchPortInfo('ports', switchInfo)
         self._addSwitchPortInfo('vlans', switchInfo)
         self._addSwitchLldpInfo(switchInfo)
