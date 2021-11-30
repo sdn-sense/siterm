@@ -47,6 +47,23 @@ class SwitchInfo():
                             ['mrs', 'value'],
                             [val])
 
+    def _addPort(self, uri, vsw, vlanuri=None, addToSite=True):
+        if addToSite:
+            self.newGraph.add((self.genUriRef('site'),
+                               self.genUriRef('nml', 'hasBidirectionalPort'),
+                               self.genUriRef('site', uri)))
+            self.newGraph.add((self.genUriRef('site', ':service+vsw:%s' % vsw),
+                               self.genUriRef('nml', 'hasBidirectionalPort'),
+                               self.genUriRef('site', uri)))
+        self.newGraph.add((self.genUriRef('site', uri),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('nml', 'BidirectionalPort')))
+        if vlanuri:
+            self.newGraph.add((self.genUriRef('site', uri),
+                               self.genUriRef('nml', 'hasBidirectionalPort'),
+                               self.genUriRef('site', vlanuri)))
+
+
     def _addSwitchPortInfo(self, key, switchInfo):
         """ Add Switch Port Info for ports, vlans """
         for switchName, switchDict in list(switchInfo[key].items()):
@@ -57,21 +74,34 @@ class SwitchInfo():
                 self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
             for portName, portSwitch in list(switchDict.items()):
-                if 'hostname' in portSwitch and 'isAlias' not in portSwitch:
-                    newuri = ":%s:%s:%s" % (switchName, portName, portSwitch['hostname'])
-                else:
-                    newuri = ":%s:%s" % (switchName, portName)
-                self.newGraph.add((self.genUriRef('site'),
-                                   self.genUriRef('nml', 'hasBidirectionalPort'),
-                                   self.genUriRef('site', newuri)))
-                self.newGraph.add((self.genUriRef('site', ':service+vsw:%s' % vsw),
-                                   self.genUriRef('nml', 'hasBidirectionalPort'),
-                                   self.genUriRef('site', newuri)))
-                self.newGraph.add((self.genUriRef('site', newuri),
-                                   self.genUriRef('rdf', 'type'),
-                                   self.genUriRef('nml', 'BidirectionalPort')))
-
+                #if 'hostname' in portSwitch and 'isAlias' not in portSwitch:
+                #    newuri = ":%s:%s:%s" % (switchName, portName, portSwitch['hostname'])
+                #else:
+                # This should come from the host itself. or we can add isAlias here.
+                newuri = ":%s:%s" % (switchName, portName)
+                self._addPort(newuri, vsw)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
+
+
+    def _addSwitchVlanInfo(self, key, switchInfo):
+        """ Add All Vlan Info from switch """
+        for switchName, switchDict in list(switchInfo[key].items()):
+            self.logger.debug('Working on %s and %s' % (switchName, switchDict))
+            try:
+                vsw = self.config.get(switchName, 'vsw')
+            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+                self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
+                continue
+            for portName, portSwitch in list(switchDict.items()):
+                if 'tagged' in portSwitch:
+                    for taggedIntf in portSwitch['tagged']:
+                        newuri = ":%s:%s" % (switchName, taggedIntf)
+                        self._addPort(newuri, vsw)
+                        vlanuri = ":%s:%s:vlanport+%s" % (switchName, taggedIntf, portSwitch['value'])
+                        self._addPort(newuri, vsw, vlanuri, False)
+                        #self._addIsAlias()
+
+
 
     def _addSwitchLldpInfo(self, switchInfo):
         """ TODO: ADD LLDP Info to MRML """
@@ -85,9 +115,8 @@ class SwitchInfo():
         """Add All Switch information from switch Backends plugin."""
         # Get switch information...
         switchInfo = self.switch.getinfo(self.renewSwitchConfig)
-        self.renewSwitchConfig  = False
         # Add Switch information to MRML
         self._addSwitchPortInfo('ports', switchInfo)
-        self._addSwitchPortInfo('vlans', switchInfo)
+        self._addSwitchVlanInfo('vlans', switchInfo)
         self._addSwitchLldpInfo(switchInfo)
         self._addSwitchRoutes(switchInfo)

@@ -17,6 +17,16 @@ class DellOS9():
         self.factName = ['dellos9_facts', 'dellos9_command']
         self.regexs = [r'tagged (.+) (.+)', r'untagged (.+) (.+)', r'channel-member (.+) (.+)']
 
+    @staticmethod
+    def _getSystemValidPortName(port):
+        """ get Systematic port name. MRML expects it without spaces """
+        # Spaces from port name are replaced with _
+        # Backslashes are replaced with dash
+        # Also - mrml does not expect to get string in nml. so need to replace all
+        # Inside the output of dictionary
+        # Same function is reused in main, and should be in other plugins.
+        return port.replace(" ", "_").replace("/", "-")
+
 
     def _portSplitter(self, portName, inPorts):
         """ Port splitter for dellos9
@@ -48,18 +58,19 @@ class DellOS9():
                     self.logger.debug("UNSUPPORTED port name %s %s" % (portName, splPorts))
                     continue
                 for i in range(int(start[vCh]), int(end[vCh]) + 1):
-                    outPorts.append(apnd % i)
+                    outPorts.append(self._getSystemValidPortName(apnd % i))
             else:
-                outPorts.append("%s %s" % (portName, splRange[0]))
+                outPorts.append(self._getSystemValidPortName("%s %s" % (portName, splRange[0])))
         return outPorts
 
 
     def _parseMembers(self, line):
+        out = []
         for regex in self.regexs:
             match = re.search(regex, line)
             if match:
-                return self._portSplitter(match.group(1), match.group(2))
-        return []
+                out += self._portSplitter(match.group(1), match.group(2))
+        return out
 
     def parser(self, ansibleOut):
         out = {}
@@ -79,7 +90,8 @@ class DellOS9():
                 if line.startswith('tagged') or line.startswith('untagged') or line.startswith('channel-member'):
                     tmpOut = self._parseMembers(line)
                     if tmpOut:
-                        out[key][line.split()[0]] = tmpOut
+                        out[key].setdefault(line.split()[0], [])
+                        out[key][line.split()[0]] += tmpOut
         return out
 
 

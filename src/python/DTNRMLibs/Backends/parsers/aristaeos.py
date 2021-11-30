@@ -17,6 +17,16 @@ class AristaEOS():
     def __init__(self):
         self.factName = ['arista.eos.eos_facts', 'arista.eos.eos_command']
 
+    @staticmethod
+    def _getSystemValidPortName(port):
+        """ get Systematic port name. MRML expects it without spaces """
+        # Spaces from port name are replaced with _
+        # Backslashes are replaced with dash
+        # Also - mrml does not expect to get string in nml. so need to replace all
+        # Inside the output of dictionary
+        # Same function is reused in main, and should be in other plugins.
+        return port.replace(" ", "_").replace("/", "-")
+
     def _getVlans(self, inLine):
         """ Get All vlans list assigned to port """
         out = []
@@ -46,10 +56,10 @@ class AristaEOS():
             elif interfaceSt:
                 if line.startswith('switchport trunk allowed vlan') or line.startswith('switchport access vlan'):
                     for vlan in self._getVlans(line):
-                        key = "Vlan%s" % vlan
+                        key = "Vlan_%s" % vlan
                         out.setdefault(key, {})
                         out[key].setdefault('tagged', [])
-                        out[key]['tagged'].append(interfaceSt)
+                        out[key]['tagged'].append(self._getSystemValidPortName(interfaceSt))
                 else:
                     m = re.match(r'channel-group ([0-9]+) .*', line)
                     if m:
@@ -57,7 +67,7 @@ class AristaEOS():
                         key = "Port-Channel%s" % chnMemberId
                         out.setdefault(key, {})
                         out[key].setdefault('channel-member', [])
-                        out[key]['channel-member'].append(interfaceSt)
+                        out[key]['channel-member'].append(self._getSystemValidPortName(interfaceSt))
         return out
 
     def getinfo(self, ansibleOut):

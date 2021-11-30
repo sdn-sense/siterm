@@ -270,7 +270,7 @@ class NodeInfo():
             self.hosts[nodeDict['hostname']].append({'switchName': switchName,
                                                      'switchPort': switchPort,
                                                      'intfKey': intfKey})
-            newuri = ":%s:%s:%s:%s" % (switchName, switchPort, nodeDict['hostname'], intfKey)
+            newuri = ":%s:%s" % (nodeDict['hostname'], intfKey)
             # Create new host definition
             self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
                                self.genUriRef('nml', 'hasBidirectionalPort'),
@@ -282,6 +282,10 @@ class NodeInfo():
             self.newGraph.add((self.genUriRef('site', newuri),
                                self.genUriRef('rdf', 'type'),
                                self.genUriRef('nml', 'BidirectionalPort')))
+            # Add isAlias
+            self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
+                               self.genUriRef('nml', 'isAlias'),
+                               self.genUriRef('site', ":%s:%s" % (switchName, switchPort))))
             # =====================================================================
             # Add most of the agent configuration to MRML
             # =====================================================================

@@ -40,7 +40,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         self.newGraph = None
         self.shared = False
         self.hosts = {}
-        self.renewSwitchConfig = True
+        self.renewSwitchConfig = False
         self.switch = Switch(config, logger, sitename)
         self.prefixes = {}
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"

@@ -32,16 +32,25 @@ class RDFHelper():
         """Generate Host Alias from configuration."""
         if 'isAlias' in kwargs['portSwitch'] and \
            kwargs['portSwitch']['isAlias']:
-            self.newGraph.add((self.genUriRef('site', kwargs['newuri']),
+            self._addIsAlias(kwargs['newuri'], kwargs['portSwitch']['isAlias'], True)
+        #elif 'hostname' in kwargs['portSwitch'] and kwargs['portSwitch']['hostname'] in list(self.hosts.keys()):
+        #    for item in self.hosts[kwargs['portSwitch']['hostname']]:
+        #        if item['switchName'] == kwargs['switchName'] and item['switchPort'] == kwargs['portName']:
+        #            suri = "%s:%s" % (kwargs['newuri'], item['intfKey'])
+        #            self._addIsAlias("")
+        #            self.newGraph.add((self.genUriRef('site', kwargs['newuri']),
+        #                               self.genUriRef('nml', 'isAlias'),
+        #                               self.genUriRef('site', suri)))
+
+    def _addIsAlias(self, uri, alias, custom=False):
+        if custom:
+            self.newGraph.add((self.genUriRef('site', uri),
                                self.genUriRef('nml', 'isAlias'),
-                               self.genUriRef('', custom=kwargs['portSwitch']['isAlias'])))
-        elif 'hostname' in kwargs['portSwitch'] and kwargs['portSwitch']['hostname'] in list(self.hosts.keys()):
-            for item in self.hosts[kwargs['portSwitch']['hostname']]:
-                if item['switchName'] == kwargs['switchName'] and item['switchPort'] == kwargs['portName']:
-                    suri = "%s:%s" % (kwargs['newuri'], item['intfKey'])
-                    self.newGraph.add((self.genUriRef('site', kwargs['newuri']),
-                                       self.genUriRef('nml', 'isAlias'),
-                                       self.genUriRef('site', suri)))
+                               self.genUriRef('', custom=alias)))
+        else:
+            self.newGraph.add((self.genUriRef('site', uri),
+                               self.genUriRef('nml', 'isAlias'),
+                               self.genUriRef('site', alias)))
 
     def addToGraph(self, sub, pred, obj):
         """Add to graph new info.

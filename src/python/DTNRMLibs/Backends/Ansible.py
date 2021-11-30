@@ -163,6 +163,16 @@ class Switch(Actions):
         ports = self.getports(inData)
         return [vlan for vlan in ports if vlan.startswith('Vlan')]
 
+    def getVlanKey(self, port):
+        # TODO: Check if parser has getports call, if does - call it
+        if port.startswith('Vlan_'):
+            return int(port[5:])
+        if port.startswith('Vlan '):
+            return int(port[5:])
+        if port.startswith('Vlan'):
+            return int(port[4:])
+        return port
+
     def getvlandata(self, inData, vlan):
         """ Get vlan data from ansible output """
         # TODO: Check if parser has getports call, if does - call it

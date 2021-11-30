@@ -149,6 +149,7 @@ class Switch(Ansible, Raw, Node):
                 tmpData = self.getvlandata(self.switches['output'][switch], port)
                 vlansDict = self.output['vlans'][switch].setdefault(nportName, tmpData)
                 vlansDict['realportname'] = port
+                vlansDict['value'] = self.getVlanKey(port)
                 self._addyamlInfoToPort(switch, nportName, defVlans, vlansDict)
             else:
                 portDict = self.output['ports'][switch].setdefault(nportName, tmpData)
