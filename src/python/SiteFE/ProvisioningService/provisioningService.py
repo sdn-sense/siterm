@@ -19,18 +19,19 @@ Date                    : 2017/09/26
 UpdateDate              : 2021/11/08
 """
 import sys
-import time
 import pprint
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getStreamLogger
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import contentDB
-from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import getDataFromSiteFE
-from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
+from DTNRMLibs.MainUtilities import getVal
+from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.Backends.main import Switch
+from SiteFE.REST.Models.DeltaModels import frontendDeltaModels
+
 
 class ProvisioningService():
     """Provisioning service communicates with Local controllers and applies
@@ -41,35 +42,25 @@ class ProvisioningService():
         self.siteDB = contentDB(logger=self.logger, config=self.config)
         self.sitename = sitename
         self.switch = Switch(config, logger, sitename)
+        self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
+        workDir = self.config.get('general', 'privatedir') + "/ProvisioningService/"
+        createDirs(workDir)
+        self.feCalls = frontendDeltaModels(self.logger, self.config. self.dbI)
 
-
-    def pushInternalAction(self, url, state, deltaID, hostname):
+    def pushInternalAction(self, state, deltaID, hostname):
         """Push Internal action and return dict."""
-        newState = ""
-        restOut = {}
-        restOut = getDataFromSiteFE({}, url, "/sitefe/v1/deltas/%s/internalaction/%s/%s" % (deltaID, hostname, state))
-        if restOut[1] >= 400:
-            msg = "Failed to set new state in database for %s delta and %s hostname. Error %s " \
-                  % (deltaID, hostname, restOut)
-            self.logger.debug(msg)
-            raise FailedInterfaceCommand(msg)
-        restOutHIDs = getDataFromSiteFE({}, url, "/sitefe/v1/hostnameids/%s" % hostname)
-        tmpOut = evaldict(restOutHIDs[0])
-        newState = tmpOut[deltaID]
-        msg = 'New State on the rest is %s and requested %s' % (newState, state)
-        self.logger.debug(msg)
-        if newState != state:
-            time.sleep(4)
-        return evaldict(restOut)
+        # TODO: Catch exceptions, like WrongDeltaStatusTransition
+        self.feCalls.commitdelta(deltaID, state, internal=True, hostname=hostname, **{'sitename': self.sitename})
 
-    def deltaRemoval(self, newDelta, deltaID, newvlan, switchName, fullURL):
+
+    def deltaRemoval(self, newDelta, deltaID, newvlan, switchName):
         """Here goes all communication with component and also rest
         interface."""
         self.logger.debug('I got REDUCTION!!!!!. Reduction only sets states until active.')
         if 'ReductionID' not in newDelta:
             # I dont know which one to set to removed...
             # Will apply only rules for reduction.
-            self.pushInternalAction(fullURL, "remove", newDelta['ReductionID'], switchName)
+            self.pushInternalAction("remove", newDelta['ReductionID'], switchName)
         deltaState = newDelta['HOSTSTATE']
         for stateChange in [{"accepting": "accepted"}, {"accepted": "committing"},
                             {"committing": "committed"}, {"committed": "activating"},
@@ -78,11 +69,11 @@ class ProvisioningService():
                 msg = 'Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState])
                 self.logger.debug(msg)
                 self.switch.mainCall(deltaState, newvlan, 'remove')
-                self.pushInternalAction(fullURL, stateChange[deltaState], deltaID, switchName)
+                self.pushInternalAction(stateChange[deltaState], deltaID, switchName)
                 deltaState = stateChange[deltaState]
         return True
 
-    def deltaCommit(self, newDelta, deltaID, newvlan, switchName, fullURL):
+    def deltaCommit(self, newDelta, deltaID, newvlan, switchName):
         """Here goes all communication with component and also rest
         interface."""
         deltaState = newDelta['HOSTSTATE']
@@ -91,7 +82,7 @@ class ProvisioningService():
             if deltaState == list(stateChange.keys())[0]:
                 self.logger.info('Delta State %s and performing action to %s' % (deltaState, stateChange[deltaState]))
                 self.switch.mainCall(deltaState, newvlan, 'add')
-                self.pushInternalAction(fullURL, stateChange[deltaState], deltaID, switchName)
+                self.pushInternalAction(stateChange[deltaState], deltaID, switchName)
                 deltaState = stateChange[deltaState]
         return True
 
@@ -123,9 +114,9 @@ class ProvisioningService():
                     newDeltas.append(tmpDict)
         return newDeltas
 
-    def getData(self, fullURL, URLPath):
+    def getData(self, fullURL, urlPath):
         """Get data from FE."""
-        agents = getDataFromSiteFE({}, fullURL, URLPath)
+        agents = getDataFromSiteFE({}, fullURL, urlPath)
         if agents[2] != 'OK':
             msg = 'Received a failure getting information from Site Frontend %s' % str(agents)
             self.logger.debug(msg)
@@ -134,7 +125,7 @@ class ProvisioningService():
 
     def getAllAliases(self):
         """Get All Aliases."""
-        out = []
+        out = self.switch.output['switches'].keys()
         for _, switchPort in list(self.switch.output['ports'].items()):
             for _, portDict in list(switchPort.items()):
                 if 'isAlias' in portDict:
@@ -142,39 +133,40 @@ class ProvisioningService():
                     out.append(tmp[0])
         return out
 
+    def _vlanAction(self, newDelta, switchName, actionKey):
+        """ Vlan action redurce/add based on delta state """
+        newvlan = self.getnewvlan(newDelta, newDelta['ID'], switchName, actionKey)
+        if actionKey == 'reduction' and newDelta['ParsedDelta'][actionKey]:
+            self.deltaRemoval(newDelta, newDelta['ID'], newvlan, switchName)
+        elif actionKey == 'addition' and newDelta['ParsedDelta'][actionKey]:
+            if newDelta['State'] in ['cancel']:
+                newDelta['ReductionID'] = newDelta['ID']
+                self.deltaRemoval(newDelta, newDelta['ID'], newvlan, switchName)
+            else:
+                self.deltaCommit(newDelta, newDelta['ID'], newvlan, switchName)
+        else:
+            self.logger.warning('Unknown delta state')
+            pretty = pprint.PrettyPrinter(indent=4)
+            pretty.pprint(evaldict(newDelta))
+
     def startwork(self):
         """Start Provisioning Service main worker."""
-        fullURL = getFullUrl(self.config, sitename=self.sitename)
-        jOut = self.getData(fullURL, "/sitefe/json/frontend/getdata")
-        workDir = self.config.get('general', 'privatedir') + "/ProvisioningService/"
-        createDirs(workDir)
+        jOut = self.dbI.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
         if not jOut:
-            self.logger.info('Seems server returned empty dictionary. Exiting.')
+            self.logger.info('No Hosts in database. Finish loop.')
             return
         # Get switch information...
         self.switch.getinfo(jOut, False)
         alliases = self.getAllAliases()
         outputDict = {}
-        allDeltas = self.getData(fullURL, "/sitefe/v1/deltas?oldview=true")
-        for switchName in list(list(self.switch.output['switches'].keys()) + alliases):
+        allDeltas = self.dbI.get('deltas')
+        for switchName in alliases:
             newDeltas = self.checkdeltas(switchName, allDeltas)
             for newDelta in newDeltas:
                 outputDict.setdefault(newDelta['ID'])
                 for actionKey in ['reduction', 'addition']:
                     try:
-                        newvlan = self.getnewvlan(newDelta, newDelta['ID'], switchName, actionKey)
-                        if actionKey == 'reduction' and newDelta['ParsedDelta'][actionKey]:
-                            self.deltaRemoval(newDelta, newDelta['ID'], newvlan, switchName, fullURL)
-                        elif actionKey == 'addition' and newDelta['ParsedDelta'][actionKey]:
-                            if newDelta['State'] in ['cancel']:
-                                newDelta['ReductionID'] = newDelta['ID']
-                                self.deltaRemoval(newDelta, newDelta['ID'], newvlan, switchName, fullURL)
-                            else:
-                                self.deltaCommit(newDelta, newDelta['ID'], newvlan, switchName, fullURL)
-                        else:
-                            self.logger.warning('Unknown delta state')
-                            pretty = pprint.PrettyPrinter(indent=4)
-                            pretty.pprint(evaldict(newDelta))
+                        self._vlanAction(newDelta, switchName, actionKey)
                     except IOError as ex:
                         self.logger.warning('IOError: %s', ex)
                         raise Exception from IOError

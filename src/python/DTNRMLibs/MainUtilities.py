@@ -35,10 +35,10 @@ import datetime
 import subprocess
 import email.utils as eut
 import configparser
-from past.builtins import basestring
-import simplejson as json
 import logging
 import logging.handlers
+from past.builtins import basestring
+import simplejson as json
 # Custom exceptions imports
 import pycurl
 import requests
@@ -63,11 +63,9 @@ def getVal(conDict, **kwargs):
     if 'sitename' in list(kwargs.keys()):
         if kwargs['sitename'] in list(conDict.keys()):
             return conDict[kwargs['sitename']]
-        else:
-            raise Exception('This SiteName is not configured on the Frontend. Contact Support')
-    else:
-        print(kwargs)
-        raise Exception('This Call Should not happen. Contact Support')
+        raise Exception('This SiteName is not configured on the Frontend. Contact Support')
+    print(kwargs)
+    raise Exception('This Call Should not happen. Contact Support')
 
 
 def getFullUrl(config, sitename=None):
@@ -138,7 +136,7 @@ def evaldict(inputDict):
 def readFile(fileName):
     """Read all file lines to a list and rstrips the ending."""
     try:
-        with open(fileName, 'r') as fd:
+        with open(fileName, 'r', encoding='utf-8') as fd:
             content = fd.readlines()
         content = [x.rstrip() for x in content]
         return content
@@ -164,7 +162,7 @@ def execute(command, logger, raiseError=True):
     msg = 'Command: %s, Out: %s, Err: %s, ReturnCode: %s' % (command, out.rstrip(), err.rstrip(), cmdOut.returncode)
     if cmdOut.returncode != 0 and raiseError:
         raise FailedInterfaceCommand(msg)
-    elif cmdOut.returncode != 0:
+    if cmdOut.returncode != 0:
         logger.debug("RaiseError is False, but command failed. Only logging Errmsg: %s" % msg)
         return False
     return True
@@ -239,13 +237,13 @@ class GitConfig():
         output = None
         if os.path.isfile('/tmp/dtnrm-no-config-fetch.yaml'):
             filename = '/tmp/dtnrm-link-%s.yaml' % name
-            with open(filename, 'r') as fd:
+            with open(filename, 'r', encoding='utf-8') as fd:
                 output = yload(fd.read())
         else:
             datetimeNow = datetime.datetime.now()
             filename = '/tmp/%s-%s.yaml' % (datetimeNow.strftime('%Y-%m-%d-%H'), name)
             if os.path.isfile(filename):
-                with open(filename, 'r') as fd:
+                with open(filename, 'r', encoding='utf-8') as fd:
                     output = yload(fd.read())
             else:
                 datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
@@ -259,7 +257,7 @@ class GitConfig():
                         pass
                 self.logger.debug('Receiving new file from GIT for %s', name)
                 outyaml = getWebContentFromURL(url).text
-                with open(filename, 'w') as fd:
+                with open(filename, 'w', encoding='utf-8') as fd:
                     fd.write(outyaml)
                 try:
                     os.symlink(filename, '/tmp/dtnrm-link-%s.yaml' % name)
@@ -282,7 +280,7 @@ class GitConfig():
         if not os.path.isfile('/etc/dtnrm.yaml'):
             self.logger.debug('Config file /etc/dtnrm.yaml does not exist.')
             raise Exception('Config file /etc/dtnrm.yaml does not exist.')
-        with open('/etc/dtnrm.yaml', 'r') as fd:
+        with open('/etc/dtnrm.yaml', 'r', encoding='utf-8') as fd:
             self.config = yload(fd.read())
         for key, requirement in list(self.defaults.items()):
             if key not in list(self.config.keys()):
@@ -344,6 +342,7 @@ def getConfig(locations=None):
     This is used till everyone move to YAML based config.
     TODO: Move all to getGitConfig.
     """
+    del locations # TODO: Clean up remaining code which uses locations
     config = getGitConfig()
     tmpCp = configparser.ConfigParser()
     if not isinstance(config, dict):
@@ -363,7 +362,7 @@ def getFileContentAsJson(inputFile):
     """Get file content as json."""
     out = {}
     if os.path.isfile(inputFile):
-        with open(inputFile, 'r') as fd:
+        with open(inputFile, 'r', encoding='utf-8') as fd:
             try:
                 out = json.load(fd)
             except ValueError:
@@ -375,7 +374,7 @@ def getFileContentAsJson(inputFile):
 def getAllFileContent(inputFile):
     """Get all file content as a string."""
     if os.path.isfile(inputFile):
-        with open(inputFile, 'r') as fd:
+        with open(inputFile, 'r', encoding='utf-8') as fd:
             return fd.read()
     raise NotFoundError('File %s was not found on the system.' % inputFile)
 
@@ -385,7 +384,7 @@ def getUsername():
     return pwd.getpwuid(os.getuid())[0]
 
 
-class contentDB(object):
+class contentDB():
     """File Saver, loader class."""
     def __init__(self, logger=None, config=None):
         self.config = config
@@ -403,18 +402,17 @@ class contentDB(object):
         return str(newuuid4 + inputText)
 
     @staticmethod
-    def dumpFileContentAsJson(outFile, content, newHash=None):
+    def dumpFileContentAsJson(outFile, content):
         """Dump File content with locks."""
         tmpoutFile = outFile + '.tmp'
-        with open(tmpoutFile, 'w+') as fd:
+        with open(tmpoutFile, 'w+', encoding='utf-8') as fd:
             json.dump(content, fd)
         shutil.move(tmpoutFile, outFile)
         return True
 
     def saveContent(self, destFileName, outputDict):
         """Saves all content to a file."""
-        newHash = self.getHash("This-to-replace-with-date-and-Service-Name")
-        return self.dumpFileContentAsJson(destFileName, outputDict, newHash)
+        return self.dumpFileContentAsJson(destFileName, outputDict)
 
     @staticmethod
     def removeFile(fileLoc):
@@ -434,7 +432,7 @@ def delete(inputObj, delObj):
         except ValueError as ex:
             print('Delete object %s is not in inputObj %s list. Err: %s' % (delObj, tmpList, ex))
         return tmpList
-    elif isinstance(inputObj, dict):
+    if isinstance(inputObj, dict):
         tmpDict = copy.deepcopy(inputObj)
         try:
             del tmpDict[delObj]
@@ -469,7 +467,7 @@ def read_input_data(environ):
         if not outjson:
             errMsg = 'Failed to parse json input: %s, Err: %s.' % (body.getvalue(), ex)
             print(errMsg)
-            raise WrongInputError(errMsg)
+            raise WrongInputError(errMsg) from ex
     return outjson
 
 VALIDATION = {"addhost": [{"key": "hostname", "type": basestring},
@@ -488,7 +486,7 @@ VALIDATION = {"addhost": [{"key": "hostname", "type": basestring},
 
 def generateHash(inText):
     """Generate unique using uuid."""
-    return str(uuid.uuid1())
+    return str(uuid.uuid1(len(inText)))
 
 
 def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):

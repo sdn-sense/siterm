@@ -38,18 +38,17 @@ from DTNRMLibs.MainUtilities import getVal
 
 class frontendDeltaModels():
     """Delta Actions through Frontend interface."""
-    def __init__(self, logger, config=None):
+    def __init__(self, logger, config=None, dbI=None):
         if config:
             self.config = config
         else:
             self.config = getConfig()
         self.logger = logger
         self.policer = {}
-        self.dbI = getDBConn('REST-DELTA', self)
-        self.config = getConfig()
-        if config:
-            self.config = config
-        self.logger = logger
+        if dbI:
+            self.dbI = dbI
+        else:
+            self.dbI = getDBConn('REST-DELTA', self)
         self.policer = {}
         for sitename in self.config.get('general', 'sites').split(','):
             policer = polS.PolicyService(config, logger, sitename)
