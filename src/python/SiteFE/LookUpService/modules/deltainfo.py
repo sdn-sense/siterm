@@ -1,3 +1,15 @@
+#!/usr/bin/env python3
+"""
+    Add/Reduce deltas from MRML
+
+    TODO: Rewrite from current state and not add deltas itself;
+
+
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/12/01
+"""
 from rdflib import Graph
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow

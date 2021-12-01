@@ -1,10 +1,21 @@
+#!/usr/bin/env python3
+"""
+    RDF Helper, prefixes, add to model.
+
+
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/12/01
+"""
+import configparser
 from rdflib import URIRef, Literal
 
 class RDFHelper():
     """This generates all known default prefixes."""
     # pylint: disable=E1101,W0201
 
-    def getSavedPrefixes(self):
+    def getSavedPrefixes(self, additionalhosts=None):
         """Get Saved prefixes from a configuration file."""
         prefixes = {}
         for key in ['mrs', 'nml', 'owl', 'rdf', 'xml', 'xsd', 'rdfs', 'schema', 'sd']:
@@ -13,6 +24,19 @@ class RDFHelper():
                                    self.config.get(self.sitename, 'domain'),
                                    self.config.get(self.sitename, 'year'))
         prefixes['site'] = prefixSite
+        for switchName in self.config.get(self.sitename, 'switch').split(','):
+            for key in ['vsw', 'rst']:
+                try:
+                    prefixes.setdefault(key, {})
+                    tKey = self.config.get(switchName, key)
+                    prefixes[key][switchName] = "%s:service+%s:%s" % (prefixes['site'], key, tKey)
+                    # This is to be confirmed once we check the L3 request. TODO
+                    #if additionalhosts:
+                    #    for host in additionalhosts:
+                    #        prefixes[key][host] = "%s:service+%s:%s" % (prefixes['site'], key, host)
+                except configparser.NoOptionError:
+                    self.logger.debug('ERROR: %s parameter is not defined for %s.', key, switchName)
+                    continue
         self.prefixes = prefixes
 
     def genUriRef(self, prefix=None, add=None, custom=None):

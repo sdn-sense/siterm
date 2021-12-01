@@ -422,6 +422,16 @@ class contentDB():
             return True
         return False
 
+    def moveFile(self, sourcefile, destdir):
+        """ Move file from sourcefile to dest dir """
+        if not os.path.isfile(sourcefile):
+            raise Exception('File %s does not exist' % sourcefile)
+        if sourcefile.startswith(destdir):
+            # We dont want to move if already in dest dir
+            return sourcefile
+        destFile = os.path.join(destdir, self.getHash('.json'))
+        shutil.move(sourcefile, destFile)
+        return destFile
 
 def delete(inputObj, delObj):
     """Delete function which covers exceptions."""

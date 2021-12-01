@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+"""
+    Add Switch Info to MRML
+
+
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/12/01
+"""
+
 import configparser
 
 class SwitchInfo():

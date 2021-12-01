@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+"""
+    Add Node Information to MRML
+
+
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/12/01
+"""
 import configparser
 from DTNRMLibs.MainUtilities import evaldict
 
@@ -200,7 +210,7 @@ class NodeInfo():
                                self.genUriRef('site', "%s:%s" % (newuri, 'bandwidthService'))))
             self.newGraph.add((self.genUriRef('site', newuri),
                                self.genUriRef('nml', 'isAlias'),
-                               self.genUriRef('site', ":%s:%s:+" % (switchName, switchPort))))
+                               self.genUriRef('site', ":%s:%s" % (switchName, switchPort))))
             # BANDWIDTH Service for INTERFACE
             # ==========================================================================================
             bws = "%s:%s" % (newuri, 'bandwidthService')
@@ -282,10 +292,6 @@ class NodeInfo():
             self.newGraph.add((self.genUriRef('site', newuri),
                                self.genUriRef('rdf', 'type'),
                                self.genUriRef('nml', 'BidirectionalPort')))
-            # Add isAlias
-            self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
-                               self.genUriRef('nml', 'isAlias'),
-                               self.genUriRef('site', ":%s:%s" % (switchName, switchPort))))
             # =====================================================================
             # Add most of the agent configuration to MRML
             # =====================================================================

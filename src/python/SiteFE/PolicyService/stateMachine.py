@@ -166,12 +166,6 @@ class StateMachine():
                  'modadd': str(delta['modadd']),
                  'connectionid': str(delta['ConnID']),
                  'error': '' if 'Error' not in list(delta.keys()) else str(delta['Error'])}
-        if dbOut['deltat'] == 'addition':
-            checkConflicts(dbObj, dbOut)
-        # SQL DB Requires this to be string, not dictionary.
-        dbOut['addition'] = str(dbOut['addition'])
-        # TODO: In future, we should also check modify and that modification
-        # does not exceed allocation times. If it does - do not allow modify.
         dbObj.insert('deltas', [dbOut])
         self.connMgr.accepted(dbObj, dbOut)
         dbOut['state'] = delta['State']
@@ -200,6 +194,8 @@ class StateMachine():
     def committing(self, dbObj):
         """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committing']]):
+            checkConflicts(dbObj, delta)
+            # TODO: Check for any conflicts.
             self._stateChangerDelta(dbObj, 'committed', **delta)
             self._modelstatechanger(dbObj, 'add', **delta)
             self.connMgr.committed(dbObj, delta)

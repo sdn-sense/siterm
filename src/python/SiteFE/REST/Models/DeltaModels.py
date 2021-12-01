@@ -18,7 +18,7 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
-from __future__ import print_function
+import json
 from tempfile import NamedTemporaryFile
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
@@ -90,12 +90,11 @@ class frontendDeltaModels():
                                             ('Location', outDict['href'])])
             return outDict
         kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
-        if 'Error' in list(out.keys()):
-            errMsg = ""
-            for key in ['errorNo', 'errorType', 'errMsg']:
-                if key in list(out['Error'].keys()):
-                    errMsg += " %s: %s" % (key, out['Error'][key])
-        return getCustomOutMsg(errMsg=errMsg, exitCode=500)
+        if 'Error' not in list(out.keys()):
+            out = "Unknown Error. Dump all out content %s" % json.dumps(out)
+        else:
+            out = json.dumps(out)
+        return getCustomOutMsg(errMsg=out, exitCode=500)
 
     def getdelta(self, deltaID=None, **kwargs):
         """Get delta from database."""
