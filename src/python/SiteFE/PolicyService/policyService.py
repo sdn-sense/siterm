@@ -49,7 +49,7 @@ class PolicyService(RDFHelper):
         self.config = config
         self.siteDB = contentDB(logger=self.logger, config=self.config)
         self.dbI = getDBConn('PolicyService', self)
-        self.stateMachine = StateMachine(self.logger)
+        self.stateMachine = StateMachine(self.logger, self.config)
         self.hosts = getAllHosts(self.sitename, self.logger)
         for siteName in self.config.get('general', 'sites').split(','):
             workDir = os.path.join(self.config.get(siteName, 'privatedir'), "PolicyService/")
