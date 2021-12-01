@@ -53,8 +53,9 @@ class ConnectionMachine():
 
     Maps Deltas with 1 to N connections
     """
-    def __init__(self, logger):
+    def __init__(self, logger, config):
         self.logger = logger
+        self.config = config
 
     @staticmethod
     def accepted(dbObj, delta):
@@ -109,10 +110,11 @@ class ConnectionMachine():
 
 class StateMachine():
     """State machine for Frontend and policy service."""
-    def __init__(self, logger):
+    def __init__(self, logger, config):
         self.logger = logger
+        self.config = config
         self.limit = 100
-        self.connMgr = ConnectionMachine(logger)
+        self.connMgr = ConnectionMachine(logger, config)
 
     def _stateChangerDelta(self, dbObj, newState, **kwargs):
         """Delta State change."""

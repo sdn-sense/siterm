@@ -53,7 +53,7 @@ class frontendDeltaModels():
         for sitename in self.config.get('general', 'sites').split(','):
             policer = polS.PolicyService(config, logger, sitename)
             self.policer[sitename] = policer
-        self.stateM = stateM.StateMachine(self.logger)
+        self.stateM = stateM.StateMachine(self.logger, self.config)
         self.siteDB = contentDB(logger=self.logger, config=self.config)
 
     def addNewDelta(self, uploadContent, environ, **kwargs):

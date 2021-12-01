@@ -26,56 +26,54 @@ from DTNRMLibs.CustomExceptions import DeltaKeyMissing
 from DTNRMLibs.CustomExceptions import BadRequestError
 
 
+def _checksvc(svc, activeDeltas):
+    if svc not in ['vsw', 'rst']:
+        raise Exception
+    if svc not in activeDeltas:
+        return True
+    return False
+
+def _checkTime(inVals, activeDeltas):
+    print(inVals, activeDeltas)
+    return
+
+def _checkIP(inVals, activeDeltas):
+    print(inVals, activeDeltas)
+    return
+
+def _checkService(inVals, activeDeltas):
+    print(inVals, activeDeltas)
+    return
+
+def _checkLabel(inVals, activeDeltas):
+    print(inVals, activeDeltas)
+    return
+
 def checkConflicts(dbObj, delta):
     """Check conflicting resources and not allow them"""
     delta['addition'] = evaldict(delta['addition'])
-    for connDelta in delta['addition']:
-        deltaIN = getdeltaInfo(connDelta, delta)
-        checkNewDelta(deltaIN)
-        for state in ['committing', 'committed', 'activating', 'activated']:
-            for deltat in ['addition', 'modify']:
-                for dbdelta in dbObj.get('deltas', search=[['state', state], ['deltat', deltat]]):
-                    print(dbdelta)
-                    dbdelta['addition'] = evaldict(dbdelta['addition'])
-                    for connDelta1 in dbdelta['addition']:
-                        deltaInDB = getdeltaInfo(connDelta1, delta)
-                        compareTwoDeltaTimes(deltaInDB, deltaIN)
-
-
-def checkNewDelta(deltaIn):
-    """Check if new delta can be provisioned"""
-    # We check only timing is ok here. All other cases are checked
-    # by deltas comparison (vlan, host, timings)
-    if getUTCnow() >= deltaIn['times'][1]:
-        raise BadRequestError('New delta endtime is in the past. Nothing to configure.')
-
-
-def getdeltaInfo(deltaAd, delta):
-    """Get Delta Info (timestart, timeend, vlan, hostname) for comparison."""
-    out = {'times': [], 'hosts': {}, 'state': '', 'uid': ''}
-    print(deltaAd)
-    out['state'] = delta['state']
-    out['uid'] = delta['uid']
-    out['conID'] = deltaAd['connectionID']
-    if 'timestart' in deltaAd.keys():
-        out['times'].append(deltaAd['timestart'])
-    else:
-        out['times'].append(0)
-    if 'timeend' in deltaAd.keys():
-        out['times'].append(deltaAd['timestart'])
-    else:
-        # As much as we can Jan 19, 2038
-        out['times'].append(2147483648)
-    # Add all hosts, any overlapping host + vlan - will do timing check.
-    for hostname, hostdict in deltaAd['hosts'].items():
-        # Catch KeyError: 'vlan' - this can happen multiple endpoints submit same time
-        # And delta is not full as parts are inside the model.
-        try:
-            out['hosts'][hostname] = hostdict['vlan']
-        except KeyError:
-            raise DeltaKeyMissing('New delta request does not have vlan information. Failing')
-    return out
-
+    activeDeltas = dbObj.get('activeDeltas')
+    # TODO: Check if it is not empty. if empty, return
+    if not activeDeltas:
+        return
+    for svc, svcitems in delta['addition'].items():
+        if _checksvc(svc, activeDeltas):
+            continue
+        for connID, connIDitems in svcitems.items():
+            for hostname, vals in connIDitems.items():
+                if hostname == 'existsDuring':
+                    _checkTime(vals, activeDeltas)
+                    # Pass it to timecheck
+                if isinstance(vals, dict):
+                    for intf, intfDict in vals.items():
+                        if 'hasNetworkAddress' in intfDict:
+                            _checkIP(intfDict['hasNetworkAddress'], activeDeltas)
+                        if 'hasService' in intfDict:
+                            _checkService(intfDict['hasService'], activeDeltas)
+                        if 'hasLabel' in intfDict:
+                            _checkLabel(intfDict['hasLabel'], activeDeltas)
+                        # TODO: This should also include later check for RST
+                        # And for routing information. Need to check if all info is good.
 
 def overlap_count(times1, times2):
     """Find out if times overlap."""
