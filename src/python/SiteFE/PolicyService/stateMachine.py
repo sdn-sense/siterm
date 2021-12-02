@@ -252,6 +252,8 @@ class StateMachine():
                     action = 'insert'
                     activeDeltas = {'insertdate': int(getUTCnow()),
                                     'output': '{}'}
+                else:
+                    activeDeltas = activeDeltas[0]
                 activeDeltas['output'] = evaldict(activeDeltas['output'])
                 activeDeltas['updatedate'] = int(getUTCnow())
                 activeDeltas['output'].update(evaldict(delta['addition']))
@@ -260,6 +262,8 @@ class StateMachine():
                     dbObj.insert('activeDeltas', [activeDeltas])
                 elif action == 'update':
                     dbObj.update('activeDeltas', [activeDeltas])
+                self._stateChangerDelta(dbObj, 'activated', **delta)
+                # Set delta state to ACTIVATED
             #for actionKey in ['reduction', 'addition']:
                 # TODO: Hosts should be checked only for reduction!
                 # Because all endpoints take all activated and apply
