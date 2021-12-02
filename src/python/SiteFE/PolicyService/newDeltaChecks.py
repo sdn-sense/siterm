@@ -49,6 +49,10 @@ def _checkLabel(inVals, activeDeltas):
     print(inVals, activeDeltas)
     return
 
+def _checkHosts(inVals, activeDeltas):
+    print(inVals, activeDeltas)
+    return
+
 def checkConflicts(dbObj, delta):
     """Check conflicting resources and not allow them"""
     delta['addition'] = evaldict(delta['addition'])
@@ -65,6 +69,8 @@ def checkConflicts(dbObj, delta):
                     _checkTime(vals, activeDeltas)
                     # Pass it to timecheck
                 if isinstance(vals, dict):
+                    # Check that hostname exists.
+                    _checkHosts(hostname, activeDeltas)
                     for intf, intfDict in vals.items():
                         if 'hasNetworkAddress' in intfDict:
                             _checkIP(intfDict['hasNetworkAddress'], activeDeltas)

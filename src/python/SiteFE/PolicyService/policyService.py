@@ -283,9 +283,7 @@ class PolicyService(RDFHelper):
                     ['activating', self.stateMachine.activating],
                     ['activated', self.stateMachine.activated],
                     ['remove', self.stateMachine.remove],
-                    ['removing', self.stateMachine.removing],
-                    ['cancel', self.stateMachine.cancel],
-                    ['cancelConn', self.stateMachine.cancelledConnections]]:
+                    ['failed', self.stateMachine.failed]]
             self.logger.info("Starting check on %s deltas" % job[0])
             job[1](dbobj)
 
