@@ -60,14 +60,14 @@ class PolicyService(RDFHelper):
         SetDefault for out hostname, port, server, interface and use
         in output dictionary.
         """
-        tmp = [_f for _f in inport[len(self.prefixes['site']):].split(':') if _f]
+        tmp = [_f for _f in str(inport)[len(self.prefixes['site']):].split(':') if _f]
         for item in tmp:
             if not len(item.split('+')) > 1:
                 out = out.setdefault(item, {})
         return out
 
 
-    def queryGraph(self, graphIn, sub=None, pre=None, obj=None, search=None):
+    def queryGraph(self, graphIn, sub=None, pre=None, obj=None, search=None, allowMultiple=False):
         """Search inside the graph based on provided parameters."""
         foundItems = []
         self.logger.debug('Searching for subject: %s predica: %s object: %s searchLine: %s' % (sub, pre, obj, search))
@@ -87,6 +87,9 @@ class PolicyService(RDFHelper):
                 self.logger.debug("o(object ) %s" % oIn)
                 self.logger.debug("-" * 50)
                 foundItems.append(oIn)
+        if not allowMultiple:
+            if len(foundItems) > 1:
+                raise Exception('Search returned multiple entries. Not Supported. Out: %s' % foundItems)
         return foundItems
 
     def getTimeScheduling(self, gIn, connectionID, connOut):
@@ -96,8 +99,7 @@ class PolicyService(RDFHelper):
         """
         out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (self.prefixes['nml'], 'existsDuring')))
         for timeline in out:
-            connOut.setdefault('existsDuring', [])
-            times = {}
+            times = connOut.setdefault('_params', {}).setdefault('existsDuring', {})
             for timev in ['end', 'start']:
                 tout = self.queryGraph(gIn, timeline, search=URIRef('%s%s' % (self.prefixes['nml'], timev)))
                 temptime = None
@@ -108,7 +110,6 @@ class PolicyService(RDFHelper):
                 except Exception:
                     continue
                 times[timev] = temptime
-            connOut['existsDuring'].append(times)
 
     def parseDeltaRequest(self, inFileName):
         """Parse delta request to json."""
@@ -128,6 +129,8 @@ class PolicyService(RDFHelper):
                 elif key == 'rst':
                     self.logger.info('Parsing L3 information from delta')
                     self.parsel3Request(gIn, out)
+        import pprint
+        pprint.pprint(out)
         return out
 
 
@@ -171,69 +174,68 @@ class PolicyService(RDFHelper):
         #         self.logger.debug('L3 Parse output: %s', outall)
         # return returnout
 
-    def _hasTag(self, gIn, bidPort, returnout):
-        print(self.prefixes)
-        out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['mrs'], 'tag')))
-        if out:
-            returnout['tag'] = str(out[0])
+    def _hasTags(self, gIn, bidPort, returnout):
+        scanVals = returnout.setdefault('_params', {})
+        for tag, pref in {'tag': 'mrs', 'belongsTo': 'nml'}.items():
+            out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes[pref], tag)))
+            if out:
+                scanVals[tag] = str(out[0])
+
 
     def _hasLabel(self, gIn, bidPort, returnout):
         returnout = self.intOut(bidPort, returnout)
-        self._hasTag(gIn, bidPort, returnout)
+        self._hasTags(gIn, bidPort, returnout)
         out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['nml'], 'hasLabel')))
-        if not out:
-            return
-        returnout.setdefault('hasLabel', [])
         for item in out:
-            scanVals = {}
+            scanVals = returnout.setdefault('hasLabel', {})
             out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['nml'], 'labeltype')))
             if out:
                 scanVals['labeltype'] = out[0][len(self.prefixes['site']):]
             out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['nml'], 'value')))
             if out:
                 scanVals['value'] = int(out[0])
-            returnout['hasLabel'].append(scanVals)
 
     def _hasService(self, gIn, bidPort, returnout):
         returnout = self.intOut(bidPort, returnout)
-        self._hasTag(gIn, bidPort, returnout)
+        self._hasTags(gIn, bidPort, returnout)
         out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['nml'], 'hasService')))
-        returnout.setdefault('hasService', [])
         for item in out:
-            scanVals = {}
-            for key in ['availableCapacity', 'granularity', 'maximumCapacity', 'priority', 'reservableCapacity', 'type', 'unit']:
+            scanVals = returnout.setdefault('hasService', {})
+            for key in ['availableCapacity', 'granularity', 'maximumCapacity',
+                        'priority', 'reservableCapacity', 'type', 'unit']:
                 out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], key)))
-                print(out)
                 if out:
                     try:
                         scanVals[key] = int(out[0])
                     except ValueError:
                         scanVals[key] = str(out[0])
-            returnout['hasService'].append(scanVals)
 
 
     def _hasNetwork(self, gIn, bidPort, returnout):
         returnout = self.intOut(bidPort, returnout)
-        self._hasTag(gIn, bidPort, returnout)
+        self._hasTags(gIn, bidPort, returnout)
         out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['mrs'], 'hasNetworkAddress')))
         for item in out:
-            returnout.setdefault('hasNetworkAddress', [])
-            scanVals = {}
-            out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'type')))
+            scanVals = returnout.setdefault('hasNetworkAddress', {})
+            out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'type')), allowMultiple=True)
             if out:
-                scanVals['type'] = [str(item) for item in out]
+                scanVals['type'] = "|".join([str(item) for item in out])
             out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'value')))
             if out:
                 scanVals['value'] = str(out[0])
-            returnout['hasNetworkAddress'].append(scanVals)
+       
 
+    def _recordSubnet(self, subnet, returnout):
+        returnout = self.intOut(subnet, returnout.setdefault('SubnetMapping', {}))
+        returnout.setdefault('providesSubnet', {})
+        returnout['providesSubnet'][str(subnet)] = ""
 
     def parsePorts(self, bidPorts, gIn, connectionID):
         """ Get all ports for any connection and scan all of them """
         tmpPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (self.prefixes['nml'],
-                                                                              'hasBidirectionalPort')))
+                                                                              'hasBidirectionalPort')), allowMultiple=True)
         tmpPorts += self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (self.prefixes['nml'],
-                                                                               'isAlias')))
+                                                                               'isAlias')), allowMultiple=True)
         for port in bidPorts:
             if port in tmpPorts:
                 tmpPorts.remove(port)
@@ -247,14 +249,14 @@ class PolicyService(RDFHelper):
         out = self.queryGraph(gIn, URIRef(self.prefixes['main']), search=URIRef('%s%s' % (self.prefixes['mrs'],
                                                                                           'providesSubnet')))
         for connectionID in out:
+            self._recordSubnet(connectionID, returnout)
             returnout.setdefault('vsw', {})
             connOut = returnout['vsw'].setdefault(str(connectionID), {})
-            connOut['connectionID'] = str(connectionID)
-            self._hasTag(gIn, connectionID, connOut)
+            self._hasTags(gIn, connectionID, connOut)
             self.logger.info('This is our connection ID: %s' % connectionID)
             out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (self.prefixes['nml'], 'labelSwapping')))
             if out:
-                connOut['labelSwapping'] = str(out[0])
+                connOut.setdefault('_params', {}).setdefault('labelSwapping', str(out[0]))
 
             # Get All Ports
             bidPorts = []
@@ -264,7 +266,7 @@ class PolicyService(RDFHelper):
             # =======================================================
             for bidPort in bidPorts:
                 self.intOut(bidPort, connOut)
-                self._hasTag(gIn, bidPort, connOut)
+                self._hasTags(gIn, bidPort, connOut)
                 bidPorts += self.parsePorts(bidPorts, gIn, bidPort)
                 self._hasLabel(gIn, bidPort, connOut)
                 self._hasService(gIn, bidPort, connOut)
@@ -310,11 +312,13 @@ class PolicyService(RDFHelper):
                     tmpFile.close()
                     outputDict[key] = self.parseDeltaRequest(tmpFile.name)
                     os.unlink(tmpFile.name)
-        except (IOError, KeyError, AttributeError, IndentationError, ValueError,
-                BadSyntax, HostNotFound, UnrecognizedDeltaOption) as ex:
+        #except (IOError, KeyError, AttributeError, IndentationError, ValueError,
+        #        BadSyntax, HostNotFound, UnrecognizedDeltaOption) as ex:
+        except IOError as ex:
             outputDict = getError(ex)
         dbobj = getVal(self.dbI, sitename=self.sitename)
-        if 'errorType' in list(outputDict.keys()):
+        if 'errorType' in outputDict or \
+        ('ParsedDelta' in outputDict and 'errorType' in outputDict['ParsedDelta']):
             toDict["State"] = "failed"
             toDict["Error"] = outputDict
             toDict['ParsedDelta'] = {'addition': '', 'reduction': ''}
