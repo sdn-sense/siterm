@@ -314,6 +314,10 @@ class StateMachine():
             #    self._stateChangerDelta(dbObj, 'cancel', **delta)
             #    self.modelstatecancel(dbObj, **delta)
 
+    def removing(self, dbObj):
+        self.logger.info('Removal call')
+        return
+
     def remove(self, dbObj):
         """Check on all remove state deltas."""
         # Remove fully from database

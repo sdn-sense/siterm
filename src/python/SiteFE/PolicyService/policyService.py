@@ -282,8 +282,7 @@ class PolicyService(RDFHelper):
                     ['committed', self.stateMachine.committed],
                     ['activating', self.stateMachine.activating],
                     ['activated', self.stateMachine.activated],
-                    ['remove', self.stateMachine.remove],
-                    ['failed', self.stateMachine.failed]]
+                    ['removal', self.stateMachine.removing]]:
             self.logger.info("Starting check on %s deltas" % job[0])
             job[1](dbobj)
 
