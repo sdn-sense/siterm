@@ -27,57 +27,103 @@ from DTNRMLibs.CustomExceptions import BadRequestError
 
 
 def _checksvc(svc, activeDeltas):
-    if svc not in ['vsw', 'rst']:
-        raise Exception
+    if svc not in ['vsw', 'rst', 'SubnetMapping']:
+        raise BadRequestError('Service does not exist. Requested %s' % svc)
     if svc not in activeDeltas:
         return True
     return False
 
 def _checkTime(inVals, activeDeltas):
-    print(inVals, activeDeltas)
+    # Need to load all times from active deltas in advance
+    # If we have many checks, it will be faster if all active
+    # delta times are preloaded
     return
 
 def _checkIP(inVals, activeDeltas):
-    print(inVals, activeDeltas)
+    # Need to check if IP is valid and from our supported ranges
+    # Seems Orchestrator ignores this check
+    if 'hasNetworkAddress' in intfDict:
+        return
     return
+#                                    'hasNetworkAddress': {'type': 'unverifiable|ipv4-address',
+#                                                          'value': '10.251.85.2/24'},
+
 
 def _checkService(inVals, activeDeltas):
-    print(inVals, activeDeltas)
+    if 'hasService' in intfDict:
+        return
     return
+#'hasService': {'availableCapacity': 1000000000,
+#                                                    'granularity': 1000000,
+#                                                    'maximumCapacity': 1000000000,
+#                                                    'priority': 0,
+#                                                    'reservableCapacity': 1000000000,
+#                                                    'type': 'guaranteedCapped',
+#                                                    'unit': 'bps'}
+
+
 
 def _checkLabel(inVals, activeDeltas):
-    print(inVals, activeDeltas)
+    # Need to check if vlan in supported.
+    # Also if addition - check that it does not overlap
+    # In case modify - ensure it exists and preconfigured
+    if  'hasLabel' in intfDict:
+        return
+    return
+#'hasLabel': {'labeltype': 'ethernet#vlan',
+#             'value': 1791}
+
+
+
+def _checkHosts(hostname, activeDeltas):
+    # Check if hostname is known. If not known
+    # Delta will not be activated
     return
 
-def _checkHosts(inVals, activeDeltas):
-    print(inVals, activeDeltas)
+def _checkInterface(hostname, interface, activeDeltas):
+    # Check if hostname has that interface and
+    # Orchestrator is allowed to control that.
     return
+
+def _checkParams(inVals, activeDeltas):
+    # Things to check:
+    if 'existsDuring' in inVals:
+        _checkTime(inVals['existsDuring'], activeDeltas)
+    # labelSwapping - check with config param if supported
+    return
+#{'_params': {'belongsTo': 'urn:ogf:network:ultralight.org:2013:service+vsw:dellos9_s0:conn+ccdc7cb5-025c-428e-96d2-b9ba51def912:resource+links-Connection_1:vlan+1791',
+#             'existsDuring': {'end': 1639433000, 'start': 1639346600},
+#             'labelSwapping': 'false',
+#             'tag': 'urn:ogf:network:service+ccdc7cb5-025c-428e-96d2-b9ba51def912:resource+links::Connection_1'}
+
 
 def checkConflicts(dbObj, delta):
     """Check conflicting resources and not allow them"""
     delta['addition'] = evaldict(delta['addition'])
     activeDeltas = dbObj.get('activeDeltas')
-    # TODO: Check if it is not empty. if empty, return
+    print(activeDeltas)
     if not activeDeltas:
         return
     for svc, svcitems in delta['addition'].items():
         if _checksvc(svc, activeDeltas):
             continue
+        if svc == 'SubnetMapping':
+            continue
         for connID, connIDitems in svcitems.items():
+            import pprint
+            print(connID)
+            pprint.pprint(connIDitems)
             for hostname, vals in connIDitems.items():
-                if hostname == 'existsDuring':
-                    _checkTime(vals, activeDeltas)
+                if hostname == '_params':
+                    _checkParams(vals, activeDeltas)
                     # Pass it to timecheck
                 if isinstance(vals, dict):
                     # Check that hostname exists.
                     _checkHosts(hostname, activeDeltas)
                     for intf, intfDict in vals.items():
-                        if 'hasNetworkAddress' in intfDict:
-                            _checkIP(intfDict['hasNetworkAddress'], activeDeltas)
-                        if 'hasService' in intfDict:
-                            _checkService(intfDict['hasService'], activeDeltas)
-                        if 'hasLabel' in intfDict:
-                            _checkLabel(intfDict['hasLabel'], activeDeltas)
+                        _checkIP(intfDict, activeDeltas)
+                        _checkService(intfDict, activeDeltas)
+                        _checkLabel(intfDict, activeDeltas)
                         # TODO: This should also include later check for RST
                         # And for routing information. Need to check if all info is good.
 

@@ -85,10 +85,11 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
                 self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
-            self.newGraph.add((self.genUriRef('site'),
+            svcService = ':%s:service+vsw:%s' % (switchName, vsw)
+            self.newGraph.add((self.genUriRef('site', ':%s' % switchName),
                                self.genUriRef('nml', 'hasService'),
-                               self.genUriRef('site', ':service+vsw:%s' % vsw)))
-            self.newGraph.add((self.genUriRef('site', ':service+vsw:%s' % vsw),
+                               self.genUriRef('site', svcService)))
+            self.newGraph.add((self.genUriRef('site', svcService),
                                self.genUriRef('rdf', 'type'),
                                self.genUriRef('nml', 'SwitchingService')))
 
@@ -98,11 +99,11 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
                 labelswap = self.config.get(switchName, 'labelswapping')
             except configparser.NoOptionError:
                 self.logger.debug('Labelswapping parameter is not defined. By default it is set to False.')
-            self.newGraph.add((self.genUriRef('site', ':service+vsw:%s' % vsw),
+            self.newGraph.add((self.genUriRef('site', svcService),
                                self.genUriRef('nml', 'labelSwapping'),
                                self.genLiteral(labelswap)))
             # Add base encoding for service
-            self.newGraph.add((self.genUriRef('site', ':service+vsw:%s' % vsw),
+            self.newGraph.add((self.genUriRef('site', svcService),
                                self.genUriRef('nml', 'encoding'),
                                self.genUriRef('schema')))
 
@@ -151,9 +152,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         hashNum = generateHash(self.newGraph.serialize(format='turtle'))
 
         # Append all deltas to the model
-        self.appendDeltas(saveName)
-        if self.dbI.get('models', limit=1, search=[['uid', hashNum]]):
-            raise Exception('hashNum %s is already in database...' % hashNum)
+        # TODO. Append Deltas
+        #self.appendDeltas(saveName)
+        #if self.dbI.get('models', limit=1, search=[['uid', hashNum]]):
+        #    raise Exception('hashNum %s is already in database...' % hashNum)
 
         self.logger.info('Checking if new model is different from previous')
         modelsEqual, modelinDB = self.checkForModelDiff(saveName)

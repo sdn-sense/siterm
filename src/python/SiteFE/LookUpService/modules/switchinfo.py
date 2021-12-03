@@ -13,16 +13,18 @@ import configparser
 
 def generateVal(cls, inval, inkey):
     if isinstance(inval, dict) and inkey == 'ipv4':
-        if 'masklen' in inval and 'address' in inval:
-            return "%s/%s" % (inval['address'], inval['masklen'])
+        return _genIPv4(cls, inval, inkey)
+        #if 'masklen' in inval and 'address' in inval:
+        #    return "%s/%s" % (inval['address'], inval['masklen'])
     elif isinstance(inval, dict) and inkey == 'ipv6':
-        subnet = 128
-        if 'subnet' in inval:
-            subnet = inval['subnet'].split('/')[-1]
-        if 'address' in inval:
-            return "%s/%s" % (inval['address'], subnet)
-    elif isinstance(inval, dict):
-        cls.logger.info('Out is dictionary, but vals unknown. Return as str %s' % inval)
+        return _genIPv6(cls, inval, inkey)
+        #subnet = 128
+        #if 'subnet' in inval:
+        #    subnet = inval['subnet'].split('/')[-1]
+        #if 'address' in inval:
+        #    return "%s/%s" % (inval['address'], subnet)
+    if isinstance(inval, (dict, list)):
+        cls.logger.info('Out is dictionary/list, but vals unknown. Return as str %s' % inval)
         return str(inval)
     if isinstance(inval, (int, float)):
         return inval
@@ -48,7 +50,7 @@ def _genIPv4(cls, inval, inkey):
             return "%s_%s" % (inval['address'], subnet)
         cls.logger.debug('One of params in Dict not available. Upredictable output')
     if isinstance(inval, list):
-        tmpKeys = [{'key': inkey, 'subkey': generateKey(cls, val, inkey), 'val': val} for val in inval]
+        tmpKeys = [{'key': inkey, 'subkey': _genIPv4(cls, val, inkey), 'val': val} for val in inval]
         return tmpKeys
     cls.logger.debug('No IPv4 value. Return empty String. This might break things. Input: %s %s' % (inval, inkey))
     return ''
@@ -67,7 +69,7 @@ def _genIPv6(cls, inval, inkey):
             return "%s_%s" % (inval['address'].replace(':', '_').replace('/', '-'), subnet)
         cls.logger.debug('One of params in Dict not available. Upredictable output')
     if isinstance(inval, list):
-        tmpKeys = [{'key': inkey, 'subkey': generateKey(cls, val, inkey), 'val': val} for val in inval]
+        tmpKeys = [{'key': inkey, 'subkey': _genIPv6(cls, val, inkey), 'val': val} for val in inval]
         return tmpKeys
     cls.logger.debug('No IPv4 value. Return empty String. This might break things. Input: %s %s' % (inval, inkey))
     return ''
@@ -82,9 +84,19 @@ def generateKey(cls, inval, inkey):
     if isinstance(inval, int):
         return str(inval)
     if inkey == 'ipv4':
+        if not isinstance(inval, list):
+            # Diff switches return differently. Make it always list in case dict
+            # e.g. Dell OS 9 returns dict if 1 IP set, List if 2
+            # Arista EOS always returns list.
+            inval = [inval]
         return _genIPv4(cls, inval, inkey)
     if inkey == 'ipv6':
-        return _genIPv4(cls, inval, inkey)
+        if not isinstance(inval, list):
+            # Diff switches return differently. Make it always list in case dict
+            # e.g. Dell OS 9 returns dict if 1 IP set, List if 2
+            # Arista EOS always returns list.
+            inval = [inval]
+        return _genIPv6(cls, inval, inkey)
     cls.logger.debug('Generate Keys return empty. Unexpected. Input: %s %s' % (inval, inkey))
     return ""
 
@@ -151,24 +163,42 @@ class SwitchInfo():
                 else:
                     self._addVals(key, subkey, val, newuri)
 
-    def _addPort(self, uri, vsw, vlanuri=None, addToSite=True):
-        if addToSite:
-            self.newGraph.add((self.genUriRef('site'),
-                               self.genUriRef('nml', 'hasBidirectionalPort'),
-                               self.genUriRef('site', uri)))
-            self.newGraph.add((self.genUriRef('site', ':service+vsw:%s' % vsw),
-                               self.genUriRef('nml', 'hasBidirectionalPort'),
-                               self.genUriRef('site', uri)))
-        self.newGraph.add((self.genUriRef('site', uri),
+
+    def _addNode(self, hostname):
+        self.newGraph.add((self.genUriRef('site'),
+                           self.genUriRef('nml', 'hasNode'),
+                           self.genUriRef('site', ":%s" % hostname)))
+        self.newGraph.add((self.genUriRef('site', ":%s" % hostname),
+                           self.genUriRef('nml', 'name'),
+                           self.genLiteral(hostname)))
+        self.newGraph.add((self.genUriRef('site', ":%s" % hostname),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('nml', 'Node')))
+
+    def _addPort(self, switchName, portName):
+        self._addNode(switchName)
+        self.newGraph.add((self.genUriRef('site', ":%s" % switchName),
+                           self.genUriRef('nml', 'hasBidirectionalPort'),
+                           self.genUriRef('site', ":%s:%s" % (switchName, portName))))
+        self.newGraph.add((self.genUriRef('site', ":%s:%s" % (switchName, portName)),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'BidirectionalPort')))
-        if vlanuri:
-            self.newGraph.add((self.genUriRef('site', uri),
-                               self.genUriRef('nml', 'hasBidirectionalPort'),
-                               self.genUriRef('site', vlanuri)))
-            self.newGraph.add((self.genUriRef('site', vlanuri),
-                               self.genUriRef('rdf', 'type'),
-                               self.genUriRef('nml', 'BidirectionalPort')))
+
+    def _addVswPort(self, switchName, portName, vsw):
+        self._addPort(switchName, portName)
+        self.newGraph.add((self.genUriRef('site', ':%s:service+vsw:%s' % (switchName, vsw)),
+                           self.genUriRef('nml', 'hasBidirectionalPort'),
+                           self.genUriRef('site', ":%s:%s" % (switchName, portName))))
+
+    def _addVlanPort(self, switchName, portName, vsw, vlan):
+        self._addPort(switchName, portName)
+        vlanuri = ":%s:%s:vlanport+%s" % (switchName, portName, vlan)
+        self.newGraph.add((self.genUriRef('site', ":%s:%s" % (switchName, portName)),
+                           self.genUriRef('nml', 'hasBidirectionalPort'),
+                           self.genUriRef('site', vlanuri)))
+        self.newGraph.add((self.genUriRef('site', vlanuri),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('nml', 'BidirectionalPort')))
 
 
     def _addSwitchPortInfo(self, key, switchInfo):
@@ -186,7 +216,7 @@ class SwitchInfo():
                 #else:
                 # This should come from the host itself. or we can add isAlias here.
                 newuri = ":%s:%s" % (switchName, portName)
-                self._addPort(newuri, vsw)
+                self._addVswPort(switchName, portName, vsw)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
 
     def _addSwitchVlanLabel(self, vlanuri, value):
@@ -221,16 +251,10 @@ class SwitchInfo():
                     # But for sure we dont want to add into model
                     del portSwitch['vlan_range']
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, vlanuri)
-# {'macaddress': '4c:76:25:e8:44:c2', 'lineprotocol': 'up', 'description': 'NDISE UCLA 211108',
-# 'duplex': None, 'mediatype': None, 'mtu': 9214, 'operstatus': 'up', 'bandwidth': 40000, 'ipv4': None,
-# 'type': None, 'tagged': ['fortyGigE_1-29-1', 'fortyGigE_1-30-1', 'hundredGigE_1-6', 'hundredGigE_1-7', 'hundredGigE_1-10',
-# 'hundredGigE_1-22', 'hundredGigE_1-23', 'hundredGigE_1-27', 'hundredGigE_1-31', 'hundredGigE_1-32', 'Port-channel_101',
-# 'Port-channel_102', 'Port-channel_111'], 'realportname': 'Vlan 2803', 'value': 2803, 'vlan_range': '1779-1799,3600-3619,3985-3989'}
                 if 'tagged' in portSwitch:
                     for taggedIntf in portSwitch['tagged']:
                         newuri = ":%s:%s" % (switchName, taggedIntf)
-                        self._addPort(newuri, vsw)
-                        self._addPort(newuri, vsw, vlanuri, False)
+                        self._addVlanPort(switchName, taggedIntf, vsw, portSwitch['value'])
                         self._addSwitchVlanLabel(vlanuri, portSwitch['value'])
                         #self._addIsAlias()
 

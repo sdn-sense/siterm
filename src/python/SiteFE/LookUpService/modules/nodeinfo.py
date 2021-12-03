@@ -309,7 +309,7 @@ class NodeInfo():
                         continue
                     # '2' is for ipv4 information
                     vlanName = vlanName.split('.')
-                    vlanuri = "%s:%s:vlanport+%s" % (nodeDict['hostname'], intfKey, vlanName[1])
+                    vlanuri = ":%s:%s:vlanport+%s" % (nodeDict['hostname'], intfKey, vlanName[1])
                     self.newGraph.add((self.genUriRef('site', vlanuri),
                                        self.genUriRef('rdf', 'type'),
                                        self.genUriRef('nml', 'BidirectionalPort')))

@@ -243,8 +243,6 @@ class StateMachine():
     def activating(self, dbObj):
         """Check on all deltas in state activating."""
         for delta in dbObj.get('deltas', search=[['state', 'activating']]):
-
-            delta['reduction'] = evaldict(delta['reduction'])
             if delta['deltat'] == 'addition':
                 activeDeltas = dbObj.get('activeDeltas')
                 action = 'update'
@@ -264,42 +262,34 @@ class StateMachine():
                     dbObj.update('activeDeltas', [activeDeltas])
                 self._stateChangerDelta(dbObj, 'activated', **delta)
                 # Set delta state to ACTIVATED
-            #for actionKey in ['reduction', 'addition']:
-                # TODO: Hosts should be checked only for reduction!
-                # Because all endpoints take all activated and apply
-                # Reduction also should remove from active config
-                # and leave new config without reduction
-                # So it is not adding it again
-                # if actionKey not in list(delta.keys()):
-                #     self.logger.info('This delta %s does not have yet actionKey %s defined.'
-                #                      % (delta['uid'], actionKey))
-                #     continue
-                # if not isinstance(delta[actionKey], list):
-                #     self.logger.info('This delta %s does not have yet actionKey defined.' % delta['uid'])
-                #     continue
-                # for connDelta in delta[actionKey]:
-                #     hostStates = {}
-                #     if 'hosts' not in list(connDelta.keys()):
-                #         self.logger.info('This delta %s does not have yet hosts defined.' % delta['uid'])
-                #         continue
-                #     for hostname in list(connDelta['hosts'].keys()):
-                #         host = dbObj.get('hoststates', search=[['deltaid', delta['uid']], ['hostname', hostname]])
-                #         if host:
-                #             hostStates[host[0]['state']] = hostname
-                #         else:
-                #             self._newhoststate(dbObj, **{'hostname': hostname,
-                #                                          'state': 'activating',
-                #                                          'deltaid': delta['uid']})
-                #             hostStates['unset'] = hostname
-                # self.logger.info('Delta %s host states are: %s' % (delta['uid'], hostStates))
+            # Because all endpoints take all activated and apply
+            # Reduction also should remove from active config
+            # and leave new config without reduction
+            # So it is not adding it again
+            if 'reduction' in delta and delta['reduction']:
+                hostStates = {}
+                for svc, svcitems in delta['reduction'].items():
+                    if svc == 'SubnetMapping':
+                        continue
+                    for connID, connIDitems in svcitems.items():
+                        for hostname, vals in connIDitems.items():
+                             host = dbObj.get('hoststates', search=[['deltaid', delta['uid']], ['hostname', hostname]])
+                             if host:
+                                 hostStates.setdefault(host[0]['state'], [])
+                                 hostStates[host[0]['state']].append(hostname)
+                             else:
+                                 self._newhoststate(dbObj, **{'hostname': hostname,
+                                                          'state': 'activating',
+                                                          'deltaid': delta['uid']})
+                                 hostStates.setdefault('unset', {})
+                                 hostStates['unset'].append(hostname)
+                self.logger.info('Delta reduction %s host states are: %s' % (delta['uid'], hostStates))
                 # if timeendcheck(delta, self.logger):
                 #     self._stateChangerDelta(dbObj, 'cancel', **delta)
                 #     self.modelstatecancel(dbObj, **delta)
-                # if list(hostStates.keys()) == ['active']:
-                #     self._stateChangerDelta(dbObj, 'activated', **delta)
-                #     self.connMgr.activated(dbObj, delta)
-                # elif 'failed' in list(hostStates.keys()):
-                #     self._stateChangerDelta(dbObj, 'failed', **delta)
+                if hostStates.keys() == ['active']:
+                     self._stateChangerDelta(dbObj, 'activated', **delta)
+                     self.connMgr.activated(dbObj, delta)
 
     def activated(self, dbObj):
         """Check on all activated state deltas."""
@@ -314,6 +304,7 @@ class StateMachine():
             # Addition
             self.logger.info('Activated check on delta %s' % delta)
             delta['addition'] = evaldict(delta['addition'])
+            checkConflicts(dbObj, delta)
             #if timeendcheck(delta, self.logger):
             #    self._stateChangerDelta(dbObj, 'cancel', **delta)
             #    self.modelstatecancel(dbObj, **delta)
