@@ -8,8 +8,13 @@ Authors:
 
 Date: 2021/12/01
 """
+# TODO: isAlias seems to be broken pointing to switch
+# TODO: interface and vlan IP address set in correct way (same as switches do)
+# TODO: vlans bidirectional on node? or only on Interface? I suspect only interface
+
 import configparser
 from DTNRMLibs.MainUtilities import evaldict
+from DTNRMLibs.FECalls import getAllHosts
 
 def ignoreInterface(intfKey, intfDict):
     """Check if ignore interface for putting it inside model."""
@@ -27,30 +32,35 @@ class NodeInfo():
     """ Module for Node Info add to MRML """
     # pylint: disable=E1101,W0201
 
+    def addNodeInfo(self):
+        jOut = getAllHosts(self.sitename, self.logger)
+        for _, nodeDict in list(jOut.items()):
+            nodeDict['hostinfo'] = evaldict(nodeDict['hostinfo'])
+            # ==================================================================================
+            # General Node Information
+            # ==================================================================================
+            self.defineNodeInformation(nodeDict)
+            # ==================================================================================
+            # Define Host Information and all it's interfaces.
+            # ==================================================================================
+            self.defineHostInfo(nodeDict, nodeDict['hostinfo'])
+            # ==================================================================================
+            # Define Routing Service information
+            # ==================================================================================
+            self.defineLayer3MRML(nodeDict, nodeDict['hostinfo'])
+
     def defineNodeInformation(self, nodeDict):
         """Define node information."""
         self.hosts[nodeDict['hostname']] = []
-        self.newGraph.add((self.genUriRef('site'),
-                           self.genUriRef('nml', 'hasNode'),
-                           self.genUriRef('site', ":%s" % nodeDict['hostname'])))
+        hosturi = self._addNode(nodeDict['hostname'])
         # Node General description
-        self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
-                           self.genUriRef('nml', 'name'),
-                           self.genLiteral(nodeDict['hostname'])))
-        self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('nml', 'Node')))
-        self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
-                           self.genUriRef('nml', 'insertTime'),
-                           self.genLiteral(nodeDict['insertdate'])))
+
+        self._nmlLiteral(hosturi, 'hostname', nodeDict['hostname'])
+        self._nmlLiteral(hosturi, 'insertdate', nodeDict['insertdate'])
         # Provide location information about site Frontend
         try:
-            self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
-                               self.genUriRef('nml', 'latitude'),
-                               self.genLiteral(self.config.get(self.sitename, 'latitude'))))
-            self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
-                               self.genUriRef('nml', 'longitude'),
-                               self.genLiteral(self.config.get(self.sitename, 'longitude'))))
+            self._nmlLiteral(hosturi, 'latitude', self.config.get(self.sitename, 'latitude'))
+            self._nmlLiteral(hosturi, 'longitude', self.config.get(self.sitename, 'longitude'))
         except configparser.NoOptionError:
             self.logger.debug('Either one or both (latitude,longitude) are not defined. Continuing as normal')
 
@@ -59,6 +69,8 @@ class NodeInfo():
         # '2' is for ipv4 information
         # Also can be added bytes_received, bytes_sent, dropin, dropout
         # errin, errout, packets_recv, packets_sent
+        # But adding such values means we will always get a new model once
+        # a single packet get's transferred
         mappings = {}
         if main:
             mappings = {'2': ['address', 'MTU', 'UP', 'broadcast', 'txqueuelen',
@@ -86,216 +98,131 @@ class NodeInfo():
                     if dKey == '2' and mapping == 'address':
                         mName = 'ipv4-address-system'
                         value = inputDict[dKey][mapping].split('/')[0]
-                    self.addToGraph(['site', prefixuri],
-                                    ['mrs', 'hasNetworkAddress'],
-                                    ['site', '%s:%s' % (prefixuri, mName)])
-                    self.addToGraph(['site', '%s:%s' % (prefixuri, mName)],
-                                    ['rdf', 'type'],
-                                    ['mrs', 'NetworkAddress'])
-                    self.addToGraph(['site', "%s:%s" % (prefixuri, mName)],
-                                    ['mrs', 'type'],
-                                    [mName])
-                    self.addToGraph(['site', "%s:%s" % (prefixuri, mName)],
-                                    ['mrs', 'value'],
-                                    [value])
+                    self._addNetworkAddress(prefixuri, mName, value)
 
-    def defineLayer3MRML(self, nodeDict):
+    def defineLayer3MRML(self, nodeDict, hostinfo):
         """Define Layer 3 Routing Service for hostname"""
-        hostinfo = evaldict(nodeDict['hostinfo'])
-        self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
-                           self.genUriRef('nml', 'hasService'),
-                           self.genUriRef('site', ':%s:service+rst' % nodeDict['hostname'])))
-        self.newGraph.add((self.genUriRef('site', ':%s:service+rst' % nodeDict['hostname']),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('mrs', 'RoutingService')))
-        # Service Definition for L3
-        self.newGraph.add((self.genUriRef('site', ":%s:service+rst" % nodeDict['hostname']),
-                           self.genUriRef('sd', 'hasServiceDefinition'),
-                           self.genUriRef('site', ':%s:sd:l3vpn' % nodeDict['hostname'])))
-        self.newGraph.add((self.genUriRef('site', ':%s:sd:l3vpn' % nodeDict['hostname']),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('sd', 'ServiceDefinition')))
-        self.newGraph.add((self.genUriRef('site', ':%s:sd:l3vpn' % nodeDict['hostname']),
-                           self.genUriRef('sd', 'serviceType'),
-                           self.genLiteral('http://services.ogf.org/nsi/2019/08/descriptions/l3-vpn')))
+        # TODO: This needs a review as seems to be broken with mixed names
+        # Create new host definition
+        return
+        # self._addRoutingService(nodeDict['hostname'])
+        # # Service Definition for L3
+        # self._addL3VPN(nodeDict['hostname'])
+        # 
+        # for tablegress in['table+defaultIngress', 'table+defaultEgress']:
+        #     routingtable = self._addRoutingTable(nodeDict['hostname'], tablegress)
+        #     for routeinfo in hostinfo['NetInfo']["routes"]:
+        #         routename = ""
+        #         if 'RTA_DST' in list(routeinfo.keys()) and routeinfo['RTA_DST'] == '169.254.0.0':
+        #             # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.
+        #             # We do not need this information inside the routed template
+        #             continue
+        #         if 'RTA_GATEWAY' in list(routeinfo.keys()):
+        #             routename = "default"
+        #             routename = self._addRoute(nodeDict['hostname'], tablegress, 'default')
+        #             self._addRouteInfo(nodeDict['hostname'], tablegress, 'default', 'black-hole')
+        #             self.newGraph.add((self.genUriRef('site', routename),
+        #                                self.genUriRef('mrs', 'routeTo'),
+        #                                self.genUriRef('site', '%s:%s' % (routename, 'to'))))
+        #             self.newGraph.add((self.genUriRef('site', routename),
+        #                                self.genUriRef('mrs', 'nextHop'),
+        #                                self.genUriRef('site', '%s:%s' % (routename, 'black-hole'))))
+        #             for vals in [['to', 'ipv4-prefix-list', '0.0.0.0/0'],
+        #                          ['black-hole', 'routing-policy', 'drop'],
+        #                          ['local', 'routing-policy', 'local']]:
+        #                 self._addNetworkAddress('%s:%s' % (routename, vals[0]), [vals[0], vals[1]], vals[2])
+        #         else:
+        #             # Ignore unreachable routes from preparing inside the model
+        #             if 'RTA_PREFSRC' not in list(routeinfo.keys()):
+        #                 continue
+        #             routename = "%s_%s" % (routeinfo['RTA_PREFSRC'], routeinfo['dst_len'])
+        #             routename = self._addRoute(nodeDict['hostname'], tablegress, routename)
+        # 
+        #             defaultroutename = routingtable + ":route+default:local"
+        #             self.newGraph.add((self.genUriRef('site', routename),
+        #                                self.genUriRef('mrs', 'routeTo'),
+        #                                self.genUriRef('site', '%s:%s' % (routename, 'to'))))
+        #             self.newGraph.add((self.genUriRef('site', routename),
+        #                                self.genUriRef('mrs', 'nextHop'),
+        #                                self.genUriRef('site', defaultroutename)))
+        #             self._addNetworkAddress('%s:%s' % (routename, 'to'),
+        #                                     ['to', 'ipv4-prefix-list'],
+        #                                     '%s/%s' % (routeinfo['RTA_DST'], routeinfo['dst_len']))
 
-        for tablegress in['table+defaultIngress', 'table+defaultEgress']:
-            routingtable = ":%s:%s" % (nodeDict['hostname'], tablegress)
-            self.newGraph.add((self.genUriRef('site', ':%s:service+rst' % nodeDict['hostname']),
-                               self.genUriRef('mrs', 'providesRoutingTable'),
-                               self.genUriRef('site', routingtable)))
-            self.newGraph.add((self.genUriRef('site', routingtable),
-                               self.genUriRef('rdf', 'type'),
-                               self.genUriRef('mrs', 'RoutingTable')))
-            for routeinfo in hostinfo['NetInfo']["routes"]:
-                routename = ""
-                if 'RTA_DST' in list(routeinfo.keys()) and routeinfo['RTA_DST'] == '169.254.0.0':
-                    # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.
-                    # We do not need this information inside the routed template
-                    continue
-                if 'RTA_GATEWAY' in list(routeinfo.keys()):
-                    routename = routingtable + ":route+default"
-                else:
-                    # Ignore unreachable routes from preparing inside the model
-                    if 'RTA_PREFSRC' not in list(routeinfo.keys()):
-                        continue
-                    routename = routingtable + ":route+%s_%s" % (routeinfo['RTA_PREFSRC'], routeinfo['dst_len'])
-                self.newGraph.add((self.genUriRef('site', routename),
-                                   self.genUriRef('rdf', 'type'),
-                                   self.genUriRef('mrs', 'Route')))
-                self.newGraph.add((self.genUriRef('site', routingtable),
-                                   self.genUriRef('mrs', 'hasRoute'),
-                                   self.genUriRef('site', routename)))
-                if 'RTA_GATEWAY' in list(routeinfo.keys()):
-                    self.newGraph.add((self.genUriRef('site', routename),
-                                       self.genUriRef('mrs', 'routeTo'),
-                                       self.genUriRef('site', '%s:%s' % (routename, 'to'))))
-                    self.newGraph.add((self.genUriRef('site', routename),
-                                       self.genUriRef('mrs', 'nextHop'),
-                                       self.genUriRef('site', '%s:%s' % (routename, 'black-hole'))))
-                    for vals in [['to', 'ipv4-prefix-list', '0.0.0.0/0'],
-                                 ['black-hole', 'routing-policy', 'drop'],
-                                 ['local', 'routing-policy', 'local']]:
-                        self.addToGraph(['site', '%s:%s' % (routename, vals[0])],
-                                        ['rdf', 'type'],
-                                        ['mrs', 'NetworkAddress'])
-                        self.addToGraph(['site', '%s:%s' % (routename, vals[0])],
-                                        ['mrs', 'type'],
-                                        [vals[1]])
-                        self.addToGraph(['site', '%s:%s' % (routename, vals[0])],
-                                        ['mrs', 'value'],
-                                        [vals[2]])
-                else:
-                    defaultroutename = routingtable + ":route+default:local"
-                    self.newGraph.add((self.genUriRef('site', routename),
-                                       self.genUriRef('mrs', 'routeTo'),
-                                       self.genUriRef('site', '%s:%s' % (routename, 'to'))))
-                    self.newGraph.add((self.genUriRef('site', routename),
-                                       self.genUriRef('mrs', 'nextHop'),
-                                       self.genUriRef('site', defaultroutename)))
-                    self.addToGraph(['site', '%s:%s' % (routename, 'to')],
-                                    ['rdf', 'type'],
-                                    ['mrs', 'NetworkAddress'])
-                    self.addToGraph(['site', '%s:%s' % (routename, 'to')],
-                                    ['mrs', 'type'],
-                                    ['ipv4-prefix-list'])
-                    self.addToGraph(['site', '%s:%s' % (routename, 'to')],
-                                    ['mrs', 'value'],
-                                    ['%s/%s' % (routeinfo['RTA_DST'], routeinfo['dst_len'])])
 
-    def addAgentConfigtoMRML(self, intfDict, newuri):
+    def addAgentConfigtoMRML(self, intfDict, newuri, hostname, intf):
         """Agent Configuration params to Model."""
-        switchName = intfDict['switch']
-        switchPort = intfDict['switch_port']
         # Add floating ip pool list for interface from the agent
         # ==========================================================================================
         if 'ipv4-floatingip-pool' in list(intfDict.keys()):
-            self.addToGraph(['site', newuri],
-                            ['mrs', 'hasNetworkAddress'],
-                            ['site', "%s:%s" % (newuri, 'ipv4-floatingip-pool')])
-            self.addToGraph(['site', "%s:%s" % (newuri, 'ipv4-floatingip-pool')],
-                            ['rdf', 'type'],
-                            ['mrs', 'NetworkAddress'])
-            self.addToGraph(['site', "%s:%s" % (newuri, 'ipv4-floatingip-pool')],
-                            ['mrs', 'type'],
-                            ["ipv4-floatingip-pool"])
-            self.addToGraph(['site', "%s:%s" % (newuri, 'ipv4-floatingip-pool')],
-                            ['mrs', 'value'],
-                            [str(intfDict["ipv4-floatingip-pool"])])
-        # Add vlan range for interface from the agent
-        # ==========================================================================================
-        if 'vlan_range' in list(intfDict.keys()):
-            self.newGraph.add((self.genUriRef('site', newuri),
-                               self.genUriRef('nml', 'hasService'),
-                               self.genUriRef('site', "%s:%s" % (newuri, 'bandwidthService'))))
-            self.newGraph.add((self.genUriRef('site', newuri),
-                               self.genUriRef('nml', 'isAlias'),
-                               self.genUriRef('site', ":%s:%s" % (switchName, switchPort))))
-            # BANDWIDTH Service for INTERFACE
-            # ==========================================================================================
-            bws = "%s:%s" % (newuri, 'bandwidthService')
-            self.newGraph.add((self.genUriRef('site', bws),
-                               self.genUriRef('rdf', 'type'),
-                               self.genUriRef('mrs', 'BandwidthService')))
-            self.newGraph.add((self.genUriRef('site', bws),
-                               self.genUriRef('mrs', 'type'),
-                               self.genLiteral('guaranteedCapped')))
+            self._addNetworkAddress(newuri, 'ipv4-floatingip-pool', str(intfDict["ipv4-floatingip-pool"]))
 
-            for item in [['unit', 'unit', "mbps"],
-                         ['max_bandwidth', 'maximumCapacity', 10000000000],
-                         ['available_bandwidth', 'availableCapacity', 10000000000],
-                         ['granularity', 'granularity', 1000000],
-                         ['reservable_bandwidth', 'reservableCapacity', 10000000000],
-                         ['min_bandwidth', 'minReservableCapacity', 10000000000]]:
-                value = item[2]
-                if item[0] in list(intfDict.keys()):
-                    value = intfDict[item[0]]
-                try:
-                    value = int((int(value) // 1000000))
-                except ValueError:
-                    value = str(value)
-                self.newGraph.add((self.genUriRef('site', bws),
-                                   self.genUriRef('mrs', item[1]),
-                                   self.genLiteral(value)))
+        # Add is Alias - So that it has link to Switch.
+        # We could use LLDP Info In future.
+        self._addIsAlias(newuri, {'isAlias': "%s:%s:%s" % (self.prefixes['site'],
+                                                           intfDict['switch'],
+                                                           intfDict['switch_port'])})
+
+        # BANDWIDTH Service for INTERFACE
+        # ==========================================================================================
+        bws = self._addBandwidthService(hostname, intf)
+
+        for item in [['unit', 'unit', "mbps"],
+                     ['max_bandwidth', 'maximumCapacity', 10000000000],
+                     ['available_bandwidth', 'availableCapacity', 10000000000],
+                     ['granularity', 'granularity', 1000000],
+                     ['reservable_bandwidth', 'reservableCapacity', 10000000000],
+                     ['min_bandwidth', 'minReservableCapacity', 10000000000]]:
+            value = item[2]
+            if item[0] in list(intfDict.keys()):
+                value = intfDict[item[0]]
+            try:
+                value = int((int(value) // 1000000))
+            except ValueError:
+                value = str(value)
+            self._mrsLiteral(bws, item[1], value)
             # ==========================================================================================
         if 'capacity' in list(intfDict.keys()):
-            self.newGraph.add((self.genUriRef('site', newuri),
-                               self.genUriRef('mrs', 'capacity'),
-                               self.genLiteral(intfDict['capacity'])))
+            self._mrsLiteral(bws, 'capacity', intfDict['capacity'])
         if 'vlan_range' in list(intfDict.keys()):
             self.newGraph.add((self.genUriRef('site', newuri),
                                self.genUriRef('nml', 'hasLabelGroup'),
                                self.genUriRef('site', "%s:vlan-range" % newuri)))
+
             self.newGraph.add((self.genUriRef('site', "%s:vlan-range" % newuri),
                                self.genUriRef('rdf', 'type'),
                                self.genUriRef('nml', 'LabelGroup')))
+
             self.newGraph.add((self.genUriRef('site', "%s:vlan-range" % newuri),
                                self.genUriRef('nml', 'labeltype'),
                                self.genUriRef('schema', '#vlan')))
-            self.newGraph.add((self.genUriRef('site', "%s:vlan-range" % newuri),
-                               self.genUriRef('nml', 'values'),
-                               self.genLiteral(intfDict['vlan_range'])))
-        self.shared = False
-        if 'shared' in list(intfDict.keys()):
-            self.shared = 'notshared'
+            self._nmlLiteral("%s:vlan-range" % newuri, 'values', intfDict['vlan_range'])
+
+        self.shared = 'notshared'
+        if 'shared' in intfDict:
             if intfDict['shared']:
                 self.shared = 'shared'
-            self.newGraph.add((self.genUriRef('site', newuri),
-                               self.genUriRef('mrs', 'type'),
-                               self.genLiteral(self.shared)))
+            self._mrsLiteral(newuri, 'type', self.shared)
 
-    def defineHostInfo(self, nodeDict):
+    def defineHostInfo(self, nodeDict, hostinfo):
         """Define Host information inside MRML.
-
         Add All interfaces info.
         """
-        hostinfo = evaldict(nodeDict['hostinfo'])
         for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
             # We exclude QoS interfaces from adding them to MRML.
             # Even so, I still want to have this inside DB for debugging purposes
             if ignoreInterface(intfKey, intfDict):
                 continue
-            switchName = intfDict['switch']
-            switchPort = intfDict['switch_port']
-            self.hosts[nodeDict['hostname']].append({'switchName': switchName,
-                                                     'switchPort': switchPort,
+            self.hosts[nodeDict['hostname']].append({'switchName': intfDict['switch'],
+                                                     'switchPort': intfDict['switch_port'],
                                                      'intfKey': intfKey})
-            newuri = ":%s:%s" % (nodeDict['hostname'], intfKey)
+
+            newuri = self._addRstPort(nodeDict['hostname'], intfKey)
             # Create new host definition
-            self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
-                               self.genUriRef('nml', 'hasBidirectionalPort'),
-                               self.genUriRef('site', newuri)))
-            self.newGraph.add((self.genUriRef('site', ":%s:service+rst" % nodeDict['hostname']),
-                               self.genUriRef('nml', 'hasBidirectionalPort'),
-                               self.genUriRef('site', newuri)))
-            # Specific node information.
-            self.newGraph.add((self.genUriRef('site', newuri),
-                               self.genUriRef('rdf', 'type'),
-                               self.genUriRef('nml', 'BidirectionalPort')))
             # =====================================================================
             # Add most of the agent configuration to MRML
             # =====================================================================
-            self.addAgentConfigtoMRML(intfDict, newuri)
+            self.addAgentConfigtoMRML(intfDict, newuri, nodeDict['hostname'], intfKey)
             # Now lets also list all interface information to MRML
             self.addIntfInfo(intfDict, newuri)
             # List each VLAN:
@@ -309,26 +236,10 @@ class NodeInfo():
                         continue
                     # '2' is for ipv4 information
                     vlanName = vlanName.split('.')
-                    vlanuri = ":%s:%s:vlanport+%s" % (nodeDict['hostname'], intfKey, vlanName[1])
-                    self.newGraph.add((self.genUriRef('site', vlanuri),
-                                       self.genUriRef('rdf', 'type'),
-                                       self.genUriRef('nml', 'BidirectionalPort')))
-                    self.newGraph.add((self.genUriRef('site', newuri),
-                                       self.genUriRef('nml', 'hasService'),
-                                       self.genUriRef('site', "%s:%s" % (newuri, 'bandwidthService'))))
-                    if self.shared:
-                        self.newGraph.add((self.genUriRef('site', vlanuri),
-                                           self.genUriRef('mrs', 'type'),
-                                           self.genLiteral(self.shared)))
-                    self.newGraph.add((self.genUriRef('site', ":%s" % nodeDict['hostname']),
-                                       self.genUriRef('nml', 'hasBidirectionalPort'),
-                                       self.genUriRef('site', vlanuri)))
-                    self.newGraph.add((self.genUriRef('site', ":%s:service+rst" % nodeDict['hostname']),
-                                       self.genUriRef('nml', 'hasBidirectionalPort'),
-                                       self.genUriRef('site', vlanuri)))
-                    self.newGraph.add((self.genUriRef('site', newuri),
-                                       self.genUriRef('nml', 'hasBidirectionalPort'),
-                                       self.genUriRef('site', vlanuri)))
+                    vlanuri = self._addVlanPort(nodeDict['hostname'], intfKey, '', vlanName[1])
+                    self._addRstPort(nodeDict['hostname'], intfKey, '', vlanName[1])
+                    self._mrsLiteral(vlanuri, 'type', self.shared)
+
                     if 'vlanid' in list(vlanDict.keys()):
                         self.newGraph.add((self.genUriRef('site', vlanuri),
                                            self.genUriRef('nml', 'hasLabel'),

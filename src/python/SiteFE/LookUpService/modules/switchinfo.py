@@ -145,8 +145,7 @@ class SwitchInfo():
                                 ['nml', 'values'],
                                 [portSwitch['vlan_range']])
                 # Generate host alias or adds' isAlias
-                self.generateHostIsalias(portSwitch=portSwitch, switchName=switchName,
-                                         portName=portName, newuri=newuri)
+                self._addIsAlias(newuri, portSwitch)
                 continue
             if key == 'channel-member':
                 for value in val:
@@ -162,44 +161,6 @@ class SwitchInfo():
                         self._addVals(item['key'], item['subkey'], item['val'], newuri)
                 else:
                     self._addVals(key, subkey, val, newuri)
-
-
-    def _addNode(self, hostname):
-        self.newGraph.add((self.genUriRef('site'),
-                           self.genUriRef('nml', 'hasNode'),
-                           self.genUriRef('site', ":%s" % hostname)))
-        self.newGraph.add((self.genUriRef('site', ":%s" % hostname),
-                           self.genUriRef('nml', 'name'),
-                           self.genLiteral(hostname)))
-        self.newGraph.add((self.genUriRef('site', ":%s" % hostname),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('nml', 'Node')))
-
-    def _addPort(self, switchName, portName):
-        self._addNode(switchName)
-        self.newGraph.add((self.genUriRef('site', ":%s" % switchName),
-                           self.genUriRef('nml', 'hasBidirectionalPort'),
-                           self.genUriRef('site', ":%s:%s" % (switchName, portName))))
-        self.newGraph.add((self.genUriRef('site', ":%s:%s" % (switchName, portName)),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('nml', 'BidirectionalPort')))
-
-    def _addVswPort(self, switchName, portName, vsw):
-        self._addPort(switchName, portName)
-        self.newGraph.add((self.genUriRef('site', ':%s:service+vsw:%s' % (switchName, vsw)),
-                           self.genUriRef('nml', 'hasBidirectionalPort'),
-                           self.genUriRef('site', ":%s:%s" % (switchName, portName))))
-
-    def _addVlanPort(self, switchName, portName, vsw, vlan):
-        self._addPort(switchName, portName)
-        vlanuri = ":%s:%s:vlanport+%s" % (switchName, portName, vlan)
-        self.newGraph.add((self.genUriRef('site', ":%s:%s" % (switchName, portName)),
-                           self.genUriRef('nml', 'hasBidirectionalPort'),
-                           self.genUriRef('site', vlanuri)))
-        self.newGraph.add((self.genUriRef('site', vlanuri),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('nml', 'BidirectionalPort')))
-
 
     def _addSwitchPortInfo(self, key, switchInfo):
         """ Add Switch Port Info for ports, vlans """
@@ -261,7 +222,154 @@ class SwitchInfo():
 
     def _addSwitchLldpInfo(self, switchInfo):
         """ TODO: ADD LLDP Info to MRML """
-        return
+        for hostname, macDict in switchInfo['info'].items():
+            mac = "00:00:00:00:00:00"
+            if 'mac' in macDict:
+                mac = macDict['mac']
+            else:
+                continue
+            for lldpHost, lldpDict in switchInfo['lldp'].items():
+                if lldpHost == hostname:
+                    # Loops? No way
+                    continue
+                for lldpIntf, intfDict in lldpDict.items():
+                    if intfDict['remote_chassis_id'] == mac:
+                        remoteuri = "%s:%s:%s" % (self.prefixes['site'], lldpHost, self.switch._getSystemValidPortName(lldpIntf))
+                        localuri = "%s:%s:%s" % (self.prefixes['site'], hostname, self.switch._getSystemValidPortName(intfDict['remote_port_id']))
+                        self._addIsAlias(remoteuri, {'isAlias': localuri})
+                        self._addIsAlias(localuri, {'isAlias': remoteuri})
+                        print(intfDict)
+# (Pdb) pprint.pprint(switchInfo['lldp'])
+# {'aristaeos_s0': {'Ethernet13/1': {'local_port_id': 'Ethernet13/1',
+#                                    'remote_chassis_id': '4c:76:25:e8:44:c0',
+#                                    'remote_port_id': '"hundredGigE 1/3"'},
+#                   'Ethernet14/1': {'local_port_id': 'Ethernet14/1',
+#                                    'remote_chassis_id': '4c:76:25:e8:44:c0',
+#                                    'remote_port_id': '"hundredGigE 1/4"'},
+#                   'Ethernet15/1': {'local_port_id': 'Ethernet15/1',
+#                                    'remote_chassis_id': '4c:76:25:e8:44:c0',
+#                                    'remote_port_id': '"hundredGigE 1/8"'},
+#                   'Ethernet16/1': {'local_port_id': 'Ethernet16/1',
+#                                    'remote_chassis_id': '4c:76:25:e8:44:c0',
+#                                    'remote_port_id': '"hundredGigE 1/9"'},
+#                   'Ethernet18/1': {'local_port_id': 'Ethernet18/1',
+#                                    'remote_chassis_id': 'b8:59:9f:ed:29:fe',
+#                                    'remote_port_id': 'enp33s0',
+#                                    'remote_system_name': 'k8s-gen4-07.ultralight.org'},
+#                   'Ethernet22/1': {'local_port_id': 'Ethernet22/1',
+#                                    'remote_chassis_id': '3c:ec:ef:1c:90:00',
+#                                    'remote_port_id': 'enp129s0f1',
+#                                    'remote_system_name': 'sandie-7.ultralight.org'},
+#                   'Ethernet29/1': {'local_port_id': 'Ethernet29/1',
+#                                    'remote_chassis_id': 'b8:59:9f:ed:29:fe',
+#                                    'remote_port_id': 'enp161s0',
+#                                    'remote_system_name': 'k8s-gen4-07.ultralight.org'},
+#                   'Ethernet31/1': {'local_port_id': 'Ethernet31/1',
+#                                    'remote_chassis_id': '98:5d:82:03:3d:19',
+#                                    'remote_port_id': '"Ethernet30/1"',
+#                                    'remote_system_name': 'caltech-sc21-sw'},
+#                   'Ethernet32/1': {'local_port_id': 'Ethernet32/1',
+#                                    'remote_chassis_id': '98:5d:82:03:3d:19',
+#                                    'remote_port_id': '"Ethernet29/1"',
+#                                    'remote_system_name': 'caltech-sc21-sw'},
+#                   'Management1': {'local_port_id': 'Management1',
+#                                   'remote_chassis_id': '00:12:f2:86:20:80',
+#                                   'remote_port_id': 'GigabitEthernet3',
+#                                   'remote_system_name': 'lrt-sdn-r02-foundry-x448'}},
+#  'dellos9_s0': {'ManagementEthernet 1/1': {'local_port_id': 'ManagementEthernet '
+#                                                             '1/1',
+#                                            'remote_chassis_id': '00:12:f2:86:20:80',
+#                                            'remote_port_id': '00:12:f2:86:20:80',
+#                                            'remote_system_name': 'lrt-sdn-r02-foundry-x448'},
+#                 'fortyGigE 1/17/1': {'local_port_id': 'fortyGigE 1/17/1',
+#                                      'remote_chassis_id': '00:01:e8:d7:72:f9',
+#                                      'remote_port_id': 'fortyGigE 0/60'},
+#                 'fortyGigE 1/18/1': {'local_port_id': 'fortyGigE 1/18/1',
+#                                      'remote_chassis_id': '00:01:e8:d7:72:f9',
+#                                      'remote_port_id': 'fortyGigE 0/52'},
+#                 'fortyGigE 1/19/1': {'local_port_id': 'fortyGigE 1/19/1',
+#                                      'remote_chassis_id': '00:01:e8:d7:72:f9',
+#                                      'remote_port_id': 'fortyGigE 0/56'},
+#                 'fortyGigE 1/20/1': {'local_port_id': 'fortyGigE 1/20/1',
+#                                      'remote_chassis_id': '00:01:e8:d7:72:f9',
+#                                      'remote_port_id': 'fortyGigE 0/48'},
+#                 'fortyGigE 1/29/1': {'local_port_id': 'fortyGigE 1/29/1',
+#                                      'remote_chassis_id': '00:25:90:7f:ff:3e',
+#                                      'remote_port_id': '00:02:c9:21:4b:11',
+#                                      'remote_system_name': 'sdn-dtn-2-09.ultralight.org'},
+#                 'fortyGigE 1/30/1': {'local_port_id': 'fortyGigE 1/30/1',
+#                                      'remote_chassis_id': '0c:c4:7a:fb:47:04',
+#                                      'remote_port_id': '00:02:c9:a0:c4:e0',
+#                                      'remote_system_name': 'sandie-3.ultralight.org'},
+#                 'hundredGigE 1/1': {'local_port_id': 'hundredGigE 1/1',
+#                                     'remote_chassis_id': '34:17:eb:4c:1e:80',
+#                                     'remote_port_id': 'hundredGigE 1/32'},
+#                 'hundredGigE 1/10': {'local_port_id': 'hundredGigE 1/10',
+#                                      'remote_chassis_id': 'e4:1d:2d:fd:c4:cc',
+#                                      'remote_port_id': 'e4:1d:2d:62:0c:66',
+#                                      'remote_system_name': 'sandie-1.ultralight.org'},
+#                 'hundredGigE 1/15': {'local_port_id': 'hundredGigE 1/15',
+#                                      'remote_chassis_id': 'b8:59:9f:d1:34:aa',
+#                                      'remote_port_id': 'etp14',
+#                                      'remote_system_name': 'sonic'},
+#                 'hundredGigE 1/16': {'local_port_id': 'hundredGigE 1/16',
+#                                      'remote_chassis_id': 'b8:59:9f:d1:34:aa',
+#                                      'remote_port_id': 'etp12',
+#                                      'remote_system_name': 'sonic'},
+#                 'hundredGigE 1/2': {'local_port_id': 'hundredGigE 1/2',
+#                                     'remote_chassis_id': '34:17:eb:4c:1e:80',
+#                                     'remote_port_id': 'hundredGigE 1/31'},
+#                 'hundredGigE 1/23': {'local_port_id': 'hundredGigE 1/23',
+#                                      'remote_chassis_id': 'e4:1d:2d:fd:c4:d0',
+#                                      'remote_port_id': 'e4:1d:2d:fd:c4:dc',
+#                                      'remote_system_name': 'sdn-dtn-1-7.ultralight.org'},
+#                 'hundredGigE 1/24': {'local_port_id': 'hundredGigE 1/24',
+#                                      'remote_chassis_id': 'b8:59:9f:ed:29:fe',
+#                                      'remote_port_id': '24:8a:07:9c:00:af',
+#                                      'remote_system_name': 'k8s-gen4-07.ultralight.org'},
+#                 'hundredGigE 1/27': {'local_port_id': 'hundredGigE 1/27',
+#                                      'remote_chassis_id': '0c:c4:7a:69:22:ca',
+#                                      'remote_port_id': '24:8a:07:9c:02:be',
+#                                      'remote_system_name': 'sdn-dtn-2-11.ultralight.org'},
+#                 'hundredGigE 1/3': {'local_port_id': 'hundredGigE 1/3',
+#                                     'remote_chassis_id': '44:4c:a8:55:2c:dd',
+#                                     'remote_port_id': 'Ethernet13/1',
+#                                     'remote_system_name': '7060cx-r1'},
+#                 'hundredGigE 1/31': {'local_port_id': 'hundredGigE 1/31',
+#                                      'remote_chassis_id': '0c:c4:7a:68:5f:70',
+#                                      'remote_port_id': '24:8a:07:9c:02:1e',
+#                                      'remote_system_name': 'sdn-dtn-2-10.ultralight.org'},
+#                 'hundredGigE 1/32': {'local_port_id': 'hundredGigE 1/32',
+#                                      'remote_chassis_id': '3c:ec:ef:1c:90:00',
+#                                      'remote_port_id': 'ec:0d:9a:c1:ba:60',
+#                                      'remote_system_name': 'sandie-7.ultralight.org'},
+#                 'hundredGigE 1/4': {'local_port_id': 'hundredGigE 1/4',
+#                                     'remote_chassis_id': '44:4c:a8:55:2c:dd',
+#                                     'remote_port_id': 'Ethernet14/1',
+#                                     'remote_system_name': '7060cx-r1'},
+#                 'hundredGigE 1/5': {'local_port_id': 'hundredGigE 1/5',
+#                                     'remote_chassis_id': '0c:c4:7a:d9:b4:8c',
+#                                     'remote_port_id': 'ec:0d:9a:92:b2:36',
+#                                     'remote_system_name': 'k8s-nvme-01.ultralight.org'},
+#                 'hundredGigE 1/6': {'local_port_id': 'hundredGigE 1/6',
+#                                     'remote_chassis_id': '24:8a:07:55:29:cc',
+#                                     'remote_port_id': '24:8a:07:55:29:cc'},
+#                 'hundredGigE 1/7': {'local_port_id': 'hundredGigE 1/7',
+#                                     'remote_chassis_id': '54:bf:64:e5:aa:c1',
+#                                     'remote_port_id': 'hundredGigE 1/2'},
+#                 'hundredGigE 1/8': {'local_port_id': 'hundredGigE 1/8',
+#                                     'remote_chassis_id': '44:4c:a8:55:2c:dd',
+#                                     'remote_port_id': 'Ethernet15/1',
+#                                     'remote_system_name': '7060cx-r1'},
+#                 'hundredGigE 1/9': {'local_port_id': 'hundredGigE 1/9',
+#                                     'remote_chassis_id': '44:4c:a8:55:2c:dd',
+#                                     'remote_port_id': 'Ethernet16/1',
+#                                     'remote_system_name': '7060cx-r1'}}}
+# 
+# pprint.pprint(switchInfo['info'])
+# {'aristaeos_s0': {'mac': '44:4c:a8:55:2c:dd'},
+#  'dellos9_s0': {'mac': '4c:76:25:e8:44:c0'}}
+
 
     def _addSwitchRoutes(self, switchInfo):
         """ TODO: Add Route info to MRML """

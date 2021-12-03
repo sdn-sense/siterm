@@ -97,7 +97,10 @@ class Switch(Ansible, Raw, Node):
         # Backslashes are replaced with dash
         # Also - mrml does not expect to get string in nml. so need to replace all
         # Inside the output of dictionary
-        return port.replace(" ", "_").replace("/", "-")
+        # Also - sometimes lldp reports multiple quotes for interface name from ansible out
+        for rpl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""]]:
+            port = port.replace(rpl[0], rpl[1])
+        return port
 
     def _insertToDB(self, data):
         self._getDBOut()

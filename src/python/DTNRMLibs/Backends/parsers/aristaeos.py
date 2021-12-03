@@ -24,8 +24,10 @@ class AristaEOS():
         # Backslashes are replaced with dash
         # Also - mrml does not expect to get string in nml. so need to replace all
         # Inside the output of dictionary
-        # Same function is reused in main, and should be in other plugins.
-        return port.replace(" ", "_").replace("/", "-")
+        # Also - sometimes lldp reports multiple quotes for interface name from ansible out
+        for rpl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""]]:
+            port = port.replace(rpl[0], rpl[1])
+        return port
 
     def _getVlans(self, inLine):
         """ Get All vlans list assigned to port """

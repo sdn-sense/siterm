@@ -19,7 +19,6 @@ from DTNRMLibs.MainUtilities import getStreamLogger
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import generateHash
-from DTNRMLibs.FECalls import getAllHosts
 from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import getUTCnow
@@ -38,7 +37,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         self.config = config
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.newGraph = None
-        self.shared = False
+        self.shared = 'notshared'
         self.hosts = {}
         self.renewSwitchConfig = False
         self.switch = Switch(config, logger, sitename)
@@ -72,77 +71,43 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         return "%s/%s-%s-%s:%s:%s:%s.mrml" % (saveDir, now.year, now.month,
                                               now.day, now.hour, now.minute, now.second)
 
-    def defineMRMLServices(self):
+    def defineTopology(self):
         """Defined Topology and Main Services available."""
         # Add main Topology
-        self.newGraph.add((self.genUriRef('site'),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('nml', 'Topology')))
-        # Add Service
+        self._addSite()
+        # Add Service for each Switch
         for switchName in self.config.get(self.sitename, 'switch').split(','):
             try:
                 vsw = self.config.get(switchName, 'vsw')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
                 self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
-            svcService = ':%s:service+vsw:%s' % (switchName, vsw)
-            self.newGraph.add((self.genUriRef('site', ':%s' % switchName),
-                               self.genUriRef('nml', 'hasService'),
-                               self.genUriRef('site', svcService)))
-            self.newGraph.add((self.genUriRef('site', svcService),
-                               self.genUriRef('rdf', 'type'),
-                               self.genUriRef('nml', 'SwitchingService')))
-
-            # Add lableSwapping flag
             labelswap = "false"
             try:
                 labelswap = self.config.get(switchName, 'labelswapping')
             except configparser.NoOptionError:
-                self.logger.debug('Labelswapping parameter is not defined. By default it is set to False.')
-            self.newGraph.add((self.genUriRef('site', svcService),
-                               self.genUriRef('nml', 'labelSwapping'),
-                               self.genLiteral(labelswap)))
-            # Add base encoding for service
-            self.newGraph.add((self.genUriRef('site', svcService),
-                               self.genUriRef('nml', 'encoding'),
-                               self.genUriRef('schema')))
-
-    def defineMRMLPrefixes(self):
-        """Define all known prefixes."""
-        self.getSavedPrefixes()
-        for prefix, val in list(self.prefixes.items()):
-            self.newGraph.bind(prefix, val)
+                self.logger.debug('Labelswapping parameter is not defined. Default is False.')
+            self._addLabelSwapping(switchName, None, vsw, labelswap)
 
     def startwork(self):
         """Main start."""
         self.logger.info('Started LookupService work')
         self.newGraph = Graph()
-        jOut = getAllHosts(self.sitename, self.logger)
         # ==================================================================================
         # 1. Define Basic MRML Prefixes
         # ==================================================================================
         self.defineMRMLPrefixes()
         # ==================================================================================
-        # 2. Define Basic MRML Definition
+        # 2. Define Topology Site
         # ==================================================================================
-        self.defineMRMLServices()
+        self.defineTopology()
         self.hosts = {}
-
-        for _, nodeDict in list(jOut.items()):
-            # ==================================================================================
-            # 3. Define Node inside yaml
-            # ==================================================================================
-            self.defineNodeInformation(nodeDict)
-            # ==================================================================================
-            # 4. Define Routing Service information
-            # ==================================================================================
-            self.defineLayer3MRML(nodeDict)
-            # ==================================================================================
-            # 5. Define Host Information and all it's interfaces.
-            # ==================================================================================
-            self.defineHostInfo(nodeDict)
         # ==================================================================================
-        # 6. Define Switch information from Switch Lookup Plugin
+        # 3. Define Node inside yaml
+        # ==================================================================================
+        self.addNodeInfo()
+        # ==================================================================================
+        # 4. Define Switch information from Switch Lookup Plugin
         # ==================================================================================
         self.addSwitchInfo()
 
