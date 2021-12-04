@@ -104,7 +104,7 @@ class SwitchInfo():
     def _addVals(self, key, subkey, val, newuri):
         if not subkey:
             return
-        val = generateVal(self, val, key, True)
+        val = generateVal(self, val, key, False)
         labeluri = '%s:%s' % (newuri, "%s+%s" % (key, subkey))
         reptype = key
         if key in ['ipv4', 'ipv6']:
