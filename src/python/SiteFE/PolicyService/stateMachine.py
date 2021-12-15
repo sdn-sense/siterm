@@ -197,7 +197,6 @@ class StateMachine():
         """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committing']]):
             checkConflicts(dbObj, delta)
-            # TODO: Check for any conflicts.
             self._stateChangerDelta(dbObj, 'committed', **delta)
             self._modelstatechanger(dbObj, 'add', **delta)
             self.connMgr.committed(dbObj, delta)
@@ -243,53 +242,29 @@ class StateMachine():
     def activating(self, dbObj):
         """Check on all deltas in state activating."""
         for delta in dbObj.get('deltas', search=[['state', 'activating']]):
+            # GET CURRENT ACTIVE DELTAS.
+            activeDeltas = dbObj.get('activeDeltas')
+            action = 'update'
+            if not activeDeltas:
+                action = 'insert'
+                activeDeltas = {'insertdate': int(getUTCnow()),
+                                'output': '{}'}
+            else:
+                activeDeltas = activeDeltas[0]
+            # ADDITION
             if delta['deltat'] == 'addition':
-                activeDeltas = dbObj.get('activeDeltas')
-                action = 'update'
-                if not activeDeltas:
-                    action = 'insert'
-                    activeDeltas = {'insertdate': int(getUTCnow()),
-                                    'output': '{}'}
-                else:
-                    activeDeltas = activeDeltas[0]
                 activeDeltas['output'] = evaldict(activeDeltas['output'])
                 activeDeltas['updatedate'] = int(getUTCnow())
                 activeDeltas['output'].update(evaldict(delta['addition']))
                 activeDeltas['output'] = str(activeDeltas['output'])
-                if action ==  'insert':
-                    dbObj.insert('activeDeltas', [activeDeltas])
-                elif action == 'update':
-                    dbObj.update('activeDeltas', [activeDeltas])
-                self._stateChangerDelta(dbObj, 'activated', **delta)
-                # Set delta state to ACTIVATED
-            # Because all endpoints take all activated and apply
-            # Reduction also should remove from active config
-            # and leave new config without reduction
-            # So it is not adding it again
+            # REDUCTION
             if 'reduction' in delta and delta['reduction']:
-                hostStates = {}
-                for svc, svcitems in delta['reduction'].items():
-                    if svc == 'SubnetMapping':
-                        continue
-                    for connID, connIDitems in svcitems.items():
-                        for hostname, vals in connIDitems.items():
-                             host = dbObj.get('hoststates', search=[['deltaid', delta['uid']], ['hostname', hostname]])
-                             if host:
-                                 hostStates.setdefault(host[0]['state'], [])
-                                 hostStates[host[0]['state']].append(hostname)
-                             else:
-                                 self._newhoststate(dbObj, **{'hostname': hostname,
-                                                          'state': 'activating',
-                                                          'deltaid': delta['uid']})
-                                 hostStates.setdefault('unset', {})
-                                 hostStates['unset'].append(hostname)
-                self.logger.info('Delta reduction %s host states are: %s' % (delta['uid'], hostStates))
-                # if timeendcheck(delta, self.logger):
-                #     self._stateChangerDelta(dbObj, 'cancel', **delta)
-                #     self.modelstatecancel(dbObj, **delta)
-                if hostStates.keys() == ['active']:
-                     self._stateChangerDelta(dbObj, 'activated', **delta)
-                     self.connMgr.activated(dbObj, delta)
+                import pdb; pdb.set_trace()
+            if action ==  'insert':
+                dbObj.insert('activeDeltas', [activeDeltas])
+            elif action == 'update':
+                dbObj.update('activeDeltas', [activeDeltas])
+            self._stateChangerDelta(dbObj, 'activated', **delta)
 
     def activated(self, dbObj):
         """Check on all activated state deltas."""
@@ -304,6 +279,7 @@ class StateMachine():
             # Addition
             self.logger.info('Activated check on delta %s' % delta)
             delta['addition'] = evaldict(delta['addition'])
+            # TODO: This check conflicts should be removed (only for testing)
             checkConflicts(dbObj, delta)
             #if timeendcheck(delta, self.logger):
             #    self._stateChangerDelta(dbObj, 'cancel', **delta)
@@ -311,7 +287,6 @@ class StateMachine():
 
     def removing(self, dbObj):
         self.logger.info('Removal call')
-        return
 
     def remove(self, dbObj):
         """Check on all remove state deltas."""

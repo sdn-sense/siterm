@@ -21,40 +21,8 @@ class Actions():
         super().__init__()
         self.name = 'RAW'
 
-    def accepting(self, inputDict, actionState):
-        """Accepting state actions."""
-        return True
-
-    def accepted(self, inputDict, actionState):
-        """Accepted state actions."""
-        return True
-
-    def committing(self, inputDict, actionState):
-        """Committing state actions."""
-        return True
-
-    def committed(self, inputDict, actionState):
-        """Committed state actions."""
-        return True
-
-    def activating(self, inputDict, actionState):
+    def activate(self, inputDict, actionState):
         """Activating state actions."""
-        return True
-
-    def active(self, inputDict, actionState):
-        """Activating state actions."""
-        return True
-
-    def activated(self, inputDict, actionState):
-        """Activating state actions."""
-        return True
-
-    def failed(self, inputDict, actionState):
-        """Failed state actions."""
-        return True
-
-    def remove(self, inputDict, actionState):
-        """Remove state actions."""
         return True
 
 

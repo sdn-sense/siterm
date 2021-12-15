@@ -124,11 +124,10 @@ def evaldict(inputDict):
     out = {}
     try:
         out = ast.literal_eval(inputDict)
-    except ValueError as ex:
-        print("ValError: Failed to literal eval dict. Err:%s " % ex)
+    except ValueError:
         out = json.loads(inputDict)
     except SyntaxError as ex:
-        print("SyntaxError: Failed to literal eval dict. Err:%s " % ex)
+        raise WrongInputError("SyntaxError: Failed to literal eval dict. Err:%s " % ex)
     return out
 
 

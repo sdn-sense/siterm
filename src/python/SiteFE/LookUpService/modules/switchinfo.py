@@ -162,7 +162,7 @@ class SwitchInfo():
     def _addSwitchPortInfo(self, key, switchInfo):
         """ Add Switch Port Info for ports, vlans """
         for switchName, switchDict in list(switchInfo[key].items()):
-            self.logger.debug('Working on %s and %s' % (switchName, switchDict))
+            self.logger.debug('Working on %s' % switchName)
             try:
                 vsw = self.config.get(switchName, 'vsw')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
@@ -195,7 +195,7 @@ class SwitchInfo():
     def _addSwitchVlanInfo(self, key, switchInfo):
         """ Add All Vlan Info from switch """
         for switchName, switchDict in list(switchInfo[key].items()):
-            self.logger.debug('Working on %s and %s' % (switchName, switchDict))
+            self.logger.debug('Working on %s' % switchName)
             try:
                 vsw = self.config.get(switchName, 'vsw')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
@@ -203,17 +203,17 @@ class SwitchInfo():
                 continue
 
             for portName, portSwitch in list(switchDict.items()):
-                vlanuri = ":%s:%s:vlanport+%s" % (switchName, portName, portSwitch['value'])
+                vlanuri = self._addVlanPort(switchName, "Vlan_%s" % portSwitch['value'], vsw, portSwitch['value'])
+                self._addSwitchVlanLabel(vlanuri, portSwitch['value'])
                 if 'vlan_range' in portSwitch:
-                    # Vlan range for vlan - this is default coming from switch
+                    # Vlan range for vlan - this is default coming from switch yaml conf
                     # But for sure we dont want to add into model
                     del portSwitch['vlan_range']
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, vlanuri)
                 if 'tagged' in portSwitch:
                     for taggedIntf in portSwitch['tagged']:
-                        self._addVlanPort(switchName, taggedIntf, vsw, portSwitch['value'])
-                        self._addSwitchVlanLabel(vlanuri, portSwitch['value'])
-                        #self._addIsAlias()
+                        self._addVlanTaggedInterface(switchName, taggedIntf, vsw, portSwitch['value'])
+                        # should we add tagged interface to vlan as hasBidirectional?
 
 
     def _addSwitchLldpInfo(self, switchInfo):
@@ -241,9 +241,11 @@ class SwitchInfo():
     def addSwitchInfo(self):
         """Add All Switch information from switch Backends plugin."""
         # Get switch information...
-        switchInfo = self.switch.getinfo(self.renewSwitchConfig)
+        switchInfo = self.switch.getinfo(True)
         # Add Switch information to MRML
         self._addSwitchPortInfo('ports', switchInfo)
+        # TODO Review how better to represent vlans
+        # vlan itself should bidirectionalports.
         self._addSwitchVlanInfo('vlans', switchInfo)
         self._addSwitchLldpInfo(switchInfo)
         self._addSwitchRoutes(switchInfo)

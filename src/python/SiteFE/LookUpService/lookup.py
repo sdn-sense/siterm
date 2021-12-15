@@ -110,6 +110,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         # 4. Define Switch information from Switch Lookup Plugin
         # ==================================================================================
         self.addSwitchInfo()
+        # ==================================================================================
+        # 5, Add all active running config
+        # ==================================================================================
+        self.addDeltaInfo()
 
         saveName = self.getModelSavePath()
         with open(saveName, "w", encoding='utf-8') as fd:

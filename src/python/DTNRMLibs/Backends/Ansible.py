@@ -10,6 +10,8 @@ Authors:
 
 Date: 2021/12/01
 """
+import os
+import yaml
 import ansible_runner
 from DTNRMLibs.Backends import parsers
 
@@ -20,40 +22,8 @@ from DTNRMLibs.Backends import parsers
 class Actions():
     """ Main caller """
 
-    def accepting(self, inputDict, actionState):
-        """Accepting state actions."""
-        return True
-
-    def accepted(self, inputDict, actionState):
-        """Accepted state actions."""
-        return True
-
-    def committing(self, inputDict, actionState):
-        """Committing state actions."""
-        return True
-
-    def committed(self, inputDict, actionState):
-        """Committed state actions."""
-        return True
-
-    def activating(self, inputDict, actionState):
+    def activate(self, inputDict, actionState):
         """Activating state actions."""
-        return True
-
-    def active(self, inputDict, actionState):
-        """Activating state actions."""
-        return True
-
-    def activated(self, inputDict, actionState):
-        """Activating state actions."""
-        return True
-
-    def failed(self, inputDict, actionState):
-        """Failed state actions."""
-        return True
-
-    def remove(self, inputDict, actionState):
-        """Remove state actions."""
         return True
 
 
@@ -73,6 +43,24 @@ class Switch(Actions):
                                        #ignore_logging = False)
         return ansRunner
 
+
+    def _getHostConfig(self, host):
+        if not os.path.isfile('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host):
+            raise Exception('Ansible config file for %s not available.' % host)
+        with open('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host, 'r', encoding='utf-8') as fd:
+            out = yaml.load(fd.read())
+        return out
+
+    def _writeHostConfig(self, host, out):
+        if not os.path.isfile('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host):
+            raise Exception('Ansible config file for %s not available.' % host)
+        with open('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host, 'w', encoding='utf-8') as fd:
+            fd.write(yaml.dump(out))
+
+
+    def _applyNewConfig(self):
+        ansOut = self._executeAnsible('applyconfig.yaml')
+        return ansOut
 
     # 0 - command show version, system. Mainly to get mac address, but might use for more info later.
     # 1 - command to get lldp neighbors details.
@@ -145,26 +133,25 @@ class Switch(Actions):
                 out[host] = host_events
         return out
 
-    def getports(self, inData):
+    @staticmethod
+    def getports(inData):
         """ Get ports from ansible output """
-        # TODO: Check if parser has getports call, if does - call it
         return inData['event_data']['res']['ansible_facts']['ansible_net_interfaces'].keys()
 
-    def getportdata(self, inData, port):
+    @staticmethod
+    def getportdata(inData, port):
         """ Get port data from ansible output """
-        # TODO: Check if parser has getports call, if does - call it
         return inData['event_data']['res']['ansible_facts']['ansible_net_interfaces'][port]
 
     def getvlans(self, inData):
         """ Get vlans from ansible output """
-        # TODO: Check if parser has getports call, if does - call it
         # Dell OS 9 has Vlan XXXX
         # Arista EOS has VlanXXXX
         ports = self.getports(inData)
         return [vlan for vlan in ports if vlan.startswith('Vlan')]
 
-    def getVlanKey(self, port):
-        # TODO: Check if parser has getports call, if does - call it
+    @staticmethod
+    def getVlanKey(port):
         if port.startswith('Vlan_'):
             return int(port[5:])
         if port.startswith('Vlan '):
@@ -175,10 +162,9 @@ class Switch(Actions):
 
     def getvlandata(self, inData, vlan):
         """ Get vlan data from ansible output """
-        # TODO: Check if parser has getports call, if does - call it
         return self.getportdata(inData, vlan)
 
-    def getfactvalues(self, inData, key):
+    @staticmethod
+    def getfactvalues(inData, key):
         """ Get custom command output from ansible output, like routing, lldp, mac """
-        # TODO: Check if parser has getports call, if does - call it
         return inData['event_data']['res']['ansible_facts'][key]

@@ -29,7 +29,10 @@ class RDFHelper():
                 try:
                     prefixes.setdefault(key, {})
                     tKey = self.config.get(switchName, key)
-                    prefixes[key][switchName] = "%s:service+%s:%s" % (prefixes['site'], key, tKey)
+                    if tKey != switchName:
+                        self.logger.debug('Config mistake. Hostname != vsw (%s != %s)' % (switchName, tKey))
+                        continue
+                    prefixes[key][switchName] = "%s:%s:service+%s" % (prefixes['site'], tKey, key)
                     # This is to be confirmed once we check the L3 request. TODO
                     #if additionalhosts:
                     #    for host in additionalhosts:
@@ -89,6 +92,8 @@ class RDFHelper():
         """Define all known prefixes."""
         self.getSavedPrefixes()
         for prefix, val in list(self.prefixes.items()):
+            if isinstance(val, dict):
+                continue
             self.newGraph.bind(prefix, val)
 
     def _addSite(self, hostname=None, portName=None, vsw=None, vlan=None):
@@ -126,7 +131,12 @@ class RDFHelper():
         self._addNode(hostname)
         if not hostname or not vsw:
             return ""
-        svcService = ':%s:service+vsw:%s' % (hostname, vsw)
+        # vsw == hostname (One switching service per Node
+        # Any reason to support more?
+        if vsw != hostname:
+            self.logger.debug('Config mistake. Hostname != vsw (%s != %s)' % (hostname, vsw))
+            return ""
+        svcService = ':%s:service+vsw' % hostname
         self.newGraph.add((self.genUriRef('site', ':%s' % hostname),
                            self.genUriRef('nml', 'hasService'),
                            self.genUriRef('site', svcService)))
@@ -137,6 +147,26 @@ class RDFHelper():
                            self.genUriRef('nml', 'encoding'),
                            self.genUriRef('schema')))
         return svcService
+
+    def _addSwitchingSubnet(self, hostname=None, portName=None, vsw=None, vlan=None):
+        """ Add Switching Subnet which comes from delta parsed request """
+        svcService = self._addSwitchingService(hostname, None, hostname)
+        subnetUri = "%s%s" % (svcService, vsw)
+        self.newGraph.add((self.genUriRef('site', svcService),
+                           self.genUriRef('mrs', 'providesSubnet'),
+                           self.genUriRef('site', subnetUri)))
+        self.newGraph.add((self.genUriRef('site', subnetUri),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('mrs', 'SwitchingSubnet')))
+        return subnetUri
+
+    def _addPortSwitchingSubnet(self, hostname=None, portName=None, vsw=None, vlan=None):
+        """ Add Port into Switching Subnet """
+        puri = self._addVlanPort(hostname, portName, vsw, vlan)
+        self.newGraph.add((self.genUriRef('site', vsw),
+                           self.genUriRef('nml', 'hasBidirectionalPort'),
+                           self.genUriRef('site', puri)))
+        return puri
 
     def _addBandwidthService(self, hostname=None, portName=None, vsw=None, vlan=None):
         uri = self._addPort(hostname, portName)
@@ -214,9 +244,10 @@ class RDFHelper():
 
     def _addVswPort(self, hostname=None, portName=None, vsw=None, vlan=None):
         uri = self._addPort(hostname, portName)
+        vsw = self._addSwitchingService(hostname, portName, vsw, vlan)
         if not uri or not vsw:
             return ""
-        self.newGraph.add((self.genUriRef('site', ':%s:service+vsw:%s' % (hostname, vsw)),
+        self.newGraph.add((self.genUriRef('site', vsw),
                            self.genUriRef('nml', 'hasBidirectionalPort'),
                            self.genUriRef('site', uri)))
         return uri
@@ -246,6 +277,17 @@ class RDFHelper():
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'BidirectionalPort')))
         return vlanuri
+
+    def _addVlanTaggedInterface(self, hostname=None, portName=None, vsw=None, vlan=None):
+        vlanuri = self._addVlanPort(hostname, "Vlan_%s" % vlan, vsw, vlan)
+        porturi = self._addPort(hostname, portName)
+        if not vlanuri or not porturi:
+            return ""
+        self.newGraph.add((self.genUriRef('site', vlanuri),
+                           self.genUriRef('nml', 'hasBidirectionalPort'),
+                           self.genUriRef('site', porturi)))
+        return vlanuri
+
 
     def _addLabelSwapping(self, hostname=None, portName=None, vsw=None, vlan=None):
         # vlan key is used as label swapping. change to pass all as kwargs

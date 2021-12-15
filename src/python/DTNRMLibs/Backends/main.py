@@ -30,7 +30,8 @@ class Switch(Ansible, Raw, Node):
         self.dbI = getDBConn('Switch', self)[self.site]
         self.output = {'switches': {}, 'ports': {},
                        'vlans': {}, 'routes': {},
-                       'lldp': {}, 'info': {}}
+                       'lldp': {}, 'info': {},
+                       'portMapping': {}}
         if self.config[site]['plugin'] == 'ansible':
             Ansible.__init__(self)
         elif self.config[site]['plugin'] == 'raw':
@@ -41,24 +42,8 @@ class Switch(Ansible, Raw, Node):
     def mainCall(self, stateCall, inputDict, actionState):
         """Main caller function which calls specific state."""
         out = {}
-        if stateCall == 'accepting':
-            out = self.accepting(inputDict, actionState)
-        elif stateCall == 'accepted':
-            out = self.accepted(inputDict, actionState)
-        elif stateCall == 'committing':
-            out = self.committing(inputDict, actionState)
-        elif stateCall == 'committed':
-            out = self.committed(inputDict, actionState)
-        elif stateCall == 'activating':
-            out = self.activating(inputDict, actionState)
-        elif stateCall == 'active':
-            out = self.active(inputDict, actionState)
-        elif stateCall == 'activated':
-            out = self.activated(inputDict, actionState)
-        elif stateCall == 'failed':
-            out = self.failed(inputDict, actionState)
-        elif stateCall == 'remove':
-            out = self.remove(inputDict, actionState)
+        if stateCall == 'activate':
+            out = self.activate(inputDict, actionState)
         else:
             raise Exception('Unknown State %s' % stateCall)
         return out
@@ -76,7 +61,8 @@ class Switch(Ansible, Raw, Node):
     def _cleanOutput(self):
         self.output = {'switches': {}, 'ports': {},
                        'vlans': {}, 'routes': {},
-                       'lldp': {}, 'info': {}}
+                       'lldp': {}, 'info': {},
+                       'portMapping': {}}
 
     def _delPortFromOut(self, switch, portname):
         for key in self.output.keys():
@@ -101,6 +87,48 @@ class Switch(Ansible, Raw, Node):
         for rpl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""]]:
             port = port.replace(rpl[0], rpl[1])
         return port
+
+    # def _getAllSystemValidPortNames(self, switchName=None):
+    #     out = {}
+    #     for switch in self._getAllSwitches(switchName):
+    #         sOut = out.setdefault(switch, [])
+    #         for key in ['ports', 'vlans']:
+    #             if key in self.output[switch]:
+    #                 for portName in self.output['switch'][key].keys():
+    #                     tmpP = self._getSystemValidPortName(portName)
+    #                     if tmpP not in out:
+    #                         sOut.append(tmpP)
+    #     return out
+
+    def _getPortMapping(self):
+        for key in ['ports', 'vlans']:
+            for switch, switchDict in self.output[key].items():
+                for portKey in switchDict.keys():
+                    self.output['portMapping'].setdefault(switch, {})
+                    if portKey.startswith('Vlan'):
+                        # This is mainly a hack to list all possible options
+                        # For vlan to interface mapping. Why? Ansible switches
+                        # Return very differently vlans, like Vlan XXXX, VlanXXXX or vlanXXXX
+                        # And we need to map this back with correct name to ansible for provisioning
+                        vlankey = switchDict[portKey]['value']
+                        self.output['portMapping'][switch]['Vlan %s' % vlankey] = switchDict[portKey]['realportname']
+                        self.output['portMapping'][switch]['Vlan%s' % vlankey] = switchDict[portKey]['realportname']
+                        self.output['portMapping'][switch]['vlan%s' % vlankey] = switchDict[portKey]['realportname']
+                    else:
+                        self.output['portMapping'][switch][portKey] = switchDict[portKey]['realportname']
+
+    def _getSwitchPortName(self, switchName, portName):
+        # Get the portName which is uses in Switch
+        # as you can see in _getSystemValidPortName -
+        # Port name from Orchestrator will come modified.
+        # We need a way to revert it back to systematic switch port name
+        return self.output['portMapping'].get(switchName, {}).get(portName, "")
+
+    def _getAllSwitches(self, switchName=None):
+        if switchName:
+            return [switchName] if switchName in self.output['switches'] else []
+        return self.output['switches'].keys()
+
 
     def _insertToDB(self, data):
         self._getDBOut()
@@ -176,9 +204,11 @@ class Switch(Ansible, Raw, Node):
         """Get info about RAW plugin."""
         # If renew or switches var empty - get latest
         # And update in DB
-        if renew or not self.switches:
+        if renew:
             out = self._getFacts()
             self._insertToDB(out)
+        if not self.switches:
+            self._getDBOut()
         # Clean and prepare output which is returned to caller
         self._cleanOutput()
         switch = self.config.get(self.site, 'switch')
@@ -186,6 +216,7 @@ class Switch(Ansible, Raw, Node):
             self._setDefaults(switchn)
             self._mergeYamlAndSwitch(switchn)
         self.output = cleanupEmpty(self.nodeinfo())
+        self._getPortMapping()
         return self.output
 
 

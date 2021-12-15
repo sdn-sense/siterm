@@ -8,7 +8,6 @@ Authors:
 
 Date: 2021/12/01
 """
-# TODO: isAlias seems to be broken pointing to switch
 # TODO: interface and vlan IP address set in correct way (same as switches do)
 # TODO: vlans bidirectional on node? or only on Interface? I suspect only interface
 
@@ -108,7 +107,7 @@ class NodeInfo():
         # self._addRoutingService(nodeDict['hostname'])
         # # Service Definition for L3
         # self._addL3VPN(nodeDict['hostname'])
-        # 
+        #
         # for tablegress in['table+defaultIngress', 'table+defaultEgress']:
         #     routingtable = self._addRoutingTable(nodeDict['hostname'], tablegress)
         #     for routeinfo in hostinfo['NetInfo']["routes"]:
@@ -137,7 +136,7 @@ class NodeInfo():
         #                 continue
         #             routename = "%s_%s" % (routeinfo['RTA_PREFSRC'], routeinfo['dst_len'])
         #             routename = self._addRoute(nodeDict['hostname'], tablegress, routename)
-        # 
+        #
         #             defaultroutename = routingtable + ":route+default:local"
         #             self.newGraph.add((self.genUriRef('site', routename),
         #                                self.genUriRef('mrs', 'routeTo'),

@@ -10,89 +10,95 @@ Authors:
 
 Date: 2021/12/01
 """
-from rdflib import Graph
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 
 class DeltaInfo():
+    """ Add Delta info, mainly tag, connID, timeline """
     # pylint: disable=E1101,W0201,E0203
-    def _deltaReduction(self, delta, mainGraphName):
-        """Delta reduction."""
-        delta['content'] = evaldict(delta['content'])
-        self.logger.info('Working on %s delta reduction in state' % delta['uid'])
-        mainGraph = Graph()
-        mainGraph.parse(mainGraphName, format='turtle')
-        reduction = delta['content']['reduction']
-        #tmpFile = tempfile.NamedTemporaryFile(delete=False, mode="w+")
-        #tmpFile.write(reduction)
-        #tmpFile.close()
-        tmpGraph = Graph()
-        #tmpGraph.parse(tmpFile.name, format='turtle')
-        tmpGraph.parse(reduction, format='turtle')
-        #os.unlink(tmpFile.name)
-        self.logger.info('Main Graph len: %s Reduction Len: %s', len(mainGraph), len(tmpGraph))
-        mainGraph -= tmpGraph
-        self.dbI.update('deltasmod', [{'uid': delta['uid'], 'updatedate': getUTCnow(), 'modadd': 'removed'}])
-        return mainGraph
 
-    def _addDeltaStatesInModel(self, mainGraph, state, addition):
-        """Add Delta States into Model."""
-        # Issue details: https://github.com/sdn-sense/siterm/issues/73
-        for conn in addition:
-            if 'timestart' in list(conn.keys()) and state == 'committed':
-                if conn['timestart'] < getUTCnow():
-                    state = 'activating'
-                else:
-                    state = 'scheduled'
-            elif 'timeend' in list(conn.keys()) and conn['timeend'] < getUTCnow() and state == 'activated':
+    def addSchedulingState(self, timeline, uri, timeuri):
+        """ Add Scheduling state into model """
+        if not timeline:
+            return
+        state = 'unknown'
+        if 'start' in timeline:
+            if timeline['start'] < getUTCnow():
+                state = 'active'
+            else:
+                state = 'scheduled'
+        if 'end' in timeline:
+            if timeline['end'] < getUTCnow():
                 state = 'deactivating'
-            # Add new State under SwitchSubnet
-            mainGraph.add((self.genUriRef(custom=conn['connectionID']),
+        self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('mrs', 'tag'),
                            self.genLiteral('monitor:status:%s' % state)))
-            # If timed delta, add State under lifetime resource
-            if 'timestart' in list(conn.keys()) or 'timeend' in list(conn.keys()):
-                mainGraph.add((self.genUriRef(custom="%s:lifetime" % conn['connectionID']),
-                               self.genUriRef('mrs', 'tag'),
-                               self.genLiteral('monitor:status:%s' % state)))
-        return mainGraph
+        self.newGraph.add((self.genUriRef('site', timeuri),
+                           self.genUriRef('mrs', 'tag'),
+                           self.genLiteral('monitor:status:%s' % state)))
+
+    def addTimeline(self, timeline, uri):
+        """ Add timeline in the model """
+        if not timeline:
+            return
+        timeuri = "%s:lifetime" % uri
+        self.newGraph.add((self.genUriRef('site', uri),
+                           self.genUriRef('nml', 'existsDuring'),
+                           self.genUriRef('site', timeuri)))
+        self.newGraph.add((self.genUriRef('site', timeuri),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('nml', 'Lifetime')))
+        # end;start
+        if 'start' in timeline:
+            self.newGraph.add((self.genUriRef('site', timeuri),
+                               self.genUriRef('nml', 'start'),
+                               self.genLiteral(timeline['start'])))
+        if 'end' in timeline:
+            self.newGraph.add((self.genUriRef('site', timeuri),
+                               self.genUriRef('nml', 'end'),
+                               self.genLiteral(timeline['end'])))
+        self.addSchedulingState(timeline, uri, timeuri)
+        return
 
 
-    def _deltaAddition(self, delta, mainGraphName, updateState=True):
-        """Delta addition lookup."""
-        delta['content'] = evaldict(delta['content'])
-        self.logger.info('Working on %s delta addition in state' % delta['uid'])
-        mainGraph = Graph()
-        mainGraph.parse(mainGraphName, format='turtle')
-        addition = delta['content']['addition']
-        #tmpFile = tempfile.NamedTemporaryFile(delete=False, mode="w+")
-        #tmpFile.write(addition)
-        #tmpFile.close()
-        tmpGraph = Graph()
-        tmpGraph.parse(addition, format='turtle')
-        #os.unlink(tmpFile.name)
-        self.logger.info('Main Graph len: %s Addition Len: %s', len(mainGraph), len(tmpGraph))
-        mainGraph += tmpGraph
-        # Add delta states for that specific delta
-        mainGraph = self._addDeltaStatesInModel(mainGraph, delta['state'], evaldict(delta['addition']))
-        if updateState:
-            self.dbI.update('deltasmod', [{'uid': delta['uid'], 'updatedate': getUTCnow(), 'modadd': 'added'}])
-        return mainGraph
+    def _addParams(self, params, uri):
+        """ Add all params, like tag, belongsTo, labelSwapping, timeline """
+        for key in [['tag', 'mrs'], ['belongsTo', 'nml'], ['labelSwapping', 'nml']]:
+            if key[0] in params:
+                self.newGraph.add((self.genUriRef('site', uri),
+                                   self.genUriRef(key[1], key[0]),
+                                   self.genUriRef('', custom=params[key[0]])))
+        if 'existsDuring' in params:
+            self.addTimeline(params['existsDuring'], uri)
 
-    def appendDeltas(self, mainGraphName):
+    def addvswInfo(self, vswDict, uri):
+        """ Add vsw Info from params """
+        for key, val in vswDict.items():
+            if key == '_params':
+                # It get's full uri here.
+                self._addParams(val, uri)
+            else:
+                for port, portDict in val.items():
+                    if portDict.get('hasLabel', {}).get('labeltype', None) == 'ethernet#vlan':
+                        vlan = portDict['hasLabel']['value']
+                        porturi = self._addVlanPort(key, port, None, vlan)
+                        # TODO: Check with Xi - why Server ports are not included
+                        # In hasBidirectionalPort for vsw connection in SwitchingSubnet
+                        if key in self.switch.switches['output'].keys():
+                            self._addPortSwitchingSubnet(key, port, uri, vlan)
+                        self._addParams(portDict.get('_params', {}), porturi)
+                    else:
+                        self.logger.debug('port %s and portDict %s ignored. No vlan label' % (port, portDict))
+
+    def addDeltaInfo(self):
         """Append all deltas to Model."""
-        for modstate in ['added', 'add', 'remove']:
-            for delta in self.dbI.get('deltas', search=[['modadd', modstate]], limit=10):
-                writeFile = False
-                if delta['deltat'] == 'reduction':
-                    if delta['state'] == 'failed':
-                        continue
-                    mainGraph = self._deltaReduction(delta, mainGraphName)
-                    writeFile = True
-                elif delta['deltat'] in ['addition', 'modify'] and \
-                (delta['modadd'] in ['add'] or delta['state'] in ['activated', 'activating', 'committed']):
-                    mainGraph = self._deltaAddition(delta, mainGraphName)
-                    writeFile = True
-                if writeFile:
-                    with open(mainGraphName, "w", encoding='utf-8') as fd:
-                        fd.write(mainGraph.serialize(format='turtle'))
+        activeDeltas = self.dbI.get('activeDeltas')
+        if activeDeltas:
+            activeDeltas = activeDeltas[0]
+            activeDeltas['output'] = evaldict(activeDeltas['output'])
+        for host, vals in activeDeltas['output'].get('SubnetMapping').items():
+            for subnet in vals.get('providesSubnet', {}).keys():
+                svcService = self._addSwitchingService(host, None, host)
+                subnetUri = subnet.split(svcService)[1]
+                uri = self._addSwitchingSubnet(host, None, subnetUri)
+                self.addvswInfo(activeDeltas.get('output', {}).get('vsw', {}).get(subnet, {}), uri)

@@ -33,13 +33,13 @@ def _checksvc(svc, activeDeltas):
         return True
     return False
 
-def _checkTime(inVals, activeDeltas):
+def _checkTime(intfDict, activeDeltas):
     # Need to load all times from active deltas in advance
     # If we have many checks, it will be faster if all active
     # delta times are preloaded
     return
 
-def _checkIP(inVals, activeDeltas):
+def _checkIP(intfDict, activeDeltas):
     # Need to check if IP is valid and from our supported ranges
     # Seems Orchestrator ignores this check
     if 'hasNetworkAddress' in intfDict:
@@ -49,7 +49,7 @@ def _checkIP(inVals, activeDeltas):
 #                                                          'value': '10.251.85.2/24'},
 
 
-def _checkService(inVals, activeDeltas):
+def _checkService(intfDict, activeDeltas):
     if 'hasService' in intfDict:
         return
     return
@@ -63,7 +63,7 @@ def _checkService(inVals, activeDeltas):
 
 
 
-def _checkLabel(inVals, activeDeltas):
+def _checkLabel(intfDict, activeDeltas):
     # Need to check if vlan in supported.
     # Also if addition - check that it does not overlap
     # In case modify - ensure it exists and preconfigured
@@ -83,6 +83,7 @@ def _checkHosts(hostname, activeDeltas):
 def _checkInterface(hostname, interface, activeDeltas):
     # Check if hostname has that interface and
     # Orchestrator is allowed to control that.
+    _checkHosts(hostname, activeDeltas)
     return
 
 def _checkParams(inVals, activeDeltas):
@@ -101,9 +102,9 @@ def checkConflicts(dbObj, delta):
     """Check conflicting resources and not allow them"""
     delta['addition'] = evaldict(delta['addition'])
     activeDeltas = dbObj.get('activeDeltas')
-    print(activeDeltas)
     if not activeDeltas:
         return
+    activeDeltas = evaldict(activeDeltas[0]['output'])
     for svc, svcitems in delta['addition'].items():
         if _checksvc(svc, activeDeltas):
             continue
@@ -116,11 +117,10 @@ def checkConflicts(dbObj, delta):
             for hostname, vals in connIDitems.items():
                 if hostname == '_params':
                     _checkParams(vals, activeDeltas)
-                    # Pass it to timecheck
+                    continue
                 if isinstance(vals, dict):
-                    # Check that hostname exists.
-                    _checkHosts(hostname, activeDeltas)
                     for intf, intfDict in vals.items():
+                        _checkInterface(hostname, intf, activeDeltas)
                         _checkIP(intfDict, activeDeltas)
                         _checkService(intfDict, activeDeltas)
                         _checkLabel(intfDict, activeDeltas)
