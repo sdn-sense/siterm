@@ -213,7 +213,6 @@ class SwitchInfo():
                 if 'tagged' in portSwitch:
                     for taggedIntf in portSwitch['tagged']:
                         self._addVlanTaggedInterface(switchName, taggedIntf, vsw, portSwitch['value'])
-                        # should we add tagged interface to vlan as hasBidirectional?
 
 
     def _addSwitchLldpInfo(self, switchInfo):
@@ -244,8 +243,6 @@ class SwitchInfo():
         switchInfo = self.switch.getinfo(True)
         # Add Switch information to MRML
         self._addSwitchPortInfo('ports', switchInfo)
-        # TODO Review how better to represent vlans
-        # vlan itself should bidirectionalports.
         self._addSwitchVlanInfo('vlans', switchInfo)
         self._addSwitchLldpInfo(switchInfo)
         self._addSwitchRoutes(switchInfo)

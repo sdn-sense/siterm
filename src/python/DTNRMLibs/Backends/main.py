@@ -103,6 +103,8 @@ class Switch(Ansible, Raw, Node):
     def _getPortMapping(self):
         for key in ['ports', 'vlans']:
             for switch, switchDict in self.output[key].items():
+                if switch not in self.switches['output']:
+                    continue
                 for portKey in switchDict.keys():
                     self.output['portMapping'].setdefault(switch, {})
                     if portKey.startswith('Vlan'):

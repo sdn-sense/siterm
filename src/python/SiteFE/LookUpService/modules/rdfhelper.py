@@ -269,7 +269,10 @@ class RDFHelper():
         uri = self._addPort(hostname, portName)
         if not uri or not vlan:
             return ""
-        vlanuri = ":%s:%s:vlanport+%s" % (hostname, portName, vlan)
+        #vlanuri = ":%s:%s:vlanport+%s" % (hostname, portName, vlan)
+        vlanuri = ":%s:%s" % (hostname, portName)
+        if vlanuri == uri:
+            return vlanuri
         self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('nml', 'hasBidirectionalPort'),
                            self.genUriRef('site', vlanuri)))
@@ -286,6 +289,9 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site', vlanuri),
                            self.genUriRef('nml', 'hasBidirectionalPort'),
                            self.genUriRef('site', porturi)))
+        self.newGraph.add((self.genUriRef('site', porturi),
+                           self.genUriRef('nml', 'hasLabel'),
+                           self.genUriRef('site', vlanuri)))
         return vlanuri
 
 
