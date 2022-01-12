@@ -107,17 +107,20 @@ class Switch(Ansible, Raw, Node):
                     continue
                 for portKey in switchDict.keys():
                     self.output['portMapping'].setdefault(switch, {})
+                    realportname = switchDict.get(portKey, {}).get('realportname', None)
+                    if not realportname:
+                        continue
                     if portKey.startswith('Vlan'):
                         # This is mainly a hack to list all possible options
                         # For vlan to interface mapping. Why? Ansible switches
                         # Return very differently vlans, like Vlan XXXX, VlanXXXX or vlanXXXX
                         # And we need to map this back with correct name to ansible for provisioning
                         vlankey = switchDict[portKey]['value']
-                        self.output['portMapping'][switch]['Vlan %s' % vlankey] = switchDict[portKey]['realportname']
-                        self.output['portMapping'][switch]['Vlan%s' % vlankey] = switchDict[portKey]['realportname']
-                        self.output['portMapping'][switch]['vlan%s' % vlankey] = switchDict[portKey]['realportname']
+                        self.output['portMapping'][switch]['Vlan %s' % vlankey] = realportname
+                        self.output['portMapping'][switch]['Vlan%s' % vlankey] = realportname
+                        self.output['portMapping'][switch]['vlan%s' % vlankey] = realportname
                     else:
-                        self.output['portMapping'][switch][portKey] = switchDict[portKey]['realportname']
+                        self.output['portMapping'][switch][portKey] = realportname
 
     def _getSwitchPortName(self, switchName, portName):
         # Get the portName which is uses in Switch

@@ -19,34 +19,7 @@ Date                    : 2018/11/26
 """
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
-from SiteFE.PolicyService.newDeltaChecks import checkConflicts
-
-
-def timeendcheck(delta, logger):
-    """Check delta timeEnd.
-
-    if passed, returns True.
-    """
-    # TODO: Check this. might be broken.
-    conns = []
-    connEnded = False
-    for connDelta in delta:
-        try:
-            if 'timeend' in list(connDelta.keys()):
-                timeleft = getUTCnow() - int(connDelta['timeend'])
-                logger.info('CurrentTime %s TimeStart %s. TimeLeft %s'
-                            % (getUTCnow(), connDelta['timeend'], timeleft))
-                if connDelta['timeend'] < getUTCnow():
-                    logger.info('This delta already passed timeend mark. \
-                                Setting state to cancel')
-                    connEnded = True
-                else:
-                    logger.info('Time did not passed yet.')
-        except IOError:
-            logger.info('This delta had an error checking endtime. \
-                        Leaving state as it is.')
-    return connEnded
-
+from SiteFE.PolicyService.deltachecks import checkConflicts, checkActiveConfig
 
 class ConnectionMachine():
     """Connection State machine.
@@ -259,7 +232,8 @@ class StateMachine():
                 activeDeltas['output'] = str(activeDeltas['output'])
             # REDUCTION
             if 'reduction' in delta and delta['reduction']:
-                import pdb; pdb.set_trace()
+                print('REDUCTION. NOT IMPLEMENTED. TODO')
+                return
             if action ==  'insert':
                 dbObj.insert('activeDeltas', [activeDeltas])
             elif action == 'update':
@@ -268,22 +242,18 @@ class StateMachine():
 
     def activated(self, dbObj):
         """Check on all activated state deltas."""
-        # What to do if activated? Pretty much nothing
-        # Might be diff case for reduction;
-        for delta in dbObj.get('deltas', search=[['state', 'activated']]):
-            # Reduction
-            #if delta['deltat'] in ['reduction']:
-            #    if delta['updatedate'] < int(getUTCnow() - 600):
-            #        self._stateChangerDelta(dbObj, 'removing', **delta)
-            #    continue
-            # Addition
-            self.logger.info('Activated check on delta %s' % delta)
-            delta['addition'] = evaldict(delta['addition'])
-            # TODO: This check conflicts should be removed (only for testing)
-            checkConflicts(dbObj, delta)
-            #if timeendcheck(delta, self.logger):
-            #    self._stateChangerDelta(dbObj, 'cancel', **delta)
-            #    self.modelstatecancel(dbObj, **delta)
+        # GET CURRENT ACTIVE DELTAS.
+        activeDeltas = dbObj.get('activeDeltas')
+        if not activeDeltas:
+            return
+        activeDeltas = activeDeltas[0]
+        activeDeltas['output'] = evaldict(activeDeltas['output'])
+        newconf, cleaned = checkActiveConfig(activeDeltas['output'])
+        if newconf != activeDeltas['output']:
+            self.logger.debug("Some services expired. Updating configuration. Removed services: %s" % cleaned)
+            activeDeltas['updatedate'] = int(getUTCnow())
+            activeDeltas['output'] = str(newconf)
+            dbObj.update('activeDeltas', [activeDeltas])
 
     def removing(self, dbObj):
         self.logger.info('Removal call')

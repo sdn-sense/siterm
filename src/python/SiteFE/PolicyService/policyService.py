@@ -223,7 +223,7 @@ class PolicyService(RDFHelper):
             out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'value')))
             if out:
                 scanVals['value'] = str(out[0])
-       
+
 
     def _recordSubnet(self, subnet, returnout):
         returnout = self.intOut(subnet, returnout.setdefault('SubnetMapping', {}))

@@ -13,9 +13,10 @@ Date: 2021/12/01
 import re
 
 class DellOS9():
+    """ Dell OS 9 Parser """
     def __init__(self):
         self.factName = ['dellos9_facts', 'dellos9_command']
-        self.regexs = [r'tagged (.+) (.+)', r'untagged (.+) (.+)', r'channel-member (.+) (.+)']
+        self.regexs = [r'^tagged (.+) (.+)', r'^untagged (.+) (.+)', r'^channel-member (.+) (.+)', r'^(Port-channel) (.+)']
 
     @staticmethod
     def _getSystemValidPortName(port):
@@ -30,50 +31,149 @@ class DellOS9():
         return port
 
     def _portSplitter(self, portName, inPorts):
-        """ Port splitter for dellos9
-        example:
-         tagged fortyGigE 1/29/1-1/30/1
-         tagged hundredGigE 1/6,1/10,1/22-1/23,1/27,1/31-1/32
-         tagged Port-channel 101-102
-         untagged fortyGigE 1/21/1
-         untagged hundredGigE 1/5,1/24
+        """ Port splitter for dellos9/8
         """
-        outPorts = []
-        for splPorts in inPorts.split(','):
-            splRange = splPorts.split('-')
-            if len(splRange) == 2:
-                start = splRange[0].split('/')
-                end = splRange[1].split('/')
-                vCh = 1  # Which value changes, usually it is 2nd, otherwise changed on intf Name
-                apnd = ""
-                if portName == "fortyGigE":
-                    apnd = "fortyGigE %s/%%s/%s" % (start[0], start[2])
-                elif portName == "hundredGigE":
-                    apnd = "hundredGigE %s/%%s" % (start[0])
-                elif portName == "Port-channel":
-                    vCh = 0
-                    apnd = "Port-channel %s"
-                # 25G? TODO! - We do not have any of 25G
-                # 10G? TODO! - SDN Testbed no 10G
-                else:
-                    self.logger.debug("UNSUPPORTED port name %s %s" % (portName, splPorts))
-                    continue
-                for i in range(int(start[vCh]), int(end[vCh]) + 1):
-                    outPorts.append(self._getSystemValidPortName(apnd % i))
-            else:
-                outPorts.append(self._getSystemValidPortName("%s %s" % (portName, splRange[0])))
-        return outPorts
+        def __identifyStep():
+            if portName == 'fortyGigE':
+                return 4
+            return 1
 
+        def rule0(reMatch):
+            # ('2,18-21,100,122', ',122', '122', '21')
+            # Split by comma, and loop:
+            # if no - add to list
+            # if - exists - split by dash and check if st < en
+            # every step is 1, 40G - is 4
+            out = []
+            for vals in reMatch[0].split(','):
+                if '-' in vals:
+                    stVal, enVal = vals.split('-')[0], vals.split('-')[1]
+                    if int(stVal) > int(enVal):
+                        print('WARNING. Ignore this port (endVal > stVal): %s %s' % (portName, vals))
+                        continue
+                    for val in range(int(stVal), int(enVal)+1, __identifyStep()):
+                        out.append(val)
+                else:
+                    out.append(int(vals))
+            return out
+
+        def rule1(reMatch):
+            # ('1/1-1/2,1/3,1/4,1/10-1/20', ',1/10-1/20', '1/10-1/20', '-1/20')
+            # Split by comma and loop:
+            # if no -, add to list
+            # if - exists - split by dash, split by / and identify which value is diff
+            # diff values check if st < en and push to looper;
+            # every step is 1, 40G - is 4
+            out = []
+            for vals in reMatch[0].split(','):
+                if '-' in vals:
+                    stVal, enVal = vals.split('-')[0].split('/'), vals.split('-')[1].split('/')
+                    mod, modline = None, None
+                    # If first digit not equal - replace first
+                    if stVal[0] != enVal[0] and stVal[1] == enVal[1] and \
+                       int(stVal[0]) < int(enVal[0]):
+                        modline = "%%s/%s" % stVal[1]
+                        mod = 0
+                    # If second digit not equal - replace second
+                    elif stVal[0] == enVal[0] and stVal[1] != enVal[1] and \
+                         int(stVal[1]) < int(enVal[1]):
+                        modline = "%s/%%s" % stVal[0]
+                        mod = 1
+                    if mod and modline:
+                        for val in range(int(stVal[mod]), int(enVal[mod])+1, __identifyStep()):
+                            out.append(modline % val)
+                else:
+                    out.append(vals)
+            return out
+
+        def rule2(reMatch):
+            # ('0', '0-3,11-12,15,56,58-59', ',58-59', '58', '59')
+            # Split by comma and loop:
+            # if no -, add to list
+            # if - exists - split by dash, and check if st < en
+            # every step is 1, 40G - is 4
+            out = []
+            tmpOut = rule0(tuple([reMatch[1]]))
+            for line in tmpOut:
+                out.append("%s/%s" % (reMatch[0], line))
+            return out
+
+        def rule3(reMatch):
+            # ('1/6/1-1/8/1,1/9/1,1/10/1-1/20/1', ',1/10/1-1/20/1', '1/10/1', '1', '10', '1', '1/20/1', '1', '20', '1')
+            # Split by comma and loop:
+            # if no -, add to list
+            # if - exists - split by dash, split by / and identify which value is diff
+            # diff values check if st < en and push to looper;
+            # Here all step is 1, even 40G is 1;
+            out = []
+            for vals in reMatch[0].split(','):
+                if '-' in vals:
+                    stVal, enVal = vals.split('-')[0].split('/'), vals.split('-')[1].split('/')
+                    mod, modline = None, None
+                    # If first digit not equal - replace first
+                    if stVal[0] != enVal[0] and stVal[1] == enVal[1] and \
+                       stVal[2] == enVal[2] and int(stVal[0]) < int(enVal[0]):
+                        modline = "%%s/%s/%s" % (stVal[1], stVal[2])
+                        mod = 0
+                    # If second digit not equal - replace second
+                    elif stVal[0] == enVal[0] and stVal[1] != enVal[1] and \
+                         stVal[2] == enVal[2] and int(stVal[1]) < int(enVal[1]):
+                        modline = "%s/%%s/%s" % (stVal[0], stVal[2])
+                        mod = 1
+                    # If third digit not equal - replace third
+                    elif stVal[0] == enVal[0] and stVal[1] == enVal[1] and \
+                         stVal[2] != enVal[2] and int(stVal[2]) < int(enVal[2]):
+                        modline = "%s/%s/%%s" % (stVal[0], stVal[1])
+                        mod = 2
+                    if mod and modline:
+                        for val in range(int(stVal[mod]), int(enVal[mod])+1, 1):
+                            out.append(modline % val)
+                else:
+                    out.append(vals)
+            return out
+
+
+        # Rule 0: Parses digit or digit group separated with dash.
+        # Can be multiple separated by comma:
+        match = re.match(r'((,*(\d{1,3}-*(\d{1,3})*))+)$', inPorts)
+        if match:
+            return rule0(match.groups())
+        # Rule 1: Parses only this group below, can be multiple separated by comma:
+        # 1/1
+        # 1/1-1/2
+        match = re.match(r'((,*(\d{1,3}/\d{1,3}(-\d{1,3}/\d{1,3})*))+)$', inPorts)
+        if match:
+            return rule1(match.groups())
+        # Rule 2: 0/XX, where XX can be digit or 2 digits separated by dash.
+        # Afterwards joint by comma, digit or 2 digits separated by dash:
+        match = re.match(r'(\d{1,3})/((,*(\d{1,3})-*(\d{1,3})*)+)$', inPorts)
+        if match:
+            return rule2(match.groups())
+        # Rule 3: Parses only this group below, can be multiple separated by comma:
+        # 1/1/1
+        # 1/7/1-1/8/1
+        match = re.match(r'((,*((\d{1,3})/(\d{1,3})/(\d{1,3}))-*((\d{1,3})/(\d{1,3})/(\d{1,3}))*)+)$', inPorts)
+        if match:
+            return rule3(match.groups())
+
+        # If we are here - raise WARNING, and continue. Return empty list
+        print('WARNING. Line %s %s NOT MATCHED' % (portName, inPorts))
+        return []
 
     def _parseMembers(self, line):
         out = []
         for regex in self.regexs:
             match = re.search(regex, line)
             if match:
-                out += self._portSplitter(match.group(1), match.group(2))
+                tmpout += self._portSplitter(match.group(1), match.group(2))
+                if not tmpout:
+                    return out
+                for item in tmpout:
+                    out.append(self._getSystemValidPortName("%s %s" % (match.group(1), item)))
         return out
 
     def parser(self, ansibleOut):
+        """ General Parser to parse ansible config """
         out = {}
         # Out must be {'<interface_name>': {'key': 'value'}} OR
         #             {'<interface_name>': {'key': ['value1', 'value2']}

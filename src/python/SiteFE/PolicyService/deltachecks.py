@@ -17,6 +17,7 @@ Email                   : jbalcas (at) caltech.edu
 @Copyright              : Copyright (C) 2021 California Institute of Technology
 Date                    : 2021/03/04
 """
+import copy
 from datetime import datetime
 from collections import namedtuple
 from DTNRMLibs.MainUtilities import evaldict
@@ -126,6 +127,27 @@ def checkConflicts(dbObj, delta):
                         _checkLabel(intfDict, activeDeltas)
                         # TODO: This should also include later check for RST
                         # And for routing information. Need to check if all info is good.
+
+def serviceEnded(indict):
+    if 'end' in indict:
+        if getUTCnow() > indict['end']:
+            return True
+    print(indict)
+    return False
+
+def checkActiveConfig(activeConfig):
+    newconf = copy.deepcopy(activeConfig)
+    cleaned = []
+    for host, pSubnets in activeConfig.get('SubnetMapping', {}).items():
+        for subnet, _ in pSubnets.get('providesSubnet', {}).items():
+            if 'existsDuring' in activeConfig.get('vsw', {}).get(subnet, {}).get('_params', {}):
+                clean = serviceEnded(activeConfig['vsw'][subnet]['_params']['existsDuring'])
+                if clean:
+                    cleaned.append(subnet)
+                    newconf['SubnetMapping'][host]['providesSubnet'].pop(subnet)
+                    newconf['vsw'].pop(subnet)
+    return newconf, cleaned
+
 
 def overlap_count(times1, times2):
     """Find out if times overlap."""
