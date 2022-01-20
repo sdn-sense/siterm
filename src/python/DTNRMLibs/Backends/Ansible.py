@@ -89,7 +89,7 @@ class Switch(Actions):
         out = {}
         ansOut = self._executeAnsible('maclldproute.yaml')
         for host, _ in ansOut.stats['ok'].items():
-            hOut = out.setdefault(host, {'info': {}, 'lldp': {}, 'ipv4routing': {}, 'ipv6routing': {}})
+            hOut = out.setdefault(host, {'info': {}, 'lldp': {}, 'ipv4': {}, 'ipv6': {}})
             for host_events in ansOut.host_events(host):
                 if host_events['event'] != 'runner_on_ok':
                     continue

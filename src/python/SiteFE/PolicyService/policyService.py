@@ -10,6 +10,7 @@ Date: 2021/12/01
 import os
 import sys
 import tempfile
+import pprint
 import time
 from rdflib import Graph
 from rdflib import URIRef
@@ -129,8 +130,7 @@ class PolicyService(RDFHelper):
                 elif key == 'rst':
                     self.logger.info('Parsing L3 information from delta')
                     self.parsel3Request(gIn, out)
-        import pprint
-        pprint.pprint(out)
+        self.logger.info(pprint.pprint(out))
         return out
 
 
@@ -303,15 +303,16 @@ class PolicyService(RDFHelper):
             for key in ['reduction', 'addition']:
                 if key in toDict["Content"] and toDict["Content"][key]:
                     self.logger.debug('Got Content %s for key %s', toDict["Content"][key], key)
-                    tmpFile = tempfile.NamedTemporaryFile(delete=False, mode="w+")
-                    try:
-                        tmpFile.write(toDict["Content"][key])
-                    except ValueError as ex:
-                        self.logger.info('Received ValueError. More details %s. Try to write normally with decode', ex)
-                        tmpFile.write(decodebase64(toDict["Content"][key]))
-                    tmpFile.close()
-                    outputDict[key] = self.parseDeltaRequest(tmpFile.name)
-                    os.unlink(tmpFile.name)
+                    tmpFile = ""
+                    with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
+                        tmpFile = fd.name
+                        try:
+                            fd.write(toDict["Content"][key])
+                        except ValueError as ex:
+                            self.logger.info('Received ValueError. More details %s. Try to write normally with decode', ex)
+                            fd.write(decodebase64(toDict["Content"][key]))
+                    outputDict[key] = self.parseDeltaRequest(tmpFile)
+                    os.unlink(tmpFile)
         #except (IOError, KeyError, AttributeError, IndentationError, ValueError,
         #        BadSyntax, HostNotFound, UnrecognizedDeltaOption) as ex:
         except IOError as ex:

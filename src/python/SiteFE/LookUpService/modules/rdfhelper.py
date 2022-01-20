@@ -10,6 +10,7 @@ Date: 2021/12/01
 """
 import configparser
 from rdflib import URIRef, Literal
+from rdflib.namespace import XSD
 
 class RDFHelper():
     """This generates all known default prefixes."""
@@ -51,8 +52,10 @@ class RDFHelper():
         return URIRef("%s%s" % (self.prefixes[prefix], add))
 
     @staticmethod
-    def genLiteral(value):
+    def genLiteral(value, datatype=None):
         """Returns simple Literal RDF out."""
+        if datatype:
+            return Literal(value, datatype=datatype)
         return Literal(value)
 
 
@@ -286,9 +289,6 @@ class RDFHelper():
         porturi = self._addPort(hostname, portName)
         if not vlanuri or not porturi:
             return ""
-        self.newGraph.add((self.genUriRef('site', vlanuri),
-                           self.genUriRef('nml', 'hasBidirectionalPort'),
-                           self.genUriRef('site', porturi)))
         self.newGraph.add((self.genUriRef('site', porturi),
                            self.genUriRef('nml', 'hasLabel'),
                            self.genUriRef('site', vlanuri)))
@@ -300,7 +300,7 @@ class RDFHelper():
         uri = self._addSwitchingService(hostname, None, vsw)
         if not uri or not vlan:
             return ""
-        self._nmlLiteral(uri, 'labelSwapping', vlan)
+        self._nmlLiteral(uri, 'labelSwapping', True if vlan in ['True', 'true', 'yes', 'yes'] else False, datatype=XSD.boolean)
         return vlan
 
     def _addNetworkAddress(self, uri, name, value):
@@ -324,10 +324,10 @@ class RDFHelper():
     # ==========================================================
     # These are very general model add ons
     # ==========================================================
-    def _nmlLiteral(self, uri, nmlkey, value):
+    def _nmlLiteral(self, uri, nmlkey, value, datatype=None):
         self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('nml', nmlkey),
-                           self.genLiteral(value)))
+                           self.genLiteral(value, datatype)))
 
     def _mrsLiteral(self, uri, mrskey, value):
         self.newGraph.add((self.genUriRef('site', uri),

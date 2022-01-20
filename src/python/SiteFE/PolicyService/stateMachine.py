@@ -215,6 +215,9 @@ class StateMachine():
     def activating(self, dbObj):
         """Check on all deltas in state activating."""
         for delta in dbObj.get('deltas', search=[['state', 'activating']]):
+            # Deltas keep string in DB, so we need to eval that
+            delta['addition'] = evaldict(delta['addition'])
+            delta['reduction'] = evaldict(delta['reduction'])
             # GET CURRENT ACTIVE DELTAS.
             activeDeltas = dbObj.get('activeDeltas')
             action = 'update'
@@ -228,7 +231,7 @@ class StateMachine():
             if delta['deltat'] == 'addition':
                 activeDeltas['output'] = evaldict(activeDeltas['output'])
                 activeDeltas['updatedate'] = int(getUTCnow())
-                activeDeltas['output'].update(evaldict(delta['addition']))
+                activeDeltas['output'].update(delta['addition'])
                 activeDeltas['output'] = str(activeDeltas['output'])
             # REDUCTION
             if 'reduction' in delta and delta['reduction']:

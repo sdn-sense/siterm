@@ -204,7 +204,7 @@ class ProvisioningService():
                 if host_events['event'] != 'runner_on_failed':
                     continue
                 self.logger.info("Failed to apply Configuration. Failure details below:")
-                pprint.pprint(host_events)
+                self.logger.info(pprint.pprint(host_events))
         if ansOut.stats['failures']:
             # TODO: Would be nice to save in DB and see errors from WEB UI
             raise Exception("There was configuration apply issue. Please contact support and provide this log file.")

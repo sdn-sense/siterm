@@ -38,14 +38,14 @@ class Node():
                         continue
                     switch = intfDict['switch']
                     switchp = intfDict['switch_port']
-                    output['ports'][switch][switchp] = {}
-                    output['ports'][switch][switchp]['destport'] = intfKey
-                    output['ports'][switch][switchp]['hostname'] = nodeDict['hostname']
-                    output['ports'][switch][switchp]['desttype'] = 'server'
-                    output['ports'][switch][switchp]['vlan_range'] = intfDict['vlan_range']
-                    output['ports'][switch][switchp]['capacity'] = intfDict['available_bandwidth']
+                    switchDict = self.output['ports'][switch].setdefault(switchp, {})
+                    switchDict['destport'] = intfKey
+                    switchDict['hostname'] = nodeDict['hostname']
+                    switchDict['desttype'] = 'server'
+                    switchDict['vlan_range'] = intfDict['vlan_range']
+                    switchDict['capacity'] = intfDict['available_bandwidth']
                     if 'isAlias' in list(intfDict.keys()):
-                        output['ports'][switch][switchp]['isAlias'] = intfDict['isAlias']
+                        switchDict['isAlias'] = intfDict['isAlias']
         if self.config.has_option(self.site, "l3_routing_map"):
             routingMap = self.config.get(self.site, "l3_routing_map")
             output['l3_routing'] = evaldict(routingMap)

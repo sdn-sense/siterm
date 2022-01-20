@@ -165,7 +165,7 @@ class DellOS9():
         for regex in self.regexs:
             match = re.search(regex, line)
             if match:
-                tmpout += self._portSplitter(match.group(1), match.group(2))
+                tmpout = self._portSplitter(match.group(1), match.group(2))
                 if not tmpout:
                     return out
                 for item in tmpout:
@@ -181,6 +181,10 @@ class DellOS9():
         interfaceSt = False
         for line in ansibleOut['event_data']['res']['ansible_facts']['ansible_net_config'].split('\n'):
             line = line.strip() # Remove all white spaces
+            if line.startswith('ip route'):
+                self.getIPv4Routing(line)
+            if line.startswith('ipv6 route'):
+                self.getIPv6Routing(line)
             if line == "!" and interfaceSt:
                 interfaceSt = False # This means interface ended!
             elif line.startswith('interface'):
@@ -271,50 +275,57 @@ class DellOS9():
         return out
 
     def getIPv4Routing(self, ansibleOut):
-        print('Called get getIPv4Routing. TODO')
-        return {}
+        """ Get IPv4 Routing from running config """
+        out = []
+        for inline in ansibleOut.split('\n'):
+            inline = inline.strip() # Remove all white spaces
+            # Rule 0: Parses route like: ip route 0.0.0.0/0 192.168.255.254
+            match = re.match(r'ip route (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}/\d{1,2}) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})$', inline)
+            if match:
+                out.append({'from': match.groups()[0], 'to': match.groups()[1]})
+                continue
+            # Rule 1: Parses route like: ip route vrf lhcone 0.0.0.0/0 192.84.86.242
+            match = re.match(r'ip route vrf (\w+) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}/\d{1,2}) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})$', inline)
+            if match:
+                out.append({'vrf': match.groups()[0], 'from': match.groups()[1], 'to': match.groups()[2]})
+                continue
+            # Rule 2: Parses route like: ip route vrf lhcone 192.84.86.0/24 NULL 0
+            match = re.match(r'ip route vrf (\w+) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}/\d{1,2}) (\w+) (\w+)$', inline)
+            if match:
+                out.append({'vrf': match.groups()[0], 'from': match.groups()[1],
+                            'intf': "%s %s" % (match.groups()[2], match.groups()[3])})
+                continue
+            # Rule 3: Parses route like: ip route vrf lhcone 192.84.86.0/24 NULL 0 1.2.3.1
+            match = re.match(r'ip route vrf (\w+) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}/\d{1,2}) (\w+) (\w+) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})$', inline)
+            if match:
+                out.append({'vrf': match.groups()[0], 'from': match.groups()[1],
+                            'intf': "%s %s" % (match.groups()[2], match.groups()[3]), 'to': match.groups()[4]})
+        return out
 
     def getIPv6Routing(self, ansibleOut):
-        print('Called get getIPv6Routing. TODO')
-        return {}
-
-# TODO ROUTING PARSING - This is what I used with custom ssh parser
-# Leaving it here if needed to re-use.
-# def parseRouteLine(splLine):
-#     """
-#     ip route 0.0.0.0/0 192.168.1.1
-#     ipv6 route vrf lhcone ::/0 2600:dddd:0:ffff::
-#     ip route vrf lhcone 0.0.0.0/0 192.1.1.1
-#     ipv6 route vrf lhcone 2600:dddd:0::/48 NULL 0
-#     """
-#     tmpRoute = {}
-#     tmpSplit = []
-#     skip = False
-#     for index, val in enumerate(splLine):
-#         if skip:
-#             skip = False
-#         elif splLine[index] in ['vrf', 'weight', 'tag', 'distance']:
-#             tmpRoute[val] = splLine[index+1]
-#             skip = True
-#         elif splLine[index] == 'permanent':
-#             tmpRoute[val] = True
-#         else:
-#             tmpSplit.append(val)
-#     valId = 0
-#     if len(tmpSplit[valId].split('/')) == 2:
-#         # Means it is with mask
-#         tmpRoute['ip'] = tmpSplit[valId]
-#         valId += 1
-#     else:
-#         tmpRoute['ip'] = "%s/%s" % (tmpSplit[valId], tmpSplit[valId+1])
-#         valId += 2
-#     tmpVal = tmpSplit[valId]
-#     if validIPAddress(tmpVal) in ["IPv4", "IPv6"]:
-#         tmpRoute['routerIP'] = tmpVal
-#         valId += 1
-#     else:
-#         tmpRoute['routerIntf'] = "%s %s" % (tmpVal, tmpSplit[valId+1])
-#         valId += 2
-#     if tmpSplit[valId:]:
-#         tmpRoute['unparsed'] = tmpSplit[valId:]
-#     return tmpRoute
+        """ Get IPv6 Routing from running config """
+        out = []
+        for inline in ansibleOut.split('\n'):
+            inline = inline.strip() # Remove all white spaces
+            # Rule 0: Matches ipv6 route 2605:d9c0:2:11::/64 fd00::3600:1
+            match = re.match(r'ipv6 route ([abcdef0-9:]+/\d{1,3}) ([abcdef0-9:]+)$', inline)
+            if match:
+                out.append({'from': match.groups()[0], 'to': match.groups()[1]})
+                continue
+            # Rule 1: Matches ipv6 route vrf lhcone ::/0 2605:d9c0:0:1::2
+            match = re.match(r'ipv6 route vrf (\w+) ([abcdef0-9:]+/\d{1,3}) ([abcdef0-9:]+)$', inline)
+            if match:
+                out.append({'vrf': match.groups()[0], 'from': match.groups()[1], 'to': match.groups()[2]})
+                continue
+            # Rule 2: Matches ipv6 route vrf lhcone 2605:d9c0::/32 NULL 0
+            match = re.match(r'ipv6 route vrf (\w+) ([abcdef0-9:]+/\d{1,3}) (\w+) (\w+)$', inline)
+            if match:
+                out.append({'vrf': match.groups()[0], 'from': match.groups()[1],
+                            'intf': "%s %s" % (match.groups()[2], match.groups()[3])})
+                continue
+            # Rule 3: Matches ipv6 route vrf lhcone 2605:d9c0::2/128 NULL 0 2605:d9c0:0:1::2
+            match = re.match(r'ipv6 route vrf (\w+) ([abcdef0-9:]+/\d{1,3}) (\w+) (\w+) ([abcdef0-9:]+)$', inline)
+            if match:
+                out.append({'vrf': match.groups()[0], 'from': match.groups()[1],
+                            'intf': "%s %s" % (match.groups()[2], match.groups()[3]), 'to': match.groups()[4]})
+        return out
