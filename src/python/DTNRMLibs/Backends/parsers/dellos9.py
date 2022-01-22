@@ -181,10 +181,6 @@ class DellOS9():
         interfaceSt = False
         for line in ansibleOut['event_data']['res']['ansible_facts']['ansible_net_config'].split('\n'):
             line = line.strip() # Remove all white spaces
-            if line.startswith('ip route'):
-                self.getIPv4Routing(line)
-            if line.startswith('ipv6 route'):
-                self.getIPv6Routing(line)
             if line == "!" and interfaceSt:
                 interfaceSt = False # This means interface ended!
             elif line.startswith('interface'):
@@ -276,6 +272,7 @@ class DellOS9():
 
     def getIPv4Routing(self, ansibleOut):
         """ Get IPv4 Routing from running config """
+        print('Call ipv4 routing')
         out = []
         for inline in ansibleOut.split('\n'):
             inline = inline.strip() # Remove all white spaces
@@ -300,10 +297,13 @@ class DellOS9():
             if match:
                 out.append({'vrf': match.groups()[0], 'from': match.groups()[1],
                             'intf': "%s %s" % (match.groups()[2], match.groups()[3]), 'to': match.groups()[4]})
+        print(out)
+        print('-----')
         return out
 
     def getIPv6Routing(self, ansibleOut):
         """ Get IPv6 Routing from running config """
+        print('Call ipv6 routing')
         out = []
         for inline in ansibleOut.split('\n'):
             inline = inline.strip() # Remove all white spaces
@@ -328,4 +328,6 @@ class DellOS9():
             if match:
                 out.append({'vrf': match.groups()[0], 'from': match.groups()[1],
                             'intf': "%s %s" % (match.groups()[2], match.groups()[3]), 'to': match.groups()[4]})
+        print(out)
+        print('-----')
         return out

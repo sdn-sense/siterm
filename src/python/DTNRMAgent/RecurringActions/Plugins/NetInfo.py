@@ -34,23 +34,8 @@ def str2bool(val):
 NAME = 'NetInfo'
 
 
-def getVlansOnSystem(config, logger):
-    """Get All VLANs provisioned already."""
-    out = {}
-    rulerObj = Ruler(config, logger)
-    vlansProvs = rulerObj.vlansProvisioned()
-    for item in vlansProvs:
-        if 'hosts' in list(item.keys()):
-            for _, hostdict in list(item['hosts'].items()):
-                if 'vlan' not in list(hostdict.keys()) or 'destport' not in list(hostdict.keys()):
-                    continue
-                out['vlan.%s' % hostdict['vlan']] = hostdict['destport']
-    return out
-
-
 def get(config, logger):
     """Get all network information."""
-    vlansON = getVlansOnSystem(config, logger)
     netInfo = {}
     interfaces = config.get('agent', "interfaces").split(",")
     for intf in interfaces:
@@ -147,17 +132,6 @@ def get(config, logger):
             print('This interface was defined in configuration, but not available. Will not add it to final output')
         else:
             outputForFE["interfaces"][intfName] = intfDict
-    print(vlansON)
-    for intfName, intfDict in netInfo.items():
-        if intfName.split('.')[0] == 'vlan':
-            for vlankey, vlandict in list(intfDict['vlans'].items()):
-                if vlankey in list(vlansON.keys()):
-                    mainInf = vlansON[vlankey]
-                    outputForFE["interfaces"].setdefault(mainInf, {'vlans': {}})
-                    outputForFE["interfaces"][mainInf]['vlans'][vlankey] = vlandict
-        else:
-            print('This interface was defined in configuration, but not available. Will not add it to final output')
-            print(intfName, intfDict)
     # Get Routing Information
     outputForFE["routes"] = getRoutes()
     return outputForFE

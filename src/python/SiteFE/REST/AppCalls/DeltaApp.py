@@ -1,22 +1,11 @@
 #!/usr/bin/env python3
-# pylint: disable=line-too-long, bad-whitespace
+# pylint: disable=line-too-long
 """All Deltas and models APIS.
 
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title                   : dtnrm
-Author                  : Justas Balcas
-Email                   : justas.balcas (at) cern.ch
-@Copyright              : Copyright (C) 2016 California Institute of Technology
-Date                    : 2017/09/26
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/01/20
 """
 from __future__ import print_function
 import re
@@ -143,40 +132,6 @@ def delta_states(environ, **kwargs):
     return outstates
 
 
-_DELTA_HOST_STATES_RE = re.compile(r'^/*v1/deltahoststates/([-_A-Za-z0-9]+)/?$')
-
-
-def delta_host_states(environ, **kwargs):
-    """
-    API Call for getting specific delta host states information;
-    Method: GET
-    Output: application/json
-    Examples: https://server-host/sitefe/v1/deltahoststates/([-_A-Za-z0-9]+)/
-    """
-    deltaID = kwargs['mReg'][0]
-    print('Requested delta host states for %s' % deltaID)
-    outstates = DELTABACKEND.getdeltahoststates(deltaID, **kwargs)
-    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
-    return outstates
-
-
-_DELTA_HOST_STATES_HISTORY_RE = re.compile(r'^/*v1/deltahoststateshistory/([-_A-Za-z0-9]+)/?$')
-
-
-def delta_host_states_history(environ, **kwargs):
-    """
-    API Call for getting specific delta host states history information;
-    Method: GET
-    Output: application/json
-    Examples: https://server-host/sitefe/v1/deltahoststateshistory/([-_A-Za-z0-9]+)/
-    """
-    deltaID = kwargs['mReg'][0]
-    print('Requested delta host states history for %s' % deltaID)
-    outstates = DELTABACKEND.getdeltahoststateshistory(deltaID, **kwargs)
-    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
-    return outstates
-
-
 # =====================================================================================================================
 # =====================================================================================================================
 
@@ -275,13 +230,13 @@ def models(environ, **kwargs):
     if kwargs['urlParams']['oldview']:
         print('Requested oldview model output. Return 200')
         return outmodels
-    elif kwargs['urlParams']['current']:
+    if kwargs['urlParams']['current']:
         if not kwargs['urlParams']['summary']:
             current['model'] = encodebase64(DELTABACKEND.getmodel(outmodels[0]['uid'], content=True, **kwargs), kwargs['urlParams']['encode'])
         outM['models'].append(current)
         print('Requested only current model. Return 200. Last Model %s' % outmodels[0]['uid'])
         return [current]
-    elif not kwargs['urlParams']['current']:
+    if not kwargs['urlParams']['current']:
         for model in outmodels:
             tmpDict = {"id": model['uid'],
                        "creationTime": convertTSToDatetime(model['insertdate']),
@@ -291,6 +246,7 @@ def models(environ, **kwargs):
             outM['models'].append(tmpDict)
         print('Returning all models known to the system. Return 200')
         return outM['models']
+    return []
 
 # =====================================================================================================================
 # =====================================================================================================================
@@ -326,47 +282,23 @@ def models_id(environ, **kwargs):
 # =====================================================================================================================
 # =====================================================================================================================
 
-_DELTA_INTERNAL_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_\.A-Za-z0-9]+)/(cancel|remove|active|activated|failed)/?$')
 
-
-def delta_internal_actions(environ, **kwargs):
-    """API Call for internalactions.
-
-    This is only allowed from same host or dtnrm-site-fe.
+_ACTIVE_DELTAS = re.compile(r'^/*v1/activedeltas/?$')
+def active_deltas(environ, **kwargs):
+    """
+    API Call to get all active deltas in the system.
     Method: GET
     Output: application/json
-    Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/internalaction/([-_.A-Za-z0-9]+)/(cancel|remove|active|activated|failed)
+    Examples: https://server-host/sitefe/v1/activedeltas
     """
-    deltaID = kwargs['mReg'][0]
-    hostname = kwargs['mReg'][1]
-    newState = kwargs['mReg'][2]
-    print('Internal action. For %s and %s to %s' % (deltaID, hostname, newState))
-    msgOut = DELTABACKEND.commitdelta(deltaID, newState, internal=True, hostname=hostname, **kwargs)
+    print('Called to get all active deltas')
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
-    return msgOut
-
-_DELTA_HOSTNAME_IDS_RE = re.compile(r'^/*v1/hostnameids/([-_\.A-Za-z0-9]+)/(activating|active)/?$')
-
-
-def delta_hostname_ids(environ, **kwargs):
-    """
-    API Call for returning all Hostname IDs states; This is needed for internal action check
-    Method: GET
-    Output: application/json
-    Examples: https://server-host/sitefe/v1/hostnameids/hostname.us.gov/(activating|active)
-    """
-    hostname = ""
-    hostname = kwargs['mReg'][0]
-    state = kwargs['mReg'][1]
-    print('Called to get all ids assigned to %s hostname' % hostname)
-    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
-    return DELTABACKEND.getHostNameIDs(hostname, state, **kwargs)
+    return DELTABACKEND.getActiveDeltas(**kwargs)
 
 # =====================================================================================================================
 # =====================================================================================================================
 
-CALLS = [(_DELTA_INTERNAL_ACTION_RE, delta_internal_actions, ['GET'], [], []),
-         (_MODELS_ID_RE, models_id, ['GET'], [{"key": "encode", "default": False, "type": bool},
+CALLS = [(_MODELS_ID_RE, models_id, ['GET'], [{"key": "encode", "default": False, "type": bool},
                                               {"key": "summary", "default": False, "type": bool}], []),
          (_MODELS_RE, models, ['GET'], [{"key": "current", "default": False, "type": bool},
                                         {"key": "summary", "default": True, "type": bool},
@@ -382,7 +314,5 @@ CALLS = [(_DELTA_INTERNAL_ACTION_RE, delta_internal_actions, ['GET'], [], []),
                                                 {"key": "oldview", "default": False, "type": bool},
                                                 {"key": "encode", "default": True, "type": bool},
                                                 {"key": "model", "default": "turtle", "type": str, "options": ['turtle']}], []),
-         (_DELTA_HOSTNAME_IDS_RE, delta_hostname_ids, ['GET'], [], []),
-         (_DELTA_STATES_RE, delta_states, ['GET'], [], []),
-         (_DELTA_HOST_STATES_RE, delta_host_states, ['GET'], [], []),
-         (_DELTA_HOST_STATES_HISTORY_RE, delta_host_states_history, ['GET'], [], [])]
+         (_ACTIVE_DELTAS, active_deltas, ['GET'], [], []),
+         (_DELTA_STATES_RE, delta_states, ['GET'], [], []),]

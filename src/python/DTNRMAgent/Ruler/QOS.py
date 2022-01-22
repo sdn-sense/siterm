@@ -2,34 +2,23 @@
 """Ruler component pulls all actions from Site-FE and applies these rules on
 DTN.
 
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title                   : dtnrm
-Author                  : Justas Balcas
-Email                   : justas.balcas (at) cern.ch
-@Copyright              : Copyright (C) 2016 California Institute of Technology
-Date                    : 2017/09/26
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/01/20
 """
 from __future__ import division
 import os
-import glob
 import tempfile
 import filecmp
 import shutil
-import simplejson as json
 from DTNRMLibs.MainUtilities import createDirs, contentDB
 from DTNRMLibs.MainUtilities import execute as executeCmd
 from DTNRMLibs.MainUtilities import getStreamLogger
 from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getFileContentAsJson
+from DTNRMLibs.MainUtilities import getUTCnow
 
 COMPONENT = 'QOS'
 
@@ -70,8 +59,7 @@ class QOS():
         self.config = config if config else getConfig()
         self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
                                                       self.config.get('general', 'logLevel'))
-        self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/QOS/"
-        self.configDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
+        self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         self.hostname = self.config.get('agent', 'hostname')
         createDirs(self.workDir)
         self.debug = self.config.getboolean('general', "debug")
@@ -93,45 +81,65 @@ class QOS():
             return intf, int(maxThrg)
         return None, None
 
-    def getAllQOSed(self):
+    @staticmethod
+    def _started(inConf):
+        timings = inConf.get('_params', {}).get('existsDuring', {})
+        if not timings:
+            return True
+        if 'start' in timings and getUTCnow() < timings['start']:
+            return False
+        return True
+
+    def getConf(self, activeDeltas=None):
+        """ Get conf from local file """
+        if activeDeltas:
+            return activeDeltas
+        activeDeltasFile = "%s/activedeltas.json" % self.workDir
+        if os.path.isfile(activeDeltasFile):
+            activeDeltas = getFileContentAsJson(activeDeltasFile)
+        return activeDeltas
+
+    @staticmethod
+    def _getvlanlistqos(inParams):
+        """ Get vlan qos dict """
+        vlans = []
+        for key, vals in inParams.items():
+            vlan = {}
+            vlan['destport'] = key
+            vlan['vlan'] = vals.get('hasLabel', {}).get('value', '')
+            vlan['params'] = vals.get('hasService', {})
+            vlans.append(vlan)
+        return vlans
+
+    def getAllQOSed(self, newConf=None):
         """Read all configs and prepare qos doc."""
         self.logger.info("Getting All QoS rules.")
-        tmpFile = tempfile.NamedTemporaryFile(delete=False, mode="w+")
-        # {"ip": "10.0.0.54/24", "reservableCapacity": "1000000000", "vlan": "3610",
-        #  "txqueuelen": 1000, "MTU": 1500, "priority": "0",
-        # "http://schemas.ogf.org/mrs/2013/12/topology#BandwidthService": {}, "availableCapacity": "1000000000",
-        # "granularity": "1000000", "maximumCapacity": "1000000000", "type": "guaranteedCapped",
-        # "destport": "ens1", "unit": "mbps"}
+        activeDeltas = self.getConf(newConf)
         totalAllocated = 0
-        for fileName in glob.glob("%s/*.json" % self.configDir):
-            self.logger.info("Analyzing %s file" % fileName)
-            inputDict = {}
-            with open(fileName, 'r') as fd:
-                inputDict = json.load(fd)
-                if 'uid' not in list(inputDict.keys()):
-                    self.logger.info('Seems this dictionary is custom delta. Ignoring it.')
+        inputDicts = []
+        for _key, vals in activeDeltas.get('output', {}).get('vsw', {}).items():
+            if self.hostname in vals:
+                if not self._started(vals):
+                    # This resource has not started yet. Continue.
                     continue
-                inputDict = inputDict[u'hosts'][self.hostname]
-                # ['hosts'][self.hostname]
-                self.logger.info("File %s content %s" % (fileName, inputDict))
-                if 'routes' in list(inputDict.keys()):
-                    self.logger.info('This is L3 definition. Ignore QOS. Todo for future based on source/dest')
-                    continue
-                inputName = "%s%sIn" % (inputDict['destport'], inputDict['vlan'])
-                outputName = "%s%sOut" % (inputDict['destport'], inputDict['vlan'])
-                params = inputDict['params'][0]
-                if not params:
-                    self.logger.info('This specific vlan request did not provided any QOS. Ignoring QOS Rules for it')
-                    continue
-                outrate, outtype = convertToRate(params['unit'], int(params['reservableCapacity']), self.logger)
-                tmpFile.write("# SPEEDLIMIT %s %s %s %s\n" % (inputDict['vlan'],
-                                                              inputDict['destport'],
-                                                              outrate, outtype))
-                tmpFile.write("interface vlan.%s %s input rate %s%s\n" % (inputDict['vlan'],
-                                                                          inputName, outrate, outtype))
-                tmpFile.write("interface vlan.%s %s output rate %s%s\n" % (inputDict['vlan'],
-                                                                           outputName, outrate, outtype))
-                totalAllocated += int(params['reservableCapacity'])
+                inputDicts += self._getvlanlistqos(vals[self.hostname])
+
+        tmpFile = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+        for inputDict in inputDicts:
+            inputName = "%s%sIn" % (inputDict['destport'], inputDict['vlan'])
+            outputName = "%s%sOut" % (inputDict['destport'], inputDict['vlan'])
+            if not inputDict['params']:
+                self.logger.info('This specific vlan request did not provided any QOS. Ignoring QOS Rules for it')
+                continue
+            outrate, outtype = convertToRate(inputDict['params']['unit'], int(inputDict['params']['reservableCapacity']), self.logger)
+            tmpFile.write("# SPEEDLIMIT %s %s %s %s\n" % (inputDict['vlan'],
+                                                          inputDict['destport'],
+                                                          outrate, outtype))
+            tmpFile.write("interface vlan.%s %s input rate %s%s\n" % (inputDict['vlan'],
+                                                                      inputName, outrate, outtype))
+            tmpFile.write("interface vlan.%s %s output rate %s%s\n" % (inputDict['vlan'],
+                                                                       outputName, outrate, outtype))
+            totalAllocated += int(inputDict['params']['reservableCapacity'])
         intfName, maxThrgIntf = self.getMaxThrg()
         if intfName and maxThrgIntf:
             maxThrgIntf = maxThrgIntf - totalAllocated
@@ -150,9 +158,9 @@ class QOS():
         tmpFile.close()
         return tmpFile.name
 
-    def start(self):
+    def startqos(self, newConf=None):
         """Main Start."""
-        newFile = self.getAllQOSed()
+        newFile = self.getAllQOSed(newConf)
         if not filecmp.cmp(newFile, '/etc/firehol/fireqos.conf'):
             self.logger.info("QoS rules are not equal. putting new config file")
             shutil.move(newFile, '/etc/firehol/fireqos.conf')
@@ -165,7 +173,7 @@ class QOS():
 def execute(config=None, logger=None):
     """Execute main script for DTN-RM Agent output preparation."""
     qosruler = QOS(config, logger)
-    qosruler.start()
+    qosruler.startqos()
 
 if __name__ == '__main__':
     execute(logger=getStreamLogger())

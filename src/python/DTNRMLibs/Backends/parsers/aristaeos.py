@@ -105,12 +105,29 @@ class AristaEOS():
             out[localPort] = tmpEntry
         return out
 
+    def __getRouting(self, ansibleOut):
+        out = []
+        for vrf, routes in ansibleOut.get('vrfs', {}).items():
+            for route, routed in routes.get('routes', {}).items():
+                for routestats in routed.get('vias', []):
+                    nRoute = {}
+                    if vrf != 'default':
+                        nRoute['vrf'] = vrf
+                    nRoute['from'] = route
+                    if 'nexthopAddr' in routestats:
+                        nRoute['to'] = routestats['nexthopAddr']
+                    if 'interface' in routestats:
+                        nRoute['intf'] = routestats['interface']
+                    out.append(nRoute)
+        return out
+
     def getIPv4Routing(self, ansibleOut):
         """ Get IPv4 Routing information """
-        print('Called get getIPv4Routing. TODO')
-        return {}
+        print('Called get getIPv4Routing AristaEOS')
+        return self.__getRouting(ansibleOut)
+
 
     def getIPv6Routing(self, ansibleOut):
         """ Get IPv6 Routing information """
-        print('Called get getIPv6Routing. TODO')
-        return {}
+        print('Called get getIPv6Routing AristaEOS')
+        return self.__getRouting(ansibleOut)

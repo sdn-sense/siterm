@@ -2,40 +2,20 @@
 """Virtual interfaces component, which creates or tierdowns virtual interface.
 This is called from a Ruler component.
 
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title             : dtnrm
-Author            : Justas Balcas
-Email             : justas.balcas (at) cern.ch
-@Copyright        : Copyright (C) 2016 California Institute of Technology
-Date            : 2017/09/26
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2022/01/20
 """
-from __future__ import print_function
 # TODO. Configure also MTU and txqueuelen
 import ipaddress
 import netifaces
 from DTNRMLibs.MainUtilities import execute
-from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 
 def getBroadCast(inIP):
     """Return broadcast IP."""
     myNet = ipaddress.ip_network(str(inIP), strict=False)
     return str(myNet.broadcast_address)
-
-
-def identifyL23(addition):
-    """Check if it is L2 or L3 delta request."""
-    return 'L3' if 'routes' in list(addition.keys()) else 'L2'
-
-
 
 class VInterfaces():
     """Virtual interface class."""
@@ -43,121 +23,113 @@ class VInterfaces():
         self.config = config
         self.logger = logger
 
-    def add(self, vlan, raiseError=False):
+    def _add(self, vlan, raiseError=False):
         """Add specific vlan."""
-        if identifyL23(vlan) == 'L2':
-            self.logger.info('Called VInterface add L2 for %s' % str(vlan))
-            command = "ip link add link %s name vlan.%s type vlan id %s" % (vlan['destport'],
-                                                                            vlan['vlan'],
-                                                                            vlan['vlan'])
-            return execute(command, self.logger, raiseError)
-        return None
+        self.logger.info('Called VInterface add L2 for %s' % str(vlan))
+        command = "ip link add link %s name vlan.%s type vlan id %s" % (vlan['destport'],
+                                                                        vlan['vlan'],
+                                                                        vlan['vlan'])
+        return execute(command, self.logger, raiseError)
 
-    def setup(self, vlan, raiseError=False):
+    def _setup(self, vlan, raiseError=False):
         """Setup vlan."""
-        if identifyL23(vlan) == 'L2':
-            if 'ip' in list(vlan.keys()):
-                self.logger.info('Called VInterface setup L2 for %s' % str(vlan))
-                command = "ip addr add %s broadcast %s dev vlan.%s" % (vlan['ip'],
-                                                                       getBroadCast(vlan['ip']),
-                                                                       vlan['vlan'])
-                return execute(command, self.logger, raiseError)
-            self.logger.info('Called VInterface setup for %s, but ip key is not present.' % str(vlan))
-            self.logger.info('Continue as nothing happened')
-        return None
-
-    def start(self, vlan, raiseError=False):
-        """Start specific vlan."""
-        if identifyL23(vlan) == 'L2':
-            self.logger.info('Called VInterface start L2 for %s' % str(vlan))
-            command = "ip link set dev vlan.%s up" % (vlan['vlan'])
+        if 'ip' in vlan.keys():
+            self.logger.info('Called VInterface setup L2 for %s' % str(vlan))
+            command = "ip addr add %s broadcast %s dev vlan.%s" % (vlan['ip'],
+                                                                   getBroadCast(vlan['ip']),
+                                                                   vlan['vlan'])
             return execute(command, self.logger, raiseError)
-        self.logger.info('Called VInterface start L3 for %s' % str(vlan))
-        for routel in vlan['routes']:
-            if 'routeTo' in list(routel.keys()) and 'nextHop' in list(routel.keys()):
-                if 'value' in list(routel['routeTo'].keys()) and 'value' in list(routel['nextHop'].keys()):
-                    command = "ip route add %s via %s" % (routel['routeTo']['value'],
-                                                          routel['nextHop']['value'].split('/')[0])
-                    execute(command, self.logger, raiseError)
-            else:
-                self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
-                                 % routel)
+        self.logger.info('Called VInterface setup for %s, but ip key is not present.' % str(vlan))
+        self.logger.info('Continue as nothing happened')
         return None
 
-    def stop(self, vlan, raiseError=False):
+    def _start(self, vlan, raiseError=False):
+        """Start specific vlan."""
+        self.logger.info('Called VInterface start L2 for %s' % str(vlan))
+        command = "ip link set dev vlan.%s up" % (vlan['vlan'])
+        return execute(command, self.logger, raiseError)
+
+    def _stop(self, vlan, raiseError=False):
         """Stop specific vlan."""
         out = []
-        if identifyL23(vlan) == 'L2':
-            self.logger.info('Called VInterface L2 stop for %s' % str(vlan))
-            for command in ["ip link set dev vlan.%s down" % (vlan['vlan']),
-                            "ip link set dev vlan.%s-ifb down" % (vlan['vlan'])]:
-                out.append(execute(command, self.logger, raiseError))
+        self.logger.info('Called VInterface L2 stop for %s' % str(vlan))
+        for command in ["ip link set dev vlan.%s down" % (vlan['vlan']),
+                        "ip link set dev vlan.%s-ifb down" % (vlan['vlan'])]:
+            out.append(execute(command, self.logger, raiseError))
         return out
 
-    def remove(self, vlan, raiseError=False):
+    def _remove(self, vlan, raiseError=False):
         """Remove specific vlan."""
         out = []
-        if identifyL23(vlan) == 'L2':
-            self.logger.info('Called VInterface remove for %s' % str(vlan))
-            for command in ["ip link delete dev vlan.%s" % (vlan['vlan']),
-                            "ip link delete dev vlan.%s-ifb" % (vlan['vlan'])]:
-                out.append(execute(command, self.logger, raiseError))
-        else:
-            self.logger.info('Called VInterface remove L3 for %s' % str(vlan))
-            for routel in vlan['routes']:
-                if 'routeTo' in list(routel.keys()) and 'nextHop' in list(routel.keys()):
-                    if 'value' in list(routel['routeTo'].keys()) and 'value' in list(routel['nextHop'].keys()):
-                        command = "ip route del %s via %s" % (routel['routeTo']['value'],
-                                                              routel['nextHop']['value'].split('/')[0])
-                        out.append(execute(command, self.logger, raiseError))
-                else:
-                    self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
-                                     % routel)
+        self.logger.info('Called VInterface remove for %s' % str(vlan))
+        for command in ["ip link delete dev vlan.%s" % (vlan['vlan']),
+                        "ip link delete dev vlan.%s-ifb" % (vlan['vlan'])]:
+            out.append(execute(command, self.logger, raiseError))
         return out
 
-    def status(self, vlan, raiseError=False):
+    @staticmethod
+    def _statusvlan(vlan, raiseError=False):
         """Get status of specific vlan."""
-        out = None
-        if identifyL23(vlan) == 'L2':
-            self.logger.info('Called VInterface status for %s' % str(vlan))
-            command = "ip link show dev vlan.%s" % (vlan['vlan'])
-            out = execute(command, self.logger, raiseError)
-            self.checkInterfacePresense(vlan, raiseError)
-        else:
-            self.logger.info('Called VInterface status L3 for %s' % str(vlan))
-            for routel in vlan['routes']:
-                if 'routeTo' in list(routel.keys()) and 'nextHop' in list(routel.keys()):
-                    if 'value' in list(routel['routeTo'].keys()) and 'value' in list(routel['nextHop'].keys()):
-                        command = "ip route get %s" % (routel['routeTo']['value'])
-                        out = execute(command, self.logger, raiseError)
-                else:
-                    self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
-                                     % routel)
-        return out
-
-    def checkInterfacePresense(self, vlan, raiseError=False):
-        """Check if interface is present and config == from Orchestrator."""
-        error = None
         allInterfaces = netifaces.interfaces()
         if 'vlan.%s' % vlan['vlan'] not in allInterfaces:
-            self.logger.debug('Previously called debug FAILED. Retry: %s' % str(vlan))
-            error = "Interface is not present for %s" % vlan
-        else:
-            allIPs = netifaces.ifaddresses('vlan.%s' % vlan['vlan'])
-            if 'ip' in list(vlan.keys()):
-                if 2 not in list(allIPs.keys()):
-                    error = "IPv4 address metrics are not available"
-                else:
-                    ipPresent = False
-                    serviceIp = vlan['ip'].split('/')[0]
-                    for ipv4m in allIPs[2]:
-                        if serviceIp == ipv4m['addr']:
-                            ipPresent = True
-                    if not ipPresent:
-                        error = 'IP Is not Set. Trying to reinitiate.'
-        if raiseError and error:
-            raise FailedInterfaceCommand(error)
+            return False
+        return True
 
+    @staticmethod
+    def _statusvlanIP(vlan, raiseError=False):
+        allIPs = netifaces.ifaddresses('vlan.%s' % vlan['vlan'])
+        serviceIp = vlan['ip'].split('/')[0]
+        for ipv4m in allIPs.get(2, {}):
+            if serviceIp == ipv4m['addr']:
+                return True
+        return False
+
+    @staticmethod
+    def _getvlanlist(inParams):
+        vlans = []
+        for key, vals in inParams.items():
+            vlan = {}
+            vlan['destport'] = key
+            vlan['vlan'] = vals.get('hasLabel', {}).get('value', '')
+            # TODO: Allow IPv6 assignment? TODO
+            vlan['ip'] = vals.get('hasNetworkAddress', {}).get('value', '')
+            vlans.append(vlan)
+        return vlans
+
+    def activate(self, inParams):
+        """ Activate Virtual Interface resources """
+        vlans = self._getvlanlist(inParams)
+        for vlan in vlans:
+            if self._statusvlan(vlan):
+                if 'ip' in vlan and vlan['ip']:
+                    if self._statusvlanIP(vlan):
+                        continue
+                    self._setup(vlan)
+            else:
+                self._add(vlan)
+                self._setup(vlan)
+            # TODO: Check if it is up?
+            self._start(vlan)
+
+    def terminate(self, inParams):
+        """ Terminate Virtual Interface resources """
+        vlans = self._getvlanlist(inParams)
+        for vlan in vlans:
+            if self._statusvlan(vlan):
+                self._stop(vlan)
+                self._remove(vlan)
+
+    def modify(self, oldParams, newParams):
+        """ Modify Virtual Interface resources """
+        old = self._getvlanlist(oldParams)
+        new = self._getvlanlist(newParams)
+        if old == new:
+            # This can happen if we modify QOS only. So there is no IP or VLAN
+            # change.
+            return
+        # TODO: check if vlan same, if not - tier down old one, set up new one
+        # check if IPs ==, if not - set new IPs.
+        print('Called modify. TODO')
 
 if __name__ == '__main__':
     print('This has to be called through main Ruler component. Not supported direct call')

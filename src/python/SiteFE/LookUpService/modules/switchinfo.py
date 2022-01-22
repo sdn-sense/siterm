@@ -203,7 +203,6 @@ class SwitchInfo():
                 continue
 
             for portName, portSwitch in list(switchDict.items()):
-                print(portSwitch, portName)
                 vlanuri = self._addVlanPort(switchName, "Vlan_%s" % portSwitch['value'], vsw, portSwitch['value'])
                 self._addSwitchVlanLabel(vlanuri, portSwitch['value'])
                 if 'vlan_range' in portSwitch:

@@ -2,21 +2,10 @@
 # pylint: disable=line-too-long
 """Site FE call functions.
 
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title                   : dtnrm
-Author                  : Justas Balcas
-Email                   : justas.balcas (at) cern.ch
-@Copyright              : Copyright (C) 2016 California Institute of Technology
-Date                    : 2017/09/26
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/01/20
 """
 import json
 from tempfile import NamedTemporaryFile
@@ -29,6 +18,7 @@ from DTNRMLibs.MainUtilities import getCustomOutMsg
 from DTNRMLibs.MainUtilities import getAllFileContent
 from DTNRMLibs.MainUtilities import convertTSToDatetime
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.CustomExceptions import DeltaNotFound
 from DTNRMLibs.CustomExceptions import ModelNotFound
 from DTNRMLibs.CustomExceptions import WrongDeltaStatusTransition
@@ -173,3 +163,14 @@ class frontendDeltaModels():
             raise WrongDeltaStatusTransition(msg)
         self.stateM.commit(dbobj, {'uid': deltaID, 'state': 'committing'})
         return {'status': 'OK'}
+
+    def getActiveDeltas(self, **kwargs):
+        """ Get all Active Deltas """
+        dbobj = getVal(self.dbI, **kwargs)
+        activeDeltas = dbobj.get('activeDeltas')
+        if activeDeltas:
+            activeDeltas = activeDeltas[0]
+            activeDeltas['output'] = evaldict(activeDeltas['output'])
+        if not activeDeltas:
+            activeDeltas = {'output': {}}
+        return activeDeltas
