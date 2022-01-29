@@ -84,7 +84,7 @@ class AristaEOS():
                 # Port does not have any neighbors
                 continue
             if len(neighbors['lldpNeighborInfo']) > 1:
-                self.logger.debug('Port %s has 2 neighbors. How do we deal with it. Out: %s. Ignoring LLDP for this port' % (localPort, neighbors))
+                #self.logger.debug('Port %s has 2 neighbors. How do we deal with it. Out: %s. Ignoring LLDP for this port' % (localPort, neighbors))
                 continue
             lldpInfo = neighbors['lldpNeighborInfo'][0]
             tmpEntry = {'local_port_id': localPort}
@@ -113,9 +113,9 @@ class AristaEOS():
                     nRoute = {}
                     if vrf != 'default':
                         nRoute['vrf'] = vrf
-                    nRoute['from'] = route
+                    nRoute['to'] = route
                     if 'nexthopAddr' in routestats:
-                        nRoute['to'] = routestats['nexthopAddr']
+                        nRoute['from'] = routestats['nexthopAddr']
                     if 'interface' in routestats:
                         nRoute['intf'] = routestats['interface']
                     out.append(nRoute)
@@ -123,11 +123,13 @@ class AristaEOS():
 
     def getIPv4Routing(self, ansibleOut):
         """ Get IPv4 Routing information """
-        print('Called get getIPv4Routing AristaEOS')
+        #self.logger.debug('Called get getIPv4Routing AristaEOS')
         return self.__getRouting(ansibleOut)
 
 
     def getIPv6Routing(self, ansibleOut):
         """ Get IPv6 Routing information """
-        print('Called get getIPv6Routing AristaEOS')
+        #self.logger.debug('Called get getIPv6Routing AristaEOS')
         return self.__getRouting(ansibleOut)
+
+MODULE = AristaEOS

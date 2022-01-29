@@ -82,6 +82,8 @@ class Switch(Actions):
                     tmpOut = self.parsers[action].getIPv6Routing(host_events['event_data']['res']['stdout'][3])
                 else:
                     print('UNDEFINED FUNCTION num X. Return empty')
+            except NotImplementedError as ex:
+                print("Got Not Implemented Error. %s" % ex)
             except (AttributeError, IndexError) as ex:
                 print('Got Exception calling switch module for %s and Num %s. Error: %s' % (action, num, ex))
             return tmpOut

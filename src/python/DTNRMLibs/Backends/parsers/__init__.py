@@ -7,12 +7,15 @@ Authors:
 
 Date: 2021/12/01
 """
-# TODO: Load by name of all possible plugins.
-from DTNRMLibs.Backends.parsers.aristaeos import AristaEOS
-from DTNRMLibs.Backends.parsers.dellos9 import DellOS9
+from os.path import dirname, basename, isfile, join
+import glob
+import importlib
+modules = glob.glob(join(dirname(__file__), "*.py"))
+__all__ = [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]
 
 ALL = {}
-for module in [AristaEOS, DellOS9]:
-    _tmp = module()
+for module in __all__:
+    tmpMod = importlib.import_module("DTNRMLibs.Backends.parsers.%s" % module)
+    _tmp = tmpMod.MODULE()
     for name in _tmp.factName:
         ALL[name] = _tmp

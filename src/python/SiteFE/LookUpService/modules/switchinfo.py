@@ -52,7 +52,7 @@ def _genIPv4(cls, inval, inkey, esc=True):
 
 def _genIPv6(cls, inval, inkey, esc=True):
     """
-    Generate Interface IPv4 details
+    Generate Interface IPv6 details
     Ansible returns list if multiple IPs set on Interface.
     But for some switches, it will return dict if a single entry
     """
@@ -68,11 +68,8 @@ def _genIPv6(cls, inval, inkey, esc=True):
     if isinstance(inval, list):
         tmpKeys = [{'key': inkey, 'subkey': _genIPv6(cls, val, inkey), 'val': val} for val in inval]
         return tmpKeys
-    cls.logger.debug('No IPv4 value. Return empty String. This might break things. Input: %s %s' % (inval, inkey))
+    cls.logger.debug('No IPv6 value. Return empty String. This might break things. Input: %s %s' % (inval, inkey))
     return ''
-#'ipv4': {'masklen': 0, 'address': '0.0.0.0'}, 'ipv6': {'subnet': 'fd01::/127', 'address': 'fd01::1'},
-# {'masklen': 24, 'address': '10.1.0.1'}
-# {'masklen': 25, 'address': '198.32.43.1'}
 
 def generateKey(cls, inval, inkey):
     """ Generate keys for mrml and escape special charts """
@@ -162,7 +159,7 @@ class SwitchInfo():
     def _addSwitchPortInfo(self, key, switchInfo):
         """ Add Switch Port Info for ports, vlans """
         for switchName, switchDict in list(switchInfo[key].items()):
-            self.logger.debug('Working on %s' % switchName)
+            self.logger.debug('Working on1 %s' % switchName)
             try:
                 vsw = self.config.get(switchName, 'vsw')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
@@ -174,7 +171,7 @@ class SwitchInfo():
                 #else:
                 # This should come from the host itself. or we can add isAlias here.
                 newuri = ":%s:%s" % (switchName, portName)
-                self._addVswPort(switchName, portName, vsw)
+                self._addVswPort(hostname=switchName, portName=portName, vsw=vsw)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
 
     def _addSwitchVlanLabel(self, vlanuri, value):
@@ -203,16 +200,17 @@ class SwitchInfo():
                 continue
 
             for portName, portSwitch in list(switchDict.items()):
-                vlanuri = self._addVlanPort(switchName, "Vlan_%s" % portSwitch['value'], vsw, portSwitch['value'])
-                self._addSwitchVlanLabel(vlanuri, portSwitch['value'])
-                if 'vlan_range' in portSwitch:
-                    # Vlan range for vlan - this is default coming from switch yaml conf
-                    # But for sure we dont want to add into model
-                    del portSwitch['vlan_range']
-                self.addSwitchIntfInfo(switchName, portName, portSwitch, vlanuri)
-                if 'tagged' in portSwitch:
-                    for taggedIntf in portSwitch['tagged']:
-                        self._addVlanTaggedInterface(switchName, taggedIntf, vsw, portSwitch['value'])
+                if 'tagged' not in portSwitch:
+                    # TODO: LOG LINE
+                    continue
+                for taggedIntf in portSwitch['tagged']:
+                    vlanuri = self._addVlanPort(hostname=switchName, portName=taggedIntf, vsw=vsw, vlan=portSwitch['value'])
+                    self._addSwitchVlanLabel(vlanuri, portSwitch['value'])
+                    if 'vlan_range' in portSwitch:
+                        # Vlan range for vlan - this is default coming from switch yaml conf
+                        # But for sure we dont want to add into model
+                        del portSwitch['vlan_range']
+                    self.addSwitchIntfInfo(switchName, portName, portSwitch, vlanuri)
 
 
     def _addSwitchLldpInfo(self, switchInfo):
@@ -235,7 +233,46 @@ class SwitchInfo():
 
     def _addSwitchRoutes(self, switchInfo):
         """ TODO: Add Route info to MRML """
-        return
+        def __validMRMLName(valIn):
+            return valIn.replace(':', '_').replace('/', '-').replace('.', '_').replace(' ', '_')
+
+        def __getFloatingFromConfig(name):
+            floatingrange = ""
+            try:
+                floatingrange = self.config.get(self.sitename, name)
+            except (configparser.NoOptionError, configparser.NoSectionError):
+                pass
+            return floatingrange
+
+        for rst, rstEntries in switchInfo.get('routes', {}).items():
+            out = {'hostname': rst}
+            for ipX, routeList in rstEntries.items():
+                out['rstname'] = 'rst-%s' % ipX
+                for route in routeList:
+                    # get ipv6/ipv4 floating ranges
+                    for key in ['ipv6-floatingip-pool', 'ipv4-floatingip-pool']:
+                        tmp = __getFloatingFromConfig(key)
+                        if tmp:
+                            out[key] = tmp
+                    out['iptype'] = ipX
+                    out['rt-table'] = 'main' if 'vrf' not in route else 'vrf-%s' % route['vrf']
+                    if 'from' in route:
+                        out['routename'] = __validMRMLName(route['from'])
+                    elif 'intf' in route:
+                        out['routename'] = __validMRMLName(route['intf'])
+                    else:
+                        # We dont have from or intf it goes to. Not parsed correctly?
+                        continue
+                    if 'to' in route:
+                        out['routetype'] ='routeTo'
+                        out['type'] = '%s-prefix' % ipX
+                        out['value'] = route['to']
+                        self._addRouteEntry(**out)
+                    if 'from' in route:
+                        out['routetype'] = 'nextHop'
+                        out['type'] = '%s-address' % ipX
+                        out['value'] = route['from']
+                        self._addRouteEntry(**out)
 
     def addSwitchInfo(self):
         """Add All Switch information from switch Backends plugin."""

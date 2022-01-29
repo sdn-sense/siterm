@@ -55,6 +55,7 @@ class PolicyService(RDFHelper):
         for siteName in self.config.get('general', 'sites').split(','):
             workDir = os.path.join(self.config.get(siteName, 'privatedir'), "PolicyService/")
             createDirs(workDir)
+        self.getSavedPrefixes(self.hosts.keys())
 
     def intOut(self, inport, out):
         """
@@ -100,7 +101,7 @@ class PolicyService(RDFHelper):
         """
         out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (self.prefixes['nml'], 'existsDuring')))
         for timeline in out:
-            times = connOut.setdefault('_params', {}).setdefault('existsDuring', {})
+            times = connOut.setdefault('_params', {}).setdefault('existsDuring', {'uri': str(timeline)})
             for timev in ['end', 'start']:
                 tout = self.queryGraph(gIn, timeline, search=URIRef('%s%s' % (self.prefixes['nml'], timev)))
                 temptime = None
@@ -120,6 +121,7 @@ class PolicyService(RDFHelper):
         gIn.parse(inFileName, format='turtle')
         for key in ['vsw', 'rst']:
             for switchName in self.config.get(self.sitename, 'switch').split(','):
+                print(self.prefixes)
                 if switchName not in self.prefixes[key]:
                     self.logger.debug('ERROR: %s parameter is not defined for %s.', key, switchName)
                     continue
@@ -186,6 +188,13 @@ class PolicyService(RDFHelper):
         returnout = self.intOut(bidPort, returnout)
         self._hasTags(gIn, bidPort, returnout)
         out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['nml'], 'hasLabel')))
+        if not out and str(bidPort).rsplit(':', maxsplit=1)[-1].startswith('vlanport+'):
+            # This is a hack, because Orchestrator does not provide full info
+            # In future - we should merge delta with model, and parse only delta info
+            # from full model.
+            scanVals = returnout.setdefault('hasLabel', {})
+            scanVals['labeltype'] = 'ethernet#vlan'
+            scanVals['value'] = int(str(bidPort).rsplit(':', maxsplit=1)[-1][9:])
         for item in out:
             scanVals = returnout.setdefault('hasLabel', {})
             out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['nml'], 'labeltype')))
@@ -201,6 +210,7 @@ class PolicyService(RDFHelper):
         out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['nml'], 'hasService')))
         for item in out:
             scanVals = returnout.setdefault('hasService', {})
+            self.getTimeScheduling(gIn, item, returnout)
             for key in ['availableCapacity', 'granularity', 'maximumCapacity',
                         'priority', 'reservableCapacity', 'type', 'unit']:
                 out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], key)))
@@ -265,6 +275,7 @@ class PolicyService(RDFHelper):
             self.getTimeScheduling(gIn, connectionID, connOut)
             # =======================================================
             for bidPort in bidPorts:
+                self.getTimeScheduling(gIn, bidPort, connOut)
                 self.intOut(bidPort, connOut)
                 self._hasTags(gIn, bidPort, connOut)
                 bidPorts += self.parsePorts(bidPorts, gIn, bidPort)
@@ -366,8 +377,9 @@ def execute(config=None, logger=None, args=None):
     if args:
         policer = PolicyService(config, logger, args[2])
         # This is only for debugging purposes.
-        policer.acceptDelta(args[1])
-        #print(policer.parseDeltaRequest(args[1], {args[2]: []}))
+        #policer.acceptDelta(args[1])
+        out = policer.parseDeltaRequest(args[1])
+        pprint.pprint(out)
     else:
         for sitename in config.get('general', 'sites').split(','):
             policer = PolicyService(config, logger, sitename)

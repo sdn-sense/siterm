@@ -9,8 +9,6 @@ Date: 2021/12/01
 """
 def exceptionCode(excName):
     """Return Exception code.
-
-    Mainly used by DTN-RM Agent.
     """
     exCodes = {IOError: -1, KeyError: -2, AttributeError: -3, IndentationError: -4,
                ValueError: -5, PluginException: -6, NameError: -7}

@@ -71,8 +71,12 @@ class DeltaInfo():
         if 'existsDuring' in params:
             self.addTimeline(params['existsDuring'], uri)
 
+    def addService(self, serviceDict, uri):
+        return
+
     def addvswInfo(self, vswDict, uri):
         """ Add vsw Info from params """
+        import pdb; pdb.set_trace()
         for key, val in vswDict.items():
             if key == '_params':
                 # It get's full uri here.
@@ -81,11 +85,9 @@ class DeltaInfo():
                 for port, portDict in val.items():
                     if portDict.get('hasLabel', {}).get('labeltype', None) == 'ethernet#vlan':
                         vlan = portDict['hasLabel']['value']
-                        porturi = self._addVlanPort(key, port, None, vlan)
-                        # TODO: Check with Xi - why Server ports are not included
-                        # In hasBidirectionalPort for vsw connection in SwitchingSubnet
+                        porturi = self._addVlanPort(hostname=key, portName=port, vlan=vlan)
                         if key in self.switch.switches['output'].keys():
-                            self._addPortSwitchingSubnet(key, port, uri, vlan)
+                            self._addPortSwitchingSubnet(hostname=key, portName=port, vsw=key, subnet=uri, vlan=vlan)
                         self._addParams(portDict.get('_params', {}), porturi)
                     else:
                         self.logger.debug('port %s and portDict %s ignored. No vlan label' % (port, portDict))
@@ -96,9 +98,10 @@ class DeltaInfo():
         if activeDeltas:
             activeDeltas = activeDeltas[0]
             activeDeltas['output'] = evaldict(activeDeltas['output'])
-        for host, vals in activeDeltas['output'].get('SubnetMapping').items():
+        print(activeDeltas)
+        for host, vals in activeDeltas['output'].get('SubnetMapping', {}).items():
             for subnet in vals.get('providesSubnet', {}).keys():
-                svcService = self._addSwitchingService(host, None, host)
+                svcService = self._addSwitchingService(hostname=host, vsw=host)
                 subnetUri = subnet.split(svcService)[1]
-                uri = self._addSwitchingSubnet(host, None, subnetUri)
+                uri = self._addSwitchingSubnet(hostname=host, vsw=host, subnet=subnetUri)
                 self.addvswInfo(activeDeltas.get('output', {}).get('vsw', {}).get(subnet, {}), uri)

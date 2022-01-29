@@ -23,7 +23,6 @@ import pprint
 import psutil
 from pyroute2 import IPRoute
 from DTNRMAgent.RecurringActions.Utilities import externalCommand
-from DTNRMAgent.Ruler.Ruler import Ruler
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 
 
@@ -142,14 +141,19 @@ def getRoutes():
     routes = []
     with IPRoute() as ipr:
         for route in ipr.get_routes(table=254, family=2):
-            newroute = {"dst_len": route['dst_len']}
+            newroute = {"dst_len": route['dst_len'], 'iptype': 'ipv4'}
             for item in route['attrs']:
                 if item[0] in ['RTA_GATEWAY', 'RTA_DST', 'RTA_PREFSRC']:
                     newroute[item[0]] = item[1]
             routes.append(newroute)
-    print(routes)
+        for route in ipr.get_routes(table=254, family=10):
+            newroute = {"dst_len": route['dst_len'], 'iptype': 'ipv6'}
+            for item in route['attrs']:
+                # TODO: Need to test this. New feature of node assign IPv6
+                if item[0] in ['RTA_GATEWAY', 'RTA_DST', 'RTA_PREFSRC']:
+                    newroute[item[0]] = item[1]
+            routes.append(newroute)
     return routes
-
 
 if __name__ == "__main__":
     PRETTY = pprint.PrettyPrinter(indent=4)

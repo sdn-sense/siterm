@@ -19,7 +19,6 @@ Date                    : 2019/05/01
 """
 import sys
 import socket
-import importlib
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getVal

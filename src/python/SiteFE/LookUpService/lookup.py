@@ -82,12 +82,12 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
                 self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
-            labelswap = "false"
+            labelswapping = "false"
             try:
-                labelswap = self.config.get(switchName, 'labelswapping')
+                labelswapping = self.config.get(switchName, 'labelswapping')
             except configparser.NoOptionError:
                 self.logger.debug('Labelswapping parameter is not defined. Default is False.')
-            self._addLabelSwapping(switchName, None, vsw, labelswap)
+            self._addLabelSwapping(hostname=switchName, vsw=vsw, labelswapping=labelswapping)
 
     def startwork(self):
         """Main start."""
@@ -119,12 +119,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         with open(saveName, "w", encoding='utf-8') as fd:
             fd.write(self.newGraph.serialize(format='turtle'))
         hashNum = generateHash(self.newGraph.serialize(format='turtle'))
-
-        # Append all deltas to the model
-        # TODO. Append Deltas
-        #self.appendDeltas(saveName)
-        #if self.dbI.get('models', limit=1, search=[['uid', hashNum]]):
-        #    raise Exception('hashNum %s is already in database...' % hashNum)
 
         self.logger.info('Checking if new model is different from previous')
         modelsEqual, modelinDB = self.checkForModelDiff(saveName)

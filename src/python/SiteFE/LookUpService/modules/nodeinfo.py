@@ -51,7 +51,7 @@ class NodeInfo():
     def defineNodeInformation(self, nodeDict):
         """Define node information."""
         self.hosts[nodeDict['hostname']] = []
-        hosturi = self._addNode(nodeDict['hostname'])
+        hosturi = self._addNode(hostname=nodeDict['hostname'])
         # Node General description
 
         self._nmlLiteral(hosturi, 'hostname', nodeDict['hostname'])
@@ -101,53 +101,37 @@ class NodeInfo():
 
     def defineLayer3MRML(self, nodeDict, hostinfo):
         """Define Layer 3 Routing Service for hostname"""
-        # TODO: This needs a review as seems to be broken with mixed names
-        # Create new host definition
-        return
-        # self._addRoutingService(nodeDict['hostname'])
-        # # Service Definition for L3
-        # self._addL3VPN(nodeDict['hostname'])
-        #
-        # for tablegress in['table+defaultIngress', 'table+defaultEgress']:
-        #     routingtable = self._addRoutingTable(nodeDict['hostname'], tablegress)
-        #     for routeinfo in hostinfo['NetInfo']["routes"]:
-        #         routename = ""
-        #         if 'RTA_DST' in list(routeinfo.keys()) and routeinfo['RTA_DST'] == '169.254.0.0':
-        #             # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.
-        #             # We do not need this information inside the routed template
-        #             continue
-        #         if 'RTA_GATEWAY' in list(routeinfo.keys()):
-        #             routename = "default"
-        #             routename = self._addRoute(nodeDict['hostname'], tablegress, 'default')
-        #             self._addRouteInfo(nodeDict['hostname'], tablegress, 'default', 'black-hole')
-        #             self.newGraph.add((self.genUriRef('site', routename),
-        #                                self.genUriRef('mrs', 'routeTo'),
-        #                                self.genUriRef('site', '%s:%s' % (routename, 'to'))))
-        #             self.newGraph.add((self.genUriRef('site', routename),
-        #                                self.genUriRef('mrs', 'nextHop'),
-        #                                self.genUriRef('site', '%s:%s' % (routename, 'black-hole'))))
-        #             for vals in [['to', 'ipv4-prefix-list', '0.0.0.0/0'],
-        #                          ['black-hole', 'routing-policy', 'drop'],
-        #                          ['local', 'routing-policy', 'local']]:
-        #                 self._addNetworkAddress('%s:%s' % (routename, vals[0]), [vals[0], vals[1]], vals[2])
-        #         else:
-        #             # Ignore unreachable routes from preparing inside the model
-        #             if 'RTA_PREFSRC' not in list(routeinfo.keys()):
-        #                 continue
-        #             routename = "%s_%s" % (routeinfo['RTA_PREFSRC'], routeinfo['dst_len'])
-        #             routename = self._addRoute(nodeDict['hostname'], tablegress, routename)
-        #
-        #             defaultroutename = routingtable + ":route+default:local"
-        #             self.newGraph.add((self.genUriRef('site', routename),
-        #                                self.genUriRef('mrs', 'routeTo'),
-        #                                self.genUriRef('site', '%s:%s' % (routename, 'to'))))
-        #             self.newGraph.add((self.genUriRef('site', routename),
-        #                                self.genUriRef('mrs', 'nextHop'),
-        #                                self.genUriRef('site', defaultroutename)))
-        #             self._addNetworkAddress('%s:%s' % (routename, 'to'),
-        #                                     ['to', 'ipv4-prefix-list'],
-        #                                     '%s/%s' % (routeinfo['RTA_DST'], routeinfo['dst_len']))
+        def __validMRMLName(valIn):
+            return valIn.replace(':', '_').replace('/', '-').replace('.', '_').replace(' ', '_')
 
+        for route in hostinfo.get('NetInfo', {}).get('routes', []):
+            if 'RTA_DST' in route.keys() and route['RTA_DST'] == '169.254.0.0':
+                # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.
+                # We do not need this information inside the routed template
+                continue
+            out = {'hostname': hostinfo['hostname'],
+                   'rstname': 'rst-%s' % route['iptype'],
+                   'iptype': route['iptype']}
+            for tablegress in['table+defaultIngress', 'table+defaultEgress']:
+                out['rt-table'] = tablegress
+                if 'RTA_GATEWAY' in list(route.keys()):
+                    out['routename'] = 'default'
+                    out['routetype'] = 'routeTo'
+                    out['type'] = '%s-address' % route['iptype']
+                    out['value'] = route['RTA_GATEWAY']
+                    self._addRouteEntry(**out)
+                    # Do we really need this?
+                    #for vals in [['to', 'ipv4-prefix-list', '0.0.0.0/0'],
+                    #             ['black-hole', 'routing-policy', 'drop'],
+                    #             ['local', 'routing-policy', 'local']]:
+                    #    self._addNetworkAddress('%s:%s' % (routename, vals[0]), [vals[0], vals[1]], vals[2])
+                elif 'RTA_PREFSRC'  in route.keys() and 'dst_len' in route.keys():
+                    out['routename'] = __validMRMLName("%s_%s" % (route['RTA_PREFSRC'], route['dst_len']))
+                    out['routetype'] = 'routeTo'
+                    out['type'] = '%s-prefix-list' % route['iptype']
+                    out['value'] = "%s_%s" % (route['RTA_PREFSRC'], route['dst_len'])
+                    self._addRouteEntry(**out)
+                    # nextHop to default route? Is it needed?
 
     def addAgentConfigtoMRML(self, intfDict, newuri, hostname, intf):
         """Agent Configuration params to Model."""
@@ -164,7 +148,7 @@ class NodeInfo():
 
         # BANDWIDTH Service for INTERFACE
         # ==========================================================================================
-        bws = self._addBandwidthService(hostname, intf)
+        bws = self._addBandwidthService(hostname=hostname, portName=intf)
 
         for item in [['unit', 'unit', "mbps"],
                      ['max_bandwidth', 'maximumCapacity', 10000000000],
@@ -216,7 +200,7 @@ class NodeInfo():
                                                      'switchPort': intfDict['switch_port'],
                                                      'intfKey': intfKey})
 
-            newuri = self._addRstPort(nodeDict['hostname'], intfKey)
+            newuri = self._addRstPort(hostname=nodeDict['hostname'], portName=intfKey)
             # Create new host definition
             # =====================================================================
             # Add most of the agent configuration to MRML
@@ -235,8 +219,8 @@ class NodeInfo():
                         continue
                     # '2' is for ipv4 information
                     vlanName = vlanName.split('.')
-                    vlanuri = self._addVlanPort(nodeDict['hostname'], intfKey, '', vlanName[1])
-                    self._addRstPort(nodeDict['hostname'], intfKey, '', vlanName[1])
+                    vlanuri = self._addVlanPort(hostname=nodeDict['hostname'], portName=intfKey, vlan=vlanName[1])
+                    self._addRstPort(hostname=nodeDict['hostname'], portName=intfKey, vlan=vlanName[1])
                     self._mrsLiteral(vlanuri, 'type', self.shared)
 
                     if 'vlanid' in list(vlanDict.keys()):
