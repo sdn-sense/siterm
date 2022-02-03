@@ -32,6 +32,7 @@ import simplejson as json
 import pycurl
 import requests
 from yaml import safe_load as yload
+from rdflib import Graph
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import WrongInputError
 from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
@@ -545,7 +546,8 @@ def getHeaders(environ):
 
 def convertTSToDatetime(inputTS):
     """Convert timestamp to datetime."""
-    return datetime.datetime.fromtimestamp(int(inputTS)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    dtObj = datetime.datetime.fromtimestamp(int(inputTS))
+    return dtObj.strftime('%Y-%m-%dT%H:%M:%S.000+0000')
 
 
 def httpdate(timestamp):
@@ -598,3 +600,49 @@ def pubStateRemote(config, dic):
     except Exception:
         excType, excValue = sys.exc_info()[:2]
         print("Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))
+
+
+def getCurrentModel(cls, raiseException=False):
+    """Get Current Model from DB."""
+    currentModel = cls.dbI.get('models', orderby=['insertdate', 'DESC'], limit=1)
+    currentGraph = Graph()
+    if currentModel:
+        try:
+            currentGraph.parse(currentModel[0]['fileloc'], format='turtle')
+        except IOError as ex:
+            if raiseException:
+                raise NotFoundError("Model failed to parse from DB. Error %s" % ex) from IOError
+            currentGraph = Graph()
+    elif raiseException:
+        raise NotFoundError("There is no model in DB. LookUpService is running?")
+    return currentModel, currentGraph
+
+def getActiveDeltas(cls):
+    """Get Active deltas from DB."""
+    activeDeltas = cls.dbI.get('activeDeltas')
+    if not activeDeltas:
+        return {'insertdate': int(getUTCnow()),
+                'output': {}}
+    activeDeltas = activeDeltas[0]
+    activeDeltas['output'] = evaldict(activeDeltas['output'])
+    return activeDeltas
+
+def writeActiveDeltas(cls, newConfig):
+    """ Write Active Deltas to DB """
+    activeDeltas = cls.dbI.get('activeDeltas')
+    action = 'update'
+    if not activeDeltas:
+        action = 'insert'
+        activeDeltas = {'insertdate': int(getUTCnow())}
+    else:
+        activeDeltas = activeDeltas[0]
+    activeDeltas['updatedate'] = int(getUTCnow())
+    activeDeltas['output'] = str(newConfig)
+    if action ==  'insert':
+        cls.dbI.insert('activeDeltas', [activeDeltas])
+    elif action == 'update':
+        cls.dbI.update('activeDeltas', [activeDeltas])
+    activeDeltas['output'] = evaldict(activeDeltas['output'])
+    return activeDeltas
+
+

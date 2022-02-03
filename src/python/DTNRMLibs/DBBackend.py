@@ -53,6 +53,16 @@ class DBBackend():
         self.conn.commit()
         self.destroy()
 
+    def _cleandb(self):
+        """Clean database."""
+        self.initialize()
+        for argname in dir(dbcalls):
+            if argname.startswith('delete_'):
+                print('Call to clean from %s' % argname)
+                self.cursor.execute(getattr(dbcalls, argname))
+        self.conn.commit()
+        self.destroy()
+
     def initialize(self):
         """Initialize mariadb connection."""
         if not self.conn:
@@ -231,3 +241,10 @@ class dbinterface():
         out = self.db.execute_del(fullquery, None)
         self._setEndCallTime(calltype, out[0])
         return out
+
+    # =====================================================
+    #  HERE GOES CLEAN CALLS
+    # =====================================================
+    def _clean(self, calltype, values):
+        self.db._cleandb()
+

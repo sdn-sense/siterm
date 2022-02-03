@@ -70,9 +70,7 @@ class frontendDeltaModels():
                    'lastModified': convertTSToDatetime(outContent['UpdateTime']),
                    'href': "%s/%s" % (environ['SCRIPT_URI'], hashNum),
                    'modelId': out['modelId'],
-                   'state': out['State'],
-                   'reduction': out['ParsedDelta']['reduction'],
-                   'addition': out['ParsedDelta']['addition']}
+                   'state': out['State']}
         print('Delta was %s. Returning info %s' % (out['State'], outDict))
         if out['State'] in ['accepted']:
             kwargs['http_respond'].ret_201('application/json', kwargs['start_response'],

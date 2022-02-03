@@ -19,7 +19,6 @@ Date                    : 2018/11/26
 """
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
-from SiteFE.PolicyService.deltachecks import checkConflicts, checkActiveConfig
 
 class ConnectionMachine():
     """Connection State machine.
@@ -135,11 +134,11 @@ class StateMachine():
                  'deltat': str(delta['Type']),
                  'content': str(delta['Content']),
                  'modelid': str(delta['modelId']),
-                 'reduction': str(delta['ParsedDelta']['reduction']),
-                 'addition': str(delta['ParsedDelta']['addition']),
-                 'reductionid': '' if 'ReductionID' not in list(delta.keys()) else delta['ReductionID'],
+                 'reduction': '',# TODO, Remove from DB
+                 'addition': '', # TODO, Remove from DB
+                 'reductionid': '', # TODO, Remove from DB
                  'modadd': str(delta['modadd']),
-                 'connectionid': str(delta['ConnID']),
+                 'connectionid': '', #TODO, Remove from DB
                  'error': '' if 'Error' not in list(delta.keys()) else str(delta['Error'])}
         dbObj.insert('deltas', [dbOut])
         self.connMgr.accepted(dbObj, dbOut)
@@ -169,7 +168,6 @@ class StateMachine():
     def committing(self, dbObj):
         """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committing']]):
-            checkConflicts(dbObj, delta)
             self._stateChangerDelta(dbObj, 'committed', **delta)
             self._modelstatechanger(dbObj, 'add', **delta)
             self.connMgr.committed(dbObj, delta)
@@ -177,89 +175,21 @@ class StateMachine():
     def committed(self, dbObj):
         """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committed']]):
-            if delta['deltat'] in ['addition', 'modify'] and delta['addition']:
-                delta['addition'] = evaldict(delta['addition'])
-                # Check the times...
-                delayStart = False
-                for connDelta in delta['addition']:
-                    try:
-                        if 'timestart' in list(connDelta.keys()):
-                            timeleft = int(connDelta['timestart']) - getUTCnow()
-                            self.logger.info('CurrentTime %s TimeStart %s. Seconds Left %s' %
-                                             (getUTCnow(), connDelta['timestart'], timeleft))
-                            if connDelta['timestart'] < getUTCnow():
-                                self.logger.info('This delta already passed timestart mark. \
-                                                 Setting state to activating')
-                                delayStart = not delayStart
-                            else:
-                                self.logger.info('This delta %s did not passed timestart mark. \
-                                                 Leaving state as it is' % delta['uid'])
-                                delayStart = True
-                    except:
-                        self.logger.info('This delta %s had an error checking starttime. \
-                                         Leaving state as it is.' % delta['uid'])
-                    if not delayStart:
-                        self._stateChangerDelta(dbObj, 'activating', **delta)
-                        self.connMgr.activating(dbObj, delta)
-            else:
-                self.logger.info('This delta %s is in committed. Setting state to activating.' % delta['uid'])
-                self._stateChangerDelta(dbObj, 'activating', **delta)
-                if delta['deltat'] in ['reduction']:
-                    for connid in evaldict(delta['connectionid']):
-                        for dConn in dbObj.get('delta_connections', search=[['connectionid', connid]]):
-                            self.logger.info('This connection %s belongs to this delta: %s. Cancel delta'
-                                             % (connid, dConn['deltaid']))
-                            deltaRem = {'uid': dConn['deltaid']}
-                            self._stateChangerDelta(dbObj, 'remove', **deltaRem)
+            self._stateChangerDelta(dbObj, 'activating', **delta)
 
     def activating(self, dbObj):
         """Check on all deltas in state activating."""
         for delta in dbObj.get('deltas', search=[['state', 'activating']]):
-            # Deltas keep string in DB, so we need to eval that
-            delta['addition'] = evaldict(delta['addition'])
-            delta['reduction'] = evaldict(delta['reduction'])
-            # GET CURRENT ACTIVE DELTAS.
-            activeDeltas = dbObj.get('activeDeltas')
-            action = 'update'
-            if not activeDeltas:
-                action = 'insert'
-                activeDeltas = {'insertdate': int(getUTCnow()),
-                                'output': '{}'}
-            else:
-                activeDeltas = activeDeltas[0]
-            # ADDITION
-            if delta['deltat'] == 'addition':
-                activeDeltas['output'] = evaldict(activeDeltas['output'])
-                activeDeltas['updatedate'] = int(getUTCnow())
-                activeDeltas['output'].update(delta['addition'])
-                activeDeltas['output'] = str(activeDeltas['output'])
-            # REDUCTION
-            if 'reduction' in delta and delta['reduction']:
-                print('REDUCTION. NOT IMPLEMENTED. TODO')
-                return
-            if action ==  'insert':
-                dbObj.insert('activeDeltas', [activeDeltas])
-            elif action == 'update':
-                dbObj.update('activeDeltas', [activeDeltas])
-            self._stateChangerDelta(dbObj, 'activated', **delta)
+            if delta['modadd'] in ['added', 'removed']:
+                self._stateChangerDelta(dbObj, 'activated', **delta)
+            if delta['modadd'] == 'failed':
+                self._stateChangerDelta(dbObj, 'failed', **delta)
 
     def activated(self, dbObj):
         """Check on all activated state deltas."""
-        # GET CURRENT ACTIVE DELTAS.
-        activeDeltas = dbObj.get('activeDeltas')
-        if not activeDeltas:
-            return
-        activeDeltas = activeDeltas[0]
-        activeDeltas['output'] = evaldict(activeDeltas['output'])
-        newconf, cleaned = checkActiveConfig(activeDeltas['output'])
-        if newconf != activeDeltas['output']:
-            self.logger.debug("Some services expired. Updating configuration. Removed services: %s" % cleaned)
-            activeDeltas['updatedate'] = int(getUTCnow())
-            activeDeltas['output'] = str(newconf)
-            dbObj.update('activeDeltas', [activeDeltas])
-
-    def removing(self, dbObj):
-        self.logger.info('Removal call')
+        for delta in dbObj.get('deltas', search=[['state', 'activated']]):
+            if delta['modadd'] == 'removed':
+                self._stateChangerDelta(dbObj, 'remove', **delta)
 
     def remove(self, dbObj):
         """Check on all remove state deltas."""
@@ -272,7 +202,6 @@ class StateMachine():
 
     def failed(self, dbObj, delta):
         """Marks delta as failed.
-
         This is only during submission
         """
         self._newdelta(dbObj, delta, 'failed')

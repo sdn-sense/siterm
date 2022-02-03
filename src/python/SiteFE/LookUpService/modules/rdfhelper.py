@@ -161,6 +161,13 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site', subnetUri),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('mrs', 'SwitchingSubnet')))
+
+        self.newGraph.add((self.genUriRef('mrs', 'SwitchingSubnet'),
+                          self.genUriRef('rdf', 'type'),
+                          self.genUriRef('rdfs', 'Class')))
+        self.newGraph.add((self.genUriRef('mrs', 'SwitchingSubnet'),
+                          self.genUriRef('rdf', 'type'),
+                          self.genUriRef('rdfs', 'Resource')))
         return subnetUri
 
     def _addPortSwitchingSubnet(self, **kwargs):
@@ -176,11 +183,12 @@ class RDFHelper():
     # It only needs to know the defaults.
     # Also _addSwitchingService
     def _addBandwidthService(self, **kwargs):
-        uri = self._addPort(**kwargs)
-        if not uri:
+        if not kwargs.get('uri', ''):
+            kwargs['uri'] = self._addPort(**kwargs)
+        if not kwargs['uri']:
             return ""
-        bws = "%s:service+%s" % (uri, 'bandwidthService')
-        self.newGraph.add((self.genUriRef('site', uri),
+        bws = "%s:service+%s" % (kwargs['uri'], 'bw')
+        self.newGraph.add((self.genUriRef('site', kwargs['uri']),
                            self.genUriRef('nml', 'hasService'),
                            self.genUriRef('site', bws)))
         self.newGraph.add((self.genUriRef('site', bws),
@@ -192,6 +200,24 @@ class RDFHelper():
         # TODO: In future we should allow not only guaranteedCapped, but also other types.
         # Requires mainly change on Agents to apply diff Traffic Shaping policies
         return bws
+
+    def _addBandwidthServiceParams(self, **kwargs):
+        bws = self._addBandwidthService(**kwargs)
+        for item in [['unit', 'unit', "bps"],
+                     ['maximumCapacity', 'maximumCapacity', 10000000000, XSD.long],
+                     ['availableCapacity', 'availableCapacity', 10000000000, XSD.long],
+                     ['granularity', 'granularity', 1000000, XSD.long],
+                     ['reservableCapacity', 'reservableCapacity', 10000000000, XSD.long],
+                     ['minReservableCapacity', 'minReservableCapacity', 10000000000, XSD.long],
+                     ['type', 'type', 'guaranteedCapped'],
+                     ['priority', 'priority', 0]]:
+            if item[0] not in kwargs:
+                kwargs[item[0]] = item[2]
+            if len(item) == 4:
+                # Means XSD type is defined.
+                self._mrsLiteral(bws, item[1], str(kwargs[item[0]]), item[3])
+            else:
+                self._mrsLiteral(bws, item[1], str(kwargs[item[0]]))
 
     def _addRoutingService(self, **kwargs):
         uri = self._addNode(**kwargs)
@@ -311,12 +337,31 @@ class RDFHelper():
                            self.genUriRef('nml', 'BidirectionalPort')))
         return vlanuri
 
+    def _addVlanLabel(self, **kwargs):
+        vlanuri = self._addVlanPort(**kwargs)
+        if not vlanuri:
+            return ""
+        labeluri = "%s:label+%s" % (vlanuri, kwargs['vlan'])
+        self.newGraph.add((self.genUriRef('site', vlanuri),
+                           self.genUriRef('nml', 'hasLabel'),
+                           self.genUriRef('site', labeluri)))
+        self.newGraph.add((self.genUriRef('site', labeluri),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('nml', 'Label')))
+        self.newGraph.add((self.genUriRef('site', labeluri),
+                           self.genUriRef('nml', 'labeltype'),
+                           self.genUriRef('schema', '#vlan')))
+        self.newGraph.add((self.genUriRef('site', labeluri),
+                           self.genUriRef('nml', 'value'),
+                           self.genLiteral(kwargs['vlan'])))
+        return labeluri
+
     def _addLabelSwapping(self, **kwargs):
         # vlan key is used as label swapping. change to pass all as kwargs
         uri = self._addSwitchingService(**kwargs)
         if not uri or not kwargs['vsw']:
             return ""
-        self._nmlLiteral(uri, 'labelSwapping', True if kwargs['labelswapping'] in ['True', 'true', 'yes', 'yes'] else False, datatype=XSD.boolean)
+        self._nmlLiteral(uri, 'labelSwapping', str(kwargs['labelswapping']))
         return kwargs['labelswapping']
 
     def _addNetworkAddress(self, uri, name, value):
@@ -345,7 +390,7 @@ class RDFHelper():
                            self.genUriRef('nml', nmlkey),
                            self.genLiteral(value, datatype)))
 
-    def _mrsLiteral(self, uri, mrskey, value):
+    def _mrsLiteral(self, uri, mrskey, value, datatype=None):
         self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('mrs', mrskey),
-                           self.genLiteral(value)))
+                           self.genLiteral(value, datatype)))

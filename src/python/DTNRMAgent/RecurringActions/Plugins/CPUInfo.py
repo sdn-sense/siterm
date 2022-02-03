@@ -7,23 +7,11 @@
  'Socket(s)': 2, 'Architecture': 'x86_64', 'Model': 60, 'Vendor ID': 'GenuineIntel', 'CPU family': 6,
  'L3 cache': '8192K', 'BogoMIPS': 6784.32, 'Stepping': 3, 'Byte Order': 'Little Endian', 'NUMA node(s)': 1}
 
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title                   : dtnrm
-Author                  : Justas Balcas
-Email                   : justas.balcas (at) cern.ch
-@Copyright              : Copyright (C) 2016 California Institute of Technology
-Date                    : 2017/09/26
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2022/01/29
 """
-from __future__ import print_function
 import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
@@ -43,7 +31,7 @@ def get(config, logger):
             else:
                 print('CpuInfo: Skipped this item: ', vals)
     cpuInfo['num_cores'] = 1
-    if 'Socket(s)' in cpuInfo and 'Core(s) per socket':
+    if 'Socket(s)' in cpuInfo and 'Core(s) per socket' in cpuInfo:
         try:
             cpuInfo['num_cores'] = int(cpuInfo['Socket(s)']) * int(cpuInfo['Core(s) per socket'])
         except Exception:

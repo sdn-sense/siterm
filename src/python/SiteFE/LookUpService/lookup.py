@@ -19,6 +19,7 @@ from DTNRMLibs.MainUtilities import getStreamLogger
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import generateHash
+from DTNRMLibs.MainUtilities import getCurrentModel
 from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import getUTCnow
@@ -45,20 +46,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
 
-    def getCurrentModel(self):
-        """Get Current Model from DB."""
-        currentModel = self.dbI.get('models', orderby=['insertdate', 'DESC'], limit=1)
-        currentGraph = Graph()
-        if currentModel:
-            try:
-                currentGraph.parse(currentModel[0]['fileloc'], format='turtle')
-            except IOError:
-                currentGraph = Graph()
-        return currentModel, currentGraph
-
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
-        currentModel, currentGraph = self.getCurrentModel()
+        currentModel, currentGraph = getCurrentModel(self, False)
         newGraph = Graph()
         newGraph.parse(saveName, format='turtle')
         return isomorphic(currentGraph, newGraph), currentModel

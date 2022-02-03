@@ -64,8 +64,8 @@ class Switch(Actions):
 
     # 0 - command show version, system. Mainly to get mac address, but might use for more info later.
     # 1 - command to get lldp neighbors details.
-    # 2 - ip route information; # TODO Once we know how we do routing in SENSE
-    # 3 - ipv6 route information # TODO Once we know how we do routing in SENSE
+    # 2 - ip route information; 
+    # 3 - ipv6 route information 
     # For Dell OS 9 - best is to use show running config;
     # For Arista EOS - show ip route vrf all | json || show ipv6 route vrf all | json
     def _getMacLLDPRoute(self):
