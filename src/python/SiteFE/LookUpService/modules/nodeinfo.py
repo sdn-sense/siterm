@@ -32,6 +32,7 @@ class NodeInfo():
     # pylint: disable=E1101,W0201
 
     def addNodeInfo(self):
+        """ Add Agent Node Information """
         jOut = getAllHosts(self.sitename, self.logger)
         for _, nodeDict in list(jOut.items()):
             nodeDict['hostinfo'] = evaldict(nodeDict['hostinfo'])
@@ -137,8 +138,9 @@ class NodeInfo():
         """Agent Configuration params to Model."""
         # Add floating ip pool list for interface from the agent
         # ==========================================================================================
-        if 'ipv4-floatingip-pool' in list(intfDict.keys()):
-            self._addNetworkAddress(newuri, 'ipv4-floatingip-pool', str(intfDict["ipv4-floatingip-pool"]))
+        for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
+            if key in list(intfDict.keys()):
+                self._addNetworkAddress(newuri, key, str(intfDict[key]))
 
         # Add is Alias - So that it has link to Switch.
         # We could use LLDP Info In future.

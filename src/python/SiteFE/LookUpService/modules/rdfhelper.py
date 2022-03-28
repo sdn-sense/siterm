@@ -231,9 +231,10 @@ class RDFHelper():
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('mrs', 'RoutingService')))
         if 'iptype' in kwargs:
-            name = '%s-floatingip-pool' % kwargs['iptype']
-            if name in kwargs:
-                self._addNetworkAddress(rst, name, str(kwargs[name]))
+            for keytype in ['%s-subnet-pool', '%s-address-pool']:
+                name = keytype % kwargs['iptype']
+                if name in kwargs:
+                    self._addNetworkAddress(rst, name, str(kwargs[name]))
         return rst
 
     def _addL3VPN(self, **kwargs):

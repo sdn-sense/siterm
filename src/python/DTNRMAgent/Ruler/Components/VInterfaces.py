@@ -92,7 +92,7 @@ class VInterfaces():
             vlan['destport'] = key
             vlan['vlan'] = vals.get('hasLabel', {}).get('value', '')
             # TODO: Allow IPv6 assignment? TODO
-            vlan['ip'] = vals.get('hasNetworkAddress', {}).get('value', '')
+            vlan['ip'] = vals.get('hasNetworkAddress', {}).get('ipv4-address', {}).get('value', '')
             vlans.append(vlan)
         return vlans
 

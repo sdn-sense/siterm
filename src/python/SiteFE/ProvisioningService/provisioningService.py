@@ -72,9 +72,11 @@ class ProvisioningService():
         """ Add IPv4 to expected yaml conf """
         # For IPv4 - only single IP is supported. No secondary ones
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
-        if 'hasNetworkAddress' in portDict:
+        pprint.pprint(portDict)
+        if portDict.get('hasNetworkAddress', {}).get('ipv4-address', {}).get('value', ""):
             vlanDict.setdefault('ip_address', {})
-            vlanDict['ip_address'] = {'ip': portDict['hasNetworkAddress']['value'], 'state': 'present'}
+            pprint.pprint(portDict)
+            vlanDict['ip_address'] = {'ip': portDict['hasNetworkAddress']['ipv4-address']['value'], 'state': 'present'}
 
     def _addIPv6Address(self, host, port, portDict):
         """ Add IPv6 to expected yaml conf """

@@ -38,7 +38,8 @@ class Switch(Actions):
         # TODO control ansible runner params or use default
         ansRunner = ansible_runner.run(private_data_dir='/etc/ansible/sense/',
                                        inventory='/etc/ansible/sense/inventory/inventory.yaml',
-                                       playbook=playbook)
+                                       playbook=playbook,
+                                       rotate_artifacts=100)
                                        #debug = True,
                                        #ignore_logging = False)
         return ansRunner

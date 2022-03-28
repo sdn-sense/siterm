@@ -28,11 +28,11 @@ def get(config, logger):
     interfaces = config.get('agent', "interfaces").split(",")
     for intf in interfaces:
         nicInfo = netInfo.setdefault(intf, {})
-        # for key in ['ipv4-floatingip-pool', 'isAlias', 'vlan_range', 'min_bandwidth', 'max_bandwidth', 'switch_port', 'shared']
         if config.has_option(intf, 'isAlias'):
             nicInfo['isAlias'] = config.get(intf, 'isAlias')
-        if config.has_option(intf, "ips"):
-            nicInfo['ipv4-floatingip-pool'] = config.get(intf, "ips")
+        for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
+            if config.has_option(intf, key):
+                nicInfo[key] = config.get(intf, key)
         nicInfo['vlan_range'] = config.get(intf, "vlans")
         nicInfo['min_bandwidth'] = int(config.get(intf, "vlan_min"))
         nicInfo['max_bandwidth'] = int(config.get(intf, "vlan_max"))

@@ -129,14 +129,14 @@ class PolicyService(RDFHelper):
         for key in ['vsw', 'rst']:
             for switchName in self.config.get(self.sitename, 'switch').split(','):
                 if switchName not in self.prefixes[key]:
-                    self.logger.debug('ERROR: %s parameter is not defined for %s.', key, switchName)
+                    self.logger.debug('Warning: %s parameter is not defined for %s.', key, switchName)
                     continue
                 self.prefixes['main'] = self.prefixes[key][switchName]
                 if key == 'vsw':
-                    self.logger.info('Parsing L2 information from delta')
+                    self.logger.info('Parsing L2 information from model')
                     self.parsel2Request(gIn, out)
                 elif key == 'rst':
-                    self.logger.info('Parsing L3 information from delta')
+                    self.logger.info('Parsing L3 information from model')
                     self.parsel3Request(gIn, out)
         self.logger.info(pprint.pprint(out))
         return out
@@ -186,11 +186,7 @@ class PolicyService(RDFHelper):
         for tag, pref in {'tag': 'mrs', 'belongsTo': 'nml', 'encoding': 'nml'}.items():
             out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes[pref], tag)), allowMultiple=True)
             if out:
-                if str("|".join(out)) == 'urn:ogf:network:ultralight.org:2013:dellos9_s0:service+vsw:conn+5869f374-66c4-4402-b5da-2627f0c9e39e:resource+links-Connection_1:vlan+3603|urn:ogf:network:ultralight.org:2013:dellos9_s0:service+vsw':
-                    import pdb; pdb.set_trace()
-                    scanVals[tag] = 'urn:ogf:network:ultralight.org:2013:dellos9_s0:service+vsw'
-                else:
-                    scanVals[tag] = str("|".join(out))
+                scanVals[tag] = str("|".join(out))
 
     def _hasLabel(self, gIn, bidPort, returnout):
         self._hasTags(gIn, bidPort, returnout)
@@ -351,7 +347,6 @@ class PolicyService(RDFHelper):
 
         import pprint
         pprint.pprint(newconf)
-        import pdb; pdb.set_trace()
         if cleaned or not self.conflictChecker.checkConflicts(self, newconf, currentActive['output']):
             print(1)
             currentActive['output'] = newconf

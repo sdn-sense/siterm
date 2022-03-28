@@ -250,7 +250,7 @@ class SwitchInfo():
                 out['rstname'] = 'rst-%s' % ipX
                 for route in routeList:
                     # get ipv6/ipv4 floating ranges
-                    for key in ['ipv6-floatingip-pool', 'ipv4-floatingip-pool']:
+                    for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
                         tmp = __getFloatingFromConfig(key)
                         if tmp:
                             out[key] = tmp
