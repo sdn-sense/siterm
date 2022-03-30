@@ -103,6 +103,19 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site'),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Topology')))
+        self.addToGraph(['site'],
+                        ['mrs', 'hasNetworkAddress'],
+                        ['site', 'sitename'])
+        self.addToGraph(['site', 'sitename'],
+                        ['rdf', 'type'],
+                        ['mrs', 'NetworkAddress'])
+        self.addToGraph(['site', 'sitename'],
+                        ['mrs', 'type'],
+                        ['sitename'])
+        self.addToGraph(['site', 'sitename'],
+                        ['mrs', 'value'],
+                        [kwargs['sitename']])
+
 
     def _addNode(self, **kwargs):
         if not kwargs['hostname']:

@@ -64,7 +64,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     def defineTopology(self):
         """Defined Topology and Main Services available."""
         # Add main Topology
-        self._addSite()
+        self._addSite(sitename=self.sitename)
         # Add Service for each Switch
         for switchName in self.config.get(self.sitename, 'switch').split(','):
             try:
