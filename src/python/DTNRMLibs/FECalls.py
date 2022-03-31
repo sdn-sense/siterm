@@ -44,7 +44,6 @@ def getDBConn(serviceName='', cls=None):
 def getAllHosts(sitename, logger):
     # TODO: Remove this and have dbConn passed.
     """Get all hosts from database."""
-    logger.info('Get all hosts for %s', sitename)
     dbObj = getDBConn('getAllHosts')[sitename]
     jOut = {}
     for site in dbObj.get('hosts'):
