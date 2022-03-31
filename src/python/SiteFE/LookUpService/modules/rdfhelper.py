@@ -332,9 +332,12 @@ class RDFHelper():
             uri = self._addPort(**kwargs)
         if not uri:
             return ""
-        self.newGraph.add((self.genUriRef('site', ":%s:service+rst" % kwargs['hostname']),
-                           self.genUriRef('nml', 'hasBidirectionalPort'),
-                           self.genUriRef('site', uri)))
+        # TODO: Allow this to be controlled via config, which rst's to include
+        # something like: rsts_enabled: ['ipv4'] or ['ipv4', 'ipv6']
+        for iptype in ['ipv4', 'ipv6']:
+            self.newGraph.add((self.genUriRef('site', ":%s:service+rst-%s" % (kwargs['hostname'], iptype)),
+                               self.genUriRef('nml', 'hasBidirectionalPort'),
+                               self.genUriRef('site', uri)))
         return uri
 
     def _addVlanPort(self, **kwargs):
