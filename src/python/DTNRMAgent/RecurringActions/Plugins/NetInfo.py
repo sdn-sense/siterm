@@ -30,7 +30,7 @@ def get(config, logger):
         nicInfo = netInfo.setdefault(intf, {})
         if config.has_option(intf, 'isAlias'):
             nicInfo['isAlias'] = config.get(intf, 'isAlias')
-        for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
+        for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool', 'macvlans']:
             if config.has_option(intf, key):
                 nicInfo[key] = config.get(intf, key)
         nicInfo['vlan_range'] = config.get(intf, "vlans")
@@ -63,7 +63,8 @@ def get(config, logger):
             nicInfo['provisioned'] = False
         foundInterfaces.append(nic)
         for vals in addrs:
-            familyInfo = nicInfo.setdefault(str(vals.family.value), {})
+            nicInfo.setdefault(str(vals.family.value), [])
+            familyInfo = {}
             # vals - family=2, address='127.0.0.1', netmask='255.0.0.0', broadcast=None, ptp=None
             # For family more information look here: http://lxr.free-electrons.com/source/include/linux/socket.h#L160
             familyInfo["family"] = vals.family.value
@@ -108,6 +109,7 @@ def get(config, logger):
                 familyInfo["Type"] = nicType[0].strip()
                 txQueueLen = externalCommand('cat /sys/class/net/' + nic + "/tx_queue_len")
                 familyInfo["txqueuelen"] = txQueueLen[0].strip()
+            nicInfo[str(vals.family.value)].append(familyInfo)
     # Check in the end which interfaces where defined in config but not available...
     outputForFE = {"interfaces": {}, "routes": []}
     for intfName, intfDict in netInfo.items():

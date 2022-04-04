@@ -86,19 +86,20 @@ class NodeInfo():
             for mapping in dMappings:
                 if dKey not in list(inputDict.keys()):
                     continue
-                if mapping in list(inputDict[dKey].keys()) and inputDict[dKey][mapping]:
-                    mName = mapping
-                    value = inputDict[dKey][mapping]
-                    if dKey == '10':
-                        mName = 'ipv6-%s' % mapping
-                    if dKey == '17' and mapping == 'address':
-                        mName = 'mac-%s' % mapping
-                    elif dKey == '17':
-                        mName = 't17-%s' % mapping
-                    if dKey == '2' and mapping == 'address':
-                        mName = 'ipv4-address-system'
-                        value = inputDict[dKey][mapping].split('/')[0]
-                    self._addNetworkAddress(prefixuri, mName, value)
+                for entry in inputDict[dKey]:
+                    if mapping in list(entry.keys()) and entry[mapping]:
+                        mName = mapping
+                        value = entry[mapping]
+                        if dKey == '10':
+                            mName = 'ipv6-%s' % mapping
+                        if dKey == '17' and mapping == 'address':
+                            mName = 'mac-%s' % mapping
+                        elif dKey == '17':
+                            mName = 't17-%s' % mapping
+                        if dKey == '2' and mapping == 'address':
+                            mName = 'ipv4-address-system'
+                            value = entry[mapping].split('/')[0]
+                        self._addNetworkAddress(prefixuri, mName, value)
 
     def defineLayer3MRML(self, nodeDict, hostinfo):
         """Define Layer 3 Routing Service for hostname"""
@@ -110,6 +111,7 @@ class NodeInfo():
                 # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.
                 # We do not need this information inside the routed template
                 continue
+
             out = {'hostname': hostinfo['hostname'],
                    'rstname': 'rst-%s' % route['iptype'],
                    'iptype': route['iptype']}
@@ -221,8 +223,8 @@ class NodeInfo():
                         continue
                     # '2' is for ipv4 information
                     vlanName = vlanName.split('.')
-                    vlanuri = self._addVlanPort(hostname=nodeDict['hostname'], portName=intfKey, vlan=vlanName[1])
-                    self._addRstPort(hostname=nodeDict['hostname'], portName=intfKey, vlan=vlanName[1])
+                    vlanuri = self._addVlanPort(hostname=nodeDict['hostname'], portName=intfKey, vtype='vlanport', vlan=vlanName[1])
+                    self._addRstPort(hostname=nodeDict['hostname'], portName=intfKey, vtype='vlanport', vlan=vlanName[1])
                     self._mrsLiteral(vlanuri, 'type', self.shared)
 
                     if 'vlanid' in list(vlanDict.keys()):

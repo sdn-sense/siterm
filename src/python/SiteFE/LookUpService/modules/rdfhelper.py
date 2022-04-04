@@ -341,9 +341,9 @@ class RDFHelper():
         return uri
 
     def _addVlanPort(self, **kwargs):
-        if not kwargs['vlan']:
+        if not kwargs['vlan'] and not kwargs['vtype']:
             return ""
-        vlanuri = ":%s:%s:vlanport+%s" % (kwargs['hostname'], kwargs['portName'], kwargs['vlan'])
+        vlanuri = ":%s:%s:%s+%s" % (kwargs['hostname'], kwargs['portName'], kwargs['vtype'], kwargs['vlan'])
         if not kwargs['portName'].startswith('Vlan_'):
             uri = self._addPort(**kwargs)
             self.newGraph.add((self.genUriRef('site', uri),

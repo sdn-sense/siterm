@@ -173,6 +173,7 @@ class SwitchInfo():
                 newuri = ":%s:%s" % (switchName, portName)
                 self._addVswPort(hostname=switchName, portName=portName, vsw=vsw)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
+                self._addAddressPool(newuri)
 
     def _addSwitchVlanLabel(self, vlanuri, value):
         labeluri = '%s:%s' % (vlanuri, "label+%s" % str(value))
@@ -204,7 +205,7 @@ class SwitchInfo():
                     # TODO: LOG LINE
                     continue
                 for taggedIntf in portSwitch['tagged']:
-                    vlanuri = self._addVlanPort(hostname=switchName, portName=taggedIntf, vsw=vsw, vlan=portSwitch['value'])
+                    vlanuri = self._addVlanPort(hostname=switchName, portName=taggedIntf, vsw=vsw, vtype='vlanport', vlan=portSwitch['value'])
                     self._addSwitchVlanLabel(vlanuri, portSwitch['value'])
                     if 'vlan_range' in portSwitch:
                         # Vlan range for vlan - this is default coming from switch yaml conf
@@ -231,18 +232,24 @@ class SwitchInfo():
                         localuri = ":%s:%s" % (hostname, self.switch._getSystemValidPortName(intfDict['remote_port_id']))
                         self._addIsAlias(localuri, {'isAlias': remoteuri})
 
+    def _addAddressPool(self, uri):
+        for key in ['ipv4-address-pool', 'ipv6-address-pool']:
+            tmp = self.__getFloatingFromConfig(key)
+            if tmp:
+                self._addNetworkAddress(uri, key, str(tmp))
+
+    def __getFloatingFromConfig(self, name):
+        floatingrange = ""
+        try:
+            floatingrange = self.config.get(self.sitename, name)
+        except (configparser.NoOptionError, configparser.NoSectionError):
+            pass
+        return floatingrange
+
     def _addSwitchRoutes(self, switchInfo):
         """ TODO: Add Route info to MRML """
         def __validMRMLName(valIn):
             return valIn.replace(':', '_').replace('/', '-').replace('.', '_').replace(' ', '_')
-
-        def __getFloatingFromConfig(name):
-            floatingrange = ""
-            try:
-                floatingrange = self.config.get(self.sitename, name)
-            except (configparser.NoOptionError, configparser.NoSectionError):
-                pass
-            return floatingrange
 
         for rst, rstEntries in switchInfo.get('routes', {}).items():
             out = {'hostname': rst}
@@ -250,8 +257,8 @@ class SwitchInfo():
                 out['rstname'] = 'rst-%s' % ipX
                 for route in routeList:
                     # get ipv6/ipv4 floating ranges
-                    for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
-                        tmp = __getFloatingFromConfig(key)
+                    for key in ['ipv4-subnet-pool', 'ipv6-subnet-pool']:
+                        tmp = self.__getFloatingFromConfig(key)
                         if tmp:
                             out[key] = tmp
                     out['iptype'] = ipX
