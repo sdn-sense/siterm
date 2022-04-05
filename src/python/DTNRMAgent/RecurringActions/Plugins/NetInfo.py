@@ -22,6 +22,14 @@ def str2bool(val):
 NAME = 'NetInfo'
 
 
+def presetMacVlans(netInfo, mainIntf, config):
+    for macvlan in config.get(mainIntf, 'macvlans').split(','):
+        nicInfo = netInfo.setdefault(macvlan, {})
+        nicInfo['parent'] = mainIntf
+        nicInfo['switch_port'] = str(config.get(mainIntf, "port")).replace('/', '-').replace(' ', '_')
+        nicInfo['switch'] = str(config.get(mainIntf, "switch"))
+        nicInfo['shared'] = str2bool(config.get(mainIntf, "shared"))
+
 def get(config, logger):
     """Get all network information."""
     netInfo = {}
@@ -30,9 +38,11 @@ def get(config, logger):
         nicInfo = netInfo.setdefault(intf, {})
         if config.has_option(intf, 'isAlias'):
             nicInfo['isAlias'] = config.get(intf, 'isAlias')
-        for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool', 'macvlans']:
+        for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
             if config.has_option(intf, key):
                 nicInfo[key] = config.get(intf, key)
+        if config.has_option(intf, 'macvlans'):
+            presetMacVlans(netInfo, intf, config)
         nicInfo['vlan_range'] = config.get(intf, "vlans")
         nicInfo['min_bandwidth'] = int(config.get(intf, "vlan_min"))
         nicInfo['max_bandwidth'] = int(config.get(intf, "vlan_max"))

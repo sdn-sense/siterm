@@ -16,7 +16,11 @@ from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.FECalls import getAllHosts
 
 def ignoreInterface(intfKey, intfDict):
-    """Check if ignore interface for putting it inside model."""
+    """
+    Check if ignore interface for putting it inside model.
+    If ends with -ifb - means interface is for QoS, ignoring
+    If int dict does not have switch/switch_port defined - ignored
+    """
     returnMsg = False
     if intfKey.endswith('-ifb'):
         returnMsg = True
@@ -204,7 +208,9 @@ class NodeInfo():
                                                      'switchPort': intfDict['switch_port'],
                                                      'intfKey': intfKey})
 
-            newuri = self._addRstPort(hostname=nodeDict['hostname'], portName=intfKey)
+            newuri = self._addRstPort(hostname=nodeDict['hostname'],
+                                      portName=intfKey,
+                                      parent=intfDict.get('parent', False))
             # Create new host definition
             # =====================================================================
             # Add most of the agent configuration to MRML

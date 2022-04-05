@@ -141,6 +141,10 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site', ":%s:%s" % (kwargs['hostname'], kwargs['portName'])),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'BidirectionalPort')))
+        if 'parent' in kwargs and kwargs['parent']:
+            self.newGraph.add((self.genUriRef('site', ":%s:%s" % (kwargs['hostname'], kwargs['parent'])),
+                               self.genUriRef('nml', 'hasBidirectionalPort'),
+                               self.genUriRef('site', ":%s:%s" % (kwargs['hostname'], kwargs['portName']))))
         return ":%s:%s" % (kwargs['hostname'], kwargs['portName'])
 
     def _addSwitchingService(self, **kwargs):
