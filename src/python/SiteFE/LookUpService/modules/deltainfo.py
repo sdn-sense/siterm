@@ -132,7 +132,7 @@ class DeltaInfo():
                     vlan = str(portDict['hasLabel']['value'])
                     portDict['uri'] = self._addVlanPort(hostname=key, portName=port, vlan=vlan, labeltype='ethernet#vlan')
                     self._addVlanLabel(hostname=key, portName=port, vlan=vlan, vtype='vlanport', labeltype='ethernet#vlan')
-                    self._addIsAlias(portDict['uri'], portDict)
+                    self._addIsAlias(uri=portDict['uri'], isAlias=portDict.get('isAlias'))
                     if key in self.switch.switches['output'].keys():
                         self._addPortSwitchingSubnet(hostname=key, portName=port, vsw=key, subnet=uri, vlan=vlan)
                     self._addParams(portDict, portDict['uri'])

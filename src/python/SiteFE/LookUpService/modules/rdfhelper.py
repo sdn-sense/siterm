@@ -59,11 +59,15 @@ class RDFHelper():
         return Literal(value)
 
 
-    def _addIsAlias(self, uri, portSwitch):
-        if 'isAlias' in portSwitch and portSwitch['isAlias']:
-            self.newGraph.add((self.genUriRef('site', uri),
+    def _addIsAlias(self, **kwargs):
+        if 'isAlias' in kwargs and kwargs['isAlias'] and \
+           'uri' in kwargs and kwargs['uri']:
+            self.newGraph.add((self.genUriRef('site', kwargs['uri']),
                                self.genUriRef('nml', 'isAlias'),
-                               self.genUriRef('', custom=portSwitch['isAlias'])))
+                               self.genUriRef('', custom=kwargs['isAlias'])))
+            if 'hostname' in kwargs and kwargs['hostname'] and \
+               'portName' in kwargs and kwargs['portName']:
+                self._addRstPort(**kwargs)
 
     def addToGraph(self, sub, pred, obj):
         """Add to graph new info.

@@ -139,7 +139,7 @@ class SwitchInfo():
                                 ['nml', 'values'],
                                 [portSwitch['vlan_range']])
                 # Generate host alias or adds' isAlias
-                self._addIsAlias(newuri, portSwitch)
+                self._addIsAlias(uri=newuri, isAlias=portSwitch.get('isAlias'), hostname=switchName, portName=portName)
                 continue
             if key == 'channel-member':
                 for value in val:
@@ -230,7 +230,7 @@ class SwitchInfo():
                     if intfDict['remote_chassis_id'] == mac:
                         remoteuri = "%s:%s:%s" % (self.prefixes['site'], lldpHost, self.switch._getSystemValidPortName(lldpIntf))
                         localuri = ":%s:%s" % (hostname, self.switch._getSystemValidPortName(intfDict['remote_port_id']))
-                        self._addIsAlias(localuri, {'isAlias': remoteuri})
+                        self._addIsAlias(uri=localuri, isAlias=remoteuri)
 
     def _addAddressPool(self, uri):
         for key in ['ipv4-address-pool', 'ipv6-address-pool']:
