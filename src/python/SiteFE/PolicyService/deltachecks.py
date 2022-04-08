@@ -22,7 +22,7 @@ class ConflictChecker():
 
     def _getAllParams(self, config):
         for svc, svcitems in config.items():
-            if svc == 'SubnetMapping':
+            if svc in ['SubnetMapping', 'RoutingMapping']:
                 continue
             for connID, connItems in svcitems.items():
                 for hostname, vals in connItems.items():
@@ -47,7 +47,7 @@ class ConflictChecker():
         return
 
     def _checksvc(self, svc, activeDeltas):
-        if svc not in ['vsw', 'rst', 'SubnetMapping']:
+        if svc not in ['vsw', 'rst', 'SubnetMapping', 'RoutingMapping']:
             raise BadRequestError('Service does not exist. Requested %s' % svc)
         if svc not in activeDeltas:
             return True
@@ -120,7 +120,7 @@ class ConflictChecker():
         for svc, svcitems in newConfig.items():
             if self._checksvc(svc, oldConfig):
                 continue
-            if svc == 'SubnetMapping':
+            if svc in ['SubnetMapping', 'RoutingMapping']:
                 continue
             for connID, connIDitems in svcitems.items():
                 for hostname, vals in connIDitems.items():

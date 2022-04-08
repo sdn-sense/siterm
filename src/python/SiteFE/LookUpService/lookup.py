@@ -43,6 +43,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         self.renewSwitchConfig = False
         self.switch = Switch(config, logger, sitename)
         self.prefixes = {}
+        self.tmpout = {}
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
 
@@ -64,20 +65,23 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     def defineTopology(self):
         """Defined Topology and Main Services available."""
         # Add main Topology
-        self._addSite(sitename=self.sitename)
+        out = {'sitename': self.sitename, 'labelswapping': "false"}
+        self._addSite(**out)
         # Add Service for each Switch
         for switchName in self.config.get(self.sitename, 'switch').split(','):
+            out['hostname'] = switchName
             try:
-                vsw = self.config.get(switchName, 'vsw')
+                out['vsw'] = self.config.get(switchName, 'vsw')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
-                self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
+                self.logger.debug('Warning: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
-            labelswapping = "false"
             try:
-                labelswapping = self.config.get(switchName, 'labelswapping')
+                out['labelswapping'] = self.config.get(switchName, 'labelswapping')
             except configparser.NoOptionError:
-                self.logger.debug('Labelswapping parameter is not defined. Default is False.')
-            self._addLabelSwapping(hostname=switchName, vsw=vsw, labelswapping=labelswapping)
+                self.logger.debug('Warning. Labelswapping parameter is not defined. Default is False.')
+            out['nodeuri'] = self._addNode(**out)
+            out['switchingserviceuri'] = self._addSwitchingService(**out)
+            self._addLabelSwapping(**out)
 
     def startwork(self):
         """Main start."""

@@ -13,7 +13,7 @@ from rdflib import URIRef, Literal
 from rdflib.namespace import XSD
 
 class RDFHelper():
-    """This generates all known default prefixes."""
+    """RDF Helper preparation class."""
     # pylint: disable=E1101,W0201,W0613
 
     def getSavedPrefixes(self, additionalhosts=None):
@@ -43,12 +43,23 @@ class RDFHelper():
                     continue
         self.prefixes = prefixes
 
+    def __checkifReqKeysMissing(self, reqKeys, allArgs):
+        for key in reqKeys:
+            if key not in allArgs or not allArgs.get(key, None):
+                self.logger.debug("Key %s is missing in allArgs: %s" % (key, allArgs))
+                return True
+        return False
+
+
+
     def genUriRef(self, prefix=None, add=None, custom=None):
         """Generate URIRef and return."""
         if custom:
             return URIRef(custom)
         if not add:
             return URIRef("%s" % self.prefixes[prefix])
+        if add.startswith(self.prefixes[prefix]):
+            return URIRef("%s" % add)
         return URIRef("%s%s" % (self.prefixes[prefix], add))
 
     @staticmethod
@@ -152,11 +163,9 @@ class RDFHelper():
         return ":%s:%s" % (kwargs['hostname'], kwargs['portName'])
 
     def _addSwitchingService(self, **kwargs):
-        self._addNode(**kwargs)
-        if not kwargs['hostname'] or not kwargs['vsw']:
+        reqKeys = ['hostname', 'vsw']
+        if self.__checkifReqKeysMissing(reqKeys, kwargs):
             return ""
-        # vsw == hostname (One switching service per Node
-        # Any reason to support more?
         if kwargs['vsw'] != kwargs['hostname']:
             self.logger.debug('Config mistake. Hostname != vsw (%s != %s)' % (kwargs['hostname'], kwargs['vsw']))
             return ""
@@ -279,7 +288,9 @@ class RDFHelper():
         if not uri:
             return ""
         self._addL3VPN(**kwargs)
-        routingtable = "%s:rt-table+%s" % (uri, kwargs['rt-table'])
+        routingtable = "%s:rt-table+%s" % (uri, kwargs.get('rt-table', ''))
+        if 'rtableuri' in kwargs and kwargs['rtableuri']:
+            routingtable = kwargs['rtableuri']
         self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('mrs', 'providesRoutingTable'),
                            self.genUriRef('site', routingtable)))
@@ -289,11 +300,16 @@ class RDFHelper():
         return routingtable
 
     def _addRoute(self, **kwargs):
-        # hostname, routename
         ruri = self._addRoutingTable(**kwargs)
-        if not ruri or not kwargs['routename']:
+        if not ruri:
             return ""
-        routeuri = "%s:route+%s" % (ruri, kwargs['routename'])
+        routeuri = ""
+        if 'routeuri' in kwargs and kwargs['routeuri']:
+            routeuri = kwargs['routeuri']
+        elif kwargs.get('routename', False):
+            routeuri = "%s:route+%s" % (ruri, kwargs['routename'])
+        else:
+            return ""
         self.newGraph.add((self.genUriRef('site', ruri),
                            self.genUriRef('mrs', 'hasRoute'),
                            self.genUriRef('site', routeuri)))
@@ -302,24 +318,37 @@ class RDFHelper():
                            self.genUriRef('mrs', 'Route')))
         return routeuri
 
+    def _addProvidesRoute(self, **kwargs):
+        suri = self._addRoutingService(**kwargs)
+        if not suri or not kwargs['routeuri']:
+            return ""
+        self.newGraph.add((self.genUriRef('site', suri),
+                           self.genUriRef('mrs', 'providesRoute'),
+                           self.genUriRef('site', kwargs['routeuri'])))
+        return kwargs['routeuri']
+
     def _addRouteEntry(self, **kwargs):
         ruri = self._addRoute(**kwargs)
         if not ruri:
             return ""
-        routeEntry = "%s:net-address+%s" % (ruri, kwargs['routename'])
+        if not 'uri' in kwargs:
+            kwargs['uri'] = "%s:net-address+%s" % (ruri, kwargs['routename'])
         self.newGraph.add((self.genUriRef('site', ruri),
                            self.genUriRef('mrs', kwargs['routetype']),
-                           self.genUriRef('site', routeEntry)))
-        self.addToGraph(['site', routeEntry],
+                           self.genUriRef('site', kwargs['uri'])))
+        self._addNetworkAddressEntry(**kwargs)
+        return kwargs['uri']
+
+    def _addNetworkAddressEntry(self, **kwargs):
+        self.addToGraph(['site', kwargs['uri']],
                         ['rdf', 'type'],
                         ['mrs', 'NetworkAddress'])
-        self.addToGraph(['site', routeEntry],
+        self.addToGraph(['site', kwargs['uri']],
                         ['mrs', 'type'],
                         [kwargs['type']])
-        self.addToGraph(['site', routeEntry],
+        self.addToGraph(['site', kwargs['uri']],
                         ['mrs', 'value'],
                         [kwargs['value']])
-        return routeEntry
 
 
     def _addVswPort(self, **kwargs):
@@ -383,10 +412,10 @@ class RDFHelper():
 
     def _addLabelSwapping(self, **kwargs):
         # vlan key is used as label swapping. change to pass all as kwargs
-        uri = self._addSwitchingService(**kwargs)
-        if not uri or not kwargs['vsw']:
+        reqKeys = ['switchingserviceuri', 'labelswapping']
+        if self.__checkifReqKeysMissing(reqKeys, kwargs):
             return ""
-        self._nmlLiteral(uri, 'labelSwapping', str(kwargs['labelswapping']))
+        self._nmlLiteral(kwargs['switchingserviceuri'], 'labelSwapping', str(kwargs['labelswapping']))
         return kwargs['labelswapping']
 
     def _addNetworkAddress(self, uri, name, value):

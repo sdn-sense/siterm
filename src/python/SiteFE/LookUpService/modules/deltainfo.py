@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=C0301
 """
     Add/Reduce deltas from MRML
 
@@ -130,23 +131,66 @@ class DeltaInfo():
             for port, portDict in val.items():
                 if portDict.get('hasLabel', {}).get('labeltype', None) == 'ethernet#vlan':
                     vlan = str(portDict['hasLabel']['value'])
-                    portDict['uri'] = self._addVlanPort(hostname=key, portName=port, vlan=vlan, labeltype='ethernet#vlan')
+                    portDict['uri'] = self._addVlanPort(hostname=key, portName=port, vlan=vlan, vtype='vlanport', labeltype='ethernet#vlan')
                     self._addVlanLabel(hostname=key, portName=port, vlan=vlan, vtype='vlanport', labeltype='ethernet#vlan')
                     self._addIsAlias(uri=portDict['uri'], isAlias=portDict.get('isAlias'))
                     if key in self.switch.switches['output'].keys():
-                        self._addPortSwitchingSubnet(hostname=key, portName=port, vsw=key, subnet=uri, vlan=vlan)
+                        self._addPortSwitchingSubnet(hostname=key, portName=port, vsw=key, vtype='vlanport', subnet=uri, vlan=vlan)
                     self._addParams(portDict, portDict['uri'])
                     self._addService(portDict, portDict['uri'])
                     self._addNetworkAddr(portDict, portDict['uri'])
                 else:
                     self.logger.debug('port %s and portDict %s ignored. No vlan label' % (port, portDict))
 
+    def addRouteTables(self, activeDeltas):
+        """ Add Route tables """
+        for host, vals in activeDeltas.get('output', {}).get('RoutingMapping', {}).items():
+            for routeTable, iptypes in vals.get('providesRoutingTable', {}).items():
+                for iptype in iptypes.keys():
+                    # uri = self._addRoutingService(hostname=host, rstname="rst-%s" % iptype)
+                    self._addRoutingTable(hostname=host, rstname="rst-%s" % iptype, rtableuri=routeTable)
+                    for route in list(activeDeltas.get('output', {}).get('rst', {}).get(routeTable, {}).get(host, {}).get(iptype, {}).get('hasRoute', {})):
+                        self._addRoute(hostname=host, rstname="rst-%s" % iptype, rtableuri=routeTable, routeuri=route)
+
+    def addRoutes(self, activeDeltas):
+        """ Add individual routes """
+        for host, vals in activeDeltas.get('output', {}).get('RoutingMapping', {}).items():
+            for routeTable, iptypes in vals.get('providesRoute', {}).items():
+                for iptype in iptypes.keys():
+                    # uri = self._addRoutingService(hostname=host, rstname="rst-%s" % iptype)
+                    #self._addRoutingTable(hostname=host, rstname="rst-%s" % iptype, rtableuri=routeTable)
+                    routedict = activeDeltas.get('output', {}).get('rst', {}).get(routeTable, {}).get(host, {}).get(iptype, {})
+                    rtableuri = routedict.get("belongsToRoutingTable", "")
+                    for route, routeInfo in routedict.get('hasRoute', {}).items():
+                        self._addProvidesRoute(hostname=host, rstname="rst-%s" % iptype, routeuri=route)
+                        for key, val in routeInfo.items():
+                            netadd = {'hostname': host,
+                                      'rstname': "rst-%s" % iptype,
+                                      'rtableuri': rtableuri,
+                                      'routeuri': route,
+                                      'routetype': key,
+                                      'uri': val.get('key', ''),
+                                      'type': val.get('type', ''),
+                                      'value': val.get('value', '')}
+                            self._addRouteEntry(**netadd)
+# {'nextHop':   {'urn:ogf:network:ultralight.org:2013:dellos9_s0:service+rst-ipv6:table+50b2eaca-e175-424b-ae0b-20708d98f45f:route+wan:via'
+#                'type': 'ipv6-address',
+#                'value': 'fc00:0:0:0:0:0:0:32/64'},
+#  'routeFrom': {'type': 'ipv6-prefix-list',
+#                'value': '2605:d9c0:2:fff1::/64'},
+#  'routeTo':   {'type': 'ipv6-prefix-list',
+#                'value': '2605:d9c0:2:fff4::/64'}}},
+
     def addDeltaInfo(self):
         """Append all deltas to Model."""
         activeDeltas = getActiveDeltas(self)
+        # Virtual Switching Info
         for host, vals in activeDeltas.get('output', {}).get('SubnetMapping', {}).items():
             for subnet in vals.get('providesSubnet', {}).keys():
                 svcService = self._addSwitchingService(hostname=host, vsw=host)
                 subnetUri = subnet.split(svcService)[1]
                 uri = self._addSwitchingSubnet(hostname=host, vsw=host, subnet=subnetUri)
                 self.addvswInfo(activeDeltas.get('output', {}).get('vsw', {}).get(subnet, {}), uri)
+        # Routing Service Info
+        self.addRouteTables(activeDeltas)
+        self.addRoutes(activeDeltas)

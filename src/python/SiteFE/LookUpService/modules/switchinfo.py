@@ -165,6 +165,11 @@ class SwitchInfo():
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
                 self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
+            try:
+                rst = self.config.get(switchName, 'rst')
+            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+                self.logger.debug('ERROR: rst parameter is not defined for %s. Err: %s', switchName, ex)
+                rst = False
             for portName, portSwitch in list(switchDict.items()):
                 #if 'hostname' in portSwitch and 'isAlias' not in portSwitch:
                 #    newuri = ":%s:%s:%s" % (switchName, portName, portSwitch['hostname'])
@@ -173,7 +178,8 @@ class SwitchInfo():
                 newuri = ":%s:%s" % (switchName, portName)
                 self._addVswPort(hostname=switchName, portName=portName, vsw=vsw)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
-                self._addAddressPool(newuri)
+                if rst:
+                    self._addAddressPool(newuri)
 
     def _addSwitchVlanLabel(self, vlanuri, value):
         labeluri = '%s:%s' % (vlanuri, "label+%s" % str(value))
@@ -247,12 +253,18 @@ class SwitchInfo():
         return floatingrange
 
     def _addSwitchRoutes(self, switchInfo):
-        """ TODO: Add Route info to MRML """
+        """ Add Route info to MRML """
         def __validMRMLName(valIn):
             return valIn.replace(':', '_').replace('/', '-').replace('.', '_').replace(' ', '_')
 
-        for rst, rstEntries in switchInfo.get('routes', {}).items():
-            out = {'hostname': rst}
+        for switchName, rstEntries in switchInfo.get('routes', {}).items():
+            self.logger.debug('Working on1 %s' % switchName)
+            try:
+                rst = self.config.get(switchName, 'rst')
+            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+                self.logger.debug('ERROR: rst parameter is not defined for %s. Err: %s', switchName, ex)
+                continue
+            out = {'hostname': switchName}
             for ipX, routeList in rstEntries.items():
                 out['rstname'] = 'rst-%s' % ipX
                 for route in routeList:

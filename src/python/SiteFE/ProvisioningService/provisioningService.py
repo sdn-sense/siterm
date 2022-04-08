@@ -72,18 +72,16 @@ class ProvisioningService():
         """ Add IPv4 to expected yaml conf """
         # For IPv4 - only single IP is supported. No secondary ones
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
-        pprint.pprint(portDict)
         if portDict.get('hasNetworkAddress', {}).get('ipv4-address', {}).get('value', ""):
             vlanDict.setdefault('ip_address', {})
-            pprint.pprint(portDict)
             vlanDict['ip_address'] = {'ip': portDict['hasNetworkAddress']['ipv4-address']['value'], 'state': 'present'}
 
     def _addIPv6Address(self, host, port, portDict):
         """ Add IPv6 to expected yaml conf """
-        # Not implemented. No details from Orchestrator yet.
-        # This is what Ansible templates would expect
-        # 'ipv6_address': [{'ip': 'fd00::1/127', 'state': 'present'}, {'ip': 'fd01::1/127', 'state': 'present'}]}}}
-        return
+        vlanDict = self.__getdefaultVlan(host,  port, portDict)
+        if portDict.get('hasNetworkAddress', {}).get('ipv6-address', {}).get('value', ""):
+            vlanDict.setdefault('ip6_address', {})
+            vlanDict['ip6_address'] = {'ip': portDict['hasNetworkAddress']['ipv6-address']['value'], 'state': 'present'}
 
     def _presetDefaultParams(self, host, port, portDict):
         vlanDict = self.__getdefaultVlan(host,  port, portDict)

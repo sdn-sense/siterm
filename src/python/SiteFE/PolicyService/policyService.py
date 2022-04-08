@@ -12,6 +12,7 @@ import sys
 import tempfile
 import pprint
 import time
+import argparse
 from rdflib import Graph
 from rdflib import URIRef
 from rdflib.plugins.parsers.notation3 import BadSyntax
@@ -24,7 +25,6 @@ from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import decodebase64
 from DTNRMLibs.MainUtilities import getCurrentModel, getActiveDeltas, writeActiveDeltas
-from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.FECalls import getAllHosts
 from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getVal
@@ -60,6 +60,7 @@ class PolicyService(RDFHelper):
         self.getSavedPrefixes(self.hosts.keys())
         self.bidPorts = {}
         self.scannedPorts = {}
+        self.scannedRoutes = []
         self.conflictChecker = ConflictChecker()
 
     def intOut(self, inport, out):
@@ -134,52 +135,65 @@ class PolicyService(RDFHelper):
                 self.prefixes['main'] = self.prefixes[key][switchName]
                 if key == 'vsw':
                     self.logger.info('Parsing L2 information from model')
-                    self.parsel2Request(gIn, out)
+                    self.parsel2Request(gIn, out, switchName)
                 elif key == 'rst':
                     self.logger.info('Parsing L3 information from model')
-                    self.parsel3Request(gIn, out)
+                    self.parsel3Request(gIn, out, switchName)
         self.logger.info(pprint.pprint(out))
         return out
 
-    def parsel3Request(self, gIn, returnout):
+    def getRoute(self, gIn, connID, returnout):
+        """ Get all routes from model for specific connID """
+        returnout.setdefault('hasRoute', {})
+        routeout = returnout['hasRoute'].setdefault(str(connID), {})
+        if str(connID) in self.scannedRoutes:
+            return str(connID)
+        for rtype in ['nextHop', 'routeFrom', 'routeTo']:
+            out = self.queryGraph(gIn, connID, search=URIRef('%s%s' % (self.prefixes['mrs'], rtype)))
+            for item in out:
+                routeInfo = routeout.setdefault(rtype, {})
+                routeInfo['key'] = str(item)
+                for valkey in ['type', 'value']:
+                    out1 = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], valkey)))
+                    if out1:
+                        # TODO: To be discussed. Can it be that we will have multiple value/type?
+                        routeInfo[valkey] = str(out1[0])
+        self.scannedRoutes.append(str(connID))
+        return ""
+
+    def getRouteTable(self, gIn, connID, returnout):
+        """ Get all route tables from model for specific connID and call getRoute """
+        out = self.queryGraph(gIn, connID, search=URIRef('%s%s' % (self.prefixes['mrs'], 'hasRoute')))
+        tmpRet = []
+        for item in out:
+            tmpRet.append(self.getRoute(gIn, item, returnout))
+        return tmpRet
+
+
+    def parsel3Request(self, gIn, returnout, switchName):
         """Parse Layer 3 Delta Request."""
-        # TODO Rewrite.
-        return
-        # for hostname in list(self.hosts.keys()):
-        #     self.prefixes['mainrst'] = URIRef("%s:%s:service+rst" % (self.prefixes['site'], hostname))
-        #     self.logger.info('Lets try to get connection ID subject for %s' % self.prefixes['mainrst'])
-        #     out = self.queryGraph(gIn, self.prefixes['mainrst'],
-        #                           search=URIRef('%s%s' % (self.prefixes['mrs'], 'providesRoutingTable')))
-        #     if not out:
-        #         msg = 'Connection ID was not received. Continue'
-        #         self.logger.info(msg)
-        #         continue
-        #     outall = {'hosts': {}}
-        #     outall['hosts'].setdefault(hostname, {})
-        #     for connectionID in out:
-        #         outall['connectionID'] = str(connectionID)
-        #         outall['hosts'][hostname]['routes'] = []
-        #         self.logger.info('This is our connection ID: %s' % connectionID)
-        #         self.logger.info('Now lets get all info what it wants to do. Mainly nextHop, routeFrom, routeTo')
-        #         bidPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (self.prefixes['mrs'], 'hasRoute')))
-        #         for bidPort in bidPorts:
-        #             route = {}
-        #             for flag in ['nextHop', 'routeFrom', 'routeTo']:
-        #                 route.setdefault(flag, {})
-        #                 out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['mrs'], flag)))
-        #                 if not out:
-        #                     continue
-        #                 for item in out:
-        #                     outt = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'type')))
-        #                     outv = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'value')))
-        #                     if not outt or not outv:
-        #                         continue
-        #                     route[flag]['type'] = str(outt[0])
-        #                     route[flag]['value'] = str(outv[0])
-        #             outall['hosts'][hostname]['routes'].append(route)
-        #         returnout.append(outall)
-        #         self.logger.debug('L3 Parse output: %s', outall)
-        # return returnout
+        self.logger.info('Lets try to get connection ID subject for %s' % self.prefixes['main'])
+        connectionID = None
+        for iptype in ['ipv4', 'ipv6']:
+            uri = "%s-%s" % (self.prefixes['main'], iptype)
+            for rsttype in [{'key': 'providesRoute', 'call': self.getRoute},
+                            {'key': 'providesRoutingTable', 'call': self.getRouteTable}]:
+                out = self.queryGraph(gIn, URIRef(uri), search=URIRef('%s%s' % (self.prefixes['mrs'], rsttype['key'])))
+                for connectionID in out:
+                    if connectionID.startswith("%s:rt-table+vrf-" % uri) or \
+                       connectionID.endswith('rt-table+main'):
+                        # Ignoring default vrf and main table.
+                        # This is not allowed to modify.
+                        continue
+                    self._recordMapping(connectionID, returnout, 'RoutingMapping', rsttype['key'], iptype)
+                    returnout.setdefault('rst', {})
+                    connOut = returnout['rst'].setdefault(str(connectionID), {}).setdefault(switchName, {}).setdefault(iptype, {})
+                    connOut[rsttype['key']] = str(connectionID)
+                    rettmp = rsttype['call'](gIn, connectionID, connOut)
+                    if rettmp and rsttype['key'] == 'providesRoutingTable':
+                        # We need to know mapping back, which route belongs to which routing table
+                        # There is no such mapping in json, so we manually add this from providesRoutingTable
+                        returnout['rst'].setdefault(str(rettmp[0]), {}).setdefault(switchName, {}).setdefault(iptype, {}).setdefault('belongsToRoutingTable', str(connectionID))
 
     def _hasTags(self, gIn, bidPort, returnout):
         scanVals = returnout.setdefault('_params', {})
@@ -239,10 +253,11 @@ class PolicyService(RDFHelper):
                 if out:
                     vals['value'] = str(out[0])
 
-    def _recordSubnet(self, subnet, returnout):
-        returnout = self.intOut(subnet, returnout.setdefault('SubnetMapping', {}))
-        returnout.setdefault('providesSubnet', {})
-        returnout['providesSubnet'][str(subnet)] = ""
+    def _recordMapping(self, subnet, returnout, mappingKey, subKey, val = ""):
+        returnout = self.intOut(subnet, returnout.setdefault(mappingKey, {}))
+        returnout.setdefault(subKey, {})
+        returnout[subKey].setdefault(str(subnet), {})
+        returnout[subKey][str(subnet)][val] = ""
 
     def parsePorts(self, gIn, connectionID, connOut):
         """ Get all ports for any connection and scan all of them """
@@ -264,14 +279,14 @@ class PolicyService(RDFHelper):
             del self.bidPorts[bidPort]
 
 
-    def parsel2Request(self, gIn, returnout):
+    def parsel2Request(self, gIn, returnout, switchName):
         """Parse L2 request."""
         self.logger.info('Lets try to get connection ID subject for %s' % self.prefixes['main'])
         connectionID = None
         out = self.queryGraph(gIn, URIRef(self.prefixes['main']), search=URIRef('%s%s' % (self.prefixes['mrs'],
                                                                                           'providesSubnet')))
         for connectionID in out:
-            self._recordSubnet(connectionID, returnout)
+            self._recordMapping(connectionID, returnout, 'SubnetMapping', 'providesSubnet')
             returnout.setdefault('vsw', {})
             connOut = returnout['vsw'].setdefault(str(connectionID), {})
             self._hasTags(gIn, connectionID, connOut)
@@ -288,6 +303,11 @@ class PolicyService(RDFHelper):
             while self.bidPorts:
                 for bidPort in list(self.bidPorts.keys()):
                     # Preset defaults in out (hostname,port)
+                    if not str(bidPort).startswith(self.prefixes['site']):
+                        # For L3 - it can include other endpoint port,
+                        # We dont need to parse that and it is isAlias in dict
+                        self._portScanFinish(bidPort)
+                        continue
                     portOut = self.intOut(bidPort, connOut)
                     # Parse all ports in port definition
                     self.parsePorts(gIn, bidPort, portOut)
@@ -306,6 +326,7 @@ class PolicyService(RDFHelper):
         return returnout
 
     def generateActiveConfigDict(self):
+        """ Generate new config from parser model."""
         _, currentGraph = getCurrentModel(self, True)
         currentActive = getActiveDeltas(self)
         for delta in self.dbI.get('deltas', search=[['state', 'activating'], ['modadd', 'add']]):
@@ -345,10 +366,8 @@ class PolicyService(RDFHelper):
         # 3. Check if any delta expired, remove it from dictionary
         newconf, cleaned = self.conflictChecker.checkActiveConfig(currentActive['output'])
 
-        import pprint
         pprint.pprint(newconf)
         if cleaned or not self.conflictChecker.checkConflicts(self, newconf, currentActive['output']):
-            print(1)
             currentActive['output'] = newconf
             currentActive = writeActiveDeltas(self, currentActive['output'])
 
@@ -368,11 +387,27 @@ class PolicyService(RDFHelper):
             self.logger.info("Starting check on %s deltas" % job[0])
             job[1](self.dbI)
 
+    def deltaToModel(self, currentGraph, deltaPath, action):
+        """ Add delta to current Model. If no delta provided, returns current Model"""
+        if not currentGraph:
+            _, currentGraph = getCurrentModel(self, True)
+            self.hosts = getAllHosts(self.sitename, self.logger)
+            self.getSavedPrefixes(self.hosts.keys())
+        if deltaPath and action:
+            gIn = Graph()
+            gIn.parse(deltaPath, format='turtle')
+            if action == 'reduction':
+                currentGraph -= gIn
+            elif action == 'addition':
+                currentGraph += gIn
+            else:
+                raise Exception('Unknown delta action. Action submitted %s' % action)
+        return currentGraph
+
+
     def acceptDelta(self, deltapath):
         """Accept delta."""
-        _, currentGraph = getCurrentModel(self, True)
-        self.hosts = getAllHosts(self.sitename, self.logger)
-        self.getSavedPrefixes(self.hosts.keys())
+        currentGraph = self.deltaToModel(None, None, None)
         deltapath = self.siteDB.moveFile(deltapath,
                                          os.path.join(self.config.get(self.sitename, 'privatedir'), "PolicyService/"))
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
@@ -390,12 +425,7 @@ class PolicyService(RDFHelper):
                             fd.write(toDict["Content"][key])
                         except ValueError:
                             fd.write(decodebase64(toDict["Content"][key]))
-                    gIn = Graph()
-                    gIn.parse(tmpFile, format='turtle')
-                    if key == 'reduction':
-                        currentGraph -= gIn
-                    elif key == 'addition':
-                        currentGraph += gIn
+                    currentGraph = self.deltaToModel(currentGraph, tmpFile, key)
                     os.unlink(tmpFile)
             self.parseModel(currentGraph)
         except IOError as ex:
@@ -421,24 +451,38 @@ def execute(config=None, logger=None, args=None):
                            config.get(component, 'logLevel'), True)
 
     if args:
-        policer = PolicyService(config, logger, args[2])
-        # This is only for debugging purposes.
-        out = policer.acceptDelta(args[1])
-        #out = policer.parseModel(args[1])
-        pprint.pprint(out)
+        if not args.sitename:
+            raise Exception('Sitename argument not defined. See --help')
+        policer = PolicyService(config, logger, args.sitename)
+        if args.action == 'accept':
+            out = policer.acceptDelta(args.delta)
+            pprint.pprint(out)
+        elif args.action in ['addition', 'reduction']:
+            newModel = policer.deltaToModel(None, args.delta, args.action)
+            out = policer.parseModel(newModel)
+            pprint.pprint(out)
     else:
         for sitename in config.get('general', 'sites').split(','):
             policer = PolicyService(config, logger, sitename)
             policer.startwork()
 
+def get_parser():
+    """
+    Returns the argparse parser.
+    """
+    # pylint: disable=line-too-long
+    oparser = argparse.ArgumentParser(description="This daemon is used for delta reduction, addition parsing",
+                                      prog=os.path.basename(sys.argv[0]), add_help=True)
+    # Main arguments
+    oparser.add_argument('--action', dest='action', default='', help='Actions to execute. Options: [accept, addition, reduction]')
+    oparser.add_argument('--sitename', dest='sitename', default='',  help='Sitename of FE. Must be present in configuration and database.')
+    oparser.add_argument('--delta', dest='delta', default='', help='Delta path. In case of accept action - need to be json format from DB. Otherwise - delta from Orchestrator')
+    return oparser
 
 if __name__ == '__main__':
+    argparser = get_parser()
     print('WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.')
-    print('If argv[1] is specified it will try to parse custom delta request. It should be a filename.')
-    print('2rd argument has to be sitename which is configured in this frontend')
-    print('Otherwise, it will check frontend for new deltas')
-    print(sys.argv)
-    if len(sys.argv) > 2:
-        execute(args=sys.argv, logger=getStreamLogger())
-    else:
-        execute(logger=getStreamLogger())
+    if len(sys.argv) == 1:
+        argparser.print_help()
+    inargs = argparser.parse_args(sys.argv[1:])
+    execute(args=inargs, logger=getStreamLogger())
