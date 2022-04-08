@@ -7,7 +7,7 @@ Authors:
 
 Date: 2022/04/08
 """
-from ipaddress import ip_address, IPv4Address
+from ipaddress import ip_address
 
 
 
@@ -22,7 +22,7 @@ def ipVersion(ipInput):
         return -1
 
 
-def validMRMLName(valIn, ipType='ipv4'):
+def validMRMLName(valIn):
     """ Generate valid MRML Name. [:/ ] not supported """
     # In case of IPv6, it does allow multiple ways to list IP address, like:
     # 2001:0DB8:0000:CD30:0000:0000:0000:0000/60
