@@ -13,6 +13,7 @@ Date: 2021/12/01
 
 import configparser
 from DTNRMLibs.MainUtilities import evaldict
+from DTNRMLibs.ipaddr import validMRMLName
 from DTNRMLibs.FECalls import getAllHosts
 
 def ignoreInterface(intfKey, intfDict):
@@ -107,8 +108,6 @@ class NodeInfo():
 
     def defineLayer3MRML(self, nodeDict, hostinfo):
         """Define Layer 3 Routing Service for hostname"""
-        def __validMRMLName(valIn):
-            return valIn.replace(':', '_').replace('/', '-').replace('.', '_').replace(' ', '_')
 
         for route in hostinfo.get('NetInfo', {}).get('routes', []):
             if 'RTA_DST' in route.keys() and route['RTA_DST'] == '169.254.0.0':
@@ -133,7 +132,7 @@ class NodeInfo():
                     #             ['local', 'routing-policy', 'local']]:
                     #    self._addNetworkAddress('%s:%s' % (routename, vals[0]), [vals[0], vals[1]], vals[2])
                 elif 'RTA_PREFSRC'  in route.keys() and 'dst_len' in route.keys():
-                    out['routename'] = __validMRMLName("%s_%s" % (route['RTA_PREFSRC'], route['dst_len']))
+                    out['routename'] = validMRMLName("%s/%s" % (route['RTA_PREFSRC'], route['dst_len']))
                     out['routetype'] = 'routeTo'
                     out['type'] = '%s-prefix-list' % route['iptype']
                     out['value'] = "%s_%s" % (route['RTA_PREFSRC'], route['dst_len'])

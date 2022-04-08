@@ -15,6 +15,7 @@ from rdflib.namespace import XSD
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getActiveDeltas
 from DTNRMLibs.MainUtilities import convertTSToDatetime
+from DTNRMLibs.ipaddr import validMRMLName
 
 
 class DeltaInfo():
@@ -106,11 +107,7 @@ class DeltaInfo():
         self._addBandwidthServiceParams(**portDict['hasService'])
 
     def _addNetworkAddr(self, portDict, uri):
-        def __validMRMLName(valIn, ipType='ipv4'):
-            # TODO: Move to general. reused in many places
-            if ipType == 'ipv4':
-                return valIn.replace('/', '_')
-            return valIn.replace(':', '_').replace('/', '_').replace(' ', '_')
+        """ Add Network delta info """
         netDict = portDict.get('hasNetworkAddress', {})
         if not netDict:
             return
@@ -119,7 +116,7 @@ class DeltaInfo():
             if not ipdict:
                 continue
             for key in ipdict.get('type', 'undefined').split('|'):
-                out = [__validMRMLName('%s-address+%s' % (ipkey, ipdict.get('value', 'undefined'))), key]
+                out = ["%s-address+%s" % (ipkey, validMRMLName(ipdict.get('value', 'undefined'))), key]
                 self._addNetworkAddress(portDict['uri'], out, ipdict.get('value', 'undefined'))
 
     def addvswInfo(self, vswDict, uri):

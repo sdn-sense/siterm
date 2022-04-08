@@ -48,8 +48,9 @@ class PolicyService(RDFHelper):
     """Policy Service to accept deltas."""
     def __init__(self, config, logger, sitename):
         self.sitename = sitename
-        self.logger = logger
         self.config = config
+        self.logger = getLogger("%s/%s/" % (self.config.get('general', 'logDir'), 'PolicyService'),
+                                                      self.config.get('general', 'logLevel'))
         self.siteDB = contentDB(logger=self.logger, config=self.config)
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.stateMachine = StateMachine(self.logger, self.config)

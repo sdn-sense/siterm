@@ -9,7 +9,6 @@ Authors:
 Date: 2021/12/01
 """
 import copy
-from ipaddress import ip_address, IPv4Address
 
 def checkConfig(config, logger, site):
     """Get info from config and ensure all params correct."""
@@ -61,13 +60,3 @@ def getConfigParams(config, switch, cls=None):
     if config.has_option(switch, 'ports_ignore'):
         portsIgnore = config.get(switch, 'ports_ignore').split(',')
     return ports, vlanRange, portsIgnore
-
-
-def validIPAddress(ipInput):
-    """ Check if IP is valid.
-        Input: str
-        Returns: (one of) IPv4, IPv6, Invalid"""
-    try:
-        return "IPv4" if isinstance(ip_address(ipInput), IPv4Address) else "IPv6"
-    except ValueError:
-        return "Invalid"

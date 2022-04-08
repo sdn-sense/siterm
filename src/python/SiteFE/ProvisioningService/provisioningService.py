@@ -186,11 +186,11 @@ class ProvisioningService():
                     self.yamlconf[switch]['interface'].setdefault(key, {'state': 'absent'})
                 continue
             for key1, val1 in val.items():
-                if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ip_address']:
+                if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ip_address', 'ip6_address']:
                     if key1 == 'tagged_members':
                         yamlOut = self.yamlconf[switch]['interface'][key].setdefault(key1, [])
                         yamlOut = self.compareTaggedMembers(yamlOut, val1)
-                    if key1 == 'ip_address':
+                    if key1 in ['ip_address', 'ip6_address']:
                         yamlOut = self.yamlconf[switch]['interface'][key].setdefault(key1, {})
                         yamlOut = self.compareIpAddress(yamlOut, val1)
                 elif isinstance(val1, (dict, list)):

@@ -8,7 +8,7 @@ Authors:
 
 Date: 2021/12/01
 """
-
+from DTNRMLibs.ipaddr import validMRMLName
 import configparser
 
 def generateVal(cls, inval, inkey, esc=False):
@@ -41,7 +41,7 @@ def _genIPv4(cls, inval, inkey, esc=True):
             subnet = inval['masklen']
         if 'address' in inval:
             if esc:
-                return "%s_%s" % (inval['address'], subnet)
+                return validMRMLName("%s/%s" % (inval['address'], subnet))
             return "%s/%s" % (inval['address'], subnet)
         cls.logger.debug('One of params in Dict not available. Upredictable output')
     if isinstance(inval, list):
@@ -62,7 +62,7 @@ def _genIPv6(cls, inval, inkey, esc=True):
             subnet = inval['subnet'].split('/')[-1]
         if 'address' in inval:
             if esc:
-                return "%s_%s" % (inval['address'].replace(':', '_').replace('/', '-'), subnet)
+                return validMRMLName("%s/%s" % (inval['address'], subnet))
             return "%s/%s" % (inval['address'], subnet)
         cls.logger.debug('One of params in Dict not available. Upredictable output')
     if isinstance(inval, list):
@@ -254,17 +254,15 @@ class SwitchInfo():
 
     def _addSwitchRoutes(self, switchInfo):
         """ Add Route info to MRML """
-        def __validMRMLName(valIn):
-            return valIn.replace(':', '_').replace('/', '-').replace('.', '_').replace(' ', '_')
 
         for switchName, rstEntries in switchInfo.get('routes', {}).items():
             self.logger.debug('Working on1 %s' % switchName)
+            out = {'hostname': switchName}
             try:
-                rst = self.config.get(switchName, 'rst')
+                out['rst'] = self.config.get(switchName, 'rst')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
                 self.logger.debug('ERROR: rst parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
-            out = {'hostname': switchName}
             for ipX, routeList in rstEntries.items():
                 out['rstname'] = 'rst-%s' % ipX
                 for route in routeList:
@@ -276,9 +274,9 @@ class SwitchInfo():
                     out['iptype'] = ipX
                     out['rt-table'] = 'main' if 'vrf' not in route else 'vrf-%s' % route['vrf']
                     if 'from' in route:
-                        out['routename'] = __validMRMLName(route['from'])
+                        out['routename'] = validMRMLName(route['from'])
                     elif 'intf' in route:
-                        out['routename'] = __validMRMLName(route['intf'])
+                        out['routename'] = validMRMLName(route['intf'])
                     else:
                         # We dont have from or intf it goes to. Not parsed correctly?
                         continue
