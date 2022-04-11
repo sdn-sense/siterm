@@ -122,12 +122,17 @@ class Switch(Ansible, Raw, Node):
                     else:
                         self.output['portMapping'][switch][portKey] = realportname
 
-    def _getSwitchPortName(self, switchName, portName):
+    def _getSwitchPortName(self, switchName, portName, vlanid=None):
         # Get the portName which is uses in Switch
         # as you can see in _getSystemValidPortName -
         # Port name from Orchestrator will come modified.
         # We need a way to revert it back to systematic switch port name
-        return self.output['portMapping'].get(switchName, {}).get(portName, "")
+        sysPort = self.output['portMapping'].get(switchName, {}).get(portName, "")
+        if not sysPort and vlanid:
+            sysPort = 'Vlan %s' % vlanid
+        elif not sysPort:
+            sysPort = portName
+        return sysPort
 
     def _getAllSwitches(self, switchName=None):
         if switchName:

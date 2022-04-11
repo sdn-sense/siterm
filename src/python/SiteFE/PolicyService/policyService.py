@@ -410,13 +410,13 @@ class PolicyService(RDFHelper):
         deltapath = self.siteDB.moveFile(deltapath,
                                          os.path.join(self.config.get(self.sitename, 'privatedir'), "PolicyService/"))
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
-        self.logger.info('Called Accept Delta. Content Location: %s', deltapath)
+        self.logger.info('Called Accept Delta. Content Location: %s' % deltapath)
         toDict = dict(fileContent)
         toDict["State"] = "accepting"
         try:
             for key in ['reduction', 'addition']:
                 if toDict.get("Content", {}).get(key, {}):
-                    self.logger.debug('Got Content %s for key %s', toDict["Content"][key], key)
+                    self.logger.debug('Got Content %s for key %s' % (toDict["Content"][key], key))
                     tmpFile = ""
                     with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
                         tmpFile = fd.name

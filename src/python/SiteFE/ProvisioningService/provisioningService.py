@@ -55,7 +55,7 @@ class ProvisioningService():
         if 'hasLabel' not in portDict or 'value' not in portDict['hasLabel']:
             raise Exception('Bad running config. Missing vlan entry: %s %s %s' % (host, port, portDict))
         vlan = portDict['hasLabel']['value']
-        vlanName = self.switch._getSwitchPortName(host, 'Vlan%s' % vlan)
+        vlanName = self.switch._getSwitchPortName(host, 'Vlan%s' % vlan, vlan)
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault('name', vlanName)
         return vlanDict
