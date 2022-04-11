@@ -22,8 +22,7 @@ UpdateDate              : 2021/11/08
 import sys
 import pprint
 from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import getLogger
-from DTNRMLibs.MainUtilities import getStreamLogger
+from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import getUTCnow
@@ -35,11 +34,11 @@ from DTNRMLibs.Backends.main import Switch
 class ProvisioningService():
     """Provisioning service communicates with Local controllers and applies
     network changes."""
-    def __init__(self, config, logger, sitename):
-        self.logger = logger
+    def __init__(self, config, sitename):
+        self.logger = getLoggingObject()
         self.config = config
         self.sitename = sitename
-        self.switch = Switch(config, logger, sitename)
+        self.switch = Switch(config, sitename)
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         workDir = self.config.get('general', 'privatedir') + "/ProvisioningService/"
         createDirs(workDir)
@@ -121,12 +120,10 @@ class ProvisioningService():
             return serviceStart
         if stTime > getUTCnow():
             self.logger.debug('Start Time in future. Not starting %s' % tag)
-            # TODO: Uncomment.
-            #serviceStart = False
+            serviceStart = False
         if enTime < getUTCnow():
             self.logger.debug('End Time passed. Not adding to config %s' % tag)
-            # TODO: Uncomment.
-            #serviceStart = False
+            serviceStart = False
         return serviceStart
 
     def prepareYamlConf(self, activeConfig, switches):
@@ -244,26 +241,21 @@ class ProvisioningService():
         if configChanged:
             self.applyConfig()
 
-def execute(config=None, logger=None, args=None):
+def execute(config=None, args=None):
     """Main Execute."""
     if not config:
         config = getConfig()
-    if not logger:
-        component = 'ProvisioningService'
-        logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), component), config.get(component, 'logLevel'))
     if args:
-        provisioner = ProvisioningService(config, logger, args[1])
+        provisioner = ProvisioningService(config, args[1])
         provisioner.startwork()
     else:
         for sitename in config.get('general', 'sites').split(','):
-            provisioner = ProvisioningService(config, logger, sitename)
+            provisioner = ProvisioningService(config, sitename)
             provisioner.startwork()
 
 if __name__ == '__main__':
     print('WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.')
     print('1st argument has to be sitename which is configured in this frontend')
     print(sys.argv)
-    if len(sys.argv) == 2:
-        execute(args=sys.argv, logger=getStreamLogger())
-    else:
-        execute(logger=getStreamLogger())
+    getLoggingObject(logType='StreamLogger')
+    execute(args=sys.argv)

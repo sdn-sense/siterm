@@ -25,6 +25,7 @@ from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.DBBackend import dbinterface
 
 
+
 def getDBConn(serviceName='', cls=None):
     """Get database connection."""
     dbConn = {}
@@ -51,11 +52,9 @@ def getAllHosts(sitename, logger):
     return jOut
 
 
-def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
+def reportServiceStatus(servicename, status, sitename, hostname):
     """Report service state to DB."""
     try:
-        if not hostname:
-            hostname = socket.gethostname()
         dbOut = {'hostname': hostname,
                  'servicestate': status,
                  'servicename': servicename,
@@ -69,9 +68,5 @@ def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
             dbobj.update('servicestates', [dbOut])
     except Exception:
         excType, excValue = sys.exc_info()[:2]
-        if logger:
-            logger.critical("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
-                            str(excType.__name__), excValue)
-        else:
-            print("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
-                  str(excType.__name__), excValue)
+        print("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
+               str(excType.__name__), excValue)

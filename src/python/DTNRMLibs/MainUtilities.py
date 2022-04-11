@@ -18,6 +18,7 @@ import time
 import shlex
 import uuid
 import copy
+import socket
 import http.client
 import base64
 import datetime
@@ -70,6 +71,8 @@ def getFullUrl(config, sitename=None):
 
 def getStreamLogger(logLevel='DEBUG'):
     """Get Stream Logger."""
+    if logging.getLogger().hasHandlers():
+        return logging.getLogger()
     levels = {'FATAL': logging.FATAL,
               'ERROR': logging.ERROR,
               'WARNING': logging.WARNING,
@@ -85,9 +88,17 @@ def getStreamLogger(logLevel='DEBUG'):
     logger.setLevel(levels[logLevel])
     return logger
 
+def getLoggingObject(logFile='', logLevel='DEBUG', logOutName='api.log',
+                     rotateTime='midnight', backupCount=10, logType='TimedRotatingFileHandler'):
+    """ Get logging Object, either Timed FD or Stream """
+    if logType == 'TimedRotatingFileHandler':
+        return getTimeRotLogger(logFile, logLevel, logOutName, rotateTime, backupCount)
+    return getStreamLogger(logLevel)
 
-def getLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='midnight', backupCount=10):
+def getTimeRotLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='midnight', backupCount=10):
     """Get new Logger for logging."""
+    if logging.getLogger().hasHandlers():
+        return logging.getLogger()
     levels = {'FATAL': logging.FATAL,
               'ERROR': logging.ERROR,
               'WARNING': logging.WARNING,
@@ -219,7 +230,7 @@ class GitConfig():
                          'GIT_URL':    {'optional': True, 'default': 'https://raw.githubusercontent.com/'},
                          'GIT_BRANCH': {'optional': True, 'default': 'master'},
                          'MD5':        {'optional': False}}
-        self.logger = getStreamLogger()
+        self.logger = getLoggingObject(logType='StreamLogger')
 
     def gitConfigCache(self, name, url):
         """Precache file for 1 hour from git and use cached file."""
@@ -325,13 +336,12 @@ def getGitConfig():
     return gitConf.config
 
 
-def getConfig(locations=None):
+def getConfig():
     """Get parsed configuration in ConfigParser Format.
 
     This is used till everyone move to YAML based config.
     TODO: Move all to getGitConfig.
     """
-    del locations # TODO: Clean up remaining code which uses locations
     config = getGitConfig()
     tmpCp = configparser.ConfigParser()
     if not isinstance(config, dict):
@@ -375,9 +385,9 @@ def getUsername():
 
 class contentDB():
     """File Saver, loader class."""
-    def __init__(self, logger=None, config=None):
-        self.config = config
-        self.logger = logger
+    def __init__(self, config=None):
+        self.config = config if config else getConfig()
+        self.logger = getLoggingObject()
 
     @staticmethod
     def getFileContentAsJson(inputFile):
@@ -591,16 +601,20 @@ def decodebase64(inputStr, decodeFlag=True):
     return inputStr
 
 
-def pubStateRemote(config, dic):
+def pubStateRemote(config, **kwargs):
     """Publish state from remote services."""
     try:
         fullUrl = getFullUrl(config)
         fullUrl += '/sitefe'
+        dic = {'servicename': kwargs['servicename'],
+               'servicestate': kwargs['servicestate'],
+               'sitename': kwargs['sitename'],
+               'hostname':socket.gethostname()
+               }
         publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
     except Exception:
         excType, excValue = sys.exc_info()[:2]
         print("Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))
-
 
 def getCurrentModel(cls, raiseException=False):
     """Get Current Model from DB."""
@@ -644,5 +658,3 @@ def writeActiveDeltas(cls, newConfig):
         cls.dbI.update('activeDeltas', [activeDeltas])
     activeDeltas['output'] = evaldict(activeDeltas['output'])
     return activeDeltas
-
-

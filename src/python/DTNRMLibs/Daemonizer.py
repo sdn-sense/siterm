@@ -13,19 +13,32 @@ import sys
 import time
 import atexit
 from signal import SIGTERM
-
+from DTNRMLibs.MainUtilities import getConfig, getLoggingObject
+from DTNRMLibs.MainUtilities import reCacheConfig
+from DTNRMLibs.MainUtilities import pubStateRemote
 
 class Daemon():
     """A generic daemon class.
 
     Usage: subclass the Daemon class and override the run() method.
     """
-    def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
+
+    ALLCMD = ['start', 'stop', 'restart', 'startforeground', 'status']
+
+    def __init__(self, component, logType='TimedRotatingFileHandler',
+                 stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
         self.stdin = stdin
         self.stdout = stdout
         self.stderr = stderr
-        self.pidfile = pidfile
+        self.component = component
+        self.pidfile = '/tmp/end-site-rm-%s.pid' % component
+        self.config = getConfig()
+        self.logger = getLoggingObject("%s/%s/" % (self.config.get('general', 'logDir'), component),
+                                self.config.get('general', 'logLevel'), logType=logType)
         self.availableCommands = ['start', 'stop', 'restart', 'startforeground', 'status']
+
+    def _refreshConfig(self):
+        self.config = getConfig()
 
     def daemonize(self):
         """do the UNIX double-fork magic, see Stevens' "Advanced Programming in
@@ -58,17 +71,17 @@ class Daemon():
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
-        with open(self.stdin, 'r') as fd:
+        with open(self.stdin, 'r', encoding='utf-8') as fd:
             os.dup2(fd.fileno(), sys.stdin.fileno())
-        with open(self.stdout, 'a+') as fd:
+        with open(self.stdout, 'a+', encoding='utf-8') as fd:
             os.dup2(fd.fileno(), sys.stdout.fileno())
-        with open(self.stderr, 'a+') as fd:
+        with open(self.stderr, 'a+', encoding='utf-8') as fd:
             os.dup2(fd.fileno(), sys.stderr.fileno())
 
         # write pidfile
         atexit.register(self.delpid)
         pid = str(os.getpid())
-        with open(self.pidfile, 'w+') as fd:
+        with open(self.pidfile, 'w+', encoding='utf-8') as fd:
             fd.write("%s\n" % pid)
 
     def delpid(self):
@@ -83,7 +96,7 @@ class Daemon():
             directory = os.path.dirname(self.pidfile)
             if not os.path.exists(directory):
                 os.makedirs(directory)
-            with open(self.pidfile, 'r') as fd:
+            with open(self.pidfile, 'r', encoding='utf-8') as fd:
                 pid = int(fd.read().strip())
         except IOError:
             pid = None
@@ -102,7 +115,7 @@ class Daemon():
         # Get the pid from the pidfile
         pid = None
         try:
-            with open(self.pidfile, 'r') as fd:
+            with open(self.pidfile, 'r', encoding='utf-8') as fd:
                 pid = int(fd.read().strip())
         except IOError:
             pid = None
@@ -134,37 +147,61 @@ class Daemon():
     def status(self):
         """Daemon status."""
         try:
-            with open(self.pidfile, 'r') as fd:
+            with open(self.pidfile, 'r', encoding='utf-8') as fd:
                 pid = int(fd.read().strip())
                 print('Application info: PID %s' % pid)
         except IOError:
             print('Is application running?')
             sys.exit(1)
 
-    def command(self, command, daemonName):
+    def command(self, command):
         """Execute a specific command to service."""
-        if command in self.availableCommands:
-            if command == 'start':
-                self.start()
-            elif command == 'stop':
-                self.stop()
-            elif command == 'restart':
-                self.restart()
-            elif command == 'startforeground':
-                self.run()
-            elif command == 'status':
-                self.status()
-            else:
-                print("Unknown command")
-                sys.exit(2)
-            sys.exit(0)
+        if command == 'start':
+            self.start()
+        elif command == 'stop':
+            self.stop()
+        elif command == 'restart':
+            self.restart()
+        elif command == 'startforeground':
+            self.run()
+        elif command == 'status':
+            self.status()
         else:
-            print("usage: %s %s" % (daemonName, "|".join(self.availableCommands)))
+            print("Unknown command")
             sys.exit(2)
+        sys.exit(0)
 
     def run(self):
-        """You should override this method when you subclass Daemon.
+        """ Run main execution """
+        timeeq, currentHour = reCacheConfig(None)
+        runThreads = self.getThreads()
+        while True:
+            hadFailure = False
+            try:
+                for sitename, rthread in list(runThreads.items()):
+                    self.logger.info('Start worker for %s site', sitename)
+                    try:
+                        rthread.startwork()
+                        pubStateRemote(self.config, servicename=self.component, servicestate='OK', sitename=sitename)
+                    except:
+                        hadFailure = True
+                        pubStateRemote(self.config, servicename=self.component, servicestate='FAILED', sitename=sitename)
+                        excType, excValue = sys.exc_info()[:2]
+                        self.logger.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
+                time.sleep(10)
+            except KeyboardInterrupt as ex:
+                pubStateRemote(self.config, servicename=self.component, servicestate='KEYBOARDINTERRUPT', sitename=sitename)
+                self.logger.critical("Received KeyboardInterrupt: %s ", ex)
+                sys.exit(3)
+            if hadFailure:
+                self.logger.info('Had Runtime Failure. Sleep for 30 seconds')
+                time.sleep(30)
+            timeeq, currentHour = reCacheConfig(currentHour)
+            if not timeeq:
+                self.logger.info('Re initiating LookUp Service with new configuration from GIT')
+                self._refreshConfig()
+                rthread = self.getThreads()
 
-        It will be called after the process has been daemonized by
-        start() or restart().
-        """
+    def getThreads(self):
+        """ Overwrite this then Daemonized in your own class """
+        return {}

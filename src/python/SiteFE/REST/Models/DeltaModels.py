@@ -14,6 +14,7 @@ from SiteFE.PolicyService import stateMachine as stateM
 from DTNRMLibs.MainUtilities import httpdate
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import contentDB
+from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getCustomOutMsg
 from DTNRMLibs.MainUtilities import getAllFileContent
 from DTNRMLibs.MainUtilities import convertTSToDatetime
@@ -28,12 +29,12 @@ from DTNRMLibs.MainUtilities import getVal
 
 class frontendDeltaModels():
     """Delta Actions through Frontend interface."""
-    def __init__(self, logger, config=None, dbI=None):
+    def __init__(self, config=None, dbI=None):
         if config:
             self.config = config
         else:
             self.config = getConfig()
-        self.logger = logger
+        self.logger = getLoggingObject()
         self.policer = {}
         if dbI:
             self.dbI = dbI
@@ -41,10 +42,10 @@ class frontendDeltaModels():
             self.dbI = getDBConn('REST-DELTA', self)
         self.policer = {}
         for sitename in self.config.get('general', 'sites').split(','):
-            policer = polS.PolicyService(config, logger, sitename)
+            policer = polS.PolicyService(config, None, sitename)
             self.policer[sitename] = policer
         self.stateM = stateM.StateMachine(self.logger, self.config)
-        self.siteDB = contentDB(logger=self.logger, config=self.config)
+        self.siteDB = contentDB(config=self.config)
 
     def addNewDelta(self, uploadContent, environ, **kwargs):
         """Add new delta."""

@@ -14,56 +14,54 @@ import filecmp
 import shutil
 from DTNRMLibs.MainUtilities import createDirs, contentDB
 from DTNRMLibs.MainUtilities import execute as executeCmd
-from DTNRMLibs.MainUtilities import getStreamLogger
-from DTNRMLibs.MainUtilities import getLogger
+from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getFileContentAsJson
 from DTNRMLibs.MainUtilities import getUTCnow
 
 COMPONENT = 'QOS'
 
-
-# bps, bytes per second
-# kbps, Kbps, kilobytes per second
-# mbps, Mbps, megabytes per second
-# gbps, Gbps, gigabytes per second
-# bit, bits per second
-# kbit, Kbit, kilobit per second
-# mbit, Mbit, megabit per second
-# gbit, Gbit, gigabit per second
-# Seems there are issues with QoS when we use really big bites and it complains about this.
-# Solution is to convert to next lower value...
-def convertToRate(inputRate, inputVal, logger):
-    """Convert input to rate understandable to fireqos."""
-    logger.info('Converting rate for QoS. Input %s %s' % (inputRate, inputVal))
-    outRate = -1
-    outType = ''
-    if inputRate == 'bps':
-        outRate = int(inputVal // 1000000000)
-        outType = 'gbit'
-    if outRate == 0:
-        outRate = int(inputVal // 1000000)
-        outType = 'mbit'
-    if outRate == 0:
-        outRate = int(inputVal // 1000)
-        outType = 'bit'
-    if outRate != -1:
-        logger.info('Converted rate for QoS from %s %s to %s' % (inputRate, inputVal, outRate))
-        return outRate, outType
-    raise Exception('Unknown input rate parameter %s and %s' % (inputRate, inputVal))
-
-
 class QOS():
     """QOS class to install new limit rules."""
-    def __init__(self, config, logger):
+    def __init__(self, config):
         self.config = config if config else getConfig()
-        self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
-                                                      self.config.get('general', 'logLevel'))
+        self.logger = getLoggingObject()
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         self.hostname = self.config.get('agent', 'hostname')
         createDirs(self.workDir)
         self.debug = self.config.getboolean('general', "debug")
-        self.agentdb = contentDB(logger=self.logger, config=self.config)
+        self.agentdb = contentDB(config=self.config)
+
+    # bps, bytes per second
+    # kbps, Kbps, kilobytes per second
+    # mbps, Mbps, megabytes per second
+    # gbps, Gbps, gigabytes per second
+    # bit, bits per second
+    # kbit, Kbit, kilobit per second
+    # mbit, Mbit, megabit per second
+    # gbit, Gbit, gigabit per second
+    # Seems there are issues with QoS when we use really big bites and it complains about this.
+    # Solution is to convert to next lower value...
+    def convertToRate(self, inputRate, inputVal):
+        """Convert input to rate understandable to fireqos."""
+        self.logger.info('Converting rate for QoS. Input %s %s' % (inputRate, inputVal))
+        outRate = -1
+        outType = ''
+        if inputRate == 'bps':
+            outRate = int(inputVal // 1000000000)
+            outType = 'gbit'
+        if outRate == 0:
+            outRate = int(inputVal // 1000000)
+            outType = 'mbit'
+        if outRate == 0:
+            outRate = int(inputVal // 1000)
+            outType = 'bit'
+        if outRate != -1:
+            self.logger.info('Converted rate for QoS from %s %s to %s' % (inputRate, inputVal, outRate))
+            return outRate, outType
+        raise Exception('Unknown input rate parameter %s and %s' % (inputRate, inputVal))
+
+
 
     def restartQos(self):
         """Restart QOS service ."""
@@ -131,7 +129,7 @@ class QOS():
             if not inputDict['params']:
                 self.logger.info('This specific vlan request did not provided any QOS. Ignoring QOS Rules for it')
                 continue
-            outrate, outtype = convertToRate(inputDict['params']['unit'], int(inputDict['params']['reservableCapacity']), self.logger)
+            outrate, outtype = self.convertToRate(inputDict['params']['unit'], int(inputDict['params']['reservableCapacity']))
             tmpFile.write("# SPEEDLIMIT %s %s %s %s\n" % (inputDict['vlan'],
                                                           inputDict['destport'],
                                                           outrate, outtype))
@@ -170,10 +168,11 @@ class QOS():
             os.unlink(newFile)
 
 
-def execute(config=None, logger=None):
+def execute(config=None):
     """Execute main script for DTN-RM Agent output preparation."""
-    qosruler = QOS(config, logger)
+    qosruler = QOS(config)
     qosruler.startqos()
 
 if __name__ == '__main__':
-    execute(logger=getStreamLogger())
+    getLoggingObject(logType='StreamLogger')
+    execute()

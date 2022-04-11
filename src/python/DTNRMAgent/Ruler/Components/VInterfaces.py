@@ -11,6 +11,7 @@ Date: 2022/01/20
 import ipaddress
 import netifaces
 from DTNRMLibs.MainUtilities import execute
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 def getBroadCast(inIP):
     """Return broadcast IP."""
@@ -19,9 +20,9 @@ def getBroadCast(inIP):
 
 class VInterfaces():
     """Virtual interface class."""
-    def __init__(self, config, logger):
+    def __init__(self, config):
         self.config = config
-        self.logger = logger
+        self.logger = getLoggingObject()
 
     def _add(self, vlan, raiseError=False):
         """Add specific vlan."""
@@ -93,6 +94,7 @@ class VInterfaces():
             vlan['vlan'] = vals.get('hasLabel', {}).get('value', '')
             # TODO: Allow IPv6 assignment? TODO
             vlan['ip'] = vals.get('hasNetworkAddress', {}).get('ipv4-address', {}).get('value', '')
+            vlan['ipv6'] = vals.get('hasNetworkAddress', {}).get('ipv6-address', {}).get('value', '')
             vlans.append(vlan)
         return vlans
 

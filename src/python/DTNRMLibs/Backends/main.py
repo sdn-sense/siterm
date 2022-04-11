@@ -15,18 +15,18 @@ from DTNRMLibs.Backends.NodeInfo import Node
 from DTNRMLibs.Backends.generalFunctions import checkConfig
 from DTNRMLibs.Backends.generalFunctions import cleanupEmpty
 from DTNRMLibs.Backends.generalFunctions import getConfigParams, getValFromConfig
-from DTNRMLibs.MainUtilities import getConfig, getStreamLogger, getLogger, getUTCnow
+from DTNRMLibs.MainUtilities import getConfig, getLoggingObject, getUTCnow
 from DTNRMLibs.FECalls import getDBConn
 
 
 class Switch(Ansible, Raw, Node):
     """ Main Switch Class. It will load module based on config """
-    def __init__(self, config, logger, site):
+    def __init__(self, config, site):
         self.config = config
-        self.logger = logger
+        self.logger = getLoggingObject()
         self.site = site
         self.switches = {}
-        checkConfig(self.config, self.logger, self.site)
+        checkConfig(self.config, self.site)
         self.dbI = getDBConn('Switch', self)[self.site]
         self.output = {'switches': {}, 'ports': {},
                        'vlans': {}, 'routes': {},
@@ -225,16 +225,15 @@ class Switch(Ansible, Raw, Node):
         return self.output
 
 
-def execute(config=None, logger=None):
+def execute(config=None):
     """Main Execute."""
     if not config:
         config = getConfig()
-    if not logger:
-        logger = getLogger()
     for siteName in config.get('general', 'sites').split(','):
-        switchM = Switch(config, logger, siteName)
+        switchM = Switch(config, siteName)
         out = switchM.getinfo()
         print(out)
 
 if __name__ == '__main__':
-    execute(logger=getStreamLogger())
+    getLoggingObject(logType='StreamLogger')
+    execute()

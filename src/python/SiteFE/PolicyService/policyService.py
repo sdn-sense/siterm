@@ -19,8 +19,7 @@ from rdflib.plugins.parsers.notation3 import BadSyntax
 from dateutil import parser
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getConfig
-from DTNRMLibs.MainUtilities import getLogger
-from DTNRMLibs.MainUtilities import getStreamLogger
+from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import decodebase64
@@ -46,12 +45,11 @@ def getError(ex):
 
 class PolicyService(RDFHelper):
     """Policy Service to accept deltas."""
-    def __init__(self, config, logger, sitename):
+    def __init__(self, config, sitename):
         self.sitename = sitename
         self.config = config
-        self.logger = getLogger("%s/%s/" % (self.config.get('general', 'logDir'), 'PolicyService'),
-                                                      self.config.get('general', 'logLevel'))
-        self.siteDB = contentDB(logger=self.logger, config=self.config)
+        self.logger = getLoggingObject()
+        self.siteDB = contentDB(config=self.config)
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.stateMachine = StateMachine(self.logger, self.config)
         self.hosts = getAllHosts(self.sitename, self.logger)
@@ -442,19 +440,14 @@ class PolicyService(RDFHelper):
         return toDict
 
 
-def execute(config=None, logger=None, args=None):
+def execute(config=None, args=None):
     """Main Execute."""
     if not config:
         config = getConfig()
-    if not logger:
-        component = 'PolicyService'
-        logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), component),
-                           config.get(component, 'logLevel'), True)
-
     if args:
         if not args.sitename:
             raise Exception('Sitename argument not defined. See --help')
-        policer = PolicyService(config, logger, args.sitename)
+        policer = PolicyService(config, args.sitename)
         if args.action == 'accept':
             out = policer.acceptDelta(args.delta)
             pprint.pprint(out)
@@ -464,7 +457,7 @@ def execute(config=None, logger=None, args=None):
             pprint.pprint(out)
     else:
         for sitename in config.get('general', 'sites').split(','):
-            policer = PolicyService(config, logger, sitename)
+            policer = PolicyService(config, sitename)
             policer.startwork()
 
 def get_parser():
@@ -486,4 +479,5 @@ if __name__ == '__main__':
     if len(sys.argv) == 1:
         argparser.print_help()
     inargs = argparser.parse_args(sys.argv[1:])
-    execute(args=inargs, logger=getStreamLogger())
+    getLoggingObject(logType='StreamLogger')
+    execute(args=inargs)

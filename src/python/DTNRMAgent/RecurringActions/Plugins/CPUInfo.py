@@ -14,12 +14,12 @@ Date: 2022/01/29
 """
 import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
-from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 NAME = 'CPUInfo'
 
 
-def get(config, logger):
+def get(**kwargs):
     """Get lscpu information."""
     cpuInfo = {}
     tmpOut = externalCommand('lscpu')
@@ -39,5 +39,6 @@ def get(config, logger):
     return cpuInfo
 
 if __name__ == "__main__":
+    getLoggingObject(logType='StreamLogger')
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig(), getStreamLogger()))
+    PRETTY.pprint(get())

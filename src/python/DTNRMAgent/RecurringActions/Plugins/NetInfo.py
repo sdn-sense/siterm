@@ -12,7 +12,8 @@ import pprint
 import psutil
 from pyroute2 import IPRoute
 from DTNRMAgent.RecurringActions.Utilities import externalCommand
-from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
+from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 
 def str2bool(val):
@@ -30,7 +31,7 @@ def presetMacVlans(netInfo, mainIntf, config):
         nicInfo['switch'] = str(config.get(mainIntf, "switch"))
         nicInfo['shared'] = str2bool(config.get(mainIntf, "shared"))
 
-def get(config, logger):
+def get(config):
     """Get all network information."""
     netInfo = {}
     interfaces = config.get('agent', "interfaces").split(",")
@@ -152,5 +153,6 @@ def getRoutes():
     return routes
 
 if __name__ == "__main__":
+    getLoggingObject(logType='StreamLogger')
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig(), getStreamLogger()))
+    PRETTY.pprint(get(getConfig()))

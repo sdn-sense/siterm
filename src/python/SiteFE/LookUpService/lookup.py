@@ -14,8 +14,7 @@ import datetime
 import configparser
 from rdflib import Graph
 from rdflib.compare import isomorphic
-from DTNRMLibs.MainUtilities import getLogger
-from DTNRMLibs.MainUtilities import getStreamLogger
+from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import generateHash
@@ -32,16 +31,16 @@ from SiteFE.LookUpService.modules.rdfhelper import RDFHelper
 
 class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     """Lookup Service prepares MRML model about the system."""
-    def __init__(self, config, logger, sitename):
+    def __init__(self, config, sitename):
         self.sitename = sitename
-        self.logger = logger
         self.config = config
+        self.logger = getLoggingObject()
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.newGraph = None
         self.shared = 'notshared'
         self.hosts = {}
         self.renewSwitchConfig = False
-        self.switch = Switch(config, logger, sitename)
+        self.switch = Switch(config, sitename)
         self.prefixes = {}
         self.tmpout = {}
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
@@ -147,17 +146,15 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
                 self.dbI.delete('models', [['id', model['id']]])
 
 
-def execute(config=None, logger=None):
+def execute(config=None):
     """Main Execute."""
     if not config:
         config = getConfig()
-    if not logger:
-        component = 'LookUpService'
-        logger = getLogger("%s/%s/" % (config.get('general', 'logDir'), component), config.get(component, 'logLevel'))
     for siteName in config.get('general', 'sites').split(','):
-        policer = LookUpService(config, logger, siteName)
+        policer = LookUpService(config, siteName)
         policer.startwork()
 
 
 if __name__ == '__main__':
-    execute(logger=getStreamLogger())
+    getLoggingObject(logType='StreamLogger')
+    execute()

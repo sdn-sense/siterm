@@ -34,7 +34,7 @@ class FrontendRM():
     def __init__(self):
         self.initialized = False
         self.config = getConfig()
-        self.siteDB = contentDB()
+        self.siteDB = contentDB(config=self.config)
         self.dbI = getDBConn('REST-Frontend', self)
 
     def getHosts(self, **kwargs):
@@ -98,10 +98,10 @@ class FrontendRM():
         """Set Service State in DB."""
         # Only 3 Services are supported to report via URL
         # DTNRM-Agent | DTNRM-Ruler | DTNRM-Debugger
-        if inputDict['servicename'] not in ['Agent', 'Ruler', 'Debugger']:
+        if inputDict['servicename'] not in ['Agent', 'Ruler', 'Debugger', 'LookUpService', 'PolicyService', 'ProvisioningService']:
             raise NotFoundError('This Service %s is not supported by Frontend' % inputDict['servicename'])
         reportServiceStatus(inputDict['servicename'], inputDict['servicestate'],
-                            kwargs['sitename'], None, inputDict['hostname'])
+                            kwargs['sitename'], inputDict['hostname'])
 
     def getdebug(self, **kwargs):
         """Get Debug action for specific ID."""

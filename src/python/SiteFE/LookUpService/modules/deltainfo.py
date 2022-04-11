@@ -170,13 +170,6 @@ class DeltaInfo():
                                       'type': val.get('type', ''),
                                       'value': val.get('value', '')}
                             self._addRouteEntry(**netadd)
-# {'nextHop':   {'urn:ogf:network:ultralight.org:2013:dellos9_s0:service+rst-ipv6:table+50b2eaca-e175-424b-ae0b-20708d98f45f:route+wan:via'
-#                'type': 'ipv6-address',
-#                'value': 'fc00:0:0:0:0:0:0:32/64'},
-#  'routeFrom': {'type': 'ipv6-prefix-list',
-#                'value': '2605:d9c0:2:fff1::/64'},
-#  'routeTo':   {'type': 'ipv6-prefix-list',
-#                'value': '2605:d9c0:2:fff4::/64'}}},
 
     def addDeltaInfo(self):
         """Append all deltas to Model."""

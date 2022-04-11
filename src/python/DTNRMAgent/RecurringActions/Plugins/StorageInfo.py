@@ -9,7 +9,7 @@ Date: 2022/01/29
 import re
 import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
-from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 NAME = 'StorageInfo'
 
@@ -52,7 +52,7 @@ def parseOut(tmpOut, storageInfo):
     return storageInfo, True
 
 
-def get(config, logger):
+def get(**kwargs):
     """Get storage mount points information."""
     storageInfo = {"Values": {}}
     tmpOut = externalCommand('df -P -h')
@@ -70,5 +70,6 @@ def get(config, logger):
     return storageInfo
 
 if __name__ == "__main__":
+    getLoggingObject(logType='StreamLogger')
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig(), getStreamLogger()))
+    PRETTY.pprint(get())

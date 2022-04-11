@@ -10,7 +10,7 @@ Date: 2021/01/20
 from __future__ import print_function
 import re
 from DTNRMLibs.MainUtilities import getConfig
-from DTNRMLibs.MainUtilities import getStreamLogger
+from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import httpdate
 from DTNRMLibs.MainUtilities import getModTime
 from DTNRMLibs.MainUtilities import encodebase64
@@ -26,7 +26,7 @@ from SiteFE.REST.Models.DeltaModels import frontendDeltaModels
 
 
 CONFIG = getConfig()
-LOGGER = getStreamLogger(CONFIG.get('general', 'logLevel'))
+LOGGER = getLoggingObject(logType='StreamLogger')
 
 DELTABACKEND = frontendDeltaModels(logger=LOGGER, config=CONFIG)
 

@@ -9,9 +9,9 @@ Changes applied to this code:
 """
 import sys
 from DTNRMLibs.Daemonizer import Daemon
-from DTNRMAgent.Debugger import Debugger
+from SiteFE.LookUpService import lookup as LS
 
-COMPONENT = 'Debugger'
+COMPONENT = 'LookUpService'
 DAEMON = None
 
 class MyDaemon(Daemon):
@@ -20,9 +20,9 @@ class MyDaemon(Daemon):
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
         outThreads = {}
-        for sitename in self.config.get('general', 'sitename').split(','):
-            debAgent = Debugger.Debugger(self.config)
-            outThreads[sitename] = debAgent
+        for sitename in self.config.get('general', 'sites').split(','):
+            thr = LS.LookUpService(self.config, sitename)
+            outThreads[sitename] = thr
         return outThreads
 
 if __name__ == "__main__":

@@ -6,17 +6,14 @@ Authors:
 
 Date: 2022/01/29
 """
-from __future__ import print_function
-from __future__ import division
-from past.utils import old_div
 import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
-from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 NAME = 'MemInfo'
 
 
-def get(config, logger):
+def get(**kwargs):
     """Get memory info from /proc/meminfo."""
     memInfo = {}
     tmpOut = externalCommand('cat /proc/meminfo')
@@ -32,9 +29,10 @@ def get(config, logger):
                 memInfo[name] = tryConvertToNumeric(value[0])
             else:
                 print('MemInfo: Skipped this item: ', vals)
-    memInfo['memory_mb'] = int(old_div(memInfo['MemTotal_kB'], 1000))
+    memInfo['memory_mb'] = int(memInfo['MemTotal_kB'] // 1000)
     return memInfo
 
 if __name__ == "__main__":
+    getLoggingObject(logType='StreamLogger')
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig(), getStreamLogger()))
+    PRETTY.pprint(get())

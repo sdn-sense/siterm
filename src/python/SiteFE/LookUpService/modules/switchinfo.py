@@ -8,8 +8,9 @@ Authors:
 
 Date: 2021/12/01
 """
-from DTNRMLibs.ipaddr import validMRMLName
 import configparser
+from DTNRMLibs.ipaddr import validMRMLName
+
 
 def generateVal(cls, inval, inkey, esc=False):
     if isinstance(inval, dict) and inkey == 'ipv4':

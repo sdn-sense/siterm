@@ -13,11 +13,11 @@ import pprint
 from DTNRMAgent.Ruler.QOS import QOS
 from DTNRMAgent.Ruler.Components.VInterfaces import VInterfaces
 from DTNRMAgent.Ruler.Components.Routing import Routing
-from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict, getStreamLogger
+from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict
 from DTNRMLibs.MainUtilities import createDirs, getFullUrl, contentDB, getFileContentAsJson
-from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 
 COMPONENT = 'Ruler'
@@ -25,17 +25,16 @@ COMPONENT = 'Ruler'
 
 class Ruler(QOS, contentDB):
     """Ruler class to create interfaces on the system."""
-    def __init__(self, config, logger):
+    def __init__(self, config):
         self.config = config if config else getConfig()
-        self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
-                                                      self.config.get('general', 'logLevel'))
+        self.logger = getLoggingObject()
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         createDirs(self.workDir)
         self.fullURL = getFullUrl(self.config, self.config.get('general', 'siteName'))
         self.hostname = self.config.get('agent', 'hostname')
         self.logger.info("====== Ruler Start Work. Hostname: %s", self.hostname)
-        self.layer2 = VInterfaces(self.config, self.logger)
-        self.layer3 = Routing(self.config, self.logger)
+        self.layer2 = VInterfaces(self.config)
+        self.layer3 = Routing(self.config,)
 
 
     def getData(self, url):
@@ -108,7 +107,7 @@ class Ruler(QOS, contentDB):
                     # will happen at activeComparison - once delta is removed in FE.
                     continue
 
-    def start(self):
+    def startwork(self):
         """Start execution and get new requests from FE."""
         # if activeDeltas did not change - do not do any comparison
         # Comparison is needed to identify if any param has changed.
@@ -132,10 +131,11 @@ class Ruler(QOS, contentDB):
         self.logger.info('Ended function start')
         self.dumpFileContentAsJson(activeDeltasFile, activeFromFE)
 
-def execute(config=None, logger=None):
+def execute(config=None):
     """Execute main script for DTN-RM Agent output preparation."""
-    ruler = Ruler(config, logger)
-    ruler.start()
+    ruler = Ruler(config)
+    ruler.startwork()
 
 if __name__ == '__main__':
-    execute(logger=getStreamLogger())
+    getLoggingObject(logType='StreamLogger')
+    execute()

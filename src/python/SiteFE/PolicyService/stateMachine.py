@@ -19,14 +19,15 @@ Date                    : 2018/11/26
 """
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 class ConnectionMachine():
     """Connection State machine.
 
     Maps Deltas with 1 to N connections
     """
-    def __init__(self, logger, config):
-        self.logger = logger
+    def __init__(self, config):
+        self.logger = getLoggingObject()
         self.config = config
 
     @staticmethod
@@ -82,11 +83,11 @@ class ConnectionMachine():
 
 class StateMachine():
     """State machine for Frontend and policy service."""
-    def __init__(self, logger, config):
-        self.logger = logger
+    def __init__(self, config):
+        self.logger = getLoggingObject()
         self.config = config
         self.limit = 100
-        self.connMgr = ConnectionMachine(logger, config)
+        self.connMgr = ConnectionMachine(config)
 
     def _stateChangerDelta(self, dbObj, newState, **kwargs):
         """Delta State change."""

@@ -27,11 +27,11 @@ from DTNRMAgent.Debugger.Actions.rapidping import rapidping
 from DTNRMAgent.Debugger.Actions.tcpdump import tcpdump
 from DTNRMAgent.Debugger.Actions.iperfserver import iperfserver
 
-from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict, getStreamLogger
+from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict
 from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import publishToSiteFE
-from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 
 COMPONENT = 'Debugger'
@@ -39,10 +39,9 @@ COMPONENT = 'Debugger'
 
 class Debugger():
     """ Debugger main process """
-    def __init__(self, config, logger):
+    def __init__(self, config):
         self.config = config if config else getConfig()
-        self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
-                                                      self.config.get('general', 'logLevel'))
+        self.logger =  getLoggingObject()
         self.fullURL = getFullUrl(self.config, self.config.get('general', 'siteName'))
         self.hostname = self.config.get('agent', 'hostname')
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
@@ -68,7 +67,7 @@ class Debugger():
         """Publish debug runtime to FE."""
         publishToSiteFE(inDic, self.fullURL, '/sitefe/json/frontend/updatedebug/%s' % inDic['id'])
 
-    def start(self):
+    def startwork(self):
         """Start execution and get new requests from FE."""
         allWork = self.getAllAssignedtoHost()
         out, err, exitCode = "", "", 0
@@ -102,10 +101,11 @@ class Debugger():
             self.publishToFE(item)
 
 
-def execute(config=None, logger=None):
+def execute(config=None):
     """Execute main script for Debugger execution."""
-    debugger = Debugger(config, logger)
-    debugger.start()
+    debugger = Debugger(config)
+    debugger.startwork()
 
 if __name__ == '__main__':
-    execute(logger=getStreamLogger())
+    getLoggingObject(logType='StreamLogger')
+    execute()

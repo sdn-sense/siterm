@@ -7,12 +7,13 @@ Authors:
 Date: 2021/01/20
 """
 from DTNRMLibs.MainUtilities import execute
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 class Routing():
     """Virtual interface class."""
-    def __init__(self, config, logger):
+    def __init__(self, config):
         self.config = config
-        self.logger = logger
+        self.logger = getLoggingObject()
 
     def add(self, vlan, raiseError=False):
         """Add specific route."""

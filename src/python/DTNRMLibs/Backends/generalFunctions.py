@@ -10,7 +10,7 @@ Date: 2021/12/01
 """
 import copy
 
-def checkConfig(config, logger, site):
+def checkConfig(config, site):
     """Get info from config and ensure all params correct."""
     if not config.has_section(site):
         msg = 'SiteName %s is not defined' % site

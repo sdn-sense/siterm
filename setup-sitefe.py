@@ -29,19 +29,18 @@ from setupUtilities import list_packages, get_py_modules, get_web_files, VERSION
 # This is how CRONJOBS are handled and division is done only for the current hour.
 SCRIPTS = []
 for sectionName in ['LookUpService', 'PolicyService', 'ProvisioningService']:
-    SCRIPTS.append('packaging/dtnrm-site-fe/centos7/%s-update' % sectionName)
+    SCRIPTS.append('packaging/dtnrm-site-fe/scripts/%s-update' % sectionName)
 
 if "--docker" in sys.argv:
     sys.argv.remove("--docker")
 setup(
     name='DTNRMSiteFE',
     version="%s" % VERSION,
-    long_description="DTN-RM Site installation",
+    long_description="End Site-RM Site installation",
     author="Justas Balcas",
-    author_email="justas.balcas@cern.ch",
-    url="https://hep.caltech.edu",
+    author_email="juztas@gmail.com",
     download_url="https://github.com/sdn-sense/siterm/tarball/0.1",
-    keywords=['DTN-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
+    keywords=['End Site-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
     package_dir={'': 'src/python/'},
     packages=['SiteFE', 'DTNRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/DTNRMLibs/']),
     install_requires=['pyparsing', 'rdflib', 'importlib', 'setuptools', 'future', 'simplejson', 'mod-wsgi',
@@ -51,8 +50,7 @@ setup(
                 ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
                                         "packaging/dtnrm-site-fe/welcome.conf"]),
                 ("/etc/cron.d/", ["packaging/dtnrm-site-fe/siterm-crons"]),
-                ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh",
-                                        "packaging/general/siterm-autoupdate.py"])] + get_web_files(),
+                ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh"])] + get_web_files(),
     py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
     scripts=SCRIPTS
 )
