@@ -39,10 +39,11 @@ COMPONENT = 'Debugger'
 
 class Debugger():
     """ Debugger main process """
-    def __init__(self, config):
+    def __init__(self, config, sitename):
         self.config = config if config else getConfig()
         self.logger =  getLoggingObject()
-        self.fullURL = getFullUrl(self.config, self.config.get('general', 'siteName'))
+        self.fullURL = getFullUrl(self.config, sitename)
+        self.sitename = sitename
         self.hostname = self.config.get('agent', 'hostname')
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
 

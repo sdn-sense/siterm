@@ -25,12 +25,13 @@ COMPONENT = 'Ruler'
 
 class Ruler(QOS, contentDB):
     """Ruler class to create interfaces on the system."""
-    def __init__(self, config):
+    def __init__(self, config, sitename):
         self.config = config if config else getConfig()
         self.logger = getLoggingObject()
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         createDirs(self.workDir)
-        self.fullURL = getFullUrl(self.config, self.config.get('general', 'siteName'))
+        self.fullURL = getFullUrl(self.config, sitename)
+        self.sitename = sitename
         self.hostname = self.config.get('agent', 'hostname')
         self.logger.info("====== Ruler Start Work. Hostname: %s", self.hostname)
         self.layer2 = VInterfaces(self.config)
