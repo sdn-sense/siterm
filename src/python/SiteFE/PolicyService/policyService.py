@@ -51,7 +51,7 @@ class PolicyService(RDFHelper):
         self.logger = getLoggingObject()
         self.siteDB = contentDB(config=self.config)
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
-        self.stateMachine = StateMachine(self.logger, self.config)
+        self.stateMachine = StateMachine(self.config)
         self.hosts = getAllHosts(self.sitename, self.logger)
         for siteName in self.config.get('general', 'sites').split(','):
             workDir = os.path.join(self.config.get(siteName, 'privatedir'), "PolicyService/")
@@ -479,5 +479,6 @@ if __name__ == '__main__':
     if len(sys.argv) == 1:
         argparser.print_help()
     inargs = argparser.parse_args(sys.argv[1:])
+    print(1)
     getLoggingObject(logType='StreamLogger')
     execute(args=inargs)

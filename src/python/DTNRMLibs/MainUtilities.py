@@ -68,10 +68,17 @@ def getFullUrl(config, sitename=None):
         webdomain = "http://" + webdomain
     return "%s/%s" % (webdomain, sitename)
 
+def checkLoggingHandler(handlerToCheck):
+    """ Check if logging handler is present and return True/False """
+    if logging.getLogger().hasHandlers():
+        for handler in logging.getLogger().handlers:
+            if isinstance(handler, handlerToCheck):
+                return True
+    return False
 
 def getStreamLogger(logLevel='DEBUG'):
     """Get Stream Logger."""
-    if logging.getLogger().hasHandlers():
+    if checkLoggingHandler(logging.StreamHandler):
         return logging.getLogger()
     levels = {'FATAL': logging.FATAL,
               'ERROR': logging.ERROR,
@@ -88,7 +95,7 @@ def getStreamLogger(logLevel='DEBUG'):
     logger.setLevel(levels[logLevel])
     return logger
 
-def getLoggingObject(logFile='', logLevel='DEBUG', logOutName='api.log',
+def getLoggingObject(logFile='/var/log/dtnrm-site', logLevel='DEBUG', logOutName='api.log',
                      rotateTime='midnight', backupCount=10, logType='TimedRotatingFileHandler'):
     """ Get logging Object, either Timed FD or Stream """
     if logType == 'TimedRotatingFileHandler':
@@ -97,7 +104,7 @@ def getLoggingObject(logFile='', logLevel='DEBUG', logOutName='api.log',
 
 def getTimeRotLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='midnight', backupCount=10):
     """Get new Logger for logging."""
-    if logging.getLogger().hasHandlers():
+    if checkLoggingHandler(logging.handlers.TimedRotatingFileHandler):
         return logging.getLogger()
     levels = {'FATAL': logging.FATAL,
               'ERROR': logging.ERROR,
@@ -604,7 +611,7 @@ def decodebase64(inputStr, decodeFlag=True):
 def pubStateRemote(config, **kwargs):
     """Publish state from remote services."""
     try:
-        fullUrl = getFullUrl(config)
+        fullUrl = getFullUrl(config, kwargs['sitename'])
         fullUrl += '/sitefe'
         dic = {'servicename': kwargs['servicename'],
                'servicestate': kwargs['servicestate'],

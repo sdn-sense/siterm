@@ -55,7 +55,6 @@ import urllib.error
 import subprocess
 # 3d-party libraries
 import pycurl
-from DTNRMLibs.MainUtilities import getLoggingObject
 
 
 class ResponseHeader():
@@ -101,7 +100,6 @@ class RequestHandler():
         self.connecttimeout = config.get('connecttimeout', 30)
         self.followlocation = config.get('followlocation', 1)
         self.maxredirs = config.get('maxredirs', 5)
-        self.logger = getLoggingObject()
 
     def encode_params(self, params, verb, doseq):
         """Encode request parameters for usage with the 4 verbs.

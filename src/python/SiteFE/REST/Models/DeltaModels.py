@@ -42,9 +42,9 @@ class frontendDeltaModels():
             self.dbI = getDBConn('REST-DELTA', self)
         self.policer = {}
         for sitename in self.config.get('general', 'sites').split(','):
-            policer = polS.PolicyService(config, None, sitename)
+            policer = polS.PolicyService(config, sitename)
             self.policer[sitename] = policer
-        self.stateM = stateM.StateMachine(self.logger, self.config)
+        self.stateM = stateM.StateMachine(self.config)
         self.siteDB = contentDB(config=self.config)
 
     def addNewDelta(self, uploadContent, environ, **kwargs):
