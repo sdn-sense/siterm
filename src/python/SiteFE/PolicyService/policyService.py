@@ -215,7 +215,7 @@ class PolicyService(RDFHelper):
             scanVals = returnout.setdefault('hasLabel', {})
             out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['nml'], 'labeltype')))
             if out:
-                scanVals['labeltype'] = out[0][len(self.prefixes['site']):]
+                scanVals['labeltype'] = 'ethernet#vlan'
             out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['nml'], 'value')))
             if out:
                 scanVals['value'] = int(out[0])

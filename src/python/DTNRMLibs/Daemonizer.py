@@ -12,7 +12,7 @@ import os
 import sys
 import time
 import atexit
-from signal import SIGTERM
+import psutil
 from DTNRMLibs.MainUtilities import getConfig, getLoggingObject
 from DTNRMLibs.MainUtilities import reCacheConfig
 from DTNRMLibs.MainUtilities import pubStateRemote
@@ -110,6 +110,13 @@ class Daemon():
         self.daemonize()
         self.run()
 
+    def __kill(self, pid):
+        """ Kill process using psutil lib """
+        process = psutil.Process(pid)
+        for proc in process.children(recursive=True):
+            proc.kill()
+        process.kill()
+
     def stop(self):
         """Stop the daemon."""
         # Get the pid from the pidfile
@@ -128,7 +135,7 @@ class Daemon():
         # Try killing the daemon process
         try:
             while 1:
-                os.kill(pid, SIGTERM)
+                self.__kill(pid)
                 time.sleep(0.1)
         except OSError as err:
             err = str(err)
