@@ -134,7 +134,7 @@ class Ruler(QOS, contentDB):
 
 def execute(config=None):
     """Execute main script for DTN-RM Agent output preparation."""
-    ruler = Ruler(config)
+    ruler = Ruler(config, None)
     ruler.startwork()
 
 if __name__ == '__main__':

@@ -34,6 +34,7 @@ def presetMacVlans(netInfo, mainIntf, config):
 def get(config):
     """Get all network information."""
     netInfo = {}
+    logger = getLoggingObject(logType='StreamLogger')
     interfaces = config.get('agent', "interfaces").split(",")
     for intf in interfaces:
         nicInfo = netInfo.setdefault(intf, {})

@@ -130,15 +130,15 @@ fi
   # Remove ssl.conf - we have all defined inside the sitefe-httpd.conf
   rm -f /etc/httpd/conf.d/ssl.conf
   # Ownership
-  echo "1. Making apache as owner of $datadir"
   chown apache:apache -R $datadir
   cd $datadir
   # File permissions, recursive
-  echo "2. Recursive file permissions to 0644 in $datadir"
   find . -type f -exec chmod 0644 {} \;
   # Dir permissions, recursive
-  echo "3. Recursive directory permissions to 0755 in $datadir"
   find . -type d -exec chmod 0755 {} \;
+  # Create log for apache and rest api
+  touch /var/log/dtnrm-siteapi.log
+  chown apache:apache /var/log/dtnrm-siteapi.log
 
 if [ X"$docker" = X ]; then
   # SELinux serve files off Apache, resursive

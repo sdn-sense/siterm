@@ -104,7 +104,7 @@ class Debugger():
 
 def execute(config=None):
     """Execute main script for Debugger execution."""
-    debugger = Debugger(config)
+    debugger = Debugger(config, None)
     debugger.startwork()
 
 if __name__ == '__main__':
