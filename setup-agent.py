@@ -39,8 +39,7 @@ setup(
     install_requires=['importlib', 'psutil', 'ipaddress', 'pyroute2', 'pyaml', 'pyshark', 'iperf3',
                       'pycurl', 'requests', 'netifaces', 'future', 'simplejson', 'rdflib'],
     data_files=[("/etc/cron.d/", ["packaging/dtnrm-site-agent/siterm-crons"]),
-                ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh",
-                                        "packaging/general/siterm-autoupdate.py"])],
+                ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh"])],
     py_modules=get_py_modules(['src/python/DTNRMAgent', 'src/python/DTNRMLibs']),
     scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler", "packaging/dtnrm-site-agent/dtnrm-debugger"]
 )
