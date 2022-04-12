@@ -112,10 +112,18 @@ class Daemon():
 
     def __kill(self, pid):
         """ Kill process using psutil lib """
-        process = psutil.Process(pid)
+        def processKill(procObj):
+            try:
+                procObj.kill()
+            except psutil.NoSuchProcess:
+                pass
+        try:
+            process = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            return
         for proc in process.children(recursive=True):
-            proc.kill()
-        process.kill()
+            processKill(proc)
+        processKill(process)
 
     def stop(self):
         """Stop the daemon."""
@@ -133,18 +141,9 @@ class Daemon():
             return  # not an error in a restart
 
         # Try killing the daemon process
-        try:
-            while 1:
-                self.__kill(pid)
-                time.sleep(0.1)
-        except OSError as err:
-            err = str(err)
-            if err.find("No such process") > 0:
-                if os.path.exists(self.pidfile):
-                    os.remove(self.pidfile)
-            else:
-                print(str(err))
-                sys.exit(1)
+        self.__kill(pid)
+        if os.path.exists(self.pidfile):
+            os.remove(self.pidfile)
 
     def restart(self):
         """Restart the daemon."""

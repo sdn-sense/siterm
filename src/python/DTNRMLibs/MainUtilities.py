@@ -95,7 +95,7 @@ def getStreamLogger(logLevel='DEBUG'):
     logger.setLevel(levels[logLevel])
     return logger
 
-def getLoggingObject(logFile='/var/log/dtnrm-site', logLevel='DEBUG', logOutName='api.log',
+def getLoggingObject(logFile='/var/log/dtnrm-site-fe/', logLevel='DEBUG', logOutName='api.log',
                      rotateTime='midnight', backupCount=10, logType='TimedRotatingFileHandler'):
     """ Get logging Object, either Timed FD or Stream """
     if logType == 'TimedRotatingFileHandler':

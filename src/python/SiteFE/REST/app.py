@@ -52,6 +52,7 @@ from DTNRMLibs.MainUtilities import getHeaders
 from DTNRMLibs.MainUtilities import getUrlParams
 from DTNRMLibs.MainUtilities import read_input_data
 from DTNRMLibs.MainUtilities import getCustomOutMsg
+from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.CustomExceptions import HTTPResponses
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.CustomExceptions import NotSupportedArgument
@@ -72,6 +73,8 @@ _SITES = ["MAIN"]
 # which do not require site name
 _HTTPRESPONDER = HTTPResponses()
 _CERTHANDLER = CertHandler()
+
+LOGGER = getLoggingObject(logFile='/var/log/dtnrm-site-fe/http-api/')
 
 
 # This would also allow to move all catches to here... and get all errors in one place

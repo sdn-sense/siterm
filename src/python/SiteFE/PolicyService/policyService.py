@@ -356,6 +356,7 @@ class PolicyService(RDFHelper):
             # And we should get again clean model for next delta check
             if not self.conflictChecker.checkConflicts(self, newConfig, currentActive['output']):
                 currentActive['output'] = newConfig
+                self.logger.info('WRITE ACTIVE: %s' % str(currentActive['output']))
                 currentActive = writeActiveDeltas(self, currentActive['output'])
                 self.stateMachine._modelstatechanger(self.dbI, 'added', **delta)
             else:
@@ -368,6 +369,7 @@ class PolicyService(RDFHelper):
         pprint.pprint(newconf)
         if cleaned or not self.conflictChecker.checkConflicts(self, newconf, currentActive['output']):
             currentActive['output'] = newconf
+            self.logger.info('WRITE ACTIVE1: %s' % str(currentActive['output']))
             currentActive = writeActiveDeltas(self, currentActive['output'])
 
     def startwork(self):

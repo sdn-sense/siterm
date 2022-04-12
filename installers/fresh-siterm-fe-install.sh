@@ -137,8 +137,8 @@ fi
   # Dir permissions, recursive
   find . -type d -exec chmod 0755 {} \;
   # Create log for apache and rest api
-  touch /var/log/dtnrm-siteapi.log
-  chown apache:apache /var/log/dtnrm-siteapi.log
+  mkdir -p /var/log/dtnrm-site-fe/http-api/
+  chown apache:apache /var/log/dtnrm-site-fe/http-api/
 
 if [ X"$docker" = X ]; then
   # SELinux serve files off Apache, resursive
