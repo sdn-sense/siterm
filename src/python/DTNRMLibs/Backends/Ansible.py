@@ -31,8 +31,11 @@ class Switch(Actions):
     """
     Ansible Switch Module
     """
-    def __init__(self):
+    def __init__(self, config, sitename):
         self.parsers = parsers.ALL
+        self.config = config
+        self.sitename = sitename
+
 
     def _executeAnsible(self, playbook):
         # TODO control ansible runner params or use default
@@ -69,6 +72,9 @@ class Switch(Actions):
     # 3 - ipv6 route information 
     # For Dell OS 9 - best is to use show running config;
     # For Arista EOS - show ip route vrf all | json || show ipv6 route vrf all | json
+    # For Azure Sonic - we use normal ssh and command line. - There is also Dell Sonic Module
+    # but that one depends on sonic-cli - which is broken in latest Azure Image (py2/py3 mainly),
+    # See https://github.com/Azure/SONiC/issues/781
     def _getMacLLDPRoute(self):
         def parserWrapper(num, host_events):
             tmpOut = {}

@@ -19,7 +19,7 @@ from DTNRMLibs.MainUtilities import getConfig, getLoggingObject, getUTCnow
 from DTNRMLibs.FECalls import getDBConn
 
 
-class Switch(Ansible, Raw, Node):
+class Switch(Node):
     """ Main Switch Class. It will load module based on config """
     def __init__(self, config, site):
         self.config = config
@@ -32,10 +32,11 @@ class Switch(Ansible, Raw, Node):
                        'vlans': {}, 'routes': {},
                        'lldp': {}, 'info': {},
                        'portMapping': {}}
+        self.plugin = None
         if self.config[site]['plugin'] == 'ansible':
-            Ansible.__init__(self)
+            self.plugin = Ansible(self.config, self.site)
         elif self.config[site]['plugin'] == 'raw':
-            Raw.__init__(self)
+            self.plugin = Raw(self.config, self.site)
         else:
             raise Exception(f"Plugin {self.config[site]['plugin']} is not supported. Contact Support")
 
@@ -175,7 +176,7 @@ class Switch(Ansible, Raw, Node):
         """Merge yaml and Switch Info. Yaml info overwrites
            any parameter in switch  configuration. """
         ports, defVlans, portsIgn = getConfigParams(self.config, switch, self)
-        vlans = self.getvlans(self.switches['output'][switch])
+        vlans = self.plugin.getvlans(self.switches['output'][switch])
         for port in ports:
             if port in portsIgn:
                 self._delPortFromOut(switch, port)
@@ -185,12 +186,12 @@ class Switch(Ansible, Raw, Node):
             # Also - mrml does not expect to get string in nml. so need to replace all
             # Inside the output of dictionary
             nportName = port.replace(" ", "_").replace("/", "-")
-            tmpData = self.getportdata(self.switches['output'][switch], port)
+            tmpData = self.plugin.getportdata(self.switches['output'][switch], port)
             if port in vlans:
-                tmpData = self.getvlandata(self.switches['output'][switch], port)
+                tmpData = self.plugin.getvlandata(self.switches['output'][switch], port)
                 vlansDict = self.output['vlans'][switch].setdefault(nportName, tmpData)
                 vlansDict['realportname'] = port
-                vlansDict['value'] = self.getVlanKey(port)
+                vlansDict['value'] = self.plugin.getVlanKey(port)
                 self._addyamlInfoToPort(switch, nportName, defVlans, vlansDict)
             else:
                 portDict = self.output['ports'][switch].setdefault(nportName, tmpData)
@@ -204,10 +205,10 @@ class Switch(Ansible, Raw, Node):
                 if 'switchport' in portDict.keys() and portDict['switchport']:
                     portDict['desttype'] = 'switch'
         # Add route information and lldp information to output dictionary
-        self.output['info'][switch] = self.getfactvalues(self.switches['output'][switch], 'ansible_command_info')
-        self.output['routes'][switch]['ipv4'] = self.getfactvalues(self.switches['output'][switch], 'ansible_command_ipv4')
-        self.output['routes'][switch]['ipv6'] = self.getfactvalues(self.switches['output'][switch], 'ansible_command_ipv6')
-        self.output['lldp'][switch] = self.getfactvalues(self.switches['output'][switch], 'ansible_command_lldp')
+        self.output['info'][switch] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_info')
+        self.output['routes'][switch]['ipv4'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_ipv4')
+        self.output['routes'][switch]['ipv6'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_ipv6')
+        self.output['lldp'][switch] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_lldp')
 
 
     def getinfo(self, renew=False):
@@ -215,7 +216,7 @@ class Switch(Ansible, Raw, Node):
         # If renew or switches var empty - get latest
         # And update in DB
         if renew:
-            out = self._getFacts()
+            out = self.plugin._getFacts()
             self._insertToDB(out)
         if not self.switches:
             self._getDBOut()

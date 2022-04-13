@@ -52,7 +52,7 @@ def getConfigParams(config, switch, cls=None):
     vlanRange = ""
     portsIgnore = []
     if config.has_option(switch, 'allports') and config.get(switch, 'allports'):
-        ports = cls.getports(cls.switches['output'][switch])
+        ports = cls.plugin.getports(cls.switches['output'][switch])
     elif config.has_option(switch, 'ports'):
         ports = config.get(switch, 'ports').split(',')
     if config.has_option(switch, 'vlan_range'):

@@ -62,6 +62,11 @@ class PolicyService(RDFHelper):
         self.scannedRoutes = []
         self.conflictChecker = ConflictChecker()
 
+    def __clean(self):
+        self.bidPorts = {}
+        self.scannedPorts = {}
+        self.scannedRoutes = []
+
     def intOut(self, inport, out):
         """
         SetDefault for out hostname, port, server, interface and use
@@ -356,7 +361,6 @@ class PolicyService(RDFHelper):
             # And we should get again clean model for next delta check
             if not self.conflictChecker.checkConflicts(self, newConfig, currentActive['output']):
                 currentActive['output'] = newConfig
-                self.logger.info('WRITE ACTIVE: %s' % str(currentActive['output']))
                 currentActive = writeActiveDeltas(self, currentActive['output'])
                 self.stateMachine._modelstatechanger(self.dbI, 'added', **delta)
             else:
@@ -369,13 +373,13 @@ class PolicyService(RDFHelper):
         pprint.pprint(newconf)
         if cleaned or not self.conflictChecker.checkConflicts(self, newconf, currentActive['output']):
             currentActive['output'] = newconf
-            self.logger.info('WRITE ACTIVE1: %s' % str(currentActive['output']))
             currentActive = writeActiveDeltas(self, currentActive['output'])
 
     def startwork(self):
         """Start Policy Service."""
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started")
+        self.__clean()
         # Committed to activating...
         # committing, committed, activating, activated, remove, removing, cancel
         # 1. First getall in activating, modadd or remove and apply to model

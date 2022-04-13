@@ -55,7 +55,7 @@ class ProvisioningService():
         if 'hasLabel' not in portDict or 'value' not in portDict['hasLabel']:
             raise Exception('Bad running config. Missing vlan entry: %s %s %s' % (host, port, portDict))
         vlan = portDict['hasLabel']['value']
-        vlanName = self.switch._getSwitchPortName(host, 'Vlan%s' % vlan, vlan)
+        vlanName = self.switch.plugin._getSwitchPortName(host, 'Vlan%s' % vlan, vlan)
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault('name', vlanName)
         return vlanDict
@@ -63,7 +63,7 @@ class ProvisioningService():
     def _addTaggedInterfaces(self, host, port, portDict):
         """ Add Tagged Interfaces to expected yaml conf """
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
-        portName = self.switch._getSwitchPortName(host, port)
+        portName = self.switch.plugin._getSwitchPortName(host, port)
         vlanDict.setdefault('tagged_members', [])
         vlanDict['tagged_members'].append({'port': portName, 'state': 'present'})
 
@@ -195,14 +195,16 @@ class ProvisioningService():
 
     def applyConfig(self):
         """ Apply yaml config on Switch """
-        ansOut = self.switch._applyNewConfig()
-        for host, _ in ansOut.stats['failures'].items():
+        ansOut = self.switch.plugin._applyNewConfig()
+        if not ansOut:
+            return
+        for host, _ in ansOut.stats.get('failures', {}).items():
             for host_events in ansOut.host_events(host):
                 if host_events['event'] != 'runner_on_failed':
                     continue
                 self.logger.info("Failed to apply Configuration. Failure details below:")
                 self.logger.info(pprint.pprint(host_events))
-        if ansOut.stats['failures']:
+        if ansOut.stats.get('failures', {}):
             # TODO: Would be nice to save in DB and see errors from WEB UI
             raise Exception("There was configuration apply issue. Please contact support and provide this log file.")
 
@@ -225,7 +227,7 @@ class ProvisioningService():
 
         configChanged = False
         for host in switches:
-            curActiveConf = self.switch._getHostConfig(host)
+            curActiveConf = self.switch.plugin._getHostConfig(host)
             # Add all keys  from curActiveConf, except interface key
             self.yamlconf.setdefault(host, {'interface': {}})
             for key, val in curActiveConf.items():
@@ -237,7 +239,7 @@ class ProvisioningService():
             # Into the host itself append all except interfaces key
             if not curActiveConf == self.yamlconf[host]:
                 configChanged = True
-                self.switch._writeHostConfig(host, self.yamlconf[host])
+                self.switch.plugin._writeHostConfig(host, self.yamlconf[host])
         if configChanged:
             self.applyConfig()
 
