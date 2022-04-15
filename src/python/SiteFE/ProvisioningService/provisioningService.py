@@ -20,7 +20,6 @@ Date                    : 2017/09/26
 UpdateDate              : 2021/11/08
 """
 import sys
-import pprint
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getConfig
@@ -45,11 +44,11 @@ class ProvisioningService():
         self.yamlconf = {}
 
     def __cleanup(self):
-        """ Cleanup yaml conf output """
+        """Cleanup yaml conf output"""
         self.yamlconf = {}
 
     def __getdefaultVlan(self, host, port, portDict):
-        """ Default yaml dict setup """
+        """Default yaml dict setup"""
         tmpD = self.yamlconf.setdefault(host, {})
         tmpD = tmpD.setdefault('interface', {})
         if 'hasLabel' not in portDict or 'value' not in portDict['hasLabel']:
@@ -61,14 +60,14 @@ class ProvisioningService():
         return vlanDict
 
     def _addTaggedInterfaces(self, host, port, portDict):
-        """ Add Tagged Interfaces to expected yaml conf """
+        """Add Tagged Interfaces to expected yaml conf"""
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
         portName = self.switch._getSwitchPortName(host, port)
         vlanDict.setdefault('tagged_members', [])
         vlanDict['tagged_members'].append({'port': portName, 'state': 'present'})
 
     def _addIPv4Address(self, host, port, portDict):
-        """ Add IPv4 to expected yaml conf """
+        """Add IPv4 to expected yaml conf"""
         # For IPv4 - only single IP is supported. No secondary ones
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
         if portDict.get('hasNetworkAddress', {}).get('ipv4-address', {}).get('value', ""):
@@ -76,7 +75,7 @@ class ProvisioningService():
             vlanDict['ip_address'] = {'ip': portDict['hasNetworkAddress']['ipv4-address']['value'], 'state': 'present'}
 
     def _addIPv6Address(self, host, port, portDict):
-        """ Add IPv6 to expected yaml conf """
+        """Add IPv6 to expected yaml conf"""
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
         if portDict.get('hasNetworkAddress', {}).get('ipv6-address', {}).get('value', ""):
             vlanDict.setdefault('ip6_address', {})
@@ -90,7 +89,7 @@ class ProvisioningService():
         return vlanDict
 
     def addvsw(self, activeConfig, switches):
-        """ Prepare ansible yaml from activeConf (for vsw) """
+        """Prepare ansible yaml from activeConf (for vsw)"""
         if 'vsw' in activeConfig:
             for _, connDict in activeConfig['vsw'].items():
                 if not self.checkIfStarted(connDict):
@@ -106,12 +105,12 @@ class ProvisioningService():
                             self._addIPv6Address(host, port, portDict)
 
     def addrst(self, activeConfig, switches):
-        """ Prepare ansible yaml from activeConf (for rst) """
+        """Prepare ansible yaml from activeConf (for rst)"""
         # TODO Implement switch RST Service.
         return
 
     def checkIfStarted(self, connDict):
-        """ Check if service started. """
+        """Check if service started."""
         serviceStart = True
         stTime = connDict.get('_params', {}).get('existsDuring', {}).get('start', 0)
         enTime = connDict.get('_params', {}).get('existsDuring', {}).get('end', 0)
@@ -127,13 +126,13 @@ class ProvisioningService():
         return serviceStart
 
     def prepareYamlConf(self, activeConfig, switches):
-        """ Prepare yaml config """
+        """Prepare yaml config"""
         self.addvsw(activeConfig, switches)
         self.addrst(activeConfig, switches)
 
     @staticmethod
     def compareTaggedMembers(newMembers, oldMembers):
-        """ Compare tagged members between expected and running conf """
+        """Compare tagged members between expected and running conf"""
         # If equal - no point to loop. return
         if newMembers == oldMembers:
             return newMembers
@@ -160,7 +159,7 @@ class ProvisioningService():
         return newMembers
 
     def compareIpAddress(self, newIPs, oldIPs):
-        """ Compare ip addresses between expected and running conf """
+        """Compare ip addresses between expected and running conf"""
         # If equal - return
         if newIPs == oldIPs:
             return newIPs
@@ -171,7 +170,7 @@ class ProvisioningService():
 
 
     def compareActiveWithRunning(self, switch, runningConf):
-        """ Compare expected and running conf """
+        """Compare expected and running conf"""
         if self.yamlconf[switch]['interface'] == runningConf:
             return # equal config
         for key, val in runningConf.items():
@@ -195,7 +194,7 @@ class ProvisioningService():
                     raise Exception('Got unexpected dictionary in comparison %s' % val)
 
     def applyConfig(self):
-        """ Apply yaml config on Switch """
+        """Apply yaml config on Switch"""
         ansOut = self.switch.plugin._applyNewConfig()
         if not ansOut:
             return

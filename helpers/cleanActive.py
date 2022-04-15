@@ -7,7 +7,7 @@ from DTNRMLibs.MainUtilities import getVal, evaldict, getUTCnow
 
 
 def cleanup(sitename):
-    """ Clan ALL Active Deltas"""
+    """Clean ALL Active Deltas"""
     dbI = getVal(getDBConn('CleanUp'), **{'sitename': sitename})
     activeDeltas = dbI.get('activeDeltas')
     action = 'insert'

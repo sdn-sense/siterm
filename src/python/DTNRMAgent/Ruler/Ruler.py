@@ -77,7 +77,7 @@ class Ruler(QOS, contentDB):
         return False
 
     def activeComparison(self, activeFile, activeFE, actKey, actCall):
-        """ Compare active vs file on node config """
+        """Compare active vs file on node config"""
         self.logger.info('Active Comparison for %s' % actKey)
         for key, vals in activeFile.get('output', {}).get(actKey, {}).items():
             if self.hostname in vals:
@@ -95,7 +95,7 @@ class Ruler(QOS, contentDB):
                     actCall.terminate(vals[self.hostname])
 
     def activeEnsure(self, activeConf, actKey, actCall):
-        """ Ensure all active resources are enabled, configured """
+        """Ensure all active resources are enabled, configured"""
         self.logger.info('Active Ensure for %s' % actKey)
         for _key, vals in activeConf.get('output', {}).get(actKey, {}).items():
             if self.hostname in vals:

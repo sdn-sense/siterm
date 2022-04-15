@@ -395,7 +395,7 @@ class RDFHelper():
         return uri
 
     def _addVlanPort(self, **kwargs):
-        """ Add Vlan Port to Model"""
+        """Add Vlan Port to Model"""
         if not kwargs['vlan'] and not kwargs['vtype']:
             return ""
         vlanuri = ":%s:%s:%s+%s" % (kwargs['hostname'], kwargs['portName'], kwargs['vtype'], kwargs['vlan'])

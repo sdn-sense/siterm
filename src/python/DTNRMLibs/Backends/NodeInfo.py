@@ -13,8 +13,8 @@ from DTNRMLibs.FECalls import getAllHosts
 
 
 class Node():
-    """ Add Node information from Database which was sent
-        by the Agent running on it.
+    """Add Node information from Database which was sent
+    by the Agent running on it.
     """
 
     def nodeinfo(self, output=None):

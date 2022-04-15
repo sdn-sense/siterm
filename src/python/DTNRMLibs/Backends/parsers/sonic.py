@@ -138,7 +138,7 @@ class Sonic():
         return out
 
     def __getRoutes(self, routeType):
-        """ General Get Routes. INPUT: routeType = (int) 4,6 """
+        """General Get Routes. INPUT: routeType = (int) 4,6"""
         out = []
         if routeType not in [4, 6]:
             return out
@@ -184,7 +184,7 @@ class Sonic():
         return self.__getRoutes(routeType=6)
 
     def parser(self, ansibleOut):
-        """ General Parser to parse ansible config """
+        """General Parser to parse ansible config"""
         out = {}
         # Out must be {'<interface_name>': {'key': 'value'}} OR
         #             {'<interface_name>': {'key': ['value1', 'value2']}
