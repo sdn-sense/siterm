@@ -14,13 +14,14 @@ STATEMACHINE = StateMachine(LOGGER)
 
 def deleteAll(sitename, deltaUID=None):
     """delete all deltas."""
-    dbI = getDBConn('cancelalldeltas')
+    dbI = getDBConn("cancelalldeltas")
     dbobj = getVal(dbI, sitename=sitename)
-    for delta in dbobj.get('deltas'):
-        if deltaUID and delta['uid'] != deltaUID:
+    for delta in dbobj.get("deltas"):
+        if deltaUID and delta["uid"] != deltaUID:
             continue
-        print('Cancel %s' % delta['uid'])
-        STATEMACHINE._stateChangerDelta(dbobj, 'remove', **delta)
+        print("Cancel %s" % delta["uid"])
+        STATEMACHINE._stateChangerDelta(dbobj, "remove", **delta)
+
 
 if __name__ == "__main__":
     print(len(sys.argv))

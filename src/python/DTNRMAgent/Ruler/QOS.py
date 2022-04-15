@@ -31,7 +31,7 @@ from DTNRMLibs.MainUtilities import getStreamLogger
 from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getConfig
 
-COMPONENT = 'QOS'
+COMPONENT = "QOS"
 
 
 # bps, bytes per second
@@ -46,35 +46,46 @@ COMPONENT = 'QOS'
 # Solution is to convert to next lower value...
 def convertToRate(inputRate, inputVal, logger):
     """Convert input to rate understandable to fireqos."""
-    logger.info('Converting rate for QoS. Input %s %s' % (inputRate, inputVal))
+    logger.info("Converting rate for QoS. Input %s %s" % (inputRate, inputVal))
     outRate = -1
-    outType = ''
-    if inputRate == 'bps':
+    outType = ""
+    if inputRate == "bps":
         outRate = int(inputVal // 1000000000)
-        outType = 'gbit'
+        outType = "gbit"
     if outRate == 0:
         outRate = int(inputVal // 1000000)
-        outType = 'mbit'
+        outType = "mbit"
     if outRate == 0:
         outRate = int(inputVal // 1000)
-        outType = 'bit'
+        outType = "bit"
     if outRate != -1:
-        logger.info('Converted rate for QoS from %s %s to %s' % (inputRate, inputVal, outRate))
+        logger.info(
+            "Converted rate for QoS from %s %s to %s" % (inputRate, inputVal, outRate)
+        )
         return outRate, outType
-    raise Exception('Unknown input rate parameter %s and %s' % (inputRate, inputVal))
+    raise Exception("Unknown input rate parameter %s and %s" % (inputRate, inputVal))
 
 
-class QOS():
+class QOS:
     """QOS class to install new limit rules."""
+
     def __init__(self, config, logger):
         self.config = config if config else getConfig()
-        self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
-                                                      self.config.get('general', 'logLevel'))
-        self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/QOS/"
-        self.configDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
-        self.hostname = self.config.get('agent', 'hostname')
+        self.logger = (
+            logger
+            if logger
+            else getLogger(
+                "%s/%s/" % (self.config.get("general", "logDir"), COMPONENT),
+                self.config.get("general", "logLevel"),
+            )
+        )
+        self.workDir = self.config.get("general", "private_dir") + "/DTNRM/QOS/"
+        self.configDir = (
+            self.config.get("general", "private_dir") + "/DTNRM/RulerAgent/"
+        )
+        self.hostname = self.config.get("agent", "hostname")
         createDirs(self.workDir)
-        self.debug = self.config.getboolean('general', "debug")
+        self.debug = self.config.getboolean("general", "debug")
         self.agentdb = contentDB(logger=self.logger, config=self.config)
 
     def restartQos(self):
@@ -85,10 +96,12 @@ class QOS():
 
     def getMaxThrg(self):
         """Get Maximum set throughput and add QoS on it."""
-        if self.config.has_option('agent', 'public_intf') and self.config.has_option('agent', 'public_intf_max'):
+        if self.config.has_option("agent", "public_intf") and self.config.has_option(
+            "agent", "public_intf_max"
+        ):
             self.logger.info("Getting max interface throughput")
-            intf = self.config.get('agent', 'public_intf')
-            maxThrg = self.config.get('agent', 'public_intf_max')
+            intf = self.config.get("agent", "public_intf")
+            maxThrg = self.config.get("agent", "public_intf_max")
             self.logger.info("Maximum throughput for %s is %s" % (intf, maxThrg))
             return intf, int(maxThrg)
         return None, None
@@ -106,56 +119,82 @@ class QOS():
         for fileName in glob.glob("%s/*.json" % self.configDir):
             self.logger.info("Analyzing %s file" % fileName)
             inputDict = {}
-            with open(fileName, 'r') as fd:
+            with open(fileName, "r") as fd:
                 inputDict = json.load(fd)
-                if 'uid' not in list(inputDict.keys()):
-                    self.logger.info('Seems this dictionary is custom delta. Ignoring it.')
+                if "uid" not in list(inputDict.keys()):
+                    self.logger.info(
+                        "Seems this dictionary is custom delta. Ignoring it."
+                    )
                     continue
-                inputDict = inputDict[u'hosts'][self.hostname]
+                inputDict = inputDict["hosts"][self.hostname]
                 # ['hosts'][self.hostname]
                 self.logger.info("File %s content %s" % (fileName, inputDict))
-                if 'routes' in list(inputDict.keys()):
-                    self.logger.info('This is L3 definition. Ignore QOS. Todo for future based on source/dest')
+                if "routes" in list(inputDict.keys()):
+                    self.logger.info(
+                        "This is L3 definition. Ignore QOS. Todo for future based on source/dest"
+                    )
                     continue
-                inputName = "%s%sIn" % (inputDict['destport'], inputDict['vlan'])
-                outputName = "%s%sOut" % (inputDict['destport'], inputDict['vlan'])
-                params = inputDict['params'][0]
+                inputName = "%s%sIn" % (inputDict["destport"], inputDict["vlan"])
+                outputName = "%s%sOut" % (inputDict["destport"], inputDict["vlan"])
+                params = inputDict["params"][0]
                 if not params:
-                    self.logger.info('This specific vlan request did not provided any QOS. Ignoring QOS Rules for it')
+                    self.logger.info(
+                        "This specific vlan request did not provided any QOS. Ignoring QOS Rules for it"
+                    )
                     continue
-                outrate, outtype = convertToRate(params['unit'], int(params['reservableCapacity']), self.logger)
-                tmpFile.write("# SPEEDLIMIT %s %s %s %s\n" % (inputDict['vlan'],
-                                                              inputDict['destport'],
-                                                              outrate, outtype))
-                tmpFile.write("interface vlan.%s %s input rate %s%s\n" % (inputDict['vlan'],
-                                                                          inputName, outrate, outtype))
-                tmpFile.write("interface vlan.%s %s output rate %s%s\n" % (inputDict['vlan'],
-                                                                           outputName, outrate, outtype))
-                totalAllocated += int(params['reservableCapacity'])
+                outrate, outtype = convertToRate(
+                    params["unit"], int(params["reservableCapacity"]), self.logger
+                )
+                tmpFile.write(
+                    "# SPEEDLIMIT %s %s %s %s\n"
+                    % (inputDict["vlan"], inputDict["destport"], outrate, outtype)
+                )
+                tmpFile.write(
+                    "interface vlan.%s %s input rate %s%s\n"
+                    % (inputDict["vlan"], inputName, outrate, outtype)
+                )
+                tmpFile.write(
+                    "interface vlan.%s %s output rate %s%s\n"
+                    % (inputDict["vlan"], outputName, outrate, outtype)
+                )
+                totalAllocated += int(params["reservableCapacity"])
         intfName, maxThrgIntf = self.getMaxThrg()
         if intfName and maxThrgIntf:
             maxThrgIntf = maxThrgIntf - totalAllocated
             if maxThrgIntf <= 0:
-                maxThrgIntf = 100  # We set by default 100MB/s for any ssh access if needed.
+                maxThrgIntf = (
+                    100  # We set by default 100MB/s for any ssh access if needed.
+                )
             # as size is reported in bits, we need to get final size in gbit.
             maxThrgIntf = int(maxThrgIntf / 1000000000.0)
-            maxtype = 'gbit'
+            maxtype = "gbit"
             if maxThrgIntf <= 0:
                 maxThrgIntf = 100
-                maxtype = 'mbit'
-            self.logger.info("Appending at the end default interface QoS. Settings %s %s %s" % (intfName, maxThrgIntf, maxtype))
-            tmpFile.write("# SPEEDLIMIT MAIN  input %s %s %s\n" % (maxThrgIntf, intfName, maxtype))
-            tmpFile.write("interface %s mainInput input rate %s%s\n" % (intfName, maxThrgIntf, maxtype))
-            tmpFile.write("interface %s mainOutput output rate %s%s\n" % (intfName, maxThrgIntf, maxtype))
+                maxtype = "mbit"
+            self.logger.info(
+                "Appending at the end default interface QoS. Settings %s %s %s"
+                % (intfName, maxThrgIntf, maxtype)
+            )
+            tmpFile.write(
+                "# SPEEDLIMIT MAIN  input %s %s %s\n" % (maxThrgIntf, intfName, maxtype)
+            )
+            tmpFile.write(
+                "interface %s mainInput input rate %s%s\n"
+                % (intfName, maxThrgIntf, maxtype)
+            )
+            tmpFile.write(
+                "interface %s mainOutput output rate %s%s\n"
+                % (intfName, maxThrgIntf, maxtype)
+            )
         tmpFile.close()
         return tmpFile.name
 
     def start(self):
         """Main Start."""
         newFile = self.getAllQOSed()
-        if not filecmp.cmp(newFile, '/etc/firehol/fireqos.conf'):
+        if not filecmp.cmp(newFile, "/etc/firehol/fireqos.conf"):
             self.logger.info("QoS rules are not equal. putting new config file")
-            shutil.move(newFile, '/etc/firehol/fireqos.conf')
+            shutil.move(newFile, "/etc/firehol/fireqos.conf")
             self.restartQos()
         else:
             self.logger.info("QoS rules are equal. NTD")
@@ -167,5 +206,6 @@ def execute(config=None, logger=None):
     qosruler = QOS(config, logger)
     qosruler.start()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     execute(logger=getStreamLogger())

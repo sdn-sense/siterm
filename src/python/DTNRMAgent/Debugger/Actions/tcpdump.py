@@ -20,8 +20,9 @@ import concurrent.futures._base
 import pyshark
 
 
-class ParsePackets():
+class ParsePackets:
     """Packet Parser"""
+
     def __init__(self):
         self.out = []
         self.stored = 0
@@ -37,7 +38,7 @@ class ParsePackets():
     def sniff(self, inputDict):
         """Sniff packets on interface for 30 seconds."""
         self.stored = 0
-        capture = pyshark.LiveCapture(interface=inputDict['interface'])
+        capture = pyshark.LiveCapture(interface=inputDict["interface"])
         try:
             capture.apply_on_packets(self.packetProcess, timeout=30)
         except concurrent.futures._base.TimeoutError:
@@ -59,7 +60,12 @@ def tcpdump(inputDict):
         exitCode = 502
     return allPackets, err, exitCode
 
+
 if __name__ == "__main__":
-    testData = {'type': 'tcpdump', 'sitename': 'T2_US_Caltech_Test1',
-                'dtn': 'sdn-sc-nodea.ultralight.org', 'interface': 'enp4s0f0.43'}
+    testData = {
+        "type": "tcpdump",
+        "sitename": "T2_US_Caltech_Test1",
+        "dtn": "sdn-sc-nodea.ultralight.org",
+        "interface": "enp4s0f0.43",
+    }
     print(tcpdump(testData))

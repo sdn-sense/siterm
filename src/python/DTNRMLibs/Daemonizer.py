@@ -15,17 +15,26 @@ import atexit
 from signal import SIGTERM
 
 
-class Daemon():
+class Daemon:
     """A generic daemon class.
 
     Usage: subclass the Daemon class and override the run() method.
     """
-    def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
+
+    def __init__(
+        self, pidfile, stdin="/dev/null", stdout="/dev/null", stderr="/dev/null"
+    ):
         self.stdin = stdin
         self.stdout = stdout
         self.stderr = stderr
         self.pidfile = pidfile
-        self.availableCommands = ['start', 'stop', 'restart', 'startforeground', 'status']
+        self.availableCommands = [
+            "start",
+            "stop",
+            "restart",
+            "startforeground",
+            "status",
+        ]
 
     def daemonize(self):
         """do the UNIX double-fork magic, see Stevens' "Advanced Programming in
@@ -58,17 +67,17 @@ class Daemon():
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
-        with open(self.stdin, 'r') as fd:
+        with open(self.stdin, "r") as fd:
             os.dup2(fd.fileno(), sys.stdin.fileno())
-        with open(self.stdout, 'a+') as fd:
+        with open(self.stdout, "a+") as fd:
             os.dup2(fd.fileno(), sys.stdout.fileno())
-        with open(self.stderr, 'a+') as fd:
+        with open(self.stderr, "a+") as fd:
             os.dup2(fd.fileno(), sys.stderr.fileno())
 
         # write pidfile
         atexit.register(self.delpid)
         pid = str(os.getpid())
-        with open(self.pidfile, 'w+') as fd:
+        with open(self.pidfile, "w+") as fd:
             fd.write("%s\n" % pid)
 
     def delpid(self):
@@ -83,7 +92,7 @@ class Daemon():
             directory = os.path.dirname(self.pidfile)
             if not os.path.exists(directory):
                 os.makedirs(directory)
-            with open(self.pidfile, 'r') as fd:
+            with open(self.pidfile, "r") as fd:
                 pid = int(fd.read().strip())
         except IOError:
             pid = None
@@ -102,7 +111,7 @@ class Daemon():
         # Get the pid from the pidfile
         pid = None
         try:
-            with open(self.pidfile, 'r') as fd:
+            with open(self.pidfile, "r") as fd:
                 pid = int(fd.read().strip())
         except IOError:
             pid = None
@@ -134,25 +143,25 @@ class Daemon():
     def status(self):
         """Daemon status."""
         try:
-            with open(self.pidfile, 'r') as fd:
+            with open(self.pidfile, "r") as fd:
                 pid = int(fd.read().strip())
-                print('Application info: PID %s' % pid)
+                print("Application info: PID %s" % pid)
         except IOError:
-            print('Is application running?')
+            print("Is application running?")
             sys.exit(1)
 
     def command(self, command, daemonName):
         """Execute a specific command to service."""
         if command in self.availableCommands:
-            if command == 'start':
+            if command == "start":
                 self.start()
-            elif command == 'stop':
+            elif command == "stop":
                 self.stop()
-            elif command == 'restart':
+            elif command == "restart":
                 self.restart()
-            elif command == 'startforeground':
+            elif command == "startforeground":
                 self.run()
-            elif command == 'status':
+            elif command == "status":
                 self.status()
             else:
                 print("Unknown command")

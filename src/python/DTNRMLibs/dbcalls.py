@@ -113,11 +113,17 @@ get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
 get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, reduction, addition, reductionid, modadd, connectionid FROM deltas"
 get_delta_connections = "SELECT id, deltaid, connectionid, state FROM delta_connections"
 get_states = "SELECT id, deltaid, state, insertdate FROM states"
-get_hoststates = "SELECT id, deltaid, state, insertdate, updatedate, hostname FROM hoststates"
-get_hoststateshistory = "SELECT id, deltaid, state, insertdate, hostname FROM hoststateshistory"
+get_hoststates = (
+    "SELECT id, deltaid, state, insertdate, updatedate, hostname FROM hoststates"
+)
+get_hoststateshistory = (
+    "SELECT id, deltaid, state, insertdate, hostname FROM hoststateshistory"
+)
 get_parsed = "SELECT id, deltaid, vals, insertdate FROM parsed"
 get_hosts = "SELECT id, ip, hostname, insertdate, updatedate, hostinfo FROM hosts"
-get_servicestates = "SELECT id, hostname, servicename, servicestate, updatedate FROM servicestates"
+get_servicestates = (
+    "SELECT id, hostname, servicename, servicestate, updatedate FROM servicestates"
+)
 get_debugrequests = "SELECT id, hostname, state, requestdict, output, insertdate, updatedate FROM debugrequests"
 get_debugrequestsids = "SELECT id FROM debugrequests"
 

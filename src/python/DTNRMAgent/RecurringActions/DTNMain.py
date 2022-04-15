@@ -30,28 +30,35 @@ from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getStreamLogger
 
-COMPONENT = 'RecurringAction'
+COMPONENT = "RecurringAction"
 
 
 def prepareJsonOut(config, logger):
     """Executes all plugins and prepares json output to FE."""
-    outputDict = {'Summary': {}}
+    outputDict = {"Summary": {}}
     tmpName = None
-    if '__all__' in dir(Plugins):
+    if "__all__" in dir(Plugins):
         for callableF in Plugins.__all__:
             try:
-                method = importlib.import_module("DTNRMAgent.RecurringActions.Plugins.%s" % callableF)
-                if hasattr(method, 'NAME'):
+                method = importlib.import_module(
+                    "DTNRMAgent.RecurringActions.Plugins.%s" % callableF
+                )
+                if hasattr(method, "NAME"):
                     tmpName = method.NAME
                 else:
                     tmpName = callableF
                 if method.NAME in list(outputDict.keys()):
-                    msg = '%s name is already defined in output dictionary' % method.NAME
+                    msg = (
+                        "%s name is already defined in output dictionary" % method.NAME
+                    )
                     logger.error(msg)
                     raise KeyError(msg)
                 tmp = method.get(config, logger)
                 if not isinstance(tmp, dict):
-                    msg = 'Returned output from %s method is not a dictionary. Type: %s' % (method.Name, type(tmp))
+                    msg = (
+                        "Returned output from %s method is not a dictionary. Type: %s"
+                        % (method.Name, type(tmp))
+                    )
                     logger.error(msg)
                     raise ValueError(msg)
                 if tmp:  # Do not add empty stuff inside....
@@ -59,54 +66,62 @@ def prepareJsonOut(config, logger):
                 else:
                     continue
                 # Here wer check if there is any CUSTOM_FUNCTIONS
-                if hasattr(method, 'CUSTOM_FUNCTIONS'):
-                    for funcOutName, funcCallable in list(method.CUSTOM_FUNCTIONS.items()):
-                        outputDict['Summary'][method.NAME] = {}
+                if hasattr(method, "CUSTOM_FUNCTIONS"):
+                    for funcOutName, funcCallable in list(
+                        method.CUSTOM_FUNCTIONS.items()
+                    ):
+                        outputDict["Summary"][method.NAME] = {}
                         tmpOut = funcCallable(config)
-                        outputDict['Summary'][method.NAME][funcOutName] = tmpOut
+                        outputDict["Summary"][method.NAME][funcOutName] = tmpOut
             except Exception as ex:
                 excType, excValue = sys.exc_info()[:2]
-                outputDict[tmpName] = {"errorType": str(excType.__name__),
-                                       "errorNo": -100,  # TODO Use exception definition from utilities
-                                       "errMsg": str(excValue),
-                                       "exception": str(ex)}
-            if 'errorType' in list(outputDict[tmpName].keys()):
-                logger.critical("%s received %s. Exception details: %s", tmpName,
-                                outputDict[tmpName]['errorType'], outputDict[tmpName])
+                outputDict[tmpName] = {
+                    "errorType": str(excType.__name__),
+                    "errorNo": -100,  # TODO Use exception definition from utilities
+                    "errMsg": str(excValue),
+                    "exception": str(ex),
+                }
+            if "errorType" in list(outputDict[tmpName].keys()):
+                logger.critical(
+                    "%s received %s. Exception details: %s",
+                    tmpName,
+                    outputDict[tmpName]["errorType"],
+                    outputDict[tmpName],
+                )
     return outputDict
 
 
 def appendConfig(config, dic):
     """Append to dic values from config and also dates."""
-    dic['hostname'] = config.get('agent', 'hostname')
-    dic['ip'] = config.get('general', 'ip')
-    dic['insertTime'] = getUTCnow()
-    dic['updateTime'] = getUTCnow()
+    dic["hostname"] = config.get("agent", "hostname")
+    dic["ip"] = config.get("general", "ip")
+    dic["insertTime"] = getUTCnow()
+    dic["updateTime"] = getUTCnow()
     return dic
 
 
 def startWork(config=None, logger=None):
     """Execute main script for DTN-RM Agent output preparation."""
 
-    workDir = config.get('general', 'private_dir') + "/DTNRM/"
+    workDir = config.get("general", "private_dir") + "/DTNRM/"
     createDirs(workDir)
     dic = prepareJsonOut(config, logger)
     fullUrl = getFullUrl(config)
     dic = appendConfig(config, dic)
 
-    if config.getboolean('general', "debug"):
+    if config.getboolean("general", "debug"):
         pretty = pprint.PrettyPrinter(indent=4)
         logger.debug(pretty.pformat(dic))
     agent = contentDB(logger=logger, config=config)
     agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
 
-    logger.info('Will try to publish information to SiteFE')
-    fullUrl += '/sitefe'
-    outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/updatehost')
-    logger.debug('Update Host result %s', outVals)
-    if outVals[2] != 'OK' or outVals[1] != 200 and outVals[3]:
-        outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/addhost')
-        logger.debug('Update Host result %s', outVals)
+    logger.info("Will try to publish information to SiteFE")
+    fullUrl += "/sitefe"
+    outVals = publishToSiteFE(dic, fullUrl, "/json/frontend/updatehost")
+    logger.debug("Update Host result %s", outVals)
+    if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
+        outVals = publishToSiteFE(dic, fullUrl, "/json/frontend/addhost")
+        logger.debug("Update Host result %s", outVals)
 
 
 def execute(config, logger):
@@ -114,7 +129,7 @@ def execute(config, logger):
     startWork(config, logger)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     CONFIG = getConfig()
     LOGGER = getStreamLogger()
     execute(CONFIG, LOGGER)

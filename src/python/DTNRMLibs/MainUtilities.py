@@ -19,6 +19,7 @@ Date                    : 2017/09/26
 """
 from __future__ import print_function
 from future import standard_library
+
 standard_library.install_aliases()
 from past.builtins import basestring
 import os
@@ -42,6 +43,7 @@ import configparser
 import simplejson as json
 import logging
 import logging.handlers
+
 # Custom exceptions imports
 import pycurl
 import requests
@@ -63,37 +65,43 @@ def getUTCnow():
 
 def getVal(conDict, **kwargs):
     """Get value from configuration."""
-    if 'sitename' in list(kwargs.keys()):
-        if kwargs['sitename'] in list(conDict.keys()):
-            return conDict[kwargs['sitename']]
+    if "sitename" in list(kwargs.keys()):
+        if kwargs["sitename"] in list(conDict.keys()):
+            return conDict[kwargs["sitename"]]
         else:
-            raise Exception('This SiteName is not configured on the Frontend. Contact Support')
+            raise Exception(
+                "This SiteName is not configured on the Frontend. Contact Support"
+            )
     else:
         print(kwargs)
-        raise Exception('This Call Should not happen. Contact Support')
+        raise Exception("This Call Should not happen. Contact Support")
 
 
 def getFullUrl(config, sitename=None):
     """Prepare full URL from Config."""
-    webdomain = config.get('general', 'webdomain')
+    webdomain = config.get("general", "webdomain")
     if not sitename:
-        sitename = config.get('general', 'sitename')
+        sitename = config.get("general", "sitename")
     if not webdomain.startswith("http"):
         webdomain = "http://" + webdomain
     return "%s/%s" % (webdomain, sitename)
 
 
-def getStreamLogger(logLevel='DEBUG'):
+def getStreamLogger(logLevel="DEBUG"):
     """Get Stream Logger."""
-    levels = {'FATAL': logging.FATAL,
-              'ERROR': logging.ERROR,
-              'WARNING': logging.WARNING,
-              'INFO': logging.INFO,
-              'DEBUG': logging.DEBUG}
+    levels = {
+        "FATAL": logging.FATAL,
+        "ERROR": logging.ERROR,
+        "WARNING": logging.WARNING,
+        "INFO": logging.INFO,
+        "DEBUG": logging.DEBUG,
+    }
     logger = logging.getLogger()
     handler = logging.StreamHandler()
-    formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
-                                  datefmt="%a, %d %b %Y %H:%M:%S")
+    formatter = logging.Formatter(
+        "%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%a, %d %b %Y %H:%M:%S",
+    )
     handler.setFormatter(formatter)
     if not logger.handlers:
         logger.addHandler(handler)
@@ -101,19 +109,31 @@ def getStreamLogger(logLevel='DEBUG'):
     return logger
 
 
-def getLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='midnight', backupCount=10):
+def getLogger(
+    logFile="",
+    logLevel="DEBUG",
+    logOutName="api.log",
+    rotateTime="midnight",
+    backupCount=10,
+):
     """Get new Logger for logging."""
-    levels = {'FATAL': logging.FATAL,
-              'ERROR': logging.ERROR,
-              'WARNING': logging.WARNING,
-              'INFO': logging.INFO,
-              'DEBUG': logging.DEBUG}
+    levels = {
+        "FATAL": logging.FATAL,
+        "ERROR": logging.ERROR,
+        "WARNING": logging.WARNING,
+        "INFO": logging.INFO,
+        "DEBUG": logging.DEBUG,
+    }
     logger = logging.getLogger()
     createDirs(logFile)
     logFile += logOutName
-    handler = logging.handlers.TimedRotatingFileHandler(logFile, when=rotateTime, backupCount=backupCount)
-    formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
-                                  datefmt="%a, %d %b %Y %H:%M:%S")
+    handler = logging.handlers.TimedRotatingFileHandler(
+        logFile, when=rotateTime, backupCount=backupCount
+    )
+    formatter = logging.Formatter(
+        "%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%a, %d %b %Y %H:%M:%S",
+    )
     handler.setFormatter(formatter)
     handler.setLevel(levels[logLevel])
     logger.addHandler(handler)
@@ -137,11 +157,10 @@ def evaldict(inputDict):
     return out
 
 
-
 def readFile(fileName):
     """Read all file lines to a list and rstrips the ending."""
     try:
-        with open(fileName, 'r') as fd:
+        with open(fileName, "r") as fd:
             content = fd.readlines()
         content = [x.rstrip() for x in content]
         return content
@@ -161,14 +180,21 @@ def externalCommand(command, communicate=True):
 
 def execute(command, logger, raiseError=True):
     """Execute interfaces commands."""
-    logger.info('Asked to execute %s command' % command)
+    logger.info("Asked to execute %s command" % command)
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
-    msg = 'Command: %s, Out: %s, Err: %s, ReturnCode: %s' % (command, out.rstrip(), err.rstrip(), cmdOut.returncode)
+    msg = "Command: %s, Out: %s, Err: %s, ReturnCode: %s" % (
+        command,
+        out.rstrip(),
+        err.rstrip(),
+        cmdOut.returncode,
+    )
     if cmdOut.returncode != 0 and raiseError:
         raise FailedInterfaceCommand(msg)
     elif cmdOut.returncode != 0:
-        logger.debug("RaiseError is False, but command failed. Only logging Errmsg: %s" % msg)
+        logger.debug(
+            "RaiseError is False, but command failed. Only logging Errmsg: %s" % msg
+        )
         return False
     return True
 
@@ -180,7 +206,10 @@ def createDirs(fullDirPath):
         try:
             os.makedirs(dirname)
         except OSError as ex:
-            print('Received exception creating %s directory. Exception: %s' % (dirname, ex))
+            print(
+                "Received exception creating %s directory. Exception: %s"
+                % (dirname, ex)
+            )
             if not os.path.isdir(dirname):
                 raise
     return
@@ -190,11 +219,11 @@ def publishToSiteFE(inputDict, host, url):
     """Put JSON to the Site FE."""
     req = Requests(host, {})
     try:
-        out = req.makeRequest(url, verb='PUT', data=json.dumps(inputDict))
+        out = req.makeRequest(url, verb="PUT", data=json.dumps(inputDict))
     except http.client.HTTPException as ex:
-        return (ex.reason, ex.status, 'FAILED', True)
+        return (ex.reason, ex.status, "FAILED", True)
     except pycurl.error as ex:
-        return (ex.args[1], ex.args[0], 'FAILED', False)
+        return (ex.args[1], ex.args[0], "FAILED", False)
     return out
 
 
@@ -202,11 +231,11 @@ def getDataFromSiteFE(inputDict, host, url):
     """Get data from Site FE."""
     req = Requests(host, {})
     try:
-        out = req.makeRequest(url, verb='GET', data=inputDict)
+        out = req.makeRequest(url, verb="GET", data=inputDict)
     except http.client.HTTPException as ex:
-        return (ex.reason, ex.status, 'FAILED', True)
+        return (ex.reason, ex.status, "FAILED", True)
     except pycurl.error as ex:
-        return (ex.args[1], ex.args[0], 'FAILED', False)
+        return (ex.args[1], ex.args[0], "FAILED", False)
     return out
 
 
@@ -220,50 +249,59 @@ def reCacheConfig(prevHour=None):
     """Return prevHour == currentHour, currentHour and used in Service Object
     re-initiation."""
     datetimeNow = datetime.datetime.now()
-    currentHour = datetimeNow.strftime('%H')
+    currentHour = datetimeNow.strftime("%H")
     return prevHour == currentHour, currentHour
 
 
 class GitConfig(object):
     """Git based configuration class."""
+
     def __init__(self):
         self.config = {}
-        self.defaults = {'SITENAME':   {'optional': False},
-                         'GIT_REPO':   {'optional': True, 'default': 'sdn-sense/rm-configs'},
-                         'GIT_URL':    {'optional': True, 'default': 'https://raw.githubusercontent.com/'},
-                         'GIT_BRANCH': {'optional': True, 'default': 'master'},
-                         'MD5':        {'optional': False}}
+        self.defaults = {
+            "SITENAME": {"optional": False},
+            "GIT_REPO": {"optional": True, "default": "sdn-sense/rm-configs"},
+            "GIT_URL": {
+                "optional": True,
+                "default": "https://raw.githubusercontent.com/",
+            },
+            "GIT_BRANCH": {"optional": True, "default": "master"},
+            "MD5": {"optional": False},
+        }
         self.logger = getStreamLogger()
 
     def gitConfigCache(self, name, url):
         """Precache file for 1 hour from git and use cached file."""
         output = None
-        if os.path.isfile('/tmp/dtnrm-no-config-fetch.yaml'):
-            filename = '/tmp/dtnrm-link-%s.yaml' % name
-            with open(filename, 'r') as fd:
+        if os.path.isfile("/tmp/dtnrm-no-config-fetch.yaml"):
+            filename = "/tmp/dtnrm-link-%s.yaml" % name
+            with open(filename, "r") as fd:
                 output = yload(fd.read())
         else:
             datetimeNow = datetime.datetime.now()
-            filename = '/tmp/%s-%s.yaml' % (datetimeNow.strftime('%Y-%m-%d-%H'), name)
+            filename = "/tmp/%s-%s.yaml" % (datetimeNow.strftime("%Y-%m-%d-%H"), name)
             if os.path.isfile(filename):
-                with open(filename, 'r') as fd:
+                with open(filename, "r") as fd:
                     output = yload(fd.read())
             else:
                 datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
-                prevfilename = '/tmp/%s-%s.yaml' % (datetimelasthour.strftime('%Y-%m-%d-%H'), name)
+                prevfilename = "/tmp/%s-%s.yaml" % (
+                    datetimelasthour.strftime("%Y-%m-%d-%H"),
+                    name,
+                )
                 if os.path.isfile(prevfilename):
-                    self.logger.debug('Remove previous old cache file %s', prevfilename)
+                    self.logger.debug("Remove previous old cache file %s", prevfilename)
                     try:
                         os.remove(prevfilename)
-                        os.remove('/tmp/dtnrm-link-%s.yaml' % name)
+                        os.remove("/tmp/dtnrm-link-%s.yaml" % name)
                     except OSError:
                         pass
-                self.logger.debug('Receiving new file from GIT for %s', name)
+                self.logger.debug("Receiving new file from GIT for %s", name)
                 outyaml = getWebContentFromURL(url).text
-                with open(filename, 'w') as fd:
+                with open(filename, "w") as fd:
                     fd.write(outyaml)
                 try:
-                    os.symlink(filename, '/tmp/dtnrm-link-%s.yaml' % name)
+                    os.symlink(filename, "/tmp/dtnrm-link-%s.yaml" % name)
                 except OSError:
                     pass
                 output = yload(outyaml)
@@ -271,8 +309,12 @@ class GitConfig(object):
 
     def getFullGitUrl(self, customAdds=None):
         """Get Full Git URL."""
-        urlJoinList = [self.config['GIT_URL'], self.config['GIT_REPO'],
-                       self.config['GIT_BRANCH'], self.config['SITENAME']]
+        urlJoinList = [
+            self.config["GIT_URL"],
+            self.config["GIT_REPO"],
+            self.config["GIT_BRANCH"],
+            self.config["SITENAME"],
+        ]
         if customAdds:
             for item in customAdds:
                 urlJoinList.append(item)
@@ -280,26 +322,32 @@ class GitConfig(object):
 
     def getLocalConfig(self):
         """Get local config for info where all configs are kept in git."""
-        if not os.path.isfile('/etc/dtnrm.yaml'):
-            self.logger.debug('Config file /etc/dtnrm.yaml does not exist.')
-            raise Exception('Config file /etc/dtnrm.yaml does not exist.')
-        with open('/etc/dtnrm.yaml', 'r') as fd:
+        if not os.path.isfile("/etc/dtnrm.yaml"):
+            self.logger.debug("Config file /etc/dtnrm.yaml does not exist.")
+            raise Exception("Config file /etc/dtnrm.yaml does not exist.")
+        with open("/etc/dtnrm.yaml", "r") as fd:
             self.config = yload(fd.read())
         for key, requirement in list(self.defaults.items()):
             if key not in list(self.config.keys()):
                 # Check if it is optional or not;
-                if not requirement['optional']:
-                    self.logger.debug('Configuration /etc/dtnrm.yaml missing non optional config parameter %s', key)
-                    raise Exception('Configuration /etc/dtnrm.yaml missing non optional config parameter %s' % key)
+                if not requirement["optional"]:
+                    self.logger.debug(
+                        "Configuration /etc/dtnrm.yaml missing non optional config parameter %s",
+                        key,
+                    )
+                    raise Exception(
+                        "Configuration /etc/dtnrm.yaml missing non optional config parameter %s"
+                        % key
+                    )
                 else:
-                    self.config[key] = requirement['default']
+                    self.config[key] = requirement["default"]
 
     def getGitAgentConfig(self):
         """https://raw.githubusercontent.com/sdn-sense/rm-
         configs/master/T2_US_Caltech/Agent01/main.yaml."""
-        if self.config['MAPPING']['type'] == 'Agent':
-            url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
-            self.config['MAIN'] = self.gitConfigCache('Agent-main', url)
+        if self.config["MAPPING"]["type"] == "Agent":
+            url = self.getFullGitUrl([self.config["MAPPING"]["config"], "main.yaml"])
+            self.config["MAIN"] = self.gitConfigCache("Agent-main", url)
             return
 
     def getGitFEConfig(self):
@@ -307,11 +355,11 @@ class GitConfig(object):
         configs/master/T2_US_Caltech/FE/auth.yaml
         https://raw.githubusercontent.com/sdn-sense/rm-
         configs/master/T2_US_Caltech/FE/main.yaml."""
-        if self.config['MAPPING']['type'] == 'FE':
-            url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
-            self.config['MAIN'] = self.gitConfigCache('FE-main', url)
-            url = self.getFullGitUrl([self.config['MAPPING']['config'], 'auth.yaml'])
-            self.config['AUTH'] = self.gitConfigCache('FE-auth', url)
+        if self.config["MAPPING"]["type"] == "FE":
+            url = self.getFullGitUrl([self.config["MAPPING"]["config"], "main.yaml"])
+            self.config["MAIN"] = self.gitConfigCache("FE-main", url)
+            url = self.getFullGitUrl([self.config["MAPPING"]["config"], "auth.yaml"])
+            self.config["AUTH"] = self.gitConfigCache("FE-auth", url)
             return
 
     def getGitConfig(self):
@@ -319,13 +367,15 @@ class GitConfig(object):
         if not self.config:
             self.getLocalConfig()
         url = "%s/mapping.yaml" % self.getFullGitUrl()
-        mapping = self.gitConfigCache('mapping', url)
-        if self.config['MD5'] not in list(mapping.keys()):
-            msg = 'Configuration is not available for this MD5 %s tag in GIT REPO %s' % \
-                            (self.config['MD5'], self.config['GIT_REPO'])
+        mapping = self.gitConfigCache("mapping", url)
+        if self.config["MD5"] not in list(mapping.keys()):
+            msg = (
+                "Configuration is not available for this MD5 %s tag in GIT REPO %s"
+                % (self.config["MD5"], self.config["GIT_REPO"])
+            )
             self.logger.debug(msg)
             raise Exception(msg)
-        self.config['MAPPING'] = copy.deepcopy(mapping[self.config['MD5']])
+        self.config["MAPPING"] = copy.deepcopy(mapping[self.config["MD5"]])
         self.getGitFEConfig()
         self.getGitAgentConfig()
 
@@ -349,9 +399,9 @@ def getConfig(locations=None):
     config = getGitConfig()
     tmpCp = configparser.ConfigParser()
     if not isinstance(config, dict):
-        print('ERROR: Config from Git returned not dictionary. Malformed yaml?')
+        print("ERROR: Config from Git returned not dictionary. Malformed yaml?")
         return None
-    for key, item in list(config['MAIN'].items()):
+    for key, item in list(config["MAIN"].items()):
         tmpCp.add_section(key)
         for key1, item1 in list(item.items()):
             out = item1
@@ -365,7 +415,7 @@ def getFileContentAsJson(inputFile):
     """Get file content as json."""
     out = {}
     if os.path.isfile(inputFile):
-        with open(inputFile, 'r') as fd:
+        with open(inputFile, "r") as fd:
             try:
                 out = json.load(fd)
             except ValueError:
@@ -377,9 +427,9 @@ def getFileContentAsJson(inputFile):
 def getAllFileContent(inputFile):
     """Get all file content as a string."""
     if os.path.isfile(inputFile):
-        with open(inputFile, 'r') as fd:
+        with open(inputFile, "r") as fd:
             return fd.read()
-    raise NotFoundError('File %s was not found on the system.' % inputFile)
+    raise NotFoundError("File %s was not found on the system." % inputFile)
 
 
 def getUsername():
@@ -389,6 +439,7 @@ def getUsername():
 
 class contentDB(object):
     """File Saver, loader class."""
+
     def __init__(self, logger=None, config=None):
         self.config = config
         self.logger = logger
@@ -407,8 +458,8 @@ class contentDB(object):
     @staticmethod
     def dumpFileContentAsJson(outFile, content, newHash=None):
         """Dump File content with locks."""
-        tmpoutFile = outFile + '.tmp'
-        with open(tmpoutFile, 'w+') as fd:
+        tmpoutFile = outFile + ".tmp"
+        with open(tmpoutFile, "w+") as fd:
             json.dump(content, fd)
         shutil.move(tmpoutFile, outFile)
         return True
@@ -434,58 +485,82 @@ def delete(inputObj, delObj):
         try:
             tmpList.remove(delObj)
         except ValueError as ex:
-            print('Delete object %s is not in inputObj %s list. Err: %s' % (delObj, tmpList, ex))
+            print(
+                "Delete object %s is not in inputObj %s list. Err: %s"
+                % (delObj, tmpList, ex)
+            )
         return tmpList
     elif isinstance(inputObj, dict):
         tmpDict = copy.deepcopy(inputObj)
         try:
             del tmpDict[delObj]
         except KeyError as ex:
-            print('Delete object %s is not in inputObj %s dict. Err: %s' % (delObj, tmpList, ex))
+            print(
+                "Delete object %s is not in inputObj %s dict. Err: %s"
+                % (delObj, tmpList, ex)
+            )
         return tmpDict
     # This should not happen
-    raise WrongInputError('Provided input type is not available for deletion. Type %s' % type(inputObj))
+    raise WrongInputError(
+        "Provided input type is not available for deletion. Type %s" % type(inputObj)
+    )
+
 
 def parse_gui_form_post(inputVal):
     """Parse GUI Form Post and return dict."""
     out = {}
-    for item in inputVal.split(b'&'):
-        tmpItem = item.split(b'=')
+    for item in inputVal.split(b"&"):
+        tmpItem = item.split(b"=")
         out[tmpItem[0].decode("utf-8")] = tmpItem[1].decode("utf-8")
     return out
 
+
 def read_input_data(environ):
     """Read input data from environ, which can be used for PUT or POST."""
-    length = int(environ.get('CONTENT_LENGTH', 0))
+    length = int(environ.get("CONTENT_LENGTH", 0))
     if length == 0:
-        raise WrongInputError('Content input length is 0.')
-    if sys.version.startswith('3.'):
-        body = io.BytesIO(environ['wsgi.input'].read(length))
+        raise WrongInputError("Content input length is 0.")
+    if sys.version.startswith("3."):
+        body = io.BytesIO(environ["wsgi.input"].read(length))
     else:
-        body = io.StringIO(environ['wsgi.input'].read(length))
+        body = io.StringIO(environ["wsgi.input"].read(length))
     outjson = {}
     try:
         outjson = json.loads(body.getvalue())
     except ValueError as ex:
         outjson = parse_gui_form_post(body.getvalue())
         if not outjson:
-            errMsg = 'Failed to parse json input: %s, Err: %s.' % (body.getvalue(), ex)
+            errMsg = "Failed to parse json input: %s, Err: %s." % (body.getvalue(), ex)
             print(errMsg)
             raise WrongInputError(errMsg)
     return outjson
 
-VALIDATION = {"addhost": [{"key": "hostname", "type": basestring},
-                          {"key": "ip", "type": basestring},
-                          {"key": "port", "type": int},
-                          {"key": "insertTime", "type": int},
-                          {"key": "updateTime", "type": int},
-                          {"key": "status", "type": basestring, "values": ["benchmark", "maintenance", "operational"]},
-                          {"key": "desc", "type": basestring}],
-              "updatehost": [{"key": "ip", "type": basestring},
-                             {"key": "port", "type": int},
-                             {"key": "updateTime", "type": int},
-                             {"key": "status", "type": basestring,
-                              "values": ["benchmark", "maintenance", "operational"]}]}
+
+VALIDATION = {
+    "addhost": [
+        {"key": "hostname", "type": basestring},
+        {"key": "ip", "type": basestring},
+        {"key": "port", "type": int},
+        {"key": "insertTime", "type": int},
+        {"key": "updateTime", "type": int},
+        {
+            "key": "status",
+            "type": basestring,
+            "values": ["benchmark", "maintenance", "operational"],
+        },
+        {"key": "desc", "type": basestring},
+    ],
+    "updatehost": [
+        {"key": "ip", "type": basestring},
+        {"key": "port", "type": int},
+        {"key": "updateTime", "type": int},
+        {
+            "key": "status",
+            "type": basestring,
+            "values": ["benchmark", "maintenance", "operational"],
+        },
+    ],
+}
 
 
 def generateHash(inText):
@@ -497,13 +572,13 @@ def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):
     """Create custom return dictionary."""
     newOut = {}
     if errMsg:
-        newOut['error_description'] = errMsg
+        newOut["error_description"] = errMsg
     if errCode:
-        newOut['error'] = errCode
+        newOut["error"] = errCode
     if msg:
-        newOut['msg'] = msg
+        newOut["msg"] = msg
     if exitCode:
-        newOut['exitCode'] = exitCode
+        newOut["exitCode"] = exitCode
     return newOut
 
 
@@ -511,31 +586,37 @@ def getUrlParams(environ, paramsList):
     """Get URL parameters and return them in dictionary."""
     if not paramsList:
         return {}
-    if environ['REQUEST_METHOD'].upper() in ['POST']:
+    if environ["REQUEST_METHOD"].upper() in ["POST"]:
         # POST will handle by himself
         return {}
-    form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ)
+    form = cgi.FieldStorage(fp=environ["wsgi.input"], environ=environ)
     outParams = {}
     for param in paramsList:
         # {"key": "summary", "default": True, "type": bool},
         # {"key": "model", "default": "turtle", "type": str, "options": ['turtle']}
-        outVals = form.getlist(param['key'])
+        outVals = form.getlist(param["key"])
         if len(outVals) > 1:
-            raise TooManyArgumentalValues("Parameter %s has too many defined values" % param['key'])
+            raise TooManyArgumentalValues(
+                "Parameter %s has too many defined values" % param["key"]
+            )
         if len(outVals) == 1:
-            if param['type'] == bool:
-                if outVals[0] in ['true', 'True']:
-                    outParams[param['key']] = True
-                elif outVals[0] in ['false', 'False']:
-                    outParams[param['key']] = False
+            if param["type"] == bool:
+                if outVals[0] in ["true", "True"]:
+                    outParams[param["key"]] = True
+                elif outVals[0] in ["false", "False"]:
+                    outParams[param["key"]] = False
                 else:
-                    raise NotSupportedArgument("Parameter %s value not acceptable. Allowed options: [tT]rue,[fF]alse" %
-                                               param['key'])
-            elif param['type'] == str and outVals[0] not in param['options']:
-                raise NotSupportedArgument("Server does not support parameter %s=%s. Supported: %s" %
-                                           (param['key'], outVals[0], param['options']))
+                    raise NotSupportedArgument(
+                        "Parameter %s value not acceptable. Allowed options: [tT]rue,[fF]alse"
+                        % param["key"]
+                    )
+            elif param["type"] == str and outVals[0] not in param["options"]:
+                raise NotSupportedArgument(
+                    "Server does not support parameter %s=%s. Supported: %s"
+                    % (param["key"], outVals[0], param["options"])
+                )
         elif not outVals:
-            outParams[param['key']] = param['default']
+            outParams[param["key"]] = param["default"]
     print(outParams)
     return outParams
 
@@ -544,14 +625,16 @@ def getHeaders(environ):
     """Get all Headers and return them back as dictionary."""
     headers = {}
     for key in list(environ.keys()):
-        if key.startswith('HTTP_'):
+        if key.startswith("HTTP_"):
             headers[key[5:]] = environ.get(key)
     return headers
 
 
 def convertTSToDatetime(inputTS):
     """Convert timestamp to datetime."""
-    return datetime.datetime.fromtimestamp(int(inputTS)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    return datetime.datetime.fromtimestamp(int(inputTS)).strftime(
+        "%Y-%m-%dT%H:%M:%S.%fZ"
+    )
 
 
 def httpdate(timestamp):
@@ -559,10 +642,29 @@ def httpdate(timestamp):
     (HTTP/1.1)."""
     dat = datetime.datetime.fromtimestamp(int(timestamp))
     weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][dat.weekday()]
-    month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep",
-             "Oct", "Nov", "Dec"][dat.month - 1]
-    return "%s, %02d %s %04d %02d:%02d:%02d GMT" % (weekday, dat.day, month, dat.year,
-                                                    dat.hour, dat.minute, dat.second)
+    month = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+    ][dat.month - 1]
+    return "%s, %02d %s %04d %02d:%02d:%02d GMT" % (
+        weekday,
+        dat.day,
+        month,
+        dat.year,
+        dat.hour,
+        dat.minute,
+        dat.second,
+    )
 
 
 def httptimestamp(inhttpdate):
@@ -574,8 +676,8 @@ def httptimestamp(inhttpdate):
 def getModTime(headers):
     """Get modification time from the headers."""
     modTime = 0
-    if 'IF_MODIFIED_SINCE' in headers:
-        modTime = httptimestamp(headers['IF_MODIFIED_SINCE'])
+    if "IF_MODIFIED_SINCE" in headers:
+        modTime = httptimestamp(headers["IF_MODIFIED_SINCE"])
     return modTime
 
 
@@ -583,8 +685,8 @@ def encodebase64(inputStr, encodeFlag=True):
     """Encode str to base64."""
     if encodeFlag and inputStr:
         if isinstance(inputStr, bytes):
-            return base64.b64encode(inputStr.encode('UTF-8'))
-        return base64.b64encode(bytes(inputStr.encode('UTF-8')))
+            return base64.b64encode(inputStr.encode("UTF-8"))
+        return base64.b64encode(bytes(inputStr.encode("UTF-8")))
     return inputStr
 
 
@@ -599,8 +701,11 @@ def pubStateRemote(config, dic):
     """Publish state from remote services."""
     try:
         fullUrl = getFullUrl(config)
-        fullUrl += '/sitefe'
-        publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
+        fullUrl += "/sitefe"
+        publishToSiteFE(dic, fullUrl, "/json/frontend/servicestate")
     except Exception:
         excType, excValue = sys.exc_info()[:2]
-        print("Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))
+        print(
+            "Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s"
+            % (str(excType.__name__), excValue)
+        )

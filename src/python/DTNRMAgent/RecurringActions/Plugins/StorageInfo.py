@@ -22,7 +22,7 @@ import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 
-NAME = 'StorageInfo'
+NAME = "StorageInfo"
 
 
 def parseOut(tmpOut, storageInfo):
@@ -32,8 +32,8 @@ def parseOut(tmpOut, storageInfo):
     for item in tmpOut:
         if not item:
             continue
-        for line in item.decode('UTF-8').split('\n'):
-            if 'unrecognized option' in line:
+        for line in item.decode("UTF-8").split("\n"):
+            if "unrecognized option" in line:
                 return storageInfo, False
             line = re.sub(" +", " ", line)
             if lineNum == 0:
@@ -50,15 +50,15 @@ def parseOut(tmpOut, storageInfo):
                 storageInfo["Values"][oneLine[0]] = {}
             key = localOut["Keys"][countNum].replace("%", "Percentage")
             # Append size and also change to underscore
-            if key in ['Avail', 'Used', 'Size']:
-                key = '%s_gb' % key
+            if key in ["Avail", "Used", "Size"]:
+                key = "%s_gb" % key
                 try:
                     storageInfo["Values"][oneLine[0]][key] = oneLine[countNum][:1]
                 except TypeError:
                     storageInfo["Values"][oneLine[0]][key] = oneLine[countNum]
                 continue
-            if key == '1024-blocks':
-                key = '1024_blocks'
+            if key == "1024-blocks":
+                key = "1024_blocks"
             storageInfo["Values"][oneLine[0]][key] = oneLine[countNum]
     return storageInfo, True
 
@@ -66,19 +66,20 @@ def parseOut(tmpOut, storageInfo):
 def get(config, logger):
     """Get storage mount points information."""
     storageInfo = {"Values": {}}
-    tmpOut = externalCommand('df -P -h')
+    tmpOut = externalCommand("df -P -h")
     storageInfo, _ = parseOut(tmpOut, dict(storageInfo))
-    tmpOut = externalCommand('df -i -P')
+    tmpOut = externalCommand("df -i -P")
     storageInfo, _ = parseOut(tmpOut, dict(storageInfo))
     outStorage = {"FileSystems": {}, "total_gb": 0, "app": "FileSystem"}
 
     totalSum = 0
     for mountName, mountVals in storageInfo["Values"].items():
-        outStorage["FileSystems"][mountName] = mountVals['Avail_gb']
-        totalSum += int(mountVals['Avail_gb'])
+        outStorage["FileSystems"][mountName] = mountVals["Avail_gb"]
+        totalSum += int(mountVals["Avail_gb"])
     outStorage["total_gb"] = totalSum
     storageInfo["FileSystems"] = outStorage
     return storageInfo
+
 
 if __name__ == "__main__":
     PRETTY = pprint.PrettyPrinter(indent=4)

@@ -28,27 +28,30 @@ import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 
-NAME = 'CPUInfo'
+NAME = "CPUInfo"
 
 
 def get(config, logger):
     """Get lscpu information."""
     cpuInfo = {}
-    tmpOut = externalCommand('lscpu')
+    tmpOut = externalCommand("lscpu")
     for item in tmpOut:
-        for desc in item.decode('UTF-8').split('\n'):
-            vals = desc.split(':')
+        for desc in item.decode("UTF-8").split("\n"):
+            vals = desc.split(":")
             if len(vals) == 2:
                 cpuInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
             else:
-                print('CpuInfo: Skipped this item: ', vals)
-    cpuInfo['num_cores'] = 1
-    if 'Socket(s)' in cpuInfo and 'Core(s) per socket':
+                print("CpuInfo: Skipped this item: ", vals)
+    cpuInfo["num_cores"] = 1
+    if "Socket(s)" in cpuInfo and "Core(s) per socket":
         try:
-            cpuInfo['num_cores'] = int(cpuInfo['Socket(s)']) * int(cpuInfo['Core(s) per socket'])
+            cpuInfo["num_cores"] = int(cpuInfo["Socket(s)"]) * int(
+                cpuInfo["Core(s) per socket"]
+            )
         except Exception:
-            print('Failed to calculate num_cores from %s. will set to 1' % cpuInfo)
+            print("Failed to calculate num_cores from %s. will set to 1" % cpuInfo)
     return cpuInfo
+
 
 if __name__ == "__main__":
     PRETTY = pprint.PrettyPrinter(indent=4)

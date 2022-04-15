@@ -29,21 +29,21 @@ import platform
 # src/python/SiteFE/__init__.py
 # src/python/DTNRMAgent/__init__.py
 # src/python/DTNRMLibs/__init__.py
-VERSION = '210312'
+VERSION = "210312"
 
 
 def printInfo(logger=None):
     """Print information about sytem before start setup."""
     print("System Information:")
     print("-" * 100)
-    print("Python version: %s" % sys.version.split('\n'))
+    print("Python version: %s" % sys.version.split("\n"))
     print("Dist: %s" % str(platform.dist()))
     print("System: %s" % platform.system())
     print("Machine: %s" % platform.machine())
     print("Platform: %s" % platform.platform())
-    print('Uname: %s' % platform.uname())
-    print('Version: %s' % platform.version())
-    print('Mac version: %s' % platform.mac_ver())
+    print("Uname: %s" % platform.uname())
+    print("Version: %s" % platform.version())
+    print("Mac version: %s" % platform.mac_ver())
 
 
 def get_path_to_root(appendLocation=None):
@@ -65,7 +65,7 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
     if not packageDirs:
         packageDirs = []
     if not ignoreThese:
-        ignoreThese = set(['CVS', '.svn', 'svn', '.git', '', 'dtnrmagent.egg-info'])
+        ignoreThese = set(["CVS", ".svn", "svn", ".git", "", "dtnrmagent.egg-info"])
     else:
         ignoreThese = set(ignoreThese)
     packages = []
@@ -74,30 +74,34 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
     for aDir in packageDirs:
         if recurse:
             # Recurse the sub-directories
-            for dirpath, dummyDirnames, dummyFilenames in os.walk('%s' % aDir, topdown=True):
-                pathelements = dirpath.split('/')
+            for dirpath, dummyDirnames, dummyFilenames in os.walk(
+                "%s" % aDir, topdown=True
+            ):
+                pathelements = dirpath.split("/")
                 # If any part of pathelements is in the ignore_these set skip the path
                 if not list(set(pathelements) & ignoreThese):
                     relPath = os.path.relpath(dirpath, get_path_to_root())
-                    relPath = relPath.split('/')[2:]
+                    relPath = relPath.split("/")[2:]
                     if not pyFiles:
-                        packages.append('.'.join(relPath))
+                        packages.append(".".join(relPath))
                     else:
                         for fileName in dummyFilenames:
-                            if fileName.startswith('__init__.') or \
-                               fileName.endswith('.pyc') or \
-                               not fileName.endswith('.py'):
+                            if (
+                                fileName.startswith("__init__.")
+                                or fileName.endswith(".pyc")
+                                or not fileName.endswith(".py")
+                            ):
                                 # print('Ignoring %s' % fileName)
                                 continue
-                            relName = fileName.rsplit('.', 1)
-                            modules.append("%s.%s" % ('.'.join(relPath), relName[0]))
+                            relName = fileName.rsplit(".", 1)
+                            modules.append("%s.%s" % (".".join(relPath), relName[0]))
                 else:
                     continue
                     # print('Ignoring %s' % dirpath)
         else:
             relPath = os.path.relpath(aDir, get_path_to_root())
-            relPath = relPath.split('/')[2:]
-            packages.append('.'.join(relPath))
+            relPath = relPath.split("/")[2:]
+            packages.append(".".join(relPath))
     if pyFiles:
         return modules
     return packages
@@ -108,10 +112,10 @@ def get_py_modules(modulesDirs):
     return list_packages(modulesDirs, pyFiles=True)
 
 
-def get_web_files(rootdir='/var/www/html'):
+def get_web_files(rootdir="/var/www/html"):
     """Get all files to copy to html dir"""
     maindir = os.path.abspath(os.getcwd())
-    htmldir = os.path.join(maindir, 'src/html/')
+    htmldir = os.path.join(maindir, "src/html/")
     htmldirs = [htmldir]
     out = []
     for dirN in htmldirs:
@@ -121,7 +125,7 @@ def get_web_files(rootdir='/var/www/html'):
             if os.path.isdir(newpath):
                 htmldirs.append(newpath)
                 continue
-            fPath = newpath[len(maindir)+1:]
+            fPath = newpath[len(maindir) + 1 :]
             allFiles.append(fPath)
-        out.append((os.path.join(rootdir, dirN[len(htmldir):]), allFiles))
+        out.append((os.path.join(rootdir, dirN[len(htmldir) :]), allFiles))
     return out

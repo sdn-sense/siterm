@@ -34,39 +34,52 @@ from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getConfig
 
 
-COMPONENT = 'Debugger'
+COMPONENT = "Debugger"
 
 
-class Debugger():
-    """ Debugger main process """
+class Debugger:
+    """Debugger main process"""
+
     def __init__(self, config, logger):
         self.config = config if config else getConfig()
-        self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
-                                                      self.config.get('general', 'logLevel'))
-        self.fullURL = getFullUrl(self.config, self.config.get('general', 'siteName'))
-        self.hostname = self.config.get('agent', 'hostname')
+        self.logger = (
+            logger
+            if logger
+            else getLogger(
+                "%s/%s/" % (self.config.get("general", "logDir"), COMPONENT),
+                self.config.get("general", "logLevel"),
+            )
+        )
+        self.fullURL = getFullUrl(self.config, self.config.get("general", "siteName"))
+        self.hostname = self.config.get("agent", "hostname")
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
 
     def getData(self, url):
         """Get data from FE."""
-        self.logger.info('Query: %s%s' % (self.fullURL, url))
+        self.logger.info("Query: %s%s" % (self.fullURL, url))
         out = getDataFromSiteFE({}, self.fullURL, url)
-        if out[2] != 'OK':
-            msg = 'Received a failure getting information from Site Frontend %s' % str(out)
+        if out[2] != "OK":
+            msg = "Received a failure getting information from Site Frontend %s" % str(
+                out
+            )
             self.logger.critical(msg)
             return {}
-        if self.config.getboolean('general', "debug"):
+        if self.config.getboolean("general", "debug"):
             pretty = pprint.PrettyPrinter(indent=4)
             self.logger.debug(pretty.pprint(evaldict(out[0])))
         return evaldict(out[0])
 
     def getAllAssignedtoHost(self):
         """Get All Assigned to Host"""
-        return self.getData("/sitefe/json/frontend/getalldebughostname/%s" % self.hostname)
+        return self.getData(
+            "/sitefe/json/frontend/getalldebughostname/%s" % self.hostname
+        )
 
     def publishToFE(self, inDic):
         """Publish debug runtime to FE."""
-        publishToSiteFE(inDic, self.fullURL, '/sitefe/json/frontend/updatedebug/%s' % inDic['id'])
+        publishToSiteFE(
+            inDic, self.fullURL, "/sitefe/json/frontend/updatedebug/%s" % inDic["id"]
+        )
 
     def start(self):
         """Start execution and get new requests from FE."""
@@ -75,29 +88,29 @@ class Debugger():
         for item in allWork:
             self.logger.debug("Work on: %s" % item)
             try:
-                item['requestdict'] = evaldict(item['requestdict'])
-                if item['requestdict']['type'] == 'rapidping':
-                    out, err, exitCode = rapidping(item['requestdict'])
-                elif item['requestdict']['type'] == 'tcpdump':
-                    out, err, exitCode = tcpdump(item['requestdict'])
-                elif item['requestdict']['type'] == 'arptable':
-                    out, err, exitCode = arptable(item['requestdict'])
-                elif item['requestdict']['type'] == 'iperf':
-                    out, err, exitCode = iperf(item['requestdict'])
-                elif item['requestdict']['type'] == 'iperfserver':
-                    out, err, exitCode = iperfserver(item['requestdict'])
+                item["requestdict"] = evaldict(item["requestdict"])
+                if item["requestdict"]["type"] == "rapidping":
+                    out, err, exitCode = rapidping(item["requestdict"])
+                elif item["requestdict"]["type"] == "tcpdump":
+                    out, err, exitCode = tcpdump(item["requestdict"])
+                elif item["requestdict"]["type"] == "arptable":
+                    out, err, exitCode = arptable(item["requestdict"])
+                elif item["requestdict"]["type"] == "iperf":
+                    out, err, exitCode = iperf(item["requestdict"])
+                elif item["requestdict"]["type"] == "iperfserver":
+                    out, err, exitCode = iperfserver(item["requestdict"])
                 else:
                     err = "Unknown Request"
                     exitCode = 500
             except:
                 err = traceback.format_exc()
                 exitCode = 501
-            output = {'out': out, 'err': err, 'exitCode': exitCode}
-            item['output'] = json.dumps(output)
+            output = {"out": out, "err": err, "exitCode": exitCode}
+            item["output"] = json.dumps(output)
             if exitCode != 0:
-                item['state'] = 'failed'
+                item["state"] = "failed"
             else:
-                item['state'] = 'finished'
+                item["state"] = "finished"
             self.logger.debug("Finish work on: %s" % item)
             self.publishToFE(item)
 
@@ -107,5 +120,6 @@ def execute(config=None, logger=None):
     debugger = Debugger(config, logger)
     debugger.start()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     execute(logger=getStreamLogger())

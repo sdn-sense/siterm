@@ -19,6 +19,7 @@ Date                    : 2017/09/26
 """
 from __future__ import print_function
 from future import standard_library
+
 standard_library.install_aliases()
 from builtins import object
 import urllib.request
@@ -33,6 +34,7 @@ from DTNRMLibs.MainUtilities import evaldict
 
 class getContent(object):
     """Get Content from url."""
+
     def __init__(self):
         # We would want to add later more things to init,
         # for example https and security details from config.
@@ -57,67 +59,68 @@ def get_match_regex(environ, regexp):
 
     This does not raise any error.
     """
-    path = environ.get('PATH_INFO', '')
+    path = environ.get("PATH_INFO", "")
     mReg = regexp.match(path)
     return mReg
 
 
 def is_application_json(environ):
     """Check if environ has set content type to json."""
-    content_type = environ.get('CONTENT_TYPE', 'application/json')
-    return content_type.startswith('application/json')
+    content_type = environ.get("CONTENT_TYPE", "application/json")
+    return content_type.startswith("application/json")
 
 
 def is_post_request(environ):
     """Check if environ has set it to POST method."""
-    if environ['REQUEST_METHOD'].upper() != 'POST':
+    if environ["REQUEST_METHOD"].upper() != "POST":
         return False
-    content_type = environ.get('CONTENT_TYPE', 'application/x-www-form-urlencoded')
-    return content_type.startswith('application/x-www-form-urlencoded') or \
-           content_type.startswith('multipart/form-data')
+    content_type = environ.get("CONTENT_TYPE", "application/x-www-form-urlencoded")
+    return content_type.startswith(
+        "application/x-www-form-urlencoded"
+    ) or content_type.startswith("multipart/form-data")
 
 
 def get_json_post_form(environ):
     """Get Json from Post form."""
     try:
-        request_body_size = int(environ.get('CONTENT_LENGTH', 0))
+        request_body_size = int(environ.get("CONTENT_LENGTH", 0))
     except ValueError:
         request_body_size = 0
-    request_body = environ['wsgi.input'].read(request_body_size)
+    request_body = environ["wsgi.input"].read(request_body_size)
     try:
         params = json.loads(request_body)
     except:
-        print('Reached except in data load')
+        print("Reached except in data load")
         params = evaldict(request_body)
         if not isinstance(params, dict):
             params = json.loads(params)
-    environ.setdefault('params', {})
+    environ.setdefault("params", {})
     for key in list(params.keys()):
-        environ['params'][key] = params[key]
-    return environ['params']
+        environ["params"][key] = params[key]
+    return environ["params"]
 
 
 def get_post_form(environ):
     """Get content submitted through POST method."""
     # assert is_post_request(environ)
     postEnv = environ.copy()
-    postEnv['QUERY_STRING'] = ''
-    inputP = environ['wsgi.input']
-    post_form = environ.get('wsgi.post_form')
+    postEnv["QUERY_STRING"] = ""
+    inputP = environ["wsgi.input"]
+    post_form = environ.get("wsgi.post_form")
     if post_form is not None and post_form[0] is input:
         return post_form[2]
-    fieldS = cgi.FieldStorage(fp=inputP,
-                              environ=postEnv,
-                              keep_blank_values=True)
+    fieldS = cgi.FieldStorage(fp=inputP, environ=postEnv, keep_blank_values=True)
     new_input = InputProcessed()
     post_form = (new_input, inputP, fieldS)
-    environ['wsgi.post_form'] = post_form
-    environ['wsgi.input'] = new_input
+    environ["wsgi.post_form"] = post_form
+    environ["wsgi.input"] = new_input
     return fieldS
 
 
 class InputProcessed(object):
     """wsgi Input processing class."""
+
     def read(self, *args):
-        raise EOFError('The wsgi.input stream has already been consumed')
+        raise EOFError("The wsgi.input stream has already been consumed")
+
     readline = readlines = __iter__ = read

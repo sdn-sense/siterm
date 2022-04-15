@@ -35,8 +35,9 @@ def callCommand(command):
 def getLatestVersion():
     """Get Latest version name from Github repo."""
     callCommand("cd /opt/dtnrmcode/siterm/ && git pull")
-    sys.path.append('/opt/dtnrmcode/siterm/')
+    sys.path.append("/opt/dtnrmcode/siterm/")
     import setupUtilities
+
     return setupUtilities.VERSION
 
 
@@ -46,23 +47,29 @@ def agentUpdater():
     Restarts all services
     """
     import DTNRMAgent
+
     installedVersion = DTNRMAgent.__version__
     latestVersion = getLatestVersion()
     if installedVersion != latestVersion:
-        print('Installed version: %s. Latest Version %s' % (installedVersion, latestVersion))
+        print(
+            "Installed version: %s. Latest Version %s"
+            % (installedVersion, latestVersion)
+        )
         # Stop all services
-        for service in ['dtnrmagent-update', 'dtnrm-ruler']:
-            print('Stop %s' % service)
-            callCommand('%s stop' % service)
+        for service in ["dtnrmagent-update", "dtnrm-ruler"]:
+            print("Stop %s" % service)
+            callCommand("%s stop" % service)
         # Install new code;
-        callCommand('cd /opt/dtnrmcode/siterm/ && python setup-agent.py install')
+        callCommand("cd /opt/dtnrmcode/siterm/ && python setup-agent.py install")
         # Run update script if any
-        if os.path.isfile('/opt/dtnrmcode/siterm/update/agent-%s.py' % latestVersion):
-            callCommand('python /opt/dtnrmcode/siterm/update/agent-%s.py' % latestVersion)
+        if os.path.isfile("/opt/dtnrmcode/siterm/update/agent-%s.py" % latestVersion):
+            callCommand(
+                "python /opt/dtnrmcode/siterm/update/agent-%s.py" % latestVersion
+            )
         # Start all services
-        for service in ['dtnrmagent-update', 'dtnrm-ruler']:
-            print('Stop %s' % service)
-            callCommand('%s start' % service)
+        for service in ["dtnrmagent-update", "dtnrm-ruler"]:
+            print("Stop %s" % service)
+            callCommand("%s start" % service)
         # Update crontab entries
         callCommand("crontab /etc/cron.d/siterm-crons")
 
@@ -73,25 +80,37 @@ def feUpdater():
     Restarts all services
     """
     import SiteFE
+
     installedVersion = SiteFE.__version__
     latestVersion = getLatestVersion()
     if installedVersion != latestVersion:
-        print('Installed version: %s. Latest Version %s' % (installedVersion, latestVersion))
+        print(
+            "Installed version: %s. Latest Version %s"
+            % (installedVersion, latestVersion)
+        )
         # Stop all services
-        for service in ['/usr/sbin/httpd -k', 'LookUpService-update',
-                        'PolicyService-update', 'ProvisioningService-update']:
-            print('Stop %s' % service)
-            callCommand('%s stop' % service)
+        for service in [
+            "/usr/sbin/httpd -k",
+            "LookUpService-update",
+            "PolicyService-update",
+            "ProvisioningService-update",
+        ]:
+            print("Stop %s" % service)
+            callCommand("%s stop" % service)
         # Install new code;
-        callCommand('cd /opt/dtnrmcode/siterm/ && python setup-sitefe.py install')
+        callCommand("cd /opt/dtnrmcode/siterm/ && python setup-sitefe.py install")
         # Run update script if any
-        if os.path.isfile('/opt/dtnrmcode/siterm/update/fe-%s.py' % latestVersion):
-            callCommand('python /opt/dtnrmcode/siterm/update/fe-%s.py' % latestVersion)
+        if os.path.isfile("/opt/dtnrmcode/siterm/update/fe-%s.py" % latestVersion):
+            callCommand("python /opt/dtnrmcode/siterm/update/fe-%s.py" % latestVersion)
         # Start all services
-        for service in ['/usr/sbin/httpd -k', 'LookUpService-update',
-                        'PolicyService-update', 'ProvisioningService-update']:
-            print('Stop %s' % service)
-            callCommand('%s start' % service)
+        for service in [
+            "/usr/sbin/httpd -k",
+            "LookUpService-update",
+            "PolicyService-update",
+            "ProvisioningService-update",
+        ]:
+            print("Stop %s" % service)
+            callCommand("%s start" % service)
         # Update crontab entries
         callCommand("crontab /etc/cron.d/siterm-crons")
 
@@ -99,20 +118,20 @@ def feUpdater():
 def checkAutoUpdate(config):
     """Check if auto update is enabled in configuration."""
     autoupdate = True
-    if 'autoupdate' in list(config['MAIN']['general'].keys()):
-        autoupdate = bool(config['MAIN']['general']['autoupdate'])
+    if "autoupdate" in list(config["MAIN"]["general"].keys()):
+        autoupdate = bool(config["MAIN"]["general"]["autoupdate"])
     if not autoupdate:
-        print('Auto Update disabled in configuration. Skipping auto update')
+        print("Auto Update disabled in configuration. Skipping auto update")
         return
-    if config['MAPPING']['type'] == 'Agent':
+    if config["MAPPING"]["type"] == "Agent":
         agentUpdater()
-    elif config['MAPPING']['type'] == 'FE':
+    elif config["MAPPING"]["type"] == "FE":
         feUpdater()
     else:
-        print('Unknown TYPE. Ignoring Auto Update.')
+        print("Unknown TYPE. Ignoring Auto Update.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     CONFIG = getGitConfig()
     pprint.pprint(CONFIG)
     checkAutoUpdate(CONFIG)

@@ -22,21 +22,22 @@ import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
 
-NAME = 'SystemKernelParams'
+NAME = "SystemKernelParams"
 
 
 def get(config, logger):
     """Get System kernel parameters information."""
     kernelInfo = {}
-    tmpOut = externalCommand('sysctl -a')
+    tmpOut = externalCommand("sysctl -a")
     for item in tmpOut:
-        for desc in item.decode('UTF-8').split('\n'):
-            vals = desc.split(' = ')
+        for desc in item.decode("UTF-8").split("\n"):
+            vals = desc.split(" = ")
             if len(vals) == 2:
                 kernelInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
             else:
-                print('KernelParams: Skipped this item: ', vals)
+                print("KernelParams: Skipped this item: ", vals)
     return kernelInfo
+
 
 if __name__ == "__main__":
     PRETTY = pprint.PrettyPrinter(indent=4)

@@ -20,34 +20,37 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
-class mainCaller():
+
+
+class mainCaller:
     """Main call for ODL plugin."""
+
     def __init__(self):
-        self.name = 'ODL'
+        self.name = "ODL"
 
     def mainCall(self, stateCall, inputDict, actionState):
         """Main caller function which calls specific state."""
         out = {}
-        if stateCall == 'accepting':
+        if stateCall == "accepting":
             out = self.accepting(inputDict, actionState)
-        elif stateCall == 'accepted':
+        elif stateCall == "accepted":
             out = self.accepted(inputDict, actionState)
-        elif stateCall == 'committing':
+        elif stateCall == "committing":
             out = self.committing(inputDict, actionState)
-        elif stateCall == 'committed':
+        elif stateCall == "committed":
             out = self.committed(inputDict, actionState)
-        elif stateCall == 'activating':
+        elif stateCall == "activating":
             out = self.activating(inputDict, actionState)
-        elif stateCall == 'active':
+        elif stateCall == "active":
             out = self.active(inputDict, actionState)
-        elif stateCall == 'activated':
+        elif stateCall == "activated":
             out = self.activated(inputDict, actionState)
-        elif stateCall == 'failed':
+        elif stateCall == "failed":
             out = self.failed(inputDict, actionState)
-        elif stateCall == 'remove':
+        elif stateCall == "remove":
             out = self.remove(inputDict, actionState)
         else:
-            raise Exception('Unknown State %s' % stateCall)
+            raise Exception("Unknown State %s" % stateCall)
         return out
 
     def accepting(self, inputDict, actionState):

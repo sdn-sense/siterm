@@ -25,14 +25,15 @@ import mariadb
 import DTNRMLibs.dbcalls as dbcalls
 
 
-class DBBackend():
+class DBBackend:
     """Database Backend class."""
+
     def __init__(self):
-        self.mpass = os.getenv('MARIA_DB_PASSWORD')
-        self.muser = os.getenv('MARIA_DB_USER', 'root')
-        self.mhost = os.getenv('MARIA_DB_HOST', 'localhost')
-        self.mport = int(os.getenv('MARIA_DB_PORT', '3306'))
-        self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
+        self.mpass = os.getenv("MARIA_DB_PASSWORD")
+        self.muser = os.getenv("MARIA_DB_USER", "root")
+        self.mhost = os.getenv("MARIA_DB_HOST", "localhost")
+        self.mport = int(os.getenv("MARIA_DB_PORT", "3306"))
+        self.mdb = os.getenv("MARIA_DB_DATABASE", "sitefe")
         self.conn = None
         self.cursor = None
 
@@ -47,8 +48,8 @@ class DBBackend():
         """Create database."""
         self.initialize()
         for argname in dir(dbcalls):
-            if argname.startswith('create_'):
-                print('Call to create %s' % argname)
+            if argname.startswith("create_"):
+                print("Call to create %s" % argname)
                 self.cursor.execute(getattr(dbcalls, argname))
         self.conn.commit()
         self.destroy()
@@ -56,11 +57,13 @@ class DBBackend():
     def initialize(self):
         """Initialize mariadb connection."""
         if not self.conn:
-            self.conn = mariadb.connect(user=self.muser,
-                                        password=self.mpass,
-                                        host=self.mhost,
-                                        port=self.mport,
-                                        database=self.mdb)
+            self.conn = mariadb.connect(
+                user=self.muser,
+                password=self.mpass,
+                host=self.mhost,
+                port=self.mport,
+                database=self.mdb,
+            )
         if not self.cursor:
             self.cursor = self.conn.cursor()
 
@@ -77,7 +80,7 @@ class DBBackend():
             raise ex
         finally:
             self.destroy()
-        return 'OK', colname, alldata
+        return "OK", colname, alldata
 
     def execute_ins(self, query, values):
         """INSERT Execute."""
@@ -89,16 +92,16 @@ class DBBackend():
                 lastID = self.cursor.lastrowid
             self.conn.commit()
         except mariadb.Error as ex:
-            print('MariaDBError. Ex: %s' % ex)
+            print("MariaDBError. Ex: %s" % ex)
             self.conn.rollback()
             raise ex
         except Exception as ex:
-            print('Got Exception %s ' % ex)
+            print("Got Exception %s " % ex)
             self.conn.rollback()
             raise ex
         finally:
             self.destroy()
-        return 'OK', '', lastID
+        return "OK", "", lastID
 
     def execute_del(self, query, values):
         """DELETE Execute."""
@@ -107,17 +110,18 @@ class DBBackend():
             self.cursor.execute(query)
             self.conn.commit()
         except Exception as ex:
-            print('Got Exception %s ' % ex)
+            print("Got Exception %s " % ex)
             self.conn.rollback()
             self.destroy()
             raise ex
         finally:
             self.destroy()
-        return 'OK', '', ''
+        return "OK", "", ""
 
 
-class dbinterface():
+class dbinterface:
     """Database interface."""
+
     def __init__(self, serviceName, config, sitename):
         self.config = config
         self.sitename = sitename
@@ -145,9 +149,9 @@ class dbinterface():
         """Get call from ALL available ones."""
         callquery = ""
         try:
-            callquery = getattr(dbcalls, '%s_%s' % (callaction, calltype))
+            callquery = getattr(dbcalls, "%s_%s" % (callaction, calltype))
         except AttributeError as ex:
-            print('Called %s_%s, but got exception %s', callaction, calltype, ex)
+            print("Called %s_%s, but got exception %s", callaction, calltype, ex)
             raise ex
         return callquery
 
@@ -179,7 +183,9 @@ class dbinterface():
     def get(self, calltype, limit=None, search=None, orderby=None, mapping=True):
         """GET Call for APPs."""
         self._setStartCallTime(calltype)
-        callExit, colname, dbout = self._caller(self.getcall('get', calltype), limit, orderby, search)
+        callExit, colname, dbout = self._caller(
+            self.getcall("get", calltype), limit, orderby, search
+        )
         self._setEndCallTime(calltype, callExit)
         out = []
         if mapping:
@@ -195,7 +201,7 @@ class dbinterface():
     def insert(self, calltype, values):
         """INSERT call for APPs."""
         self._setStartCallTime(calltype)
-        out = self.db.execute_ins(self.getcall('insert', calltype), values)
+        out = self.db.execute_ins(self.getcall("insert", calltype), values)
         self._setEndCallTime(calltype, out[0])
         return out
 
@@ -206,7 +212,7 @@ class dbinterface():
     def update(self, calltype, values):
         """UPDATE Call for APPs."""
         self._setStartCallTime(calltype)
-        out = self.db.execute_ins(self.getcall('update', calltype), values)
+        out = self.db.execute_ins(self.getcall("update", calltype), values)
         self._setEndCallTime(calltype, out[0])
         return out
 
@@ -226,7 +232,7 @@ class dbinterface():
                     query += "AND "
                 first = False
                 query += '%s = "%s" ' % (item[0], item[1])
-        fullquery = "%s %s" % (self.getcall('delete', calltype), query)
+        fullquery = "%s %s" % (self.getcall("delete", calltype), query)
         self._setStartCallTime(calltype)
         out = self.db.execute_del(fullquery, None)
         self._setEndCallTime(calltype, out[0])

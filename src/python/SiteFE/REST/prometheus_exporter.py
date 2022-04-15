@@ -26,8 +26,9 @@ from prometheus_client import Enum, CONTENT_TYPE_LATEST
 
 class PrometheusAPI(object):
     """Prometheus exporter class."""
+
     def __init__(self):
-        self.dbI = getDBConn('Prometheus')
+        self.dbI = getDBConn("Prometheus")
 
     @staticmethod
     def cleanRegistry():
@@ -37,25 +38,30 @@ class PrometheusAPI(object):
 
     def getServiceStates(self, registry, **kwargs):
         """Get all Services states."""
-        serviceState = Enum('service_state', 'Description of enum',
-                            labelnames=['servicename'],
-                            states=['OK', 'UNKNOWN', 'FAILED', 'KEYBOARDINTERRUPT'],
-                            registry=registry)
-        services = self.dbI[kwargs['sitename']].get('servicestates')
+        serviceState = Enum(
+            "service_state",
+            "Description of enum",
+            labelnames=["servicename"],
+            states=["OK", "UNKNOWN", "FAILED", "KEYBOARDINTERRUPT"],
+            registry=registry,
+        )
+        services = self.dbI[kwargs["sitename"]].get("servicestates")
         # {'servicestate': u'OK', 'hostname': u'4df8c7b989d1',
         #  'servicename': u'LookUpService', 'id': 1, 'updatedate': 1601047007}
         timenow = int(getUTCnow())
         for service in services:
-            state = 'UNKNOWN'
-            if int(timenow - service['updatedate']) < 120:
+            state = "UNKNOWN"
+            if int(timenow - service["updatedate"]) < 120:
                 # If we are not getting service state for 2 mins, leave state as unknown
-                state = service['servicestate']
-            serviceState.labels(servicename=service['servicename']).state(state)
+                state = service["servicestate"]
+            serviceState.labels(servicename=service["servicename"]).state(state)
 
     def metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""
         registry = self.cleanRegistry()
         self.getServiceStates(registry, **kwargs)
         data = generate_latest(registry)
-        kwargs['http_respond'].ret_200(CONTENT_TYPE_LATEST, kwargs['start_response'], None)
+        kwargs["http_respond"].ret_200(
+            CONTENT_TYPE_LATEST, kwargs["start_response"], None
+        )
         return iter([data])

@@ -31,7 +31,8 @@ def str2bool(val):
     """Check if str is true boolean."""
     return val.lower() in ("yes", "true", "t", "1")
 
-NAME = 'NetInfo'
+
+NAME = "NetInfo"
 
 
 def getVlansOnSystem(config, logger):
@@ -40,11 +41,13 @@ def getVlansOnSystem(config, logger):
     rulerObj = Ruler(config, logger)
     vlansProvs = rulerObj.vlansProvisioned()
     for item in vlansProvs:
-        if 'hosts' in list(item.keys()):
-            for _, hostdict in list(item['hosts'].items()):
-                if 'vlan' not in list(hostdict.keys()) or 'destport' not in list(hostdict.keys()):
+        if "hosts" in list(item.keys()):
+            for _, hostdict in list(item["hosts"].items()):
+                if "vlan" not in list(hostdict.keys()) or "destport" not in list(
+                    hostdict.keys()
+                ):
                     continue
-                out['vlan.%s' % hostdict['vlan']] = hostdict['destport']
+                out["vlan.%s" % hostdict["vlan"]] = hostdict["destport"]
     return out
 
 
@@ -52,7 +55,7 @@ def get(config, logger):
     """Get all network information."""
     vlansON = getVlansOnSystem(config, logger)
     netInfo = {}
-    interfaces = config.get('agent', "interfaces").split(",")
+    interfaces = config.get("agent", "interfaces").split(",")
     for intf in interfaces:
         nicInfo = netInfo.setdefault(intf, {})
         vlanRange = config.get(intf, "vlans")
@@ -61,23 +64,23 @@ def get(config, logger):
         switchPort = config.get(intf, "port")
         switch = config.get(intf, "switch")
         sharedInterface = config.get(intf, "shared")
-        if config.has_option(intf, 'isAlias'):
-            nicInfo['isAlias'] = config.get(intf, 'isAlias')
+        if config.has_option(intf, "isAlias"):
+            nicInfo["isAlias"] = config.get(intf, "isAlias")
         if config.has_option(intf, "ips"):
-            nicInfo['ipv4-floatingip-pool'] = config.get(intf, "ips")
-        nicInfo['vlan_range'] = vlanRange
-        nicInfo['min_bandwidth'] = int(vlanMin)
-        nicInfo['max_bandwidth'] = int(vlanMax)
-        nicInfo['switch_port'] = str(switchPort).replace('/', '_')
-        nicInfo['switch'] = str(switch)
-        nicInfo['shared'] = str2bool(sharedInterface)
-        nicInfo['vlans'] = {}
+            nicInfo["ipv4-floatingip-pool"] = config.get(intf, "ips")
+        nicInfo["vlan_range"] = vlanRange
+        nicInfo["min_bandwidth"] = int(vlanMin)
+        nicInfo["max_bandwidth"] = int(vlanMax)
+        nicInfo["switch_port"] = str(switchPort).replace("/", "_")
+        nicInfo["switch"] = str(switch)
+        nicInfo["shared"] = str2bool(sharedInterface)
+        nicInfo["vlans"] = {}
         # TODO. It should calculate available capacity, depending on installed vlans.
         # Currently we set it same as max_bandwidth.
-        nicInfo['available_bandwidth'] = int(vlanMax)  # TODO
+        nicInfo["available_bandwidth"] = int(vlanMax)  # TODO
         # TODO. It should also calculate reservable capacity depending on installed vlans;
         # Currently we set it to max available;
-        nicInfo['reservable_bandwidth'] = int(vlanMax)  # TODO
+        nicInfo["reservable_bandwidth"] = int(vlanMax)  # TODO
     tmpifAddr = psutil.net_if_addrs()
     tmpifStats = psutil.net_if_stats()
     tmpIOCount = psutil.net_io_counters(pernic=True)
@@ -85,14 +88,14 @@ def get(config, logger):
     for nic, addrs in list(tmpifAddr.items()):
         # TODO: Check with configuration of which vlans are provisioned;
         # Currently it is a hack. if it is a vlan, I assume it is provisioned by orchestrator;
-        nicSplit = nic.split('.')
-        nicInfo = netInfo.setdefault(nicSplit[0], {'vlans': {}})
+        nicSplit = nic.split(".")
+        nicInfo = netInfo.setdefault(nicSplit[0], {"vlans": {}})
         if len(nicSplit) == 2:
-            nicInfo = nicInfo['vlans'].setdefault(nic, {})
-            nicInfo['provisioned'] = True
-            nicInfo['vlanid'] = nicSplit[1]
+            nicInfo = nicInfo["vlans"].setdefault(nic, {})
+            nicInfo["provisioned"] = True
+            nicInfo["vlanid"] = nicSplit[1]
         else:
-            nicInfo['provisioned'] = False
+            nicInfo["provisioned"] = False
         foundInterfaces.append(nic)
         for vals in addrs:
             familyInfo = nicInfo.setdefault(str(vals.family.value), {})
@@ -103,16 +106,20 @@ def get(config, logger):
             familyInfo["netmask"] = vals.netmask
             if int(vals.family.value) in [2, 10] and vals.address and vals.netmask:
                 try:
-                    ipwithnetmask = ipaddress.ip_interface(u"%s/%s" % (vals.address, vals.netmask))
+                    ipwithnetmask = ipaddress.ip_interface(
+                        "%s/%s" % (vals.address, vals.netmask)
+                    )
                     if isinstance(ipwithnetmask, ipaddress.IPv4Interface):
                         familyInfo["ipv4-address"] = str(ipwithnetmask)
                     elif isinstance(ipwithnetmask, ipaddress.IPv6Interface):
                         familyInfo["ipv6-address"] = str(ipwithnetmask)
                     else:
-                        print("This type was not understood by the system. Type: %s and value: %s" %  \
-                              (type(ipwithnetmask), str(ipwithnetmask)))
+                        print(
+                            "This type was not understood by the system. Type: %s and value: %s"
+                            % (type(ipwithnetmask), str(ipwithnetmask))
+                        )
                 except ValueError as ex:
-                    print('Got an exception %s' % ex)
+                    print("Got an exception %s" % ex)
             elif int(vals.family.value) in [17]:
                 familyInfo["mac-address"] = vals.address
             familyInfo["broadcast"] = vals.broadcast
@@ -136,27 +143,33 @@ def get(config, logger):
                 # Additional info which is not provided by psutil so far...
                 # More detail information about all types here:
                 # http://lxr.free-electrons.qcom/source/include/uapi/linux/if_arp.h
-                nicType = externalCommand('cat /sys/class/net/' + nic + "/type")
+                nicType = externalCommand("cat /sys/class/net/" + nic + "/type")
                 familyInfo["Type"] = nicType[0].strip()
-                txQueueLen = externalCommand('cat /sys/class/net/' + nic + "/tx_queue_len")
+                txQueueLen = externalCommand(
+                    "cat /sys/class/net/" + nic + "/tx_queue_len"
+                )
                 familyInfo["txqueuelen"] = txQueueLen[0].strip()
     # Check in the end which interfaces where defined in config but not available...
     outputForFE = {"interfaces": {}, "routes": []}
     for intfName, intfDict in netInfo.items():
-        if intfName.split('.')[0] not in foundInterfaces:
-            print('This interface was defined in configuration, but not available. Will not add it to final output')
+        if intfName.split(".")[0] not in foundInterfaces:
+            print(
+                "This interface was defined in configuration, but not available. Will not add it to final output"
+            )
         else:
             outputForFE["interfaces"][intfName] = intfDict
     print(vlansON)
     for intfName, intfDict in netInfo.items():
-        if intfName.split('.')[0] == 'vlan':
-            for vlankey, vlandict in list(intfDict['vlans'].items()):
+        if intfName.split(".")[0] == "vlan":
+            for vlankey, vlandict in list(intfDict["vlans"].items()):
                 if vlankey in list(vlansON.keys()):
                     mainInf = vlansON[vlankey]
-                    outputForFE["interfaces"].setdefault(mainInf, {'vlans': {}})
-                    outputForFE["interfaces"][mainInf]['vlans'][vlankey] = vlandict
+                    outputForFE["interfaces"].setdefault(mainInf, {"vlans": {}})
+                    outputForFE["interfaces"][mainInf]["vlans"][vlankey] = vlandict
         else:
-            print('This interface was defined in configuration, but not available. Will not add it to final output')
+            print(
+                "This interface was defined in configuration, but not available. Will not add it to final output"
+            )
             print(intfName, intfDict)
     # Get Routing Information
     outputForFE["routes"] = getRoutes()
@@ -168,9 +181,9 @@ def getRoutes():
     routes = []
     with IPRoute() as ipr:
         for route in ipr.get_routes(table=254, family=2):
-            newroute = {"dst_len": route['dst_len']}
-            for item in route['attrs']:
-                if item[0] in ['RTA_GATEWAY', 'RTA_DST', 'RTA_PREFSRC']:
+            newroute = {"dst_len": route["dst_len"]}
+            for item in route["attrs"]:
+                if item[0] in ["RTA_GATEWAY", "RTA_DST", "RTA_PREFSRC"]:
                     newroute[item[0]] = item[1]
             routes.append(newroute)
     print(routes)

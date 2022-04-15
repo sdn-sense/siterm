@@ -67,31 +67,31 @@ def getProcInfo(procID):
     """Get Process informationa about specific process."""
     procOutInfo = {}
     procS = psutil.Process(int(procID))
-    procOutInfo['CreateTime'] = procS.create_time()
+    procOutInfo["CreateTime"] = procS.create_time()
     ioCounters = procS.io_counters()
-    procOutInfo['IOCounters'] = {}
-    procOutInfo['IOCounters']['ReadCount'] = ioCounters.read_count
-    procOutInfo['IOCounters']['WriteCount'] = ioCounters.write_count
-    procOutInfo['IOCounters']['ReadBytes'] = ioCounters.read_bytes
-    procOutInfo['IOCounters']['WriteBytes'] = ioCounters.write_bytes
-    procOutInfo['IOCounters']['ReadChars'] = ioCounters.read_chars
-    procOutInfo['IOCounters']['WriteChars'] = ioCounters.write_chars
-    procOutInfo['IOCounters']['NumFds'] = procS.num_fds()
+    procOutInfo["IOCounters"] = {}
+    procOutInfo["IOCounters"]["ReadCount"] = ioCounters.read_count
+    procOutInfo["IOCounters"]["WriteCount"] = ioCounters.write_count
+    procOutInfo["IOCounters"]["ReadBytes"] = ioCounters.read_bytes
+    procOutInfo["IOCounters"]["WriteBytes"] = ioCounters.write_bytes
+    procOutInfo["IOCounters"]["ReadChars"] = ioCounters.read_chars
+    procOutInfo["IOCounters"]["WriteChars"] = ioCounters.write_chars
+    procOutInfo["IOCounters"]["NumFds"] = procS.num_fds()
     memInfo = procS.memory_full_info()
-    procOutInfo['MemUseInfo'] = {}
-    procOutInfo['MemUseInfo']['Rss'] = memInfo.rss
-    procOutInfo['MemUseInfo']['Vms'] = memInfo.vms
-    procOutInfo['MemUseInfo']['Shared'] = memInfo.shared
-    procOutInfo['MemUseInfo']['Text'] = memInfo.text
-    procOutInfo['MemUseInfo']['Lib'] = memInfo.lib
-    procOutInfo['MemUseInfo']['Data'] = memInfo.data
-    procOutInfo['MemUseInfo']['Dirty'] = memInfo.dirty
-    procOutInfo['MemUseInfo']['Uss'] = memInfo.uss
-    procOutInfo['MemUseInfo']['Pss'] = memInfo.pss
-    procOutInfo['MemUseInfo']['Swap'] = memInfo.swap
-    procOutInfo['Connections'] = {}
+    procOutInfo["MemUseInfo"] = {}
+    procOutInfo["MemUseInfo"]["Rss"] = memInfo.rss
+    procOutInfo["MemUseInfo"]["Vms"] = memInfo.vms
+    procOutInfo["MemUseInfo"]["Shared"] = memInfo.shared
+    procOutInfo["MemUseInfo"]["Text"] = memInfo.text
+    procOutInfo["MemUseInfo"]["Lib"] = memInfo.lib
+    procOutInfo["MemUseInfo"]["Data"] = memInfo.data
+    procOutInfo["MemUseInfo"]["Dirty"] = memInfo.dirty
+    procOutInfo["MemUseInfo"]["Uss"] = memInfo.uss
+    procOutInfo["MemUseInfo"]["Pss"] = memInfo.pss
+    procOutInfo["MemUseInfo"]["Swap"] = memInfo.swap
+    procOutInfo["Connections"] = {}
     for item in procS.connections():
-        if item.status not in list(procOutInfo['Connections'].keys()):
-            procOutInfo['Connections'][item.status] = 0
-        procOutInfo['Connections'][item.status] += 1
+        if item.status not in list(procOutInfo["Connections"].keys()):
+            procOutInfo["Connections"][item.status] = 0
+        procOutInfo["Connections"][item.status] += 1
     return procOutInfo
