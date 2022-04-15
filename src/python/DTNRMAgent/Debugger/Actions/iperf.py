@@ -20,7 +20,7 @@ from DTNRMLibs.MainUtilities import externalCommand
 
 
 def iperf(inputDict):
-    """Run TCP IPerf """
+    """Run TCP IPerf"""
     # TODO Checks:
     # IP Is valid;
     # Ping works;

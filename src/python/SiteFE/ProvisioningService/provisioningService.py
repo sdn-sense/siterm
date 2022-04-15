@@ -131,7 +131,8 @@ class ProvisioningService():
         self.addvsw(activeConfig, switches)
         self.addrst(activeConfig, switches)
 
-    def compareTaggedMembers(self, newMembers, oldMembers):
+    @staticmethod
+    def compareTaggedMembers(newMembers, oldMembers):
         """ Compare tagged members between expected and running conf """
         # If equal - no point to loop. return
         if newMembers == oldMembers:

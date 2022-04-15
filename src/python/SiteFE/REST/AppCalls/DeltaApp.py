@@ -126,6 +126,7 @@ def delta_states(environ, **kwargs):
     Output: application/json
     Examples: https://server-host/sitefe/v1/deltastates/([-_A-Za-z0-9]+)/
     """
+    del environ
     deltaID = kwargs['mReg'][0]
     print('Requested delta states for %s' % deltaID)
     outstates = DELTABACKEND.getdeltastates(deltaID, **kwargs)
@@ -192,6 +193,7 @@ def deltas_action(environ, **kwargs):
               # Will commit or remove specific delta. remove is allowed only from same host or
                 dtnrm-site-frontend
     """
+    del environ
     msgOut = DELTABACKEND.commitdelta(kwargs['mReg'][0], **kwargs)
     kwargs['http_respond'].ret_204('application/json', kwargs['start_response'], None)
     print('Delta %s commited. Return 204' % kwargs['mReg'][0])
@@ -292,6 +294,7 @@ def active_deltas(environ, **kwargs):
     Output: application/json
     Examples: https://server-host/sitefe/v1/activedeltas
     """
+    del environ
     print('Called to get all active deltas')
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     return DELTABACKEND.getActiveDeltas(**kwargs)

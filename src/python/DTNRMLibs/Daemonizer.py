@@ -38,6 +38,7 @@ class Daemon():
         self.availableCommands = ['start', 'stop', 'restart', 'startforeground', 'status']
 
     def _refreshConfig(self):
+        """Config refresh call"""
         self.config = getConfig()
 
     def daemonize(self):
@@ -110,8 +111,9 @@ class Daemon():
         self.daemonize()
         self.run()
 
-    def __kill(self, pid):
-        """ Kill process using psutil lib """
+    @staticmethod
+    def __kill(pid):
+        """Kill process using psutil lib"""
         def processKill(procObj):
             try:
                 procObj.kill()
@@ -178,7 +180,7 @@ class Daemon():
         sys.exit(0)
 
     def run(self):
-        """ Run main execution """
+        """Run main execution"""
         timeeq, currentHour = reCacheConfig(None)
         runThreads = self.getThreads()
         while True:
@@ -208,6 +210,7 @@ class Daemon():
                 self._refreshConfig()
                 rthread = self.getThreads()
 
-    def getThreads(self):
-        """ Overwrite this then Daemonized in your own class """
+    @staticmethod
+    def getThreads():
+        """Overwrite this then Daemonized in your own class"""
         return {}

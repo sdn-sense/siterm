@@ -22,17 +22,14 @@ from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getLoggingObject
 
 class ConnectionMachine():
-    """Connection State machine.
-
-    Maps Deltas with 1 to N connections
-    """
+    """Connection State machine.Maps Deltas with 1 to N connections"""
     def __init__(self, config):
         self.logger = getLoggingObject()
         self.config = config
 
     @staticmethod
     def accepted(dbObj, delta):
-        """ If delta addition and accepted - add connection entry in DB """
+        """If delta addition and accepted - add connection entry in DB"""
         if delta['deltat'] in ['addition', 'modify'] and delta['state'] in ['accepting', 'accepted']:
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
@@ -62,10 +59,7 @@ class ConnectionMachine():
 
     @staticmethod
     def activated(dbObj, delta):
-        """Change specific delta connection id state to activated.
-
-        Reduction - cancelled
-        """
+        """Change specific delta connection id state to activated. Reduction - cancelled"""
         if delta['deltat'] in ['addition', 'modify']:
             for connid in evaldict(delta['connectionid']):
                 dbOut = {'deltaid': delta['uid'],
@@ -200,9 +194,6 @@ class StateMachine():
                 self._stateChangerDelta(dbObj, 'removed', **delta)
                 self.modelstatecancel(dbObj, **delta)
 
-
     def failed(self, dbObj, delta):
-        """Marks delta as failed.
-        This is only during submission
-        """
+        """Marks delta as failed. This is only during submission"""
         self._newdelta(dbObj, delta, 'failed')

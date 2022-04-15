@@ -52,7 +52,7 @@ def parseOut(tmpOut, storageInfo):
     return storageInfo, True
 
 
-def get(**kwargs):
+def get(**_):
     """Get storage mount points information."""
     storageInfo = {"Values": {}}
     tmpOut = externalCommand('df -P -h')

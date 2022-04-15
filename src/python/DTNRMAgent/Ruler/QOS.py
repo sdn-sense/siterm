@@ -64,7 +64,7 @@ class QOS():
 
 
     def restartQos(self):
-        """Restart QOS service ."""
+        """Restart QOS service"""
         self.logger.info("Restarting fireqos rules")
         executeCmd("fireqos clear_all_qos", self.logger)
         executeCmd("fireqos start", self.logger)
@@ -81,6 +81,7 @@ class QOS():
 
     @staticmethod
     def _started(inConf):
+        """Check if service started"""
         timings = inConf.get('_params', {}).get('existsDuring', {})
         if not timings:
             return True
@@ -89,7 +90,7 @@ class QOS():
         return True
 
     def getConf(self, activeDeltas=None):
-        """ Get conf from local file """
+        """Get conf from local file"""
         if activeDeltas:
             return activeDeltas
         activeDeltasFile = "%s/activedeltas.json" % self.workDir
@@ -99,7 +100,7 @@ class QOS():
 
     @staticmethod
     def _getvlanlistqos(inParams):
-        """ Get vlan qos dict """
+        """Get vlan qos dict"""
         vlans = []
         for key, vals in inParams.items():
             vlan = {}

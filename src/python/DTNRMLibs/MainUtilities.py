@@ -69,7 +69,7 @@ def getFullUrl(config, sitename=None):
     return "%s/%s" % (webdomain, sitename)
 
 def checkLoggingHandler(handlerToCheck):
-    """ Check if logging handler is present and return True/False """
+    """Check if logging handler is present and return True/False"""
     if logging.getLogger().hasHandlers():
         for handler in logging.getLogger().handlers:
             if isinstance(handler, handlerToCheck):
@@ -97,7 +97,7 @@ def getStreamLogger(logLevel='DEBUG'):
 
 def getLoggingObject(logFile='/var/log/dtnrm-site-fe/', logLevel='DEBUG', logOutName='api.log',
                      rotateTime='midnight', backupCount=10, logType='TimedRotatingFileHandler'):
-    """ Get logging Object, either Timed FD or Stream """
+    """Get logging Object, either Timed FD or Stream"""
     if logType == 'TimedRotatingFileHandler':
         return getTimeRotLogger(logFile, logLevel, logOutName, rotateTime, backupCount)
     return getStreamLogger(logLevel)
@@ -135,10 +135,8 @@ def evaldict(inputDict):
     except ValueError:
         out = json.loads(inputDict)
     except SyntaxError as ex:
-        raise WrongInputError("SyntaxError: Failed to literal eval dict. Err:%s " % ex)
+        raise WrongInputError("SyntaxError: Failed to literal eval dict. Err:%s " % ex) from ex
     return out
-
-
 
 def readFile(fileName):
     """Read all file lines to a list and rstrips the ending."""
@@ -151,7 +149,6 @@ def readFile(fileName):
         # File does not exist
         return []
 
-
 def externalCommand(command, communicate=True):
     """Execute External Commands and return stdout and stderr."""
     command = shlex.split(str(command))
@@ -159,7 +156,6 @@ def externalCommand(command, communicate=True):
     if communicate:
         return proc.communicate()
     return proc
-
 
 def execute(command, logger, raiseError=True):
     """Execute interfaces commands."""
@@ -173,7 +169,6 @@ def execute(command, logger, raiseError=True):
         logger.debug("RaiseError is False, but command failed. Only logging Errmsg: %s" % msg)
         return False
     return True
-
 
 def createDirs(fullDirPath):
     """Create Directories on fullDirPath."""
@@ -189,7 +184,6 @@ def createDirs(fullDirPath):
                 raise
     return
 
-
 def publishToSiteFE(inputDict, host, url):
     """Put JSON to the Site FE."""
     req = Requests(host, {})
@@ -200,7 +194,6 @@ def publishToSiteFE(inputDict, host, url):
     except pycurl.error as ex:
         return (ex.args[1], ex.args[0], 'FAILED', False)
     return out
-
 
 def getDataFromSiteFE(inputDict, host, url):
     """Get data from Site FE."""
@@ -213,12 +206,10 @@ def getDataFromSiteFE(inputDict, host, url):
         return (ex.args[1], ex.args[0], 'FAILED', False)
     return out
 
-
 def getWebContentFromURL(url):
     """TODO: Add some catches in future."""
     out = requests.get(url)
     return out
-
 
 def reCacheConfig(prevHour=None):
     """Return prevHour == currentHour, currentHour and used in Service Object
@@ -226,7 +217,6 @@ def reCacheConfig(prevHour=None):
     datetimeNow = datetime.datetime.now()
     currentHour = datetimeNow.strftime('%H')
     return prevHour == currentHour, currentHour
-
 
 class GitConfig():
     """Git based configuration class."""
@@ -298,18 +288,17 @@ class GitConfig():
                 self.config[key] = requirement['default']
 
     def getGitAgentConfig(self):
-        """https://raw.githubusercontent.com/sdn-sense/rm-
-        configs/master/T2_US_Caltech/Agent01/main.yaml."""
+        """Get Git Agent Config.
+        Example: https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/Agent01/main.yaml."""
         if self.config['MAPPING']['type'] == 'Agent':
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
             self.config['MAIN'] = self.gitConfigCache('Agent-main', url)
             return
 
     def getGitFEConfig(self):
-        """https://raw.githubusercontent.com/sdn-sense/rm-
-        configs/master/T2_US_Caltech/FE/auth.yaml
-        https://raw.githubusercontent.com/sdn-sense/rm-
-        configs/master/T2_US_Caltech/FE/main.yaml."""
+        """Get Git FE Config.
+        Example: https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/auth.yaml
+        https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/main.yaml."""
         if self.config['MAPPING']['type'] == 'FE':
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
             self.config['MAIN'] = self.gitConfigCache('FE-main', url)
@@ -334,10 +323,7 @@ class GitConfig():
 
 
 def getGitConfig():
-    """Wrapper before git config class.
-
-    Returns dictionary.
-    """
+    """Wrapper before git config class. Returns dictionary."""
     gitConf = GitConfig()
     gitConf.getGitConfig()
     return gitConf.config
@@ -429,7 +415,7 @@ class contentDB():
         return False
 
     def moveFile(self, sourcefile, destdir):
-        """ Move file from sourcefile to dest dir """
+        """Move file from sourcefile to dest dir"""
         if not os.path.isfile(sourcefile):
             raise Exception('File %s does not exist' % sourcefile)
         if sourcefile.startswith(destdir):
@@ -649,7 +635,7 @@ def getActiveDeltas(cls):
     return activeDeltas
 
 def writeActiveDeltas(cls, newConfig):
-    """ Write Active Deltas to DB """
+    """Write Active Deltas to DB"""
     activeDeltas = cls.dbI.get('activeDeltas')
     action = 'update'
     if not activeDeltas:

@@ -16,10 +16,11 @@ TODO:
 import pprint
 import ansible_runner
 
-def runAnsible(playbook):
+def runAnsible(playbookFile):
+    """Run Ansible Playbook"""
     ansRunner = ansible_runner.run(private_data_dir='/etc/ansible/sense/',
                                    inventory='/etc/ansible/sense/inventory/inventory.yaml',
-                                   playbook=playbook)
+                                   playbook=playbookFile)
     return ansRunner
 
 

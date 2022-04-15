@@ -20,7 +20,7 @@ from DTNRMLibs.FECalls import getDBConn
 
 
 class Switch(Node):
-    """ Main Switch Class. It will load module based on config """
+    """Main Switch Class. It will load module based on config"""
     def __init__(self, config, site):
         self.config = config
         self.logger = getLoggingObject()
@@ -50,27 +50,26 @@ class Switch(Node):
         return out
 
 
-    #getconfig(refresh=False):
-    #    if no refresh - get from db if available;
-    #    if refresh - run ansible runner and update db
-    #    if refresh and plugin == raw - use raw plugin and update db
-
     def _setDefaults(self, switchName):
+        """Set Default vals inside output"""
         for key in self.output.keys():
             self.output[key].setdefault(switchName, {})
 
     def _cleanOutput(self):
+        """Clean output"""
         self.output = {'switches': {}, 'ports': {},
                        'vlans': {}, 'routes': {},
                        'lldp': {}, 'info': {},
                        'portMapping': {}}
 
     def _delPortFromOut(self, switch, portname):
+        """Delete Port from Output"""
         for key in self.output.keys():
             if switch in self.output[key] and portname in self.output[key][switch]:
                 del self.output[key][switch][portname]
 
     def _getDBOut(self):
+        """Get Database output of all switches configs for site"""
         tmp = self.dbI.get('switches', limit=1, search=[['sitename', self.site]])
         if tmp:
             self.switches = tmp[0]
@@ -78,8 +77,9 @@ class Switch(Node):
         if not self.switches:
             self.logger.debug('No switches in database.')
 
-    def _getSystemValidPortName(self, port):
-        """ get Systematic port name. MRML expects it without spaces """
+    @staticmethod
+    def _getSystemValidPortName(port):
+        """Get Systematic port name. MRML expects it without spaces"""
         # Spaces from port name are replaced with _
         # Backslashes are replaced with dash
         # Also - mrml does not expect to get string in nml. so need to replace all
@@ -89,19 +89,8 @@ class Switch(Node):
             port = port.replace(rpl[0], rpl[1])
         return port
 
-    # def _getAllSystemValidPortNames(self, switchName=None):
-    #     out = {}
-    #     for switch in self._getAllSwitches(switchName):
-    #         sOut = out.setdefault(switch, [])
-    #         for key in ['ports', 'vlans']:
-    #             if key in self.output[switch]:
-    #                 for portName in self.output['switch'][key].keys():
-    #                     tmpP = self._getSystemValidPortName(portName)
-    #                     if tmpP not in out:
-    #                         sOut.append(tmpP)
-    #     return out
-
     def _getPortMapping(self):
+        """Get Port Mapping. Normalizing diff port representations"""
         for key in ['ports', 'vlans']:
             for switch, switchDict in self.output[key].items():
                 if switch not in self.switches['output']:
@@ -124,6 +113,7 @@ class Switch(Node):
                         self.output['portMapping'][switch][portKey] = realportname
 
     def _getSwitchPortName(self, switchName, portName, vlanid=None):
+        """Get Switch Port Name"""
         # Get the portName which is uses in Switch
         # as you can see in _getSystemValidPortName -
         # Port name from Orchestrator will come modified.
@@ -136,12 +126,14 @@ class Switch(Node):
         return sysPort
 
     def _getAllSwitches(self, switchName=None):
+        """Get All Switches"""
         if switchName:
             return [switchName] if switchName in self.output['switches'] else []
         return self.output['switches'].keys()
 
 
     def _insertToDB(self, data):
+        """Insert to databse new switches data"""
         self._getDBOut()
         out = {'sitename': self.site,
                'updatedate': getUTCnow(),
@@ -158,6 +150,7 @@ class Switch(Node):
         self._getDBOut()
 
     def _addyamlInfoToPort(self, switch, nportName, defVlans, out):
+        """Add Yaml info to specific port"""
         portKey = "port_%s_%s"
         for key in ['hostname', 'isAlias', 'vlan_range', 'capacity', 'desttype', 'destport']:
             if not self.config.has_option(switch, portKey % (nportName, key)):
@@ -174,7 +167,7 @@ class Switch(Node):
 
     def _mergeYamlAndSwitch(self, switch):
         """Merge yaml and Switch Info. Yaml info overwrites
-           any parameter in switch  configuration. """
+           any parameter in switch  configuration."""
         ports, defVlans, portsIgn = getConfigParams(self.config, switch, self)
         vlans = self.plugin.getvlans(self.switches['output'][switch])
         for port in ports:

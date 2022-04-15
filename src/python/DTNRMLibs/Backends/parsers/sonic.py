@@ -17,7 +17,7 @@ from DTNRMLibs.ipaddr import ipVersion, getsubnet
 from DTNRMLibs.MainUtilities import getLoggingObject
 
 class Sonic():
-    """ Default class example for building new parsers """
+    """Default class example for building new parsers"""
     def __init__(self):
         # Facts names is used to match with ansible command.
         # See ansible project template and it depends on which
@@ -34,6 +34,7 @@ class Sonic():
         self.runnincConf = {}
 
     def __getMac(self):
+        """Get Mac from runningconfig"""
         mac = "00:00:00:00:00:00"
         if len(self.runnincConf['DEVICE_METADATA']) > 1:
             self.logger.info('WARNING. MAC ADDRESS MIGHT BE INCORRECT! Multiple Devices on SONIC')
@@ -53,10 +54,12 @@ class Sonic():
         EXAMPLE:
         {'mac': '4c:76:25:e8:44:c0'}
         """
+        del ansibleOut
         mac = self.__getMac()
         return {'mac': mac}
 
-    def getlldpneighbors(self, ansibleOut):
+    @staticmethod
+    def getlldpneighbors(ansibleOut):
         """
         This call is used to get all lldp neighbors, which are used
         for generating topology.
@@ -161,6 +164,7 @@ class Sonic():
         [{'to': '0.0.0.0/0', 'from': '192.168.255.254'},
          {'vrf': 'lhcone', 'to': '0.0.0.0/0', 'from': '192.84.86.238'}]
         """
+        del ansibleOut
         return self.__getRoutes(routeType=4)
 
 
@@ -176,6 +180,7 @@ class Sonic():
         [{'vrf': 'lhcone', 'to': '::/0', 'from': '2605:d9c0:0:ff02::'},
          {'vrf': 'lhcone', 'to': '2605:d9c0:2::/48', 'intf': 'NULL 0'}]
         """
+        del ansibleOut
         return self.__getRoutes(routeType=6)
 
     def parser(self, ansibleOut):

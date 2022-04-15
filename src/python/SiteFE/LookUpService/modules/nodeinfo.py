@@ -8,8 +8,6 @@ Authors:
 
 Date: 2021/12/01
 """
-# TODO: interface and vlan IP address set in correct way (same as switches do)
-# TODO: vlans bidirectional on node? or only on Interface? I suspect only interface
 
 import configparser
 from DTNRMLibs.MainUtilities import evaldict
@@ -33,11 +31,11 @@ def ignoreInterface(intfKey, intfDict):
 
 
 class NodeInfo():
-    """ Module for Node Info add to MRML """
+    """Module for Node Info add to MRML"""
     # pylint: disable=E1101,W0201
 
     def addNodeInfo(self):
-        """ Add Agent Node Information """
+        """Add Agent Node Information"""
         jOut = getAllHosts(self.sitename, self.logger)
         for _, nodeDict in list(jOut.items()):
             nodeDict['hostinfo'] = evaldict(nodeDict['hostinfo'])
@@ -108,7 +106,7 @@ class NodeInfo():
 
     def defineLayer3MRML(self, nodeDict, hostinfo):
         """Define Layer 3 Routing Service for hostname"""
-
+        del nodeDict
         for route in hostinfo.get('NetInfo', {}).get('routes', []):
             if 'RTA_DST' in route.keys() and route['RTA_DST'] == '169.254.0.0':
                 # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.

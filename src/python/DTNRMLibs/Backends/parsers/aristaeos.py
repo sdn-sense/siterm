@@ -14,14 +14,14 @@ import re
 from DTNRMLibs.MainUtilities import getLoggingObject
 
 class AristaEOS():
-    """ Arista EOS Ansible wrapper. """
+    """Arista EOS Ansible wrapper."""
     def __init__(self):
         self.factName = ['arista.eos.eos_facts', 'arista.eos.eos_command']
         self.logger = getLoggingObject()
 
     @staticmethod
     def _getSystemValidPortName(port):
-        """ get Systematic port name. MRML expects it without spaces """
+        """Get Systematic port name. MRML expects it without spaces"""
         # Spaces from port name are replaced with _
         # Backslashes are replaced with dash
         # Also - mrml does not expect to get string in nml. so need to replace all
@@ -31,8 +31,9 @@ class AristaEOS():
             port = port.replace(rpl[0], rpl[1])
         return port
 
-    def _getVlans(self, inLine):
-        """ Get All vlans list assigned to port """
+    @staticmethod
+    def _getVlans(inLine):
+        """Get All vlans list assigned to port"""
         out = []
         tmpVlans = inLine.split()[-1:][0] # Get the last item from split, e.g. 1127,1779-1799,2803
         for splPorts in tmpVlans.split(','):
@@ -45,7 +46,7 @@ class AristaEOS():
         return out
 
     def parser(self, ansibleOut):
-        """ Parse Ansible output and prepare it as other SENSE Services expect it """
+        """Parse Ansible output and prepare it as other SENSE Services expect it"""
         # Out must be {'<interface_name>': {'key': 'value'}} OR
         #             {'<interface_name>': {'key': ['value1', 'value2']}
         # dict as value are not supported (not found use case yet for this)
@@ -74,12 +75,14 @@ class AristaEOS():
                         out[key]['channel-member'].append(self._getSystemValidPortName(interfaceSt))
         return out
 
-    def getinfo(self, ansibleOut):
-        """ Get Info. So far mainly mac address is used """
+    @staticmethod
+    def getinfo(ansibleOut):
+        """Get Info. So far mainly mac address is used"""
         return {'mac': ansibleOut['systemMacAddress']}
 
-    def getlldpneighbors(self, ansibleOut):
-        """ Get LLDP Neighbors information """
+    @staticmethod
+    def getlldpneighbors(ansibleOut):
+        """Get LLDP Neighbors information"""
         out = {}
         for localPort, neighbors in ansibleOut['lldpNeighbors'].items():
             if not neighbors['lldpNeighborInfo']:
@@ -107,7 +110,9 @@ class AristaEOS():
             out[localPort] = tmpEntry
         return out
 
-    def __getRouting(self, ansibleOut):
+    @staticmethod
+    def __getRouting(ansibleOut):
+        """Get Routing Info from Arista EOS Devices"""
         out = []
         for vrf, routes in ansibleOut.get('vrfs', {}).items():
             for route, routed in routes.get('routes', {}).items():
@@ -124,13 +129,13 @@ class AristaEOS():
         return out
 
     def getIPv4Routing(self, ansibleOut):
-        """ Get IPv4 Routing information """
+        """Get IPv4 Routing information"""
         #self.logger.debug('Called get getIPv4Routing AristaEOS')
         return self.__getRouting(ansibleOut)
 
 
     def getIPv6Routing(self, ansibleOut):
-        """ Get IPv6 Routing information """
+        """Get IPv6 Routing information"""
         #self.logger.debug('Called get getIPv6Routing AristaEOS')
         return self.__getRouting(ansibleOut)
 

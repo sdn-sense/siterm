@@ -19,8 +19,8 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 NAME = 'CPUInfo'
 
 
-def get(**kwargs):
-    """Get lscpu information."""
+def get(**_):
+    """Get lscpu information"""
     cpuInfo = {}
     tmpOut = externalCommand('lscpu')
     for item in tmpOut:
@@ -30,12 +30,11 @@ def get(**kwargs):
                 cpuInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
             else:
                 print('CpuInfo: Skipped this item: ', vals)
-    cpuInfo['num_cores'] = 1
-    if 'Socket(s)' in cpuInfo and 'Core(s) per socket' in cpuInfo:
-        try:
-            cpuInfo['num_cores'] = int(cpuInfo['Socket(s)']) * int(cpuInfo['Core(s) per socket'])
-        except Exception:
-            print('Failed to calculate num_cores from %s. will set to 1' % cpuInfo)
+    try:
+        cpuInfo['num_cores'] = int(cpuInfo['Socket(s)']) * int(cpuInfo['Core(s) per socket'])
+    except (ValueError, KeyError):
+        print('Failed to calculate num_cores from %s. will set to 1' % cpuInfo)
+        cpuInfo['num_cores'] = 1
     return cpuInfo
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 # Class Name, this is also used below MODULE= <ClassName>
 # Ansible module will preload all parsers by MODULE variable
 class Default():
-    """ Default class example for building new parsers """
+    """Default class example for building new parsers"""
     def __init__(self):
         # Facts names is used to match with ansible command.
         # See ansible project template and it depends on which
@@ -97,7 +97,7 @@ class Default():
         raise NotImplementedError('Default getIPv4Routing call not implemented')
 
     def parser(self, ansibleOut):
-        """ Parse Ansible output and prepare it as other SENSE Services expect it """
+        """Parse Ansible output and prepare it as other SENSE Services expect it"""
         # Out must be {'<interface_name>': {'key': 'value'}} OR
         #             {'<interface_name>': {'key': ['value1', 'value2']}
         # dict as value are not supported (not found use case yet for this)

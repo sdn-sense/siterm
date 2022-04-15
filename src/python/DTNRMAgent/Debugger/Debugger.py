@@ -19,7 +19,6 @@ Date                    : 2021/03/12
 """
 from __future__ import absolute_import
 import json
-import traceback
 import pprint
 from DTNRMAgent.Debugger.Actions.arptable import arptable
 from DTNRMAgent.Debugger.Actions.iperf import iperf
@@ -38,7 +37,7 @@ COMPONENT = 'Debugger'
 
 
 class Debugger():
-    """ Debugger main process """
+    """Debugger main process"""
     def __init__(self, config, sitename):
         self.config = config if config else getConfig()
         self.logger =  getLoggingObject()
@@ -65,11 +64,11 @@ class Debugger():
         return self.getData("/sitefe/json/frontend/getalldebughostname/%s" % self.hostname)
 
     def publishToFE(self, inDic):
-        """Publish debug runtime to FE."""
+        """Publish debug runtime to FE"""
         publishToSiteFE(inDic, self.fullURL, '/sitefe/json/frontend/updatedebug/%s' % inDic['id'])
 
     def startwork(self):
-        """Start execution and get new requests from FE."""
+        """Start execution and get new requests from FE"""
         allWork = self.getAllAssignedtoHost()
         out, err, exitCode = "", "", 0
         for item in allWork:
@@ -89,8 +88,8 @@ class Debugger():
                 else:
                     err = "Unknown Request"
                     exitCode = 500
-            except:
-                err = traceback.format_exc()
+            except (ValueError, KeyError, OSError) as ex:
+                err = ex
                 exitCode = 501
             output = {'out': out, 'err': err, 'exitCode': exitCode}
             item['output'] = json.dumps(output)

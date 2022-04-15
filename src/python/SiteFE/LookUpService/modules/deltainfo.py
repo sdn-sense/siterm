@@ -19,11 +19,11 @@ from DTNRMLibs.ipaddr import validMRMLName
 
 
 class DeltaInfo():
-    """ Add Delta info, mainly tag, connID, timeline """
+    """Add Delta info, mainly tag, connID, timeline"""
     # pylint: disable=E1101,W0201
 
     def addSchedulingState(self, timeline, uri, timeuri):
-        """ Add Scheduling state into model """
+        """Add Scheduling state into model"""
         if not timeline:
             return
         state = 'unknown'
@@ -43,7 +43,7 @@ class DeltaInfo():
                            self.genLiteral('monitor:status:%s' % state)))
 
     def addTimeline(self, params, uri):
-        """ Add timeline in the model """
+        """Add timeline in the model"""
         timeline = params.get('_params', {}).get('existsDuring', {})
         if not timeline:
             return
@@ -79,7 +79,7 @@ class DeltaInfo():
 
 
     def _addParams(self, params, uri):
-        """ Add all params, like tag, belongsTo, labelSwapping, timeline """
+        """Add all params, like tag, belongsTo, labelSwapping, timeline"""
         if '_params' not in params:
             return
         # ['key', 'type', 'literal']
@@ -107,7 +107,8 @@ class DeltaInfo():
         self._addBandwidthServiceParams(**portDict['hasService'])
 
     def _addNetworkAddr(self, portDict, uri):
-        """ Add Network delta info """
+        """Add Network delta info"""
+        del uri
         netDict = portDict.get('hasNetworkAddress', {})
         if not netDict:
             return
@@ -120,7 +121,7 @@ class DeltaInfo():
                 self._addNetworkAddress(portDict['uri'], out, ipdict.get('value', 'undefined'))
 
     def addvswInfo(self, vswDict, uri):
-        """ Add vsw Info from params """
+        """Add vsw Info from params"""
         self._addParams(vswDict, uri)
         for key, val in vswDict.items():
             if key == '_params':
@@ -140,7 +141,7 @@ class DeltaInfo():
                     self.logger.debug('port %s and portDict %s ignored. No vlan label' % (port, portDict))
 
     def addRouteTables(self, activeDeltas):
-        """ Add Route tables """
+        """Add Route tables"""
         for host, vals in activeDeltas.get('output', {}).get('RoutingMapping', {}).items():
             for routeTable, iptypes in vals.get('providesRoutingTable', {}).items():
                 for iptype in iptypes.keys():
@@ -150,7 +151,7 @@ class DeltaInfo():
                         self._addRoute(hostname=host, rstname="rst-%s" % iptype, rtableuri=routeTable, routeuri=route)
 
     def addRoutes(self, activeDeltas):
-        """ Add individual routes """
+        """Add individual routes"""
         for host, vals in activeDeltas.get('output', {}).get('RoutingMapping', {}).items():
             for routeTable, iptypes in vals.get('providesRoute', {}).items():
                 for iptype in iptypes.keys():

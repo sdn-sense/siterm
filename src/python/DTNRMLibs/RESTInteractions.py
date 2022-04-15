@@ -34,13 +34,14 @@ class getContent():
         # for example https and security details from config.
         self.initialized = True
 
-    def get_method(self, url):
+    @staticmethod
+    def get_method(url):
         """Only used inside the site for forwardning requests."""
         try:
             req = urllib.request.Request(url)
-            response = urllib.request.urlopen(req)
-            thePage = response.read()
-            return thePage
+            with urllib.request.urlopen(req) as response:
+                thePage = response.read()
+                return thePage
         except urllib.error.HTTPError as ex:
             if ex.code == 404:
                 raise NotFoundError from ex
@@ -113,6 +114,8 @@ def get_post_form(environ):
 
 class InputProcessed():
     """wsgi Input processing class."""
-    def read(self, *args):
+    @staticmethod
+    def read(*args):
+        """Process wsgi Input reads"""
         raise EOFError('The wsgi.input stream has already been consumed')
     readline = readlines = __iter__ = read

@@ -58,6 +58,7 @@ class Ruler(QOS, contentDB):
 
     @staticmethod
     def _started(inConf):
+        """Check if service started"""
         timings = inConf.get('_params', {}).get('existsDuring', {})
         if not timings:
             return True
@@ -67,6 +68,7 @@ class Ruler(QOS, contentDB):
 
     @staticmethod
     def _ended(inConf):
+        """Check if service ended"""
         timings = inConf.get('_params', {}).get('existsDuring', {})
         if not timings:
             return False

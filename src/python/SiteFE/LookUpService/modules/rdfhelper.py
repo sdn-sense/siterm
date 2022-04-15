@@ -44,6 +44,7 @@ class RDFHelper():
         self.prefixes = prefixes
 
     def __checkifReqKeysMissing(self, reqKeys, allArgs):
+        """Check if key is not missing"""
         for key in reqKeys:
             if key not in allArgs or not allArgs.get(key, None):
                 self.logger.debug("Key %s is missing in allArgs: %s" % (key, allArgs))
@@ -71,6 +72,7 @@ class RDFHelper():
 
 
     def _addIsAlias(self, **kwargs):
+        """Add isAlias to model"""
         if 'isAlias' in kwargs and kwargs['isAlias'] and \
            'uri' in kwargs and kwargs['uri']:
             self.newGraph.add((self.genUriRef('site', kwargs['uri']),
@@ -115,6 +117,7 @@ class RDFHelper():
             self.newGraph.bind(prefix, val)
 
     def _addSite(self, **kwargs):
+        """Add Site to Model"""
         self.newGraph.add((self.genUriRef('site'),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Topology')))
@@ -133,6 +136,7 @@ class RDFHelper():
 
 
     def _addNode(self, **kwargs):
+        """Add Node to Model"""
         if not kwargs['hostname']:
             return ""
         self.newGraph.add((self.genUriRef('site'),
@@ -147,6 +151,7 @@ class RDFHelper():
         return ":%s" % kwargs['hostname']
 
     def _addPort(self, **kwargs):
+        """Add Port to Model"""
         self._addNode(**kwargs)
         if not kwargs['hostname'] or not kwargs['portName']:
             return ""
@@ -163,6 +168,7 @@ class RDFHelper():
         return ":%s:%s" % (kwargs['hostname'], kwargs['portName'])
 
     def _addSwitchingService(self, **kwargs):
+        """Add Switching Service to Model"""
         reqKeys = ['hostname', 'vsw']
         if self.__checkifReqKeysMissing(reqKeys, kwargs):
             return ""
@@ -182,7 +188,7 @@ class RDFHelper():
         return svcService
 
     def _addSwitchingSubnet(self, **kwargs):
-        """ Add Switching Subnet which comes from delta parsed request """
+        """Add Switching Subnet which comes from delta parsed request"""
         svcService = self._addSwitchingService(**kwargs)
         subnetUri = "%s%s" % (svcService, kwargs['subnet'])
         self.newGraph.add((self.genUriRef('site', svcService),
@@ -201,7 +207,7 @@ class RDFHelper():
         return subnetUri
 
     def _addPortSwitchingSubnet(self, **kwargs):
-        """ Add Port into Switching Subnet """
+        """Add Port into Switching Subnet"""
         puri = self._addVlanPort(**kwargs)
         self.newGraph.add((self.genUriRef('site', kwargs['subnet']),
                            self.genUriRef('nml', 'hasBidirectionalPort'),
@@ -213,6 +219,7 @@ class RDFHelper():
     # It only needs to know the defaults.
     # Also _addSwitchingService
     def _addBandwidthService(self, **kwargs):
+        """Add Bandwidth Service to Model"""
         if not kwargs.get('uri', ''):
             kwargs['uri'] = self._addPort(**kwargs)
         if not kwargs['uri']:
@@ -232,6 +239,7 @@ class RDFHelper():
         return bws
 
     def _addBandwidthServiceParams(self, **kwargs):
+        """Add Bandwitdh Service Parameters to Model"""
         bws = self._addBandwidthService(**kwargs)
         for item in [['unit', 'unit', "bps"],
                      ['maximumCapacity', 'maximumCapacity', 10000000000, XSD.long],
@@ -250,6 +258,7 @@ class RDFHelper():
                 self._mrsLiteral(bws, item[1], str(kwargs[item[0]]))
 
     def _addRoutingService(self, **kwargs):
+        """Add Routing Service"""
         uri = self._addNode(**kwargs)
         if not uri:
             return ""
@@ -268,6 +277,7 @@ class RDFHelper():
         return rst
 
     def _addL3VPN(self, **kwargs):
+        """Add L3 VPN Definition to Model"""
         # Service Definition for L3
         uri = self._addRoutingService(**kwargs)
         if not uri:
@@ -284,6 +294,7 @@ class RDFHelper():
         return ':%s:sd:l3vpn' % kwargs['hostname']
 
     def _addRoutingTable(self, **kwargs):
+        """Add Routing Table to Model"""
         uri = self._addRoutingService(**kwargs)
         if not uri:
             return ""
@@ -300,6 +311,7 @@ class RDFHelper():
         return routingtable
 
     def _addRoute(self, **kwargs):
+        """Add Route To Model"""
         ruri = self._addRoutingTable(**kwargs)
         if not ruri:
             return ""
@@ -319,6 +331,7 @@ class RDFHelper():
         return routeuri
 
     def _addProvidesRoute(self, **kwargs):
+        """Add Provides Route to Model"""
         suri = self._addRoutingService(**kwargs)
         if not suri or not kwargs['routeuri']:
             return ""
@@ -328,10 +341,11 @@ class RDFHelper():
         return kwargs['routeuri']
 
     def _addRouteEntry(self, **kwargs):
+        """Add Route Entry"""
         ruri = self._addRoute(**kwargs)
         if not ruri:
             return ""
-        if not 'uri' in kwargs:
+        if 'uri' not in kwargs:
             kwargs['uri'] = "%s:net-address+%s" % (ruri, kwargs['routename'])
         self.newGraph.add((self.genUriRef('site', ruri),
                            self.genUriRef('mrs', kwargs['routetype']),
@@ -340,6 +354,7 @@ class RDFHelper():
         return kwargs['uri']
 
     def _addNetworkAddressEntry(self, **kwargs):
+        """Add Network Address Entry to model"""
         self.addToGraph(['site', kwargs['uri']],
                         ['rdf', 'type'],
                         ['mrs', 'NetworkAddress'])
@@ -352,6 +367,7 @@ class RDFHelper():
 
 
     def _addVswPort(self, **kwargs):
+        """Add VSW Port to Model"""
         uri = self._addPort(**kwargs)
         vsw = self._addSwitchingService(**kwargs)
         if not uri or not vsw:
@@ -362,6 +378,7 @@ class RDFHelper():
         return uri
 
     def _addRstPort(self, **kwargs):
+        """Add RST Port to Model"""
         uri = ''
         if 'vlan' in kwargs:
             uri = self._addVlanPort(**kwargs)
@@ -378,6 +395,7 @@ class RDFHelper():
         return uri
 
     def _addVlanPort(self, **kwargs):
+        """ Add Vlan Port to Model"""
         if not kwargs['vlan'] and not kwargs['vtype']:
             return ""
         vlanuri = ":%s:%s:%s+%s" % (kwargs['hostname'], kwargs['portName'], kwargs['vtype'], kwargs['vlan'])
@@ -392,6 +410,7 @@ class RDFHelper():
         return vlanuri
 
     def _addVlanLabel(self, **kwargs):
+        """Add Vlan Label to Model"""
         vlanuri = self._addVlanPort(**kwargs)
         if not vlanuri:
             return ""
@@ -411,6 +430,7 @@ class RDFHelper():
         return labeluri
 
     def _addLabelSwapping(self, **kwargs):
+        """Add Label Swapping to Model"""
         # vlan key is used as label swapping. change to pass all as kwargs
         reqKeys = ['switchingserviceuri', 'labelswapping']
         if self.__checkifReqKeysMissing(reqKeys, kwargs):
@@ -419,6 +439,7 @@ class RDFHelper():
         return kwargs['labelswapping']
 
     def _addNetworkAddress(self, uri, name, value):
+        """Add NetworkAddress to Model"""
         sname = name
         if isinstance(name, list):
             sname = name[1]
@@ -440,11 +461,13 @@ class RDFHelper():
     # These are very general model add ons
     # ==========================================================
     def _nmlLiteral(self, uri, nmlkey, value, datatype=None):
+        """Add NML Literal to Model"""
         self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('nml', nmlkey),
                            self.genLiteral(value, datatype)))
 
     def _mrsLiteral(self, uri, mrskey, value, datatype=None):
+        """Add MRS Literal to Model"""
         self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('mrs', mrskey),
                            self.genLiteral(value, datatype)))

@@ -7,6 +7,7 @@ from DTNRMLibs.MainUtilities import getVal, evaldict
 
 
 def listActive(sitename):
+    """List Active"""
     dbI = getVal(getDBConn('List'), **{'sitename': sitename})
     activeDeltas = dbI.get('activeDeltas')
     print('='*100)

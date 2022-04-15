@@ -13,6 +13,7 @@ from DTNRMLibs.ipaddr import validMRMLName
 
 
 def generateVal(cls, inval, inkey, esc=False):
+    """Generate mrml valid val/key for ipv4/ipv6"""
     if isinstance(inval, dict) and inkey == 'ipv4':
         return _genIPv4(cls, inval, inkey, esc)
     if isinstance(inval, dict) and inkey == 'ipv6':
@@ -73,7 +74,7 @@ def _genIPv6(cls, inval, inkey, esc=True):
     return ''
 
 def generateKey(cls, inval, inkey):
-    """ Generate keys for mrml and escape special charts """
+    """Generate keys for mrml and escape special charts"""
     if isinstance(inval, str):
         return inval.replace(':', '_').replace('/', '-')
     if isinstance(inval, int):
@@ -96,7 +97,7 @@ def generateKey(cls, inval, inkey):
     return ""
 
 class SwitchInfo():
-    """ Module for Switch Info add to MRML """
+    """Module for Switch Info add to MRML"""
     # pylint: disable=E1101,W0201,E0203
 
     def _addVals(self, key, subkey, val, newuri):
@@ -122,7 +123,7 @@ class SwitchInfo():
                         [val])
 
     def addSwitchIntfInfo(self, switchName, portName, portSwitch, newuri):
-        """ Add switch info to mrml """
+        """Add switch info to mrml"""
         for key, val in portSwitch.items():
             if not val:
                 continue
@@ -158,7 +159,7 @@ class SwitchInfo():
                     self._addVals(key, subkey, val, newuri)
 
     def _addSwitchPortInfo(self, key, switchInfo):
-        """ Add Switch Port Info for ports, vlans """
+        """Add Switch Port Info for ports, vlans"""
         for switchName, switchDict in list(switchInfo[key].items()):
             self.logger.debug('Working on1 %s' % switchName)
             try:
@@ -183,6 +184,7 @@ class SwitchInfo():
                     self._addAddressPool(newuri)
 
     def _addSwitchVlanLabel(self, vlanuri, value):
+        """Add Switch Vlan Label"""
         labeluri = '%s:%s' % (vlanuri, "label+%s" % str(value))
         self.addToGraph(['site', vlanuri],
                         ['nml', 'hasLabel'],
@@ -198,7 +200,7 @@ class SwitchInfo():
                         [value])
 
     def _addSwitchVlanInfo(self, key, switchInfo):
-        """ Add All Vlan Info from switch """
+        """Add All Vlan Info from switch"""
         for switchName, switchDict in list(switchInfo[key].items()):
             self.logger.debug('Working on %s' % switchName)
             try:
@@ -222,7 +224,7 @@ class SwitchInfo():
 
 
     def _addSwitchLldpInfo(self, switchInfo):
-        """ ADD LLDP Info to MRML """
+        """ADD LLDP Info to MRML"""
         for hostname, macDict in switchInfo['info'].items():
             if 'mac' in macDict:
                 mac = macDict['mac']
@@ -239,12 +241,14 @@ class SwitchInfo():
                         self._addIsAlias(uri=localuri, isAlias=remoteuri)
 
     def _addAddressPool(self, uri):
+        """Add Address Pools"""
         for key in ['ipv4-address-pool', 'ipv6-address-pool']:
             tmp = self.__getFloatingFromConfig(key)
             if tmp:
                 self._addNetworkAddress(uri, key, str(tmp))
 
     def __getFloatingFromConfig(self, name):
+        """Get Floating val from configuration"""
         floatingrange = ""
         try:
             floatingrange = self.config.get(self.sitename, name)
@@ -253,7 +257,7 @@ class SwitchInfo():
         return floatingrange
 
     def _addSwitchRoutes(self, switchInfo):
-        """ Add Route info to MRML """
+        """Add Route info to MRML"""
 
         for switchName, rstEntries in switchInfo.get('routes', {}).items():
             self.logger.debug('Working on1 %s' % switchName)

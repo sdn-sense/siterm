@@ -35,8 +35,7 @@ def tryConvertToNumeric(value):
 
     Returns what should be expected, t.y.: if str is float, int will
     fail and float will be returned; if str is int, float and int will
-    succeed, returns int; if any of these fail, returns value.
-    """
+    succeed, returns int; if any of these fail, returns value."""
     floatVal = None
     intVal = None
     try:
@@ -53,8 +52,7 @@ def tryConvertToNumeric(value):
 def runPipedCmd(cmd1, cmd2):
     """Run two commands, in which second is executed after first.
 
-    Like in bash | t.y.: ls -l | grep '123'.
-    """
+    Like in bash | t.y.: ls -l | grep '123'."""
     cmd1 = shlex.split(cmd1)
     cmd2 = shlex.split(cmd2)
     proc1 = subprocess.Popen(cmd1, stdout=subprocess.PIPE)

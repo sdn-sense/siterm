@@ -63,6 +63,7 @@ class PolicyService(RDFHelper):
         self.conflictChecker = ConflictChecker()
 
     def __clean(self):
+        """Clean params of PolicyService"""
         self.bidPorts = {}
         self.scannedPorts = {}
         self.scannedRoutes = []
@@ -79,7 +80,8 @@ class PolicyService(RDFHelper):
         return out
 
     def addIsAlias(self, gIn, bidPort, returnout):
-        """ Add is Alias to activeDeltas output """
+        """Add is Alias to activeDeltas output"""
+        del gIn
         if 'isAlias' in self.bidPorts.get(URIRef(bidPort), []) or 'isAlias' in self.scannedPorts.get(bidPort, []):
             returnout['isAlias'] = str(bidPort)
 
@@ -147,7 +149,7 @@ class PolicyService(RDFHelper):
         return out
 
     def getRoute(self, gIn, connID, returnout):
-        """ Get all routes from model for specific connID """
+        """Get all routes from model for specific connID"""
         returnout.setdefault('hasRoute', {})
         routeout = returnout['hasRoute'].setdefault(str(connID), {})
         if str(connID) in self.scannedRoutes:
@@ -166,7 +168,7 @@ class PolicyService(RDFHelper):
         return ""
 
     def getRouteTable(self, gIn, connID, returnout):
-        """ Get all route tables from model for specific connID and call getRoute """
+        """Get all route tables from model for specific connID and call getRoute"""
         out = self.queryGraph(gIn, connID, search=URIRef('%s%s' % (self.prefixes['mrs'], 'hasRoute')))
         tmpRet = []
         for item in out:
@@ -200,6 +202,7 @@ class PolicyService(RDFHelper):
                         returnout['rst'].setdefault(str(rettmp[0]), {}).setdefault(switchName, {}).setdefault(iptype, {}).setdefault('belongsToRoutingTable', str(connectionID))
 
     def _hasTags(self, gIn, bidPort, returnout):
+        """Query Graph and get Tags"""
         scanVals = returnout.setdefault('_params', {})
         for tag, pref in {'tag': 'mrs', 'belongsTo': 'nml', 'encoding': 'nml'}.items():
             out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes[pref], tag)), allowMultiple=True)
@@ -207,6 +210,7 @@ class PolicyService(RDFHelper):
                 scanVals[tag] = str("|".join(out))
 
     def _hasLabel(self, gIn, bidPort, returnout):
+        """Query Graph and get Labels"""
         self._hasTags(gIn, bidPort, returnout)
         out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['nml'], 'hasLabel')))
         if not out and str(bidPort).rsplit(':', maxsplit=1)[-1].startswith('vlanport+'):
@@ -226,6 +230,7 @@ class PolicyService(RDFHelper):
                 scanVals['value'] = int(out[0])
 
     def _hasService(self, gIn, bidPort, returnout):
+        """Query Graph and get Services"""
         self._hasTags(gIn, bidPort, returnout)
         out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['nml'], 'hasService')))
         for item in out:
@@ -241,6 +246,7 @@ class PolicyService(RDFHelper):
                         scanVals[key] = str(out[0])
 
     def _hasNetwork(self, gIn, bidPort, returnout):
+        """Query Graph and get hasNetworkAddress"""
         self._hasTags(gIn, bidPort, returnout)
         out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['mrs'], 'hasNetworkAddress')))
         for item in out:
@@ -258,13 +264,14 @@ class PolicyService(RDFHelper):
                     vals['value'] = str(out[0])
 
     def _recordMapping(self, subnet, returnout, mappingKey, subKey, val = ""):
+        """Query Graph and add all mappings"""
         returnout = self.intOut(subnet, returnout.setdefault(mappingKey, {}))
         returnout.setdefault(subKey, {})
         returnout[subKey].setdefault(str(subnet), {})
         returnout[subKey][str(subnet)][val] = ""
 
     def parsePorts(self, gIn, connectionID, connOut):
-        """ Get all ports for any connection and scan all of them """
+        """Get all ports for any connection and scan all of them"""
         for key in ['hasBidirectionalPort', 'isAlias']:
             tmpPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (self.prefixes['nml'], key)), allowMultiple=True)
             for port in tmpPorts:
@@ -277,6 +284,7 @@ class PolicyService(RDFHelper):
                     connOut['isAlias'] = str(port)
 
     def _portScanFinish(self, bidPort):
+        """Check if port was already scanned"""
         if bidPort not in self.scannedPorts:
             self.scannedPorts[bidPort] = self.bidPorts[bidPort]
         if bidPort in self.bidPorts:
@@ -285,6 +293,7 @@ class PolicyService(RDFHelper):
 
     def parsel2Request(self, gIn, returnout, switchName):
         """Parse L2 request."""
+        del switchName
         self.logger.info('Lets try to get connection ID subject for %s' % self.prefixes['main'])
         connectionID = None
         out = self.queryGraph(gIn, URIRef(self.prefixes['main']), search=URIRef('%s%s' % (self.prefixes['mrs'],
@@ -330,7 +339,7 @@ class PolicyService(RDFHelper):
         return returnout
 
     def generateActiveConfigDict(self):
-        """ Generate new config from parser model."""
+        """Generate new config from parser model."""
         _, currentGraph = getCurrentModel(self, True)
         currentActive = getActiveDeltas(self)
         for delta in self.dbI.get('deltas', search=[['state', 'activating'], ['modadd', 'add']]):
@@ -393,7 +402,7 @@ class PolicyService(RDFHelper):
             job[1](self.dbI)
 
     def deltaToModel(self, currentGraph, deltaPath, action):
-        """ Add delta to current Model. If no delta provided, returns current Model"""
+        """Add delta to current Model. If no delta provided, returns current Model"""
         if not currentGraph:
             _, currentGraph = getCurrentModel(self, True)
             self.hosts = getAllHosts(self.sitename, self.logger)
@@ -467,9 +476,7 @@ def execute(config=None, args=None):
             policer.startwork()
 
 def get_parser():
-    """
-    Returns the argparse parser.
-    """
+    """Returns the argparse parser."""
     # pylint: disable=line-too-long
     oparser = argparse.ArgumentParser(description="This daemon is used for delta reduction, addition parsing",
                                       prog=os.path.basename(sys.argv[0]), add_help=True)

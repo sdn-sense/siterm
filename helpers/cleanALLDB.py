@@ -4,9 +4,10 @@ import sys
 from DTNRMLibs.FECalls import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 
-def cleanActive(sitename):
+def cleanDB(sitename):
+    """Clean All DB"""
     dbI = getVal(getDBConn('Delete'), **{'sitename': sitename})
     dbI._clean('ALL', 'ALL')
 
 if __name__ == "__main__":
-    cleanActive(sys.argv[1])
+    cleanDB(sys.argv[1])

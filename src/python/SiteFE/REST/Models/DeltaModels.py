@@ -164,7 +164,7 @@ class frontendDeltaModels():
         return {'status': 'OK'}
 
     def getActiveDeltas(self, **kwargs):
-        """ Get all Active Deltas """
+        """Get all Active Deltas"""
         dbobj = getVal(self.dbI, **kwargs)
         activeDeltas = dbobj.get('activeDeltas')
         if activeDeltas:

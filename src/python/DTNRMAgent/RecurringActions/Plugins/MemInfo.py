@@ -13,8 +13,8 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 NAME = 'MemInfo'
 
 
-def get(**kwargs):
-    """Get memory info from /proc/meminfo."""
+def get(**_):
+    """Get memory info from /proc/meminfo"""
     memInfo = {}
     tmpOut = externalCommand('cat /proc/meminfo')
     for item in tmpOut:

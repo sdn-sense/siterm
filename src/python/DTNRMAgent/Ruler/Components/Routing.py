@@ -15,31 +15,38 @@ class Routing():
         self.config = config
         self.logger = getLoggingObject()
 
-    def add(self, vlan, raiseError=False):
+    @staticmethod
+    def add(vlan, raiseError=False):
         """Add specific route."""
-        return
+        del vlan, raiseError
 
-    def setup(self, vlan, raiseError=False):
+    @staticmethod
+    def setup(vlan, raiseError=False):
         """Setup specific route."""
-        return
+        del vlan, raiseError
 
-    def start(self, vlan, raiseError=False):
+    @staticmethod
+    def start(vlan, raiseError=False):
         """Add specific route."""
-        return
+        del vlan, raiseError
 
-    def stop(self, vlan, raiseError=False):
+    @staticmethod
+    def stop(vlan, raiseError=False):
         """Stop specific route."""
-        return
+        del vlan, raiseError
 
-    def remove(self, vlan, raiseError=False):
+    @staticmethod
+    def remove(vlan, raiseError=False):
         """Remove specific route."""
-        return
+        del vlan, raiseError
 
-    def status(self, vlan, raiseError=False):
+    @staticmethod
+    def status(vlan, raiseError=False):
         """Check status of specific route."""
-        return
+        del vlan, raiseError
 
     def startRoute(self, vlan, raiseError=False):
+        """Start/Add Route on DTN"""
         self.logger.info('Called VInterface start L3 for %s' % str(vlan))
         for routel in vlan['routes']:
             if 'routeTo' in list(routel.keys()) and 'nextHop' in list(routel.keys()):
@@ -50,9 +57,9 @@ class Routing():
             else:
                 self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
                                  % routel)
-        return None
 
     def removeRoute(self, vlan, raiseError=False):
+        """Remove Route from DTN"""
         out = []
         self.logger.info('Called VInterface remove L3 for %s' % str(vlan))
         for routel in vlan['routes']:
@@ -66,7 +73,7 @@ class Routing():
                                  % routel)
 
     def statusRoute(self, vlan, raiseError=False):
-        out = []
+        """Check Status of Route on DTN"""
         self.logger.info('Called VInterface status L3 for %s' % str(vlan))
         for routel in vlan['routes']:
             if 'routeTo' in list(routel.keys()) and 'nextHop' in list(routel.keys()):

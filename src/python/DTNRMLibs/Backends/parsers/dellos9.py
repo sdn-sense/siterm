@@ -14,7 +14,7 @@ import re
 from DTNRMLibs.MainUtilities import getLoggingObject
 
 class DellOS9():
-    """ Dell OS 9 Parser """
+    """Dell OS 9 Parser"""
     def __init__(self):
         self.factName = ['dellos9_facts', 'dellos9_command']
         self.regexs = [r'^tagged (.+) (.+)', r'^untagged (.+) (.+)', r'^channel-member (.+) (.+)', r'^(Port-channel) (.+)']
@@ -22,7 +22,7 @@ class DellOS9():
 
     @staticmethod
     def _getSystemValidPortName(port):
-        """ get Systematic port name. MRML expects it without spaces """
+        """Get Systematic port name. MRML expects it without spaces"""
         # Spaces from port name are replaced with _
         # Backslashes are replaced with dash
         # Also - mrml does not expect to get string in nml. so need to replace all
@@ -32,20 +32,21 @@ class DellOS9():
             port = port.replace(rpl[0], rpl[1])
         return port
 
-    def _portSplitter(self, portName, inPorts):
-        """ Port splitter for dellos9/8
-        """
+    @staticmethod
+    def _portSplitter(portName, inPorts):
+        """Port splitter for dellos9"""
         def __identifyStep():
             if portName == 'fortyGigE':
                 return 4
             return 1
 
         def rule0(reMatch):
-            # ('2,18-21,100,122', ',122', '122', '21')
-            # Split by comma, and loop:
-            # if no - add to list
-            # if - exists - split by dash and check if st < en
-            # every step is 1, 40G - is 4
+            """Rule 0 to split ports to extended list
+            INPUT: ('2,18-21,100,122', ',122', '122', '21')
+            Split by comma, and loop:
+              if no split - add to list
+              if exists - split by dash and check if st < en
+                every step is 1, 40G - is 4"""
             out = []
             for vals in reMatch[0].split(','):
                 if '-' in vals:
@@ -60,12 +61,13 @@ class DellOS9():
             return out
 
         def rule1(reMatch):
-            # ('1/1-1/2,1/3,1/4,1/10-1/20', ',1/10-1/20', '1/10-1/20', '-1/20')
-            # Split by comma and loop:
-            # if no -, add to list
-            # if - exists - split by dash, split by / and identify which value is diff
-            # diff values check if st < en and push to looper;
-            # every step is 1, 40G - is 4
+            """Rule 1 to split ports to extended list
+            INPUT: ('1/1-1/2,1/3,1/4,1/10-1/20', ',1/10-1/20', '1/10-1/20', '-1/20')
+            Split by comma and loop:
+            if no -, add to list
+            if - exists - split by dash, split by / and identify which value is diff
+            diff values check if st < en and push to looper;
+            every step is 1, 40G - is 4"""
             out = []
             for vals in reMatch[0].split(','):
                 if '-' in vals:
@@ -89,11 +91,12 @@ class DellOS9():
             return out
 
         def rule2(reMatch):
-            # ('0', '0-3,11-12,15,56,58-59', ',58-59', '58', '59')
-            # Split by comma and loop:
-            # if no -, add to list
-            # if - exists - split by dash, and check if st < en
-            # every step is 1, 40G - is 4
+            """Rule 2 to split ports to extended list
+            INPUT ('0', '0-3,11-12,15,56,58-59', ',58-59', '58', '59')
+            Split by comma and loop:
+            if no -, add to list
+            if - exists - split by dash, and check if st < en
+            every step is 1, 40G - is 4"""
             out = []
             tmpOut = rule0(tuple([reMatch[1]]))
             for line in tmpOut:
@@ -101,12 +104,13 @@ class DellOS9():
             return out
 
         def rule3(reMatch):
-            # ('1/6/1-1/8/1,1/9/1,1/10/1-1/20/1', ',1/10/1-1/20/1', '1/10/1', '1', '10', '1', '1/20/1', '1', '20', '1')
-            # Split by comma and loop:
-            # if no -, add to list
-            # if - exists - split by dash, split by / and identify which value is diff
-            # diff values check if st < en and push to looper;
-            # Here all step is 1, even 40G is 1;
+            """Rule 3 to split ports to extended list
+            INPUT ('1/6/1-1/8/1,1/9/1,1/10/1-1/20/1', ',1/10/1-1/20/1', '1/10/1', '1', '10', '1', '1/20/1', '1', '20', '1')
+            Split by comma and loop:
+            if no -, add to list
+            if - exists - split by dash, split by / and identify which value is diff
+            diff values check if st < en and push to looper;
+            Here all step is 1, even 40G is 1;"""
             out = []
             for vals in reMatch[0].split(','):
                 if '-' in vals:
@@ -163,6 +167,7 @@ class DellOS9():
         return []
 
     def _parseMembers(self, line):
+        """Parse Members of port"""
         out = []
         for regex in self.regexs:
             match = re.search(regex, line)
@@ -175,7 +180,7 @@ class DellOS9():
         return out
 
     def parser(self, ansibleOut):
-        """ General Parser to parse ansible config """
+        """General Parser to parse ansible config"""
         out = {}
         # Out must be {'<interface_name>': {'key': 'value'}} OR
         #             {'<interface_name>': {'key': ['value1', 'value2']}
@@ -197,8 +202,8 @@ class DellOS9():
                         out[key][line.split()[0]] += tmpOut
         return out
 
-
-    def getinfo(self, ansibleOut):
+    @staticmethod
+    def getinfo(ansibleOut):
         """
         Get info from ansible out, Mainly mac. Output example:
         Stack MAC                  : 4c:76:25:e8:44:c0
@@ -230,7 +235,8 @@ class DellOS9():
                     out[regName] = match.group(1)
         return out
 
-    def getlldpneighbors(self, ansibleOut):
+    @staticmethod
+    def getlldpneighbors(ansibleOut):
         """
         Get all lldp neighbors. Each entry will contain:
          Local Interface Hu 1/1 has 1 neighbor
@@ -272,8 +278,9 @@ class DellOS9():
                 out[entryOut['local_port_id']] = entryOut
         return out
 
-    def getIPv4Routing(self, ansibleOut):
-        """ Get IPv4 Routing from running config """
+    @staticmethod
+    def getIPv4Routing(ansibleOut):
+        """Get IPv4 Routing from running config"""
         #self.logger.debug('Call ipv4 routing DellOS9')
         out = []
         for inline in ansibleOut.split('\n'):
@@ -301,8 +308,9 @@ class DellOS9():
                             'intf': "%s %s" % (match.groups()[2], match.groups()[3]), 'from': match.groups()[4]})
         return out
 
-    def getIPv6Routing(self, ansibleOut):
-        """ Get IPv6 Routing from running config """
+    @staticmethod
+    def getIPv6Routing(ansibleOut):
+        """Get IPv6 Routing from running config"""
         #self.logger.debug('Call ipv6 routing DellOS9')
         out = []
         for inline in ansibleOut.split('\n'):

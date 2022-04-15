@@ -19,7 +19,6 @@ Date                    : 2017/09/26
 """
 import os
 import sys
-import platform
 
 # IMPORTANT Be aware if you update version here, please update it also in:
 # setupUtilities.py

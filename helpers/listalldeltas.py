@@ -15,6 +15,7 @@ STATEMACHINE = StateMachine(LOGGER)
 
 
 def getdeltaAll(sitename):
+    """Get Deltas from Database and dump to stdout"""
     dbI = getDBConn('listalldeltas')
     dbobj = getVal(dbI, sitename=sitename)
     for delta in dbobj.get('deltas'):

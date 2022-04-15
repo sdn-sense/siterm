@@ -71,6 +71,7 @@ class VInterfaces():
     @staticmethod
     def _statusvlan(vlan, raiseError=False):
         """Get status of specific vlan."""
+        del raiseError
         allInterfaces = netifaces.interfaces()
         if 'vlan.%s' % vlan['vlan'] not in allInterfaces:
             return False
@@ -78,6 +79,8 @@ class VInterfaces():
 
     @staticmethod
     def _statusvlanIP(vlan, raiseError=False):
+        """Check if IP set on vlan"""
+        del raiseError
         allIPs = netifaces.ifaddresses('vlan.%s' % vlan['vlan'])
         serviceIp = vlan['ip'].split('/')[0]
         for ipv4m in allIPs.get(2, {}):
@@ -87,6 +90,7 @@ class VInterfaces():
 
     @staticmethod
     def _getvlanlist(inParams):
+        """Get All Vlan List"""
         vlans = []
         for key, vals in inParams.items():
             vlan = {}
@@ -99,7 +103,7 @@ class VInterfaces():
         return vlans
 
     def activate(self, inParams):
-        """ Activate Virtual Interface resources """
+        """Activate Virtual Interface resources"""
         vlans = self._getvlanlist(inParams)
         for vlan in vlans:
             if self._statusvlan(vlan):
@@ -114,7 +118,7 @@ class VInterfaces():
             self._start(vlan)
 
     def terminate(self, inParams):
-        """ Terminate Virtual Interface resources """
+        """Terminate Virtual Interface resources"""
         vlans = self._getvlanlist(inParams)
         for vlan in vlans:
             if self._statusvlan(vlan):
@@ -122,7 +126,7 @@ class VInterfaces():
                 self._remove(vlan)
 
     def modify(self, oldParams, newParams):
-        """ Modify Virtual Interface resources """
+        """Modify Virtual Interface resources"""
         old = self._getvlanlist(oldParams)
         new = self._getvlanlist(newParams)
         if old == new:

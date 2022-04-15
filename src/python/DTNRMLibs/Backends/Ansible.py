@@ -16,22 +16,9 @@ import ansible_runner
 from DTNRMLibs.Backends import parsers
 from DTNRMLibs.MainUtilities import getLoggingObject
 
-# =======================
-#  Main caller - calls are done only by Provisioning Service
-# =======================
 
-class Actions():
-    """ Main caller """
-
-    def activate(self, inputDict, actionState):
-        """Activating state actions."""
-        return True
-
-
-class Switch(Actions):
-    """
-    Ansible Switch Module
-    """
+class Switch():
+    """Ansible Switch Module"""
     def __init__(self, config, sitename):
         self.parsers = parsers.ALL
         self.config = config
@@ -41,8 +28,14 @@ class Switch(Actions):
         # the one switches which do not have ansible modules.
         self.cmdCounter = 0
 
+    @staticmethod
+    def activate(_inputDict, _actionState):
+        """Activating state actions."""
+        return True
 
-    def _executeAnsible(self, playbook):
+    @staticmethod
+    def _executeAnsible(playbook):
+        """Execute Ansible plybook"""
         # TODO control ansible runner params or use default
         return ansible_runner.run(private_data_dir='/etc/ansible/sense/',
                                   inventory='/etc/ansible/sense/inventory/inventory.yaml',
@@ -52,17 +45,21 @@ class Switch(Actions):
                                   #ignore_logging = False)
 
     def getAnsNetworkOS(self, host):
+        """Get Ansible network os from hosts file"""
         return self._getHostConfig(host).get('ansible_network_os', '')
 
-
-    def _getHostConfig(self, host):
+    @staticmethod
+    def _getHostConfig(host):
+        """Get Ansible Host Config"""
         if not os.path.isfile('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host):
             raise Exception('Ansible config file for %s not available.' % host)
         with open('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host, 'r', encoding='utf-8') as fd:
             out = yaml.load(fd.read())
         return out
 
-    def _writeHostConfig(self, host, out):
+    @staticmethod
+    def _writeHostConfig(host, out):
+        """Write Ansible Host config file"""
         if not os.path.isfile('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host):
             raise Exception('Ansible config file for %s not available.' % host)
         with open('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host, 'w', encoding='utf-8') as fd:
@@ -70,6 +67,7 @@ class Switch(Actions):
 
 
     def _applyNewConfig(self):
+        """Apply new config and run ansible playbook"""
         ansOut = self._executeAnsible('applyconfig.yaml')
         return ansOut
 
@@ -83,7 +81,9 @@ class Switch(Actions):
     # but that one depends on sonic-cli - which is broken in latest Azure Image (py2/py3 mainly),
     # See https://github.com/Azure/SONiC/issues/781
     def _getMacLLDPRoute(self):
+        """Parser for Mac/LLDP/Route Ansible playbook"""
         def parserWrapper(num, andsiblestdout):
+            """Parser wrapper to call specific parser function"""
             cmdList = {0: self.parsers[action].getinfo,
                        1: self.parsers[action].getlldpneighbors,
                        2: self.parsers[action].getIPv4Routing,
@@ -135,6 +135,7 @@ class Switch(Actions):
         return out
 
     def _getFacts(self):
+        """Get All Facts for all Ansible Hosts"""
         ansOut = self._executeAnsible('getfacts.yaml')
         out = {}
         for host, _ in ansOut.stats['ok'].items():
@@ -175,16 +176,16 @@ class Switch(Actions):
 
     @staticmethod
     def getports(inData):
-        """ Get ports from ansible output """
+        """Get ports from ansible output"""
         return inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get('ansible_net_interfaces', {}).keys()
 
     @staticmethod
     def getportdata(inData, port):
-        """ Get port data from ansible output """
+        """Get port data from ansible output"""
         return inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get('ansible_net_interfaces', {}).get(port, {})
 
     def getvlans(self, inData):
-        """ Get vlans from ansible output """
+        """Get vlans from ansible output"""
         # Dell OS 9 has Vlan XXXX
         # Arista EOS has VlanXXXX
         ports = self.getports(inData)
@@ -192,6 +193,7 @@ class Switch(Actions):
 
     @staticmethod
     def getVlanKey(port):
+        """Normalize Vlan Key between diff switches"""
         if port.startswith('Vlan_'):
             return int(port[5:])
         if port.startswith('Vlan '):
@@ -201,10 +203,10 @@ class Switch(Actions):
         return port
 
     def getvlandata(self, inData, vlan):
-        """ Get vlan data from ansible output """
+        """Get vlan data from ansible output"""
         return self.getportdata(inData, vlan)
 
     @staticmethod
     def getfactvalues(inData, key):
-        """ Get custom command output from ansible output, like routing, lldp, mac """
-        return inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get('key', {})
+        """Get custom command output from ansible output, like routing, lldp, mac"""
+        return inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get(key, {})

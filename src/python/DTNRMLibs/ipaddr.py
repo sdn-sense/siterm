@@ -11,13 +11,13 @@ from ipaddress import ip_address, ip_network
 
 
 def getsubnet(ipInput, strict=False):
-    """ Get subnet if IP address """
+    """Get subnet if IP address"""
     return ip_network(ipInput, strict=strict).compressed
 
 def ipVersion(ipInput, strict=False):
-    """ Check if IP is valid.
-        Input: str
-        Returns: (one of) IPv4, IPv6, Invalid"""
+    """Check if IP is valid.
+    Input: str
+    Returns: (one of) IPv4, IPv6, Invalid"""
     version = -1
     try:
         version = ip_network(ipInput, strict=strict).version
@@ -34,7 +34,7 @@ def ipVersion(ipInput, strict=False):
 
 
 def validMRMLName(valIn):
-    """ Generate valid MRML Name. [:/ ] not supported """
+    """Generate valid MRML Name. [:/ ] not supported"""
     # In case of IPv6, it does allow multiple ways to list IP address, like:
     # 2001:0DB8:0000:CD30:0000:0000:0000:0000/60
     # 2001:0DB8::CD30:0:0:0:0/60

@@ -24,6 +24,7 @@ NAME = 'NetInfo'
 
 
 def presetMacVlans(netInfo, mainIntf, config):
+    """Preset macvlan info in output"""
     for macvlan in config.get(mainIntf, 'macvlans').split(','):
         nicInfo = netInfo.setdefault(macvlan, {})
         nicInfo['parent'] = mainIntf
@@ -32,7 +33,7 @@ def presetMacVlans(netInfo, mainIntf, config):
         nicInfo['shared'] = str2bool(config.get(mainIntf, "shared"))
 
 def get(config):
-    """Get all network information."""
+    """Get all network information"""
     netInfo = {}
     logger = getLoggingObject(logType='StreamLogger')
     interfaces = config.get('agent', "interfaces").split(",")
@@ -135,7 +136,7 @@ def get(config):
 
 
 def getRoutes():
-    """Get Routing information from host."""
+    """Get Routing information from host"""
     routes = []
     with IPRoute() as ipr:
         for route in ipr.get_routes(table=254, family=2):

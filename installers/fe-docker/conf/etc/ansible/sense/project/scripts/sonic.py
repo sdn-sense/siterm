@@ -29,6 +29,7 @@ import shlex
 import ipaddress
 
 def normalizeIPAddress(ipInput):
+    """Normalize IP Address"""
     tmpIP = ipInput.split('/')
     longIP = ipaddress.ip_address(tmpIP[0]).exploded
     if len(tmpIP) == 2:
@@ -43,7 +44,7 @@ def externalCommand(command):
     return proc.communicate()
 
 def strtojson(intxt):
-    """ str to json function """
+    """str to json function"""
     out = {}
     try:
         out = ast.literal_eval(intxt)
@@ -54,7 +55,7 @@ def strtojson(intxt):
     return out
 
 def loadJson(infile):
-    """ Load json file and return dictionary """
+    """Load json file and return dictionary"""
     out = {}
     if not os.path.isfile(infile):
         print('File does not exist %s. Exiting' % infile)
@@ -64,13 +65,13 @@ def loadJson(infile):
     return strtojson(out)
 
 class SonicCmd():
-    """ Sonic CMD Executor API """
+    """Sonic CMD Executor API"""
     def __init__(self):
         self.config = {}
         self.needRefresh = True
 
     def generateSonicDict(self):
-        """ Generate all Vlan Info for comparison with SENSE FE Entries """
+        """Generate all Vlan Info for comparison with SENSE FE Entries"""
         cmdout = externalCommand('show runningconfiguration all')
         out = strtojson(cmdout[0])
         for key, _ in out.get('VLAN', {}).items():
@@ -96,26 +97,27 @@ class SonicCmd():
                 intD['tagged_members'].append(tmpKey[1])
 
     def __executeCommand(self, cmd):
-        """ Execute command and set needRefresh to True """
+        """Execute command and set needRefresh to True"""
         print(cmd)
         externalCommand(cmd)
         self.needRefresh = True
 
     def __refreshConfig(self):
+        """Refresh config from Switch"""
         if self.needRefresh:
             self.config = {}
             self.generateSonicDict()
             self.needRefresh = False
 
     def _addVlan(self, **kwargs):
-        """ Add Vlan if not present """
+        """Add Vlan if not present"""
         self.__refreshConfig()
         if kwargs['vlan'] not in self.config:
             cmd = "sudo config vlan add %(vlanid)s" % kwargs
             self.__executeCommand(cmd)
 
     def _delVlan(self, **kwargs):
-        """ Del Vlan if present. Del All Members, IPs too (required) """
+        """Del Vlan if present. Del All Members, IPs too (required)"""
         # First we need to clean all IPs and tagged members from VLAN
         self._delMember(**kwargs)
         self._delIP(**kwargs)
@@ -125,7 +127,7 @@ class SonicCmd():
             self.__executeCommand(cmd)
 
     def _addMember(self, **kwargs):
-        """ Add Member if not present """
+        """Add Member if not present"""
         self._addVlan(**kwargs)
         self.__refreshConfig()
         if kwargs['member'] not in self.config.get(kwargs['vlan'], {}).get('tagged_members', []):
@@ -133,7 +135,7 @@ class SonicCmd():
             self.__executeCommand(cmd)
 
     def _delMember(self, **kwargs):
-        """ Del Member if not present """
+        """Del Member if not present"""
         self.__refreshConfig()
         if 'member' in kwargs:
             cmd = "sudo config vlan member del %(vlanid)s %(member)s" % kwargs
@@ -144,7 +146,7 @@ class SonicCmd():
                 self._delMember(**kwargs)
 
     def _addIP(self, **kwargs):
-        """ Add IP if not present """
+        """Add IP if not present"""
         self._addVlan(**kwargs)
         self.__refreshConfig()
         if kwargs['ip'] not in self.config.get(kwargs['vlan'], {}).get('ips', []):
@@ -152,7 +154,7 @@ class SonicCmd():
             self.__executeCommand(cmd)
 
     def _delIP(self, **kwargs):
-        """ Del IP if not present """
+        """Del IP if not present"""
         self.__refreshConfig()
         if 'ip' in kwargs:
             cmd = "sudo config interface ip remove %(vlan)s %(ip)s" % kwargs
@@ -163,9 +165,7 @@ class SonicCmd():
                 self._delIP(**kwargs)
 
 def applyConfig(sensevlans):
-    """ Loop via sense vlans
-        and check with sonic vlans config
-    """
+    """Loop via sense vlans and check with sonic vlans config"""
     #{'description': 'urn:ogf:network:service+63b10f36-2f66-4db2-9273-493c79b5da35:vt+l2-policy::Connection_1',
     # 'ip6_address': {'ip': 'fc00:0:0:0:0:0:0:38/64', 'state': 'present'}, 'name': 'Vlan 3333', 'state': 'present',
     # 'tagged_members': [{'port': 'Ethernet24', 'state': 'present'}]}
@@ -199,6 +199,7 @@ def applyConfig(sensevlans):
                 sonicAPI._delMember(**tmpD)
 
 def execute(args):
+    """Main execute"""
     if len(args) == 1 or len(args) > 2:
         print('Too many or not enough args provided. Args: %s' % args)
         print('Please run ./sonic.py <json_file_config_location>')

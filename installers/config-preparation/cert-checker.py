@@ -25,26 +25,27 @@ def printInfo(inDict):
 def getCertInfoCMD(certLocation):
     """Get Certificate information using openssl command line."""
     cmd = "openssl x509 -in %s -subject -issuer -noout -dates" % certLocation
-    proc = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
-    stdout, stderr = proc.communicate()
-    out = {}
-    for line in stdout.split("\n"):
-        if not line: continue
-        vars = line.split("=", 1)
-        out[vars[0].strip()] = vars[1].strip()
-    printInfo(out)
+    with subprocess.Popen(cmd.split(), stdout=subprocess.PIPE) as proc:
+        stdout, _ = proc.communicate()
+        out = {}
+        for line in stdout.split("\n"):
+            if not line:
+                continue
+            lVars = line.split("=", 1)
+            out[lVars[0].strip()] = lVars[1].strip()
+        printInfo(out)
 
 def getCertInfoOpenSSL(certLocation):
     """Get Certificate information using OpenSSL Library."""
     out = {}
-    certF=open(certLocation, 'rt').read()
-    cert = crypto.load_certificate(crypto.FILETYPE_PEM, certF)
-    subject = cert.get_subject()
-    out['subject'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode()) for name, value in subject.get_components())
-    out['notAfter'] = cert.get_notAfter()
-    out['notBefore'] = cert.get_notBefore()
-    out['issuer'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode()) for name, value in cert.get_issuer().get_components())
-    printInfo(out)
+    with open(certLocation, 'rt', encoding='utf-8') as certF:
+        cert = crypto.load_certificate(crypto.FILETYPE_PEM, certF.read())
+        subject = cert.get_subject()
+        out['subject'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode()) for name, value in subject.get_components())
+        out['notAfter'] = cert.get_notAfter()
+        out['notBefore'] = cert.get_notBefore()
+        out['issuer'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode()) for name, value in cert.get_issuer().get_components())
+        printInfo(out)
 
 if __name__ == '__main__':
     print('Argument must be certificate file. Passed arguments %s' % sys.argv)
