@@ -1,0 +1,6 @@
+# More detailed documentation: https://docs.ansible.com/ansible/latest/network/index.html
+ansible_become: false
+ansible_network_os: dellos9
+ansible_ssh_pass: MySuperDuperPassword
+ansible_ssh_user: MySuperDuperUsername
+hostname: dellos9_s0

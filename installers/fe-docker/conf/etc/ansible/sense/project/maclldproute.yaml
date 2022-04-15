@@ -1,0 +1,41 @@
+# Command order must be as defined below.
+# Mainly because code expects to send to parser specific
+# ansible output.  
+# 0 - command show version, system. Mainly to get mac address
+# 1 - command to get lldp neighbors details.
+# 2 - ip route information;
+# 3 - ipv6 route information
+
+- name: Test playbook to show running versions.
+  hosts: all
+  connection: network_cli
+  gather_facts: no
+  tasks:
+  - name: "Get version, lldp, routes from Dell OS 9"
+    dellos9_command:
+      commands: 
+         - show system
+         - show lldp neighbors detail
+         - show running-config
+         - show running-config
+    when: ansible_network_os == "dellos9"
+
+  - name: "Get Version, lldp, routes from Arista EOS"
+    arista.eos.eos_command:
+      commands:
+        - show version | json
+        - show lldp neighbors detail | json
+        - show ip route vrf all | json
+        - show ipv6 route vrf all | json
+    when: ansible_network_os == 'arista.eos.eos'
+
+  - name: "Get version, lldp, routes from  SONiC"
+    command: "{{ item }}"
+    with_items:
+      - echo This is dummy call. It will use running config. # Sonic module will use configuration for mac address identification
+      - show lldp neighbors
+      - echo This is dummy call. It will use running config. # Sonic module will use configuration for ip routing identification
+      - echo This is dummy call. It will use running config. # Sonic module will use configuration for ipv6 routing identification
+    become: true
+    register: sonic_command
+    when: ansible_network_os == 'sonic'

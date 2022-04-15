@@ -1,0 +1,23 @@
+---
+- name: Get running configuration
+  hosts: all
+  connection: network_cli
+  gather_facts: no
+  tasks:
+  - name: Gather Dell OS 9 Facts
+    dellos9_facts:
+      gather_subset: all
+    register: facts
+    when: ansible_network_os == "dellos9"
+
+  - name: Gather Arista EOS Facts
+    arista.eos.eos_facts:
+      gather_subset: all
+    register: facts
+    when: ansible_network_os == "arista.eos.eos"
+
+  - name: Gather Azure SONiC Facts
+    command: show runningconfiguration all
+    become: true
+    register: facts
+    when: ansible_network_os == "sonic"

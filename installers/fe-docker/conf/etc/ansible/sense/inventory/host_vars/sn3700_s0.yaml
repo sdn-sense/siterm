@@ -1,0 +1,5 @@
+# More detailed documentation: https://docs.ansible.com/ansible/latest/network/index.html
+ansible_become: true
+ansible_network_os: sonic
+ansible_ssh_user: sense
+hostname: sn3700

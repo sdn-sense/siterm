@@ -1,0 +1,14 @@
+# Supported groups:
+# dellos9 - Managing Dell OS 9
+# aristaeos - Managing Arista EOS Devices
+# sonic - Managing Azure Sonic
+# More detailed configuration parameters: https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html
+# Few examples below
+#[dellos9]
+#dellos9_s0 ansible_host=192.168.100.1
+
+#[aristaeos]
+#aristaeos_s0 ansible_host=192.168.100.2
+
+#[sonic]
+#sn3700_s0 ansible_host=192.168.100.2 ansible_user=sense ansible_connection=ssh ansible_ssh_private_key_file=/etc/grid-security/ssh-keys/my_private_key

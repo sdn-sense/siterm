@@ -1,0 +1,18 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+{##########################################
+#Purpose:
+#Configure VLAN Interface commands for Azure Sonic devices
+#interface:
+#  Vlan 1798:
+#    description: urn:ogf:network:service+8791cc78-e68c-4d52-9b7c-3c6f3e9d2795:resource+links::Connection_1
+#    ip_address: {ip: 10.251.85.2/24, state: present}
+#    ip6_address: {ip: 'fc00:0:0:0:0:0:0:1d/64', state: present}
+#    name: Vlan 1798
+#    state: present
+#    tagged_members:
+#    - {port: hundredGigE 1/23, state: present}
+#    - {port: hundredGigE 1/9, state: present}
+#########################################}
+{% if interface is defined and interface %}
+{{ interface }}
+{% endif %}

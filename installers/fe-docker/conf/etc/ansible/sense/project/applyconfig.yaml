@@ -1,0 +1,34 @@
+---
+- name: Apply Vlan Configuration templates
+  hosts: all
+  connection: network_cli
+  gather_facts: no
+  tasks:
+    - name: Build Config Templates for Vlan Creation/Removal
+      template:
+        src: "{{ template_name }}"
+        dest: /var/tmp/{{ inventory_hostname }}.conf
+    - name: Push Dell OS 9 Config
+      dellos9_config:
+        src: /var/tmp/{{ inventory_hostname }}.conf
+        save: yes
+        provider:
+          host: "{{ ansible_host }}"
+          timeout: 300
+      when: ansible_network_os == 'dellos9'
+    - name: Push Arista EOS Config
+      arista.eos.eos_config:
+        src: /var/tmp/{{ inventory_hostname }}.conf
+        provider:
+          host: "{{ ansible_host }}"
+          timeout: 300
+      when: ansible_network_os == "arista.eos.eos"
+    - name: Transfer Sonic Script
+      copy: src=scripts/sonic.py dest=/var/tmp/sonic.py mode=0755
+      when: ansible_network_os == "sonic"
+
+    - name: Apply Config on Azure Sonic
+      command: python3 /var/tmp/sonic.py /var/tmp/{{ inventory_hostname }}.conf
+      when: ansible_network_os == "sonic"
+    #- name: Remove the config files
+    #  file: path="/var/tmp/{{ inventory_hostname }}.conf" state=absent
