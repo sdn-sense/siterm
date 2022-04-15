@@ -1,4 +1,4 @@
-FROM centos:8
+FROM almalinux:8
 
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
 
@@ -16,8 +16,8 @@ RUN chmod +x /root/mariadb.sh
 
 # Configuration which repo to use for build
 ARG GITREPO=siterm
-ARG GITORG=sdn-sense
-ARG GITBR=master
+ARG GITORG=juztas
+ARG GITBR=ansibleraw
 
 
 RUN adduser apache -U -u 48

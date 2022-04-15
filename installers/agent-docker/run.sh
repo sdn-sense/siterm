@@ -8,3 +8,5 @@ docker run \
        --net=host \
        --log-driver="json-file" --log-opt max-size=10m --log-opt max-file=10 \
        siteagent
+
+# For development, add -v /home/jbalcas/siterm/:/opt/dtnrmcode/siterm/ \

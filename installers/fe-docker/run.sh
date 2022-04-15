@@ -7,6 +7,7 @@ docker run \
        -v $(pwd)/conf/etc/httpd/certs/fullchain.pem:/etc/httpd/certs/fullchain.pem \
        -v $(pwd)/conf/etc/grid-security/hostcert.pem:/etc/grid-security/hostcert.pem \
        -v $(pwd)/conf/etc/grid-security/hostkey.pem:/etc/grid-security/hostkey.pem \
+       -v $(pwd)/conf/etc/grid-security/ssh-keys/:/etc/grid-security/ssh-keys/ \
        -v $(pwd)/conf/opt/config/:/opt/config/ \
        -v $(pwd)/conf/var/lib/mysql/:/var/lib/mysql/ \
        -p 8080:80 \
@@ -14,3 +15,5 @@ docker run \
        --env-file ./conf/environment \
        --log-driver="json-file" --log-opt max-size=10m --log-opt max-file=10 \
        sitefe
+
+# For development, add -v /home/jbalcas/siterm/:/opt/dtnrmcode/siterm/ \

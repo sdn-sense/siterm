@@ -1,8 +1,8 @@
-FROM centos:8
+FROM almalinux:8
 
 ARG GITREPO=siterm
-ARG GITORG=sdn-sense
-ARG GITBR=master
+ARG GITORG=juztas
+ARG GITBR=ansibleraw
 
 MAINTAINER Justas Balcas <jbalcas@caltech.edu>
 
