@@ -7,19 +7,30 @@ Authors:
 
 Date: 2022/04/08
 """
-from ipaddress import ip_address
+from ipaddress import ip_address, ip_network
 
 
+def getsubnet(ipInput, strict=False):
+    """ Get subnet if IP address """
+    return ip_network(ipInput, strict=strict).compressed
 
-def ipVersion(ipInput):
+def ipVersion(ipInput, strict=False):
     """ Check if IP is valid.
         Input: str
         Returns: (one of) IPv4, IPv6, Invalid"""
+    version = -1
+    try:
+        version = ip_network(ipInput, strict=strict).version
+    except ValueError:
+        pass
+    if version != -1:
+        return version
     tmpIP = ipInput.split('/')
     try:
-        return ip_address(tmpIP[0]).version
+        version = ip_address(tmpIP[0]).version
     except ValueError:
-        return -1
+        pass
+    return version
 
 
 def validMRMLName(valIn):

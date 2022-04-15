@@ -14,6 +14,7 @@ import os
 import yaml
 import ansible_runner
 from DTNRMLibs.Backends import parsers
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 # =======================
 #  Main caller - calls are done only by Provisioning Service
@@ -35,17 +36,23 @@ class Switch(Actions):
         self.parsers = parsers.ALL
         self.config = config
         self.sitename = sitename
+        self.logger = getLoggingObject()
+        # cmd counter is used only for command with items (e.g. sonic, p4)
+        # the one switches which do not have ansible modules.
+        self.cmdCounter = 0
 
 
     def _executeAnsible(self, playbook):
         # TODO control ansible runner params or use default
-        ansRunner = ansible_runner.run(private_data_dir='/etc/ansible/sense/',
-                                       inventory='/etc/ansible/sense/inventory/inventory.yaml',
-                                       playbook=playbook,
-                                       rotate_artifacts=100)
-                                       #debug = True,
-                                       #ignore_logging = False)
-        return ansRunner
+        return ansible_runner.run(private_data_dir='/etc/ansible/sense/',
+                                  inventory='/etc/ansible/sense/inventory/inventory.yaml',
+                                  playbook=playbook,
+                                  rotate_artifacts=100)
+                                  #debug = True,
+                                  #ignore_logging = False)
+
+    def getAnsNetworkOS(self, host):
+        return self._getHostConfig(host).get('ansible_network_os', '')
 
 
     def _getHostConfig(self, host):
@@ -68,61 +75,66 @@ class Switch(Actions):
 
     # 0 - command show version, system. Mainly to get mac address, but might use for more info later.
     # 1 - command to get lldp neighbors details.
-    # 2 - ip route information; 
-    # 3 - ipv6 route information 
+    # 2 - ip route information;
+    # 3 - ipv6 route information
     # For Dell OS 9 - best is to use show running config;
     # For Arista EOS - show ip route vrf all | json || show ipv6 route vrf all | json
     # For Azure Sonic - we use normal ssh and command line. - There is also Dell Sonic Module
     # but that one depends on sonic-cli - which is broken in latest Azure Image (py2/py3 mainly),
     # See https://github.com/Azure/SONiC/issues/781
     def _getMacLLDPRoute(self):
-        def parserWrapper(num, host_events):
+        def parserWrapper(num, andsiblestdout):
+            cmdList = {0: self.parsers[action].getinfo,
+                       1: self.parsers[action].getlldpneighbors,
+                       2: self.parsers[action].getIPv4Routing,
+                       3: self.parsers[action].getIPv6Routing}
             tmpOut = {}
             try:
-                if num == 0:
-                    tmpOut = self.parsers[action].getinfo(host_events['event_data']['res']['stdout'][0])
-                elif num == 1:
-                    tmpOut = self.parsers[action].getlldpneighbors(host_events['event_data']['res']['stdout'][1])
-                elif num == 2:
-                    tmpOut = self.parsers[action].getIPv4Routing(host_events['event_data']['res']['stdout'][2])
-                elif num == 3:
-                    tmpOut = self.parsers[action].getIPv6Routing(host_events['event_data']['res']['stdout'][3])
+                if num not in cmdList:
+                    self.logger.info('UNDEFINED FUNCTION num X. Return empty')
                 else:
-                    print('UNDEFINED FUNCTION num X. Return empty')
+                    tmpOut = cmdList[num](andsiblestdout)
             except NotImplementedError as ex:
-                print("Got Not Implemented Error. %s" % ex)
+                self.logger.debug("Got Not Implemented Error. %s" % ex)
             except (AttributeError, IndexError) as ex:
-                print('Got Exception calling switch module for %s and Num %s. Error: %s' % (action, num, ex))
+                self.logger.debug('Got Exception calling switch module for %s and Num %s. Error: %s' % (action, num, ex))
             return tmpOut
 
+        keyMapping = {0: 'info', 1: 'lldp', 2: 'ipv4', 3: 'ipv6'}
         out = {}
         ansOut = self._executeAnsible('maclldproute.yaml')
         for host, _ in ansOut.stats['ok'].items():
-            hOut = out.setdefault(host, {'info': {}, 'lldp': {}, 'ipv4': {}, 'ipv6': {}})
+            hOut = out.setdefault(host, {})
             for host_events in ansOut.host_events(host):
-                if host_events['event'] != 'runner_on_ok':
+                if host_events['event'] not in ['runner_on_ok', 'runner_item_on_ok']:
                     continue
                 if 'stdout' in host_events['event_data']['res']:
                     # 0 - command to get mainly mac
                     action = host_events['event_data']['task_action']
-                    hOut['info'] = parserWrapper(0, host_events)
-                    # 1 - command to get lldp neighbors detail
-                    hOut['lldp'] = parserWrapper(1, host_events)
-                    # 2 - command to get IPv4 routing info
-                    hOut['ipv4'] = parserWrapper(2, host_events)
-                    # 3 - command to get IPv6 routing info
-                    hOut['ipv6'] = parserWrapper(3, host_events)
+                    # In case of command, we pass most event_data back to Backend parser
+                    # because it does not group output in a single ansible even
+                    # as ansible network modules.
+                    if action == 'command':
+                        # This means it is not using any special ansible module
+                        # to communicate with switch/router. In this case, we get
+                        # ansible_network_os and use that for loading module
+                        action = "%s_command" % self.getAnsNetworkOS(host)
+                        # And in case action is not set - means it is badly configured
+                        # inside the ansible module by sys/net admin.
+                        # We log this inside te log, and ignore that switch
+                        if action == '_command':
+                            self.logger.info('WARNING. ansible_network_os is not defined for %s host. Ignoring this host' % host)
+                            continue
+                        hOut.setdefault(keyMapping[self.cmdCounter], {})
+                        hOut[keyMapping[self.cmdCounter]] = parserWrapper(self.cmdCounter, host_events['event_data']['res'])
+                        self.cmdCounter += 1
+                    else:
+                        for val, key in keyMapping.items():
+                            hOut.setdefault(key, {})
+                            hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
         return out
 
-    def _appendCustomInfo(self, maclldproute, host, host_events):
-        if host in maclldproute:
-            for key, out in maclldproute[host].items():
-                host_events['event_data']['res']['ansible_facts']['ansible_command_%s' % key] = out
-        return host_events
-
-
     def _getFacts(self):
-        maclldproute = self._getMacLLDPRoute()
         ansOut = self._executeAnsible('getfacts.yaml')
         out = {}
         for host, _ in ansOut.stats['ok'].items():
@@ -130,27 +142,46 @@ class Switch(Actions):
             for host_events in ansOut.host_events(host):
                 if host_events['event'] != 'runner_on_ok':
                     continue
-                if 'ansible_facts' in host_events['event_data']['res'] and  \
-                     'ansible_net_interfaces' in host_events['event_data']['res']['ansible_facts']:
-                    action = host_events['event_data']['task_action']
-                    if action in self.parsers.keys():
-                        tmpOut = self.parsers[action].parser(host_events)
-                        for portName, portVals in tmpOut.items():
-                            host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'].setdefault(portName, {})
-                            host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'][portName].update(portVals)
-                host_events = self._appendCustomInfo(maclldproute, host, host_events)
+                action = host_events['event_data']['task_action']
+                if action == 'command':
+                    # This means it is not using any special ansible module
+                    # to communicate with switch/router. In this case, we get
+                    # ansible_network_os and use that for loading module
+                    action = "%s_command" % self.getAnsNetworkOS(host)
+                    # And in case action is not set - means it is badly configured
+                    # inside the ansible module by sys/net admin.
+                    # We log this inside te log, and ignore that switch
+                    if action == '_command':
+                        self.logger.info('WARNING. ansible_network_os is not defined for %s host. Ignoring this host' % host)
+                        continue
+                ansNetIntf = host_events.setdefault('event_data', {}).setdefault('res', {}).setdefault('ansible_facts', {}).setdefault('ansible_net_interfaces', {})
+                if action in self.parsers.keys():
+                    tmpOut = self.parsers[action].parser(host_events)
+                    for portName, portVals in tmpOut.items():
+                        ansNetIntf.setdefault(portName, {})
+                        ansNetIntf[portName].update(portVals)
+                        host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'].setdefault(portName, {})
+                        host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'][portName].update(portVals)
                 out[host] = host_events
+        try:
+            maclldproute = self._getMacLLDPRoute()
+            for host, hitems in maclldproute.items():
+                if host in out:
+                    for key, vals in hitems.items():
+                        out[host]['event_data']['res']['ansible_facts']['ansible_command_%s' % key] = vals
+        finally:
+            self.cmdCounter = 0
         return out
 
     @staticmethod
     def getports(inData):
         """ Get ports from ansible output """
-        return inData['event_data']['res']['ansible_facts']['ansible_net_interfaces'].keys()
+        return inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get('ansible_net_interfaces', {}).keys()
 
     @staticmethod
     def getportdata(inData, port):
         """ Get port data from ansible output """
-        return inData['event_data']['res']['ansible_facts']['ansible_net_interfaces'][port]
+        return inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get('ansible_net_interfaces', {}).get(port, {})
 
     def getvlans(self, inData):
         """ Get vlans from ansible output """
@@ -176,4 +207,4 @@ class Switch(Actions):
     @staticmethod
     def getfactvalues(inData, key):
         """ Get custom command output from ansible output, like routing, lldp, mac """
-        return inData['event_data']['res']['ansible_facts'][key]
+        return inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get('key', {})

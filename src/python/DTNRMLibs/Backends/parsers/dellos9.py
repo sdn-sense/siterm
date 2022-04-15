@@ -11,12 +11,14 @@ Authors:
 Date: 2021/12/01
 """
 import re
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 class DellOS9():
     """ Dell OS 9 Parser """
     def __init__(self):
         self.factName = ['dellos9_facts', 'dellos9_command']
         self.regexs = [r'^tagged (.+) (.+)', r'^untagged (.+) (.+)', r'^channel-member (.+) (.+)', r'^(Port-channel) (.+)']
+        self.logger = getLoggingObject()
 
     @staticmethod
     def _getSystemValidPortName(port):

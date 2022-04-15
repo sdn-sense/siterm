@@ -11,11 +11,13 @@ Authors:
 Date: 2021/12/01
 """
 import re
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 class AristaEOS():
     """ Arista EOS Ansible wrapper. """
     def __init__(self):
         self.factName = ['arista.eos.eos_facts', 'arista.eos.eos_command']
+        self.logger = getLoggingObject()
 
     @staticmethod
     def _getSystemValidPortName(port):

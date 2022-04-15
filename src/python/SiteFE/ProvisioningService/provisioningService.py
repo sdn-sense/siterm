@@ -55,7 +55,7 @@ class ProvisioningService():
         if 'hasLabel' not in portDict or 'value' not in portDict['hasLabel']:
             raise Exception('Bad running config. Missing vlan entry: %s %s %s' % (host, port, portDict))
         vlan = portDict['hasLabel']['value']
-        vlanName = self.switch.plugin._getSwitchPortName(host, 'Vlan%s' % vlan, vlan)
+        vlanName = self.switch._getSwitchPortName(host, 'Vlan%s' % vlan, vlan)
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault('name', vlanName)
         return vlanDict
@@ -63,7 +63,7 @@ class ProvisioningService():
     def _addTaggedInterfaces(self, host, port, portDict):
         """ Add Tagged Interfaces to expected yaml conf """
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
-        portName = self.switch.plugin._getSwitchPortName(host, port)
+        portName = self.switch._getSwitchPortName(host, port)
         vlanDict.setdefault('tagged_members', [])
         vlanDict['tagged_members'].append({'port': portName, 'state': 'present'})
 

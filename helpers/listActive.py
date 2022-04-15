@@ -3,7 +3,7 @@
 import sys
 import pprint
 from DTNRMLibs.FECalls import getDBConn
-from DTNRMLibs.MainUtilities import getVal, evaldict, getUTCnow
+from DTNRMLibs.MainUtilities import getVal, evaldict
 
 
 def listActive(sitename):
