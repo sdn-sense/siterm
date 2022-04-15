@@ -13,9 +13,8 @@ TODO:
     3. Allow to test vlan and IP assignment
 
 """
-import re
-import ansible_runner
 import pprint
+import ansible_runner
 
 def runAnsible(playbook):
     ansRunner = ansible_runner.run(private_data_dir='/etc/ansible/sense/',
@@ -25,7 +24,6 @@ def runAnsible(playbook):
 
 
 playbooks = ['getfacts.yaml', 'maclldproute.yaml', 'applyconfig.yaml']
-playbooks = ['applyconfig.yaml']
 for playbook in playbooks:
     print("RUNNING PLAYBOOK: %s" % playbook)
     r = runAnsible(playbook)
@@ -38,7 +36,7 @@ for playbook in playbooks:
         print("HOSTNAME: %s" % host)
         print('-'*100)
         for host_events in r.host_events(host):
-            if 'runner_on_ok' != host_events['event']:
+            if host_events['event'] != 'runner_on_ok':
                 continue
             if 'stdout_lines' in host_events['event_data']['res']:
                 for line in host_events['event_data']['res']['stdout_lines']:

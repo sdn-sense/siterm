@@ -224,7 +224,6 @@ class SwitchInfo():
     def _addSwitchLldpInfo(self, switchInfo):
         """ ADD LLDP Info to MRML """
         for hostname, macDict in switchInfo['info'].items():
-            mac = "00:00:00:00:00:00"
             if 'mac' in macDict:
                 mac = macDict['mac']
             else:

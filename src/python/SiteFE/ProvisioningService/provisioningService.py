@@ -186,10 +186,10 @@ class ProvisioningService():
                 if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ip_address', 'ip6_address']:
                     if key1 == 'tagged_members':
                         yamlOut = self.yamlconf[switch]['interface'][key].setdefault(key1, [])
-                        yamlOut = self.compareTaggedMembers(yamlOut, val1)
+                        self.compareTaggedMembers(yamlOut, val1)
                     if key1 in ['ip_address', 'ip6_address']:
                         yamlOut = self.yamlconf[switch]['interface'][key].setdefault(key1, {})
-                        yamlOut = self.compareIpAddress(yamlOut, val1)
+                        self.compareIpAddress(yamlOut, val1)
                 elif isinstance(val1, (dict, list)):
                     raise Exception('Got unexpected dictionary in comparison %s' % val)
 
@@ -203,7 +203,7 @@ class ProvisioningService():
                 if host_events['event'] != 'runner_on_failed':
                     continue
                 self.logger.info("Failed to apply Configuration. Failure details below:")
-                self.logger.info(pprint.pprint(host_events))
+                self.logger.info(host_events)
         if ansOut.stats.get('failures', {}):
             # TODO: Would be nice to save in DB and see errors from WEB UI
             raise Exception("There was configuration apply issue. Please contact support and provide this log file.")

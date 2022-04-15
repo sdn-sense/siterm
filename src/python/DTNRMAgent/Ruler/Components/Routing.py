@@ -39,8 +39,6 @@ class Routing():
         """Check status of specific route."""
         return
 
-
-
     def startRoute(self, vlan, raiseError=False):
         self.logger.info('Called VInterface start L3 for %s' % str(vlan))
         for routel in vlan['routes']:
@@ -74,7 +72,7 @@ class Routing():
             if 'routeTo' in list(routel.keys()) and 'nextHop' in list(routel.keys()):
                 if 'value' in list(routel['routeTo'].keys()) and 'value' in list(routel['nextHop'].keys()):
                     command = "ip route get %s" % (routel['routeTo']['value'])
-                    out = execute(command, self.logger, raiseError)
+                    execute(command, self.logger, raiseError)
             else:
                 self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
                                  % routel)
