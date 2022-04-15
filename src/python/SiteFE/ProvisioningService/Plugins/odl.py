@@ -50,38 +50,47 @@ class mainCaller():
             raise Exception('Unknown State %s' % stateCall)
         return out
 
-    def accepting(self, inputDict, actionState):
+    @staticmethod
+    def accepting(inputDict, actionState):
         """Accepting state actions."""
         return True
 
-    def accepted(self, inputDict, actionState):
+    @staticmethod
+    def accepted(inputDict, actionState):
         """Accepted state actions."""
         return True
 
-    def committing(self, inputDict, actionState):
+    @staticmethod
+    def committing(inputDict, actionState):
         """Committing state actions."""
         return True
 
-    def committed(self, inputDict, actionState):
+    @staticmethod
+    def committed(inputDict, actionState):
         """Committed state actions."""
         return True
 
-    def activating(self, inputDict, actionState):
+    @staticmethod
+    def activating(inputDict, actionState):
         """Activating state actions."""
         return True
 
-    def active(self, inputDict, actionState):
+    @staticmethod
+    def active(inputDict, actionState):
         """Activating state actions."""
         return True
 
-    def activated(self, inputDict, actionState):
+    @staticmethod
+    def activated(inputDict, actionState):
         """Activating state actions."""
         return True
 
-    def failed(self, inputDict, actionState):
+    @staticmethod
+    def failed(inputDict, actionState):
         """Failed state actions."""
         return True
 
-    def remove(self, inputDict, actionState):
+    @staticmethod
+    def remove(inputDict, actionState):
         """Remove state actions."""
         return True

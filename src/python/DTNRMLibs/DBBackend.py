@@ -141,7 +141,8 @@ class dbinterface():
         msg = "DB: %s %s %s %s" % (self.serviceName, calltype, str(diff), callExit)
         print(msg)
 
-    def getcall(self, callaction, calltype):
+    @staticmethod
+    def getcall(callaction, calltype):
         """Get call from ALL available ones."""
         callquery = ""
         try:

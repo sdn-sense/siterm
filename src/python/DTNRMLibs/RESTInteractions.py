@@ -38,7 +38,8 @@ class getContent(object):
         # for example https and security details from config.
         self.initialized = True
 
-    def get_method(self, url):
+    @staticmethod
+    def get_method(url):
         """Only used inside the site for forwardning requests."""
         try:
             req = urllib.request.Request(url)
@@ -118,6 +119,7 @@ def get_post_form(environ):
 
 class InputProcessed(object):
     """wsgi Input processing class."""
-    def read(self, *args):
+    @staticmethod
+    def read(*args):
         raise EOFError('The wsgi.input stream has already been consumed')
     readline = readlines = __iter__ = read
