@@ -17,7 +17,7 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2020 California Institute of Technology
 Date                    : 2020/09/25
 """
-from DTNRMLibs.FECalls import getDBConn
+from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getUTCnow
 from prometheus_client import generate_latest, CollectorRegistry
 from prometheus_client import Enum, CONTENT_TYPE_LATEST
@@ -37,8 +37,8 @@ class PrometheusAPI():
     def getServiceStates(self, registry, **kwargs):
         """Get all Services states."""
         serviceState = Enum('service_state', 'Description of enum',
-                            labelnames=['servicename'],
-                            states=['OK', 'UNKNOWN', 'FAILED', 'KEYBOARDINTERRUPT'],
+                            labelnames=['servicename', 'hostname'],
+                            states=['OK', 'UNKNOWN', 'FAILED', 'KEYBOARDINTERRUPT', 'UNSET'],
                             registry=registry)
         services = self.dbI[kwargs['sitename']].get('servicestates')
         # {'servicestate': u'OK', 'hostname': u'4df8c7b989d1',
@@ -49,7 +49,7 @@ class PrometheusAPI():
             if int(timenow - service['updatedate']) < 120:
                 # If we are not getting service state for 2 mins, leave state as unknown
                 state = service['servicestate']
-            serviceState.labels(servicename=service['servicename']).state(state)
+            serviceState.labels(servicename=service['servicename'], hostname=service.get('hostname', 'UNSET')).state(state)
 
     def metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""

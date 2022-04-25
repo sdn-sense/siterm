@@ -8,10 +8,11 @@ Changes applied to this code:
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
 import sys
-from DTNRMLibs.Daemonizer import Daemon
+from DTNRMLibs.Daemonizer import Daemon, getParser, validateArgs
 from SiteFE.PolicyService import policyService as polS
 
 COMPONENT = 'PolicyService'
+DESCRIPTION = "PolicyService responsible to accept/activate deltas, remove expired resources from model."
 DAEMON = None
 
 class MyDaemon(Daemon):
@@ -26,12 +27,10 @@ class MyDaemon(Daemon):
         return outThreads
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print('ERROR: Options available: %s ' % Daemon.ALLCMD)
-        sys.exit(1)
-    if sys.argv[1] in Daemon.ALLCMD:
-        if sys.argv[1] == 'startforeground':
-            DAEMON = MyDaemon(COMPONENT, 'StreamLogger')
-        else:
-            DAEMON = MyDaemon(COMPONENT)
-        DAEMON.command(sys.argv[1])
+    parser = getParser(DESCRIPTION)
+    if len(sys.argv) == 1:
+        parser.print_help()
+    inargs = parser.parse_args(sys.argv[1:])
+    validateArgs(inargs)
+    DAEMON = MyDaemon(COMPONENT, inargs)
+    DAEMON.command(inargs)

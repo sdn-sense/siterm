@@ -26,7 +26,7 @@ from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.FECalls import getDBConn
+from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.Backends.main import Switch
 
 

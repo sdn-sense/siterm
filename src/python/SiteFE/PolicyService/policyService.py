@@ -25,7 +25,7 @@ from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import decodebase64
 from DTNRMLibs.MainUtilities import getCurrentModel, getActiveDeltas, writeActiveDeltas
 from DTNRMLibs.FECalls import getAllHosts
-from DTNRMLibs.FECalls import getDBConn
+from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine

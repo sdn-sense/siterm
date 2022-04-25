@@ -40,6 +40,7 @@ from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
 from DTNRMLibs.CustomExceptions import NotSupportedArgument
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 from DTNRMLibs.HTTPLibrary import Requests
+from DTNRMLibs.DBBackend import dbinterface
 
 
 def getUTCnow():
@@ -324,8 +325,24 @@ class GitConfig():
 
 def getGitConfig():
     """Wrapper before git config class. Returns dictionary."""
-    gitConf = GitConfig()
-    gitConf.getGitConfig()
+    unlocked = True
+    lockfile = '/tmp/siterm-git-fetch-lockfile'
+    while unlocked:
+        try:
+            os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            with open(lockfile, 'w', encoding='utf-8') as fd:
+                fd.write('Locked by PID: %s' % os.getpid())
+            unlocked = False
+        except FileExistsError as ex:
+            with open(lockfile, 'r', encoding='utf-8') as fd:
+                print(fd.read())
+            print('Lock Present to prefetch git config. Wait 1 seconds. Exception: %s ' % ex)
+            time.sleep(1)
+    try:
+        gitConf = GitConfig()
+        gitConf.getGitConfig()
+    finally:
+        os.remove(lockfile)
     return gitConf.config
 
 
@@ -594,10 +611,50 @@ def decodebase64(inputStr, decodeFlag=True):
     return inputStr
 
 
-def pubStateRemote(config, **kwargs):
+def getDBConn(serviceName='', cls=None):
+    """Get database connection."""
+    dbConn = {}
+    if hasattr(cls, 'config'):
+        config = cls.config
+    else:
+        config = getConfig()
+    for sitename in config.get('general', 'sites').split(','):
+        if hasattr(cls, 'dbI'):
+            if hasattr(cls.dbI, sitename):
+                # DB Object is already in place!
+                continue
+        dbConn[sitename] = dbinterface(serviceName, config, sitename)
+    return dbConn
+
+def reportServiceStatus(**kwargs):
+    """Report service state to DB."""
+    try:
+        dbOut = {'hostname': kwargs.get('hostname', 'default'),
+                 'servicestate': kwargs.get('servicestate', 'UNSET'),
+                 'servicename': kwargs.get('servicename', 'UNSET'),
+                 'updatedate': getUTCnow()}
+        dbI = getDBConn(dbOut['servicename'], kwargs.get('cls', None))
+        dbobj = getVal(dbI, **{'sitename': kwargs.get('sitename', 'UNSET')})
+        services = dbobj.get('servicestates', search=[['hostname', dbOut['hostname']], ['servicename', dbOut['servicename']]])
+        if not services:
+            dbobj.insert('servicestates', [dbOut])
+        else:
+            dbobj.update('servicestates', [dbOut])
+    except Exception:
+        excType, excValue = sys.exc_info()[:2]
+        print("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
+               str(excType.__name__), excValue)
+
+
+def pubStateRemote(**kwargs):
     """Publish state from remote services."""
     try:
-        fullUrl = getFullUrl(config, kwargs['sitename'])
+        reportServiceStatus(**kwargs)
+        return
+    except:
+        pass
+    try:
+        fullUrl = getFullUrl(kwargs['cls'].config, kwargs['sitename'])
         fullUrl += '/sitefe'
         dic = {'servicename': kwargs['servicename'],
                'servicestate': kwargs['servicestate'],

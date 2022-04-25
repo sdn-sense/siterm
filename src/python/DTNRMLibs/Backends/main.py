@@ -16,7 +16,7 @@ from DTNRMLibs.Backends.generalFunctions import checkConfig
 from DTNRMLibs.Backends.generalFunctions import cleanupEmpty
 from DTNRMLibs.Backends.generalFunctions import getConfigParams, getValFromConfig
 from DTNRMLibs.MainUtilities import getConfig, getLoggingObject, getUTCnow
-from DTNRMLibs.FECalls import getDBConn
+from DTNRMLibs.MainUtilities import getDBConn
 
 
 class Switch(Node):

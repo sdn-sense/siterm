@@ -7,15 +7,33 @@ Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
-from __future__ import print_function
 import os
 import sys
 import time
+import argparse
 import atexit
 import psutil
 from DTNRMLibs.MainUtilities import getConfig, getLoggingObject
 from DTNRMLibs.MainUtilities import reCacheConfig
 from DTNRMLibs.MainUtilities import pubStateRemote
+
+
+def getParser(description):
+    """Returns the argparse parser."""
+    oparser = argparse.ArgumentParser(description=description,
+                                      prog=os.path.basename(sys.argv[0]), add_help=True)
+    oparser.add_argument('--action', dest='action', default='', help='Action - start, stop, status, restart service.')
+    oparser.add_argument('--foreground', action='store_true', help="Run program in foreground. Default no")
+    oparser.set_defaults(foreground=False)
+    oparser.add_argument('--logtostdout', action='store_true', help="Log to stdout and not to file. Default false")
+    oparser.set_defaults(logtostdout=False)
+    return oparser
+
+def validateArgs(inargs):
+    """Validate arguments."""
+        # Check port
+    if inargs.action not in ['start', 'stop', 'status', 'restart']:
+        raise Exception("Action '%s' not supported. Supported actions: start, stop, status, restart" % inargs.action)
 
 class Daemon():
     """A generic daemon class.
@@ -23,19 +41,15 @@ class Daemon():
     Usage: subclass the Daemon class and override the run() method.
     """
 
-    ALLCMD = ['start', 'stop', 'restart', 'startforeground', 'status']
-
-    def __init__(self, component, logType='TimedRotatingFileHandler',
-                 stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
-        self.stdin = stdin
-        self.stdout = stdout
-        self.stderr = stderr
+    def __init__(self, component, inargs):
+        logType = 'TimedRotatingFileHandler'
+        if inargs.logtostdout:
+            logType = 'StreamLogger'
         self.component = component
         self.pidfile = '/tmp/end-site-rm-%s.pid' % component
         self.config = getConfig()
         self.logger = getLoggingObject("%s/%s/" % (self.config.get('general', 'logDir'), component),
                                 self.config.get('general', 'logLevel'), logType=logType)
-        self.availableCommands = ['start', 'stop', 'restart', 'startforeground', 'status']
 
     def _refreshConfig(self):
         """Config refresh call"""
@@ -72,11 +86,11 @@ class Daemon():
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
-        with open(self.stdin, 'r', encoding='utf-8') as fd:
+        with open('/dev/null', 'r', encoding='utf-8') as fd:
             os.dup2(fd.fileno(), sys.stdin.fileno())
-        with open(self.stdout, 'a+', encoding='utf-8') as fd:
+        with open('/dev/null', 'a+', encoding='utf-8') as fd:
             os.dup2(fd.fileno(), sys.stdout.fileno())
-        with open(self.stderr, 'a+', encoding='utf-8') as fd:
+        with open('/dev/null', 'a+', encoding='utf-8') as fd:
             os.dup2(fd.fileno(), sys.stderr.fileno())
 
         # write pidfile
@@ -162,17 +176,17 @@ class Daemon():
             print('Is application running?')
             sys.exit(1)
 
-    def command(self, command):
+    def command(self, inargs):
         """Execute a specific command to service."""
-        if command == 'start':
+        if inargs.action == 'start' and inargs.foreground:
             self.start()
-        elif command == 'stop':
-            self.stop()
-        elif command == 'restart':
-            self.restart()
-        elif command == 'startforeground':
+        elif inargs.action == 'start' and not inargs.foreground:
             self.run()
-        elif command == 'status':
+        elif inargs.action == 'stop':
+            self.stop()
+        elif inargs.action == 'restart':
+            self.restart()
+        elif inargs.action == 'status':
             self.status()
         else:
             print("Unknown command")
@@ -190,15 +204,15 @@ class Daemon():
                     self.logger.info('Start worker for %s site', sitename)
                     try:
                         rthread.startwork()
-                        pubStateRemote(self.config, servicename=self.component, servicestate='OK', sitename=sitename)
+                        pubStateRemote(cls=self, servicename=self.component, servicestate='OK', sitename=sitename)
                     except:
                         hadFailure = True
-                        pubStateRemote(self.config, servicename=self.component, servicestate='FAILED', sitename=sitename)
+                        pubStateRemote(cls=self, servicename=self.component, servicestate='FAILED', sitename=sitename)
                         excType, excValue = sys.exc_info()[:2]
                         self.logger.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
                 time.sleep(10)
             except KeyboardInterrupt as ex:
-                pubStateRemote(self.config, servicename=self.component, servicestate='KEYBOARDINTERRUPT', sitename=sitename)
+                pubStateRemote(cls=self, servicename=self.component, servicestate='KEYBOARDINTERRUPT', sitename=sitename)
                 self.logger.critical("Received KeyboardInterrupt: %s ", ex)
                 sys.exit(3)
             if hadFailure:
@@ -206,7 +220,7 @@ class Daemon():
                 time.sleep(30)
             timeeq, currentHour = reCacheConfig(currentHour)
             if not timeeq:
-                self.logger.info('Re initiating LookUp Service with new configuration from GIT')
+                self.logger.info('Re-initiating Service with new configuration from GIT')
                 self._refreshConfig()
                 rthread = self.getThreads()
 

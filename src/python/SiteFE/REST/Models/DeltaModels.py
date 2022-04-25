@@ -23,7 +23,7 @@ from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.CustomExceptions import DeltaNotFound
 from DTNRMLibs.CustomExceptions import ModelNotFound
 from DTNRMLibs.CustomExceptions import WrongDeltaStatusTransition
-from DTNRMLibs.FECalls import getDBConn
+from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 
 
