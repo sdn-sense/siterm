@@ -13,7 +13,7 @@ class Routing():
     """Virtual interface class."""
     def __init__(self, config):
         self.config = config
-        self.logger = getLoggingObject(service='Ruler')
+        self.logger = getLoggingObject(config=self.config, service='Ruler')
 
     @staticmethod
     def add(vlan, raiseError=False):

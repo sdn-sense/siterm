@@ -48,7 +48,7 @@ class PolicyService(RDFHelper):
     def __init__(self, config, sitename):
         self.sitename = sitename
         self.config = config
-        self.logger = getLoggingObject(service='PolicyService')
+        self.logger = getLoggingObject(config=self.config, service='PolicyService')
         self.siteDB = contentDB(config=self.config)
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.stateMachine = StateMachine(self.config)

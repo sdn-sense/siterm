@@ -34,8 +34,8 @@ class ProvisioningService():
     """Provisioning service communicates with Local controllers and applies
     network changes."""
     def __init__(self, config, sitename):
-        self.logger = getLoggingObject(service='ProvisioningService')
         self.config = config
+        self.logger = getLoggingObject(config=self.config, service='ProvisioningService')
         self.sitename = sitename
         self.switch = Switch(config, sitename)
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})

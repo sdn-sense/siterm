@@ -48,9 +48,10 @@ class Daemon():
         self.component = component
         self.pidfile = '/tmp/end-site-rm-%s.pid' % component
         self.config = getConfig()
-        self.logger = getLoggingObject(logfile="%s/%s/" % (self.config.get('general', 'logDir'), component),
-                                logLevel=self.config.get('general', 'logLevel'), logType=logType,
-                                service=self.component)
+        self.logger = getLoggingObject(config=self.config,
+                                       logfile="%s/%s/" % (self.config.get('general', 'logDir'), component),
+                                       logLevel=self.config.get('general', 'logLevel'), logType=logType,
+                                       service=self.component)
 
     def _refreshConfig(self):
         """Config refresh call"""

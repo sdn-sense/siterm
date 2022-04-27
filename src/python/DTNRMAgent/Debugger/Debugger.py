@@ -40,7 +40,7 @@ class Debugger():
     """Debugger main process"""
     def __init__(self, config, sitename):
         self.config = config if config else getConfig()
-        self.logger =  getLoggingObject(service='Debugger')
+        self.logger = getLoggingObject(config=self.config, service='Debugger')
         self.fullURL = getFullUrl(self.config, sitename)
         self.sitename = sitename
         self.hostname = self.config.get('agent', 'hostname')

@@ -34,7 +34,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     def __init__(self, config, sitename):
         self.sitename = sitename
         self.config = config
-        self.logger = getLoggingObject(service='LookUpService')
+        self.logger = getLoggingObject(config=self.config, service='LookUpService')
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.newGraph = None
         self.shared = 'notshared'

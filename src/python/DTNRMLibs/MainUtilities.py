@@ -109,6 +109,12 @@ def getTimeRotLogger(**kwargs):
     if checkLoggingHandler(**kwargs):
         handler = logging.getLogger(kwargs.get('service', __name__))
         return logging.getLogger(kwargs.get('service', __name__))
+    if 'logFile' not in kwargs:
+        if 'config' in kwargs:
+            kwargs['logFile'] = "%s/%s/" % (kwargs['config'].get('general', 'logDir'), kwargs.get('service', __name__))
+        else:
+            print('No config passed, will log to StreamLogger... Code issue!')
+            return getStreamLogger(**kwargs)
     levels = {'FATAL': logging.FATAL,
               'ERROR': logging.ERROR,
               'WARNING': logging.WARNING,
@@ -401,7 +407,7 @@ class contentDB():
     """File Saver, loader class."""
     def __init__(self, config=None):
         self.config = config if config else getConfig()
-        self.logger = getLoggingObject(service='contentdb')
+        self.logger = getLoggingObject(config=self.config, service='contentdb')
 
     @staticmethod
     def getFileContentAsJson(inputFile):

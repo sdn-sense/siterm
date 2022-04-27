@@ -15,9 +15,9 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 
 class AristaEOS():
     """Arista EOS Ansible wrapper."""
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.factName = ['arista.eos.eos_facts', 'arista.eos.eos_command']
-        self.logger = getLoggingObject(service='SwitchBackends')
+        self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
 
     @staticmethod
     def _getSystemValidPortName(port):

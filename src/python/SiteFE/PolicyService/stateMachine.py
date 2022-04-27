@@ -24,8 +24,8 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 class ConnectionMachine():
     """Connection State machine.Maps Deltas with 1 to N connections"""
     def __init__(self, config):
-        self.logger = getLoggingObject(service='PolicyService')
         self.config = config
+        self.logger = getLoggingObject(config=self.config, service='PolicyService')
 
     @staticmethod
     def accepted(dbObj, delta):
@@ -78,8 +78,8 @@ class ConnectionMachine():
 class StateMachine():
     """State machine for Frontend and policy service."""
     def __init__(self, config):
-        self.logger = getLoggingObject(service='PolicyService')
         self.config = config
+        self.logger = getLoggingObject(config=self.config, service='PolicyService')
         self.limit = 100
         self.connMgr = ConnectionMachine(config)
 

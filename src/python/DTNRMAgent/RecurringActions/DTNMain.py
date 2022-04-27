@@ -25,8 +25,8 @@ class RecurringAction():
     """Provisioning service communicates with Local controllers and applies
     network changes."""
     def __init__(self, config, sitename):
-        self.logger = getLoggingObject(service='Agent')
         self.config = config
+        self.logger = getLoggingObject(config=self.config, service='Agent')
         self.sitename = sitename
 
     def prepareJsonOut(self):

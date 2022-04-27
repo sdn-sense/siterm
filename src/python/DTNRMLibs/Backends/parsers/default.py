@@ -17,7 +17,7 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 # Ansible module will preload all parsers by MODULE variable
 class Default():
     """Default class example for building new parsers"""
-    def __init__(self):
+    def __init__(self, **kwargs):
         # Facts names is used to match with ansible command.
         # See ansible project template and it depends on which
         # ansible module you use for acessing network device.
@@ -26,7 +26,7 @@ class Default():
         # You can find more details here of other possible switches.
         # https://docs.w3cub.com/ansible/
         self.factName = ['default_facts', 'default_command']
-        self.logger = getLoggingObject(service='SwitchBackends')
+        self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
 
     def getinfo(self, ansibleOut):
         """

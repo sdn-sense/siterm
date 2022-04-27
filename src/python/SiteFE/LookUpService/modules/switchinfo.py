@@ -170,7 +170,6 @@ class SwitchInfo():
             try:
                 rst = self.config.get(switchName, 'rst')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
-                self.logger.debug('ERROR: rst parameter is not defined for %s. Err: %s', switchName, ex)
                 rst = False
             for portName, portSwitch in list(switchDict.items()):
                 newuri = ":%s:%s" % (switchName, portName)
@@ -263,10 +262,14 @@ class SwitchInfo():
             out = {'hostname': switchName}
             try:
                 out['rst'] = self.config.get(switchName, 'rst')
-                out['private_asn'] = self.config.get(switchName, 'private_asn')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
-                self.logger.debug('ERROR: rst/private_asn parameter is not correctly defined (MISCONFIG. Contact Support) for %s. Err: %s', switchName, ex)
                 continue
+            if 'rst' in out and out['rst']:
+                try:
+                    out['private_asn'] = self.config.get(switchName, 'private_asn')
+                except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+                    self.logger.debug('ERROR: private_asn parameter is not defined (MISCONFIG. Contact Support) for %s. Err: %s', switchName, ex)
+                    continue
             for ipX, routeList in rstEntries.items():
                 out['rstname'] = 'rst-%s' % ipX
                 for route in routeList:

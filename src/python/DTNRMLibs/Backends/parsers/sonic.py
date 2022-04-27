@@ -18,7 +18,7 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 
 class Sonic():
     """Default class example for building new parsers"""
-    def __init__(self):
+    def __init__(self, **kwargs):
         # Facts names is used to match with ansible command.
         # See ansible project template and it depends on which
         # ansible module you use for acessing network device.
@@ -30,7 +30,7 @@ class Sonic():
         # You can find more details here of other possible switches.
         # https://docs.w3cub.com/ansible/
         self.factName = ['sonic_command']
-        self.logger = getLoggingObject(service='SwitchBackends')
+        self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
         self.runnincConf = {}
 
     def __getMac(self):

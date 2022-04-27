@@ -22,7 +22,7 @@ class VInterfaces():
     """Virtual interface class."""
     def __init__(self, config):
         self.config = config
-        self.logger = getLoggingObject(service='Ruler')
+        self.logger = getLoggingObject(config=self.config, service='Ruler')
 
     def _add(self, vlan, raiseError=False):
         """Add specific vlan."""

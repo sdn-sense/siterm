@@ -15,10 +15,10 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 
 class DellOS9():
     """Dell OS 9 Parser"""
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.factName = ['dellos9_facts', 'dellos9_command']
         self.regexs = [r'^tagged (.+) (.+)', r'^untagged (.+) (.+)', r'^channel-member (.+) (.+)', r'^(Port-channel) (.+)']
-        self.logger = getLoggingObject(service='SwitchBackends')
+        self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
 
     @staticmethod
     def _getSystemValidPortName(port):
