@@ -628,6 +628,7 @@ def getDBConn(serviceName='', cls=None):
 
 def reportServiceStatus(**kwargs):
     """Report service state to DB."""
+    reported = True
     try:
         dbOut = {'hostname': kwargs.get('hostname', 'default'),
                  'servicestate': kwargs.get('servicestate', 'UNSET'),
@@ -640,19 +641,21 @@ def reportServiceStatus(**kwargs):
             dbobj.insert('servicestates', [dbOut])
         else:
             dbobj.update('servicestates', [dbOut])
+    except configparser.NoOptionError:
+        reported = False
     except Exception:
         excType, excValue = sys.exc_info()[:2]
         print("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
                str(excType.__name__), excValue)
+        reported = False
+    return reported
 
 
 def pubStateRemote(**kwargs):
     """Publish state from remote services."""
-    try:
-        reportServiceStatus(**kwargs)
+    reported = reportServiceStatus(**kwargs)
+    if reported:
         return
-    except:
-        pass
     try:
         fullUrl = getFullUrl(kwargs['cls'].config, kwargs['sitename'])
         fullUrl += '/sitefe'

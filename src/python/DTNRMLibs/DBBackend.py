@@ -53,6 +53,16 @@ class DBBackend():
         self.conn.commit()
         self.destroy()
 
+    def _cleandbtable(self, dbtable):
+        """Clean only specific table if available"""
+        self.initialize()
+        for argname in dir(dbcalls):
+            if argname == 'delete_%s' % dbtable:
+                print('Call to clean from %s' % argname)
+                self.cursor.execute(getattr(dbcalls, argname))
+        self.conn.commit()
+        self.destroy()
+
     def _cleandb(self):
         """Clean database."""
         self.initialize()
@@ -252,3 +262,8 @@ class dbinterface():
         """Database Clean Up"""
         del calltype, values
         self.db._cleandb()
+
+    def _cleantable(self, calltype, values):
+        """Clean specific table"""
+        del values
+        self.db._cleandbtable(calltype)
