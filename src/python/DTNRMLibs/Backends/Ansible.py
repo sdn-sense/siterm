@@ -23,7 +23,7 @@ class Switch():
         self.parsers = parsers.ALL
         self.config = config
         self.sitename = sitename
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='SwitchBackends')
         # cmd counter is used only for command with items (e.g. sonic, p4)
         # the one switches which do not have ansible modules.
         self.cmdCounter = 0

@@ -30,7 +30,7 @@ class Sonic():
         # You can find more details here of other possible switches.
         # https://docs.w3cub.com/ansible/
         self.factName = ['sonic_command']
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='SwitchBackends')
         self.runnincConf = {}
 
     def __getMac(self):

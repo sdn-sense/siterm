@@ -40,7 +40,7 @@ class Debugger():
     """Debugger main process"""
     def __init__(self, config, sitename):
         self.config = config if config else getConfig()
-        self.logger =  getLoggingObject()
+        self.logger =  getLoggingObject(service='Debugger')
         self.fullURL = getFullUrl(self.config, sitename)
         self.sitename = sitename
         self.hostname = self.config.get('agent', 'hostname')
@@ -107,5 +107,5 @@ def execute(config=None):
     debugger.startwork()
 
 if __name__ == '__main__':
-    getLoggingObject(logType='StreamLogger')
+    getLoggingObject(logType='StreamLogger', service='Debugger')
     execute()

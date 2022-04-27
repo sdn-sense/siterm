@@ -74,7 +74,7 @@ _SITES = ["MAIN"]
 _HTTPRESPONDER = HTTPResponses()
 _CERTHANDLER = CertHandler()
 
-LOGGER = getLoggingObject(logFile='/var/log/dtnrm-site-fe/http-api/')
+LOGGER = getLoggingObject(logFile='/var/log/dtnrm-site-fe/http-api/', service='http-api'))
 
 
 # This would also allow to move all catches to here... and get all errors in one place

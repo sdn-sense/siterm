@@ -33,6 +33,6 @@ def get(**_):
     return memInfo
 
 if __name__ == "__main__":
-    getLoggingObject(logType='StreamLogger')
+    getLoggingObject(logType='StreamLogger', service='Agent')
     PRETTY = pprint.PrettyPrinter(indent=4)
     PRETTY.pprint(get())

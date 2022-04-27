@@ -25,7 +25,7 @@ class RecurringAction():
     """Provisioning service communicates with Local controllers and applies
     network changes."""
     def __init__(self, config, sitename):
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='Agent')
         self.config = config
         self.sitename = sitename
 
@@ -113,5 +113,5 @@ def execute(config):
 
 if __name__ == '__main__':
     CONFIG = getConfig()
-    getLoggingObject(logType='StreamLogger')
+    getLoggingObject(logType='StreamLogger', service='Agent')
     execute(CONFIG)

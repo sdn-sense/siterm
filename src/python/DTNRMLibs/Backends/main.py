@@ -23,7 +23,7 @@ class Switch(Node):
     """Main Switch Class. It will load module based on config"""
     def __init__(self, config, site):
         self.config = config
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='SwitchBackends')
         self.site = site
         self.switches = {}
         checkConfig(self.config, self.site)
@@ -234,5 +234,5 @@ def execute(config=None):
         print(out)
 
 if __name__ == '__main__':
-    getLoggingObject(logType='StreamLogger')
+    getLoggingObject(logType='StreamLogger', service='SwitchBackends')
     execute()

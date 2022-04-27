@@ -34,7 +34,7 @@ class ProvisioningService():
     """Provisioning service communicates with Local controllers and applies
     network changes."""
     def __init__(self, config, sitename):
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='ProvisioningService')
         self.config = config
         self.sitename = sitename
         self.switch = Switch(config, sitename)
@@ -259,5 +259,5 @@ if __name__ == '__main__':
     print('WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.')
     print('1st argument has to be sitename which is configured in this frontend')
     print(sys.argv)
-    getLoggingObject(logType='StreamLogger')
+    getLoggingObject(logType='StreamLogger', service='ProvisioningService')
     execute(args=sys.argv)

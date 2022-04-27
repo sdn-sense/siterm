@@ -34,7 +34,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     def __init__(self, config, sitename):
         self.sitename = sitename
         self.config = config
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='LookUpService')
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.newGraph = None
         self.shared = 'notshared'
@@ -156,5 +156,5 @@ def execute(config=None):
 
 
 if __name__ == '__main__':
-    getLoggingObject(logType='StreamLogger')
+    getLoggingObject(logType='StreamLogger', service='LookUpService')
     execute()

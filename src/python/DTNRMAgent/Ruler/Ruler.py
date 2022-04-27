@@ -27,7 +27,7 @@ class Ruler(QOS, contentDB):
     """Ruler class to create interfaces on the system."""
     def __init__(self, config, sitename):
         self.config = config if config else getConfig()
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='Ruler')
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         createDirs(self.workDir)
         self.fullURL = getFullUrl(self.config, sitename)
@@ -140,5 +140,5 @@ def execute(config=None):
     ruler.startwork()
 
 if __name__ == '__main__':
-    getLoggingObject(logType='StreamLogger')
+    getLoggingObject(logType='StreamLogger', service='Ruler')
     execute()

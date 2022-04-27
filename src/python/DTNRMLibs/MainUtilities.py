@@ -69,57 +69,61 @@ def getFullUrl(config, sitename=None):
         webdomain = "http://" + webdomain
     return "%s/%s" % (webdomain, sitename)
 
-def checkLoggingHandler(handlerToCheck):
+def checkLoggingHandler(**kwargs):
     """Check if logging handler is present and return True/False"""
-    if logging.getLogger().hasHandlers():
-        for handler in logging.getLogger().handlers:
-            if isinstance(handler, handlerToCheck):
+    if logging.getLogger(kwargs.get('service', __name__)).hasHandlers():
+        for handler in logging.getLogger(kwargs.get('service', __name__)).handlers:
+            if isinstance(handler, kwargs['handler']):
                 return True
     return False
 
-def getStreamLogger(logLevel='DEBUG'):
+def getStreamLogger(**kwargs):
     """Get Stream Logger."""
-    if checkLoggingHandler(logging.StreamHandler):
-        return logging.getLogger()
+    kwargs['handler'] = logging.StreamHandler
+    if checkLoggingHandler(**kwargs):
+        return logging.getLogger(kwargs.get('service', __name__))
     levels = {'FATAL': logging.FATAL,
               'ERROR': logging.ERROR,
               'WARNING': logging.WARNING,
               'INFO': logging.INFO,
               'DEBUG': logging.DEBUG}
-    logger = logging.getLogger()
+    logger = logging.getLogger(kwargs.get('service', __name__))
     handler = logging.StreamHandler()
     formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
                                   datefmt="%a, %d %b %Y %H:%M:%S")
     handler.setFormatter(formatter)
     if not logger.handlers:
         logger.addHandler(handler)
-    logger.setLevel(levels[logLevel])
+    logger.setLevel(levels[kwargs.get('logLevel', 'DEBUG')])
     return logger
 
-def getLoggingObject(logFile='/var/log/dtnrm-site-fe/', logLevel='DEBUG', logOutName='api.log',
-                     rotateTime='midnight', backupCount=10, logType='TimedRotatingFileHandler'):
+def getLoggingObject(**kwargs):
     """Get logging Object, either Timed FD or Stream"""
-    if logType == 'TimedRotatingFileHandler':
-        return getTimeRotLogger(logFile, logLevel, logOutName, rotateTime, backupCount)
-    return getStreamLogger(logLevel)
+    if kwargs.get('logType', 'TimedRotatingFileHandler') == 'TimedRotatingFileHandler':
+        return getTimeRotLogger(**kwargs)
+    return getStreamLogger(**kwargs)
 
-def getTimeRotLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='midnight', backupCount=10):
+def getTimeRotLogger(**kwargs):
     """Get new Logger for logging."""
-    if checkLoggingHandler(logging.handlers.TimedRotatingFileHandler):
-        return logging.getLogger()
+    kwargs['handler'] = logging.handlers.TimedRotatingFileHandler
+    if checkLoggingHandler(**kwargs):
+        handler = logging.getLogger(kwargs.get('service', __name__))
+        return logging.getLogger(kwargs.get('service', __name__))
     levels = {'FATAL': logging.FATAL,
               'ERROR': logging.ERROR,
               'WARNING': logging.WARNING,
               'INFO': logging.INFO,
               'DEBUG': logging.DEBUG}
-    logger = logging.getLogger()
-    createDirs(logFile)
-    logFile += logOutName
-    handler = logging.handlers.TimedRotatingFileHandler(logFile, when=rotateTime, backupCount=backupCount)
+    createDirs(kwargs.get('logFile', ''))
+    logFile = kwargs.get('logFile', '') + kwargs.get('logOutName', 'api.log')
+    logger = logging.getLogger(kwargs.get('service', __name__))
+    handler = logging.handlers.TimedRotatingFileHandler(logFile,
+                                                        when=kwargs.get('rotateTime', 'midnight'),
+                                                        backupCount=kwargs.get('backupCount', 5))
     formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
                                   datefmt="%a, %d %b %Y %H:%M:%S")
     handler.setFormatter(formatter)
-    handler.setLevel(levels[logLevel])
+    handler.setLevel(levels[kwargs.get('logLevel', 'DEBUG')])
     logger.addHandler(handler)
     return logger
 
@@ -397,7 +401,7 @@ class contentDB():
     """File Saver, loader class."""
     def __init__(self, config=None):
         self.config = config if config else getConfig()
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='contentdb')
 
     @staticmethod
     def getFileContentAsJson(inputFile):

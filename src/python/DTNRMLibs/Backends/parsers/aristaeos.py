@@ -17,7 +17,7 @@ class AristaEOS():
     """Arista EOS Ansible wrapper."""
     def __init__(self):
         self.factName = ['arista.eos.eos_facts', 'arista.eos.eos_command']
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='SwitchBackends')
 
     @staticmethod
     def _getSystemValidPortName(port):

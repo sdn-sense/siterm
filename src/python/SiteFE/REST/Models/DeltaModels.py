@@ -34,7 +34,7 @@ class frontendDeltaModels():
             self.config = config
         else:
             self.config = getConfig()
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='http-api')
         self.policer = {}
         if dbI:
             self.dbI = dbI

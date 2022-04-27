@@ -26,7 +26,7 @@ from SiteFE.REST.Models.DeltaModels import frontendDeltaModels
 
 
 CONFIG = getConfig()
-LOGGER = getLoggingObject(logType='StreamLogger')
+LOGGER = getLoggingObject(logType='StreamLogger', service='http-api')
 # TODO: Use Logger
 
 DELTABACKEND = frontendDeltaModels(config=CONFIG)

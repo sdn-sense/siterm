@@ -35,7 +35,7 @@ class FrontendRM():
     def __init__(self):
         self.initialized = False
         self.config = getConfig()
-        self.logger = getLoggingObject(logFile='/var/log/dtnrm-site-fe/http-api/')
+        self.logger = getLoggingObject(logFile='/var/log/dtnrm-site-fe/http-api/', service='http-api')
         self.siteDB = contentDB(config=self.config)
         self.dbI = getDBConn('REST-Frontend', self)
 

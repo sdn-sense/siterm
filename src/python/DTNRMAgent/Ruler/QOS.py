@@ -25,7 +25,7 @@ class QOS():
     """QOS class to install new limit rules."""
     def __init__(self, config):
         self.config = config if config else getConfig()
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='QOS')
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         self.hostname = self.config.get('agent', 'hostname')
         createDirs(self.workDir)
@@ -175,5 +175,5 @@ def execute(config=None):
     qosruler.startqos()
 
 if __name__ == '__main__':
-    getLoggingObject(logType='StreamLogger')
+    getLoggingObject(logType='StreamLogger', service='QOS')
     execute()

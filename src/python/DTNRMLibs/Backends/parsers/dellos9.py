@@ -18,7 +18,7 @@ class DellOS9():
     def __init__(self):
         self.factName = ['dellos9_facts', 'dellos9_command']
         self.regexs = [r'^tagged (.+) (.+)', r'^untagged (.+) (.+)', r'^channel-member (.+) (.+)', r'^(Port-channel) (.+)']
-        self.logger = getLoggingObject()
+        self.logger = getLoggingObject(service='SwitchBackends')
 
     @staticmethod
     def _getSystemValidPortName(port):
