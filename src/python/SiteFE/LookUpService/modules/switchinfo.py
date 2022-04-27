@@ -173,10 +173,6 @@ class SwitchInfo():
                 self.logger.debug('ERROR: rst parameter is not defined for %s. Err: %s', switchName, ex)
                 rst = False
             for portName, portSwitch in list(switchDict.items()):
-                #if 'hostname' in portSwitch and 'isAlias' not in portSwitch:
-                #    newuri = ":%s:%s:%s" % (switchName, portName, portSwitch['hostname'])
-                #else:
-                # This should come from the host itself. or we can add isAlias here.
                 newuri = ":%s:%s" % (switchName, portName)
                 self._addVswPort(hostname=switchName, portName=portName, vsw=vsw)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
@@ -243,18 +239,21 @@ class SwitchInfo():
     def _addAddressPool(self, uri):
         """Add Address Pools"""
         for key in ['ipv4-address-pool', 'ipv6-address-pool']:
-            tmp = self.__getFloatingFromConfig(key)
+            tmp = self.__getValFromConfig(key)
             if tmp:
                 self._addNetworkAddress(uri, key, str(tmp))
 
-    def __getFloatingFromConfig(self, name):
+    def __getValFromConfig(self, name, key=''):
         """Get Floating val from configuration"""
-        floatingrange = ""
+        outVal = ""
         try:
-            floatingrange = self.config.get(self.sitename, name)
+            if key:
+                outVal = self.config.get(key, name)
+            else:
+                outVal = self.config.get(self.sitename, name)
         except (configparser.NoOptionError, configparser.NoSectionError):
             pass
-        return floatingrange
+        return outVal
 
     def _addSwitchRoutes(self, switchInfo):
         """Add Route info to MRML"""
@@ -264,15 +263,16 @@ class SwitchInfo():
             out = {'hostname': switchName}
             try:
                 out['rst'] = self.config.get(switchName, 'rst')
+                out['private_asn'] = self.config.get(switchName, 'private_asn')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
-                self.logger.debug('ERROR: rst parameter is not defined for %s. Err: %s', switchName, ex)
+                self.logger.debug('ERROR: rst/private_asn parameter is not correctly defined (MISCONFIG. Contact Support) for %s. Err: %s', switchName, ex)
                 continue
             for ipX, routeList in rstEntries.items():
                 out['rstname'] = 'rst-%s' % ipX
                 for route in routeList:
                     # get ipv6/ipv4 floating ranges
                     for key in ['ipv4-subnet-pool', 'ipv6-subnet-pool']:
-                        tmp = self.__getFloatingFromConfig(key)
+                        tmp = self.__getValFromConfig(key)
                         if tmp:
                             out[key] = tmp
                     out['iptype'] = ipX

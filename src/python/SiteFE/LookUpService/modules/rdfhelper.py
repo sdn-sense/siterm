@@ -274,6 +274,8 @@ class RDFHelper():
                 name = keytype % kwargs['iptype']
                 if name in kwargs:
                     self._addNetworkAddress(rst, name, str(kwargs[name]))
+        if 'private_asn' in kwargs:
+            self._addNetworkAddress(rst, 'private_asn', str(kwargs['private_asn']))
         return rst
 
     def _addL3VPN(self, **kwargs):
