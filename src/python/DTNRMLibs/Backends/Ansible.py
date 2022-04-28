@@ -37,7 +37,7 @@ class Switch():
     def _executeAnsible(playbook):
         """Execute Ansible playbook"""
         # TODO control ansible runner params or use default
-        return ansible_runner.run(private_data_dir='/opt/siterm/config/ansible/',
+        return ansible_runner.run(private_data_dir='/opt/siterm/config/ansible/sense/',
                                   inventory='/opt/siterm/config/ansible/sense/inventory/inventory.yaml',
                                   playbook=playbook,
                                   rotate_artifacts=100)
