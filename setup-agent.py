@@ -23,8 +23,6 @@ import sys
 from setuptools import setup
 from setupUtilities import list_packages, get_py_modules, VERSION
 
-if "--docker" in sys.argv:
-    sys.argv.remove("--docker")
 setup(
     name='DTNRMAgent',
     version="%s" % VERSION,

@@ -31,8 +31,6 @@ SCRIPTS = []
 for sectionName in ['LookUpService', 'PolicyService', 'ProvisioningService']:
     SCRIPTS.append('packaging/dtnrm-site-fe/scripts/%s-update' % sectionName)
 
-if "--docker" in sys.argv:
-    sys.argv.remove("--docker")
 setup(
     name='DTNRMSiteFE',
     version="%s" % VERSION,

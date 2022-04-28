@@ -33,7 +33,7 @@ class Default():
         This call is used to get system MAC, which will be used
         for generating topology together with lldp information.
         INPUT:
-          Ansible file: /etc/ansible/sense/project/maclldproute.yaml
+          Ansible file: /opt/siterm/config/ansible/sense/project/maclldproute.yaml
           1st command (Dell `show system` | Arista `show version | json`)
         OUTPUT:
         {'mac': <MAC_ADDRESS>}
@@ -47,7 +47,7 @@ class Default():
         This call is used to get all lldp neighbors, which are used
         for generating topology.
         INPUT:
-          Ansible file: /etc/ansible/sense/project/maclldproute.yaml
+          Ansible file: /opt/siterm/config/ansible/sense/project/maclldproute.yaml
           2nd command (Dell `show lldp neighbors detail` | Arista `show lldp neighbors detail | json`)
         OUTPUT:
         {<local_port_id>: {'local_port_id': <local_port_id>,
@@ -71,7 +71,7 @@ class Default():
         """
         This call is used to get all IPv4 routing information
         INPUT:
-          Ansible file: /etc/ansible/sense/project/maclldproute.yaml
+          Ansible file: /opt/siterm/config/ansible/sense/project/maclldproute.yaml
           3rd command (Dell `show running-config` | Arista `show ip route vrf all | json`)
         OUTPUT:
         [{'to': <TO_RANGE>, 'from': 'FROM_GTW', 'vrf': <VRF_NAME|Optional>, 'intf': <INTF_NAME|Optional>}]
@@ -86,7 +86,7 @@ class Default():
         """
         This call is used to get all IPv6 routing information
         INPUT:
-          Ansible file: /etc/ansible/sense/project/maclldproute.yaml
+          Ansible file: /opt/siterm/config/ansible/sense/project/maclldproute.yaml
           4th command (Dell `show running-config` | Arista `show ipv6 route vrf all | json`)
         OUTPUT:
         [{'to': <TO_RANGE>, 'from': 'FROM_GTW', 'vrf': <VRF_NAME|Optional>, 'intf': <INTF_NAME|Optional>}]

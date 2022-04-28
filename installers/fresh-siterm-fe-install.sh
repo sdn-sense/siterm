@@ -29,9 +29,6 @@
 ##H  -D anyvalue    this flag tells that this is docker installation. It will skip copying config files
 ##H  -h             Display this help.
 
-# TODO also force to specify TSDB parameters it should get from FE.
-# TODO. data directory should come from configuration parameter
-datadir=/opt/config/
 workdir=`pwd`
 packages="git autoconf sudo libcurl-devel libffi-devel openssl-devel automake curl gcc libuuid-devel lm_sensors make nc pkgconfig wget zlib-devel python3-devel httpd httpd-devel python3-mod_wsgi mod_ssl cronie python3-pip python38 python3-pyOpenSSL mariadb-server python38-pyyaml python3-mysql mariadb-devel fetch-crl ansible procps-ng"
 # Check if release is supported.
@@ -111,17 +108,9 @@ pip3 install --upgrade setuptools
 
 echo "==================================================================="
 echo "Cloning siterm and installing it"
-cd $rootdir
-rm -rf $gitr
-git clone -b $gitb https://github.com/$gito/$gitr
+cd $rootdir/dtnrmcode/$gitr
 
-cd $gitr
-
-if [ X"$docker" = X ]; then
-  python3 setup-sitefe.py install || exit $?
-else
-  python3 setup-sitefe.py install --docker || exit $?
-fi
+python3 setup-sitefe.py install || exit $?
 
   echo "==================================================================="
   echo "Modifying ownership and permission rules for Site FE directories"
@@ -129,23 +118,15 @@ fi
 
   # Remove ssl.conf - we have all defined inside the sitefe-httpd.conf
   rm -f /etc/httpd/conf.d/ssl.conf
-  # Ownership
-  chown apache:apache -R $datadir
-  cd $datadir
-  # File permissions, recursive
-  find . -type f -exec chmod 0644 {} \;
-  # Dir permissions, recursive
-  find . -type d -exec chmod 0755 {} \;
-  # Create log for apache and rest api
   mkdir -p /var/log/dtnrm-site-fe/http-api/
-  chown apache:apache /var/log/dtnrm-site-fe/http-api/
+  chown -R apache:apache /var/log/dtnrm-site-fe/*
 
 if [ X"$docker" = X ]; then
   # SELinux serve files off Apache, resursive
-  echo "4. Apply SELinux rule to allow Apache serve files from $datadir"
-  chcon -t httpd_sys_content_t $datadir -R
+  echo "4. Apply SELinux rule to allow Apache serve files from $rootdir"
+  chcon -t httpd_sys_content_t $rootdir -R
   # Allow write only to specific dirs
-  chcon -t httpd_sys_rw_content_t $datadir -R
+  chcon -t httpd_sys_rw_content_t $rootdir -R
   echo "5. Applying mod_proxy policy change so that it can write remotely."
   echo "   More details: http://sysadminsjourney.com/content/2010/02/01/apache-modproxy-error-13permission-denied-error-rhel/"
   /usr/sbin/setsebool -P httpd_can_network_connect 1
@@ -154,15 +135,6 @@ fi
 echo "==================================================================="
 echo "==================================================================="
 echo "==================================================================="
-echo "                       INSTALLATION DONE                           "
+echo "                       DOCKER BUILD DONE                           "
 echo "==================================================================="
-echo "Please check the following things:"
-echo "   1. Configuration changes:"
-echo "      Your configuration is correct on GIT Repo."
-echo "   2. Start httpd service"
-echo "   3. Execute all services and see if they work (While it is fresh install, just see if there is no obvious errors):"
-echo "        a) LookUpService-update: MRML template preparation about all DTNs and Switches. "
-echo "        b) PolicyService-update: That deltas are accepted and it works"
-echo "        c) ProvisioningService-Update: That provisions deltas."
-echo "   4. Make sure firewalld has port 443/tcp"
 exit 0

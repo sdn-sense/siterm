@@ -35,10 +35,10 @@ class Switch():
 
     @staticmethod
     def _executeAnsible(playbook):
-        """Execute Ansible plybook"""
+        """Execute Ansible playbook"""
         # TODO control ansible runner params or use default
-        return ansible_runner.run(private_data_dir='/etc/ansible/sense/',
-                                  inventory='/etc/ansible/sense/inventory/inventory.yaml',
+        return ansible_runner.run(private_data_dir='/opt/siterm/config/ansible/',
+                                  inventory='/opt/siterm/config/ansible/sense/inventory/inventory.yaml',
                                   playbook=playbook,
                                   rotate_artifacts=100)
                                   #debug = True,
@@ -51,18 +51,18 @@ class Switch():
     @staticmethod
     def _getHostConfig(host):
         """Get Ansible Host Config"""
-        if not os.path.isfile('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host):
+        if not os.path.isfile('/opt/siterm/config/ansible/sense/inventory/host_vars/%s.yaml' % host):
             raise Exception('Ansible config file for %s not available.' % host)
-        with open('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host, 'r', encoding='utf-8') as fd:
+        with open('/opt/siterm/config/ansible/sense/inventory/host_vars/%s.yaml' % host, 'r', encoding='utf-8') as fd:
             out = yaml.load(fd.read())
         return out
 
     @staticmethod
     def _writeHostConfig(host, out):
         """Write Ansible Host config file"""
-        if not os.path.isfile('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host):
+        if not os.path.isfile('/opt/siterm/config/ansible/sense/inventory/host_vars/%s.yaml' % host):
             raise Exception('Ansible config file for %s not available.' % host)
-        with open('/etc/ansible/sense/inventory/host_vars/%s.yaml' % host, 'w', encoding='utf-8') as fd:
+        with open('/opt/siterm/config/ansible/sense/inventory/host_vars/%s.yaml' % host, 'w', encoding='utf-8') as fd:
             fd.write(yaml.dump(out))
 
 
