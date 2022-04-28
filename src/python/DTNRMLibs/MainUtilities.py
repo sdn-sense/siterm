@@ -74,27 +74,30 @@ def checkLoggingHandler(**kwargs):
     if logging.getLogger(kwargs.get('service', __name__)).hasHandlers():
         for handler in logging.getLogger(kwargs.get('service', __name__)).handlers:
             if isinstance(handler, kwargs['handler']):
-                return True
-    return False
+                return handler
+    return None
+
+
+LEVELS = {'FATAL': logging.FATAL,
+          'ERROR': logging.ERROR,
+          'WARNING': logging.WARNING,
+          'INFO': logging.INFO,
+          'DEBUG': logging.DEBUG}
+
 
 def getStreamLogger(**kwargs):
     """Get Stream Logger."""
     kwargs['handler'] = logging.StreamHandler
-    if checkLoggingHandler(**kwargs):
-        return logging.getLogger(kwargs.get('service', __name__))
-    levels = {'FATAL': logging.FATAL,
-              'ERROR': logging.ERROR,
-              'WARNING': logging.WARNING,
-              'INFO': logging.INFO,
-              'DEBUG': logging.DEBUG}
+    handler = checkLoggingHandler(**kwargs)
     logger = logging.getLogger(kwargs.get('service', __name__))
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
-                                  datefmt="%a, %d %b %Y %H:%M:%S")
-    handler.setFormatter(formatter)
+    if not handler:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
+                                      datefmt="%a, %d %b %Y %H:%M:%S")
+        handler.setFormatter(formatter)
     if not logger.handlers:
         logger.addHandler(handler)
-    logger.setLevel(levels[kwargs.get('logLevel', 'DEBUG')])
+    logger.setLevel(LEVELS[kwargs.get('logLevel', 'DEBUG')])
     return logger
 
 def getLoggingObject(**kwargs):
@@ -106,31 +109,25 @@ def getLoggingObject(**kwargs):
 def getTimeRotLogger(**kwargs):
     """Get new Logger for logging."""
     kwargs['handler'] = logging.handlers.TimedRotatingFileHandler
-    if checkLoggingHandler(**kwargs):
-        handler = logging.getLogger(kwargs.get('service', __name__))
-        return logging.getLogger(kwargs.get('service', __name__))
+    handler = checkLoggingHandler(**kwargs)
     if 'logFile' not in kwargs:
         if 'config' in kwargs:
             kwargs['logFile'] = "%s/%s/" % (kwargs['config'].get('general', 'logDir'), kwargs.get('service', __name__))
         else:
             print('No config passed, will log to StreamLogger... Code issue!')
             return getStreamLogger(**kwargs)
-    levels = {'FATAL': logging.FATAL,
-              'ERROR': logging.ERROR,
-              'WARNING': logging.WARNING,
-              'INFO': logging.INFO,
-              'DEBUG': logging.DEBUG}
-    createDirs(kwargs.get('logFile', ''))
     logFile = kwargs.get('logFile', '') + kwargs.get('logOutName', 'api.log')
     logger = logging.getLogger(kwargs.get('service', __name__))
-    handler = logging.handlers.TimedRotatingFileHandler(logFile,
-                                                        when=kwargs.get('rotateTime', 'midnight'),
-                                                        backupCount=kwargs.get('backupCount', 5))
-    formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
-                                  datefmt="%a, %d %b %Y %H:%M:%S")
-    handler.setFormatter(formatter)
-    handler.setLevel(levels[kwargs.get('logLevel', 'DEBUG')])
-    logger.addHandler(handler)
+    if not handler:
+        handler = logging.handlers.TimedRotatingFileHandler(logFile,
+                                                            when=kwargs.get('rotateTime', 'midnight'),
+                                                            backupCount=kwargs.get('backupCount', 5))
+        formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
+                                      datefmt="%a, %d %b %Y %H:%M:%S")
+        handler.setFormatter(formatter)
+        handler.setLevel(LEVELS[kwargs.get('logLevel', 'DEBUG')])
+        logger.addHandler(handler)
+    logger.setLevel(LEVELS[kwargs.get('logLevel', 'DEBUG')])
     return logger
 
 
@@ -238,7 +235,6 @@ class GitConfig():
                          'GIT_URL':    {'optional': True, 'default': 'https://raw.githubusercontent.com/'},
                          'GIT_BRANCH': {'optional': True, 'default': 'master'},
                          'MD5':        {'optional': False}}
-        self.logger = getLoggingObject(logType='StreamLogger')
 
     def gitConfigCache(self, name, url):
         """Precache file for 1 hour from git and use cached file."""
@@ -257,13 +253,13 @@ class GitConfig():
                 datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
                 prevfilename = '/tmp/%s-%s.yaml' % (datetimelasthour.strftime('%Y-%m-%d-%H'), name)
                 if os.path.isfile(prevfilename):
-                    self.logger.debug('Remove previous old cache file %s', prevfilename)
+                    print('Remove previous old cache file %s', prevfilename)
                     try:
                         os.remove(prevfilename)
                         os.remove('/tmp/dtnrm-link-%s.yaml' % name)
                     except OSError:
                         pass
-                self.logger.debug('Receiving new file from GIT for %s', name)
+                print('Receiving new file from GIT for %s', name)
                 outyaml = getWebContentFromURL(url).text
                 with open(filename, 'w', encoding='utf-8') as fd:
                     fd.write(outyaml)
@@ -286,7 +282,7 @@ class GitConfig():
     def getLocalConfig(self):
         """Get local config for info where all configs are kept in git."""
         if not os.path.isfile('/etc/dtnrm.yaml'):
-            self.logger.debug('Config file /etc/dtnrm.yaml does not exist.')
+            print('Config file /etc/dtnrm.yaml does not exist.')
             raise Exception('Config file /etc/dtnrm.yaml does not exist.')
         with open('/etc/dtnrm.yaml', 'r', encoding='utf-8') as fd:
             self.config = yload(fd.read())
@@ -294,7 +290,7 @@ class GitConfig():
             if key not in list(self.config.keys()):
                 # Check if it is optional or not;
                 if not requirement['optional']:
-                    self.logger.debug('Configuration /etc/dtnrm.yaml missing non optional config parameter %s', key)
+                    print('Configuration /etc/dtnrm.yaml missing non optional config parameter %s', key)
                     raise Exception('Configuration /etc/dtnrm.yaml missing non optional config parameter %s' % key)
                 self.config[key] = requirement['default']
 
@@ -326,7 +322,7 @@ class GitConfig():
         if self.config['MD5'] not in list(mapping.keys()):
             msg = 'Configuration is not available for this MD5 %s tag in GIT REPO %s' % \
                             (self.config['MD5'], self.config['GIT_REPO'])
-            self.logger.debug(msg)
+            print(msg)
             raise Exception(msg)
         self.config['MAPPING'] = copy.deepcopy(mapping[self.config['MD5']])
         self.getGitFEConfig()
