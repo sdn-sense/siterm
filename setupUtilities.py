@@ -17,11 +17,8 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
-from __future__ import print_function
-from builtins import str
 import os
 import sys
-import platform
 
 # IMPORTANT Be aware if you update version here, please update it also in:
 # setupUtilities.py
@@ -30,20 +27,6 @@ import platform
 # src/python/DTNRMAgent/__init__.py
 # src/python/DTNRMLibs/__init__.py
 VERSION = '210312'
-
-
-def printInfo(logger=None):
-    """Print information about sytem before start setup."""
-    print("System Information:")
-    print("-" * 100)
-    print("Python version: %s" % sys.version.split('\n'))
-    print("Dist: %s" % str(platform.dist()))
-    print("System: %s" % platform.system())
-    print("Machine: %s" % platform.machine())
-    print("Platform: %s" % platform.platform())
-    print('Uname: %s' % platform.uname())
-    print('Version: %s' % platform.version())
-    print('Mac version: %s' % platform.mac_ver())
 
 
 def get_path_to_root(appendLocation=None):

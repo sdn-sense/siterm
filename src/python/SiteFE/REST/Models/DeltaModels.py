@@ -1,56 +1,51 @@
 #!/usr/bin/env python3
-# pylint: disable=line-too-long, bad-whitespace
+# pylint: disable=line-too-long
 """Site FE call functions.
 
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title                   : dtnrm
-Author                  : Justas Balcas
-Email                   : justas.balcas (at) cern.ch
-@Copyright              : Copyright (C) 2016 California Institute of Technology
-Date                    : 2017/09/26
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/01/20
 """
-from __future__ import print_function
-from builtins import object
+import json
 from tempfile import NamedTemporaryFile
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
 from DTNRMLibs.MainUtilities import httpdate
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import contentDB
+from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getCustomOutMsg
 from DTNRMLibs.MainUtilities import getAllFileContent
 from DTNRMLibs.MainUtilities import convertTSToDatetime
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.CustomExceptions import DeltaNotFound
 from DTNRMLibs.CustomExceptions import ModelNotFound
 from DTNRMLibs.CustomExceptions import WrongDeltaStatusTransition
-from DTNRMLibs.FECalls import getDBConn
+from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 
 
-class frontendDeltaModels(object):
+class frontendDeltaModels():
     """Delta Actions through Frontend interface."""
-    def __init__(self, logger, config=None):
-        self.dbI = getDBConn('REST-DELTA')
-        self.config = getConfig()
+    def __init__(self, config=None, dbI=None):
         if config:
             self.config = config
-        self.logger = logger
+        else:
+            self.config = getConfig()
+        self.logger = getLoggingObject(config=self.config, service='http-api')
+        self.policer = {}
+        if dbI:
+            self.dbI = dbI
+        else:
+            self.dbI = getDBConn('REST-DELTA', self)
         self.policer = {}
         for sitename in self.config.get('general', 'sites').split(','):
-            policer = polS.PolicyService(config, logger, sitename)
+            policer = polS.PolicyService(config, sitename)
             self.policer[sitename] = policer
-        self.stateM = stateM.StateMachine(self.logger)
-        self.siteDB = contentDB(logger=self.logger, config=self.config)
+        self.stateM = stateM.StateMachine(self.config)
+        self.siteDB = contentDB(config=self.config)
 
     def addNewDelta(self, uploadContent, environ, **kwargs):
         """Add new delta."""
@@ -76,23 +71,19 @@ class frontendDeltaModels(object):
                    'lastModified': convertTSToDatetime(outContent['UpdateTime']),
                    'href': "%s/%s" % (environ['SCRIPT_URI'], hashNum),
                    'modelId': out['modelId'],
-                   'state': out['State'],
-                   'reduction': out['ParsedDelta']['reduction'],
-                   'addition': out['ParsedDelta']['addition']}
+                   'state': out['State']}
         print('Delta was %s. Returning info %s' % (out['State'], outDict))
         if out['State'] in ['accepted']:
             kwargs['http_respond'].ret_201('application/json', kwargs['start_response'],
                                            [('Last-Modified', httpdate(out['UpdateTime'])),
                                             ('Location', outDict['href'])])
             return outDict
+        kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
+        if 'Error' not in list(out.keys()):
+            out = "Unknown Error. Dump all out content %s" % json.dumps(out)
         else:
-            kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
-            if 'Error' in list(out.keys()):
-                errMsg = ""
-                for key in ['errorNo', 'errorType', 'errMsg']:
-                    if key in list(out['Error'].keys()):
-                        errMsg += " %s: %s" % (key, out['Error'][key])
-            return getCustomOutMsg(errMsg=errMsg, exitCode=500)
+            out = json.dumps(out)
+        return getCustomOutMsg(errMsg=out, exitCode=500)
 
     def getdelta(self, deltaID=None, **kwargs):
         """Get delta from database."""
@@ -172,3 +163,13 @@ class frontendDeltaModels(object):
         self.stateM.commit(dbobj, {'uid': deltaID, 'state': 'committing'})
         return {'status': 'OK'}
 
+    def getActiveDeltas(self, **kwargs):
+        """Get all Active Deltas"""
+        dbobj = getVal(self.dbI, **kwargs)
+        activeDeltas = dbobj.get('activeDeltas')
+        if activeDeltas:
+            activeDeltas = activeDeltas[0]
+            activeDeltas['output'] = evaldict(activeDeltas['output'])
+        if not activeDeltas:
+            activeDeltas = {'output': {}}
+        return activeDeltas

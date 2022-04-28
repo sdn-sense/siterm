@@ -23,19 +23,21 @@ from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import getLoggingObject
+from DTNRMLibs.MainUtilities import reportServiceStatus
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import BadRequestError
-from DTNRMLibs.FECalls import getDBConn
-from DTNRMLibs.FECalls import reportServiceStatus
+from DTNRMLibs.MainUtilities import getDBConn
 
 
 class FrontendRM():
     """Site Frontend calls."""
     def __init__(self):
-        self.dbI = getDBConn('REST-Frontend')
         self.initialized = False
         self.config = getConfig()
-        self.siteDB = contentDB()
+        self.logger = getLoggingObject(config=self.config, logFile='/var/log/dtnrm-site-fe/http-api/', service='http-api')
+        self.siteDB = contentDB(config=self.config)
+        self.dbI = getDBConn('REST-Frontend', self)
 
     def getHosts(self, **kwargs):
         """Return all available Hosts, where key is IP address."""
@@ -93,15 +95,16 @@ class FrontendRM():
                'hostinfo': json.dumps(inputDict)}
         dbobj.update('hosts', [out])
 
-    @staticmethod
-    def servicestate(inputDict, **kwargs):
+    def servicestate(self, inputDict, **kwargs):
         """Set Service State in DB."""
         # Only 3 Services are supported to report via URL
         # DTNRM-Agent | DTNRM-Ruler | DTNRM-Debugger
-        if inputDict['servicename'] not in ['Agent', 'Ruler', 'Debugger']:
+        if inputDict['servicename'] not in ['Agent', 'Ruler', 'Debugger', 'LookUpService',
+                                            'PolicyService', 'ProvisioningService']:
             raise NotFoundError('This Service %s is not supported by Frontend' % inputDict['servicename'])
-        reportServiceStatus(inputDict['servicename'], inputDict['servicestate'],
-                            kwargs['sitename'], None, inputDict['hostname'])
+        reportServiceStatus(**{'servicename': inputDict['servicename'], 'servicestate': inputDict['servicestate'],
+                               'sitename': kwargs['sitename'], 'hostname': inputDict['hostname'],
+                               'cls': self})
 
     def getdebug(self, **kwargs):
         """Get Debug action for specific ID."""

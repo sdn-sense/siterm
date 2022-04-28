@@ -1,26 +1,11 @@
 #!/usr/bin/env python3
 """Everything goes here when they do not fit anywhere else.
 
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title                   : dtnrm
-Author                  : Justas Balcas
-Email                   : justas.balcas (at) cern.ch
-@Copyright              : Copyright (C) 2016 California Institute of Technology
-Date                    : 2017/09/26
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2021/01/20
 """
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-from past.builtins import basestring
 import os
 import os.path
 import io
@@ -33,25 +18,29 @@ import time
 import shlex
 import uuid
 import copy
+import socket
 import http.client
 import base64
 import datetime
 import subprocess
 import email.utils as eut
 import configparser
-import simplejson as json
 import logging
 import logging.handlers
+from past.builtins import basestring
+import simplejson as json
 # Custom exceptions imports
 import pycurl
 import requests
 from yaml import safe_load as yload
+from rdflib import Graph
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import WrongInputError
 from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
 from DTNRMLibs.CustomExceptions import NotSupportedArgument
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
 from DTNRMLibs.HTTPLibrary import Requests
+from DTNRMLibs.DBBackend import dbinterface
 
 
 def getUTCnow():
@@ -66,11 +55,9 @@ def getVal(conDict, **kwargs):
     if 'sitename' in list(kwargs.keys()):
         if kwargs['sitename'] in list(conDict.keys()):
             return conDict[kwargs['sitename']]
-        else:
-            raise Exception('This SiteName is not configured on the Frontend. Contact Support')
-    else:
-        print(kwargs)
-        raise Exception('This Call Should not happen. Contact Support')
+        raise Exception('This SiteName is not configured on the Frontend. Contact Support')
+    print(kwargs)
+    raise Exception('This Call Should not happen. Contact Support')
 
 
 def getFullUrl(config, sitename=None):
@@ -82,41 +69,65 @@ def getFullUrl(config, sitename=None):
         webdomain = "http://" + webdomain
     return "%s/%s" % (webdomain, sitename)
 
+def checkLoggingHandler(**kwargs):
+    """Check if logging handler is present and return True/False"""
+    if logging.getLogger(kwargs.get('service', __name__)).hasHandlers():
+        for handler in logging.getLogger(kwargs.get('service', __name__)).handlers:
+            if isinstance(handler, kwargs['handler']):
+                return handler
+    return None
 
-def getStreamLogger(logLevel='DEBUG'):
+
+LEVELS = {'FATAL': logging.FATAL,
+          'ERROR': logging.ERROR,
+          'WARNING': logging.WARNING,
+          'INFO': logging.INFO,
+          'DEBUG': logging.DEBUG}
+
+
+def getStreamLogger(**kwargs):
     """Get Stream Logger."""
-    levels = {'FATAL': logging.FATAL,
-              'ERROR': logging.ERROR,
-              'WARNING': logging.WARNING,
-              'INFO': logging.INFO,
-              'DEBUG': logging.DEBUG}
-    logger = logging.getLogger()
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
-                                  datefmt="%a, %d %b %Y %H:%M:%S")
-    handler.setFormatter(formatter)
+    kwargs['handler'] = logging.StreamHandler
+    handler = checkLoggingHandler(**kwargs)
+    logger = logging.getLogger(kwargs.get('service', __name__))
+    if not handler:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
+                                      datefmt="%a, %d %b %Y %H:%M:%S")
+        handler.setFormatter(formatter)
     if not logger.handlers:
         logger.addHandler(handler)
-    logger.setLevel(levels[logLevel])
+    logger.setLevel(LEVELS[kwargs.get('logLevel', 'DEBUG')])
     return logger
 
+def getLoggingObject(**kwargs):
+    """Get logging Object, either Timed FD or Stream"""
+    if kwargs.get('logType', 'TimedRotatingFileHandler') == 'TimedRotatingFileHandler':
+        return getTimeRotLogger(**kwargs)
+    return getStreamLogger(**kwargs)
 
-def getLogger(logFile='', logLevel='DEBUG', logOutName='api.log', rotateTime='midnight', backupCount=10):
+def getTimeRotLogger(**kwargs):
     """Get new Logger for logging."""
-    levels = {'FATAL': logging.FATAL,
-              'ERROR': logging.ERROR,
-              'WARNING': logging.WARNING,
-              'INFO': logging.INFO,
-              'DEBUG': logging.DEBUG}
-    logger = logging.getLogger()
-    createDirs(logFile)
-    logFile += logOutName
-    handler = logging.handlers.TimedRotatingFileHandler(logFile, when=rotateTime, backupCount=backupCount)
-    formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
-                                  datefmt="%a, %d %b %Y %H:%M:%S")
-    handler.setFormatter(formatter)
-    handler.setLevel(levels[logLevel])
-    logger.addHandler(handler)
+    kwargs['handler'] = logging.handlers.TimedRotatingFileHandler
+    handler = checkLoggingHandler(**kwargs)
+    if 'logFile' not in kwargs:
+        if 'config' in kwargs:
+            kwargs['logFile'] = "%s/%s/" % (kwargs['config'].get('general', 'logDir'), kwargs.get('service', __name__))
+        else:
+            print('No config passed, will log to StreamLogger... Code issue!')
+            return getStreamLogger(**kwargs)
+    logFile = kwargs.get('logFile', '') + kwargs.get('logOutName', 'api.log')
+    logger = logging.getLogger(kwargs.get('service', __name__))
+    if not handler:
+        handler = logging.handlers.TimedRotatingFileHandler(logFile,
+                                                            when=kwargs.get('rotateTime', 'midnight'),
+                                                            backupCount=kwargs.get('backupCount', 5))
+        formatter = logging.Formatter("%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
+                                      datefmt="%a, %d %b %Y %H:%M:%S")
+        handler.setFormatter(formatter)
+        handler.setLevel(LEVELS[kwargs.get('logLevel', 'DEBUG')])
+        logger.addHandler(handler)
+    logger.setLevel(LEVELS[kwargs.get('logLevel', 'DEBUG')])
     return logger
 
 
@@ -129,26 +140,22 @@ def evaldict(inputDict):
     out = {}
     try:
         out = ast.literal_eval(inputDict)
-    except ValueError as ex:
-        print("ValError: Failed to literal eval dict. Err:%s " % ex)
+    except ValueError:
         out = json.loads(inputDict)
     except SyntaxError as ex:
-        print("SyntaxError: Failed to literal eval dict. Err:%s " % ex)
+        raise WrongInputError("SyntaxError: Failed to literal eval dict. Err:%s " % ex) from ex
     return out
-
-
 
 def readFile(fileName):
     """Read all file lines to a list and rstrips the ending."""
     try:
-        with open(fileName, 'r') as fd:
+        with open(fileName, 'r', encoding='utf-8') as fd:
             content = fd.readlines()
         content = [x.rstrip() for x in content]
         return content
     except IOError:
         # File does not exist
         return []
-
 
 def externalCommand(command, communicate=True):
     """Execute External Commands and return stdout and stderr."""
@@ -158,7 +165,6 @@ def externalCommand(command, communicate=True):
         return proc.communicate()
     return proc
 
-
 def execute(command, logger, raiseError=True):
     """Execute interfaces commands."""
     logger.info('Asked to execute %s command' % command)
@@ -167,14 +173,15 @@ def execute(command, logger, raiseError=True):
     msg = 'Command: %s, Out: %s, Err: %s, ReturnCode: %s' % (command, out.rstrip(), err.rstrip(), cmdOut.returncode)
     if cmdOut.returncode != 0 and raiseError:
         raise FailedInterfaceCommand(msg)
-    elif cmdOut.returncode != 0:
+    if cmdOut.returncode != 0:
         logger.debug("RaiseError is False, but command failed. Only logging Errmsg: %s" % msg)
         return False
     return True
 
-
 def createDirs(fullDirPath):
     """Create Directories on fullDirPath."""
+    if not fullDirPath:
+        return
     dirname = os.path.dirname(fullDirPath)
     if not os.path.isdir(dirname):
         try:
@@ -184,7 +191,6 @@ def createDirs(fullDirPath):
             if not os.path.isdir(dirname):
                 raise
     return
-
 
 def publishToSiteFE(inputDict, host, url):
     """Put JSON to the Site FE."""
@@ -197,7 +203,6 @@ def publishToSiteFE(inputDict, host, url):
         return (ex.args[1], ex.args[0], 'FAILED', False)
     return out
 
-
 def getDataFromSiteFE(inputDict, host, url):
     """Get data from Site FE."""
     req = Requests(host, {})
@@ -209,12 +214,10 @@ def getDataFromSiteFE(inputDict, host, url):
         return (ex.args[1], ex.args[0], 'FAILED', False)
     return out
 
-
 def getWebContentFromURL(url):
     """TODO: Add some catches in future."""
     out = requests.get(url)
     return out
-
 
 def reCacheConfig(prevHour=None):
     """Return prevHour == currentHour, currentHour and used in Service Object
@@ -223,8 +226,7 @@ def reCacheConfig(prevHour=None):
     currentHour = datetimeNow.strftime('%H')
     return prevHour == currentHour, currentHour
 
-
-class GitConfig(object):
+class GitConfig():
     """Git based configuration class."""
     def __init__(self):
         self.config = {}
@@ -233,34 +235,33 @@ class GitConfig(object):
                          'GIT_URL':    {'optional': True, 'default': 'https://raw.githubusercontent.com/'},
                          'GIT_BRANCH': {'optional': True, 'default': 'master'},
                          'MD5':        {'optional': False}}
-        self.logger = getStreamLogger()
 
     def gitConfigCache(self, name, url):
         """Precache file for 1 hour from git and use cached file."""
         output = None
-        if os.path.isfile('/tmp/dtnrm-no-config-fetch.yaml'):
-            filename = '/tmp/dtnrm-link-%s.yaml' % name
-            with open(filename, 'r') as fd:
+        filename = '/tmp/dtnrm-link-%s.yaml' % name
+        if os.path.isfile('/tmp/dtnrm-no-config-fetch.yaml') and os.path.isfile(filename):
+            with open(filename, 'r', encoding='utf-8') as fd:
                 output = yload(fd.read())
         else:
             datetimeNow = datetime.datetime.now()
             filename = '/tmp/%s-%s.yaml' % (datetimeNow.strftime('%Y-%m-%d-%H'), name)
             if os.path.isfile(filename):
-                with open(filename, 'r') as fd:
+                with open(filename, 'r', encoding='utf-8') as fd:
                     output = yload(fd.read())
             else:
                 datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
                 prevfilename = '/tmp/%s-%s.yaml' % (datetimelasthour.strftime('%Y-%m-%d-%H'), name)
                 if os.path.isfile(prevfilename):
-                    self.logger.debug('Remove previous old cache file %s', prevfilename)
+                    print('Remove previous old cache file %s', prevfilename)
                     try:
                         os.remove(prevfilename)
                         os.remove('/tmp/dtnrm-link-%s.yaml' % name)
                     except OSError:
                         pass
-                self.logger.debug('Receiving new file from GIT for %s', name)
+                print('Receiving new file from GIT for %s', name)
                 outyaml = getWebContentFromURL(url).text
-                with open(filename, 'w') as fd:
+                with open(filename, 'w', encoding='utf-8') as fd:
                     fd.write(outyaml)
                 try:
                     os.symlink(filename, '/tmp/dtnrm-link-%s.yaml' % name)
@@ -281,32 +282,30 @@ class GitConfig(object):
     def getLocalConfig(self):
         """Get local config for info where all configs are kept in git."""
         if not os.path.isfile('/etc/dtnrm.yaml'):
-            self.logger.debug('Config file /etc/dtnrm.yaml does not exist.')
+            print('Config file /etc/dtnrm.yaml does not exist.')
             raise Exception('Config file /etc/dtnrm.yaml does not exist.')
-        with open('/etc/dtnrm.yaml', 'r') as fd:
+        with open('/etc/dtnrm.yaml', 'r', encoding='utf-8') as fd:
             self.config = yload(fd.read())
         for key, requirement in list(self.defaults.items()):
             if key not in list(self.config.keys()):
                 # Check if it is optional or not;
                 if not requirement['optional']:
-                    self.logger.debug('Configuration /etc/dtnrm.yaml missing non optional config parameter %s', key)
+                    print('Configuration /etc/dtnrm.yaml missing non optional config parameter %s', key)
                     raise Exception('Configuration /etc/dtnrm.yaml missing non optional config parameter %s' % key)
-                else:
-                    self.config[key] = requirement['default']
+                self.config[key] = requirement['default']
 
     def getGitAgentConfig(self):
-        """https://raw.githubusercontent.com/sdn-sense/rm-
-        configs/master/T2_US_Caltech/Agent01/main.yaml."""
+        """Get Git Agent Config.
+        Example: https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/Agent01/main.yaml."""
         if self.config['MAPPING']['type'] == 'Agent':
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
             self.config['MAIN'] = self.gitConfigCache('Agent-main', url)
             return
 
     def getGitFEConfig(self):
-        """https://raw.githubusercontent.com/sdn-sense/rm-
-        configs/master/T2_US_Caltech/FE/auth.yaml
-        https://raw.githubusercontent.com/sdn-sense/rm-
-        configs/master/T2_US_Caltech/FE/main.yaml."""
+        """Get Git FE Config.
+        Example: https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/auth.yaml
+        https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/main.yaml."""
         if self.config['MAPPING']['type'] == 'FE':
             url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
             self.config['MAIN'] = self.gitConfigCache('FE-main', url)
@@ -323,7 +322,7 @@ class GitConfig(object):
         if self.config['MD5'] not in list(mapping.keys()):
             msg = 'Configuration is not available for this MD5 %s tag in GIT REPO %s' % \
                             (self.config['MD5'], self.config['GIT_REPO'])
-            self.logger.debug(msg)
+            print(msg)
             raise Exception(msg)
         self.config['MAPPING'] = copy.deepcopy(mapping[self.config['MD5']])
         self.getGitFEConfig()
@@ -331,16 +330,29 @@ class GitConfig(object):
 
 
 def getGitConfig():
-    """Wrapper before git config class.
-
-    Returns dictionary.
-    """
-    gitConf = GitConfig()
-    gitConf.getGitConfig()
+    """Wrapper before git config class. Returns dictionary."""
+    unlocked = True
+    lockfile = '/tmp/siterm-git-fetch-lockfile'
+    while unlocked:
+        try:
+            os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            with open(lockfile, 'w', encoding='utf-8') as fd:
+                fd.write('Locked by PID: %s' % os.getpid())
+            unlocked = False
+        except FileExistsError as ex:
+            with open(lockfile, 'r', encoding='utf-8') as fd:
+                print(fd.read())
+            print('Lock Present to prefetch git config. Wait 1 seconds. Exception: %s ' % ex)
+            time.sleep(1)
+    try:
+        gitConf = GitConfig()
+        gitConf.getGitConfig()
+    finally:
+        os.remove(lockfile)
     return gitConf.config
 
 
-def getConfig(locations=None):
+def getConfig():
     """Get parsed configuration in ConfigParser Format.
 
     This is used till everyone move to YAML based config.
@@ -365,7 +377,7 @@ def getFileContentAsJson(inputFile):
     """Get file content as json."""
     out = {}
     if os.path.isfile(inputFile):
-        with open(inputFile, 'r') as fd:
+        with open(inputFile, 'r', encoding='utf-8') as fd:
             try:
                 out = json.load(fd)
             except ValueError:
@@ -377,7 +389,7 @@ def getFileContentAsJson(inputFile):
 def getAllFileContent(inputFile):
     """Get all file content as a string."""
     if os.path.isfile(inputFile):
-        with open(inputFile, 'r') as fd:
+        with open(inputFile, 'r', encoding='utf-8') as fd:
             return fd.read()
     raise NotFoundError('File %s was not found on the system.' % inputFile)
 
@@ -387,11 +399,11 @@ def getUsername():
     return pwd.getpwuid(os.getuid())[0]
 
 
-class contentDB(object):
+class contentDB():
     """File Saver, loader class."""
-    def __init__(self, logger=None, config=None):
-        self.config = config
-        self.logger = logger
+    def __init__(self, config=None):
+        self.config = config if config else getConfig()
+        self.logger = getLoggingObject(config=self.config, service='contentdb')
 
     @staticmethod
     def getFileContentAsJson(inputFile):
@@ -405,18 +417,17 @@ class contentDB(object):
         return str(newuuid4 + inputText)
 
     @staticmethod
-    def dumpFileContentAsJson(outFile, content, newHash=None):
+    def dumpFileContentAsJson(outFile, content):
         """Dump File content with locks."""
         tmpoutFile = outFile + '.tmp'
-        with open(tmpoutFile, 'w+') as fd:
+        with open(tmpoutFile, 'w+', encoding='utf-8') as fd:
             json.dump(content, fd)
         shutil.move(tmpoutFile, outFile)
         return True
 
     def saveContent(self, destFileName, outputDict):
         """Saves all content to a file."""
-        newHash = self.getHash("This-to-replace-with-date-and-Service-Name")
-        return self.dumpFileContentAsJson(destFileName, outputDict, newHash)
+        return self.dumpFileContentAsJson(destFileName, outputDict)
 
     @staticmethod
     def removeFile(fileLoc):
@@ -426,6 +437,16 @@ class contentDB(object):
             return True
         return False
 
+    def moveFile(self, sourcefile, destdir):
+        """Move file from sourcefile to dest dir"""
+        if not os.path.isfile(sourcefile):
+            raise Exception('File %s does not exist' % sourcefile)
+        if sourcefile.startswith(destdir):
+            # We dont want to move if already in dest dir
+            return sourcefile
+        destFile = os.path.join(destdir, self.getHash('.json'))
+        shutil.move(sourcefile, destFile)
+        return destFile
 
 def delete(inputObj, delObj):
     """Delete function which covers exceptions."""
@@ -436,7 +457,7 @@ def delete(inputObj, delObj):
         except ValueError as ex:
             print('Delete object %s is not in inputObj %s list. Err: %s' % (delObj, tmpList, ex))
         return tmpList
-    elif isinstance(inputObj, dict):
+    if isinstance(inputObj, dict):
         tmpDict = copy.deepcopy(inputObj)
         try:
             del tmpDict[delObj]
@@ -471,7 +492,7 @@ def read_input_data(environ):
         if not outjson:
             errMsg = 'Failed to parse json input: %s, Err: %s.' % (body.getvalue(), ex)
             print(errMsg)
-            raise WrongInputError(errMsg)
+            raise WrongInputError(errMsg) from ex
     return outjson
 
 VALIDATION = {"addhost": [{"key": "hostname", "type": basestring},
@@ -490,7 +511,7 @@ VALIDATION = {"addhost": [{"key": "hostname", "type": basestring},
 
 def generateHash(inText):
     """Generate unique using uuid."""
-    return str(uuid.uuid1())
+    return str(uuid.uuid1(len(inText)))
 
 
 def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):
@@ -551,7 +572,8 @@ def getHeaders(environ):
 
 def convertTSToDatetime(inputTS):
     """Convert timestamp to datetime."""
-    return datetime.datetime.fromtimestamp(int(inputTS)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    dtObj = datetime.datetime.fromtimestamp(int(inputTS))
+    return dtObj.strftime('%Y-%m-%dT%H:%M:%S.000+0000')
 
 
 def httpdate(timestamp):
@@ -595,12 +617,103 @@ def decodebase64(inputStr, decodeFlag=True):
     return inputStr
 
 
-def pubStateRemote(config, dic):
-    """Publish state from remote services."""
+def getDBConn(serviceName='', cls=None):
+    """Get database connection."""
+    dbConn = {}
+    if hasattr(cls, 'config'):
+        config = cls.config
+    else:
+        config = getConfig()
+    for sitename in config.get('general', 'sites').split(','):
+        if hasattr(cls, 'dbI'):
+            if hasattr(cls.dbI, sitename):
+                # DB Object is already in place!
+                continue
+        dbConn[sitename] = dbinterface(serviceName, config, sitename)
+    return dbConn
+
+def reportServiceStatus(**kwargs):
+    """Report service state to DB."""
+    reported = True
     try:
-        fullUrl = getFullUrl(config)
+        dbOut = {'hostname': kwargs.get('hostname', 'default'),
+                 'servicestate': kwargs.get('servicestate', 'UNSET'),
+                 'servicename': kwargs.get('servicename', 'UNSET'),
+                 'updatedate': getUTCnow()}
+        dbI = getDBConn(dbOut['servicename'], kwargs.get('cls', None))
+        dbobj = getVal(dbI, **{'sitename': kwargs.get('sitename', 'UNSET')})
+        services = dbobj.get('servicestates', search=[['hostname', dbOut['hostname']], ['servicename', dbOut['servicename']]])
+        if not services:
+            dbobj.insert('servicestates', [dbOut])
+        else:
+            dbobj.update('servicestates', [dbOut])
+    except configparser.NoOptionError:
+        reported = False
+    except Exception:
+        excType, excValue = sys.exc_info()[:2]
+        print("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
+               str(excType.__name__), excValue)
+        reported = False
+    return reported
+
+
+def pubStateRemote(**kwargs):
+    """Publish state from remote services."""
+    reported = reportServiceStatus(**kwargs)
+    if reported:
+        return
+    try:
+        fullUrl = getFullUrl(kwargs['cls'].config, kwargs['sitename'])
         fullUrl += '/sitefe'
+        dic = {'servicename': kwargs['servicename'],
+               'servicestate': kwargs['servicestate'],
+               'sitename': kwargs['sitename'],
+               'hostname':socket.gethostname()
+               }
         publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
     except Exception:
         excType, excValue = sys.exc_info()[:2]
         print("Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))
+
+def getCurrentModel(cls, raiseException=False):
+    """Get Current Model from DB."""
+    currentModel = cls.dbI.get('models', orderby=['insertdate', 'DESC'], limit=1)
+    currentGraph = Graph()
+    if currentModel:
+        try:
+            currentGraph.parse(currentModel[0]['fileloc'], format='turtle')
+        except IOError as ex:
+            if raiseException:
+                raise NotFoundError("Model failed to parse from DB. Error %s" % ex) from IOError
+            currentGraph = Graph()
+    elif raiseException:
+        raise NotFoundError("There is no model in DB. LookUpService is running?")
+    return currentModel, currentGraph
+
+def getActiveDeltas(cls):
+    """Get Active deltas from DB."""
+    activeDeltas = cls.dbI.get('activeDeltas')
+    if not activeDeltas:
+        return {'insertdate': int(getUTCnow()),
+                'output': {}}
+    activeDeltas = activeDeltas[0]
+    activeDeltas['output'] = evaldict(activeDeltas['output'])
+    return activeDeltas
+
+def writeActiveDeltas(cls, newConfig):
+    """Write Active Deltas to DB"""
+    activeDeltas = cls.dbI.get('activeDeltas')
+    action = 'update'
+    if not activeDeltas:
+        action = 'insert'
+        activeDeltas = {'insertdate': int(getUTCnow())}
+    else:
+        activeDeltas = activeDeltas[0]
+    activeDeltas['updatedate'] = int(getUTCnow())
+    activeDeltas['output'] = str(newConfig)
+    if action ==  'insert':
+        cls.dbI.insert('activeDeltas', [activeDeltas])
+    elif action == 'update':
+        cls.dbI.update('activeDeltas', [activeDeltas])
+    activeDeltas['output'] = evaldict(activeDeltas['output'])
+    return activeDeltas

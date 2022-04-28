@@ -91,7 +91,7 @@ class ResponseHeader():
 class RequestHandler():
     """RequestHandler provides APIs to fetch single/multiple URL requests based
     on pycurl library."""
-    def __init__(self, config=None, logger=None):
+    def __init__(self, config=None):
         super(RequestHandler, self).__init__()
         if not config:
             config = {}
@@ -100,7 +100,6 @@ class RequestHandler():
         self.connecttimeout = config.get('connecttimeout', 30)
         self.followlocation = config.get('followlocation', 1)
         self.maxredirs = config.get('maxredirs', 5)
-        self.logger = logger if logger else logging.getLogger()
 
     def encode_params(self, params, verb, doseq):
         """Encode request parameters for usage with the 4 verbs.

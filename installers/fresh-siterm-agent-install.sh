@@ -30,7 +30,7 @@
 ##H  -h             Display this help.
 
 workdir=`pwd`
-packages="git autoconf automake sudo libcurl-devel libffi-devel python3-lxml openssl-devel curl gcc traceroute libuuid-devel lm_sensors ipset make nc pkgconfig python38 python38-pyyaml zlib-devel python3-devel wget tcpdump jq iproute cronie python3-pip wireshark iperf3 tc diffutils fetch-crl"
+packages="git autoconf automake sudo libcurl-devel libffi-devel python3-lxml openssl-devel curl gcc traceroute libuuid-devel lm_sensors ipset make nc pkgconfig python38 python38-pyyaml zlib-devel python3-devel wget tcpdump jq iproute cronie python3-pip wireshark iperf3 iproute-tc diffutils fetch-crl procps-ng mariadb-devel"
 
 while [ $# -ge 1 ]; do
   case $1 in
@@ -91,8 +91,8 @@ echo "Packages: $packages"
 yum install -y epel-release
 yum install -y $packages
 
-# Make sure root directory is there
-[ -d $rootdir ] || mkdir -p $rootdir || exit $?
+# Check that root dir is present (points to code)
+[ -d $rootdir ] || exit $?
 # Also make a tmp directory
 [ -d $tmpdir ] || mkdir -p $tmpdir || exit $?
 
@@ -101,17 +101,9 @@ echo "We need latest setuptools to be able to install dtnrm package. Updating se
 pip3 install --upgrade setuptools
 
 echo "==================================================================="
-echo "Cloning siterm and installing it"
-cd $rootdir
-rm -rf $gitr
-git clone -b $gitb https://github.com/$gito/$gitr
-cd $gitr
-
-if [ X"$docker" = X ]; then
-  python3 setup-agent.py install || exit $?
-else
-  python3 setup-agent.py install --docker || exit $?
-fi
+echo "Install siterm "
+cd $rootdir/dtnrmcode/$gitr
+python3 setup-agent.py install || exit $?
 
 for x in iprange firehol
 do
@@ -149,13 +141,6 @@ touch /etc/firehol/fireqos.conf
 echo "==================================================================="
 echo "==================================================================="
 echo "==================================================================="
-echo "                       INSTALLATION DONE                           "
+echo "                       DOCKER BUILD DONE                           "
 echo "==================================================================="
-echo "Please check the following things:"
-echo "   1. Make sure your GIT Config is ok in official GIT Repo"
-echo "   2. Service to start:"
-echo "         a) 'dtnrmagent-update start' which updates about all information of DTN"
-echo "         b) 'dtnrm-ruler start' which looks for new requests and applies rules"
-echo "         c) 'dtnrm-nettester start' (OPTIONAL) This is network tester which will start transfers automatically"
-echo "             This requires to define correct secrets.sh file for communicating with Orchestrator. Location /opt/sense-client/"
 exit 0

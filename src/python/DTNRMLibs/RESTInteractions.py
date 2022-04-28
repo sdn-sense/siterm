@@ -17,39 +17,35 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-from builtins import object
+import cgi
 import urllib.request
 import urllib.error
 import urllib.parse
 import simplejson as json
-import cgi
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.MainUtilities import evaldict
 
 
-class getContent(object):
+class getContent():
     """Get Content from url."""
     def __init__(self):
         # We would want to add later more things to init,
         # for example https and security details from config.
         self.initialized = True
 
-    def get_method(self, url):
+    @staticmethod
+    def get_method(url):
         """Only used inside the site for forwardning requests."""
         try:
             req = urllib.request.Request(url)
-            response = urllib.request.urlopen(req)
-            thePage = response.read()
-            return thePage
+            with urllib.request.urlopen(req) as response:
+                thePage = response.read()
+                return thePage
         except urllib.error.HTTPError as ex:
             if ex.code == 404:
-                raise NotFoundError
-            else:
-                raise BadRequestError
+                raise NotFoundError from ex
+            raise BadRequestError from ex
 
 
 def get_match_regex(environ, regexp):
@@ -116,8 +112,10 @@ def get_post_form(environ):
     return fieldS
 
 
-class InputProcessed(object):
+class InputProcessed():
     """wsgi Input processing class."""
-    def read(self, *args):
+    @staticmethod
+    def read(*args):
+        """Process wsgi Input reads"""
         raise EOFError('The wsgi.input stream has already been consumed')
     readline = readlines = __iter__ = read

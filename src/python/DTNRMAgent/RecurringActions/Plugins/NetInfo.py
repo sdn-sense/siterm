@@ -1,21 +1,10 @@
 #!/usr/bin/env python3
 """Plugin which gathers everything about all NICs.
 
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title                   : dtnrm
-Author                  : Justas Balcas
-Email                   : justas.balcas (at) cern.ch
-@Copyright              : Copyright (C) 2016 California Institute of Technology
-Date                    : 2017/09/26
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2022/01/29
 """
 from __future__ import print_function
 import ipaddress
@@ -23,8 +12,8 @@ import pprint
 import psutil
 from pyroute2 import IPRoute
 from DTNRMAgent.RecurringActions.Utilities import externalCommand
-from DTNRMAgent.Ruler.Ruler import Ruler
-from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
+from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 
 def str2bool(val):
@@ -34,50 +23,42 @@ def str2bool(val):
 NAME = 'NetInfo'
 
 
-def getVlansOnSystem(config, logger):
-    """Get All VLANs provisioned already."""
-    out = {}
-    rulerObj = Ruler(config, logger)
-    vlansProvs = rulerObj.vlansProvisioned()
-    for item in vlansProvs:
-        if 'hosts' in list(item.keys()):
-            for _, hostdict in list(item['hosts'].items()):
-                if 'vlan' not in list(hostdict.keys()) or 'destport' not in list(hostdict.keys()):
-                    continue
-                out['vlan.%s' % hostdict['vlan']] = hostdict['destport']
-    return out
+def presetMacVlans(netInfo, mainIntf, config):
+    """Preset macvlan info in output"""
+    for macvlan in config.get(mainIntf, 'macvlans').split(','):
+        nicInfo = netInfo.setdefault(macvlan, {})
+        nicInfo['parent'] = mainIntf
+        nicInfo['switch_port'] = str(config.get(mainIntf, "port")).replace('/', '-').replace(' ', '_')
+        nicInfo['switch'] = str(config.get(mainIntf, "switch"))
+        nicInfo['shared'] = str2bool(config.get(mainIntf, "shared"))
 
-
-def get(config, logger):
-    """Get all network information."""
-    vlansON = getVlansOnSystem(config, logger)
+def get(config):
+    """Get all network information"""
     netInfo = {}
+    logger = getLoggingObject(logType='StreamLogger')
     interfaces = config.get('agent', "interfaces").split(",")
     for intf in interfaces:
         nicInfo = netInfo.setdefault(intf, {})
-        vlanRange = config.get(intf, "vlans")
-        vlanMin = config.get(intf, "vlan_min")
-        vlanMax = config.get(intf, "vlan_max")
-        switchPort = config.get(intf, "port")
-        switch = config.get(intf, "switch")
-        sharedInterface = config.get(intf, "shared")
         if config.has_option(intf, 'isAlias'):
             nicInfo['isAlias'] = config.get(intf, 'isAlias')
-        if config.has_option(intf, "ips"):
-            nicInfo['ipv4-floatingip-pool'] = config.get(intf, "ips")
-        nicInfo['vlan_range'] = vlanRange
-        nicInfo['min_bandwidth'] = int(vlanMin)
-        nicInfo['max_bandwidth'] = int(vlanMax)
-        nicInfo['switch_port'] = str(switchPort).replace('/', '_')
-        nicInfo['switch'] = str(switch)
-        nicInfo['shared'] = str2bool(sharedInterface)
+        for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
+            if config.has_option(intf, key):
+                nicInfo[key] = config.get(intf, key)
+        if config.has_option(intf, 'macvlans'):
+            presetMacVlans(netInfo, intf, config)
+        nicInfo['vlan_range'] = config.get(intf, "vlans")
+        nicInfo['min_bandwidth'] = int(config.get(intf, "vlan_min"))
+        nicInfo['max_bandwidth'] = int(config.get(intf, "vlan_max"))
+        nicInfo['switch_port'] = str(config.get(intf, "port")).replace('/', '-').replace(' ', '_')
+        nicInfo['switch'] = str(config.get(intf, "switch"))
+        nicInfo['shared'] = str2bool(config.get(intf, "shared"))
         nicInfo['vlans'] = {}
         # TODO. It should calculate available capacity, depending on installed vlans.
         # Currently we set it same as max_bandwidth.
-        nicInfo['available_bandwidth'] = int(vlanMax)  # TODO
+        nicInfo['available_bandwidth'] = int(config.get(intf, "vlan_max"))  # TODO
         # TODO. It should also calculate reservable capacity depending on installed vlans;
         # Currently we set it to max available;
-        nicInfo['reservable_bandwidth'] = int(vlanMax)  # TODO
+        nicInfo['reservable_bandwidth'] = int(config.get(intf, "vlan_max"))  # TODO
     tmpifAddr = psutil.net_if_addrs()
     tmpifStats = psutil.net_if_stats()
     tmpIOCount = psutil.net_io_counters(pernic=True)
@@ -95,7 +76,8 @@ def get(config, logger):
             nicInfo['provisioned'] = False
         foundInterfaces.append(nic)
         for vals in addrs:
-            familyInfo = nicInfo.setdefault(str(vals.family.value), {})
+            nicInfo.setdefault(str(vals.family.value), [])
+            familyInfo = {}
             # vals - family=2, address='127.0.0.1', netmask='255.0.0.0', broadcast=None, ptp=None
             # For family more information look here: http://lxr.free-electrons.com/source/include/linux/socket.h#L160
             familyInfo["family"] = vals.family.value
@@ -109,10 +91,10 @@ def get(config, logger):
                     elif isinstance(ipwithnetmask, ipaddress.IPv6Interface):
                         familyInfo["ipv6-address"] = str(ipwithnetmask)
                     else:
-                        print("This type was not understood by the system. Type: %s and value: %s" %  \
-                              (type(ipwithnetmask), str(ipwithnetmask)))
+                        logger.debug("This type was not understood by the system. Type: %s and value: %s" %  \
+                                     (type(ipwithnetmask), str(ipwithnetmask)))
                 except ValueError as ex:
-                    print('Got an exception %s' % ex)
+                    logger.debug('Got an exception %s' % ex)
             elif int(vals.family.value) in [17]:
                 familyInfo["mac-address"] = vals.address
             familyInfo["broadcast"] = vals.broadcast
@@ -140,43 +122,39 @@ def get(config, logger):
                 familyInfo["Type"] = nicType[0].strip()
                 txQueueLen = externalCommand('cat /sys/class/net/' + nic + "/tx_queue_len")
                 familyInfo["txqueuelen"] = txQueueLen[0].strip()
+            nicInfo[str(vals.family.value)].append(familyInfo)
     # Check in the end which interfaces where defined in config but not available...
     outputForFE = {"interfaces": {}, "routes": []}
     for intfName, intfDict in netInfo.items():
         if intfName.split('.')[0] not in foundInterfaces:
-            print('This interface was defined in configuration, but not available. Will not add it to final output')
+            logger.debug('This interface was defined in configuration, but not available. Will not add it to final output')
         else:
             outputForFE["interfaces"][intfName] = intfDict
-    print(vlansON)
-    for intfName, intfDict in netInfo.items():
-        if intfName.split('.')[0] == 'vlan':
-            for vlankey, vlandict in list(intfDict['vlans'].items()):
-                if vlankey in list(vlansON.keys()):
-                    mainInf = vlansON[vlankey]
-                    outputForFE["interfaces"].setdefault(mainInf, {'vlans': {}})
-                    outputForFE["interfaces"][mainInf]['vlans'][vlankey] = vlandict
-        else:
-            print('This interface was defined in configuration, but not available. Will not add it to final output')
-            print(intfName, intfDict)
     # Get Routing Information
     outputForFE["routes"] = getRoutes()
     return outputForFE
 
 
 def getRoutes():
-    """Get Routing information from host."""
+    """Get Routing information from host"""
     routes = []
     with IPRoute() as ipr:
         for route in ipr.get_routes(table=254, family=2):
-            newroute = {"dst_len": route['dst_len']}
+            newroute = {"dst_len": route['dst_len'], 'iptype': 'ipv4'}
             for item in route['attrs']:
                 if item[0] in ['RTA_GATEWAY', 'RTA_DST', 'RTA_PREFSRC']:
                     newroute[item[0]] = item[1]
             routes.append(newroute)
-    print(routes)
+        for route in ipr.get_routes(table=254, family=10):
+            newroute = {"dst_len": route['dst_len'], 'iptype': 'ipv6'}
+            for item in route['attrs']:
+                # TODO: Need to test this. New feature of node assign IPv6
+                if item[0] in ['RTA_GATEWAY', 'RTA_DST', 'RTA_PREFSRC']:
+                    newroute[item[0]] = item[1]
+            routes.append(newroute)
     return routes
 
-
 if __name__ == "__main__":
+    getLoggingObject(logType='StreamLogger', service='Agent')
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig(), getStreamLogger()))
+    PRETTY.pprint(get(getConfig()))

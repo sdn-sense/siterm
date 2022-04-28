@@ -23,8 +23,6 @@ import sys
 from setuptools import setup
 from setupUtilities import list_packages, get_py_modules, VERSION
 
-if "--docker" in sys.argv:
-    sys.argv.remove("--docker")
 setup(
     name='DTNRMAgent',
     version="%s" % VERSION,
@@ -37,10 +35,10 @@ setup(
     package_dir={'': 'src/python/'},
     packages=['DTNRMAgent', 'DTNRMLibs'] + list_packages(['src/python/DTNRMAgent/', 'src/python/DTNRMLibs/']),
     install_requires=['importlib', 'psutil', 'ipaddress', 'pyroute2', 'pyaml', 'pyshark', 'iperf3',
-                      'pycurl', 'requests', 'netifaces', 'future', 'simplejson'],
+                      'pycurl', 'requests', 'netifaces', 'future', 'simplejson', 'rdflib', 'typing-extensions==4.1.1',
+                      'mariadb==1.0.8'],
     data_files=[("/etc/cron.d/", ["packaging/dtnrm-site-agent/siterm-crons"]),
-                ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh",
-                                        "packaging/general/siterm-autoupdate.py"])],
+                ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh"])],
     py_modules=get_py_modules(['src/python/DTNRMAgent', 'src/python/DTNRMLibs']),
     scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler", "packaging/dtnrm-site-agent/dtnrm-debugger"]
 )

@@ -22,7 +22,7 @@ from __future__ import print_function
 import os
 import time
 import mariadb
-import DTNRMLibs.dbcalls as dbcalls
+from DTNRMLibs import dbcalls
 
 
 class DBBackend():
@@ -49,6 +49,26 @@ class DBBackend():
         for argname in dir(dbcalls):
             if argname.startswith('create_'):
                 print('Call to create %s' % argname)
+                self.cursor.execute(getattr(dbcalls, argname))
+        self.conn.commit()
+        self.destroy()
+
+    def _cleandbtable(self, dbtable):
+        """Clean only specific table if available"""
+        self.initialize()
+        for argname in dir(dbcalls):
+            if argname == 'delete_%s' % dbtable:
+                print('Call to clean from %s' % argname)
+                self.cursor.execute(getattr(dbcalls, argname))
+        self.conn.commit()
+        self.destroy()
+
+    def _cleandb(self):
+        """Clean database."""
+        self.initialize()
+        for argname in dir(dbcalls):
+            if argname.startswith('delete_'):
+                print('Call to clean from %s' % argname)
                 self.cursor.execute(getattr(dbcalls, argname))
         self.conn.commit()
         self.destroy()
@@ -102,6 +122,7 @@ class DBBackend():
 
     def execute_del(self, query, values):
         """DELETE Execute."""
+        del values
         try:
             self.initialize()
             self.cursor.execute(query)
@@ -128,6 +149,7 @@ class dbinterface():
 
     def _setStartCallTime(self, calltype):
         """Set Call Start timer."""
+        del calltype
         self.callStart = float(time.time())
 
     def _setEndCallTime(self, calltype, callExit):
@@ -141,7 +163,8 @@ class dbinterface():
         msg = "DB: %s %s %s %s" % (self.serviceName, calltype, str(diff), callExit)
         print(msg)
 
-    def getcall(self, callaction, calltype):
+    @staticmethod
+    def getcall(callaction, calltype):
         """Get call from ALL available ones."""
         callquery = ""
         try:
@@ -231,3 +254,16 @@ class dbinterface():
         out = self.db.execute_del(fullquery, None)
         self._setEndCallTime(calltype, out[0])
         return out
+
+    # =====================================================
+    #  HERE GOES CLEAN CALLS
+    # =====================================================
+    def _clean(self, calltype, values):
+        """Database Clean Up"""
+        del calltype, values
+        self.db._cleandb()
+
+    def _cleantable(self, calltype, values):
+        """Clean specific table"""
+        del values
+        self.db._cleandbtable(calltype)

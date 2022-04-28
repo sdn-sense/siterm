@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""
+This part of code is taken from:
+   https://web.archive.org/web/20160305151936/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+Please respect developer (Sander Marechal) and always keep a reference to URL and also as kudos to him
+Changes applied to this code:
+    Dedention (Justas Balcas 07/12/2017)
+    pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
+"""
+import sys
+from DTNRMLibs.Daemonizer import Daemon, getParser, validateArgs
+from SiteFE.PolicyService import policyService as polS
+
+COMPONENT = 'PolicyService'
+DESCRIPTION = "PolicyService responsible to accept/activate deltas, remove expired resources from model."
+DAEMON = None
+
+class MyDaemon(Daemon):
+    """ My own Deamon override """
+
+    def getThreads(self):
+        """Multi threading. Allow multiple sites under single FE"""
+        outThreads = {}
+        for sitename in self.config.get('general', 'sites').split(','):
+            thr = polS.PolicyService(self.config, sitename)
+            outThreads[sitename] = thr
+        return outThreads
+
+if __name__ == "__main__":
+    parser = getParser(DESCRIPTION)
+    if len(sys.argv) == 1:
+        parser.print_help()
+    inargs = parser.parse_args(sys.argv[1:])
+    validateArgs(inargs)
+    DAEMON = MyDaemon(COMPONENT, inargs)
+    DAEMON.command(inargs)

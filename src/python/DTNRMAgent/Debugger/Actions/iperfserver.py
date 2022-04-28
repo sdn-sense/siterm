@@ -20,7 +20,7 @@ from DTNRMLibs.MainUtilities import externalCommand
 
 
 def iperfserver(inputDict):
-    """Run IPerf Server """
+    """Run IPerf Server"""
     # TODO Checks:
     # Port is not used
     # Use python library (iperf3 pip)

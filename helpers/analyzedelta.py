@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Print delta information."""
-from __future__ import print_function
-from builtins import str
 import sys
 import tempfile
 import ast
+import pprint
 from DTNRMLibs.FECalls import getAllHosts
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import evaldict
@@ -20,6 +19,7 @@ STATEMACHINE = StateMachine(LOGGER)
 
 
 def getdeltaAll(sitename, deltaUID):
+    """Get Delta Info"""
     dbI = getDBConn('analyzedelta')
     dbobj = getVal(dbI, sitename=sitename)
     policer = polS.PolicyService(CONFIG, LOGGER)
@@ -39,7 +39,6 @@ def getdeltaAll(sitename, deltaUID):
         print('Delta connID: ', delta['connectionid'])
         print('Delta Deltatype: ', delta['deltat'])
         print('-' * 20)
-        import pprint
         pprint.pprint(delta)
         print('Delta times')
         for deltatimes in dbobj.get('states', search=[['deltaid', delta['uid']]]):

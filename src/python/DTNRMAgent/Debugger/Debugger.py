@@ -19,7 +19,6 @@ Date                    : 2021/03/12
 """
 from __future__ import absolute_import
 import json
-import traceback
 import pprint
 from DTNRMAgent.Debugger.Actions.arptable import arptable
 from DTNRMAgent.Debugger.Actions.iperf import iperf
@@ -27,23 +26,23 @@ from DTNRMAgent.Debugger.Actions.rapidping import rapidping
 from DTNRMAgent.Debugger.Actions.tcpdump import tcpdump
 from DTNRMAgent.Debugger.Actions.iperfserver import iperfserver
 
-from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict, getStreamLogger
+from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict
 from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import publishToSiteFE
-from DTNRMLibs.MainUtilities import getLogger
 from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 
 COMPONENT = 'Debugger'
 
 
 class Debugger():
-    """ Debugger main process """
-    def __init__(self, config, logger):
+    """Debugger main process"""
+    def __init__(self, config, sitename):
         self.config = config if config else getConfig()
-        self.logger = logger if logger else getLogger("%s/%s/" % (self.config.get('general', 'logDir'), COMPONENT),
-                                                      self.config.get('general', 'logLevel'))
-        self.fullURL = getFullUrl(self.config, self.config.get('general', 'siteName'))
+        self.logger = getLoggingObject(config=self.config, service='Debugger')
+        self.fullURL = getFullUrl(self.config, sitename)
+        self.sitename = sitename
         self.hostname = self.config.get('agent', 'hostname')
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
 
@@ -65,11 +64,11 @@ class Debugger():
         return self.getData("/sitefe/json/frontend/getalldebughostname/%s" % self.hostname)
 
     def publishToFE(self, inDic):
-        """Publish debug runtime to FE."""
+        """Publish debug runtime to FE"""
         publishToSiteFE(inDic, self.fullURL, '/sitefe/json/frontend/updatedebug/%s' % inDic['id'])
 
-    def start(self):
-        """Start execution and get new requests from FE."""
+    def startwork(self):
+        """Start execution and get new requests from FE"""
         allWork = self.getAllAssignedtoHost()
         out, err, exitCode = "", "", 0
         for item in allWork:
@@ -89,8 +88,8 @@ class Debugger():
                 else:
                     err = "Unknown Request"
                     exitCode = 500
-            except:
-                err = traceback.format_exc()
+            except (ValueError, KeyError, OSError) as ex:
+                err = ex
                 exitCode = 501
             output = {'out': out, 'err': err, 'exitCode': exitCode}
             item['output'] = json.dumps(output)
@@ -102,10 +101,11 @@ class Debugger():
             self.publishToFE(item)
 
 
-def execute(config=None, logger=None):
+def execute(config=None):
     """Execute main script for Debugger execution."""
-    debugger = Debugger(config, logger)
-    debugger.start()
+    debugger = Debugger(config, None)
+    debugger.startwork()
 
 if __name__ == '__main__':
-    execute(logger=getStreamLogger())
+    getLoggingObject(logType='StreamLogger', service='Debugger')
+    execute()

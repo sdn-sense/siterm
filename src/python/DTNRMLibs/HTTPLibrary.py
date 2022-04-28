@@ -18,8 +18,6 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
-from future import standard_library
-standard_library.install_aliases()
 import os
 import base64
 import urllib.parse
@@ -41,6 +39,7 @@ def argValidity(arg, aType):
             return arg
     else:
         raise ValidityFailure("Input %s != %s." % (type(arg), aType))
+    return {} if aType == dict else []
 
 
 def check_server_url(url):
@@ -172,13 +171,15 @@ class Requests(dict):
                                              ckey=ckey, cert=cert, capath=capath, decode=decoder)
         return data, response.status, response.reason, response.fromcache
 
-    def getKeyCert(self):
+    @staticmethod
+    def getKeyCert():
         """Get the user credentials if they exist, otherwise throw an
         exception."""
         key, cert = getKeyCertFromEnv()
         return key, cert
 
-    def getCAPath(self):
+    @staticmethod
+    def getCAPath():
         """Return the path of the CA certificates.
 
         The check is loose in the pycurl_manager: is capath == None then

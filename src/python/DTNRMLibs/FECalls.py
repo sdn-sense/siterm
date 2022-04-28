@@ -17,64 +17,13 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2019 California Institute of Technology
 Date                    : 2019/05/01
 """
-import sys
-import socket
-import importlib
-from DTNRMLibs.MainUtilities import getConfig
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.DBBackend import dbinterface
-
-
-def getDBConn(serviceName=''):
-    """Get datanase connection."""
-    dbConn = {}
-    config = getConfig()
-    for sitename in config.get('general', 'sites').split(','):
-        dbConn[sitename] = dbinterface(serviceName, config, sitename)
-    return dbConn
-
+from DTNRMLibs.MainUtilities import getDBConn
 
 def getAllHosts(sitename, logger):
+    # TODO: Remove this and have dbConn passed.
     """Get all hosts from database."""
-    logger.info('Get all hosts for %s', sitename)
     dbObj = getDBConn('getAllHosts')[sitename]
     jOut = {}
     for site in dbObj.get('hosts'):
         jOut[site['hostname']] = site
     return jOut
-
-
-def getSwitches(config, sitename, nodes, logger):
-    """Get Switches plugin."""
-    switchPlugin = config.get(sitename, 'plugin')
-    logger.info('Will load %s switch plugin' % switchPlugin)
-    method = importlib.import_module("SiteFE.LookUpService.Plugins.%s" % switchPlugin.lower())
-    switchInfo = method.getinfo(config, logger, nodes, sitename)
-    return switchInfo
-
-
-def reportServiceStatus(servicename, status, sitename, logger, hostname=""):
-    """Report service state to DB."""
-    try:
-        if not hostname:
-            hostname = socket.gethostname()
-        dbOut = {'hostname': hostname,
-                 'servicestate': status,
-                 'servicename': servicename,
-                 'updatedate': getUTCnow()}
-        dbI = getDBConn(servicename)
-        dbobj = getVal(dbI, **{'sitename': sitename})
-        services = dbobj.get('servicestates', search=[['hostname', hostname], ['servicename', servicename]])
-        if not services:
-            dbobj.insert('servicestates', [dbOut])
-        else:
-            dbobj.update('servicestates', [dbOut])
-    except Exception:
-        excType, excValue = sys.exc_info()[:2]
-        if logger:
-            logger.critical("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
-                            str(excType.__name__), excValue)
-        else:
-            print("Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
-                  str(excType.__name__), excValue)

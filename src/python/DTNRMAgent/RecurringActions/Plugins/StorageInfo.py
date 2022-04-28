@@ -1,26 +1,15 @@
 #!/usr/bin/env python3
 """Plugin which executes df command and prepares output about mounted storages.
 
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-Title                   : dtnrm
-Author                  : Justas Balcas
-Email                   : justas.balcas (at) cern.ch
-@Copyright              : Copyright (C) 2016 California Institute of Technology
-Date                    : 2017/09/26
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2022/01/29
 """
 import re
 import pprint
 from DTNRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
-from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
+from DTNRMLibs.MainUtilities import getLoggingObject
 
 NAME = 'StorageInfo'
 
@@ -63,7 +52,7 @@ def parseOut(tmpOut, storageInfo):
     return storageInfo, True
 
 
-def get(config, logger):
+def get(**_):
     """Get storage mount points information."""
     storageInfo = {"Values": {}}
     tmpOut = externalCommand('df -P -h')
@@ -81,5 +70,6 @@ def get(config, logger):
     return storageInfo
 
 if __name__ == "__main__":
+    getLoggingObject(logType='StreamLogger', service='Agent')
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig(), getStreamLogger()))
+    PRETTY.pprint(get())

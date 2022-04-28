@@ -52,6 +52,7 @@ from DTNRMLibs.MainUtilities import getHeaders
 from DTNRMLibs.MainUtilities import getUrlParams
 from DTNRMLibs.MainUtilities import read_input_data
 from DTNRMLibs.MainUtilities import getCustomOutMsg
+from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.CustomExceptions import HTTPResponses
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.CustomExceptions import NotSupportedArgument
@@ -73,13 +74,13 @@ _SITES = ["MAIN"]
 _HTTPRESPONDER = HTTPResponses()
 _CERTHANDLER = CertHandler()
 
-
 # This would also allow to move all catches to here... and get all errors in one place
 # ==============================================
 #              DEFAULT Functions
 # ==============================================
 def check_initialized(environ):
     """Env and configuration initialization."""
+    del environ
     global _INITIALIZED
     global _CP
     global _SITES
@@ -95,6 +96,7 @@ _FECONFIG_RE = re.compile(r'^/*json/frontend/configuration$')
 
 def feconfig(environ, **kwargs):
     """Returns Frontend configuration"""
+    del environ
     global _CP
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     return _CP['MAIN']
@@ -158,24 +160,8 @@ _PROMETHEUS_RE = re.compile(r'^/*json/frontend/metrics$')
 
 def prometheus(environ, **kwargs):
     """Return prometheus stats."""
+    del environ
     return _PROMETHEUS.metrics(**kwargs)
-
-
-URLS = [(_FECONFIG_RE, feconfig, ['GET'], [], []),
-        (_FRONTEND_RE, frontend, ['GET', 'PUT'], [], []),
-        (_DEBUG_RE, debug, ['GET', 'POST', 'PUT'], [], []),
-        (_PROMETHEUS_RE, prometheus, ['GET'], [], [])]
-
-if '__all__' in dir(AllCalls):
-    for callableF in AllCalls.__all__:
-        name = "SiteFE.REST.AppCalls.%s" % callableF
-        method = importlib.import_module(name)
-        if hasattr(method, 'CALLS'):
-            for item in method.CALLS:
-                URLS.append(item)
-            tmpCalls = method.CALLS
-        else:
-            continue
 
 
 def internallCall(caller, environ, **kwargs):
@@ -270,3 +256,20 @@ def application(environ, start_response):
     print('Send 501 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501)))
     _HTTPRESPONDER.ret_501('application/json', start_response, [('Location', '/')])
     return [bytes(json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501)), 'UTF-8')]
+
+
+URLS = [(_FECONFIG_RE, feconfig, ['GET'], [], []),
+        (_FRONTEND_RE, frontend, ['GET', 'PUT'], [], []),
+        (_DEBUG_RE, debug, ['GET', 'POST', 'PUT'], [], []),
+        (_PROMETHEUS_RE, prometheus, ['GET'], [], [])]
+
+if '__all__' in dir(AllCalls):
+    for callableF in AllCalls.__all__:
+        name = "SiteFE.REST.AppCalls.%s" % callableF
+        method = importlib.import_module(name)
+        if hasattr(method, 'CALLS'):
+            for item in method.CALLS:
+                URLS.append(item)
+            tmpCalls = method.CALLS
+        else:
+            continue
