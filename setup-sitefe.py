@@ -19,7 +19,6 @@ Email             : justas.balcas (at) cern.ch
 @Copyright        : Copyright (C) 2016 California Institute of Technology
 Date            : 2017/09/26
 """
-import sys
 from setuptools import setup
 from setupUtilities import list_packages, get_py_modules, get_web_files, VERSION
 
@@ -41,9 +40,10 @@ setup(
     keywords=['End Site-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
     package_dir={'': 'src/python/'},
     packages=['SiteFE', 'DTNRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/DTNRMLibs/']),
-    install_requires=['pyparsing', "rdflib;python_version<'3.7'", 'importlib', 'setuptools', 'future', 'simplejson', 'mod-wsgi',
-                      'prometheus-client', 'python-dateutil', 'pyaml', 'requests', 'pycurl', 'pyOpenSSL',
-                      'mariadb==1.0.8', 'cryptography==3.2.1', 'wheel', 'paramiko', 'ansible_runner', 'psutil', 'typing-extensions==4.1.1'],
+    install_requires=['pyparsing', "rdflib", 'importlib', 'setuptools', 'future', 'simplejson',
+                      'mod-wsgi', 'prometheus-client', 'python-dateutil', 'pyaml', 'requests',
+                      'pycurl', 'pyOpenSSL', 'mariadb==1.0.8', 'cryptography==3.2.1',
+                      'wheel', 'paramiko', 'ansible_runner', 'psutil', 'typing-extensions==4.1.1'],
     data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
                 ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
                                         "packaging/dtnrm-site-fe/welcome.conf"]),

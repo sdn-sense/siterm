@@ -145,7 +145,6 @@ class PolicyService(RDFHelper):
                 elif key == 'rst':
                     self.logger.info('Parsing L3 information from model')
                     self.parsel3Request(gIn, out, switchName)
-        self.logger.info(pprint.pprint(out))
         return out
 
     def getRoute(self, gIn, connID, returnout):
@@ -381,14 +380,13 @@ class PolicyService(RDFHelper):
             else:
                 self.stateMachine._modelstatechanger(self.dbI, 'failed', **delta)
 
-        newConfig = self.parseModel(currentGraph)
+        self.parseModel(currentGraph)
         # 3. Check if any delta expired, remove it from dictionary
         newconf, cleaned = self.conflictChecker.checkActiveConfig(currentActive['output'])
 
-        pprint.pprint(newconf)
         if cleaned or not self.conflictChecker.checkConflicts(self, newconf, currentActive['output']):
             currentActive['output'] = newconf
-            currentActive = writeActiveDeltas(self, currentActive['output'])
+            writeActiveDeltas(self, currentActive['output'])
 
     def startwork(self):
         """Start Policy Service."""

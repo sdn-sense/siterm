@@ -15,35 +15,30 @@ class Routing():
         self.config = config
         self.logger = getLoggingObject(config=self.config, service='Ruler')
 
-    @staticmethod
-    def add(vlan, raiseError=False):
+    def add(self, vlan, raiseError=False):
         """Add specific route."""
-        del vlan, raiseError
+        self.logger.info('ADD ROUTE. TODO: %s %s' % (vlan, raiseError))
 
-    @staticmethod
-    def setup(vlan, raiseError=False):
+
+    def setup(self, vlan, raiseError=False):
         """Setup specific route."""
-        del vlan, raiseError
+        self.logger.info('SETUP ROUTE. TODO: %s %s' % (vlan, raiseError))
 
-    @staticmethod
-    def start(vlan, raiseError=False):
+    def start(self, vlan, raiseError=False):
         """Add specific route."""
-        del vlan, raiseError
+        self.logger.info('START ROUTE. TODO: %s %s' % (vlan, raiseError))
 
-    @staticmethod
-    def stop(vlan, raiseError=False):
+    def stop(self, vlan, raiseError=False):
         """Stop specific route."""
-        del vlan, raiseError
+        self.logger.info('STOP ROUTE. TODO: %s %s' % (vlan, raiseError))
 
-    @staticmethod
-    def remove(vlan, raiseError=False):
+    def remove(self, vlan, raiseError=False):
         """Remove specific route."""
-        del vlan, raiseError
+        self.logger.info('REMOVE ROUTE. TODO: %s %s' % (vlan, raiseError))
 
-    @staticmethod
-    def status(vlan, raiseError=False):
+    def status(self, vlan, raiseError=False):
         """Check status of specific route."""
-        del vlan, raiseError
+        self.logger.info('STATUS ROUTE. TODO: %s %s' % (vlan, raiseError))
 
     def startRoute(self, vlan, raiseError=False):
         """Start/Add Route on DTN"""

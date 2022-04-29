@@ -38,23 +38,23 @@ for row in data:
 """
 from __future__ import print_function
 
-# system modules
-from future import standard_library
-standard_library.install_aliases()
-from past.builtins import basestring
 import os
 import io
 import re
 import sys
 import http.client
-import simplejson as json
 import logging
 import urllib.request
 import urllib.parse
 import urllib.error
 import subprocess
+from past.builtins import basestring
+import simplejson as json
 # 3d-party libraries
 import pycurl
+# system modules
+from future import standard_library
+standard_library.install_aliases()
 
 
 class ResponseHeader():
@@ -289,7 +289,7 @@ class RequestHandler():
                     if ret != pycurl.E_CALL_MULTI_PERFORM:
                         break
             dummyNumq, response, dummyErr = multi.info_read()
-            for dummyCobj in response:
+            for _ in response:
                 data = json.loads(bbuf.getvalue())
                 if isinstance(data, dict):
                     data.update(params)
@@ -306,7 +306,7 @@ class RequestHandler():
                 bbuf.flush()
                 hbuf.flush()
 
-HTTP_PAT = re.compile("(https|http)://[-A-Za-z0-9_+&@#/%?=~_|!:,.;]*[-A-Za-z0-9+&@#/%=~_|]")
+HTTP_PAT = re.compile("(https|http)://[-A-Za-z0-9_+&@#/%?=~|!:,.;]*[-A-Za-z0-9+&@#/%=~_|]")
 
 
 def validate_url(url):
