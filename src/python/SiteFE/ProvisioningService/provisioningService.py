@@ -27,6 +27,7 @@ from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import getDBConn
+from DTNRMLibs.MainUtilities import generateMD5
 from DTNRMLibs.Backends.main import Switch
 
 
@@ -104,10 +105,77 @@ class ProvisioningService():
                             self._addIPv4Address(host, port, portDict)
                             self._addIPv6Address(host, port, portDict)
 
+
+    def _getDefaultBGP(self, host, *args):
+        """Default yaml dict setup"""
+        tmpD = self.yamlconf.setdefault(host, {})
+        tmpD = tmpD.setdefault('sense_bgp', {})
+        # TODO: Try except. In case not defined in config. NoOptionError will happen
+        myasn = self.config.get(host, 'private_asn')
+        tmpD['asn'] = myasn
+        tmpD['state'] = 'present'
+        return tmpD
+
+    def _addOwnRoutes(self, host, ruid, rDict):
+        #  'routeFrom': {'ipv6-prefix-list': {'type': 'ipv6-prefix-list',
+        #                            'value': '2605:d9c0:2:fff1::/64'},
+        #                'key': 'urn:ogf:network:ultralight.org:2013:dellos9_s0:service+rst-ipv6:table+365eeb6f-9fb8-47a9-a131-d9c14838d112:route+wan-1:from',
+        #                'type': 'routeFrom'},
+        bgpdict = self._getDefaultBGP(host, ruid, rDict)
+        for iptype in ['ipv4', 'ipv6']:
+            val = rDict.get('routeFrom', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
+            if val:
+                bgpdict.setdefault('%s_network' % iptype, [])
+                bgpdict['%s_network' % iptype].append({'address': val, 'state': 'present'})
+
+    def _addNeighbors(self, host, ruid, rDict):
+        bgpdict = self._getDefaultBGP(host, ruid, rDict)
+        for iptype in ['ipv4', 'ipv6']:
+            remasn = rDict.get('routeTo', {}).get('bgp-private-asn', {}).get('value', None)
+            remip = rDict.get('nextHop', {}).get('%s-address' % iptype, {}).get('value', None)
+            if remasn and remip:
+                neighbor = bgpdict.setdefault('neighbor', {}).setdefault(iptype, [])
+                newNeighbor = {'remote_asn': remasn, 'ip': remip, 'state': 'present',
+                               'route_map': {'in': 'sense-%s-mapin' % ruid, 'out': 'sense-%s-mapout' % ruid}}
+                neighbor.append(newNeighbor)
+
+    def _addPrefixList(self, host, ruid, rDict):
+        bgpdict = self._getDefaultBGP(host, ruid, rDict)
+        for iptype in ['ipv4', 'ipv6']:
+            rTo = rDict.get('routeFrom', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
+            rFrom = rDict.get('routeTo', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
+            prefList = bgpdict.setdefault('prefix_list', [])
+            if rTo:
+                prefList.append({'name': 'sense-%s-to' % ruid, 'iprange': rTo, 'state': 'present', 'iptype': iptype})
+                self._addRouteMap(host, 'sense-%s-to' % ruid, 'sense-%s-mapout' % ruid)
+            if rFrom:
+                prefList.append({'name': 'sense-%s-from' % ruid, 'iprange': rFrom, 'state': 'present', 'iptype': iptype})
+                self._addRouteMap(host, 'sense-%s-from' % ruid, 'sense-%s-mapin' % ruid)
+
+    def _addRouteMap(self, host, match, name):
+        bgpdict = self._getDefaultBGP(host)
+        if name and match:
+            routeMap = bgpdict.setdefault('route_map', [])
+            routeMap.append({'name': name, 'match': match, 'state': 'present'})
+
+
     def addrst(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for rst)"""
-        # TODO Implement switch RST Service.
-        return
+        if 'rst' in activeConfig:
+            for _, connDict in activeConfig['rst'].items():
+                if not self.checkIfStarted(connDict):
+                    continue
+                for host, hostDict in connDict.items():
+                    if host not in switches:
+                        continue
+                    for rtype, rFullDict in hostDict.items():
+                        for rtag, rDict in rFullDict.get('hasRoute', {}).items():
+                            ruid = generateMD5(rtag)
+                            self._getDefaultBGP(host, ruid, rDict)
+                            self._addOwnRoutes(host, ruid, rDict)
+                            self._addNeighbors(host, ruid, rDict)
+                            self._addPrefixList(host, ruid, rDict)
+
 
     def checkIfStarted(self, connDict):
         """Check if service started."""

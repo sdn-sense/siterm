@@ -159,11 +159,17 @@ class PolicyService(RDFHelper):
             for item in out:
                 routeInfo = routeout.setdefault(rtype, {})
                 routeInfo['key'] = str(item)
-                for valkey in ['type', 'value']:
-                    out1 = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], valkey)))
-                    if out1:
-                        # TODO: To be discussed. Can it be that we will have multiple value/type?
-                        routeInfo[valkey] = str(out1[0])
+                routeInfo['type'] = rtype
+                mrstype = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'type')))
+                mrsval = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'value')))
+                if mrstype and mrsval:
+                    mrstype = str(mrstype[0])
+                    mrsval = str(mrsval[0])
+                    routeInfo.setdefault(mrstype, {})
+                    routeInfo[mrstype]['type'] = mrstype
+                    routeInfo[mrstype]['value'] = mrsval
+                else:
+                    self.logger.warning('Either val or type not defined. Key: %s, Type: %s, Val: %s' % (str(item), mrstype, mrsval))
         self.scannedRoutes.append(str(connID))
         return ""
 
