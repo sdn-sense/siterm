@@ -19,7 +19,6 @@ Email             : justas.balcas (at) cern.ch
 @Copyright        : Copyright (C) 2016 California Institute of Technology
 Date            : 2017/09/26
 """
-import sys
 from setuptools import setup
 from setupUtilities import list_packages, get_py_modules, VERSION
 
@@ -40,5 +39,7 @@ setup(
     data_files=[("/etc/cron.d/", ["packaging/dtnrm-site-agent/siterm-crons"]),
                 ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh"])],
     py_modules=get_py_modules(['src/python/DTNRMAgent', 'src/python/DTNRMLibs']),
-    scripts=["packaging/dtnrm-site-agent/dtnrmagent-update", "packaging/dtnrm-site-agent/dtnrm-ruler", "packaging/dtnrm-site-agent/dtnrm-debugger"]
+    scripts=["packaging/dtnrm-site-agent/dtnrmagent-update",
+             "packaging/dtnrm-site-agent/dtnrm-ruler",
+             "packaging/dtnrm-site-agent/dtnrm-debugger"]
 )
