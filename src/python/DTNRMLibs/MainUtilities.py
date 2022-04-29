@@ -23,6 +23,7 @@ import http.client
 import base64
 import datetime
 import subprocess
+import hashlib
 import email.utils as eut
 import configparser
 import logging
@@ -507,7 +508,10 @@ VALIDATION = {"addhost": [{"key": "hostname", "type": basestring},
                              {"key": "updateTime", "type": int},
                              {"key": "status", "type": basestring,
                               "values": ["benchmark", "maintenance", "operational"]}]}
-
+def generateMD5(inText):
+    """Generate MD5 from provided str"""
+    hashObj = hashlib.md5(inText.encode())
+    return hashObj.hexdigest()
 
 def generateHash(inText):
     """Generate unique using uuid."""
