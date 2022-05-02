@@ -30,7 +30,7 @@
 ##H  -h             Display this help.
 
 workdir=`pwd`
-packages="git autoconf sudo libcurl-devel libffi-devel openssl-devel automake curl gcc libuuid-devel lm_sensors make nc pkgconfig wget zlib-devel python38-devel httpd httpd-devel python3-mod_wsgi mod_ssl cronie python38-pip python38 python3-pyOpenSSL mariadb-server python38-pyyaml python3-mysql mariadb-devel fetch-crl ansible procps-ng"
+packages="git autoconf sudo libcurl-devel libffi-devel openssl-devel automake curl gcc libuuid-devel lm_sensors make nc pkgconfig wget zlib-devel python36-devel httpd httpd-devel python3-mod_wsgi mod_ssl cronie python38-pip python36 python3-pyOpenSSL mariadb-server python3-pyyaml python3-mysql mariadb-devel fetch-crl procps-ng ansible"
 # Check if release is supported.
 
 while [ $# -ge 1 ]; do
@@ -92,11 +92,6 @@ echo "Packages: $packages"
 yum install -y epel-release
 yum install -y $packages
 
-echo '==================================================================='
-echo 'Installing ansible packages'
-ansible-galaxy collection install dellemc.os9
-ansible-galaxy collection install arista.eos
-
 # Make sure root directory is there
 [ -d $rootdir ] || mkdir -p $rootdir || exit $?
 # Also make a tmp directory
@@ -112,14 +107,20 @@ cd $rootdir/dtnrmcode/$gitr
 
 python3 setup-sitefe.py install || exit $?
 
-  echo "==================================================================="
-  echo "Modifying ownership and permission rules for Site FE directories"
-  echo "-------------------------------------------------------------------"
 
-  # Remove ssl.conf - we have all defined inside the sitefe-httpd.conf
-  rm -f /etc/httpd/conf.d/ssl.conf
-  mkdir -p /var/log/dtnrm-site-fe/http-api/
-  chown -R apache:apache /var/log/dtnrm-site-fe/*
+echo '==================================================================='
+echo 'Installing ansible packages'
+ansible-galaxy collection install dellemc.os9
+ansible-galaxy collection install arista.eos
+
+echo "==================================================================="
+echo "Modifying ownership and permission rules for Site FE directories"
+echo "-------------------------------------------------------------------"
+
+# Remove ssl.conf - we have all defined inside the sitefe-httpd.conf
+rm -f /etc/httpd/conf.d/ssl.conf
+mkdir -p /var/log/dtnrm-site-fe/http-api/
+chown -R apache:apache /var/log/dtnrm-site-fe/*
 
 if [ X"$docker" = X ]; then
   # SELinux serve files off Apache, resursive
