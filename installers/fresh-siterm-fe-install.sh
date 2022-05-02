@@ -30,7 +30,7 @@
 ##H  -h             Display this help.
 
 workdir=`pwd`
-packages="git autoconf sudo libcurl-devel libffi-devel openssl-devel automake curl gcc libuuid-devel lm_sensors make nc pkgconfig wget zlib-devel python38-devel httpd httpd-devel python3-mod_wsgi mod_ssl cronie python3-pip python38 python3-pyOpenSSL mariadb-server python38-pyyaml python3-mysql mariadb-devel fetch-crl ansible procps-ng"
+packages="git autoconf sudo libcurl-devel libffi-devel openssl-devel automake curl gcc libuuid-devel lm_sensors make nc pkgconfig wget zlib-devel python38-devel httpd httpd-devel python3-mod_wsgi mod_ssl cronie python38-pip python38 python3-pyOpenSSL mariadb-server python38-pyyaml python3-mysql mariadb-devel fetch-crl ansible procps-ng"
 # Check if release is supported.
 
 while [ $# -ge 1 ]; do

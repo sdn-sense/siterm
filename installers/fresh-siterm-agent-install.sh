@@ -30,7 +30,7 @@
 ##H  -h             Display this help.
 
 workdir=`pwd`
-packages="git autoconf automake sudo libcurl-devel libffi-devel python3-lxml openssl-devel curl gcc traceroute libuuid-devel lm_sensors ipset make nc pkgconfig python38 python38-pyyaml zlib-devel python38-devel wget tcpdump jq iproute cronie python3-pip wireshark iperf3 iproute-tc diffutils fetch-crl procps-ng mariadb-devel"
+packages="git autoconf automake sudo libcurl-devel libffi-devel python3-lxml openssl-devel curl gcc traceroute libuuid-devel lm_sensors ipset make nc pkgconfig python38 python38-pyyaml zlib-devel python38-devel wget tcpdump jq iproute cronie python38-pip wireshark iperf3 iproute-tc diffutils fetch-crl procps-ng mariadb-devel"
 
 while [ $# -ge 1 ]; do
   case $1 in
