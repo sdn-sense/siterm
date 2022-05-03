@@ -43,8 +43,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         self.switch = Switch(config, sitename)
         self.prefixes = {}
         self.tmpout = {}
-        workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
-        createDirs(workDir)
+        self.workDir = self.config.get('general', 'privatedir') + "/%s/LookUpService/" % self.sitename
+        createDirs(self.workDir)
 
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
@@ -56,9 +56,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     def getModelSavePath(self):
         """Get Model Save Location."""
         now = datetime.datetime.now()
-        saveDir = "%s/%s" % (self.config.get(self.sitename, "privatedir"), "LookUpService")
-        createDirs(saveDir)
-        return "%s/%s-%s-%s:%s:%s:%s.mrml" % (saveDir, now.year, now.month,
+        return "%s/%s-%s-%s:%s:%s:%s.mrml" % (self.workDir, now.year, now.month,
                                               now.day, now.hour, now.minute, now.second)
 
     def defineTopology(self):

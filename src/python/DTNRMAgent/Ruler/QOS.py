@@ -26,7 +26,7 @@ class QOS():
     def __init__(self, config):
         self.config = config if config else getConfig()
         self.logger = getLoggingObject(config=self.config, service='QOS')
-        self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
+        self.workDir = self.config.get('general', 'privatedir') + "/DTNRM/RulerAgent/"
         self.hostname = self.config.get('agent', 'hostname')
         createDirs(self.workDir)
         self.debug = self.config.getboolean('general', "debug")

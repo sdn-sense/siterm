@@ -53,9 +53,8 @@ class PolicyService(RDFHelper):
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.stateMachine = StateMachine(self.config)
         self.hosts = getAllHosts(self.sitename, self.logger)
-        for siteName in self.config.get('general', 'sites').split(','):
-            workDir = os.path.join(self.config.get(siteName, 'privatedir'), "PolicyService/")
-            createDirs(workDir)
+        self.workDir = os.path.join(self.config.get('general', 'privatedir'), "%s/PolicyService/" % self.sitename)
+        createDirs(self.workDir)
         self.getSavedPrefixes(self.hosts.keys())
         self.bidPorts = {}
         self.scannedPorts = {}
@@ -426,8 +425,7 @@ class PolicyService(RDFHelper):
     def acceptDelta(self, deltapath):
         """Accept delta."""
         currentGraph = self.deltaToModel(None, None, None)
-        deltapath = self.siteDB.moveFile(deltapath,
-                                         os.path.join(self.config.get(self.sitename, 'privatedir'), "PolicyService/"))
+        deltapath = self.siteDB.moveFile(deltapath, self.workDir)
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
         self.logger.info('Called Accept Delta. Content Location: %s' % deltapath)
         toDict = dict(fileContent)

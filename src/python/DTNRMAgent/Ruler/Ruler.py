@@ -28,7 +28,7 @@ class Ruler(QOS, contentDB):
     def __init__(self, config, sitename):
         self.config = config if config else getConfig()
         self.logger = getLoggingObject(config=self.config, service='Ruler')
-        self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
+        self.workDir = self.config.get('general', 'privatedir') + "/DTNRM/RulerAgent/"
         createDirs(self.workDir)
         self.fullURL = getFullUrl(self.config, sitename)
         self.sitename = sitename

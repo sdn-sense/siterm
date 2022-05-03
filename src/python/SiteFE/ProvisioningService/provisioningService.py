@@ -40,8 +40,9 @@ class ProvisioningService():
         self.sitename = sitename
         self.switch = Switch(config, sitename)
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
-        workDir = self.config.get('general', 'privatedir') + "/ProvisioningService/"
-        createDirs(workDir)
+        self.workDir = self.config.get('general', 'privatedir') + "/%s/ProvisioningService/" % self.sitename
+        createDirs(self.workDir)
+        # TODO Use Work dir and save history of applied configs.
         self.yamlconf = {}
 
     def __cleanup(self):

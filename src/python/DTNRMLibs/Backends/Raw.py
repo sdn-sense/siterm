@@ -20,7 +20,7 @@ class Switch():
         self.config = config
         self.sitename = sitename
         self.name = 'RAW'
-        self.workDir = os.path.join(self.config.get(sitename, 'privatedir'), "RAW-Switch-Config/")
+        self.workDir = os.path.join(self.config.get('general', 'privatedir'), "%s/RAW-Switch-Config/" % self.sitename)
         createDirs(self.workDir)
 
     def activate(self, inputDict, actionState):

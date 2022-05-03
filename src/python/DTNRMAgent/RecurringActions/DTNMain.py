@@ -82,7 +82,7 @@ class RecurringAction():
     def startwork(self):
         """Execute main script for DTN-RM Agent output preparation."""
 
-        workDir = self.config.get('general', 'private_dir') + "/DTNRM/"
+        workDir = self.config.get('general', 'privatedir') + "/DTNRM/"
         createDirs(workDir)
         dic = self.prepareJsonOut()
         fullUrl = getFullUrl(self.config)
