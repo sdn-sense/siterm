@@ -161,6 +161,7 @@ class DeltaInfo():
                     rtableuri = routedict.get("belongsToRoutingTable", "")
                     for route, routeInfo in routedict.get('hasRoute', {}).items():
                         self._addProvidesRoute(hostname=host, rstname="rst-%s" % iptype, routeuri=route)
+                        self._addBandwidthServiceRoute(**{'routeuri': route, 'uri': routedict.get('hasService', {}).get('bwuri', '')})
                         for key, val in routeInfo.items():
                             netadd = {'hostname': host,
                                       'rstname': "rst-%s" % iptype,

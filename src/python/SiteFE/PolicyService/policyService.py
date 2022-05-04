@@ -199,6 +199,7 @@ class PolicyService(RDFHelper):
                     self._recordMapping(connectionID, returnout, 'RoutingMapping', rsttype['key'], iptype)
                     returnout.setdefault('rst', {})
                     connOut = returnout['rst'].setdefault(str(connectionID), {}).setdefault(switchName, {}).setdefault(iptype, {})
+                    self._hasService(gIn, connectionID, connOut)
                     connOut[rsttype['key']] = str(connectionID)
                     rettmp = rsttype['call'](gIn, connectionID, connOut)
                     if rettmp and rsttype['key'] == 'providesRoutingTable':
@@ -240,6 +241,7 @@ class PolicyService(RDFHelper):
         out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['nml'], 'hasService')))
         for item in out:
             scanVals = returnout.setdefault('hasService', {})
+            scanVals['bwuri'] = str(item)
             self.getTimeScheduling(gIn, item, returnout)
             for key in ['availableCapacity', 'granularity', 'maximumCapacity',
                         'priority', 'reservableCapacity', 'type', 'unit']:

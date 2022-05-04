@@ -238,6 +238,14 @@ class RDFHelper():
         # Requires mainly change on Agents to apply diff Traffic Shaping policies
         return bws
 
+    def _addBandwidthServiceRoute(self, **kwargs):
+        if not kwargs.get('routeuri', '') or not kwargs.get('uri', ''):
+            return
+        self.newGraph.add((self.genUriRef('site', kwargs['routeuri']),
+                           self.genUriRef('nml', 'hasService'),
+                           self.genUriRef('site', kwargs['uri'])))
+
+
     def _addBandwidthServiceParams(self, **kwargs):
         """Add Bandwitdh Service Parameters to Model"""
         bws = self._addBandwidthService(**kwargs)
