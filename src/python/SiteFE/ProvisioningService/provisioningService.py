@@ -17,7 +17,7 @@ Author                  : Justas Balcas
 Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
-UpdateDate              : 2021/11/08
+UpdateDate              : 2022/05/09
 """
 import sys
 import configparser
@@ -52,6 +52,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.yamlconf = {}
 
     def getConfigValue(self, section, option, raiseError=False):
+        """Get Config Val"""
         try:
             return self.config.get(section, option)
         except (configparser.NoOptionError, configparser.NoSectionError) as ex:

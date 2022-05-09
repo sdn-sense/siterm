@@ -16,10 +16,9 @@ Author                  : Justas Balcas
 Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
-UpdateDate              : 2021/05/11
+UpdateDate              : 2022/05/09
 """
 from DTNRMLibs.MainUtilities import generateMD5
-
 
 def singleDictCompare(inDict, oldDict):
     """Compare single dict and set any remaining items
@@ -35,10 +34,11 @@ def singleDictCompare(inDict, oldDict):
             inDict[oldKey] = 'absent'
     return
 
-
-
 class RoutingService():
-    # pylint: disable=E1101,W0201
+    """ Routing Service Class. Adds all activeDelta params,
+    compares with running active config, make things absent if they
+    are not existing anymore"""
+    # pylint: disable=E1101,W0201,W0235
     def __init__(self):
         super().__init__()
 
@@ -96,7 +96,6 @@ class RoutingService():
             permitst += len(routeMap.get(name, {}))
             routeMap.setdefault(name, {}).setdefault(int(permitst), {match: 'present'})
 
-
     def addrst(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for rst)"""
         if 'rst' in activeConfig:
@@ -114,8 +113,9 @@ class RoutingService():
                             self._addNeighbors(host, ruid, rDict)
                             self._addPrefixList(host, ruid, rDict)
 
-
-    def compareNeighbRouteMap(self, routeNew, routeOld):
+    @staticmethod
+    def compareNeighbRouteMap(routeNew, routeOld):
+        """Compare Neighbour Route map"""
         for rtype in ['in', 'out']:
             routeNew.setdefault(rtype, {})
             for key, val in routeOld[rtype].items():
@@ -140,7 +140,8 @@ class RoutingService():
             elif neigNew[neighKey].get('route_map', {}) != neighDict.get('route_map', {}):
                 self.compareNeighbRouteMap(neigNew[neighKey].get('route_map', {}), neighDict.get('route_map', {}))
 
-    def compareRouteMap(self, newMap, oldMap):
+    @staticmethod
+    def compareRouteMap(newMap, oldMap):
         """Compare Route maps"""
         # If equal - return
         if newMap == oldMap:
@@ -152,8 +153,6 @@ class RoutingService():
                         pVal = newMap.setdefault(rmapName, {}).setdefault(permitVal, {})
                         pVal[route] = 'absent'
         return
-
-
 
     def compareBGP(self, switch, runningConf):
         """Compare L3 BGP"""

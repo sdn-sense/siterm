@@ -16,13 +16,12 @@ Author                  : Justas Balcas
 Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
-UpdateDate              : 2021/05/11
+UpdateDate              : 2022/05/09
 """
 
-
-
 class VirtualSwitchingService():
-    # pylint: disable=E1101,W0201
+    """Virtual Switching - add interfaces inside ansible yaml"""
+    # pylint: disable=E1101,W0201,W0235
     def __init__(self):
         super().__init__()
 
@@ -98,7 +97,8 @@ class VirtualSwitchingService():
                 newMembers[oldIP] = 'absent'
         return
 
-    def compareIpAddress(self, newIPs, oldIPs):
+    @staticmethod
+    def compareIpAddress(newIPs, oldIPs):
         """Compare ip addresses between expected and running conf"""
         # If equal - return
         if newIPs == oldIPs:
@@ -109,7 +109,6 @@ class VirtualSwitchingService():
                 # new config
                 newIPs[oldIP] = 'absent'
         return
-
 
     def compareVsw(self, switch, runningConf):
         """Compare expected and running conf"""
