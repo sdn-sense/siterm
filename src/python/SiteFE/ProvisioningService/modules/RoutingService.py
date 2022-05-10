@@ -42,11 +42,14 @@ class RoutingService():
     def __init__(self):
         super().__init__()
 
-    def _getDefaultBGP(self, host, *args):
+
+    def _getDefaultBGP(self, host):
         """Default yaml dict setup"""
         tmpD = self.yamlconf.setdefault(host, {})
         tmpD = tmpD.setdefault('sense_bgp', {})
-        tmpD['asn'] = self.getConfigValue(host, 'private_asn', True)
+        tmpD['asn'] = self.getConfigValue(host, 'private_asn')
+        if not tmpD['asn']:
+            del tmpD['asn']
         tmpD['vrf'] = self.getConfigValue(host, 'vrf')
         if not tmpD['vrf']:
             del tmpD['vrf']
@@ -54,7 +57,7 @@ class RoutingService():
         return tmpD
 
     def _addOwnRoutes(self, host, ruid, rDict):
-        bgpdict = self._getDefaultBGP(host, ruid, rDict)
+        bgpdict = self._getDefaultBGP(host)
         for iptype in ['ipv4', 'ipv6']:
             val = rDict.get('routeFrom', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
             if val:
@@ -62,7 +65,7 @@ class RoutingService():
                 bgpdict['%s_network' % iptype][val] =  'present'
 
     def _addNeighbors(self, host, ruid, rDict):
-        bgpdict = self._getDefaultBGP(host, ruid, rDict)
+        bgpdict = self._getDefaultBGP(host)
         for iptype in ['ipv4', 'ipv6']:
             remasn = rDict.get('routeTo', {}).get('bgp-private-asn', {}).get('value', None)
             remip = rDict.get('nextHop', {}).get('%s-address' % iptype, {}).get('value', None)
@@ -76,7 +79,7 @@ class RoutingService():
                                                   'out': {'sense-%s-mapout' % ruid: 'present'}})
 
     def _addPrefixList(self, host, ruid, rDict):
-        bgpdict = self._getDefaultBGP(host, ruid, rDict)
+        bgpdict = self._getDefaultBGP(host)
         for iptype in ['ipv4', 'ipv6']:
             rTo = rDict.get('routeFrom', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
             rFrom = rDict.get('routeTo', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
@@ -108,10 +111,13 @@ class RoutingService():
                     for _, rFullDict in hostDict.items():
                         for rtag, rDict in rFullDict.get('hasRoute', {}).items():
                             ruid = generateMD5(rtag)
-                            self._getDefaultBGP(host, ruid, rDict)
+                            self._getDefaultBGP(host)
                             self._addOwnRoutes(host, ruid, rDict)
                             self._addNeighbors(host, ruid, rDict)
                             self._addPrefixList(host, ruid, rDict)
+        else:
+            for host in switches:
+                self._getDefaultBGP(host)
 
     @staticmethod
     def compareNeighbRouteMap(routeNew, routeOld):
@@ -121,7 +127,7 @@ class RoutingService():
             for key, val in routeOld[rtype].items():
                 if key not in routeNew[rtype].keys():
                     if val == 'present':
-                        routeNew[rtype]['key'] = 'absent'
+                        routeNew[rtype][key] = 'absent'
 
     def compareNeighbors(self, neigNew, neigOld):
         """Compare neighbors"""
@@ -130,15 +136,21 @@ class RoutingService():
         for neighKey, neighDict in neigOld.items():
             if neighKey in neigNew.keys() and neighDict == neigNew[neighKey]:
                 continue
-            if neighKey not in neigNew.keys():
-                if neighDict['state'] == 'present':
-                    # Need to make it absent and add to neigNew
-                    neigNew.setdefault(neighKey, neighDict)
-                    neigNew[neighKey]['state'] = 'absent'
-            # They are not equal and it exists in new dictionary.
-            # So diff can be in route_map or remote_asn
-            elif neigNew[neighKey].get('route_map', {}) != neighDict.get('route_map', {}):
-                self.compareNeighbRouteMap(neigNew[neighKey].get('route_map', {}), neighDict.get('route_map', {}))
+            for iprange, ipdict in neighDict.items():
+                # Make everything absent if state is present
+                if ipdict.get('state', '') == 'present' and neighKey not in neigNew.keys():
+                    neigIPRange = neigNew.setdefault(neighKey, {})
+                    nRange = neigIPRange.setdefault(iprange, {'state': 'absent',
+                                                              'route_map': {'in': {}, 'out': {}}})
+                    nRange['remote_asn'] = ipdict['remote_asn']
+                    self.compareNeighbRouteMap(nRange.get('route_map', {}), ipdict.get('route_map', {}))
+                elif ipdict.get('state', '') == 'present' and neighKey in neigNew.keys():
+                    # Need to loop over route maps and make them absent
+                    if iprange not in neigNew.keys():
+                        neigIPRange = neigNew.setdefault(neighKey, {})
+                        neigIPRange.setdefault(iprange, {'state': 'absent',
+                                                     'route_map': {'in': {}, 'out': {}}})
+                    self.compareNeighbRouteMap(neigNew[neighKey][iprange].get('route_map', {}), ipdict.get('route_map', {}))
 
     @staticmethod
     def compareRouteMap(newMap, oldMap):
