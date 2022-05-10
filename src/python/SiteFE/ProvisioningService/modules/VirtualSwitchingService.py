@@ -25,10 +25,14 @@ class VirtualSwitchingService():
     def __init__(self):
         super().__init__()
 
-    def __getdefaultVlan(self, host, port, portDict):
-        """Default yaml dict setup"""
+    def __getdefaultIntf(self, host):
         tmpD = self.yamlconf.setdefault(host, {})
         tmpD = tmpD.setdefault('interface', {})
+        return tmpD
+
+    def __getdefaultVlan(self, host, port, portDict):
+        """Default yaml dict setup"""
+        tmpD = self.__getdefaultIntf(host)
         if 'hasLabel' not in portDict or 'value' not in portDict['hasLabel']:
             raise Exception('Bad running config. Missing vlan entry: %s %s %s' % (host, port, portDict))
         vlan = portDict['hasLabel']['value']
@@ -82,6 +86,10 @@ class VirtualSwitchingService():
                             self._addTaggedInterfaces(host, port, portDict)
                             self._addIPv4Address(host, port, portDict)
                             self._addIPv6Address(host, port, portDict)
+        else:
+            for host in switches:
+                self.__getdefaultIntf(host)
+
     @staticmethod
     def compareTaggedMembers(newMembers, oldMembers):
         """Compare tagged members between expected and running conf"""
