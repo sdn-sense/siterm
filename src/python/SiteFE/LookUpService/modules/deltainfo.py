@@ -163,15 +163,16 @@ class DeltaInfo():
                         self._addProvidesRoute(hostname=host, rstname="rst-%s" % iptype, routeuri=route)
                         self._addBandwidthServiceRoute(**{'routeuri': route, 'uri': routedict.get('hasService', {}).get('bwuri', '')})
                         for key, val in routeInfo.items():
-                            netadd = {'hostname': host,
-                                      'rstname': "rst-%s" % iptype,
-                                      'rtableuri': rtableuri,
-                                      'routeuri': route,
-                                      'routetype': key,
-                                      'uri': val.get('key', ''),
-                                      'type': val.get('type', ''),
-                                      'value': val.get('value', '')}
-                            self._addRouteEntry(**netadd)
+                            for _, entrVal in val.items():
+                                netadd = {'hostname': host,
+                                          'rstname': "rst-%s" % iptype,
+                                          'rtableuri': rtableuri,
+                                          'routeuri': route,
+                                          'routetype': key,
+                                          'uri': entrVal.get('key', ''),
+                                          'type': entrVal.get('type', ''),
+                                          'value': entrVal.get('value', '')}
+                                self._addRouteEntry(**netadd)
 
     def addDeltaInfo(self):
         """Append all deltas to Model."""

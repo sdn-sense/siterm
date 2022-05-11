@@ -36,7 +36,7 @@ def getError(ex):
     errors = {IOError: -1, KeyError: -2, AttributeError: -3, IndentationError: -4,
               ValueError: -5, BadSyntax: -6}
     out = {'errType': 'Unrecognized', 'errNo': -100, 'errMsg': 'Unset'}
-    if ex.__class__ in list(errors.keys()):
+    if ex.__class__ in errors.keys():
         out['errType'] = str(ex.__class__)
         out['errNo'] = str(errors[ex.__class__])
     if hasattr(ex, 'message'):
@@ -156,19 +156,19 @@ class PolicyService(RDFHelper):
         for rtype in ['nextHop', 'routeFrom', 'routeTo']:
             out = self.queryGraph(gIn, connID, search=URIRef('%s%s' % (self.prefixes['mrs'], rtype)))
             for item in out:
-                routeInfo = routeout.setdefault(rtype, {})
-                routeInfo['key'] = str(item)
-                routeInfo['type'] = rtype
-                mrstype = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'type')))
-                mrsval = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'value')))
-                if mrstype and mrsval:
-                    mrstype = str(mrstype[0])
-                    mrsval = str(mrsval[0])
-                    routeInfo.setdefault(mrstype, {})
-                    routeInfo[mrstype]['type'] = mrstype
-                    routeInfo[mrstype]['value'] = mrsval
+                mrstypes = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'type')))
+                mrsvals = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'value')))
+                if mrstypes and mrsvals and len(mrstypes) == len(mrsvals):
+                    for ind in range(len(mrstypes)):
+                        mrtype = str(mrstypes[ind])
+                        mrval = str(mrsvals[ind])
+                        if mrtype and mrval:
+                            routeVals = routeout.setdefault(rtype, {}).setdefault(mrtype, {})
+                            routeVals['type'] = mrtype
+                            routeVals['value'] = mrval
+                            routeVals['key'] = str(item)
                 else:
-                    self.logger.warning('Either val or type not defined. Key: %s, Type: %s, Val: %s' % (str(item), mrstype, mrsval))
+                    self.logger.warning('Either val or type not defined. Key: %s, Type: %s, Val: %s' % (str(item), mrstypes, mrsvals))
         self.scannedRoutes.append(str(connID))
         return ""
 
@@ -382,11 +382,14 @@ class PolicyService(RDFHelper):
             else:
                 self.stateMachine._modelstatechanger(self.dbI, 'failed', **delta)
 
+        self.logger.info('Parsing Current Model')
         self.parseModel(currentGraph)
         # 3. Check if any delta expired, remove it from dictionary
+        self.logger.info('Conflict Check of expired entities')
         newconf, cleaned = self.conflictChecker.checkActiveConfig(currentActive['output'])
-
+        self.logger.info('Conflict Check for diff outcomes')
         if cleaned or not self.conflictChecker.checkConflicts(self, newconf, currentActive['output']):
+            self.logger.info('IMPORTANT: State changed. Writing new config to DB.')
             currentActive['output'] = newconf
             writeActiveDeltas(self, currentActive['output'])
 
