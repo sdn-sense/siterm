@@ -121,18 +121,21 @@ class Ruler(QOS, contentDB):
         if os.path.isfile(activeDeltasFile):
             activeDeltas = getFileContentAsJson(activeDeltasFile)
         activeFromFE = self.getActiveDeltas()
+        updated = False
+        if activeDeltas != activeFromFE:
+            updated = True
+            self.dumpFileContentAsJson(activeDeltasFile, activeFromFE)
 
         if not self.config.getboolean('agent', 'norules'):
             self.logger.info('Agent is configured to apply rules')
             for actKey, actCall in {'vsw': self.layer2, 'rst': self.layer3}.items():
-                if activeDeltas != activeFromFE:
+                if updated:
                     self.activeComparison(activeDeltas, activeFromFE, actKey, actCall)
                 self.activeEnsure(activeFromFE, actKey,actCall)
-            self.startqos(activeFromFE)
+            self.startqos()
         else:
             self.logger.info('Agent is not configured to apply rules')
         self.logger.info('Ended function start')
-        self.dumpFileContentAsJson(activeDeltasFile, activeFromFE)
 
 def execute(config=None):
     """Execute main script for DTN-RM Agent output preparation."""
