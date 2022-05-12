@@ -19,6 +19,28 @@ Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
 
+def dictCompare(inDict, oldDict):
+    """Compare dict and set any remaining items
+       from current ansible yaml as absent in new one if
+       it's status is present"""
+    # If equal - return
+    if inDict == oldDict:
+        return
+    for key, val in oldDict.items():
+        if isinstance(val, dict):
+            dictCompare(inDict.setdefault(key, {}), val)
+            if not inDict[key]:
+                # if it is empty after back from loop, delete
+                del inDict[key]
+            continue
+        if val == 'present' and key not in inDict.keys():
+            # Means current state is present, but model does not know anything
+            inDict[key] = 'absent'
+        elif val not in ['present', 'absent']:
+            # Ensure we pre-keep all other keys
+            inDict[key] = val
+    return
+
 class VirtualSwitchingService():
     """Virtual Switching - add interfaces inside ansible yaml"""
     # pylint: disable=E1101,W0201,W0235
@@ -90,54 +112,21 @@ class VirtualSwitchingService():
             for host in switches:
                 self.__getdefaultIntf(host)
 
-    @staticmethod
-    def compareTaggedMembers(newMembers, oldMembers):
-        """Compare tagged members between expected and running conf"""
-        # If equal - no point to loop. return
-        if newMembers == oldMembers:
-            return
-        # Otherwise, loop via old members, and see which one is gone
-        # It might be all remain in place and just new member was added.
-        for oldIP, oldState in oldMembers.items():
-            if oldState == 'present' and oldIP not in newMembers.keys():
-                # Means current state is present, but tagged member
-                # is not anymore in new config
-                newMembers[oldIP] = 'absent'
-        return
-
-    @staticmethod
-    def compareIpAddress(newIPs, oldIPs):
-        """Compare ip addresses between expected and running conf"""
-        # If equal - return
-        if newIPs == oldIPs:
-            return
-        for oldIP, oldState in oldIPs.items():
-            if oldState == 'present' and oldIP not in newIPs.keys():
-                # Means current state is present, but IP is not anymore in
-                # new config
-                newIPs[oldIP] = 'absent'
-        return
-
     def compareVsw(self, switch, runningConf):
         """Compare expected and running conf"""
         if self.yamlconf[switch]['interface'] == runningConf:
             return # equal config
         for key, val in runningConf.items():
-            if key not in self.yamlconf[switch]['interface'].keys():
-                if val['state'] != 'absent':
-                    # Vlan is present in ansible config, but not in new config
-                    # set vlan to state: 'absent'. In case it is absent already
-                    # we dont need to set it again. Switch is unhappy to apply
-                    # same command if service is not present.
-                    self.yamlconf[switch]['interface'].setdefault(key, {'state': 'absent'})
+            if key not in self.yamlconf[switch]['interface'].keys() and val['state'] != 'absent':
+                # Vlan is present in ansible config, but not in new config
+                # set vlan to state: 'absent'. In case it is absent already
+                # we dont need to set it again. Switch is unhappy to apply
+                # same command if service is not present.
+                self.yamlconf[switch]['interface'].setdefault(key, {'state': 'absent'})
                 continue
             for key1, val1 in val.items():
                 if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ipv4_address', 'ipv6_address']:
-                    if key1 == 'tagged_members':
-                        yamlOut = self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, {})
-                        self.compareTaggedMembers(yamlOut, val1)
-                    if key1 in ['ipv4_address', 'ipv6_address']:
-                        yamlOut = self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, {})
-                        self.compareIpAddress(yamlOut, val1)
+                    yamlOut = self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, {})
+                    self.dictCompare(yamlOut, val1)
                 elif isinstance(val1, (dict, list)):
                     raise Exception('Got unexpected dictionary in comparison %s' % val)
