@@ -20,18 +20,26 @@ UpdateDate              : 2022/05/09
 """
 from DTNRMLibs.MainUtilities import generateMD5
 
-def singleDictCompare(inDict, oldDict):
-    """Compare single dict and set any remaining items
+def dictCompare(inDict, oldDict):
+    """Compare dict and set any remaining items
        from current ansible yaml as absent in new one if
        it's status is present"""
     # If equal - return
     if inDict == oldDict:
         return
-    for oldKey, oldState in oldDict.items():
-        if oldState == 'present' and oldKey not in inDict.keys():
-            # Means current state is present, but IP is not anymore in
-            # new config
-            inDict[oldKey] = 'absent'
+    for key, val in oldDict.items():
+        if isinstance(val, dict):
+            dictCompare(inDict.setdefault(key, {}), val)
+            if not inDict[key]:
+                # if it is empty after back from loop, delete
+                del inDict[key]
+            continue
+        if val == 'present' and key not in inDict.keys():
+            # Means current state is present, but model does not know anything
+            inDict[key] = 'absent'
+        elif val not in ['present', 'absent']:
+            # Ensure we pre-keep all other keys
+            inDict[key] = val
     return
 
 class RoutingService():
@@ -56,7 +64,8 @@ class RoutingService():
         tmpD['state'] = 'present'
         return tmpD
 
-    def _addOwnRoutes(self, host, ruid, rDict):
+    def _addOwnRoutes(self, host, rDict):
+        """Add Routes"""
         bgpdict = self._getDefaultBGP(host)
         for iptype in ['ipv4', 'ipv6']:
             val = rDict.get('routeFrom', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
@@ -65,6 +74,7 @@ class RoutingService():
                 bgpdict['%s_network' % iptype][val] =  'present'
 
     def _addNeighbors(self, host, ruid, rDict):
+        """Add Neighbors"""
         bgpdict = self._getDefaultBGP(host)
         for iptype in ['ipv4', 'ipv6']:
             remasn = rDict.get('routeTo', {}).get('bgp-private-asn', {}).get('value', None)
@@ -79,6 +89,7 @@ class RoutingService():
                                                   'out': {'sense-%s-mapout' % ruid: 'present'}})
 
     def _addPrefixList(self, host, ruid, rDict):
+        """Add Prefix Lists"""
         bgpdict = self._getDefaultBGP(host)
         for iptype in ['ipv4', 'ipv6']:
             rTo = rDict.get('routeFrom', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
@@ -92,6 +103,7 @@ class RoutingService():
                 self._addRouteMap(host, 'sense-%s-from' % ruid, 'sense-%s-mapin' % ruid, iptype)
 
     def _addRouteMap(self, host, match, name, iptype):
+        """Add Route Maps"""
         permitst = 10
         bgpdict = self._getDefaultBGP(host)
         if name and match:
@@ -112,59 +124,12 @@ class RoutingService():
                         for rtag, rDict in rFullDict.get('hasRoute', {}).items():
                             ruid = generateMD5(rtag)
                             self._getDefaultBGP(host)
-                            self._addOwnRoutes(host, ruid, rDict)
+                            self._addOwnRoutes(host, rDict)
                             self._addNeighbors(host, ruid, rDict)
                             self._addPrefixList(host, ruid, rDict)
         else:
             for host in switches:
                 self._getDefaultBGP(host)
-
-    @staticmethod
-    def compareNeighbRouteMap(routeNew, routeOld):
-        """Compare Neighbour Route map"""
-        for rtype in ['in', 'out']:
-            routeNew.setdefault(rtype, {})
-            for key, val in routeOld[rtype].items():
-                if key not in routeNew[rtype].keys():
-                    if val == 'present':
-                        routeNew[rtype][key] = 'absent'
-
-    def compareNeighbors(self, neigNew, neigOld):
-        """Compare neighbors"""
-        if neigNew == neigOld:
-            return
-        for neighKey, neighDict in neigOld.items():
-            if neighKey in neigNew.keys() and neighDict == neigNew[neighKey]:
-                continue
-            for iprange, ipdict in neighDict.items():
-                # Make everything absent if state is present
-                if ipdict.get('state', '') == 'present' and neighKey not in neigNew.keys():
-                    neigIPRange = neigNew.setdefault(neighKey, {})
-                    nRange = neigIPRange.setdefault(iprange, {'state': 'absent',
-                                                              'route_map': {'in': {}, 'out': {}}})
-                    nRange['remote_asn'] = ipdict['remote_asn']
-                    self.compareNeighbRouteMap(nRange.get('route_map', {}), ipdict.get('route_map', {}))
-                elif ipdict.get('state', '') == 'present' and neighKey in neigNew.keys():
-                    # Need to loop over route maps and make them absent
-                    if iprange not in neigNew.keys():
-                        neigIPRange = neigNew.setdefault(neighKey, {})
-                        neigIPRange.setdefault(iprange, {'state': 'absent',
-                                                     'route_map': {'in': {}, 'out': {}}})
-                    self.compareNeighbRouteMap(neigNew[neighKey][iprange].get('route_map', {}), ipdict.get('route_map', {}))
-
-    @staticmethod
-    def compareRouteMap(newMap, oldMap):
-        """Compare Route maps"""
-        # If equal - return
-        if newMap == oldMap:
-            return
-        for rmapName, rmap in oldMap.items():
-            for permitVal, vals in rmap.items():
-                for route, state in vals.items():
-                    if rmapName not in newMap.keys() and state == 'present':
-                        pVal = newMap.setdefault(rmapName, {}).setdefault(permitVal, {})
-                        pVal[route] = 'absent'
-        return
 
     def compareBGP(self, switch, runningConf):
         """Compare L3 BGP"""
@@ -172,12 +137,6 @@ class RoutingService():
             return # equal config
         for key, val in runningConf.items():
             # ipv6_network, ipv4_network, neighbor, prefix_list, route_map
-            if key in ['ipv6_network', 'ipv4_network', 'prefix_list']:
+            if key in ['ipv6_network', 'ipv4_network', 'prefix_list', 'route_map', 'neighbor']:
                 yamlOut = self.yamlconf[switch]['sense_bgp'].setdefault(key, {})
-                singleDictCompare(yamlOut, val)
-            elif key == 'route_map':
-                yamlOut = self.yamlconf[switch]['sense_bgp'].setdefault(key, {})
-                self.compareRouteMap(yamlOut, val)
-            elif key == 'neighbor':
-                yamlOut = self.yamlconf[switch]['sense_bgp'].setdefault(key, {})
-                self.compareNeighbors(yamlOut, val)
+                dictCompare(yamlOut, val)
