@@ -152,7 +152,8 @@ class Switch(Node):
     def _addyamlInfoToPort(self, switch, nportName, defVlans, out):
         """Add Yaml info to specific port"""
         portKey = "port_%s_%s"
-        for key in ['hostname', 'isAlias', 'vlan_range', 'capacity', 'desttype', 'destport']:
+        for key in ['hostname', 'isAlias', 'vlan_range', 'desttype', 'destport',
+                    'capacity', 'granularity', 'availableCapacity']:
             if not self.config.has_option(switch, portKey % (nportName, key)):
                 if key == 'vlan_range':
                     out[key] = defVlans

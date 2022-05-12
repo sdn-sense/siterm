@@ -150,13 +150,17 @@ class SwitchInfo():
                                     ['nml', 'hasBidirectionalPort'],
                                     ['site', '%s:%s' % (switchuri, self.switch._getSystemValidPortName(value))])
                 continue
-            if key in ['ipv4', 'ipv6', 'mac', 'macaddress', 'lineprotocol', 'operstatus', 'mtu']:
+            if key in ['ipv4', 'ipv6', 'mac', 'macaddress', 'lineprotocol', 'operstatus', 'mtu', 'bandwidth']:
                 subkey = generateKey(self, val, key)
                 if isinstance(subkey, list):
                     for item in subkey:
                         self._addVals(item['key'], item['subkey'], item['val'], newuri)
                 else:
                     self._addVals(key, subkey, val, newuri)
+            if key in ['capacity', 'availableCapacity', 'granularity', 'reservableCapacity']:
+                # TODO: Allow specify availableCapacity and granularity from config
+                # reservableCapacity calculated automatically based on available - allAllocated.
+                self._mrsLiteral(newuri, key, int(portSwitch.get(key))*1000)
 
     def _addSwitchPortInfo(self, key, switchInfo):
         """Add Switch Port Info for ports, vlans"""
