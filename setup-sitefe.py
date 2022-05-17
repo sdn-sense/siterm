@@ -44,7 +44,7 @@ setup(
                       'mod-wsgi', 'prometheus-client', 'python-dateutil', 'pyaml', 'requests',
                       'pycurl', 'pyOpenSSL', 'mariadb==1.0.8', 'cryptography==3.2.1',
                       'wheel', 'paramiko', 'ansible-runner', 'psutil', 'typing-extensions==4.1.1',
-                      'ansible'],
+                      'ansible', 'ansible-pylibssh'],
     data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
                 ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
                                         "packaging/dtnrm-site-fe/welcome.conf"]),
