@@ -119,8 +119,6 @@ echo "-------------------------------------------------------------------"
 
 # Remove ssl.conf - we have all defined inside the sitefe-httpd.conf
 rm -f /etc/httpd/conf.d/ssl.conf
-mkdir -p /var/log/dtnrm-site-fe/http-api/
-chown -R apache:apache /var/log/dtnrm-site-fe/*
 
 if [ X"$docker" = X ]; then
   # SELinux serve files off Apache, resursive
