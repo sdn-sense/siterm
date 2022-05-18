@@ -374,6 +374,18 @@ def getConfig():
     return tmpCp
 
 
+def configToDict(config):
+    """
+    Converts a Config Parser object into a dictionary.
+    """
+    retDict = {}
+    for section in config.sections():
+        retDict[section] = {}
+        for key, val in config.items(section):
+            retDict[section][key] = val
+    return retDict
+
+
 def getFileContentAsJson(inputFile):
     """Get file content as json."""
     out = {}

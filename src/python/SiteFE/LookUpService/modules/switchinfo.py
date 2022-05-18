@@ -141,7 +141,7 @@ class SwitchInfo():
                                 ['nml', 'values'],
                                 [portSwitch['vlan_range']])
                 # Generate host alias or adds' isAlias
-                self._addIsAlias(uri=newuri, isAlias=portSwitch.get('isAlias'), hostname=switchName, portName=portName)
+                self._addIsAlias(uri=newuri, isAlias=portSwitch.get('isAlias'), hostname=switchName, portName=portName, nodetype='switch')
                 continue
             if key == 'channel-member':
                 for value in val:
