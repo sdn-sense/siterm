@@ -196,6 +196,8 @@ class NodeInfo():
         """Define Host information inside MRML.
         Add All interfaces info.
         """
+        rstsEnabled = hostinfo.get('Summary', {}).get('config', {}).get('agent', {}).get('rsts_enabled', '').split(',')
+        rstsEnabled = list(filter(None, rstsEnabled))
         for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
             # We exclude QoS interfaces from adding them to MRML.
             # Even so, I still want to have this inside DB for debugging purposes
@@ -207,7 +209,8 @@ class NodeInfo():
 
             newuri = self._addRstPort(hostname=nodeDict['hostname'],
                                       portName=intfKey,
-                                      parent=intfDict.get('parent', False))
+                                      parent=intfDict.get('parent', False),
+                                      nodetype='server', rsts_enabled=rstsEnabled)
             # Create new host definition
             # =====================================================================
             # Add most of the agent configuration to MRML
@@ -227,7 +230,8 @@ class NodeInfo():
                     # '2' is for ipv4 information
                     vlanName = vlanName.split('.')
                     vlanuri = self._addVlanPort(hostname=nodeDict['hostname'], portName=intfKey, vtype='vlanport', vlan=vlanName[1])
-                    self._addRstPort(hostname=nodeDict['hostname'], portName=intfKey, vtype='vlanport', vlan=vlanName[1])
+                    self._addRstPort(hostname=nodeDict['hostname'], portName=intfKey, vtype='vlanport',
+                                     vlan=vlanName[1], nodetype='server', rsts_enabled=rstsEnabled)
                     self._mrsLiteral(vlanuri, 'type', self.shared)
 
                     if 'vlanid' in list(vlanDict.keys()):

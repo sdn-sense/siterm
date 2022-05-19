@@ -9,10 +9,10 @@ Changes applied to this code:
 """
 import sys
 from DTNRMLibs.Daemonizer import Daemon, getParser, validateArgs
-from SiteFE.ProvisioningService import provisioningService as prsS
+from DTNRMAgent.Debugger import Debugger
 
-COMPONENT = 'ProvisioningService'
-DESCRIPTION = "ProvisioningService responsible to apply configuration on switches."
+COMPONENT = 'Debugger'
+DESCRIPTION = "Debugger start's debug process, like ping, iperf, tcpdump, arp on the agent node"
 DAEMON = None
 
 class MyDaemon(Daemon):
@@ -21,9 +21,9 @@ class MyDaemon(Daemon):
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
         outThreads = {}
-        for sitename in self.config.get('general', 'sites').split(','):
-            thr = prsS.ProvisioningService(self.config, sitename)
-            outThreads[sitename] = thr
+        for sitename in self.config.get('general', 'sitename').split(','):
+            debAgent = Debugger.Debugger(self.config, sitename)
+            outThreads[sitename] = debAgent
         return outThreads
 
 if __name__ == "__main__":

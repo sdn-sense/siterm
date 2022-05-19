@@ -9,21 +9,35 @@ Changes applied to this code:
 """
 import sys
 from DTNRMLibs.Daemonizer import Daemon, getParser, validateArgs
-from DTNRMAgent.Ruler import Ruler
+from DTNRMLibs.ConfigFetcher import ConfigFetcher
+from DTNRMLibs.MainUtilities import getLoggingObject
 
-COMPONENT = 'Ruler'
-DESCRIPTION = "Ruler applys VLAN, IPv(4,6), QOS Rules on the server"
+
+COMPONENT = 'ConfigFetcher'
+DESCRIPTION = "Config fetcher from Github"
 DAEMON = None
 
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
+    def __init__(self, component, inargs):
+        logType = 'TimedRotatingFileHandler'
+        if inargs.logtostdout:
+            logType = 'StreamLogger'
+        self.component = component
+        self.inargs = inargs
+        self.config = None
+        self.runCount = 0
+        self.pidfile = '/tmp/end-site-rm-%s.pid' % component
+        self.logger = getLoggingObject(logFile="%s/%s-" % ('/var/log/', component),
+                                       logLevel='DEBUG', logType=logType,
+                                       service=self.component)
+
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
         outThreads = {}
-        for sitename in self.config.get('general', 'sitename').split(','):
-            rulAgent = Ruler.Ruler(self.config, sitename)
-            outThreads[sitename] = rulAgent
+        confFetcher = ConfigFetcher(self.logger)
+        outThreads['DEFAULT'] = confFetcher
         return outThreads
 
 if __name__ == "__main__":
@@ -33,4 +47,4 @@ if __name__ == "__main__":
     inargs = parser.parse_args(sys.argv[1:])
     validateArgs(inargs)
     DAEMON = MyDaemon(COMPONENT, inargs)
-    DAEMON.command(inargs)
+    DAEMON.command()

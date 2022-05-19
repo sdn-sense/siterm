@@ -16,10 +16,10 @@ from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import configToDict
 from DTNRMLibs.MainUtilities import getLoggingObject
 
 COMPONENT = 'RecurringAction'
-
 
 class RecurringAction():
     """Provisioning service communicates with Local controllers and applies
@@ -77,6 +77,8 @@ class RecurringAction():
         dic['ip'] = self.config.get('general', 'ip')
         dic['insertTime'] = getUTCnow()
         dic['updateTime'] = getUTCnow()
+        dic['Summary'].setdefault('config', {})
+        dic['Summary']['config'] = configToDict(self.config)
         return dic
 
     def startwork(self):

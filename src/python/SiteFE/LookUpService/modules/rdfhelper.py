@@ -28,11 +28,11 @@ class RDFHelper():
         for switchName in self.config.get(self.sitename, 'switch').split(','):
             for key in ['vsw', 'rst']:
                 try:
-                    prefixes.setdefault(key, {})
                     tKey = self.config.get(switchName, key)
                     if tKey != switchName:
                         self.logger.debug('Config mistake. Hostname != %s (%s != %s)' % (key, switchName, tKey))
                         continue
+                    prefixes.setdefault(key, {})
                     prefixes[key][switchName] = "%s:%s:service+%s" % (prefixes['site'], tKey, key)
                     # This is to be confirmed once we check the L3 request. TODO
                     #if additionalhosts:
@@ -396,9 +396,17 @@ class RDFHelper():
             uri = self._addPort(**kwargs)
         if not uri:
             return ""
-        # TODO: Allow this to be controlled via config, which rst's to include
-        # something like: rsts_enabled: ['ipv4'] or ['ipv4', 'ipv6']
-        for iptype in ['ipv4', 'ipv6']:
+        iptypes = []
+        if kwargs.get('nodetype', '') == 'switch' and kwargs.get('hostname', 'no-host') in self.prefixes.get('rst', {}):
+            try:
+                iptypes = self.config.get(kwargs['hostname'], 'rsts_enabled').split(',')
+            except configparser.NoOptionError:
+                iptypes = []
+        elif kwargs.get('nodetype', '') == 'server' and kwargs.get('rsts_enabled', ''):
+            iptypes = kwargs.get('rsts_enabled')
+        for iptype in iptypes:
+            if iptype not in ['ipv4', 'ipv6']:
+                continue
             self.newGraph.add((self.genUriRef('site', ":%s:service+rst-%s" % (kwargs['hostname'], iptype)),
                                self.genUriRef('nml', 'hasBidirectionalPort'),
                                self.genUriRef('site', uri)))
