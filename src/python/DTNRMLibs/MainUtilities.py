@@ -237,38 +237,15 @@ class GitConfig():
                          'GIT_BRANCH': {'optional': True, 'default': 'master'},
                          'MD5':        {'optional': False}}
 
-    def gitConfigCache(self, name, url):
-        """Precache file for 1 hour from git and use cached file."""
+    def gitConfigCache(self, name):
+        """Get Config file from tmp dir"""
         output = None
         filename = '/tmp/dtnrm-link-%s.yaml' % name
-        if os.path.isfile('/tmp/dtnrm-no-config-fetch.yaml') and os.path.isfile(filename):
+        if os.path.isfile(filename):
             with open(filename, 'r', encoding='utf-8') as fd:
                 output = yload(fd.read())
         else:
-            datetimeNow = datetime.datetime.now()
-            filename = '/tmp/%s-%s.yaml' % (datetimeNow.strftime('%Y-%m-%d-%H'), name)
-            if os.path.isfile(filename):
-                with open(filename, 'r', encoding='utf-8') as fd:
-                    output = yload(fd.read())
-            else:
-                datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
-                prevfilename = '/tmp/%s-%s.yaml' % (datetimelasthour.strftime('%Y-%m-%d-%H'), name)
-                if os.path.isfile(prevfilename):
-                    print('Remove previous old cache file %s', prevfilename)
-                    try:
-                        os.remove(prevfilename)
-                        os.remove('/tmp/dtnrm-link-%s.yaml' % name)
-                    except OSError:
-                        pass
-                print('Receiving new file from GIT for %s', name)
-                outyaml = getWebContentFromURL(url).text
-                with open(filename, 'w', encoding='utf-8') as fd:
-                    fd.write(outyaml)
-                try:
-                    os.symlink(filename, '/tmp/dtnrm-link-%s.yaml' % name)
-                except OSError:
-                    pass
-                output = yload(outyaml)
+            raise Exception('Config file %s does not exist.' % filename)
         return output
 
     def getFullGitUrl(self, customAdds=None):
@@ -296,30 +273,21 @@ class GitConfig():
                 self.config[key] = requirement['default']
 
     def getGitAgentConfig(self):
-        """Get Git Agent Config.
-        Example: https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/Agent01/main.yaml."""
+        """Get Git Agent Config."""
         if self.config['MAPPING']['type'] == 'Agent':
-            url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
-            self.config['MAIN'] = self.gitConfigCache('Agent-main', url)
-            return
+            self.config['MAIN'] = self.gitConfigCache('Agent-main')
 
     def getGitFEConfig(self):
-        """Get Git FE Config.
-        Example: https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/auth.yaml
-        https://raw.githubusercontent.com/sdn-sense/rm-configs/master/T2_US_Caltech/FE/main.yaml."""
+        """Get Git FE Config."""
         if self.config['MAPPING']['type'] == 'FE':
-            url = self.getFullGitUrl([self.config['MAPPING']['config'], 'main.yaml'])
-            self.config['MAIN'] = self.gitConfigCache('FE-main', url)
-            url = self.getFullGitUrl([self.config['MAPPING']['config'], 'auth.yaml'])
-            self.config['AUTH'] = self.gitConfigCache('FE-auth', url)
-            return
+            self.config['MAIN'] = self.gitConfigCache('FE-main')
+            self.config['AUTH'] = self.gitConfigCache('FE-auth')
 
     def getGitConfig(self):
         """Get git config from configured github repo."""
         if not self.config:
             self.getLocalConfig()
-        url = "%s/mapping.yaml" % self.getFullGitUrl()
-        mapping = self.gitConfigCache('mapping', url)
+        mapping = self.gitConfigCache('mapping')
         if self.config['MD5'] not in list(mapping.keys()):
             msg = 'Configuration is not available for this MD5 %s tag in GIT REPO %s' % \
                             (self.config['MD5'], self.config['GIT_REPO'])
@@ -332,26 +300,9 @@ class GitConfig():
 
 def getGitConfig():
     """Wrapper before git config class. Returns dictionary."""
-    unlocked = True
-    lockfile = '/tmp/siterm-git-fetch-lockfile'
-    while unlocked:
-        try:
-            os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-            with open(lockfile, 'w', encoding='utf-8') as fd:
-                fd.write('Locked by PID: %s' % os.getpid())
-            unlocked = False
-        except FileExistsError as ex:
-            with open(lockfile, 'r', encoding='utf-8') as fd:
-                print(fd.read())
-            print('Lock Present to prefetch git config. Wait 1 seconds. Exception: %s ' % ex)
-            time.sleep(1)
-    try:
-        gitConf = GitConfig()
-        gitConf.getGitConfig()
-    finally:
-        os.remove(lockfile)
+    gitConf = GitConfig()
+    gitConf.getGitConfig()
     return gitConf.config
-
 
 def getConfig():
     """Get parsed configuration in ConfigParser Format.

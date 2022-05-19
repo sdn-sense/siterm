@@ -26,6 +26,8 @@ def getParser(description):
     oparser.add_argument('--foreground', action='store_true', help="Run program in foreground. Default no")
     oparser.set_defaults(foreground=False)
     oparser.add_argument('--logtostdout', action='store_true', help="Log to stdout and not to file. Default false")
+    oparser.add_argument('--onetimerun', action='store_true', help="Run once and exit from loop (Only for start). Default false")
+    oparser.add_argument('--noreporting', action='store_true', help="Do not report service Status to FE (Only for start/restart). Default false")
     oparser.set_defaults(logtostdout=False)
     return oparser
 
@@ -46,6 +48,8 @@ class Daemon():
         if inargs.logtostdout:
             logType = 'StreamLogger'
         self.component = component
+        self.inargs = inargs
+        self.runCount = 0
         self.pidfile = '/tmp/end-site-rm-%s.pid' % component
         self.config = getConfig()
         self.logger = getLoggingObject(config=self.config,
@@ -178,48 +182,66 @@ class Daemon():
             print('Is application running?')
             sys.exit(1)
 
-    def command(self, inargs):
+    def command(self):
         """Execute a specific command to service."""
-        if inargs.action == 'start' and inargs.foreground:
+        if self.inargs.action == 'start' and self.inargs.foreground:
             self.start()
-        elif inargs.action == 'start' and not inargs.foreground:
+        elif self.inargs.action == 'start' and not self.inargs.foreground:
             self.run()
-        elif inargs.action == 'stop':
+        elif self.inargs.action == 'stop':
             self.stop()
-        elif inargs.action == 'restart':
+        elif self.inargs.action == 'restart':
             self.restart()
-        elif inargs.action == 'status':
+        elif self.inargs.action == 'status':
             self.status()
         else:
             print("Unknown command")
             sys.exit(2)
         sys.exit(0)
 
+    def reporter(self, state, sitename):
+        """Report Service State to FE"""
+        if not self.inargs.noreporting:
+            pubStateRemote(cls=self, servicename=self.component, servicestate=state, sitename=sitename)
+
+    def runLoop(self):
+        """Return True if it is not onetime run."""
+        if self.inargs.onetimerun and self.runCount == 0:
+            return True
+        if self.inargs.onetimerun and self.runCount > 0:
+            return False
+        return True
+
     def run(self):
         """Run main execution"""
         timeeq, currentHour = reCacheConfig(None)
         runThreads = self.getThreads()
-        while True:
+        while self.runLoop():
+            self.runCount += 1
             hadFailure = False
             try:
                 for sitename, rthread in list(runThreads.items()):
                     self.logger.info('Start worker for %s site', sitename)
                     try:
                         rthread.startwork()
-                        pubStateRemote(cls=self, servicename=self.component, servicestate='OK', sitename=sitename)
+                        self.reporter('OK', sitename)
                     except:
                         hadFailure = True
-                        pubStateRemote(cls=self, servicename=self.component, servicestate='FAILED', sitename=sitename)
+                        self.reporter('FAILED', sitename)
                         excType, excValue = sys.exc_info()[:2]
                         self.logger.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
-                time.sleep(10)
+                if self.runLoop():
+                    time.sleep(10)
             except KeyboardInterrupt as ex:
-                pubStateRemote(cls=self, servicename=self.component, servicestate='KEYBOARDINTERRUPT', sitename=sitename)
+                self.reporter('KEYBOARDINTERRUPT', sitename)
                 self.logger.critical("Received KeyboardInterrupt: %s ", ex)
                 sys.exit(3)
             if hadFailure:
                 self.logger.info('Had Runtime Failure. Sleep for 30 seconds')
-                time.sleep(30)
+                if self.runLoop():
+                    time.sleep(30)
+                else:
+                    sys.exit(4)
             timeeq, currentHour = reCacheConfig(currentHour)
             if not timeeq:
                 self.logger.info('Re-initiating Service with new configuration from GIT')

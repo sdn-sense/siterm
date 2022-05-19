@@ -33,4 +33,4 @@ if __name__ == "__main__":
     inargs = parser.parse_args(sys.argv[1:])
     validateArgs(inargs)
     DAEMON = MyDaemon(COMPONENT, inargs)
-    DAEMON.command(inargs)
+    DAEMON.command()

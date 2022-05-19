@@ -9,10 +9,10 @@ Changes applied to this code:
 """
 import sys
 from DTNRMLibs.Daemonizer import Daemon, getParser, validateArgs
-from DTNRMAgent.Debugger import Debugger
+from DTNRMAgent.Ruler import Ruler
 
-COMPONENT = 'Debugger'
-DESCRIPTION = "Debugger start's debug process, like ping, iperf, tcpdump, arp on the agent node"
+COMPONENT = 'Ruler'
+DESCRIPTION = "Ruler applys VLAN, IPv(4,6), QOS Rules on the server"
 DAEMON = None
 
 class MyDaemon(Daemon):
@@ -22,8 +22,8 @@ class MyDaemon(Daemon):
         """Multi threading. Allow multiple sites under single FE"""
         outThreads = {}
         for sitename in self.config.get('general', 'sitename').split(','):
-            debAgent = Debugger.Debugger(self.config, sitename)
-            outThreads[sitename] = debAgent
+            rulAgent = Ruler.Ruler(self.config, sitename)
+            outThreads[sitename] = rulAgent
         return outThreads
 
 if __name__ == "__main__":
@@ -33,4 +33,4 @@ if __name__ == "__main__":
     inargs = parser.parse_args(sys.argv[1:])
     validateArgs(inargs)
     DAEMON = MyDaemon(COMPONENT, inargs)
-    DAEMON.command(inargs)
+    DAEMON.command()
