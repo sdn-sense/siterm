@@ -160,9 +160,9 @@ class NodeInfo():
         for route in hostinfo.get('NetInfo', {}).get('routes', []):
             if route.get('iptype') in rstsEnabled:
                 if route.get('iptype') == 'ipv4':
-                    self.defL3IPv4(hostinfo['hostname'], route)
+                    self._defL3IPv4(hostinfo['hostname'], route)
                 elif route.get('iptype') == 'ipv6':
-                    self.defL3IPv6(hostinfo['hostname'], route)
+                    self._defL3IPv6(hostinfo['hostname'], route)
 
     def addAgentConfigtoMRML(self, intfDict, newuri, hostname, intf):
         """Agent Configuration params to Model."""
