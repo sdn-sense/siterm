@@ -34,6 +34,13 @@ class NodeInfo():
     """Module for Node Info add to MRML"""
     # pylint: disable=E1101,W0201
 
+    @staticmethod
+    def __getRstsEnabled(hostinfo):
+        """Get RSTS Enabled from Agent Config"""
+        rstsEnabled = hostinfo.get('Summary', {}).get('config', {}).get('agent', {}).get('rsts_enabled', '').split(',')
+        rstsEnabled = list(filter(None, rstsEnabled))
+        return rstsEnabled
+
     def addNodeInfo(self):
         """Add Agent Node Information"""
         jOut = getAllHosts(self.sitename, self.logger)
@@ -104,38 +111,58 @@ class NodeInfo():
                             value = entry[mapping].split('/')[0]
                         self._addNetworkAddress(prefixuri, mName, value)
 
+    def _defL3IPv6(self, hostname, route):
+        """Define L3 IPv6 Routing information inside the model for host"""
+        # TODO IPv6 Host Routing
+        # Currently this is what we get from Agent:
+        # {'dst_len': 96, 'iptype': 'ipv6', 'RTA_DST': '::'}
+        # {'dst_len': 96, 'iptype': 'ipv6', 'RTA_DST': '::ffff:0.0.0.0'}
+        # {'dst_len': 24, 'iptype': 'ipv6', 'RTA_DST': '2002:a00::'}
+        # {'dst_len': 24, 'iptype': 'ipv6', 'RTA_DST': '2002:7f00::'}
+        return
+
+    def _defL3IPv4(self, hostname, route):
+        """Define L3 IPv4 Routing information inside the model for host"""
+        if 'RTA_DST' in route.keys() and route['RTA_DST'] == '169.254.0.0':
+            # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.
+            # We do not need this information inside the routed template
+            return
+
+        out = {'hostname': hostname,
+               'rstname': 'rst-%s' % route['iptype'],
+               'iptype': route['iptype']}
+        for tablegress in['table+defaultIngress', 'table+defaultEgress']:
+            out['rt-table'] = tablegress
+            if 'RTA_GATEWAY' in list(route.keys()):
+                out['routename'] = 'default'
+                out['routetype'] = 'routeTo'
+                out['type'] = '%s-address' % route['iptype']
+                out['value'] = route['RTA_GATEWAY']
+                self._addRouteEntry(**out)
+                # Do we really need this?
+                #for vals in [['to', 'ipv4-prefix-list', '0.0.0.0/0'],
+                #             ['black-hole', 'routing-policy', 'drop'],
+                #             ['local', 'routing-policy', 'local']]:
+                #    self._addNetworkAddress('%s:%s' % (routename, vals[0]), [vals[0], vals[1]], vals[2])
+            elif 'RTA_PREFSRC'  in route.keys() and 'dst_len' in route.keys():
+                out['routename'] = validMRMLName("%s/%s" % (route['RTA_PREFSRC'], route['dst_len']))
+                out['routetype'] = 'routeTo'
+                out['type'] = '%s-prefix-list' % route['iptype']
+                out['value'] = "%s_%s" % (route['RTA_PREFSRC'], route['dst_len'])
+                self._addRouteEntry(**out)
+                # nextHop to default route? Is it needed?
+
+
     def defineLayer3MRML(self, nodeDict, hostinfo):
         """Define Layer 3 Routing Service for hostname"""
         del nodeDict
+        rstsEnabled = self.__getRstsEnabled(hostinfo)
         for route in hostinfo.get('NetInfo', {}).get('routes', []):
-            if 'RTA_DST' in route.keys() and route['RTA_DST'] == '169.254.0.0':
-                # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.
-                # We do not need this information inside the routed template
-                continue
-
-            out = {'hostname': hostinfo['hostname'],
-                   'rstname': 'rst-%s' % route['iptype'],
-                   'iptype': route['iptype']}
-            for tablegress in['table+defaultIngress', 'table+defaultEgress']:
-                out['rt-table'] = tablegress
-                if 'RTA_GATEWAY' in list(route.keys()):
-                    out['routename'] = 'default'
-                    out['routetype'] = 'routeTo'
-                    out['type'] = '%s-address' % route['iptype']
-                    out['value'] = route['RTA_GATEWAY']
-                    self._addRouteEntry(**out)
-                    # Do we really need this?
-                    #for vals in [['to', 'ipv4-prefix-list', '0.0.0.0/0'],
-                    #             ['black-hole', 'routing-policy', 'drop'],
-                    #             ['local', 'routing-policy', 'local']]:
-                    #    self._addNetworkAddress('%s:%s' % (routename, vals[0]), [vals[0], vals[1]], vals[2])
-                elif 'RTA_PREFSRC'  in route.keys() and 'dst_len' in route.keys():
-                    out['routename'] = validMRMLName("%s/%s" % (route['RTA_PREFSRC'], route['dst_len']))
-                    out['routetype'] = 'routeTo'
-                    out['type'] = '%s-prefix-list' % route['iptype']
-                    out['value'] = "%s_%s" % (route['RTA_PREFSRC'], route['dst_len'])
-                    self._addRouteEntry(**out)
-                    # nextHop to default route? Is it needed?
+            if route.get('iptype') in rstsEnabled:
+                if route.get('iptype') == 'ipv4':
+                    self.defL3IPv4(hostinfo['hostname'], route)
+                elif route.get('iptype') == 'ipv6':
+                    self.defL3IPv6(hostinfo['hostname'], route)
 
     def addAgentConfigtoMRML(self, intfDict, newuri, hostname, intf):
         """Agent Configuration params to Model."""
@@ -196,8 +223,7 @@ class NodeInfo():
         """Define Host information inside MRML.
         Add All interfaces info.
         """
-        rstsEnabled = hostinfo.get('Summary', {}).get('config', {}).get('agent', {}).get('rsts_enabled', '').split(',')
-        rstsEnabled = list(filter(None, rstsEnabled))
+        rstsEnabled = self.__getRstsEnabled(hostinfo)
         for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
             # We exclude QoS interfaces from adding them to MRML.
             # Even so, I still want to have this inside DB for debugging purposes
@@ -229,7 +255,8 @@ class NodeInfo():
                         continue
                     # '2' is for ipv4 information
                     vlanName = vlanName.split('.')
-                    vlanuri = self._addVlanPort(hostname=nodeDict['hostname'], portName=intfKey, vtype='vlanport', vlan=vlanName[1])
+                    vlanuri = self._addVlanPort(hostname=nodeDict['hostname'], portName=intfKey,
+                                                vtype='vlanport', vlan=vlanName[1])
                     self._addRstPort(hostname=nodeDict['hostname'], portName=intfKey, vtype='vlanport',
                                      vlan=vlanName[1], nodetype='server', rsts_enabled=rstsEnabled)
                     self._mrsLiteral(vlanuri, 'type', self.shared)
