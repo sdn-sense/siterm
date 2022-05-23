@@ -135,7 +135,7 @@ class PolicyService(RDFHelper):
         out = {}
         for key in ['vsw', 'rst']:
             for switchName in self.config.get(self.sitename, 'switch').split(','):
-                if switchName not in self.prefixes[key]:
+                if switchName not in self.prefixes.get(key, {}):
                     self.logger.debug('Warning: %s parameter is not defined for %s.', key, switchName)
                     continue
                 self.prefixes['main'] = self.prefixes[key][switchName]
