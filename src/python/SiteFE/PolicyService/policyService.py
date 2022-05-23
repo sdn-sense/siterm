@@ -388,7 +388,7 @@ class PolicyService(RDFHelper):
         self.logger.info('Conflict Check of expired entities')
         newconf, cleaned = self.conflictChecker.checkActiveConfig(currentActive['output'])
         self.logger.info('Conflict Check for diff outcomes')
-        if cleaned or not self.conflictChecker.checkConflicts(self, newconf, currentActive['output']):
+        if cleaned or self.conflictChecker.checkConflicts(self, newconf, currentActive['output']):
             self.logger.info('IMPORTANT: State changed. Writing new config to DB.')
             currentActive['output'] = newconf
             writeActiveDeltas(self, currentActive['output'])
@@ -469,20 +469,19 @@ def execute(config=None, args=None):
     if not config:
         config = getConfig()
     if args:
-        if not args.sitename:
-            raise Exception('Sitename argument not defined. See --help')
-        policer = PolicyService(config, args.sitename)
-        if args.action == 'accept':
-            out = policer.acceptDelta(args.delta)
-            pprint.pprint(out)
-        elif args.action in ['addition', 'reduction']:
-            newModel = policer.deltaToModel(None, args.delta, args.action)
-            out = policer.parseModel(newModel)
-            pprint.pprint(out)
-    else:
-        for sitename in config.get('general', 'sites').split(','):
-            policer = PolicyService(config, sitename)
-            policer.startwork()
+        if args.sitename:
+            policer = PolicyService(config, args.sitename)
+            if args.action == 'accept':
+                out = policer.acceptDelta(args.delta)
+                pprint.pprint(out)
+            elif args.action in ['addition', 'reduction']:
+                newModel = policer.deltaToModel(None, args.delta, args.action)
+                out = policer.parseModel(newModel)
+                pprint.pprint(out)
+        elif args.action == 'fullRun':
+            for sitename in config.get('general', 'sites').split(','):
+                policer = PolicyService(config, sitename)
+                policer.startwork()
 
 def get_parser():
     """Returns the argparse parser."""
@@ -490,7 +489,7 @@ def get_parser():
     oparser = argparse.ArgumentParser(description="This daemon is used for delta reduction, addition parsing",
                                       prog=os.path.basename(sys.argv[0]), add_help=True)
     # Main arguments
-    oparser.add_argument('--action', dest='action', default='', help='Actions to execute. Options: [accept, addition, reduction]')
+    oparser.add_argument('--action', dest='action', default='', help='Actions to execute. Options: [accept, addition, reduction, fullRun]')
     oparser.add_argument('--sitename', dest='sitename', default='',  help='Sitename of FE. Must be present in configuration and database.')
     oparser.add_argument('--delta', dest='delta', default='', help='Delta path. In case of accept action - need to be json format from DB. Otherwise - delta from Orchestrator')
     return oparser
@@ -501,6 +500,5 @@ if __name__ == '__main__':
     if len(sys.argv) == 1:
         argparser.print_help()
     inargs = argparser.parse_args(sys.argv[1:])
-    print(1)
     getLoggingObject(logType='StreamLogger', service='PolicyService')
     execute(args=inargs)
