@@ -34,10 +34,6 @@ class RDFHelper():
                         continue
                     prefixes.setdefault(key, {})
                     prefixes[key][switchName] = "%s:%s:service+%s" % (prefixes['site'], tKey, key)
-                    # This is to be confirmed once we check the L3 request. TODO
-                    #if additionalhosts:
-                    #    for host in additionalhosts:
-                    #        prefixes[key][host] = "%s:service+%s:%s" % (prefixes['site'], key, host)
                 except configparser.NoOptionError:
                     self.logger.debug('ERROR: %s parameter is not defined for %s.', key, switchName)
                     continue
