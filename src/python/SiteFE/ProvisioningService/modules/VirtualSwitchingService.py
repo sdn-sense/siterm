@@ -127,6 +127,6 @@ class VirtualSwitchingService():
             for key1, val1 in val.items():
                 if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ipv4_address', 'ipv6_address']:
                     yamlOut = self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, {})
-                    self.dictCompare(yamlOut, val1)
+                    dictCompare(yamlOut, val1)
                 elif isinstance(val1, (dict, list)):
                     raise Exception('Got unexpected dictionary in comparison %s' % val)
