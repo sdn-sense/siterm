@@ -12,6 +12,7 @@ Date: 2021/12/01
 """
 import re
 from DTNRMLibs.MainUtilities import getLoggingObject
+from DTNRMLibs.ipaddr import normalizedip
 
 class DellOS9():
     """Dell OS 9 Parser"""
@@ -318,24 +319,25 @@ class DellOS9():
             # Rule 0: Matches ipv6 route 2605:d9c0:2:11::/64 fd00::3600:1
             match = re.match(r'ipv6 route ([abcdef0-9:]+/\d{1,3}) ([abcdef0-9:]+)$', inline)
             if match:
-                out.append({'to': match.groups()[0], 'from': match.groups()[1]})
+                out.append({'to': normalizedip(match.groups()[0]), 'from': normalizedip(match.groups()[1])})
                 continue
             # Rule 1: Matches ipv6 route vrf lhcone ::/0 2605:d9c0:0:1::2
             match = re.match(r'ipv6 route vrf (\w+) ([abcdef0-9:]+/\d{1,3}) ([abcdef0-9:]+)$', inline)
             if match:
-                out.append({'vrf': match.groups()[0], 'to': match.groups()[1], 'from': match.groups()[2]})
+                out.append({'vrf': match.groups()[0], 'to': normalizedip(match.groups()[1]), 'from': normalizedip(match.groups()[2])})
                 continue
             # Rule 2: Matches ipv6 route vrf lhcone 2605:d9c0::/32 NULL 0
             match = re.match(r'ipv6 route vrf (\w+) ([abcdef0-9:]+/\d{1,3}) (\w+) (\w+)$', inline)
             if match:
-                out.append({'vrf': match.groups()[0], 'to': match.groups()[1],
+                out.append({'vrf': match.groups()[0], 'to': normalizedip(match.groups()[1]),
                             'intf': "%s %s" % (match.groups()[2], match.groups()[3])})
                 continue
             # Rule 3: Matches ipv6 route vrf lhcone 2605:d9c0::2/128 NULL 0 2605:d9c0:0:1::2
             match = re.match(r'ipv6 route vrf (\w+) ([abcdef0-9:]+/\d{1,3}) (\w+) (\w+) ([abcdef0-9:]+)$', inline)
             if match:
-                out.append({'vrf': match.groups()[0], 'to': match.groups()[1],
-                            'intf': "%s %s" % (match.groups()[2], match.groups()[3]), 'from': match.groups()[4]})
+                out.append({'vrf': match.groups()[0], 'to': normalizedip(match.groups()[1]),
+                            'intf': "%s %s" % (match.groups()[2], match.groups()[3]),
+                            'from': normalizedip(match.groups()[4])})
         return out
 
 MODULE = DellOS9

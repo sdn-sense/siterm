@@ -10,6 +10,24 @@ Date: 2022/04/08
 from ipaddress import ip_address, ip_network
 
 
+def normalizedip(ipInput):
+    """
+    Normalize IPv6 address. It can have leading 0 or not and both are valid.
+    This function will ensure same format is used.
+    """
+    tmp = ipInput.split('/')
+    ipaddr = None
+    try:
+        ipaddr = ip_address(tmp[0]).compressed
+    except ValueError:
+        ipaddr = tmp[0]
+    if len(tmp) == 2:
+        return "%s/%s" % (ipaddr, tmp[1])
+    if len(tmp) == 1:
+        return ipaddr
+    # We return what we get here, because it had multiple / (which is not really valid)
+    return ipInput
+
 def getsubnet(ipInput, strict=False):
     """Get subnet if IP address"""
     return ip_network(ipInput, strict=strict).compressed

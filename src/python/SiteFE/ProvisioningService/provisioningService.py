@@ -21,6 +21,7 @@ UpdateDate              : 2022/05/09
 """
 import sys
 import configparser
+import datetime
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getConfig
@@ -46,6 +47,14 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         workDir = self.config.get('general', 'privatedir') + "/ProvisioningService/"
         createDirs(workDir)
         self.yamlconf = {}
+        self.lastApplied = None
+
+    def _forceApply(self):
+        curDate = datetime.datetime.now().strftime('%Y-%m-%d-%H')
+        if self.lastApplied != curDate:
+            self.lastApplied = curDate
+            return True
+        return False
 
     def __cleanup(self):
         """Cleanup yaml conf output"""
@@ -131,7 +140,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             if curActiveConf != self.yamlconf[host]:
                 configChanged = True
                 self.switch.plugin._writeHostConfig(host, self.yamlconf[host])
-        if configChanged:
+        if configChanged or self._forceApply():
             self.applyConfig()
 
 def execute(config=None, args=None):
