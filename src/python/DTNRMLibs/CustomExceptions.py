@@ -101,11 +101,11 @@ class NotSupportedArgument(ExceptionTemplate):
     """Argument value is not supported."""
 
 
-class PluginException(Exception):
+class PluginException(ExceptionTemplate):
     """Plugin Exception."""
 
 
-class OverlapException(Exception):
+class OverlapException(ExceptionTemplate):
     """Overlap Exception."""
 
 

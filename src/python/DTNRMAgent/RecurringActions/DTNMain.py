@@ -18,6 +18,7 @@ from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import configToDict
 from DTNRMLibs.MainUtilities import getLoggingObject
+from DTNRMLibs.CustomExceptions import PluginException
 
 COMPONENT = 'RecurringAction'
 
@@ -31,6 +32,7 @@ class RecurringAction():
 
     def prepareJsonOut(self):
         """Executes all plugins and prepares json output to FE."""
+        excMsg = ""
         outputDict = {'Summary': {}}
         tmpName = None
         if '__all__' in dir(Plugins):
@@ -66,10 +68,11 @@ class RecurringAction():
                                            "errorNo": -100,  # TODO Use exception definition from utilities
                                            "errMsg": str(excValue),
                                            "exception": str(ex)}
+                    excMsg += " %s: %s" % (str(excType.__name__), str(excValue))
                 if 'errorType' in list(outputDict[tmpName].keys()):
                     self.logger.critical("%s received %s. Exception details: %s", tmpName,
                                     outputDict[tmpName]['errorType'], outputDict[tmpName])
-        return outputDict
+        return outputDict, excMsg
 
     def appendConfig(self, dic):
         """Append to dic values from config and also dates."""
@@ -86,13 +89,10 @@ class RecurringAction():
 
         workDir = self.config.get('general', 'private_dir') + "/DTNRM/"
         createDirs(workDir)
-        dic = self.prepareJsonOut()
+        dic, excMsg = self.prepareJsonOut()
         fullUrl = getFullUrl(self.config)
         dic = self.appendConfig(dic)
 
-        if self.config.getboolean('general', "debug"):
-            pretty = pprint.PrettyPrinter(indent=4)
-            self.logger.debug(pretty.pformat(dic))
         agent = contentDB(config=self.config)
         agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
 
@@ -103,6 +103,8 @@ class RecurringAction():
         if outVals[2] != 'OK' or outVals[1] != 200 and outVals[3]:
             outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/addhost')
             self.logger.debug('Update Host result %s', outVals)
+        if excMsg:
+            raise PluginException(excMsg)
 
 
 def execute(config):
