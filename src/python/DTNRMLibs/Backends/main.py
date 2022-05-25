@@ -209,11 +209,10 @@ class Switch(Node):
         """Get info about RAW plugin."""
         # If renew or switches var empty - get latest
         # And update in DB
-        if renew:
+        if renew or not self.switches:
             out = self.plugin._getFacts()
             self._insertToDB(out)
-        if not self.switches:
-            self._getDBOut()
+        self._getDBOut()
         # Clean and prepare output which is returned to caller
         self._cleanOutput()
         switch = self.config.get(self.site, 'switch')
