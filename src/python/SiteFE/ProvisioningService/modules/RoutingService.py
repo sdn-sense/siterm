@@ -33,6 +33,10 @@ def dictCompare(inDict, oldDict):
             if not inDict[key]:
                 # if it is empty after back from loop, delete
                 del inDict[key]
+            # If val has state and it is absent, delete inDictKey also
+            if 'state' in val and val['state'] == 'absent':
+                # Means everything already below is absent
+                del inDict[key]
             continue
         if val == 'present' and key not in inDict.keys():
             # Means current state is present, but model does not know anything

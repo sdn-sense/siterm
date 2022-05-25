@@ -13,7 +13,7 @@ Date: 2022/04/13
 """
 import json
 import re
-from DTNRMLibs.ipaddr import ipVersion, getsubnet
+from DTNRMLibs.ipaddr import ipVersion, getsubnet, normalizedip
 from DTNRMLibs.MainUtilities import getLoggingObject
 
 class Sonic():
@@ -144,7 +144,7 @@ class Sonic():
             return out
         for route, rDict in self.runnincConf.get('STATIC_ROUTE', {}).items():
             if ipVersion(route) == routeType:
-                tmpRoute = {'from': route,
+                tmpRoute = {'from': normalizedip(route),
                             'to': rDict.get('nexthop', ''),
                             'vrf': rDict.get('nexthop-vrf', ''),
                             'intf': rDict.get('ifname', ''),
@@ -220,7 +220,7 @@ class Sonic():
                 out[tmpPort[0]]['ipv4'].append({'address': tmpIP[0], 'masklen': tmpIP[1]})
             elif iptype == 6:
                 out[tmpPort[0]].setdefault('ipv6', [])
-                out[tmpPort[0]]['ipv6'].append({'address': tmpIP[0], 'subnet': getsubnet(tmpPort[1])})
+                out[tmpPort[0]]['ipv6'].append({'address': normalizedip(tmpIP[0]), 'subnet': getsubnet(tmpPort[1])})
         # Get all vlan members, tagged, untagged
         for port, portDict in tmpJson.get('VLAN_MEMBER', {}).items():
             tmpPort = port.split('|')

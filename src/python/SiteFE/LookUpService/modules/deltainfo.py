@@ -16,6 +16,7 @@ from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getActiveDeltas
 from DTNRMLibs.MainUtilities import convertTSToDatetime
 from DTNRMLibs.ipaddr import validMRMLName
+from DTNRMLibs.ipaddr import normalizedip
 
 
 class DeltaInfo():
@@ -117,8 +118,9 @@ class DeltaInfo():
             if not ipdict:
                 continue
             for key in ipdict.get('type', 'undefined').split('|'):
-                out = ["%s-address+%s" % (ipkey, validMRMLName(ipdict.get('value', 'undefined'))), key]
-                self._addNetworkAddress(portDict['uri'], out, ipdict.get('value', 'undefined'))
+                val = normalizedip(ipdict.get('value', 'undefined'))
+                out = ["%s-address+%s" % (ipkey, validMRMLName(val)), key]
+                self._addNetworkAddress(portDict['uri'], out, val)
 
     def addvswInfo(self, vswDict, uri):
         """Add vsw Info from params"""
