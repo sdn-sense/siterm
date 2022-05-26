@@ -9,7 +9,6 @@ Date: 2022/01/20
 """
 from __future__ import absolute_import
 import os
-import pprint
 from DTNRMAgent.Ruler.QOS import QOS
 from DTNRMAgent.Ruler.Components.VInterfaces import VInterfaces
 from DTNRMAgent.Ruler.Components.Routing import Routing
@@ -46,9 +45,6 @@ class Ruler(QOS, contentDB):
             msg = 'Received a failure getting information from Site Frontend %s' % str(out)
             self.logger.critical(msg)
             return {}
-        if self.config.getboolean('general', "debug"):
-            pretty = pprint.PrettyPrinter(indent=4)
-            pretty.pprint(evaldict(out[0]))
         self.logger.info('End function checkdeltas')
         return evaldict(out[0])
 

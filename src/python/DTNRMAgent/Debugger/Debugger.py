@@ -19,7 +19,6 @@ Date                    : 2021/03/12
 """
 from __future__ import absolute_import
 import json
-import pprint
 from DTNRMAgent.Debugger.Actions.arptable import arptable
 from DTNRMAgent.Debugger.Actions.iperf import iperf
 from DTNRMAgent.Debugger.Actions.rapidping import rapidping
@@ -54,9 +53,6 @@ class Debugger():
             msg = 'Received a failure getting information from Site Frontend %s' % str(out)
             self.logger.critical(msg)
             return {}
-        if self.config.getboolean('general', "debug"):
-            pretty = pprint.PrettyPrinter(indent=4)
-            self.logger.debug(pretty.pprint(evaldict(out[0])))
         return evaldict(out[0])
 
     def getAllAssignedtoHost(self):
