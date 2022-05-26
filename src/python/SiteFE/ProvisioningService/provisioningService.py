@@ -20,6 +20,8 @@ Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
 import sys
+import time
+import json
 import configparser
 import datetime
 from DTNRMLibs.MainUtilities import evaldict
@@ -90,19 +92,17 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.addvsw(activeConfig, switches)
         self.addrst(activeConfig, switches)
 
-    def applyConfig(self):
+    def applyConfig(self, raiseExc=True):
         """Apply yaml config on Switch"""
         ansOut = self.switch.plugin._applyNewConfig()
         if not ansOut:
             return
         for host, _ in ansOut.stats.get('failures', {}).items():
             for host_events in ansOut.host_events(host):
-                if host_events['event'] != 'runner_on_failed':
-                    continue
-                self.logger.info("Failed to apply Configuration. Failure details below:")
-                self.logger.info(host_events)
-        if ansOut.stats.get('failures', {}):
-            # TODO: Would be nice to save in DB and see errors from WEB UI
+                self.logger.info("Ansible runtime log of %s event" % host_events['event'])
+                self.logger.info(json.dumps(host_events, indent=4))
+        if ansOut.stats.get('failures', {}) and raiseExc:
+            # TODO: Would be nice to save in DB and see errors from WEB UI)
             raise Exception("There was configuration apply issue. Please contact support and provide this log file.")
 
 
@@ -131,17 +131,27 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             for key, val in curActiveConf.items():
                 if key == 'interface':
                     # Pass val to new function which does comparison
+                    self.logger.info('Comparing vsw config with ansible config')
                     self.compareVsw(host, curActiveConf['interface'])
                 elif key == 'sense_bgp':
+                    self.logger.info('Comparing bgp config with ansible config')
                     self.compareBGP(host, curActiveConf['sense_bgp'])
                 else:
                     self.yamlconf[host][key] = val
             # Into the host itself append all except interfaces key
             if curActiveConf != self.yamlconf[host]:
+                self.logger.debug('Yaml config changed. New config:')
+                self.logger.debug(json.dumps(self.yamlconf[host], indent=4))
                 configChanged = True
                 self.switch.plugin._writeHostConfig(host, self.yamlconf[host])
         if configChanged or self._forceApply():
+            self.logger.info('Apply Config')
+            # This executes the double apply and it is because of Dell (and might be others)
+            # Dell seems to ignore some statements via ansible and requires second aplly
+            # TODO: Review this using paramiko and not network_cli.
             self.applyConfig()
+            time.sleep(1)
+            self.applyConfig(raiseExc=False)
 
 def execute(config=None, args=None):
     """Main Execute."""
