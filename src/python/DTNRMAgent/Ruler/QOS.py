@@ -67,7 +67,6 @@ class QOS():
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         self.hostname = self.config.get('agent', 'hostname')
         createDirs(self.workDir)
-        self.debug = self.config.getboolean('general', "debug")
         self.agentdb = contentDB(config=self.config)
         self.activeDeltas = {}
         self.totalAllocated = 0
