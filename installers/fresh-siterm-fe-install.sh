@@ -100,7 +100,6 @@ yum install -y $packages
 echo "==================================================================="
 echo "We need latest setuptools to be able to install dtnrm package. Updating setuptools"
 pip3 install --upgrade setuptools
-pip3 install PyYAML
 
 echo "==================================================================="
 echo "Cloning siterm and installing it"
