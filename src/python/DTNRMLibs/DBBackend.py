@@ -38,6 +38,8 @@ class DBBackend():
 
     def destroy(self):
         """Destroy connection."""
+        if self.cursor:
+            self.cursor.close()
         if self.conn:
             self.conn.close()
         self.conn = None
