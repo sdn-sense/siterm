@@ -30,7 +30,7 @@
 ##H  -h             Display this help.
 
 workdir=`pwd`
-packages="git autoconf sudo libcurl-devel libffi-devel openssl-devel automake curl gcc libuuid-devel lm_sensors make nc pkgconfig wget zlib-devel python36-devel httpd httpd-devel python3-mod_wsgi mod_ssl cronie python38-pip python36 python3-pyOpenSSL mariadb-server python3-pyyaml python3-mysql mariadb-devel fetch-crl procps-ng ansible"
+packages="git autoconf sudo libcurl-devel libffi-devel openssl-devel automake curl gcc libuuid-devel lm_sensors make nc pkgconfig wget zlib-devel python36-devel httpd httpd-devel python3-mod_wsgi mod_ssl cronie python38-pip python36 python3-pyOpenSSL mariadb-server  python3-mysql mariadb-devel fetch-crl procps-ng ansible"
 # Check if release is supported.
 
 while [ $# -ge 1 ]; do
@@ -100,6 +100,7 @@ yum install -y $packages
 echo "==================================================================="
 echo "We need latest setuptools to be able to install dtnrm package. Updating setuptools"
 pip3 install --upgrade setuptools
+pip3 install PyYAML
 
 echo "==================================================================="
 echo "Cloning siterm and installing it"
