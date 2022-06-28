@@ -9,6 +9,7 @@ Date: 2021/01/20
 """
 from __future__ import division
 import os
+import copy
 import tempfile
 import filecmp
 import shutil
@@ -20,6 +21,8 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getFileContentAsJson
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.CustomExceptions import ConfigException
+from DTNRMLibs.CustomExceptions import OverSubscribeException
 
 COMPONENT = 'QOS'
 
@@ -69,7 +72,7 @@ class QOS():
         createDirs(self.workDir)
         self.agentdb = contentDB(config=self.config)
         self.activeDeltas = {}
-        self.totalAllocated = 0
+        self.params = {}
 
     # bps, bytes per second
     # kbps, Kbps, kilobytes per second
@@ -90,14 +93,17 @@ class QOS():
         outRate = -1
         outType = ''
         if inputRate == 'bps':
-            outRate = int(inputVal // 1000000000)
-            outType = 'gbit'
-        if outRate == 0:
             outRate = int(inputVal // 1000000)
             outType = 'mbit'
-        if outRate == 0:
-            outRate = int(inputVal // 1000)
-            outType = 'bit'
+            if outRate == 0:
+                outRate = int(inputVal // 1000)
+                outType = 'bit'
+        elif inputRate == 'mbps':
+            outRate = int(inputVal)
+            outType = 'mbit'
+        elif inputRate == 'gbps':
+            outRate = int(inputVal * 1000)
+            outType = 'mbit'
         if outRate != -1:
             self.logger.info('Converted rate for QoS from %s %s to %s' % (inputRate, inputVal, outRate))
             return outRate, outType
@@ -111,13 +117,24 @@ class QOS():
 
     def getMaxThrg(self):
         """Get Maximum set throughput and add QoS on it."""
-        if self.config.has_option('agent', 'public_intf') and self.config.has_option('agent', 'public_intf_max'):
-            self.logger.info("Getting max interface throughput")
-            intf = self.config.get('agent', 'public_intf')
-            maxThrg = self.config.get('agent', 'public_intf_max')
-            self.logger.info("Maximum throughput for %s is %s" % (intf, maxThrg))
-            return intf, int(maxThrg)
-        return None, None
+        if self.config.has_option('agent', 'public_intf'):
+            if self.config.has_option('agent', 'public_intf_def'):
+                self.logger.info("Getting def class default throughput")
+                self.params['defThrgIntf'] = self.config.get('agent', 'public_intf_def')
+            else:
+                self.params['defThrgIntf'] = 100
+            self.params['defThrgType'] = 'mbps'
+            if self.config.has_option('agent', 'public_intf_max'):
+                self.logger.info("Getting max interface throughput")
+                self.params['intfName'] = self.config.get('agent', 'public_intf')
+                self.params['maxThrgIntf'] = int(self.config.get('agent', 'public_intf_max')) - self.params['defThrgIntf']
+                if self.params['maxThrgIntf'] <= 0:
+                    raise ConfigException('ConfigError: Remaining throughtput is <= 0: %s' % self.params['maxThrgIntf'])
+            else:
+                raise ConfigException('ConfigError: Public Interface max speed undefined. See public_intf_max config param')
+        else:
+            raise ConfigException('ConfigError: Public Interface not defined. See public_intf config param')
+
 
     @staticmethod
     def _started(inConf):
@@ -151,7 +168,6 @@ class QOS():
         """Read all configs and prepare qos doc."""
         self.logger.info("Getting All QoS rules.")
         self.getConf()
-        self.totalAllocated = 0
         fName = ""
         with tempfile.NamedTemporaryFile(delete=False, mode="w+") as tmpFile:
             fName = tmpFile.name
@@ -161,20 +177,12 @@ class QOS():
 
     def getParams(self):
         """Get all params from Host Config"""
-        params = {}
-        params['intfName'], params['maxThrgIntf'] = self.getMaxThrg()
-        if params['intfName'] and params['maxThrgIntf']:
-            params['maxThrgIntf'] = params['maxThrgIntf'] - self.totalAllocated
-            if params['maxThrgIntf'] <= 0:
-                params['maxThrgIntf'] = 100  # We set by default 100MB/s for any ssh access if needed.
-            # as size is reported in bits, we need to get final size in gbit.
-            params['maxThrgIntf'] = int(params['maxThrgIntf'] / 1000000000.0)
-            params['maxtype'] = 'gbit'
-            if params['maxThrgIntf'] <= 0:
-                params['maxThrgIntf'] = 100
-                params['maxtype'] = 'mbit'
-        params['maxName'] =  "%(maxThrgIntf)s%(maxtype)s" % params
-        return params
+        self.logger.info("Getting All Params from config file.")
+        self.params = {}
+        self.getMaxThrg()
+        self.params['maxtype'] = 'mbit'
+        self.params['maxThrgRemaining'] = self.params['maxThrgIntf']
+        self.params['maxName'] =  "%(maxThrgIntf)s%(maxtype)s" % self.params
 
     def addVlanQoS(self, tmpFD):
         """Add Vlan BW Request parameters"""
@@ -193,6 +201,8 @@ class QOS():
                 self.logger.info('This specific vlan request did not provided any QOS. Ignoring QOS Rules for it')
                 continue
             outrate, outtype = self.convertToRate(inputDict['params'])
+            if self.params['maxThrgRemaining'] - outrate <= 0:
+                raise OverSubscribeException("Node is oversubscribed. Will not modify present QoS.")
             tmpFD.write("# SENSE CREATED VLAN %s %s %s %s\n" % (inputDict['vlan'],
                                                                 inputDict['destport'],
                                                                 outrate, outtype))
@@ -200,13 +210,28 @@ class QOS():
                                                                     inputName, outrate, outtype))
             tmpFD.write("interface vlan.%s %s output rate %s%s\n" % (inputDict['vlan'],
                                                                      outputName, outrate, outtype))
-            self.totalAllocated += int(inputDict['params']['reservableCapacity'])
+            self.params['maxThrgRemaining'] -= outrate
+
+    def calculateRSTFairshare(self, reqRate):
+        """Calculate L3 RST Fairshare throughput. Equivalent Fractions finding."""
+        newRate = float(reqRate) * float(self.params['maxThrgRemaining'])
+        newRate = newRate // float(self.params['totalRSTThrg'])
+        return int(newRate)
+
+    def findTotalRSTAllocation(self, overlapServices):
+        """Find total RST Allocations."""
+        totalRST = 0
+        for _, servParams in overlapServices.items():
+            if 'rules' not in servParams:
+                continue
+            tmpThrg, _ = self.convertToRate(servParams['rules'])
+            totalRST += tmpThrg
+        self.params['totalRSTThrg'] = totalRST
 
     def addRSTQoS(self, tmpFD):
         """BW Requests do not reach Agent. Loop over all RST definitions and
         if any our range is with-in network namespace, we add QoS as defined for RST
         """
-        params = self.getParams()
         allIPs = getAllIPs()
         overlapServices = {}
         for _key, vals in self.activeDeltas.get('output', {}).get('rst', {}).items():
@@ -221,19 +246,19 @@ class QOS():
                     for _, routeInfo in routes.get('hasRoute').items():
                         iprange = routeInfo.get('routeFrom', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
                         findOverlaps(service, iprange, allIPs, iptype)
+        self.findTotalRSTAllocation(overlapServices)
         for qosType in ['input', 'output']:
+            params = copy.deepcopy(self.params)
             params['counter'] = 0
             params['type'] = qosType
             params['matchtype'] = 'dst' if qosType == 'input' else 'src'
-            params['remainingRate'] = params['maxThrgIntf']
-            params['remainingType'] = params['maxtype']
             tmpFD.write("# SENSE Controlled Interface %(type)s %(intfName)s %(maxName)s\n" % params)
             tmpFD.write("interface46 %(intfName)s %(type)s-%(intfName)s %(type)s rate %(maxName)s balanced\n" % params)
             for servName, servParams in overlapServices.items():
                 if 'rules' not in servParams:
                     continue
                 params['resvRate'], params['resvType'] = self.convertToRate(servParams['rules'])
-                params['remainingRate'] =  params['remainingRate'] - params['resvRate']
+                params['resvRate'] = self.calculateRSTFairshare(params['resvRate'])
                 # Need to calculate the remaining traffic
                 params['resvName'] = "%(resvRate)s%(resvType)s" % params
                 tmpFD.write('  # priority%s belongs to %s service\n' % (params['counter'], servName))
@@ -244,7 +269,7 @@ class QOS():
                     tmpFD.write('    match6 %s %s\n' % (params['matchtype'], ipval))
                 tmpFD.write('\n')
             tmpFD.write('  # Default - all remaining traffic gets mapped to default class\n')
-            tmpFD.write('  class default commit %(remainingRate)s%(remainingType)s max %(maxName)s\n' % params)
+            tmpFD.write('  class default commit %(defThrgIntf)s%(defThrgType)s max %(maxName)s\n' % params)
             tmpFD.write('    match all\n\n')
 
 
