@@ -34,7 +34,8 @@ class DBBackend():
         self.mport = int(os.getenv('MARIA_DB_PORT', '3306'))
         self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
 
-    def destroy(self, conn, cursor):
+    @staticmethod
+    def destroy(conn, cursor):
         """Destroy connection."""
         if cursor:
             cursor.close()
