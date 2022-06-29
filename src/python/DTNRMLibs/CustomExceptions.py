@@ -28,6 +28,8 @@ class ExceptionTemplate(Exception):
 class NotFoundError(ExceptionTemplate):
     """Not Found error."""
 
+class ConfigException(ExceptionTemplate):
+    """Config Exception."""
 
 class WrongInputError(ExceptionTemplate):
     """Wrong Input Error."""
@@ -108,6 +110,9 @@ class PluginException(ExceptionTemplate):
 class OverlapException(ExceptionTemplate):
     """Overlap Exception."""
 
+
+class OverSubscribeException(ExceptionTemplate):
+    """OverSubscribe Exception."""
 
 class HTTPResponses():
     """Frontend HTTP Responses."""
