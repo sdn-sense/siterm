@@ -2,6 +2,59 @@
 """Ruler component pulls all actions from Site-FE and applies these rules on
 DTN.
 
+Throughput fairshare calculation:
+In SENSE, there can be multiple QoS Requests:
+End-to-End Path directly to a single DTN with QOS
+L3 Path between Routers - where QoS is requested for an IP Range (There might be 1 to many servers behind same IP Range)
+
+QoS Info:
+1gbps is always allocated for default traffic (like anything else, non SENSE traffic). Min allocation request is 1gbps.
+
+Scenario 1:
+Site uplink is 100gbps, 1 DTN - 100gbps.
+If Requested path is End-To-End for 10gbps - SiteRM will create vlan with hard QoS for 10gbps for specific vlan.
+Remaining 90gbps will be for any other traffic or default traffic.
+
+Scenario 2:
+Site uplink is 10gbps, 1 DTN - 10gbps.
+If Requested path is End-To-End for 9gbps - SiteRM will create vlan with hard QoS for 9gbps for specific vlan.
+Remaining 1gbps will be for any other traffic or default traffic.
+
+Scenario 3:
+Site uplink is 10gbps, 1 DTN - 10gbps.
+If Requested path is End-To-End for 10gbps - SiteRM Agent will fail to apply rules and will not add QoS.
+It exceeds the requirement. In future (TODO) - this will be prechecked in Frontend and delta request will not be accepted.
+
+Scenario 4:
+Site uplink is 100gbps, 10 DTN - each 10gbps.
+For End-To-End request to specific DTN - Scenario's 1,2,3 apply.
+Once End-To-End QoS added - all remaining traffic can be fairshared for L3 QoS (L3 Path between Routers). In this case:
+If only 1 new L3 Path requested for 50gbps - Site Uplink is capable, but Servers are not. Formula in this case on DTN is:
+    TotalDTNSpeed - MinDefault - AllEnd-To-EndLimits = RemainingTraffic
+    10gbps - 1gbps - 1gbps(if only 1 end-to-end vlan requested) = 8gbps
+    NewRate = L3Requested * RemainingTraffic / TotalRSTRequested
+    NewRate = 50gbps * 8 / 50
+In this case - All Agents (which have that specific IPv6 address) - will put 8gbps priority for matching ipv6 addresses.
+
+Scenario 5:
+Site uplink is 100gbps, 10 DTN - each 10gbps.
+For End-To-End request to specific DTN - Scenario's 1,2,3 apply.
+Once End-To-End QoS added - all remaining traffic can be fairshared for L3 QoS (L3 Path between Routers). In this case:
+Lets say we have 3 L3 Path requested for diff ranges (1st - 10gbps, 2nd - 20gbps, 3rd - 50gbps). Site uplink is capable to support that,
+but DTNs each are limited to 10gbps. Formula in this case on DTN is:
+    TotalDTNSpeed - MinDefault - AllEnd-To-EndLimits = RemainingTraffic
+    10gbps - 1gbps - 1gbps(if only 1 end-to-end vlan requested) = 8gbps
+    NewRate = L3Requested * RemainingTraffic / TotalRSTRequested
+    NewRate1st = 10gbps * 8 / 80 = 1gbps
+    NewRate2nd = 20gbps * 8 / 80 = 2gbps
+    NewRate3rd = 50gbps * 8 / 80 = 5gbps
+
+P.S. In case RemainingTraffic >= TotalRSTRequested - Formula not used and RequestedForRST is Returned. If RST Requested 5gbps,
+and server has 8gbps remaining - 5gbps will be added to QoS rules. This is not ideal in case there are 10 servers behind and each capable 10gbps -
+because all of them will have 5gbps QoS. SENSE In this case has no knowledge which server will be used for data transfer and limiting QoS
+must be done on the network side (Either Site Router, or ESNet)
+
+
 Authors:
   Justas Balcas jbalcas (at) caltech.edu
 
@@ -122,12 +175,12 @@ class QOS():
                 self.logger.info("Getting def class default throughput")
                 self.params['defThrgIntf'] = self.config.get('agent', 'public_intf_def')
             else:
-                self.params['defThrgIntf'] = 100
-            self.params['defThrgType'] = 'mbps'
+                self.params['defThrgIntf'] = 1000
+            self.params['defThrgType'] = 'mbit'
             if self.config.has_option('agent', 'public_intf_max'):
                 self.logger.info("Getting max interface throughput")
                 self.params['intfName'] = self.config.get('agent', 'public_intf')
-                self.params['maxThrgIntf'] = int(self.config.get('agent', 'public_intf_max')) - self.params['defThrgIntf']
+                self.params['maxThrgIntf'] = int(self.config.get('agent', 'public_intf_max'))
                 if self.params['maxThrgIntf'] <= 0:
                     raise ConfigException('ConfigError: Remaining throughtput is <= 0: %s' % self.params['maxThrgIntf'])
             else:
@@ -168,6 +221,7 @@ class QOS():
         """Read all configs and prepare qos doc."""
         self.logger.info("Getting All QoS rules.")
         self.getConf()
+        self.getParams()
         fName = ""
         with tempfile.NamedTemporaryFile(delete=False, mode="w+") as tmpFile:
             fName = tmpFile.name
@@ -181,7 +235,7 @@ class QOS():
         self.params = {}
         self.getMaxThrg()
         self.params['maxtype'] = 'mbit'
-        self.params['maxThrgRemaining'] = self.params['maxThrgIntf']
+        self.params['maxThrgRemaining'] = self.params['maxThrgIntf'] - self.params['defThrgIntf']
         self.params['maxName'] =  "%(maxThrgIntf)s%(maxtype)s" % self.params
 
     def addVlanQoS(self, tmpFD):
@@ -214,8 +268,13 @@ class QOS():
 
     def calculateRSTFairshare(self, reqRate):
         """Calculate L3 RST Fairshare throughput. Equivalent Fractions finding."""
+        if int(self.params['maxThrgRemaining']) >= int(self.params['totalRSTThrg']):
+            self.logger.debug('ThrgRemaining >= than totalRST. Return requested rate')
+            return reqRate
+        self.logger.debug('RST Throughput is more than server capable. Returning fairshare.')
         newRate = float(reqRate) * float(self.params['maxThrgRemaining'])
         newRate = newRate // float(self.params['totalRSTThrg'])
+        self.logger.debug('Requested: %s, TotalRST: %s, MaxRemaining: %s, NewRate: %s' % (reqRate, self.params['totalRSTThrg'], self.params['maxThrgRemaining'], newRate))
         return int(newRate)
 
     def findTotalRSTAllocation(self, overlapServices):
