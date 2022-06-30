@@ -212,10 +212,20 @@ class Daemon():
             return False
         return True
 
+    def refreshThreads(self):
+        while True:
+            try:
+                runThreads = self.getThreads()
+                return runThreads
+            except:
+                excType, excValue = sys.exc_info()[:2]
+                self.logger.critical("Exception!!! Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
+                time.sleep(10)
+
     def run(self):
         """Run main execution"""
         timeeq, currentHour = reCacheConfig(None)
-        runThreads = self.getThreads()
+        runThreads = self.refreshThreads()
         while self.runLoop():
             self.runCount += 1
             hadFailure = False
@@ -246,7 +256,7 @@ class Daemon():
             if not timeeq:
                 self.logger.info('Re-initiating Service with new configuration from GIT')
                 self._refreshConfig()
-                rthread = self.getThreads()
+                rthread = self.refreshThreads()
 
     @staticmethod
     def getThreads():
