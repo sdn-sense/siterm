@@ -7,8 +7,13 @@ In SENSE, there can be multiple QoS Requests:
 End-to-End Path directly to a single DTN with QOS
 L3 Path between Routers - where QoS is requested for an IP Range (There might be 1 to many servers behind same IP Range)
 
-QoS Info:
-1gbps is always allocated for default traffic (like anything else, non SENSE traffic). Min allocation request is 1gbps.
+QOS Walkthrough:
+1. Get all Rules from FE;
+2. Get all info about endhost capabilities;
+3. Apply all End-To-End QoS (hard qos) - hard qos means no one else can use that specific throughput.
+4. Sum all L3 Requests and if any of EndHost IPs are with-in requested range - it will use it for step 5/6
+5. For each L3 add soft QoS - min = L3Requested * RemainingTraffic / TotalRSTRequested; max = RemainingTraffic
+6. Add default rule for any other traffic - min = (config parameter public_intf_def or 100mbit), max = RemainingTraffic / (TotalRSTRequestedCount + 1)
 
 Scenario 1:
 Site uplink is 100gbps, 1 DTN - 100gbps.
@@ -27,7 +32,7 @@ It exceeds the requirement. In future (TODO) - this will be prechecked in Fronte
 
 Scenario 4:
 Site uplink is 100gbps, 10 DTN - each 10gbps.
-For End-To-End request to specific DTN - Scenario's 1,2,3 apply.
+There 1 End-To-End QoS 1gbps Request on the system. (For End-To-End request to specific DTN - Scenario's 1,2,3 apply.)
 Once End-To-End QoS added - all remaining traffic can be fairshared for L3 QoS (L3 Path between Routers). In this case:
 If only 1 new L3 Path requested for 50gbps - Site Uplink is capable, but Servers are not. Formula in this case on DTN is:
     TotalDTNSpeed - MinDefault - AllEnd-To-EndLimits = RemainingTraffic
@@ -38,7 +43,7 @@ In this case - All Agents (which have that specific IPv6 address) - will put 8gb
 
 Scenario 5:
 Site uplink is 100gbps, 10 DTN - each 10gbps.
-For End-To-End request to specific DTN - Scenario's 1,2,3 apply.
+There 1 End-To-End QoS 1gbps Request on the system. (For End-To-End request to specific DTN - Scenario's 1,2,3 apply.)
 Once End-To-End QoS added - all remaining traffic can be fairshared for L3 QoS (L3 Path between Routers). In this case:
 Lets say we have 3 L3 Path requested for diff ranges (1st - 10gbps, 2nd - 20gbps, 3rd - 50gbps). Site uplink is capable to support that,
 but DTNs each are limited to 10gbps. Formula in this case on DTN is:
@@ -52,7 +57,7 @@ but DTNs each are limited to 10gbps. Formula in this case on DTN is:
 P.S. In case RemainingTraffic >= TotalRSTRequested - Formula not used and RequestedForRST is Returned. If RST Requested 5gbps,
 and server has 8gbps remaining - 5gbps will be added to QoS rules. This is not ideal in case there are 10 servers behind and each capable 10gbps -
 because all of them will have 5gbps QoS. SENSE In this case has no knowledge which server will be used for data transfer and limiting QoS
-must be done on the network side (Either Site Router, or ESNet)
+must be done on the network side (Either Site Router, or ESNet).
 
 
 Authors:
@@ -175,7 +180,7 @@ class QOS():
                 self.logger.info("Getting def class default throughput")
                 self.params['defThrgIntf'] = self.config.get('agent', 'public_intf_def')
             else:
-                self.params['defThrgIntf'] = 1000
+                self.params['defThrgIntf'] = 100
             self.params['defThrgType'] = 'mbit'
             if self.config.has_option('agent', 'public_intf_max'):
                 self.logger.info("Getting max interface throughput")
@@ -312,7 +317,7 @@ class QOS():
             params['type'] = qosType
             params['matchtype'] = 'dst' if qosType == 'input' else 'src'
             tmpFD.write("# SENSE Controlled Interface %(type)s %(intfName)s %(maxName)s\n" % params)
-            tmpFD.write("interface46 %(intfName)s %(type)s-%(intfName)s %(type)s rate %(maxName)s balanced\n" % params)
+            tmpFD.write("interface46 %(intfName)s %(type)s-%(intfName)s %(type)s rate %(maxName)s\n" % params)
             for servName, servParams in overlapServices.items():
                 if 'rules' not in servParams:
                     continue
@@ -327,8 +332,9 @@ class QOS():
                 for ipval in servParams.get('ipv6', []):
                     tmpFD.write('    match6 %s %s\n' % (params['matchtype'], ipval))
                 tmpFD.write('\n')
+            params['maxDefault'] = "%s%s" % (int(params['maxThrgIntf'] / (len(overlapServices)+1)), params['maxtype'])
             tmpFD.write('  # Default - all remaining traffic gets mapped to default class\n')
-            tmpFD.write('  class default commit %(defThrgIntf)s%(defThrgType)s max %(maxName)s\n' % params)
+            tmpFD.write('  class default commit %(defThrgIntf)s%(defThrgType)s max %(maxDefault)s\n' % params)
             tmpFD.write('    match all\n\n')
 
 
