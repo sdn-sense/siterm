@@ -1,0 +1,14 @@
+psutil
+ipaddress
+pyroute2
+pyaml
+pyshark
+iperf3
+pycurl
+requests
+netifaces
+future
+simplejson
+rdflib
+typing-extensions==4.1.1
+mariadb==1.0.8
