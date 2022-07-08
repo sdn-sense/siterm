@@ -103,6 +103,7 @@ pip3 install --upgrade setuptools
 echo "==================================================================="
 echo "Install siterm "
 cd $rootdir/dtnrmcode/$gitr
+pip3 install -r requirements-agent.txt || exit $?
 python3 setup-agent.py install || exit $?
 
 for x in iprange firehol

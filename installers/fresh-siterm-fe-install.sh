@@ -115,7 +115,7 @@ fi
 echo "==================================================================="
 echo "Cloning siterm and installing it"
 cd $rootdir/dtnrmcode/$gitr
-
+pip3 install -r requirements-sitefe.txt || exit $?
 python3 setup-sitefe.py install || exit $?
 
 
