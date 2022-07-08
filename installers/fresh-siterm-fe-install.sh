@@ -100,6 +100,17 @@ yum install -y $packages
 echo "==================================================================="
 echo "We need latest setuptools to be able to install dtnrm package. Updating setuptools"
 pip3 install --upgrade setuptools
+pip3 install --upgrade pip
+
+ARCH=`arch`
+if [ $ARCH = "ppc64le" ]; then
+echo "==================================================================="
+echo "ppc64le requires Rust to for cryptography library. Install rust"
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf &> rust-install.sh
+sh rust-install.sh -y
+source $HOME/.cargo/env
+rm -f rust-install.sh
+fi
 
 echo "==================================================================="
 echo "Cloning siterm and installing it"
