@@ -127,16 +127,25 @@ class ConflictChecker():
 
     def checkConflicts(self, cls, newConfig, oldConfig):
         """Check conflicting resources and not allow them"""
+        resourceConflicts = False
         self._getAllParams(newConfig)
         if not oldConfig:
-            return False
+            return resourceConflicts
         if newConfig == oldConfig:
-            return False
+            return resourceConflicts
         for svc, svcitems in newConfig.items():
             if self._checksvc(svc, oldConfig):
                 continue
             if svc in ['SubnetMapping', 'RoutingMapping']:
                 continue
+            if svc == 'vsw':
+                # Virtual Switching Service
+                #resourceConflicts = self.checkvsw()
+                print(1)
+            if svc == 'rst':
+                # Routing Service
+                # resourceConflicts = self.checkrst()
+                print(1)
             for _connID, connIDitems in svcitems.items():
                 for hostname, vals in connIDitems.items():
                     if hostname == '_params':

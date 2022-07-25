@@ -12,7 +12,7 @@ def exceptionCode(excName):
     """
     exCodes = {IOError: -1, KeyError: -2, AttributeError: -3, IndentationError: -4,
                ValueError: -5, PluginException: -6, NameError: -7}
-    if excName in list(exCodes.keys()):
+    if excName in exCodes:
         return exCodes[excName]
     return -100
 

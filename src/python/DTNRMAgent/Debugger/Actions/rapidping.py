@@ -23,7 +23,7 @@ def rapidping(inputDict):
     """Return arptable for specific vlan"""
     # TODO Checks:
     # Interface is available;
-    command = "ping -i 0.001 -w %s %s -s 1024 -I %s" % (inputDict['time'], inputDict['ip'], inputDict['interface'])
+    command = "ping -i %(interval)s -w %(time)s %(ip)s -s %(packetsize)s -I %(interface)s" % inputDict
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
     return out.decode("utf-8"), err.decode("utf-8"), cmdOut.returncode
@@ -31,5 +31,6 @@ def rapidping(inputDict):
 if __name__ == "__main__":
     testData = {'type': 'rapidping', 'sitename': 'T2_US_Caltech_Test1',
                 'dtn': 'sdn-sc-nodea.ultralight.org', 'ip': '1.1.1.1',
-                'interface': 'vlan.3604', 'time': '60'}
+                'interface': 'vlan.3604', 'time': '60', "packetsize": "32",
+                "interval": "1"}
     print(rapidping(testData))
