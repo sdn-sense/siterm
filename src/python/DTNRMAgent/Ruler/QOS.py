@@ -231,17 +231,23 @@ class QOS():
         with tempfile.NamedTemporaryFile(delete=False, mode="w+") as tmpFile:
             fName = tmpFile.name
             self.addVlanQoS(tmpFile)
-            self.addRSTQoS(tmpFile)
+            if self.params['l3enabled']:
+                self.addRSTQoS(tmpFile)
         return fName
 
     def getParams(self):
         """Get all params from Host Config"""
         self.logger.info("Getting All Params from config file.")
         self.params = {}
-        self.getMaxThrg()
-        self.params['maxtype'] = 'mbit'
-        self.params['maxThrgRemaining'] = self.params['maxThrgIntf'] - self.params['defThrgIntf']
-        self.params['maxName'] =  "%(maxThrgIntf)s%(maxtype)s" % self.params
+        try:
+            self.getMaxThrg()
+            self.params['maxtype'] = 'mbit'
+            self.params['maxThrgRemaining'] = self.params['maxThrgIntf'] - self.params['defThrgIntf']
+            self.params['maxName'] =  "%(maxThrgIntf)s%(maxtype)s" % self.params
+            self.params['l3enabled'] = True
+        except ConfigException as ex:
+            print('L3 DTN Config public intf not defined. Will not add QoS for L3. Exception %s' % ex)
+            self.params['l3enabled'] = False
 
     def addVlanQoS(self, tmpFD):
         """Add Vlan BW Request parameters"""
