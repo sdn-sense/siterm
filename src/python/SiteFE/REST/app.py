@@ -121,7 +121,9 @@ def frontend(environ, **kwargs):
     Examples: https://server-host/json/frontend/addhost # Will add new host. Raises error if it is already there
     """
     methodType = environ['REQUEST_METHOD'].upper()
-    command = _FRONTEND_ACTIONS[methodType][kwargs['mReg'][0]]
+    command = _FRONTEND_ACTIONS[methodType].get(kwargs['mReg'][0])
+    if not command:
+        raise BadRequestError("Unsupported Call. Contact support. Call details: %s %s" % (methodType, kwargs['mReg'][0]))
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     if methodType == 'GET':
         return command(**kwargs)
@@ -142,11 +144,15 @@ def debug(environ, **kwargs):
     """Debug ations
     Method: GET; Calls: getdebug
     Output: application/json
-    Method: PUT; Calls: submitdebug | updatedebug
+    Method: POST; Calls: submitdebug
+    Output: application/json
+    Method: PUT; Calls: updatedebug
     Output: application/json
     """
     methodType = environ['REQUEST_METHOD'].upper()
-    command = _DEBUG_ACTIONS[methodType][kwargs['mReg'][0]]
+    command = _DEBUG_ACTIONS[methodType].get(kwargs['mReg'][0], "")
+    if not command:
+        raise BadRequestError("Unsupported Call. Contact support. Call details: %s %s" % (methodType, kwargs['mReg'][0]))
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     if methodType == 'GET':
         return command(**kwargs)
@@ -174,10 +180,14 @@ def internallCall(caller, environ, **kwargs):
         exception = '%s: Received Exception: %s' % (caller, ex)
         kwargs['http_respond'].ret_404('application/json', kwargs['start_response'], None)
         returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=404)
-    except (ValueError, BadRequestError, IOError) as ex:
+    except (ValueError, IOError) as ex:
         exception = '%s: Received Exception: %s' % (caller, ex)
         kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
         returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=500)
+    except BadRequestError as ex:
+        exception = '%s: Received BadRequestError: %s' % (caller, ex)
+        kwargs['http_respond'].ret_400('application/json', kwargs['start_response'], None)
+        returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=400)
     if exception:
         print(exception)
     return returnDict

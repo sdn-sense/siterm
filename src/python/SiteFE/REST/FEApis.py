@@ -126,10 +126,14 @@ class FrontendRM():
 
     def submitdebug(self, inputDict, **kwargs):
         """Submit new debug action request."""
+        jsondump = json.dumps(inputDict)
+        for symbol in [";", "&"]:
+            if symbol in jsondump:
+                raise BadRequestError('Unsupported symbol in input request. Contact Support')
         dbobj = getVal(self.dbI, **kwargs)
         out = {'hostname': inputDict['dtn'],
                'state': 'new',
-               'requestdict': json.dumps(inputDict),
+               'requestdict': jsondump,
                'output': '',
                'insertdate': getUTCnow(),
                'updatedate': getUTCnow()}
