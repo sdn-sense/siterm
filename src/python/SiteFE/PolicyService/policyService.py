@@ -388,8 +388,6 @@ class PolicyService(RDFHelper):
         self.logger.info('Conflict Check of expired entities')
         newconf, cleaned = self.conflictChecker.checkActiveConfig(currentActive['output'])
         self.logger.info('Conflict Check for diff outcomes')
-        import pprint
-        pprint.pprint(currentActive['output'])
         if cleaned or self.conflictChecker.checkConflicts(self, newconf, currentActive['output']):
             self.logger.info('IMPORTANT: State changed. Writing new config to DB.')
             currentActive['output'] = newconf
