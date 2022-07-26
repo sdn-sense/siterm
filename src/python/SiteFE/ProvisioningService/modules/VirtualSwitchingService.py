@@ -108,9 +108,8 @@ class VirtualSwitchingService():
                             self._addTaggedInterfaces(host, port, portDict)
                             self._addIPv4Address(host, port, portDict)
                             self._addIPv6Address(host, port, portDict)
-        else:
-            for host in switches:
-                self.__getdefaultIntf(host)
+        for host in switches:
+            self.__getdefaultIntf(host)
 
     def compareVsw(self, switch, runningConf):
         """Compare expected and running conf"""
