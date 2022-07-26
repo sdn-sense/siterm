@@ -131,9 +131,8 @@ class RoutingService():
                             self._addOwnRoutes(host, rDict)
                             self._addNeighbors(host, ruid, rDict)
                             self._addPrefixList(host, ruid, rDict)
-        else:
-            for host in switches:
-                self._getDefaultBGP(host)
+        for host in switches:
+            self._getDefaultBGP(host)
 
     def compareBGP(self, switch, runningConf):
         """Compare L3 BGP"""
