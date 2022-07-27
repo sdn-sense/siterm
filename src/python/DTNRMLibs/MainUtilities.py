@@ -607,7 +607,7 @@ def reportServiceStatus(**kwargs):
         dbOut = {'hostname': kwargs.get('hostname', 'default'),
                  'servicestate': kwargs.get('servicestate', 'UNSET'),
                  'servicename': kwargs.get('servicename', 'UNSET'),
-                 'version': kwargs.get('version', 'UNSET'),
+                 'version': kwargs.get('version', runningVersion),
                  'updatedate': getUTCnow()}
         dbI = getDBConn(dbOut['servicename'], kwargs.get('cls', None))
         dbobj = getVal(dbI, **{'sitename': kwargs.get('sitename', 'UNSET')})
