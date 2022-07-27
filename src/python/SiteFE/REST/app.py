@@ -106,6 +106,7 @@ _FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata|service
 _FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata},
                      'PUT': {'addhost': _FRONTEND_RM.addhost,
                              'updatehost': _FRONTEND_RM.updatehost,
+                             'deletehost': _FRONTEND_RM.deletehost,
                              'servicestate': _FRONTEND_RM.servicestate}}
 
 
@@ -116,7 +117,7 @@ def frontend(environ, **kwargs):
     Output: application/json
     Examples: https://server-host/json/frontend/getdata # Will return info about all hosts hosts
     Method: PUT
-    Calls: addhost | updatehost | servicestate
+    Calls: addhost | updatehost | servicestate | deletehost
     Output: application/json
     Examples: https://server-host/json/frontend/addhost # Will add new host. Raises error if it is already there
     """

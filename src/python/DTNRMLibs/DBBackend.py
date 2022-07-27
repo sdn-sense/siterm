@@ -18,7 +18,6 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2019 California Institute of Technology
 Date                    : 2019/05/01
 """
-from __future__ import print_function
 import os
 import time
 import mariadb
