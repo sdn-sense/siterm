@@ -92,6 +92,7 @@ create_servicestates = """CREATE TABLE IF NOT EXISTS servicestates(
                           hostname text NOT NULL,
                           servicename text NOT NULL,
                           servicestate text NOT NULL,
+                          version text NOT NULL,
                           updatedate int NOT NULL,
                           primary key(id))"""
 create_debugrequests = """CREATE TABLE IF NOT EXISTS debugrequests(
@@ -122,7 +123,7 @@ insert_parsed = "INSERT INTO parsed(deltaid, vals, insertdate) VALUES(%(deltaid)
 insert_hosts = "INSERT INTO hosts(ip, hostname, insertdate, updatedate, hostinfo) VALUES(%(ip)s, %(hostname)s, %(insertdate)s, %(updatedate)s, %(hostinfo)s)"
 insert_switches = "INSERT INTO switches(sitename, insertdate, updatedate, output) VALUES(%(sitename)s, %(insertdate)s, %(updatedate)s, %(output)s)"
 insert_activeDeltas = "INSERT INTO activeDeltas(insertdate, updatedate, output) VALUES(%(insertdate)s, %(updatedate)s, %(output)s)"
-insert_servicestates = "INSERT INTO servicestates(hostname, servicename, servicestate, updatedate) VALUES(%(hostname)s, %(servicename)s, %(servicestate)s, %(updatedate)s)"
+insert_servicestates = "INSERT INTO servicestates(hostname, servicename, servicestate, version, updatedate) VALUES(%(hostname)s, %(servicename)s, %(servicestate)s, %(version)s, %(updatedate)s)"
 insert_debugrequests = "INSERT INTO debugrequests(hostname, state, requestdict, output, insertdate, updatedate) VALUES(%(hostname)s, %(state)s, %(requestdict)s, %(output)s, %(insertdate)s, %(updatedate)s)"
 
 get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
@@ -135,7 +136,7 @@ get_parsed = "SELECT id, deltaid, vals, insertdate FROM parsed"
 get_hosts = "SELECT id, ip, hostname, insertdate, updatedate, hostinfo FROM hosts"
 get_switches = "SELECT id, sitename, insertdate, updatedate, output FROM switches"
 get_activeDeltas = "SELECT id, insertdate, updatedate, output FROM activeDeltas"
-get_servicestates = "SELECT id, hostname, servicename, servicestate, updatedate FROM servicestates"
+get_servicestates = "SELECT id, hostname, servicename, servicestate, version, updatedate FROM servicestates"
 get_debugrequests = "SELECT id, hostname, state, requestdict, output, insertdate, updatedate FROM debugrequests"
 get_debugrequestsids = "SELECT id FROM debugrequests"
 
@@ -146,7 +147,7 @@ update_hoststates = "UPDATE hoststates SET state = %(state)s, updatedate = %(upd
 update_hosts = "UPDATE hosts SET ip = %(ip)s, hostname = %(hostname)s, updatedate = %(updatedate)s, hostinfo = %(hostinfo)s WHERE id = %(id)s"
 update_switches = "UPDATE switches SET sitename = %(sitename)s, updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
 update_activeDeltas = "UPDATE activeDeltas SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
-update_servicestates = "UPDATE servicestates SET servicestate = %(servicestate)s, updatedate = %(updatedate)s WHERE hostname = %(hostname)s AND servicename = %(servicename)s"
+update_servicestates = "UPDATE servicestates SET servicestate = %(servicestate)s, updatedate = %(updatedate)s, version = %(version)s WHERE hostname = %(hostname)s AND servicename = %(servicename)s"
 update_debugrequests = "UPDATE debugrequests SET state = %(state)s, output = %(output)s, updatedate = %(updatedate)s WHERE id = %(id)s"
 
 delete_models = "DELETE FROM models"

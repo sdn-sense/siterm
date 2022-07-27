@@ -35,6 +35,7 @@ import pycurl
 import requests
 from yaml import safe_load as yload
 from rdflib import Graph
+from DTNRMLibs import __version__ as runningVersion
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import WrongInputError
 from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
@@ -606,6 +607,7 @@ def reportServiceStatus(**kwargs):
         dbOut = {'hostname': kwargs.get('hostname', 'default'),
                  'servicestate': kwargs.get('servicestate', 'UNSET'),
                  'servicename': kwargs.get('servicename', 'UNSET'),
+                 'version': kwargs.get('version', 'UNSET'),
                  'updatedate': getUTCnow()}
         dbI = getDBConn(dbOut['servicename'], kwargs.get('cls', None))
         dbobj = getVal(dbI, **{'sitename': kwargs.get('sitename', 'UNSET')})
@@ -635,7 +637,8 @@ def pubStateRemote(**kwargs):
         dic = {'servicename': kwargs['servicename'],
                'servicestate': kwargs['servicestate'],
                'sitename': kwargs['sitename'],
-               'hostname':socket.gethostname()
+               'hostname': socket.gethostname(),
+               'version': runningVersion
                }
         publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
     except Exception:

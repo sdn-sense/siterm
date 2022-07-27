@@ -95,6 +95,16 @@ class FrontendRM():
                'hostinfo': json.dumps(inputDict)}
         dbobj.update('hosts', [out])
 
+    def deletehost(self, inputDict, **kwargs):
+        """Delete Host from DB."""
+        # Validate that these entries are known...
+        dbobj = getVal(self.dbI, **kwargs)
+        host = dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
+        if not host:
+            raise NotFoundError('This IP %s is not registered at all.' % inputDict['ip'])
+        dbobj.delete('hosts', ['id', host[0]['id']])
+
+
     def servicestate(self, inputDict, **kwargs):
         """Set Service State in DB."""
         # Only 3 Services are supported to report via URL
@@ -104,7 +114,7 @@ class FrontendRM():
             raise NotFoundError('This Service %s is not supported by Frontend' % inputDict['servicename'])
         reportServiceStatus(**{'servicename': inputDict['servicename'], 'servicestate': inputDict['servicestate'],
                                'sitename': kwargs['sitename'], 'hostname': inputDict['hostname'],
-                               'cls': self})
+                               'version': inputDict['version'], 'cls': self})
 
     def getdebug(self, **kwargs):
         """Get Debug action for specific ID."""

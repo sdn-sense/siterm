@@ -26,7 +26,7 @@ import sys
 # src/python/SiteFE/__init__.py
 # src/python/DTNRMAgent/__init__.py
 # src/python/DTNRMLibs/__init__.py
-VERSION = '210312'
+VERSION = '20220727'
 
 
 def get_path_to_root(appendLocation=None):
