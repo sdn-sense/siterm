@@ -9,6 +9,13 @@ Date: 2022/04/08
 """
 from ipaddress import ip_address, ip_network
 
+def normalizedipwithnet(ipInput, netmask):
+    """Normalize IP with separate netmask"""
+    tmp = ipInput.split('/')
+    if len(tmp) >= 2:
+        return normalizedip(ipInput)
+    tmpNet = netmask.split('/')
+    return normalizedip("%s/%s" % (ipInput, tmpNet[1]))
 
 def normalizedip(ipInput):
     """
