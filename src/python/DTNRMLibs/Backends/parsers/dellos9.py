@@ -22,7 +22,7 @@ class DellOS9():
         self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
 
     @staticmethod
-    def _getSystemValidPortName(port):
+    def getSystemValidPortName(port):
         """Get Systematic port name. MRML expects it without spaces"""
         # Spaces from port name are replaced with _
         # Backslashes are replaced with dash
@@ -177,7 +177,7 @@ class DellOS9():
                 if not tmpout:
                     return out
                 for item in tmpout:
-                    out.append(self._getSystemValidPortName(f"{match.group(1)} {item}"))
+                    out.append(self.getSystemValidPortName(f"{match.group(1)} {item}"))
         return out
 
     def parser(self, ansibleOut):

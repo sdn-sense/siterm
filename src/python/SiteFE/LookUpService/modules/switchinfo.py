@@ -148,7 +148,7 @@ class SwitchInfo():
                     switchuri = ":".join(newuri.split(':')[:-1])
                     self.addToGraph(['site', newuri],
                                     ['nml', 'hasBidirectionalPort'],
-                                    ['site', f'{switchuri}:{self.switch._getSystemValidPortName(value)}'])
+                                    ['site', f'{switchuri}:{self.switch.getSystemValidPortName(value)}'])
                 continue
             if key in ['ipv4', 'ipv6', 'mac', 'macaddress', 'lineprotocol', 'operstatus', 'mtu', 'bandwidth']:
                 subkey = generateKey(self, val, key)
@@ -236,8 +236,8 @@ class SwitchInfo():
                     continue
                 for lldpIntf, intfDict in lldpDict.items():
                     if intfDict['remote_chassis_id'] == mac:
-                        remoteuri = f"{self.prefixes['site']}:{lldpHost}:{self.switch._getSystemValidPortName(lldpIntf)}"
-                        localuri = f":{hostname}:{self.switch._getSystemValidPortName(intfDict['remote_port_id'])}"
+                        remoteuri = f"{self.prefixes['site']}:{lldpHost}:{self.switch.getSystemValidPortName(lldpIntf)}"
+                        localuri = f":{hostname}:{self.switch.getSystemValidPortName(intfDict['remote_port_id'])}"
                         self._addIsAlias(uri=localuri, isAlias=remoteuri)
 
     def _addAddressPool(self, uri):

@@ -78,7 +78,7 @@ class Switch(Node):
             self.logger.debug('No switches in database.')
 
     @staticmethod
-    def _getSystemValidPortName(port):
+    def getSystemValidPortName(port):
         """Get Systematic port name. MRML expects it without spaces"""
         # Spaces from port name are replaced with _
         # Backslashes are replaced with dash
@@ -115,7 +115,7 @@ class Switch(Node):
     def _getSwitchPortName(self, switchName, portName, vlanid=None):
         """Get Switch Port Name"""
         # Get the portName which is uses in Switch
-        # as you can see in _getSystemValidPortName -
+        # as you can see in getSystemValidPortName -
         # Port name from Orchestrator will come modified.
         # We need a way to revert it back to systematic switch port name
         sysPort = self.output['portMapping'].get(switchName, {}).get(portName, "")
