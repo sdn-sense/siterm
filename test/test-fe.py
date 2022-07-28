@@ -17,6 +17,7 @@ def makeRequest(cls, url, params):
         return ex.result, ex.status, ex.reason, ex
     return out
 
+
 def debugActions(cls, dataIn, dataUpd):
     """Test Debug Actions: submit, get update"""
     # SUBMIT
@@ -26,7 +27,7 @@ def debugActions(cls, dataIn, dataUpd):
     cls.assertEqual(outs[2], 'OK')
     # GET
     urlg = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/getdebug/{outs[0]['ID']}"
-    outg = makeRequest(cls, urlg, {'verb': 'GET', 'data':{}})
+    outg = makeRequest(cls, urlg, {'verb': 'GET', 'data': {}})
     cls.assertEqual(outg[1], 200)
     cls.assertEqual(outg[2], 'OK')
     # UPDATE
@@ -44,49 +45,49 @@ class TestUtils(unittest.TestCase):
         """Test Fake Url"""
         url = "/NoSite/sitefe/no/url/"
         for action in ["GET", "POST", "PUT", "DELETE"]:
-            out = makeRequest(self, url, {'verb': action, 'data':{}})
+            out = makeRequest(self, url, {'verb': action, 'data': {}})
             self.assertIn(out[1], [404, 405])
 
     def test_config(self):
         """Test to get Config"""
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/configuration"
-        out = makeRequest(self, url, {'verb': 'GET', 'data':{}})
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
         for action in ["POST", "PUT", "DELETE"]:
-            out = makeRequest(self, url, {'verb': action, 'data':{}})
+            out = makeRequest(self, url, {'verb': action, 'data': {}})
             self.assertEqual(out[1], 405)
 
     def test_metrics(self):
         """Test metrics API"""
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/metrics"
-        out = makeRequest(self, url, {'verb': 'GET', 'data':{}})
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
         for action in ["POST", "PUT", "DELETE"]:
-            out = makeRequest(self, url, {'verb': action, 'data':{}})
+            out = makeRequest(self, url, {'verb': action, 'data': {}})
             self.assertEqual(out[1], 405)
             self.assertEqual(out[2], 'Method Not Allowed')
 
     def test_getdebug(self):
         """Test getdebug API"""
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getdebug/dummyhostname"
-        out = makeRequest(self, url, {'verb': 'GET', 'data':{}})
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
         for action in ["POST", "PUT", "DELETE"]:
-            out = makeRequest(self, url, {'verb': action, 'data':{}})
+            out = makeRequest(self, url, {'verb': action, 'data': {}})
             self.assertIn(out[1], [400, 405])
             self.assertIn(out[2], ['Bad Request', 'Method Not Allowed'])
 
     def test_getalldebughostname(self):
         """Test getalldebughostname API"""
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getalldebughostname/dummyhostname"
-        out = makeRequest(self, url, {'verb': 'GET', 'data':{}})
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
         for action in ["POST", "PUT", "DELETE"]:
-            out = makeRequest(self, url, {'verb': action, 'data':{}})
+            out = makeRequest(self, url, {'verb': action, 'data': {}})
             self.assertIn(out[1], [400, 405])
             self.assertIn(out[2], ['Bad Request', 'Method Not Allowed'])
 
@@ -98,7 +99,6 @@ class TestUtils(unittest.TestCase):
         outsuc = {"out": ["ping success", "from unittest"], "err": "", "exitCode": 0}
         dataupd = {'state': 'success', 'output': json.dumps(outsuc)}
         debugActions(self, data, dataupd)
-
 
     def test_debug_arptable(self):
         """Test Debug arptable API"""
@@ -116,7 +116,6 @@ class TestUtils(unittest.TestCase):
 
     def test_debug_iperf(self):
         """Test Debug Iperf API"""
-        # {"type": "iperf", "sitename": "", "dtn": "", "interface": "", "ip": "", "port": "", "time": ""},
         data = {"type": "iperf", "sitename": "", "dtn": "dummyhostname",
                 "interface": "dummyinterface", "ip": "1.2.3.4", "port": "1234", "time": "60"}
         outsuc = {"out": ["iperf success", "from unittest"], "err": "", "exitCode": 0}
@@ -125,7 +124,6 @@ class TestUtils(unittest.TestCase):
 
     def test_debug_iperfserver(self):
         """Test Debug IperfServer API"""
-        # {"type": "iperfserver", "sitename": "", "dtn": "", "interface": "", "ip": "", "port": "", "time": ""}
         data = {"type": "iperfserver", "sitename": "", "dtn": "dummyhostname",
                 "interface": "dummyinterface", "ip": "1.2.3.4", "port": "1234", "time": "60"}
         outsuc = {"out": ["iperf server success", "from unittest"], "err": "", "exitCode": 0}
@@ -142,7 +140,7 @@ class TestUtils(unittest.TestCase):
         os.environ["X509_USER_KEY"] = f"{work_dir}/certs/host.key"
         os.environ["X509_USER_CERT"] = f"{work_dir}/certs/host.cert"
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/configuration"
-        out = makeRequest(self, url, {'verb': 'GET', 'data':{}})
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
         os.environ["X509_USER_KEY"] = x509_key
         os.environ["X509_USER_CERT"] = x509_cert
         self.assertEqual(out[1], 401)
@@ -150,8 +148,8 @@ class TestUtils(unittest.TestCase):
 
     def test_getdata(self):
         """Test to get agentdata"""
-        url = "/%(sitename)s/sitefe/json/frontend/getdata" % self.PARAMS
-        out = makeRequest(self, url, {'verb': 'GET', 'data':{}})
+        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getdata"
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
 
@@ -189,7 +187,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(out[2], 'OK')
         # Get Host
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getdata"
-        out = makeRequest(self, url, {'verb': 'GET', 'data':{}})
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
         # Delete Host
@@ -198,9 +196,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
 
-
-
-#"%(sitename)/sitefe/json/frontend/servicestate" PUT
+# "%(sitename)/sitefe/json/frontend/servicestate" PUT
 # TODO Write Unit tests for get deltas, submit delta, check model.
 # _DELTAS_RE = re.compile(r'^/*v1/deltas/?$')
 #          (_DELTAS_RE, deltas, ['GET', 'POST'], [{"key": "summary", "default": True, "type": bool},
