@@ -102,7 +102,7 @@ class FrontendRM():
         host = dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
         if not host:
             raise NotFoundError(f"This IP {inputDict['ip']} is not registered at all.")
-        dbobj.delete('hosts', ['id', host[0]['id']])
+        dbobj.delete('hosts', [['id', host[0]['id']]])
 
 
     def servicestate(self, inputDict, **kwargs):
