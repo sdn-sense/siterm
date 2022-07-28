@@ -20,7 +20,7 @@ Date                    : 2020/09/25
 from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getUTCnow
 from prometheus_client import generate_latest, CollectorRegistry
-from prometheus_client import Enum, CONTENT_TYPE_LATEST
+from prometheus_client import Enum, Info, CONTENT_TYPE_LATEST
 
 
 class PrometheusAPI():
@@ -40,9 +40,13 @@ class PrometheusAPI():
                             labelnames=['servicename', 'hostname'],
                             states=['OK', 'UNKNOWN', 'FAILED', 'KEYBOARDINTERRUPT', 'UNSET'],
                             registry=registry)
+        infoState = Info('running_version', 'Running Code Version.',
+                         labelnames=['servicename', 'hostname'],
+                         registry=registry)
         services = self.dbI[kwargs['sitename']].get('servicestates')
         # {'servicestate': u'OK', 'hostname': u'4df8c7b989d1',
-        #  'servicename': u'LookUpService', 'id': 1, 'updatedate': 1601047007}
+        #  'servicename': u'LookUpService', 'id': 1, 'updatedate': 1601047007,
+        #  'version': '220727'}
         timenow = int(getUTCnow())
         for service in services:
             state = 'UNKNOWN'
@@ -50,6 +54,7 @@ class PrometheusAPI():
                 # If we are not getting service state for 2 mins, leave state as unknown
                 state = service['servicestate']
             serviceState.labels(servicename=service['servicename'], hostname=service.get('hostname', 'UNSET')).state(state)
+            infoState.labels(servicename=service['servicename'], hostname=service.get('hostname', 'UNSET')).info({'version': service['version']})
 
     def metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""

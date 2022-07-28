@@ -13,6 +13,7 @@ import time
 import argparse
 import atexit
 import psutil
+from DTNRMLibs import __version__ as runningVersion
 from DTNRMLibs.MainUtilities import getConfig, getLoggingObject
 from DTNRMLibs.MainUtilities import reCacheConfig
 from DTNRMLibs.MainUtilities import pubStateRemote
@@ -202,7 +203,9 @@ class Daemon():
     def reporter(self, state, sitename):
         """Report Service State to FE"""
         if not self.inargs.noreporting:
-            pubStateRemote(cls=self, servicename=self.component, servicestate=state, sitename=sitename)
+            pubStateRemote(cls=self, servicename=self.component,
+                           servicestate=state, sitename=sitename,
+                           version=runningVersion)
 
     def runLoop(self):
         """Return True if it is not onetime run."""
