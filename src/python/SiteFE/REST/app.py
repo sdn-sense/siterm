@@ -102,7 +102,7 @@ def feconfig(environ, **kwargs):
     return _CP['MAIN']
 
 
-_FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|getdata|servicestate)$')
+_FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|deletehost|getdata|servicestate)$')
 _FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata},
                      'PUT': {'addhost': _FRONTEND_RM.addhost,
                              'updatehost': _FRONTEND_RM.updatehost,
