@@ -124,7 +124,7 @@ def frontend(environ, **kwargs):
     methodType = environ['REQUEST_METHOD'].upper()
     command = _FRONTEND_ACTIONS[methodType].get(kwargs['mReg'][0])
     if not command:
-        raise BadRequestError("Unsupported Call. Contact support. Call details: %s %s" % (methodType, kwargs['mReg'][0]))
+        raise BadRequestError(f"Unsupported Call. Contact support. Call details: {methodType} {kwargs['mReg'][0]}")
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     if methodType == 'GET':
         return command(**kwargs)
@@ -153,7 +153,7 @@ def debug(environ, **kwargs):
     methodType = environ['REQUEST_METHOD'].upper()
     command = _DEBUG_ACTIONS[methodType].get(kwargs['mReg'][0], "")
     if not command:
-        raise BadRequestError("Unsupported Call. Contact support. Call details: %s %s" % (methodType, kwargs['mReg'][0]))
+        raise BadRequestError(f"Unsupported Call. Contact support. Call details: {methodType} {kwargs['mReg'][0]}")
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     if methodType == 'GET':
         return command(**kwargs)
@@ -178,15 +178,15 @@ def internallCall(caller, environ, **kwargs):
     try:
         return caller(environ, **kwargs)
     except (ModelNotFound, DeltaNotFound) as ex:
-        exception = '%s: Received Exception: %s' % (caller, ex)
+        exception = f'{caller}: Received Exception: {ex}'
         kwargs['http_respond'].ret_404('application/json', kwargs['start_response'], None)
         returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=404)
     except (ValueError, IOError) as ex:
-        exception = '%s: Received Exception: %s' % (caller, ex)
+        exception = f'{caller}: Received Exception: {ex}'
         kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
         returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=500)
     except BadRequestError as ex:
-        exception = '%s: Received BadRequestError: %s' % (caller, ex)
+        exception = f'{caller}: Received BadRequestError: {ex}'
         kwargs['http_respond'].ret_400('application/json', kwargs['start_response'], None)
         returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=400)
     if exception:
@@ -256,15 +256,15 @@ def application(environ, start_response):
                                     headers=headers, sitename=sitename)
                 return returnDump(out)
             except (NotSupportedArgument, TooManyArgumentalValues) as ex:
-                print('Send 400 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400)))
+                print(f'Send 400 error. More details: {json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400))}')
                 _HTTPRESPONDER.ret_400('application/json', start_response, None)
                 return [bytes(json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400)), 'UTF-8')]
             except IOError as ex: # Exception as ex:
-                print('Send 500 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500)))
+                print(f'Send 500 error. More details: {json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500))}')
                 _HTTPRESPONDER.ret_500('application/json', start_response, None)
                 return [bytes(json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500)), 'UTF-8')]
     errMsg = "Such API does not exist. Not Implemented"
-    print('Send 501 error. More details: %s' % json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501)))
+    print(f'Send 501 error. More details: {json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501))}')
     _HTTPRESPONDER.ret_501('application/json', start_response, [('Location', '/')])
     return [bytes(json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501)), 'UTF-8')]
 
@@ -276,7 +276,7 @@ URLS = [(_FECONFIG_RE, feconfig, ['GET'], [], []),
 
 if '__all__' in dir(AllCalls):
     for callableF in AllCalls.__all__:
-        name = "SiteFE.REST.AppCalls.%s" % callableF
+        name = f"SiteFE.REST.AppCalls.{callableF}"
         method = importlib.import_module(name)
         if hasattr(method, 'CALLS'):
             for item in method.CALLS:

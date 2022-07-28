@@ -30,7 +30,7 @@ class Switch():
     def _getHostConfig(self, host):
         """Get config of RAW local file."""
         out = {}
-        confFName = "%s/%s.yaml" %  (self.workDir, host)
+        confFName = f"{self.workDir}/{host}.yaml"
         if os.path.isfile(confFName):
             with open(confFName, 'r', encoding='utf-8') as fd:
                 out = yaml.load(fd.read())
@@ -39,7 +39,7 @@ class Switch():
     def _writeHostConfig(self, host, out):
         """It saves locally all configuration.
         RAW plugin does not apply anything on switches."""
-        confFName = "%s/%s.yaml" %  (self.workDir, host)
+        confFName = f"{self.workDir}/{host}.yaml"
         with open(confFName, 'w', encoding='utf-8') as fd:
             fd.write(yaml.dump(out))
 

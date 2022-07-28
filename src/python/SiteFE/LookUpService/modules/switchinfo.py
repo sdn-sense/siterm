@@ -19,7 +19,7 @@ def generateVal(cls, inval, inkey, esc=False):
     if isinstance(inval, dict) and inkey == 'ipv6':
         return _genIPv6(cls, inval, inkey, esc)
     if isinstance(inval, (dict, list)):
-        cls.logger.info('Out is dictionary/list, but vals unknown. Return as str %s' % inval)
+        cls.logger.info(f'Out is dictionary/list, but vals unknown. Return as str {inval}')
         return str(inval)
     if isinstance(inval, (int, float)):
         return inval
@@ -43,13 +43,13 @@ def _genIPv4(cls, inval, inkey, esc=True):
             subnet = inval['masklen']
         if 'address' in inval:
             if esc:
-                return validMRMLName("%s/%s" % (inval['address'], subnet))
-            return "%s/%s" % (inval['address'], subnet)
+                return validMRMLName(f"{inval['address']}/{subnet}")
+            return f"{inval['address']}/{subnet}"
         cls.logger.debug('One of params in Dict not available. Upredictable output')
     if isinstance(inval, list):
         tmpKeys = [{'key': inkey, 'subkey': _genIPv4(cls, val, inkey), 'val': val} for val in inval]
         return tmpKeys
-    cls.logger.debug('No IPv4 value. Return empty String. This might break things. Input: %s %s' % (inval, inkey))
+    cls.logger.debug(f'No IPv4 value. Return empty String. This might break things. Input: {inval} {inkey}')
     return ''
 
 def _genIPv6(cls, inval, inkey, esc=True):
@@ -64,13 +64,13 @@ def _genIPv6(cls, inval, inkey, esc=True):
             subnet = inval['subnet'].split('/')[-1]
         if 'address' in inval:
             if esc:
-                return validMRMLName("%s/%s" % (inval['address'], subnet))
-            return "%s/%s" % (inval['address'], subnet)
+                return validMRMLName(f"{inval['address']}/{subnet}")
+            return f"{inval['address']}/{subnet}"
         cls.logger.debug('One of params in Dict not available. Upredictable output')
     if isinstance(inval, list):
         tmpKeys = [{'key': inkey, 'subkey': _genIPv6(cls, val, inkey), 'val': val} for val in inval]
         return tmpKeys
-    cls.logger.debug('No IPv6 value. Return empty String. This might break things. Input: %s %s' % (inval, inkey))
+    cls.logger.debug(f'No IPv6 value. Return empty String. This might break things. Input: {inval} {inkey}')
     return ''
 
 def generateKey(cls, inval, inkey):
@@ -93,7 +93,7 @@ def generateKey(cls, inval, inkey):
             # Arista EOS always returns list.
             inval = [inval]
         return _genIPv6(cls, inval, inkey)
-    cls.logger.debug('Generate Keys return empty. Unexpected. Input: %s %s' % (inval, inkey))
+    cls.logger.debug(f'Generate Keys return empty. Unexpected. Input: {inval} {inkey}')
     return ""
 
 class SwitchInfo():
@@ -104,11 +104,11 @@ class SwitchInfo():
         if not subkey:
             return
         val = generateVal(self, val, key, False)
-        labeluri = '%s:%s' % (newuri, "%s+%s" % (key, subkey))
+        labeluri = f"{newuri}:{key}+{subkey}"
         reptype = key
         if key in ['ipv4', 'ipv6']:
-            reptype = '%s-address' % key
-            labeluri = '%s:%s' % (newuri, "%s-address+%s" % (key, subkey))
+            reptype = f'{key}-address'
+            labeluri = f"{newuri}:{key}-address+{subkey}"
         self.addToGraph(['site', newuri],
                         ['mrs', 'hasNetworkAddress'],
                         ['site', labeluri])
@@ -130,14 +130,14 @@ class SwitchInfo():
             if key == 'vlan_range':
                 self.addToGraph(['site', newuri],
                                 ['nml', 'hasLabelGroup'],
-                                ['site', '%s:%s' % (newuri, "vlan-range")])
-                self.addToGraph(['site', '%s:%s' % (newuri, "vlan-range")],
+                                ['site', f"{newuri}:{'vlan-range'}"])
+                self.addToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['rdf', 'type'],
                                 ['nml', 'LabelGroup'])
-                self.addToGraph(['site', "%s:%s" % (newuri, "vlan-range")],
+                self.addToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['nml', 'labeltype'],
                                 ['schema', '#vlan'])
-                self.addToGraph(['site', "%s:%s" % (newuri, "vlan-range")],
+                self.addToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['nml', 'values'],
                                 [portSwitch['vlan_range']])
                 # Generate host alias or adds' isAlias
@@ -148,7 +148,7 @@ class SwitchInfo():
                     switchuri = ":".join(newuri.split(':')[:-1])
                     self.addToGraph(['site', newuri],
                                     ['nml', 'hasBidirectionalPort'],
-                                    ['site', '%s:%s' % (switchuri, self.switch._getSystemValidPortName(value))])
+                                    ['site', f'{switchuri}:{self.switch.getSystemValidPortName(value)}'])
                 continue
             if key in ['ipv4', 'ipv6', 'mac', 'macaddress', 'lineprotocol', 'operstatus', 'mtu', 'bandwidth']:
                 subkey = generateKey(self, val, key)
@@ -165,7 +165,7 @@ class SwitchInfo():
     def _addSwitchPortInfo(self, key, switchInfo):
         """Add Switch Port Info for ports, vlans"""
         for switchName, switchDict in list(switchInfo[key].items()):
-            self.logger.debug('Working on1 %s' % switchName)
+            self.logger.debug(f'Working on1 {switchName}')
             try:
                 vsw = self.config.get(switchName, 'vsw')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
@@ -173,10 +173,10 @@ class SwitchInfo():
                 continue
             try:
                 rst = self.config.get(switchName, 'rst')
-            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+            except (configparser.NoOptionError, configparser.NoSectionError):
                 rst = False
             for portName, portSwitch in list(switchDict.items()):
-                newuri = ":%s:%s" % (switchName, portName)
+                newuri = f":{switchName}:{portName}"
                 self._addVswPort(hostname=switchName, portName=portName, vsw=vsw)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
                 if rst:
@@ -184,7 +184,7 @@ class SwitchInfo():
 
     def _addSwitchVlanLabel(self, vlanuri, value):
         """Add Switch Vlan Label"""
-        labeluri = '%s:%s' % (vlanuri, "label+%s" % str(value))
+        labeluri = f"{vlanuri}:label+{str(value)}"
         self.addToGraph(['site', vlanuri],
                         ['nml', 'hasLabel'],
                         ['site', labeluri])
@@ -201,7 +201,7 @@ class SwitchInfo():
     def _addSwitchVlanInfo(self, key, switchInfo):
         """Add All Vlan Info from switch"""
         for switchName, switchDict in list(switchInfo[key].items()):
-            self.logger.debug('Working on %s' % switchName)
+            self.logger.debug(f'Working on {switchName}')
             try:
                 vsw = self.config.get(switchName, 'vsw')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
@@ -213,7 +213,8 @@ class SwitchInfo():
                     # TODO: LOG LINE
                     continue
                 for taggedIntf in portSwitch['tagged']:
-                    vlanuri = self._addVlanPort(hostname=switchName, portName=taggedIntf, vsw=vsw, vtype='vlanport', vlan=portSwitch['value'])
+                    vlanuri = self._addVlanPort(hostname=switchName, portName=taggedIntf, vsw=vsw,
+                                                vtype='vlanport', vlan=portSwitch['value'])
                     self._addSwitchVlanLabel(vlanuri, portSwitch['value'])
                     if 'vlan_range' in portSwitch:
                         # Vlan range for vlan - this is default coming from switch yaml conf
@@ -235,8 +236,8 @@ class SwitchInfo():
                     continue
                 for lldpIntf, intfDict in lldpDict.items():
                     if intfDict['remote_chassis_id'] == mac:
-                        remoteuri = "%s:%s:%s" % (self.prefixes['site'], lldpHost, self.switch._getSystemValidPortName(lldpIntf))
-                        localuri = ":%s:%s" % (hostname, self.switch._getSystemValidPortName(intfDict['remote_port_id']))
+                        remoteuri = f"{self.prefixes['site']}:{lldpHost}:{self.switch.getSystemValidPortName(lldpIntf)}"
+                        localuri = f":{hostname}:{self.switch.getSystemValidPortName(intfDict['remote_port_id'])}"
                         self._addIsAlias(uri=localuri, isAlias=remoteuri)
 
     def _addAddressPool(self, uri):
@@ -262,11 +263,11 @@ class SwitchInfo():
         """Add Route info to MRML"""
 
         for switchName, rstEntries in switchInfo.get('routes', {}).items():
-            self.logger.debug('Working on1 %s' % switchName)
+            self.logger.debug(f'Working on1 {switchName}')
             out = {'hostname': switchName}
             try:
                 out['rst'] = self.config.get(switchName, 'rst')
-            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+            except (configparser.NoOptionError, configparser.NoSectionError):
                 continue
             if 'rst' in out and out['rst']:
                 try:
@@ -275,7 +276,7 @@ class SwitchInfo():
                     self.logger.debug('ERROR: private_asn parameter is not defined (MISCONFIG. Contact Support) for %s. Err: %s', switchName, ex)
                     continue
             for ipX, routeList in rstEntries.items():
-                out['rstname'] = 'rst-%s' % ipX
+                out['rstname'] = f'rst-{ipX}'
                 for route in routeList:
                     # get ipv6/ipv4 floating ranges
                     for key in ['ipv4-subnet-pool', 'ipv6-subnet-pool']:
@@ -283,7 +284,7 @@ class SwitchInfo():
                         if tmp:
                             out[key] = tmp
                     out['iptype'] = ipX
-                    out['rt-table'] = 'main' if 'vrf' not in route else 'vrf-%s' % route['vrf']
+                    out['rt-table'] = 'main' if 'vrf' not in route else f"vrf-{route['vrf']}"
                     if 'from' in route:
                         out['routename'] = validMRMLName(route['from'])
                     elif 'intf' in route:
@@ -293,12 +294,12 @@ class SwitchInfo():
                         continue
                     if 'to' in route:
                         out['routetype'] ='routeTo'
-                        out['type'] = '%s-prefix' % ipX
+                        out['type'] = f'{ipX}-prefix'
                         out['value'] = route['to']
                         self._addRouteEntry(**out)
                     if 'from' in route:
                         out['routetype'] = 'nextHop'
-                        out['type'] = '%s-address' % ipX
+                        out['type'] = f'{ipX}-address'
                         out['value'] = route['from']
                         self._addRouteEntry(**out)
 

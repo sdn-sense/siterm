@@ -37,18 +37,18 @@ class RecurringAction():
         if '__all__' in dir(Plugins):
             for callableF in Plugins.__all__:
                 try:
-                    method = importlib.import_module("DTNRMAgent.RecurringActions.Plugins.%s" % callableF)
+                    method = importlib.import_module(f"DTNRMAgent.RecurringActions.Plugins.{callableF}")
                     if hasattr(method, 'NAME'):
                         tmpName = method.NAME
                     else:
                         tmpName = callableF
                     if method.NAME in list(outputDict.keys()):
-                        msg = '%s name is already defined in output dictionary' % method.NAME
+                        msg = f'{method.NAME} name is already defined in output dictionary'
                         self.logger.error(msg)
                         raise KeyError(msg)
                     tmp = method.get(config=self.config)
                     if not isinstance(tmp, dict):
-                        msg = 'Returned output from %s method is not a dictionary. Type: %s' % (method.Name, type(tmp))
+                        msg = f'Returned output from {method.Name} method is not a dictionary. Type: {type(tmp)}'
                         self.logger.error(msg)
                         raise ValueError(msg)
                     if tmp:  # Do not add empty stuff inside....
@@ -67,7 +67,7 @@ class RecurringAction():
                                            "errorNo": -100,  # TODO Use exception definition from utilities
                                            "errMsg": str(excValue),
                                            "exception": str(ex)}
-                    excMsg += " %s: %s" % (str(excType.__name__), str(excValue))
+                    excMsg += f" {str(excType.__name__)}: {str(excValue)}"
                 if 'errorType' in list(outputDict[tmpName].keys()):
                     self.logger.critical("%s received %s. Exception details: %s", tmpName,
                                     outputDict[tmpName]['errorType'], outputDict[tmpName])

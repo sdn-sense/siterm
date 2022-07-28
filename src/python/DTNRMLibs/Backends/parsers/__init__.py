@@ -17,7 +17,7 @@ __all__ = [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('_
 ALL = {}
 for module in __all__:
     config = getConfig()
-    tmpMod = importlib.import_module("DTNRMLibs.Backends.parsers.%s" % module)
+    tmpMod = importlib.import_module(f"DTNRMLibs.Backends.parsers.{module}")
     _tmp = tmpMod.MODULE(config=config)
     for name in _tmp.factName:
         ALL[name] = _tmp

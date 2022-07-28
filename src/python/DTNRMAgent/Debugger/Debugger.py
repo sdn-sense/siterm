@@ -47,28 +47,28 @@ class Debugger():
 
     def getData(self, url):
         """Get data from FE."""
-        self.logger.info('Query: %s%s' % (self.fullURL, url))
+        self.logger.info(f'Query: {self.fullURL}{url}')
         out = getDataFromSiteFE({}, self.fullURL, url)
         if out[2] != 'OK':
-            msg = 'Received a failure getting information from Site Frontend %s' % str(out)
+            msg = f'Received a failure getting information from Site Frontend {str(out)}'
             self.logger.critical(msg)
             return {}
         return evaldict(out[0])
 
     def getAllAssignedtoHost(self):
         """Get All Assigned to Host"""
-        return self.getData("/sitefe/json/frontend/getalldebughostname/%s" % self.hostname)
+        return self.getData(f"/sitefe/json/frontend/getalldebughostname/{self.hostname}")
 
     def publishToFE(self, inDic):
         """Publish debug runtime to FE"""
-        publishToSiteFE(inDic, self.fullURL, '/sitefe/json/frontend/updatedebug/%s' % inDic['id'])
+        publishToSiteFE(inDic, self.fullURL, f"/sitefe/json/frontend/updatedebug/{inDic['id']}")
 
     def startwork(self):
         """Start execution and get new requests from FE"""
         allWork = self.getAllAssignedtoHost()
         out, err, exitCode = "", "", 0
         for item in allWork:
-            self.logger.debug("Work on: %s" % item)
+            self.logger.debug(f"Work on: {item}")
             try:
                 item['requestdict'] = evaldict(item['requestdict'])
                 if item['requestdict']['type'] == 'rapidping':
@@ -93,7 +93,7 @@ class Debugger():
                 item['state'] = 'failed'
             else:
                 item['state'] = 'finished'
-            self.logger.debug("Finish work on: %s" % item)
+            self.logger.debug(f"Finish work on: {item}")
             self.publishToFE(item)
 
 

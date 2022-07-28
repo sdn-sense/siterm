@@ -56,9 +56,9 @@ class VirtualSwitchingService():
         """Default yaml dict setup"""
         tmpD = self.__getdefaultIntf(host)
         if 'hasLabel' not in portDict or 'value' not in portDict['hasLabel']:
-            raise Exception('Bad running config. Missing vlan entry: %s %s %s' % (host, port, portDict))
+            raise Exception(f'Bad running config. Missing vlan entry: {host} {port} {portDict}')
         vlan = portDict['hasLabel']['value']
-        vlanName = self.switch._getSwitchPortName(host, 'Vlan%s' % vlan, vlan)
+        vlanName = self.switch._getSwitchPortName(host, f'Vlan{vlan}', vlan)
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault('name', vlanName)
         tmpVrf = self.getConfigValue(host, 'vrf')
@@ -128,4 +128,4 @@ class VirtualSwitchingService():
                     yamlOut = self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, {})
                     dictCompare(yamlOut, val1)
                 elif isinstance(val1, (dict, list)):
-                    raise Exception('Got unexpected dictionary in comparison %s' % val)
+                    raise Exception(f'Got unexpected dictionary in comparison {val}')

@@ -25,7 +25,7 @@ def iperf(inputDict):
     # IP Is valid;
     # Ping works;
     # Telnet to default port works (5201)
-    command = "iperf3 -c %s -B %s -t %s" % (inputDict['ip'], inputDict['interface'], inputDict['time'])
+    command = f"iperf3 -c {inputDict['ip']} -B {inputDict['interface']} -t {inputDict['time']}"
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
     return out.decode("utf-8"), err.decode("utf-8"), cmdOut.returncode

@@ -20,7 +20,7 @@ class AristaEOS():
         self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
 
     @staticmethod
-    def _getSystemValidPortName(port):
+    def getSystemValidPortName(port):
         """Get Systematic port name. MRML expects it without spaces"""
         # Spaces from port name are replaced with _
         # Backslashes are replaced with dash
@@ -61,18 +61,18 @@ class AristaEOS():
             elif interfaceSt:
                 if line.startswith('switchport trunk allowed vlan') or line.startswith('switchport access vlan'):
                     for vlan in self._getVlans(line):
-                        key = "Vlan%s" % vlan
+                        key = f"Vlan{vlan}"
                         out.setdefault(key, {})
                         out[key].setdefault('tagged', [])
-                        out[key]['tagged'].append(self._getSystemValidPortName(interfaceSt))
+                        out[key]['tagged'].append(self.getSystemValidPortName(interfaceSt))
                 else:
                     m = re.match(r'channel-group ([0-9]+) .*', line)
                     if m:
                         chnMemberId = m.group(1)
-                        key = "Port-Channel%s" % chnMemberId
+                        key = f"Port-Channel{chnMemberId}"
                         out.setdefault(key, {})
                         out[key].setdefault('channel-member', [])
-                        out[key]['channel-member'].append(self._getSystemValidPortName(interfaceSt))
+                        out[key]['channel-member'].append(self.getSystemValidPortName(interfaceSt))
         return out
 
     @staticmethod

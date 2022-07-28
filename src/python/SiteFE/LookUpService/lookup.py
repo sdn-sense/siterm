@@ -56,10 +56,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     def getModelSavePath(self):
         """Get Model Save Location."""
         now = datetime.datetime.now()
-        saveDir = "%s/%s" % (self.config.get(self.sitename, "privatedir"), "LookUpService")
+        saveDir = f"{self.config.get(self.sitename, 'privatedir')}/{'LookUpService'}"
         createDirs(saveDir)
-        return "%s/%s-%s-%s:%s:%s:%s.mrml" % (saveDir, now.year, now.month,
-                                              now.day, now.hour, now.minute, now.second)
+        return f"{saveDir}/{now.year}-{now.month}-{now.day}:{now.hour}:{now.minute}:{now.second}.mrml"
 
     def defineTopology(self):
         """Defined Topology and Main Services available."""
@@ -134,7 +133,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
             # Also next run get new info from switch plugin
             self.renewSwitchConfig = True
 
-        self.logger.debug('Last Known Model: %s' % str(lastKnownModel['fileloc']))
+        self.logger.debug(f"Last Known Model: {str(lastKnownModel['fileloc'])}")
         # Clean Up old models (older than 24h.)
         for model in self.dbI.get('models', limit=100, orderby=['insertdate', 'ASC']):
             if model['insertdate'] < int(getUTCnow() - 86400):
@@ -142,7 +141,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
                 try:
                     os.unlink(model['fileloc'])
                 except OSError as ex:
-                    self.logger.debug('Got OS Error removing this model %s. Exc: %s' % (model, str(ex)))
+                    self.logger.debug(f'Got OS Error removing this model {model}. Exc: {str(ex)}')
                 self.dbI.delete('models', [['id', model['id']]])
 
 

@@ -38,10 +38,10 @@ class DeltaInfo():
                 state = 'deactivating'
         self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('mrs', 'tag'),
-                           self.genLiteral('monitor:status:%s' % state)))
+                           self.genLiteral(f'monitor:status:{state}')))
         self.newGraph.add((timeuri,
                            self.genUriRef('mrs', 'tag'),
-                           self.genLiteral('monitor:status:%s' % state)))
+                           self.genLiteral(f'monitor:status:{state}')))
 
     def addTimeline(self, params, uri):
         """Add timeline in the model"""
@@ -52,7 +52,7 @@ class DeltaInfo():
         if timeuri:
             timeuri = self.genUriRef(custom=timeuri)
         else:
-            timeuri = self.genUriRef('site', "%s:lifetime" % uri)
+            timeuri = self.genUriRef('site', f"{uri}:lifetime")
         self.newGraph.add((self.genUriRef('nml', 'Lifetime'),
                           self.genUriRef('rdf', 'type'),
                           self.genUriRef('rdfs', 'Class')))
@@ -114,12 +114,12 @@ class DeltaInfo():
         if not netDict:
             return
         for ipkey in ['ipv4', 'ipv6']:
-            ipdict = netDict.get('%s-address' % ipkey, {})
+            ipdict = netDict.get(f'{ipkey}-address', {})
             if not ipdict:
                 continue
             for key in ipdict.get('type', 'undefined').split('|'):
                 val = normalizedip(ipdict.get('value', 'undefined'))
-                out = ["%s-address+%s" % (ipkey, validMRMLName(val)), key]
+                out = [f"{ipkey}-address+{validMRMLName(val)}", key]
                 self._addNetworkAddress(portDict['uri'], out, val)
 
     def addvswInfo(self, vswDict, uri):
@@ -140,7 +140,7 @@ class DeltaInfo():
                     self._addService(portDict, portDict['uri'])
                     self._addNetworkAddr(portDict, portDict['uri'])
                 else:
-                    self.logger.debug('port %s and portDict %s ignored. No vlan label' % (port, portDict))
+                    self.logger.debug(f'port {port} and portDict {portDict} ignored. No vlan label')
 
     def addRouteTables(self, activeDeltas):
         """Add Route tables"""
@@ -148,9 +148,9 @@ class DeltaInfo():
             for routeTable, iptypes in vals.get('providesRoutingTable', {}).items():
                 for iptype in iptypes.keys():
                     # uri = self._addRoutingService(hostname=host, rstname="rst-%s" % iptype)
-                    self._addRoutingTable(hostname=host, rstname="rst-%s" % iptype, rtableuri=routeTable)
+                    self._addRoutingTable(hostname=host, rstname=f"rst-{iptype}", rtableuri=routeTable)
                     for route in list(activeDeltas.get('output', {}).get('rst', {}).get(routeTable, {}).get(host, {}).get(iptype, {}).get('hasRoute', {})):
-                        self._addRoute(hostname=host, rstname="rst-%s" % iptype, rtableuri=routeTable, routeuri=route)
+                        self._addRoute(hostname=host, rstname=f"rst-{iptype}", rtableuri=routeTable, routeuri=route)
 
     def addRoutes(self, activeDeltas):
         """Add individual routes"""
@@ -162,12 +162,12 @@ class DeltaInfo():
                     routedict = activeDeltas.get('output', {}).get('rst', {}).get(routeTable, {}).get(host, {}).get(iptype, {})
                     rtableuri = routedict.get("belongsToRoutingTable", "")
                     for route, routeInfo in routedict.get('hasRoute', {}).items():
-                        self._addProvidesRoute(hostname=host, rstname="rst-%s" % iptype, routeuri=route)
+                        self._addProvidesRoute(hostname=host, rstname=f"rst-{iptype}", routeuri=route)
                         self._addBandwidthServiceRoute(**{'routeuri': route, 'uri': routedict.get('hasService', {}).get('bwuri', '')})
                         for key, val in routeInfo.items():
                             for _, entrVal in val.items():
                                 netadd = {'hostname': host,
-                                          'rstname': "rst-%s" % iptype,
+                                          'rstname': f"rst-{iptype}",
                                           'rtableuri': rtableuri,
                                           'routeuri': route,
                                           'routetype': key,

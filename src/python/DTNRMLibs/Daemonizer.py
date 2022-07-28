@@ -36,7 +36,7 @@ def validateArgs(inargs):
     """Validate arguments."""
         # Check port
     if inargs.action not in ['start', 'stop', 'status', 'restart']:
-        raise Exception("Action '%s' not supported. Supported actions: start, stop, status, restart" % inargs.action)
+        raise Exception(f"Action '{inargs.action}' not supported. Supported actions: start, stop, status, restart")
 
 class Daemon():
     """A generic daemon class.
@@ -51,10 +51,10 @@ class Daemon():
         self.component = component
         self.inargs = inargs
         self.runCount = 0
-        self.pidfile = '/tmp/end-site-rm-%s.pid' % component
+        self.pidfile = f'/tmp/end-site-rm-{component}.pid'
         self.config = getConfig()
         self.logger = getLoggingObject(config=self.config,
-                                       logfile="%s/%s/" % (self.config.get('general', 'logDir'), component),
+                                       logfile=f"{self.config.get('general', 'logDir')}/{component}/",
                                        logLevel=self.config.get('general', 'logLevel'), logType=logType,
                                        service=self.component)
 
@@ -104,7 +104,7 @@ class Daemon():
         atexit.register(self.delpid)
         pid = str(os.getpid())
         with open(self.pidfile, 'w+', encoding='utf-8') as fd:
-            fd.write("%s\n" % pid)
+            fd.write(f"{pid}\n")
 
     def delpid(self):
         """Remove pid file."""
@@ -178,7 +178,7 @@ class Daemon():
         try:
             with open(self.pidfile, 'r', encoding='utf-8') as fd:
                 pid = int(fd.read().strip())
-                print('Application info: PID %s' % pid)
+                print(f'Application info: PID {pid}')
         except IOError:
             print('Is application running?')
             sys.exit(1)

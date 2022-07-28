@@ -46,7 +46,7 @@ class DBBackend():
         conn, cursor = self.initialize()
         for argname in dir(dbcalls):
             if argname.startswith('create_'):
-                print('Call to create %s' % argname)
+                print(f'Call to create {argname}')
                 cursor.execute(getattr(dbcalls, argname))
         conn.commit()
         self.destroy(conn, cursor)
@@ -55,8 +55,8 @@ class DBBackend():
         """Clean only specific table if available"""
         conn, cursor = self.initialize()
         for argname in dir(dbcalls):
-            if argname == 'delete_%s' % dbtable:
-                print('Call to clean from %s' % argname)
+            if argname == f'delete_{dbtable}':
+                print(f'Call to clean from {argname}')
                 cursor.execute(getattr(dbcalls, argname))
         conn.commit()
         self.destroy(conn, cursor)
@@ -66,7 +66,7 @@ class DBBackend():
         conn, cursor = self.initialize()
         for argname in dir(dbcalls):
             if argname.startswith('delete_'):
-                print('Call to clean from %s' % argname)
+                print(f'Call to clean from {argname}')
                 cursor.execute(getattr(dbcalls, argname))
         conn.commit()
         self.destroy(conn, cursor)
@@ -106,11 +106,11 @@ class DBBackend():
                 lastID = cursor.lastrowid
             conn.commit()
         except mariadb.Error as ex:
-            print('MariaDBError. Ex: %s' % ex)
+            print(f'MariaDBError. Ex: {ex}')
             conn.rollback()
             raise ex
         except Exception as ex:
-            print('Got Exception %s ' % ex)
+            print(f'Got Exception {ex} ')
             conn.rollback()
             raise ex
         finally:
@@ -125,7 +125,7 @@ class DBBackend():
             cursor.execute(query)
             conn.commit()
         except Exception as ex:
-            print('Got Exception %s ' % ex)
+            print(f'Got Exception {ex} ')
             conn.rollback()
             raise ex
         finally:
@@ -156,7 +156,7 @@ class dbinterface():
     def _calldiff(self, calltype, callExit):
         """Log timing for call."""
         diff = self.callEnd - self.callStart
-        msg = "DB: %s %s %s %s" % (self.serviceName, calltype, str(diff), callExit)
+        msg = f"DB: {self.serviceName} {calltype} {str(diff)} {callExit}"
         print(msg)
 
     @staticmethod
@@ -164,7 +164,7 @@ class dbinterface():
         """Get call from ALL available ones."""
         callquery = ""
         try:
-            callquery = getattr(dbcalls, '%s_%s' % (callaction, calltype))
+            callquery = getattr(dbcalls, f'{callaction}_{calltype}')
         except AttributeError as ex:
             print('Called %s_%s, but got exception %s', callaction, calltype, ex)
             raise ex
@@ -187,12 +187,12 @@ class dbinterface():
                     first = False
                 else:
                     query += "AND "
-                query += '%s = "%s" ' % (item[0], item[1])
+                query += f'{item[0]} = "{item[1]}" '
         if orderby:
-            query += "ORDER BY %s %s " % (orderby[0], orderby[1])
+            query += f"ORDER BY {orderby[0]} {orderby[1]} "
         if limit:
-            query += "LIMIT %s" % limit
-        fullquery = "%s %s" % (origquery, query)
+            query += f"LIMIT {limit}"
+        fullquery = f"{origquery} {query}"
         return self.db.execute_get(fullquery)
 
     def get(self, calltype, limit=None, search=None, orderby=None, mapping=True):
@@ -244,8 +244,8 @@ class dbinterface():
                 else:
                     query += "AND "
                 first = False
-                query += '%s = "%s" ' % (item[0], item[1])
-        fullquery = "%s %s" % (self.getcall('delete', calltype), query)
+                query += f'{item[0]} = "{item[1]}" '
+        fullquery = f"{self.getcall('delete', calltype)} {query}"
         self._setStartCallTime(calltype)
         out = self.db.execute_del(fullquery, None)
         self._setEndCallTime(calltype, out[0])

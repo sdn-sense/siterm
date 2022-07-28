@@ -156,18 +156,18 @@ class RequestHandler():
             curl.setopt(pycurl.POST, 1)
             if encoded_data:
                 curl.setopt(pycurl.POSTFIELDS, encoded_data)
-        elif verb == 'DELETE' or verb == 'PUT':
+        elif verb in ['DELETE', 'PUT']:
             curl.setopt(pycurl.CUSTOMREQUEST, verb)
             curl.setopt(pycurl.HTTPHEADER, ['Transfer-Encoding: chunked'])
             if encoded_data:
                 curl.setopt(pycurl.POSTFIELDS, encoded_data)
         else:
-            raise Exception('Unsupported HTTP method "%s"' % verb)
+            raise Exception(f'Unsupported HTTP method "{verb}"')
 
         curl.setopt(pycurl.URL, str(url))
         if headers:
             curl.setopt(pycurl.HTTPHEADER,
-                        ["%s: %s" % (k, v) for k, v in list(headers.items())])
+                        [f"{k}: {v}" for k, v in list(headers.items())])
         if sys.version.startswith('3.'):
             bbuf = io.BytesIO()
             hbuf = io.BytesIO()
@@ -194,7 +194,7 @@ class RequestHandler():
 
     def debug(self, debug_type, debug_msg):
         """Debug callback implementation."""
-        print("debug(%d): %s" % (debug_type, debug_msg))
+        print(f"debug({debug_type}): {debug_msg}")
 
     def parse_body(self, data, decode=False):
         """Parse body part of URL request (by default use json).
@@ -205,7 +205,7 @@ class RequestHandler():
             try:
                 res = json.loads(data)
             except ValueError as exc:
-                msg = 'Unable to load JSON data, %s, data type=%s, pass as is' % (str(exc), type(data))
+                msg = f'Unable to load JSON data, {str(exc)}, data type={type(data)}, pass as is'
                 logging.warning(msg)
                 return data
             return res
@@ -236,7 +236,7 @@ class RequestHandler():
                 data = self.parse_body(bbuf.getvalue(), decode)
         else:
             data = bbuf.getvalue()
-            msg = 'url=%s, code=%s, reason=%s, headers=%s' % (url, header.status, header.reason, header.header)
+            msg = f'url={url}, code={header.status}, reason={header.reason}, headers={header.header}'
             exc = http.client.HTTPException(msg)
             setattr(exc, 'req_data', params)
             setattr(exc, 'req_headers', headers)
@@ -300,8 +300,7 @@ class RequestHandler():
                             item.update(params)
                             yield item
                         else:
-                            err = 'Unsupported data format: data=%s, type=%s'\
-                                % (item, type(item))
+                            err = f'Unsupported data format: data={item}, type={type(item)}'
                             raise Exception(err)
                 bbuf.flush()
                 hbuf.flush()
@@ -332,7 +331,7 @@ def pycurl_options():
 
 def cern_sso_cookie(url, fname, cert, ckey):
     """Obtain cern SSO cookie and store it in given file name."""
-    cmd = 'cern-get-sso-cookie -cert %s -key %s -r -u %s -o %s' % (cert, ckey, url, fname)
+    cmd = f'cern-get-sso-cookie -cert {cert} -key {ckey} -r -u {url} -o {fname}'
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, env=os.environ)
     proc.wait()
 
@@ -364,7 +363,7 @@ def getdata(urls, ckey, cert, headers=None, options=None, num_conn=100, cookie=N
         mcurl.handles.append(curl)
         if headers:
             curl.setopt(pycurl.HTTPHEADER,
-                        ["%s: %s" % (k, v) for k, v in list(headers.items())])
+                        [f"{k}: {v}" for k, v in list(headers.items())])
 
     # Main loop
     freelist = mcurl.handles[:]

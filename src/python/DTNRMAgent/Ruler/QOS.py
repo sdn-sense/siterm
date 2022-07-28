@@ -91,11 +91,11 @@ def getAllIPs():
         for intType, intDict in netifaces.ifaddresses(intf).items():
             if int(intType) == 2:
                 for ipv4 in intDict:
-                    address = "%s/%s" % (ipv4.get('addr'), ipv4.get('netmask'))
+                    address = f"{ipv4.get('addr')}/{ipv4.get('netmask')}"
                     allIPs['ipv4'].append(address)
             elif int(intType) == 10:
                 for ipv6 in intDict:
-                    address = "%s/%s" % (ipv6.get('addr'), ipv6.get('netmask').split("/")[1])
+                    address = f"{ipv6.get('addr')}/{ipv6.get('netmask').split('/')[1]}"
                     allIPs['ipv6'].append(address)
     return allIPs
         #{17: [{'addr': '00:25:90:94:8c:0d', 'broadcast': 'ff:ff:ff:ff:ff:ff'}],
@@ -146,7 +146,7 @@ class QOS():
         # ['unit'], int(inputDict['params']['reservableCapacity']
         # ['unit'], int(servParams['rules']['reservableCapacity'])
         """Convert input to rate understandable to fireqos."""
-        self.logger.info('Converting rate for QoS. Input %s' % params)
+        self.logger.info(f'Converting rate for QoS. Input {params}')
         inputVal, inputRate = params['reservableCapacity'], params['unit']
         outRate = -1
         outType = ''
@@ -163,9 +163,9 @@ class QOS():
             outRate = int(inputVal * 1000)
             outType = 'mbit'
         if outRate != -1:
-            self.logger.info('Converted rate for QoS from %s %s to %s' % (inputRate, inputVal, outRate))
+            self.logger.info(f'Converted rate for QoS from {inputRate} {inputVal} to {outRate}')
             return outRate, outType
-        raise Exception('Unknown input rate parameter %s and %s' % (inputRate, inputVal))
+        raise Exception(f'Unknown input rate parameter {inputRate} and {inputVal}')
 
     def restartQos(self):
         """Restart QOS service"""
@@ -187,7 +187,7 @@ class QOS():
                 self.params['intfName'] = self.config.get('agent', 'public_intf')
                 self.params['maxThrgIntf'] = int(self.config.get('agent', 'public_intf_max'))
                 if self.params['maxThrgIntf'] <= 0:
-                    raise ConfigException('ConfigError: Remaining throughtput is <= 0: %s' % self.params['maxThrgIntf'])
+                    raise ConfigException(f"ConfigError: Remaining throughtput is <= 0: {self.params['maxThrgIntf']}")
             else:
                 raise ConfigException('ConfigError: Public Interface max speed undefined. See public_intf_max config param')
         else:
@@ -206,7 +206,7 @@ class QOS():
 
     def getConf(self):
         """Get conf from local file"""
-        activeDeltasFile = "%s/activedeltas.json" % self.workDir
+        activeDeltasFile = f"{self.workDir}/activedeltas.json"
         if os.path.isfile(activeDeltasFile):
             self.activeDeltas = getFileContentAsJson(activeDeltasFile)
 
@@ -243,10 +243,10 @@ class QOS():
             self.getMaxThrg()
             self.params['maxtype'] = 'mbit'
             self.params['maxThrgRemaining'] = self.params['maxThrgIntf'] - self.params['defThrgIntf']
-            self.params['maxName'] =  "%(maxThrgIntf)s%(maxtype)s" % self.params
+            self.params['maxName'] =  f"{self.params['maxThrgIntf']}{self.params['maxtype']}"
             self.params['l3enabled'] = True
         except ConfigException as ex:
-            print('L3 DTN Config public intf not defined. Will not add QoS for L3. Exception %s' % ex)
+            print(f'L3 DTN Config public intf not defined. Will not add QoS for L3. Exception {ex}')
             self.params['l3enabled'] = False
 
     def addVlanQoS(self, tmpFD):
@@ -260,8 +260,8 @@ class QOS():
                 inputDicts += self._getvlanlistqos(vals[self.hostname])
 
         for inputDict in inputDicts:
-            inputName = "%s%sIn" % (inputDict['destport'], inputDict['vlan'])
-            outputName = "%s%sOut" % (inputDict['destport'], inputDict['vlan'])
+            inputName = f"{inputDict['destport']}{inputDict['vlan']}In"
+            outputName = f"{inputDict['destport']}{inputDict['vlan']}Out"
             if not inputDict['params']:
                 self.logger.info('This specific vlan request did not provided any QOS. Ignoring QOS Rules for it')
                 continue
@@ -285,7 +285,7 @@ class QOS():
         self.logger.debug('RST Throughput is more than server capable. Returning fairshare.')
         newRate = float(reqRate) * float(self.params['maxThrgRemaining'])
         newRate = newRate // float(self.params['totalRSTThrg'])
-        self.logger.debug('Requested: %s, TotalRST: %s, MaxRemaining: %s, NewRate: %s' % (reqRate, self.params['totalRSTThrg'], self.params['maxThrgRemaining'], newRate))
+        self.logger.debug(f"Requested: {reqRate}, TotalRST: {self.params['totalRSTThrg']}, MaxRemaining: {self.params['maxThrgRemaining']}, NewRate: {newRate}")
         return int(newRate)
 
     def findTotalRSTAllocation(self, overlapServices):
@@ -314,7 +314,7 @@ class QOS():
                                                                                          'rules': {}})
                     service['rules'] = routes['hasService']
                     for _, routeInfo in routes.get('hasRoute').items():
-                        iprange = routeInfo.get('routeFrom', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
+                        iprange = routeInfo.get('routeFrom', {}).get(f'{iptype}-prefix-list', {}).get('value', None)
                         findOverlaps(service, iprange, allIPs, iptype)
         self.findTotalRSTAllocation(overlapServices)
         for qosType in ['input', 'output']:
@@ -322,25 +322,25 @@ class QOS():
             params['counter'] = 0
             params['type'] = qosType
             params['matchtype'] = 'dst' if qosType == 'input' else 'src'
-            tmpFD.write("# SENSE Controlled Interface %(type)s %(intfName)s %(maxName)s\n" % params)
-            tmpFD.write("interface46 %(intfName)s %(type)s-%(intfName)s %(type)s rate %(maxName)s\n" % params)
+            tmpFD.write(f"# SENSE Controlled Interface {params['type']} {params['intfName']} {params['maxName']}\n")
+            tmpFD.write(f"interface46 {params['intfName']} {params['type']}-{params['intfName']} {params['type']} rate {params['maxName']}\n")
             for servName, servParams in overlapServices.items():
                 if 'rules' not in servParams:
                     continue
                 params['resvRate'], params['resvType'] = self.convertToRate(servParams['rules'])
                 params['resvRate'] = self.calculateRSTFairshare(params['resvRate'])
                 # Need to calculate the remaining traffic
-                params['resvName'] = "%(resvRate)s%(resvType)s" % params
-                tmpFD.write('  # priority%s belongs to %s service\n' % (params['counter'], servName))
-                tmpFD.write('  class priority%(counter)s commit %(resvName)s max %(maxName)s\n' % params)
+                params['resvName'] = f"{params['resvRate']}{params['resvType']}"
+                tmpFD.write(f"  # priority{params['counter']} belongs to {servName} service\n")
+                tmpFD.write(f"  class priority{params['counter']} commit {params['resvName']} max {params['maxName']}\n")
                 for ipval in servParams.get('ipv4', []):
-                    tmpFD.write('    match %s %s\n' % (params['matchtype'], ipval))
+                    tmpFD.write(f"    match {params['matchtype']} {ipval}\n")
                 for ipval in servParams.get('ipv6', []):
-                    tmpFD.write('    match6 %s %s\n' % (params['matchtype'], ipval))
+                    tmpFD.write(f"    match6 {params['matchtype']} {ipval}\n")
                 tmpFD.write('\n')
-            params['maxDefault'] = "%s%s" % (int(params['maxThrgIntf'] / (len(overlapServices)+1)), params['maxtype'])
+            params['maxDefault'] = f"{int(params['maxThrgIntf'] / (len(overlapServices) + 1))}{params['maxtype']}"
             tmpFD.write('  # Default - all remaining traffic gets mapped to default class\n')
-            tmpFD.write('  class default commit %(defThrgIntf)s%(defThrgType)s max %(maxDefault)s\n' % params)
+            tmpFD.write(f"  class default commit {params['defThrgIntf']}{params['defThrgType']} max {params['maxDefault']}\n")
             tmpFD.write('    match all\n\n')
 
 

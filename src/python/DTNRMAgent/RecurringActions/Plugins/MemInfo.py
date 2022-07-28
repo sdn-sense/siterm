@@ -25,7 +25,7 @@ def get(**_):
                 # We strip it to remove white spaces and split to remove kb in the end
                 name = vals[0].strip()
                 if len(value) == 2:
-                    name += "_%s" % value[1]
+                    name += f"_{value[1]}"
                 memInfo[name] = tryConvertToNumeric(value[0])
             else:
                 print('MemInfo: Skipped this item: ', vals)

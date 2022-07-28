@@ -33,7 +33,7 @@ def get(**_):
     try:
         cpuInfo['num_cores'] = int(cpuInfo['Socket(s)']) * int(cpuInfo['Core(s) per socket'])
     except (ValueError, KeyError):
-        print('Failed to calculate num_cores from %s. will set to 1' % cpuInfo)
+        print(f'Failed to calculate num_cores from {cpuInfo}. will set to 1')
         cpuInfo['num_cores'] = 1
     return cpuInfo
 

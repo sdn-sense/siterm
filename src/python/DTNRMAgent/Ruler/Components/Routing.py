@@ -17,46 +17,46 @@ class Routing():
 
     def add(self, vlan, raiseError=False):
         """Add specific route."""
-        self.logger.info('ADD ROUTE. TODO: %s %s' % (vlan, raiseError))
+        self.logger.info(f'ADD ROUTE. TODO: {vlan} {raiseError}')
 
 
     def setup(self, vlan, raiseError=False):
         """Setup specific route."""
-        self.logger.info('SETUP ROUTE. TODO: %s %s' % (vlan, raiseError))
+        self.logger.info(f'SETUP ROUTE. TODO: {vlan} {raiseError}')
 
     def start(self, vlan, raiseError=False):
         """Add specific route."""
-        self.logger.info('START ROUTE. TODO: %s %s' % (vlan, raiseError))
+        self.logger.info(f'START ROUTE. TODO: {vlan} {raiseError}')
 
     def stop(self, vlan, raiseError=False):
         """Stop specific route."""
-        self.logger.info('STOP ROUTE. TODO: %s %s' % (vlan, raiseError))
+        self.logger.info(f'STOP ROUTE. TODO: {vlan} {raiseError}')
 
     def remove(self, vlan, raiseError=False):
         """Remove specific route."""
-        self.logger.info('REMOVE ROUTE. TODO: %s %s' % (vlan, raiseError))
+        self.logger.info(f'REMOVE ROUTE. TODO: {vlan} {raiseError}')
 
     def status(self, vlan, raiseError=False):
         """Check status of specific route."""
-        self.logger.info('STATUS ROUTE. TODO: %s %s' % (vlan, raiseError))
+        self.logger.info(f'STATUS ROUTE. TODO: {vlan} {raiseError}')
 
     def startRoute(self, vlan, raiseError=False):
         """Start/Add Route on DTN"""
-        self.logger.info('Called VInterface start L3 for %s' % str(vlan))
+        self.logger.info(f'Called VInterface start L3 for {str(vlan)}')
         for routel in vlan['routes']:
             if 'routeTo' in list(routel.keys()) and 'nextHop' in list(routel.keys()):
                 if 'value' in list(routel['routeTo'].keys()) and 'value' in list(routel['nextHop'].keys()):
-                    command = "ip route add %s via %s" % (routel['routeTo']['value'],
-                                                          routel['nextHop']['value'].split('/')[0])
+                    subnet = routel['nextHop']['value'].split('/')[0]
+                    command = f"ip route add {routel['routeTo']['value']} via {subnet}"
                     execute(command, self.logger, raiseError)
             else:
-                self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
-                                 % routel)
+                self.logger.info((f"Parsed delta did not had routeTo or nextHop keys in route info."
+                                  f"Route details: {routel}"))
 
     def removeRoute(self, vlan, raiseError=False):
         """Remove Route from DTN"""
         out = []
-        self.logger.info('Called VInterface remove L3 for %s' % str(vlan))
+        self.logger.info(f'Called VInterface remove L3 for {str(vlan)}')
         for routel in vlan['routes']:
             if 'routeTo' in list(routel.keys()) and 'nextHop' in list(routel.keys()):
                 if 'value' in list(routel['routeTo'].keys()) and 'value' in list(routel['nextHop'].keys()):
@@ -64,17 +64,17 @@ class Routing():
                                                           routel['nextHop']['value'].split('/')[0])
                     out.append(execute(command, self.logger, raiseError))
             else:
-                self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
-                                 % routel)
+                self.logger.info((f"Parsed delta did not had routeTo or nextHop keys in route info."
+                                  f"Route details: {routel}"))
 
     def statusRoute(self, vlan, raiseError=False):
         """Check Status of Route on DTN"""
-        self.logger.info('Called VInterface status L3 for %s' % str(vlan))
+        self.logger.info(f'Called VInterface status L3 for {str(vlan)}')
         for routel in vlan['routes']:
             if 'routeTo' in list(routel.keys()) and 'nextHop' in list(routel.keys()):
                 if 'value' in list(routel['routeTo'].keys()) and 'value' in list(routel['nextHop'].keys()):
-                    command = "ip route get %s" % (routel['routeTo']['value'])
+                    command = f"ip route get {routel['routeTo']['value']}"
                     execute(command, self.logger, raiseError)
             else:
-                self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
-                                 % routel)
+                self.logger.info((f"Parsed delta did not had routeTo or nextHop keys in route info."
+                                  f"Route details: {routel}"))

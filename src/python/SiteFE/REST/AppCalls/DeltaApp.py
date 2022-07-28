@@ -66,7 +66,7 @@ def deltas(environ, **kwargs):
             current = {"id": delta['uid'],
                        "lastModified": convertTSToDatetime(delta['updatedate']),
                        "state": delta['state'],
-                       "href": "%s/%s" % (environ['SCRIPT_URI'], delta['uid']),
+                       "href": f"{environ['SCRIPT_URI']}/{delta['uid']}",
                        "modelId": delta['modelid']}
             if not kwargs['urlParams']['summary']:
                 # Doing here not encode, because we are decoding. So it is opposite.
@@ -92,7 +92,7 @@ def deltas(environ, **kwargs):
         else:
             kwargs['http_respond'].ret_400('application/json', kwargs['start_response'], None)
             customErr = getCustomOutMsg(errMsg='You did POST method, but provided CONTENT_TYPE is not correct', errCode=400)
-            print('Return 400. More details: %s' % customErr)
+            print(f'Return 400. More details: {customErr}')
             return customErr
     if not out:
         out = get_post_form(environ)
@@ -101,13 +101,13 @@ def deltas(environ, **kwargs):
         newDelta[key] = out.get(key, "")
     for key in ['modelId', 'id']:
         if not newDelta[key]:
-            customErr = getCustomOutMsg(errMsg='You did POST method, %s is not specified' % key, errCode=400)
-            print('Wrong delta: %s. Parsed:%s Error: %s' % (out, newDelta, customErr))
+            customErr = getCustomOutMsg(errMsg=f'You did POST method, {key} is not specified', errCode=400)
+            print(f'Wrong delta: {out}. Parsed:{newDelta} Error: {customErr}')
             kwargs['http_respond'].ret_400('application/json', kwargs['start_response'], None)
             return customErr
     if not newDelta['reduction'] and not newDelta['addition']:
         customErr = getCustomOutMsg(errMsg='You did POST method, but nor reduction, nor addition is present', errCode=400)
-        print('Wrong delta: %s. Parsed:%s Error: %s' % (out, newDelta, customErr))
+        print(f'Wrong delta: {out}. Parsed:{newDelta} Error: {customErr}')
         kwargs['http_respond'].ret_400('application/json', kwargs['start_response'], None)
         return customErr
     return DELTABACKEND.addNewDelta(newDelta, environ, **kwargs)
@@ -125,7 +125,7 @@ def delta_states(environ, **kwargs):
     """
     del environ
     deltaID = kwargs['mReg'][0]
-    print('Requested delta states for %s' % deltaID)
+    print(f'Requested delta states for {deltaID}')
     outstates = DELTABACKEND.getdeltastates(deltaID, **kwargs)
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
     return outstates
@@ -150,7 +150,7 @@ def deltas_id(environ, **kwargs):
         print('DELETE Method is not supported yet. Return 405')
         return [getCustomOutMsg(errMsg="Method %s is not supported in %s" % environ['REQUEST_METHOD'].upper(), errCode=405)]
     modTime = getModTime(kwargs['headers'])
-    print('Delta Status query for %s' % kwargs['mReg'][0])
+    print(f"Delta Status query for {kwargs['mReg'][0]}")
     delta = DELTABACKEND.getdelta(kwargs['mReg'][0], **kwargs)
     if not delta:
         kwargs['http_respond'].ret_204('application/json', kwargs['start_response'],
@@ -158,7 +158,7 @@ def deltas_id(environ, **kwargs):
         print('Return empty list. There are no deltas on the system')
         return []
     if modTime > delta['updatedate']:
-        print('Delta with ID %s was not updated so far. Time request comparison requested' % kwargs['mReg'][0])
+        print(f"Delta with ID {kwargs['mReg'][0]} was not updated so far. Time request comparison requested")
         kwargs['http_respond'].ret_304('application/json', kwargs['start_response'], ('Last-Modified', httpdate(delta['updatedate'])))
         return []
     if kwargs['urlParams']['oldview']:
@@ -168,13 +168,14 @@ def deltas_id(environ, **kwargs):
     current = {"id": delta['uid'],
                "lastModified": convertTSToDatetime(delta['updatedate']),
                "state": delta['state'],
-               "href": "%s" % environ['SCRIPT_URI'],
+               "href": f"{environ['SCRIPT_URI']}",
                "modelId": delta['modelid']}
     if not kwargs['urlParams']['summary']:
         current['addition'] = encodebase64(delta['addition'], kwargs['urlParams']['encode'])
         current['reduction'] = encodebase64(delta['reduction'], kwargs['urlParams']['encode'])
-    print('Returning delta %s information. Few details: ModelID: %s, State: %s, LastModified: %s' % \
-          (current["id"], current["modelId"], current["state"], current["lastModified"]))
+    print((f"Returning delta {current['id']} information. Few details:"
+           f"ModelID: {current['modelId']} State: {current['state']},"
+           f"LastModified: current['lastModified']"))
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], [('Last-Modified', httpdate(delta['updatedate']))])
     return [current]
 
@@ -193,7 +194,7 @@ def deltas_action(environ, **kwargs):
     del environ
     msgOut = DELTABACKEND.commitdelta(kwargs['mReg'][0], **kwargs)
     kwargs['http_respond'].ret_204('application/json', kwargs['start_response'], None)
-    print('Delta %s commited. Return 204' % kwargs['mReg'][0])
+    print(f"Delta {kwargs['mReg'][0]} commited. Return 204")
     return msgOut
 
 # =====================================================================================================================
@@ -220,10 +221,10 @@ def models(environ, **kwargs):
     outM = {"models": []}
     current = {"id": outmodels[0]['uid'],
                "creationTime": convertTSToDatetime(outmodels[0]['insertdate']),
-               "href": "%s/%s" % (environ['SCRIPT_URI'], outmodels[0]['uid'])}
+               "href": f"{environ['SCRIPT_URI']}/{outmodels[0]['uid']}"}
     print(outmodels[0]['insertdate'], modTime, getUTCnow())
     if outmodels[0]['insertdate'] < modTime:
-        print('%s and %s' % (outmodels[0]['insertdate'], modTime))
+        print(f"{outmodels[0]['insertdate']} and {modTime}")
         kwargs['http_respond'].ret_304('application/json', kwargs['start_response'], ('Last-Modified', httpdate(outmodels[0]['insertdate'])))
         return []
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], [('Last-Modified', httpdate(outmodels[0]['insertdate']))])
@@ -234,13 +235,13 @@ def models(environ, **kwargs):
         if not kwargs['urlParams']['summary']:
             current['model'] = encodebase64(DELTABACKEND.getmodel(outmodels[0]['uid'], content=True, **kwargs), kwargs['urlParams']['encode'])
         outM['models'].append(current)
-        print('Requested only current model. Return 200. Last Model %s' % outmodels[0]['uid'])
+        print(f"Requested only current model. Return 200. Last Model {outmodels[0]['uid']}")
         return [current]
     if not kwargs['urlParams']['current']:
         for model in outmodels:
             tmpDict = {"id": model['uid'],
                        "creationTime": convertTSToDatetime(model['insertdate']),
-                       "href": "%s/%s" % (environ['SCRIPT_URI'], model['uid'])}
+                       "href": f"{environ['SCRIPT_URI']}/{model['uid']}"}
             if not kwargs['urlParams']['summary']:
                 tmpDict['model'] = encodebase64(DELTABACKEND.getmodel(model['uid'], content=True, **kwargs), kwargs['urlParams']['encode'])
             outM['models'].append(tmpDict)
@@ -266,15 +267,15 @@ def models_id(environ, **kwargs):
     outmodels = DELTABACKEND.getmodel(modelID, **kwargs)
     model = outmodels if isinstance(outmodels, dict) else outmodels[0]
     if modTime > model['insertdate']:
-        print('Model with ID %s was not updated so far. Time request comparison requested' % modelID)
+        print(f'Model with ID {modelID} was not updated so far. Time request comparison requested')
         kwargs['http_respond'].ret_304('application/json', kwargs['start_response'], ('Last-Modified', httpdate(model['insertdate'])))
         return []
     current = {"id": model['uid'],
                "creationTime": convertTSToDatetime(model['insertdate']),
-               "href": "%s/%s" % (environ['SCRIPT_URI'], model['uid'])}
+               "href": f"{environ['SCRIPT_URI']}/{model['uid']}"}
     if not kwargs['urlParams']['summary']:
         current['model'] = encodebase64(DELTABACKEND.getmodel(model['uid'], content=True, **kwargs), kwargs['urlParams']['encode'])
-    print('Requested a specific model with id %s' % modelID)
+    print(f'Requested a specific model with id {modelID}')
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], [('Last-Modified', httpdate(model['insertdate']))])
     return current
     # Deltas are not associated with model. Not clear use case. If deltas is there Return all deltas.

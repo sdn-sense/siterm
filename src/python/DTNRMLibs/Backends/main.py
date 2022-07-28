@@ -46,7 +46,7 @@ class Switch(Node):
         if stateCall == 'activate':
             out = self.activate(inputDict, actionState)
         else:
-            raise Exception('Unknown State %s' % stateCall)
+            raise Exception(f'Unknown State {stateCall}')
         return out
 
 
@@ -78,7 +78,7 @@ class Switch(Node):
             self.logger.debug('No switches in database.')
 
     @staticmethod
-    def _getSystemValidPortName(port):
+    def getSystemValidPortName(port):
         """Get Systematic port name. MRML expects it without spaces"""
         # Spaces from port name are replaced with _
         # Backslashes are replaced with dash
@@ -106,21 +106,21 @@ class Switch(Node):
                         # Return very differently vlans, like Vlan XXXX, VlanXXXX or vlanXXXX
                         # And we need to map this back with correct name to ansible for provisioning
                         vlankey = switchDict[portKey]['value']
-                        self.output['portMapping'][switch]['Vlan %s' % vlankey] = realportname
-                        self.output['portMapping'][switch]['Vlan%s' % vlankey] = realportname
-                        self.output['portMapping'][switch]['vlan%s' % vlankey] = realportname
+                        self.output['portMapping'][switch][f'Vlan {vlankey}'] = realportname
+                        self.output['portMapping'][switch][f'Vlan{vlankey}'] = realportname
+                        self.output['portMapping'][switch][f'vlan{vlankey}'] = realportname
                     else:
                         self.output['portMapping'][switch][portKey] = realportname
 
     def _getSwitchPortName(self, switchName, portName, vlanid=None):
         """Get Switch Port Name"""
         # Get the portName which is uses in Switch
-        # as you can see in _getSystemValidPortName -
+        # as you can see in getSystemValidPortName -
         # Port name from Orchestrator will come modified.
         # We need a way to revert it back to systematic switch port name
         sysPort = self.output['portMapping'].get(switchName, {}).get(portName, "")
         if not sysPort and vlanid:
-            sysPort = 'Vlan %s' % vlanid
+            sysPort = f'Vlan {vlanid}'
         elif not sysPort:
             sysPort = portName
         return sysPort

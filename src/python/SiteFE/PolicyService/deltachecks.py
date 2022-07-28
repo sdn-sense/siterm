@@ -54,7 +54,7 @@ class ConflictChecker():
     def _checksvc(self, svc, activeDeltas):
         """Check that unknown svc are in delta"""
         if svc not in ['vsw', 'rst', 'SubnetMapping', 'RoutingMapping']:
-            raise BadRequestError('Service does not exist. Requested %s' % svc)
+            raise BadRequestError(f'Service does not exist. Requested {svc}')
         if svc not in activeDeltas:
             return True
         return False

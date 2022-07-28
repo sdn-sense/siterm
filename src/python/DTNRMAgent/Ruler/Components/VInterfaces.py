@@ -37,7 +37,7 @@ class VInterfaces():
 
     def _add(self, vlan, raiseError=False):
         """Add specific vlan."""
-        self.logger.info('Called VInterface add L2 for %s' % str(vlan))
+        self.logger.info(f'Called VInterface add L2 for {str(vlan)}')
         command = "ip link add link %s name vlan.%s type vlan id %s" % (vlan['destport'],
                                                                         vlan['vlan'],
                                                                         vlan['vlan'])
@@ -46,42 +46,42 @@ class VInterfaces():
     def _setup(self, vlan, raiseError=False):
         """Setup vlan."""
         if 'ip' in vlan.keys() and vlan['ip']:
-            self.logger.info('Called VInterface IPv4 setup L2 for %s' % str(vlan))
+            self.logger.info(f'Called VInterface IPv4 setup L2 for {str(vlan)}')
             command = "ip addr add %s broadcast %s dev vlan.%s" % (vlan['ip'],
                                                                    getBroadCast(vlan['ip']),
                                                                    vlan['vlan'])
             execute(command, self.logger, raiseError)
         elif 'ipv6' in vlan.keys() and vlan['ipv6']:
-            self.logger.info('Called VInterface IPv6 setup L2 for %s' % str(vlan))
+            self.logger.info(f'Called VInterface IPv6 setup L2 for {str(vlan)}')
             command = "ip addr add %s broadcast %s dev vlan.%s" % (vlan['ipv6'],
                                                                    getBroadCast(vlan['ipv6']),
                                                                    vlan['vlan'])
             execute(command, self.logger, raiseError)
         else:
-            self.logger.info('Called VInterface setup for %s, but ip/ipv6 keys are not present.' % str(vlan))
+            self.logger.info(f'Called VInterface setup for {str(vlan)}, but ip/ipv6 keys are not present.')
             self.logger.info('Continue as nothing happened')
 
     def _start(self, vlan, raiseError=False):
         """Start specific vlan."""
-        self.logger.info('Called VInterface start L2 for %s' % str(vlan))
-        command = "ip link set dev vlan.%s up" % (vlan['vlan'])
+        self.logger.info(f'Called VInterface start L2 for {str(vlan)}')
+        command = f"ip link set dev vlan.{vlan['vlan']} up"
         return execute(command, self.logger, raiseError)
 
     def _stop(self, vlan, raiseError=False):
         """Stop specific vlan."""
         out = []
-        self.logger.info('Called VInterface L2 stop for %s' % str(vlan))
-        for command in ["ip link set dev vlan.%s down" % (vlan['vlan']),
-                        "ip link set dev vlan.%s-ifb down" % (vlan['vlan'])]:
+        self.logger.info(f'Called VInterface L2 stop for {str(vlan)}')
+        for command in [f"ip link set dev vlan.{vlan['vlan']} down",
+                        f"ip link set dev vlan.{vlan['vlan']}-ifb down"]:
             out.append(execute(command, self.logger, raiseError))
         return out
 
     def _remove(self, vlan, raiseError=False):
         """Remove specific vlan."""
         out = []
-        self.logger.info('Called VInterface remove for %s' % str(vlan))
-        for command in ["ip link delete dev vlan.%s" % (vlan['vlan']),
-                        "ip link delete dev vlan.%s-ifb" % (vlan['vlan'])]:
+        self.logger.info(f'Called VInterface remove for {str(vlan)}')
+        for command in [f"ip link delete dev vlan.{vlan['vlan']}",
+                        f"ip link delete dev vlan.{vlan['vlan']}-ifb"]:
             out.append(execute(command, self.logger, raiseError))
         return out
 
@@ -90,7 +90,7 @@ class VInterfaces():
         """Get status of specific vlan."""
         del raiseError
         allInterfaces = netifaces.interfaces()
-        if 'vlan.%s' % vlan['vlan'] not in allInterfaces:
+        if f"vlan.{vlan['vlan']}" not in allInterfaces:
             return False
         return True
 
@@ -98,7 +98,7 @@ class VInterfaces():
     def _statusvlanIP(vlan, raiseError=False):
         """Check if IP set on vlan"""
         del raiseError
-        allIPs = netifaces.ifaddresses('vlan.%s' % vlan['vlan'])
+        allIPs = netifaces.ifaddresses(f"vlan.{vlan['vlan']}")
         ip4Exists = False
         if 'ip' in vlan and vlan['ip']:
             serviceIp = vlan['ip'].split('/')[0]
@@ -143,7 +143,7 @@ class VInterfaces():
             else:
                 self._add(vlan)
                 self._setup(vlan)
-            if not intfUp("vlan.%s" % vlan['vlan']):
+            if not intfUp(f"vlan.{vlan['vlan']}"):
                 self._start(vlan)
 
     def terminate(self, inParams):

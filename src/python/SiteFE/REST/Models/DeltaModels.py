@@ -69,10 +69,10 @@ class frontendDeltaModels():
         out = self.policer[kwargs['sitename']].acceptDelta(tmpfd.name)
         outDict = {'id': hashNum,
                    'lastModified': convertTSToDatetime(outContent['UpdateTime']),
-                   'href': "%s/%s" % (environ['SCRIPT_URI'], hashNum),
+                   'href': f"{environ['SCRIPT_URI']}/{hashNum}",
                    'modelId': out['modelId'],
                    'state': out['State']}
-        print('Delta was %s. Returning info %s' % (out['State'], outDict))
+        print(f"Delta was {out['State']}. Returning info {outDict}")
         if out['State'] in ['accepted']:
             kwargs['http_respond'].ret_201('application/json', kwargs['start_response'],
                                            [('Last-Modified', httpdate(out['UpdateTime'])),
@@ -80,7 +80,7 @@ class frontendDeltaModels():
             return outDict
         kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
         if 'Error' not in list(out.keys()):
-            out = "Unknown Error. Dump all out content %s" % json.dumps(out)
+            out = f"Unknown Error. Dump all out content {json.dumps(out)}"
         else:
             out = json.dumps(out)
         return getCustomOutMsg(errMsg=out, exitCode=500)
@@ -92,7 +92,7 @@ class frontendDeltaModels():
             return dbobj.get('deltas')
         out = dbobj.get('deltas', search=[['uid', deltaID]])
         if not out:
-            raise DeltaNotFound("Delta with %s id was not found in the system" % deltaID)
+            raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out[0]
 
     def getdeltastates(self, deltaID, **kwargs):
@@ -100,7 +100,7 @@ class frontendDeltaModels():
         dbobj = getVal(self.dbI, **kwargs)
         out = dbobj.get('states', search=[['deltaid', deltaID]])
         if not out:
-            raise DeltaNotFound("Delta with %s id was not found in the system" % deltaID)
+            raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out
 
     def getdeltahoststates(self, deltaID, **kwargs):
@@ -108,7 +108,7 @@ class frontendDeltaModels():
         dbobj = getVal(self.dbI, **kwargs)
         out = dbobj.get('hoststates', search=[['deltaid', deltaID]])
         if not out:
-            raise DeltaNotFound("Delta Host States with %s id was not found in the system" % deltaID)
+            raise DeltaNotFound(f"Delta Host States with {deltaID} id was not found in the system")
         return out
 
     def getdeltahoststateshistory(self, deltaID, **kwargs):
@@ -116,7 +116,7 @@ class frontendDeltaModels():
         dbobj = getVal(self.dbI, **kwargs)
         out = dbobj.get('hoststateshistory', search=[['deltaid', deltaID]])
         if not out:
-            raise DeltaNotFound("Delta Host States with %s id was not found in the system" % deltaID)
+            raise DeltaNotFound(f"Delta Host States with {deltaID} id was not found in the system")
         return out
 
     def getHostNameIDs(self, hostname, state, **kwargs):
@@ -131,7 +131,7 @@ class frontendDeltaModels():
             return dbobj.get('models', orderby=['insertdate', 'DESC'])
         model = dbobj.get('models', limit=1, search=[['uid', modelID]])
         if not model:
-            raise ModelNotFound("Model with %s id was not found in the system" % modelID)
+            raise ModelNotFound(f"Model with {modelID} id was not found in the system")
         if content:
             return getAllFileContent(model[0]['fileloc'])
         return model[0]
@@ -142,7 +142,7 @@ class frontendDeltaModels():
         if internal:
             out = dbobj.get('hoststates', search=[['deltaid', deltaID], ['hostname', hostname]])
             if not out:
-                msg = 'This query did not returned any host states for %s %s' % (deltaID, hostname)
+                msg = f'This query did not returned any host states for {deltaID} {hostname}'
                 raise WrongDeltaStatusTransition(msg)
             self.stateM._stateChangerHost(dbobj, out[0]['id'], **{'deltaid': deltaID,
                                                                   'state': newState,
@@ -153,11 +153,11 @@ class frontendDeltaModels():
                 self.stateM.stateChange(dbobj, {'uid': deltaID, 'state': newState})
             return getCustomOutMsg(msg='Internal State change approved', exitCode=200)
         delta = self.getdelta(deltaID, **kwargs)
-        print('Commit Action for delta %s' % delta)
+        print(f'Commit Action for delta {delta}')
         # Now we go directly to commited in case of commit
         if delta['state'] != 'accepted':
-            msg = "Delta    state in the system is not in accepted state. \
-                  State on the system: %s. Not allowed to change." % delta['state']
+            msg = (f"Delta state in the system is not in accepted state."
+                   f"State on the system: {delta['state']}. Not allowed to change.")
             print(msg)
             raise WrongDeltaStatusTransition(msg)
         self.stateM.commit(dbobj, {'uid': deltaID, 'state': 'committing'})
