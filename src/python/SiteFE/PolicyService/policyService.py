@@ -88,27 +88,27 @@ class PolicyService(RDFHelper):
     def queryGraph(self, graphIn, sub=None, pre=None, obj=None, search=None, allowMultiple=True):
         """Search inside the graph based on provided parameters."""
         foundItems = []
-        self.logger.debug('Searching for subject: %s predica: %s object: %s searchLine: %s' % (sub, pre, obj, search))
+        self.logger.debug(f'Searching for subject: {sub} predica: {pre} object: {obj} searchLine: {search}')
         for sIn, pIn, oIn in graphIn.triples((sub, pre, obj)):
             if search:
                 if search == pIn:
                     self.logger.debug('Found item with search parameter')
-                    self.logger.debug("s(subject) %s" % sIn)
-                    self.logger.debug("p(predica) %s" % pIn)
-                    self.logger.debug("o(object ) %s" % oIn)
+                    self.logger.debug(f"s(subject) {sIn}")
+                    self.logger.debug(f"p(predica) {pIn}")
+                    self.logger.debug(f"o(object ) {oIn}")
                     self.logger.debug("-" * 50)
                     foundItems.append(oIn)
             else:
                 self.logger.debug('Found item without search parameter')
-                self.logger.debug("s(subject) %s" % sIn)
-                self.logger.debug("p(predica) %s" % pIn)
-                self.logger.debug("o(object ) %s" % oIn)
+                self.logger.debug(f"s(subject) {sIn}")
+                self.logger.debug(f"p(predica) {pIn}")
+                self.logger.debug(f"o(object ) {oIn}")
                 self.logger.debug("-" * 50)
                 foundItems.append(oIn)
         if not allowMultiple:
             if len(foundItems) > 1:
                 #return foundItems
-                raise Exception('Search returned multiple entries. Not Supported. Out: %s' % foundItems)
+                raise Exception(f'Search returned multiple entries. Not Supported. Out: {foundItems}')
         return foundItems
 
     def getTimeScheduling(self, gIn, connectionID, connOut):
@@ -116,11 +116,11 @@ class PolicyService(RDFHelper):
         In case it fails to get correct timestamp, resources will be
         provisioned right away.
         """
-        out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (self.prefixes['nml'], 'existsDuring')))
+        out = self.queryGraph(gIn, connectionID, search=URIRef(f"{self.prefixes['nml']}{'existsDuring'}"))
         for timeline in out:
             times = connOut.setdefault('_params', {}).setdefault('existsDuring', {'uri': str(timeline)})
             for timev in ['end', 'start']:
-                tout = self.queryGraph(gIn, timeline, search=URIRef('%s%s' % (self.prefixes['nml'], timev)))
+                tout = self.queryGraph(gIn, timeline, search=URIRef(f"{self.prefixes['nml']}{timev}"))
                 temptime = None
                 try:
                     temptime = int(time.mktime(parser.parse(str(tout[0])).timetuple()))
@@ -154,10 +154,10 @@ class PolicyService(RDFHelper):
         if str(connID) in self.scannedRoutes:
             return str(connID)
         for rtype in ['nextHop', 'routeFrom', 'routeTo']:
-            out = self.queryGraph(gIn, connID, search=URIRef('%s%s' % (self.prefixes['mrs'], rtype)))
+            out = self.queryGraph(gIn, connID, search=URIRef(f"{self.prefixes['mrs']}{rtype}"))
             for item in out:
-                mrstypes = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'type')))
-                mrsvals = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'value')))
+                mrstypes = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'type'}"))
+                mrsvals = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'value'}"))
                 if mrstypes and mrsvals and len(mrstypes) == len(mrsvals):
                     for ind in range(len(mrstypes)):
                         mrtype = str(mrstypes[ind])
@@ -168,13 +168,13 @@ class PolicyService(RDFHelper):
                             routeVals['value'] = mrval
                             routeVals['key'] = str(item)
                 else:
-                    self.logger.warning('Either val or type not defined. Key: %s, Type: %s, Val: %s' % (str(item), mrstypes, mrsvals))
+                    self.logger.warning(f'Either val or type not defined. Key: {str(item)}, Type: {mrstypes}, Val: {mrsvals}')
         self.scannedRoutes.append(str(connID))
         return ""
 
     def getRouteTable(self, gIn, connID, returnout):
         """Get all route tables from model for specific connID and call getRoute"""
-        out = self.queryGraph(gIn, connID, search=URIRef('%s%s' % (self.prefixes['mrs'], 'hasRoute')))
+        out = self.queryGraph(gIn, connID, search=URIRef(f"{self.prefixes['mrs']}{'hasRoute'}"))
         tmpRet = []
         for item in out:
             tmpRet.append(self.getRoute(gIn, item, returnout))
@@ -183,15 +183,15 @@ class PolicyService(RDFHelper):
 
     def parsel3Request(self, gIn, returnout, switchName):
         """Parse Layer 3 Delta Request."""
-        self.logger.info('Lets try to get connection ID subject for %s' % self.prefixes['main'])
+        self.logger.info(f"Lets try to get connection ID subject for {self.prefixes['main']}")
         connectionID = None
         for iptype in ['ipv4', 'ipv6']:
-            uri = "%s-%s" % (self.prefixes['main'], iptype)
+            uri = f"{self.prefixes['main']}-{iptype}"
             for rsttype in [{'key': 'providesRoute', 'call': self.getRoute},
                             {'key': 'providesRoutingTable', 'call': self.getRouteTable}]:
-                out = self.queryGraph(gIn, URIRef(uri), search=URIRef('%s%s' % (self.prefixes['mrs'], rsttype['key'])))
+                out = self.queryGraph(gIn, URIRef(uri), search=URIRef(f"{self.prefixes['mrs']}{rsttype['key']}"))
                 for connectionID in out:
-                    if connectionID.startswith("%s:rt-table+vrf-" % uri) or \
+                    if connectionID.startswith(f"{uri}:rt-table+vrf-") or \
                        connectionID.endswith('rt-table+main'):
                         # Ignoring default vrf and main table.
                         # This is not allowed to modify.
@@ -211,14 +211,14 @@ class PolicyService(RDFHelper):
         """Query Graph and get Tags"""
         scanVals = returnout.setdefault('_params', {})
         for tag, pref in {'tag': 'mrs', 'belongsTo': 'nml', 'encoding': 'nml'}.items():
-            out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes[pref], tag)), allowMultiple=True)
+            out = self.queryGraph(gIn, bidPort, search=URIRef(f'{self.prefixes[pref]}{tag}'), allowMultiple=True)
             if out:
                 scanVals[tag] = str("|".join(out))
 
     def _hasLabel(self, gIn, bidPort, returnout):
         """Query Graph and get Labels"""
         self._hasTags(gIn, bidPort, returnout)
-        out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['nml'], 'hasLabel')))
+        out = self.queryGraph(gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}{'hasLabel'}"))
         if not out and str(bidPort).rsplit(':', maxsplit=1)[-1].startswith('vlanport+'):
             # This is a hack, because Orchestrator does not provide full info
             # In future - we should merge delta with model, and parse only delta info
@@ -228,24 +228,24 @@ class PolicyService(RDFHelper):
             scanVals['value'] = int(str(bidPort).rsplit(':', maxsplit=1)[-1][9:])
         for item in out:
             scanVals = returnout.setdefault('hasLabel', {})
-            out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['nml'], 'labeltype')))
+            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}{'labeltype'}"))
             if out:
                 scanVals['labeltype'] = 'ethernet#vlan'
-            out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['nml'], 'value')))
+            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}{'value'}"))
             if out:
                 scanVals['value'] = int(out[0])
 
     def _hasService(self, gIn, bidPort, returnout):
         """Query Graph and get Services"""
         self._hasTags(gIn, bidPort, returnout)
-        out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['nml'], 'hasService')))
+        out = self.queryGraph(gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}{'hasService'}"))
         for item in out:
             scanVals = returnout.setdefault('hasService', {})
             scanVals['bwuri'] = str(item)
             self.getTimeScheduling(gIn, item, returnout)
             for key in ['availableCapacity', 'granularity', 'maximumCapacity',
                         'priority', 'reservableCapacity', 'type', 'unit']:
-                out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], key)))
+                out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{key}"))
                 if out:
                     try:
                         scanVals[key] = int(out[0])
@@ -255,18 +255,18 @@ class PolicyService(RDFHelper):
     def _hasNetwork(self, gIn, bidPort, returnout):
         """Query Graph and get hasNetworkAddress"""
         self._hasTags(gIn, bidPort, returnout)
-        out = self.queryGraph(gIn, bidPort, search=URIRef('%s%s' % (self.prefixes['mrs'], 'hasNetworkAddress')))
+        out = self.queryGraph(gIn, bidPort, search=URIRef(f"{self.prefixes['mrs']}{'hasNetworkAddress'}"))
         for item in out:
             scanVals = returnout.setdefault('hasNetworkAddress', {})
             # We only add params we care, which are: ipv4-address, ipv6-address
             name = str(item).rsplit(':', maxsplit=1)[-1].split('+')[0]
             if name in ['ipv4-address', 'ipv6-address']:
                 vals = scanVals.setdefault(name, {})
-                out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'type')),
+                out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'type'}"),
                                       allowMultiple=True)
                 if out:
                     vals['type'] = "|".join([str(item) for item in out])
-                out = self.queryGraph(gIn, item, search=URIRef('%s%s' % (self.prefixes['mrs'], 'value')))
+                out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'value'}"))
                 if out:
                     vals['value'] = str(out[0])
 
@@ -280,7 +280,7 @@ class PolicyService(RDFHelper):
     def parsePorts(self, gIn, connectionID, connOut):
         """Get all ports for any connection and scan all of them"""
         for key in ['hasBidirectionalPort', 'isAlias']:
-            tmpPorts = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (self.prefixes['nml'], key)), allowMultiple=True)
+            tmpPorts = self.queryGraph(gIn, connectionID, search=URIRef(f"{self.prefixes['nml']}{key}"), allowMultiple=True)
             for port in tmpPorts:
                 if port not in self.bidPorts and port not in self.scannedPorts:
                     self.bidPorts.setdefault(port, [])
@@ -301,7 +301,7 @@ class PolicyService(RDFHelper):
     def parsel2Request(self, gIn, returnout, switchName):
         """Parse L2 request."""
         del switchName
-        self.logger.info('Lets try to get connection ID subject for %s' % self.prefixes['main'])
+        self.logger.info(f"Lets try to get connection ID subject for {self.prefixes['main']}")
         connectionID = None
         out = self.queryGraph(gIn, URIRef(self.prefixes['main']), search=URIRef('%s%s' % (self.prefixes['mrs'],
                                                                                           'providesSubnet')))
@@ -310,8 +310,8 @@ class PolicyService(RDFHelper):
             returnout.setdefault('vsw', {})
             connOut = returnout['vsw'].setdefault(str(connectionID), {})
             self._hasTags(gIn, connectionID, connOut)
-            self.logger.info('This is our connection ID: %s' % connectionID)
-            out = self.queryGraph(gIn, connectionID, search=URIRef('%s%s' % (self.prefixes['nml'], 'labelSwapping')))
+            self.logger.info(f'This is our connection ID: {connectionID}')
+            out = self.queryGraph(gIn, connectionID, search=URIRef(f"{self.prefixes['nml']}{'labelSwapping'}"))
             if out:
                 connOut.setdefault('_params', {}).setdefault('labelSwapping', str(out[0]))
 
@@ -407,7 +407,7 @@ class PolicyService(RDFHelper):
                     ['committed', self.stateMachine.committed],
                     ['activating', self.stateMachine.activating],
                     ['activated', self.stateMachine.activated]]:
-            self.logger.info("Starting check on %s deltas" % job[0])
+            self.logger.info(f"Starting check on {job[0]} deltas")
             job[1](self.dbI)
 
     def deltaToModel(self, currentGraph, deltaPath, action):
@@ -424,7 +424,7 @@ class PolicyService(RDFHelper):
             elif action == 'addition':
                 currentGraph += gIn
             else:
-                raise Exception('Unknown delta action. Action submitted %s' % action)
+                raise Exception(f'Unknown delta action. Action submitted {action}')
         return currentGraph
 
 
@@ -434,13 +434,13 @@ class PolicyService(RDFHelper):
         deltapath = self.siteDB.moveFile(deltapath,
                                          os.path.join(self.config.get(self.sitename, 'privatedir'), "PolicyService/"))
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
-        self.logger.info('Called Accept Delta. Content Location: %s' % deltapath)
+        self.logger.info(f'Called Accept Delta. Content Location: {deltapath}')
         toDict = dict(fileContent)
         toDict["State"] = "accepting"
         try:
             for key in ['reduction', 'addition']:
                 if toDict.get("Content", {}).get(key, {}):
-                    self.logger.debug('Got Content %s for key %s' % (toDict["Content"][key], key))
+                    self.logger.debug(f"Got Content {toDict['Content'][key]} for key {key}")
                     tmpFile = ""
                     with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
                         tmpFile = fd.name

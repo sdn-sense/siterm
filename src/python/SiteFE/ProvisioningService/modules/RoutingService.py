@@ -72,39 +72,39 @@ class RoutingService():
         """Add Routes"""
         bgpdict = self._getDefaultBGP(host)
         for iptype in ['ipv4', 'ipv6']:
-            val = rDict.get('routeFrom', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
+            val = rDict.get('routeFrom', {}).get(f'{iptype}-prefix-list', {}).get('value', None)
             if val:
-                bgpdict.setdefault('%s_network' % iptype, {})
-                bgpdict['%s_network' % iptype][val] =  'present'
+                bgpdict.setdefault(f'{iptype}_network', {})
+                bgpdict[f'{iptype}_network'][val] =  'present'
 
     def _addNeighbors(self, host, ruid, rDict):
         """Add Neighbors"""
         bgpdict = self._getDefaultBGP(host)
         for iptype in ['ipv4', 'ipv6']:
             remasn = rDict.get('routeTo', {}).get('bgp-private-asn', {}).get('value', None)
-            remip = rDict.get('nextHop', {}).get('%s-address' % iptype, {}).get('value', None)
+            remip = rDict.get('nextHop', {}).get(f'{iptype}-address', {}).get('value', None)
             if remasn and remip:
                 neighbor = bgpdict.setdefault('neighbor', {}).setdefault(iptype, {}).setdefault(remip, {})
                 if neighbor:
                     raise Exception('Neighbor already defined. MultiPath neighbors not supported')
                 neighbor.setdefault('remote_asn', remasn)
                 neighbor.setdefault('state', 'present')
-                neighbor.setdefault('route_map', {'in': {'sense-%s-mapin' % ruid: 'present'},
-                                                  'out': {'sense-%s-mapout' % ruid: 'present'}})
+                neighbor.setdefault('route_map', {'in': {f'sense-{ruid}-mapin': 'present'},
+                                                  'out': {f'sense-{ruid}-mapout': 'present'}})
 
     def _addPrefixList(self, host, ruid, rDict):
         """Add Prefix Lists"""
         bgpdict = self._getDefaultBGP(host)
         for iptype in ['ipv4', 'ipv6']:
-            rTo = rDict.get('routeFrom', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
-            rFrom = rDict.get('routeTo', {}).get('%s-prefix-list' % iptype, {}).get('value', None)
+            rTo = rDict.get('routeFrom', {}).get(f'{iptype}-prefix-list', {}).get('value', None)
+            rFrom = rDict.get('routeTo', {}).get(f'{iptype}-prefix-list', {}).get('value', None)
             prefList = bgpdict.setdefault('prefix_list', {}).setdefault(iptype, {})
             if rTo:
-                prefList[rTo] = {'sense-%s-to' % ruid: 'present'}
-                self._addRouteMap(host, 'sense-%s-to' % ruid, 'sense-%s-mapout' % ruid, iptype)
+                prefList[rTo] = {f'sense-{ruid}-to': 'present'}
+                self._addRouteMap(host, f'sense-{ruid}-to', f'sense-{ruid}-mapout', iptype)
             if rFrom:
-                prefList[rFrom] = {'sense-%s-from' % ruid: 'present'}
-                self._addRouteMap(host, 'sense-%s-from' % ruid, 'sense-%s-mapin' % ruid, iptype)
+                prefList[rFrom] = {f'sense-{ruid}-from': 'present'}
+                self._addRouteMap(host, f'sense-{ruid}-from', f'sense-{ruid}-mapin', iptype)
 
     def _addRouteMap(self, host, match, name, iptype):
         """Add Route Maps"""

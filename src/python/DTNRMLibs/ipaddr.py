@@ -15,7 +15,7 @@ def normalizedipwithnet(ipInput, netmask):
     if len(tmp) >= 2:
         return normalizedip(ipInput)
     tmpNet = netmask.split('/')
-    return normalizedip("%s/%s" % (ipInput, tmpNet[1]))
+    return normalizedip(f"{ipInput}/{tmpNet[1]}")
 
 def normalizedip(ipInput):
     """
@@ -29,7 +29,7 @@ def normalizedip(ipInput):
     except ValueError:
         ipaddr = tmp[0]
     if len(tmp) == 2:
-        return "%s/%s" % (ipaddr, tmp[1])
+        return f"{ipaddr}/{tmp[1]}"
     if len(tmp) == 1:
         return ipaddr
     # We return what we get here, because it had multiple / (which is not really valid)

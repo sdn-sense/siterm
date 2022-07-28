@@ -51,18 +51,18 @@ class Switch():
     @staticmethod
     def _getHostConfig(host):
         """Get Ansible Host Config"""
-        if not os.path.isfile('/opt/siterm/config/ansible/sense/inventory/host_vars/%s.yaml' % host):
-            raise Exception('Ansible config file for %s not available.' % host)
-        with open('/opt/siterm/config/ansible/sense/inventory/host_vars/%s.yaml' % host, 'r', encoding='utf-8') as fd:
+        if not os.path.isfile(f'/opt/siterm/config/ansible/sense/inventory/host_vars/{host}.yaml'):
+            raise Exception(f'Ansible config file for {host} not available.')
+        with open(f'/opt/siterm/config/ansible/sense/inventory/host_vars/{host}.yaml', 'r', encoding='utf-8') as fd:
             out = yaml.load(fd.read())
         return out
 
     @staticmethod
     def _writeHostConfig(host, out):
         """Write Ansible Host config file"""
-        if not os.path.isfile('/opt/siterm/config/ansible/sense/inventory/host_vars/%s.yaml' % host):
-            raise Exception('Ansible config file for %s not available.' % host)
-        with open('/opt/siterm/config/ansible/sense/inventory/host_vars/%s.yaml' % host, 'w', encoding='utf-8') as fd:
+        if not os.path.isfile(f'/opt/siterm/config/ansible/sense/inventory/host_vars/{host}.yaml'):
+            raise Exception(f'Ansible config file for {host} not available.')
+        with open(f'/opt/siterm/config/ansible/sense/inventory/host_vars/{host}.yaml', 'w', encoding='utf-8') as fd:
             fd.write(yaml.dump(out))
 
 
@@ -95,9 +95,9 @@ class Switch():
                 else:
                     tmpOut = cmdList[num](andsiblestdout)
             except NotImplementedError as ex:
-                self.logger.debug("Got Not Implemented Error. %s" % ex)
+                self.logger.debug(f"Got Not Implemented Error. {ex}")
             except (AttributeError, IndexError) as ex:
-                self.logger.debug('Got Exception calling switch module for %s and Num %s. Error: %s' % (action, num, ex))
+                self.logger.debug(f'Got Exception calling switch module for {action} and Num {num}. Error: {ex}')
             return tmpOut
 
         keyMapping = {0: 'info', 1: 'lldp', 2: 'ipv4', 3: 'ipv6'}
@@ -118,12 +118,12 @@ class Switch():
                         # This means it is not using any special ansible module
                         # to communicate with switch/router. In this case, we get
                         # ansible_network_os and use that for loading module
-                        action = "%s_command" % self.getAnsNetworkOS(host)
+                        action = f"{self.getAnsNetworkOS(host)}_command"
                         # And in case action is not set - means it is badly configured
                         # inside the ansible module by sys/net admin.
                         # We log this inside te log, and ignore that switch
                         if action == '_command':
-                            self.logger.info('WARNING. ansible_network_os is not defined for %s host. Ignoring this host' % host)
+                            self.logger.info(f'WARNING. ansible_network_os is not defined for {host} host. Ignoring this host')
                             continue
                         hOut.setdefault(keyMapping[self.cmdCounter], {})
                         hOut[keyMapping[self.cmdCounter]] = parserWrapper(self.cmdCounter, host_events['event_data']['res'])
@@ -148,12 +148,12 @@ class Switch():
                     # This means it is not using any special ansible module
                     # to communicate with switch/router. In this case, we get
                     # ansible_network_os and use that for loading module
-                    action = "%s_command" % self.getAnsNetworkOS(host)
+                    action = f"{self.getAnsNetworkOS(host)}_command"
                     # And in case action is not set - means it is badly configured
                     # inside the ansible module by sys/net admin.
                     # We log this inside te log, and ignore that switch
                     if action == '_command':
-                        self.logger.info('WARNING. ansible_network_os is not defined for %s host. Ignoring this host' % host)
+                        self.logger.info(f'WARNING. ansible_network_os is not defined for {host} host. Ignoring this host')
                         continue
                 ansNetIntf = host_events.setdefault('event_data', {}).setdefault('res', {}).setdefault('ansible_facts', {}).setdefault('ansible_net_interfaces', {})
                 if action in self.parsers.keys():
@@ -169,7 +169,7 @@ class Switch():
             for host, hitems in maclldproute.items():
                 if host in out:
                     for key, vals in hitems.items():
-                        out[host]['event_data']['res']['ansible_facts']['ansible_command_%s' % key] = vals
+                        out[host]['event_data']['res']['ansible_facts'][f'ansible_command_{key}'] = vals
         finally:
             self.cmdCounter = 0
         return out

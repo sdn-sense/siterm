@@ -25,31 +25,31 @@ class ConfigFetcher():
     def _fetchFile(self, name, url):
         output = {}
         datetimeNow = datetime.datetime.now() + datetime.timedelta(minutes=10)
-        filename = '/tmp/%s-%s.yaml' % (datetimeNow.strftime('%Y-%m-%d-%H'), name)
+        filename = f"/tmp/{datetimeNow.strftime('%Y-%m-%d-%H')}-{name}.yaml"
         if os.path.isfile(filename):
-            self.logger.info('Config files are not yet needed for update. For %s from %s' % (name, url))
+            self.logger.info(f'Config files are not yet needed for update. For {name} from {url}')
             with open(filename, 'r', encoding='utf-8') as fd:
                 output = yload(fd.read())
         else:
-            self.logger.info('Fetching new config file for %s from %s' % (name, url))
+            self.logger.info(f'Fetching new config file for {name} from {url}')
             datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
-            prevfilename = '/tmp/%s-%s.yaml' % (datetimelasthour.strftime('%Y-%m-%d-%H'), name)
-            print('Receiving new file from GIT for %s' % name)
+            prevfilename = f"/tmp/{datetimelasthour.strftime('%Y-%m-%d-%H')}-{name}.yaml"
+            print(f'Receiving new file from GIT for {name}')
             outyaml = getWebContentFromURL(url).text
             output = yload(outyaml)
             with open(filename, 'w', encoding='utf-8') as fd:
                 fd.write(outyaml)
             try:
-                shutil.copy(filename, '/tmp/dtnrm-link-%s.yaml' % name)
+                shutil.copy(filename, f'/tmp/dtnrm-link-{name}.yaml')
                 if os.path.isfile(prevfilename):
-                    self.logger.info('Remove previous old cache file %s' % prevfilename)
+                    self.logger.info(f'Remove previous old cache file {prevfilename}')
                     os.remove(prevfilename)
             except IOError as ex:
-                self.logger.info('Got IOError: %s' % ex)
+                self.logger.info(f'Got IOError: {ex}')
         return output
 
     def fetchMapping(self):
-        url = "%s/mapping.yaml" % self.gitObj.getFullGitUrl()
+        url = f"{self.gitObj.getFullGitUrl()}/mapping.yaml"
         return self._fetchFile('mapping', url)
 
     def fetchAgent(self):

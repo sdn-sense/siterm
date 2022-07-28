@@ -86,7 +86,7 @@ class StateMachine():
     def _stateChangerDelta(self, dbObj, newState, **kwargs):
         """Delta State change."""
         tNow = getUTCnow()
-        self.logger.info('Changing delta %s to %s' % (kwargs['uid'], newState))
+        self.logger.info(f"Changing delta {kwargs['uid']} to {newState}")
         dbObj.update('deltas', [{'uid': kwargs['uid'],
                                  'state': newState,
                                  'updatedate': tNow}])

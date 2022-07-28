@@ -80,10 +80,10 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         if stTime == 0 and enTime == 0:
             return serviceStart
         if stTime > getUTCnow():
-            self.logger.debug('Start Time in future. Not starting %s' % tag)
+            self.logger.debug(f'Start Time in future. Not starting {tag}')
             serviceStart = False
         if enTime < getUTCnow():
-            self.logger.debug('End Time passed. Not adding to config %s' % tag)
+            self.logger.debug(f'End Time passed. Not adding to config {tag}')
             serviceStart = False
         return serviceStart
 
@@ -99,7 +99,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             return
         for host, _ in ansOut.stats.get('failures', {}).items():
             for host_events in ansOut.host_events(host):
-                self.logger.info("Ansible runtime log of %s event" % host_events['event'])
+                self.logger.info(f"Ansible runtime log of {host_events['event']} event")
                 self.logger.info(json.dumps(host_events, indent=4))
         if ansOut.stats.get('failures', {}) and raiseExc:
             # TODO: Would be nice to save in DB and see errors from WEB UI)

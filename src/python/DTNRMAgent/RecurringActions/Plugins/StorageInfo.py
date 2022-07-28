@@ -40,7 +40,7 @@ def parseOut(tmpOut, storageInfo):
             key = localOut["Keys"][countNum].replace("%", "Percentage")
             # Append size and also change to underscore
             if key in ['Avail', 'Used', 'Size']:
-                key = '%s_gb' % key
+                key = f'{key}_gb'
                 try:
                     storageInfo["Values"][oneLine[0]][key] = oneLine[countNum][:1]
                 except TypeError:

@@ -38,7 +38,7 @@ def argValidity(arg, aType):
         if isinstance(arg, list):
             return arg
     else:
-        raise ValidityFailure("Input %s != %s." % (type(arg), aType))
+        raise ValidityFailure(f"Input {type(arg)} != {aType}.")
     return {} if aType == dict else []
 
 
@@ -46,7 +46,7 @@ def check_server_url(url):
     """Check if given url starts with http tag."""
     goodName = url.startswith('http://') or url.startswith('https://')
     if not goodName:
-        msg = "You must include http(s):// in your server's address, %s doesn't" % url
+        msg = f"You must include http(s):// in your server's address, {url} doesn't"
         raise ValueError(msg)
 
 
@@ -56,8 +56,7 @@ def sanitizeURL(url):
     or password."""
     endpointComponents = urllib.parse.urlparse(url)
     if endpointComponents.port:
-        netloc = '%s:%s' % (endpointComponents.hostname,
-                            endpointComponents.port)
+        netloc = f'{endpointComponents.hostname}:{endpointComponents.port}'
     else:
         netloc = endpointComponents.hostname
     url = urllib.parse.urlunparse(
@@ -84,7 +83,7 @@ def encodeRequest(configreq, listParams=None):
     for lparam in listParams:
         if lparam in configreq:
             if len(configreq[lparam]) > 0:
-                encodedLists += ('&%s=' % lparam) + ('&%s=' % lparam).join(map(urllib.parse.quote, configreq[lparam]))
+                encodedLists += f'&{lparam}=' + f'&{lparam}='.join(map(urllib.parse.quote, configreq[lparam]))
             del configreq[lparam]
     encoded = urllib.parse.urlencode(configreq) + encodedLists
     return str(encoded)

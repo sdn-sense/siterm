@@ -13,11 +13,11 @@ import copy
 def checkConfig(config, site):
     """Get info from config and ensure all params correct."""
     if not config.has_section(site):
-        msg = 'SiteName %s is not defined' % site
+        msg = f'SiteName {site} is not defined'
         raise Exception(msg)
     for key in ['plugin', 'switch']:
         if not config.has_option(site, key):
-            msg = 'Option %s is not defined in Site Config. Return' % key
+            msg = f'Option {key} is not defined in Site Config. Return'
             raise Exception(msg)
 
 def cleanupEmpty(output):

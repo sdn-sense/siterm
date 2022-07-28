@@ -201,7 +201,7 @@ class Sonic():
         for port, _portDict in tmpJson.get('PORTCHANNEL_MEMBER', {}).items():
             tmpPort = port.split('|')
             if len(tmpPort) != 2:
-                self.logger.info('Warning. PORTCHANNEL_MEMBER member key issue. Key: %s' % port)
+                self.logger.info(f'Warning. PORTCHANNEL_MEMBER member key issue. Key: {port}')
                 continue
             out.setdefault(tmpPort[0], {})
             out[tmpPort[0]].setdefault('channel-member', [])
@@ -210,7 +210,7 @@ class Sonic():
         for port, _portDict in tmpJson.get('VLAN_INTERFACE', {}).items():
             tmpPort = port.split('|')
             if len(tmpPort) != 2:
-                self.logger.info('Warning. VLAN_INTERFACE member key issue. Key: %s' % port)
+                self.logger.info(f'Warning. VLAN_INTERFACE member key issue. Key: {port}')
                 continue
             out.setdefault(tmpPort[0], {})
             iptype = ipVersion(tmpPort[1])
@@ -225,7 +225,7 @@ class Sonic():
         for port, portDict in tmpJson.get('VLAN_MEMBER', {}).items():
             tmpPort = port.split('|')
             if len(tmpPort) != 2:
-                self.logger.info('Warning. VLAN_MEMBER member key issue. Key: %s' % port)
+                self.logger.info(f'Warning. VLAN_MEMBER member key issue. Key: {port}')
                 continue
             pOutDict = out.setdefault(tmpPort[0], {})
             tagDict = pOutDict.setdefault(portDict.get('tagging_mode', 'undefinedtagmode'), [])

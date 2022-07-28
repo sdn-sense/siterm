@@ -61,7 +61,7 @@ class AristaEOS():
             elif interfaceSt:
                 if line.startswith('switchport trunk allowed vlan') or line.startswith('switchport access vlan'):
                     for vlan in self._getVlans(line):
-                        key = "Vlan%s" % vlan
+                        key = f"Vlan{vlan}"
                         out.setdefault(key, {})
                         out[key].setdefault('tagged', [])
                         out[key]['tagged'].append(self._getSystemValidPortName(interfaceSt))
@@ -69,7 +69,7 @@ class AristaEOS():
                     m = re.match(r'channel-group ([0-9]+) .*', line)
                     if m:
                         chnMemberId = m.group(1)
-                        key = "Port-Channel%s" % chnMemberId
+                        key = f"Port-Channel{chnMemberId}"
                         out.setdefault(key, {})
                         out[key].setdefault('channel-member', [])
                         out[key]['channel-member'].append(self._getSystemValidPortName(interfaceSt))

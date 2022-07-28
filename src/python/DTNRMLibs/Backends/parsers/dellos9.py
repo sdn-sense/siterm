@@ -101,7 +101,7 @@ class DellOS9():
             out = []
             tmpOut = rule0(tuple([reMatch[1]]))
             for line in tmpOut:
-                out.append("%s/%s" % (reMatch[0], line))
+                out.append(f"{reMatch[0]}/{line}")
             return out
 
         def rule3(reMatch):
@@ -177,7 +177,7 @@ class DellOS9():
                 if not tmpout:
                     return out
                 for item in tmpout:
-                    out.append(self._getSystemValidPortName("%s %s" % (match.group(1), item)))
+                    out.append(self._getSystemValidPortName(f"{match.group(1)} {item}"))
         return out
 
     def parser(self, ansibleOut):
@@ -300,13 +300,13 @@ class DellOS9():
             match = re.match(r'ip route vrf (\w+) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}/\d{1,2}) (\w+) (\w+)$', inline)
             if match:
                 out.append({'vrf': match.groups()[0], 'to': match.groups()[1],
-                            'intf': "%s %s" % (match.groups()[2], match.groups()[3])})
+                            'intf': f"{match.groups()[2]} {match.groups()[3]}"})
                 continue
             # Rule 3: Parses route like: ip route vrf lhcone 192.84.86.0/24 NULL 0 1.2.3.1
             match = re.match(r'ip route vrf (\w+) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}/\d{1,2}) (\w+) (\w+) (\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})$', inline)
             if match:
                 out.append({'vrf': match.groups()[0], 'to': match.groups()[1],
-                            'intf': "%s %s" % (match.groups()[2], match.groups()[3]), 'from': match.groups()[4]})
+                            'intf': f"{match.groups()[2]} {match.groups()[3]}", 'from': match.groups()[4]})
         return out
 
     @staticmethod
@@ -330,13 +330,13 @@ class DellOS9():
             match = re.match(r'ipv6 route vrf (\w+) ([abcdef0-9:]+/\d{1,3}) (\w+) (\w+)$', inline)
             if match:
                 out.append({'vrf': match.groups()[0], 'to': normalizedip(match.groups()[1]),
-                            'intf': "%s %s" % (match.groups()[2], match.groups()[3])})
+                            'intf': f"{match.groups()[2]} {match.groups()[3]}"})
                 continue
             # Rule 3: Matches ipv6 route vrf lhcone 2605:d9c0::2/128 NULL 0 2605:d9c0:0:1::2
             match = re.match(r'ipv6 route vrf (\w+) ([abcdef0-9:]+/\d{1,3}) (\w+) (\w+) ([abcdef0-9:]+)$', inline)
             if match:
                 out.append({'vrf': match.groups()[0], 'to': normalizedip(match.groups()[1]),
-                            'intf': "%s %s" % (match.groups()[2], match.groups()[3]),
+                            'intf': f"{match.groups()[2]} {match.groups()[3]}",
                             'from': normalizedip(match.groups()[4])})
         return out
 

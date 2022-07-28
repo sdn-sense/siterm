@@ -51,15 +51,15 @@ class CertHandler():
             raise Exception('Unauthorized access. Request without certificate.')
         cert = crypto.load_certificate(crypto.FILETYPE_PEM, environ['SSL_CLIENT_CERT'])
         subject = cert.get_subject()
-        out['subject'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode())
+        out['subject'] = "".join(f"/{name.decode():s}={value.decode():s}"
                                  for name, value in subject.get_components())
         out['notAfter'] = int(time.mktime(datetime.strptime(cert.get_notAfter().decode('UTF-8'),
                                                             '%Y%m%d%H%M%SZ').timetuple()))
         out['notBefore'] = int(time.mktime(datetime.strptime(cert.get_notBefore().decode('UTF-8'),
                                                              '%Y%m%d%H%M%SZ').timetuple()))
-        out['issuer'] = "".join("/{0:s}={1:s}".format(name.decode(), value.decode())
+        out['issuer'] = "".join(f"/{name.decode():s}={value.decode():s}"
                                 for name, value in cert.get_issuer().get_components())
-        out['fullDN'] = "%s%s" % (out['issuer'], out['subject'])
+        out['fullDN'] = f"{out['issuer']}{out['subject']}"
         return out
 
     def validateCertificate(self, environ):
@@ -70,18 +70,18 @@ class CertHandler():
             raise Exception('Certificate not found. Unauthorized')
         for key in ['subject', 'notAfter', 'notBefore', 'issuer', 'fullDN']:
             if key not in list(environ['CERTINFO'].keys()):
-                print('%s not available in certificate retrieval' % key)
+                print(f'{key} not available in certificate retrieval')
                 raise Exception('Unauthorized access')
         # Check time before
         if environ['CERTINFO']['notBefore'] > timestamp:
             print('Certificate Invalid. Current Time: %s NotBefore: %s' % (timestamp,
                                                                            environ['CERTINFO']['notBefore']))
-            raise Exception('Certificate Invalid. Full Info: %s' % environ['CERTINFO'])
+            raise Exception(f"Certificate Invalid. Full Info: {environ['CERTINFO']}")
         # Check time after
         if environ['CERTINFO']['notAfter'] < timestamp:
             print('Certificate Invalid. Current Time: %s NotAfter: %s' % (timestamp,
                                                                           environ['CERTINFO']['notAfter']))
-            raise Exception('Certificate Invalid. Full Info: %s' % environ['CERTINFO'])
+            raise Exception(f"Certificate Invalid. Full Info: {environ['CERTINFO']}")
         # Check if reload of auth list is needed.
         self.loadAuthorized()
         # Check DN in authorized list

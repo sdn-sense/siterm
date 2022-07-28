@@ -85,7 +85,7 @@ def get(config):
             familyInfo["netmask"] = vals.netmask
             if int(vals.family.value) in [2, 10] and vals.address and vals.netmask:
                 try:
-                    ipwithnetmask = ipaddress.ip_interface(u"%s/%s" % (vals.address, vals.netmask))
+                    ipwithnetmask = ipaddress.ip_interface(f"{vals.address}/{vals.netmask}")
                     if isinstance(ipwithnetmask, ipaddress.IPv4Interface):
                         familyInfo["ipv4-address"] = str(ipwithnetmask)
                     elif isinstance(ipwithnetmask, ipaddress.IPv6Interface):
@@ -94,7 +94,7 @@ def get(config):
                         logger.debug("This type was not understood by the system. Type: %s and value: %s" %  \
                                      (type(ipwithnetmask), str(ipwithnetmask)))
                 except ValueError as ex:
-                    logger.debug('Got an exception %s' % ex)
+                    logger.debug(f'Got an exception {ex}')
             elif int(vals.family.value) in [17]:
                 familyInfo["mac-address"] = vals.address
             familyInfo["broadcast"] = vals.broadcast

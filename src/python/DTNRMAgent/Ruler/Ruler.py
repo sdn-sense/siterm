@@ -39,10 +39,10 @@ class Ruler(QOS, contentDB):
 
     def getData(self, url):
         """Get data from FE."""
-        self.logger.info('Query: %s%s' % (self.fullURL, url))
+        self.logger.info(f'Query: {self.fullURL}{url}')
         out = getDataFromSiteFE({}, self.fullURL, url)
         if out[2] != 'OK':
-            msg = 'Received a failure getting information from Site Frontend %s' % str(out)
+            msg = f'Received a failure getting information from Site Frontend {str(out)}'
             self.logger.critical(msg)
             return {}
         self.logger.info('End function checkdeltas')
@@ -74,7 +74,7 @@ class Ruler(QOS, contentDB):
 
     def activeComparison(self, activeFile, activeFE, actKey, actCall):
         """Compare active vs file on node config"""
-        self.logger.info('Active Comparison for %s' % actKey)
+        self.logger.info(f'Active Comparison for {actKey}')
         for key, vals in activeFile.get('output', {}).get(actKey, {}).items():
             if self.hostname in vals:
                 if not self._started(vals):
@@ -92,7 +92,7 @@ class Ruler(QOS, contentDB):
 
     def activeEnsure(self, activeConf, actKey, actCall):
         """Ensure all active resources are enabled, configured"""
-        self.logger.info('Active Ensure for %s' % actKey)
+        self.logger.info(f'Active Ensure for {actKey}')
         for _key, vals in activeConf.get('output', {}).get(actKey, {}).items():
             if self.hostname in vals:
                 if self._started(vals) and not self._ended(vals):
@@ -113,7 +113,7 @@ class Ruler(QOS, contentDB):
         # Otherwise - do precheck if all resources are active
         # And start QOS Ruler if it is configured so.
         activeDeltas = {}
-        activeDeltasFile = "%s/activedeltas.json" % self.workDir
+        activeDeltasFile = f"{self.workDir}/activedeltas.json"
         if os.path.isfile(activeDeltasFile):
             activeDeltas = getFileContentAsJson(activeDeltasFile)
         activeFromFE = self.getActiveDeltas()

@@ -69,7 +69,7 @@ def getFullUrl(config, sitename=None):
         sitename = config.get('general', 'sitename')
     if not webdomain.startswith("http"):
         webdomain = "http://" + webdomain
-    return "%s/%s" % (webdomain, sitename)
+    return f"{webdomain}/{sitename}"
 
 def checkLoggingHandler(**kwargs):
     """Check if logging handler is present and return True/False"""
@@ -114,7 +114,7 @@ def getTimeRotLogger(**kwargs):
     handler = checkLoggingHandler(**kwargs)
     if 'logFile' not in kwargs:
         if 'config' in kwargs:
-            kwargs['logFile'] = "%s/%s/" % (kwargs['config'].get('general', 'logDir'), kwargs.get('service', __name__))
+            kwargs['logFile'] = f"{kwargs['config'].get('general', 'logDir')}/{kwargs.get('service', __name__)}/"
         else:
             print('No config passed, will log to StreamLogger... Code issue!')
             return getStreamLogger(**kwargs)
@@ -145,7 +145,7 @@ def evaldict(inputDict):
     except ValueError:
         out = json.loads(inputDict)
     except SyntaxError as ex:
-        raise WrongInputError("SyntaxError: Failed to literal eval dict. Err:%s " % ex) from ex
+        raise WrongInputError(f"SyntaxError: Failed to literal eval dict. Err:{ex} ") from ex
     return out
 
 def readFile(fileName):
@@ -169,14 +169,14 @@ def externalCommand(command, communicate=True):
 
 def execute(command, logger, raiseError=True):
     """Execute interfaces commands."""
-    logger.info('Asked to execute %s command' % command)
+    logger.info(f'Asked to execute {command} command')
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
-    msg = 'Command: %s, Out: %s, Err: %s, ReturnCode: %s' % (command, out.rstrip(), err.rstrip(), cmdOut.returncode)
+    msg = f'Command: {command}, Out: {out.rstrip()}, Err: {err.rstrip()}, ReturnCode: {cmdOut.returncode}'
     if cmdOut.returncode != 0 and raiseError:
         raise FailedInterfaceCommand(msg)
     if cmdOut.returncode != 0:
-        logger.debug("RaiseError is False, but command failed. Only logging Errmsg: %s" % msg)
+        logger.debug(f"RaiseError is False, but command failed. Only logging Errmsg: {msg}")
         return False
     return True
 
@@ -189,7 +189,7 @@ def createDirs(fullDirPath):
         try:
             os.makedirs(dirname)
         except OSError as ex:
-            print('Received exception creating %s directory. Exception: %s' % (dirname, ex))
+            print(f'Received exception creating {dirname} directory. Exception: {ex}')
             if not os.path.isdir(dirname):
                 raise
     return
@@ -241,12 +241,12 @@ class GitConfig():
     def gitConfigCache(self, name):
         """Get Config file from tmp dir"""
         output = None
-        filename = '/tmp/dtnrm-link-%s.yaml' % name
+        filename = f'/tmp/dtnrm-link-{name}.yaml'
         if os.path.isfile(filename):
             with open(filename, 'r', encoding='utf-8') as fd:
                 output = yload(fd.read())
         else:
-            raise Exception('Config file %s does not exist.' % filename)
+            raise Exception(f'Config file {filename} does not exist.')
         return output
 
     def getFullGitUrl(self, customAdds=None):
@@ -270,7 +270,7 @@ class GitConfig():
                 # Check if it is optional or not;
                 if not requirement['optional']:
                     print('Configuration /etc/dtnrm.yaml missing non optional config parameter %s', key)
-                    raise Exception('Configuration /etc/dtnrm.yaml missing non optional config parameter %s' % key)
+                    raise Exception(f'Configuration /etc/dtnrm.yaml missing non optional config parameter {key}')
                 self.config[key] = requirement['default']
 
     def getGitAgentConfig(self):
@@ -356,7 +356,7 @@ def getAllFileContent(inputFile):
     if os.path.isfile(inputFile):
         with open(inputFile, 'r', encoding='utf-8') as fd:
             return fd.read()
-    raise NotFoundError('File %s was not found on the system.' % inputFile)
+    raise NotFoundError(f'File {inputFile} was not found on the system.')
 
 
 def getUsername():
@@ -405,7 +405,7 @@ class contentDB():
     def moveFile(self, sourcefile, destdir):
         """Move file from sourcefile to dest dir"""
         if not os.path.isfile(sourcefile):
-            raise Exception('File %s does not exist' % sourcefile)
+            raise Exception(f'File {sourcefile} does not exist')
         if sourcefile.startswith(destdir):
             # We dont want to move if already in dest dir
             return sourcefile
@@ -420,17 +420,17 @@ def delete(inputObj, delObj):
         try:
             tmpList.remove(delObj)
         except ValueError as ex:
-            print('Delete object %s is not in inputObj %s list. Err: %s' % (delObj, tmpList, ex))
+            print(f'Delete object {delObj} is not in inputObj {tmpList} list. Err: {ex}')
         return tmpList
     if isinstance(inputObj, dict):
         tmpDict = copy.deepcopy(inputObj)
         try:
             del tmpDict[delObj]
         except KeyError as ex:
-            print('Delete object %s is not in inputObj %s dict. Err: %s' % (delObj, tmpList, ex))
+            print(f'Delete object {delObj} is not in inputObj {tmpList} dict. Err: {ex}')
         return tmpDict
     # This should not happen
-    raise WrongInputError('Provided input type is not available for deletion. Type %s' % type(inputObj))
+    raise WrongInputError(f'Provided input type is not available for deletion. Type {type(inputObj)}')
 
 def parse_gui_form_post(inputVal):
     """Parse GUI Form Post and return dict."""
@@ -455,7 +455,7 @@ def read_input_data(environ):
     except ValueError as ex:
         outjson = parse_gui_form_post(body.getvalue())
         if not outjson:
-            errMsg = 'Failed to parse json input: %s, Err: %s.' % (body.getvalue(), ex)
+            errMsg = f'Failed to parse json input: {body.getvalue()}, Err: {ex}.'
             print(errMsg)
             raise WrongInputError(errMsg) from ex
     return outjson
@@ -510,7 +510,7 @@ def getUrlParams(environ, paramsList):
         # {"key": "model", "default": "turtle", "type": str, "options": ['turtle']}
         outVals = form.getlist(param['key'])
         if len(outVals) > 1:
-            raise TooManyArgumentalValues("Parameter %s has too many defined values" % param['key'])
+            raise TooManyArgumentalValues(f"Parameter {param['key']} has too many defined values")
         if len(outVals) == 1:
             if param['type'] == bool:
                 if outVals[0] in ['true', 'True']:
@@ -643,7 +643,7 @@ def pubStateRemote(**kwargs):
         publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
     except Exception:
         excType, excValue = sys.exc_info()[:2]
-        print("Error details in pubStateRemote. ErrorType: %s, ErrMsg: %s" % (str(excType.__name__), excValue))
+        print(f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
 
 def getCurrentModel(cls, raiseException=False):
     """Get Current Model from DB."""
@@ -654,7 +654,7 @@ def getCurrentModel(cls, raiseException=False):
             currentGraph.parse(currentModel[0]['fileloc'], format='turtle')
         except IOError as ex:
             if raiseException:
-                raise NotFoundError("Model failed to parse from DB. Error %s" % ex) from IOError
+                raise NotFoundError(f"Model failed to parse from DB. Error {ex}") from IOError
             currentGraph = Graph()
     elif raiseException:
         raise NotFoundError("There is no model in DB. LookUpService is running?")

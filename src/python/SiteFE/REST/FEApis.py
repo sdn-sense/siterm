@@ -87,7 +87,7 @@ class FrontendRM():
         dbobj = getVal(self.dbI, **kwargs)
         host = dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
         if not host:
-            raise NotFoundError('This IP %s is not registered at all. Call addhost' % inputDict['ip'])
+            raise NotFoundError(f"This IP {inputDict['ip']} is not registered at all. Call addhost")
         out = {'id': host[0]['id'],
                'hostname': inputDict['hostname'],
                'ip': inputDict['ip'],
@@ -101,7 +101,7 @@ class FrontendRM():
         dbobj = getVal(self.dbI, **kwargs)
         host = dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
         if not host:
-            raise NotFoundError('This IP %s is not registered at all.' % inputDict['ip'])
+            raise NotFoundError(f"This IP {inputDict['ip']} is not registered at all.")
         dbobj.delete('hosts', ['id', host[0]['id']])
 
 
@@ -111,7 +111,7 @@ class FrontendRM():
         # DTNRM-Agent | DTNRM-Ruler | DTNRM-Debugger
         if inputDict['servicename'] not in ['Agent', 'Ruler', 'Debugger', 'LookUpService',
                                             'PolicyService', 'ProvisioningService']:
-            raise NotFoundError('This Service %s is not supported by Frontend' % inputDict['servicename'])
+            raise NotFoundError(f"This Service {inputDict['servicename']} is not supported by Frontend")
         reportServiceStatus(**{'servicename': inputDict['servicename'], 'servicestate': inputDict['servicestate'],
                                'sitename': kwargs['sitename'], 'hostname': inputDict['hostname'],
                                'version': inputDict['version'], 'cls': self})

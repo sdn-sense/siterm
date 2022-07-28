@@ -101,11 +101,11 @@ class NodeInfo():
                         mName = mapping
                         value = entry[mapping]
                         if dKey == '10':
-                            mName = 'ipv6-%s' % mapping
+                            mName = f'ipv6-{mapping}'
                         if dKey == '17' and mapping == 'address':
-                            mName = 'mac-%s' % mapping
+                            mName = f'mac-{mapping}'
                         elif dKey == '17':
-                            mName = 't17-%s' % mapping
+                            mName = f't17-{mapping}'
                         if dKey == '2' and mapping == 'address':
                             mName = 'ipv4-address-system'
                             value = entry[mapping].split('/')[0]
@@ -129,14 +129,14 @@ class NodeInfo():
             return
 
         out = {'hostname': hostname,
-               'rstname': 'rst-%s' % route['iptype'],
+               'rstname': f"rst-{route['iptype']}",
                'iptype': route['iptype']}
         for tablegress in['table+defaultIngress', 'table+defaultEgress']:
             out['rt-table'] = tablegress
             if 'RTA_GATEWAY' in list(route.keys()):
                 out['routename'] = 'default'
                 out['routetype'] = 'routeTo'
-                out['type'] = '%s-address' % route['iptype']
+                out['type'] = f"{route['iptype']}-address"
                 out['value'] = route['RTA_GATEWAY']
                 self._addRouteEntry(**out)
                 # Do we really need this?
@@ -145,10 +145,10 @@ class NodeInfo():
                 #             ['local', 'routing-policy', 'local']]:
                 #    self._addNetworkAddress('%s:%s' % (routename, vals[0]), [vals[0], vals[1]], vals[2])
             elif 'RTA_PREFSRC'  in route.keys() and 'dst_len' in route.keys():
-                out['routename'] = validMRMLName("%s/%s" % (route['RTA_PREFSRC'], route['dst_len']))
+                out['routename'] = validMRMLName(f"{route['RTA_PREFSRC']}/{route['dst_len']}")
                 out['routetype'] = 'routeTo'
-                out['type'] = '%s-prefix-list' % route['iptype']
-                out['value'] = "%s_%s" % (route['RTA_PREFSRC'], route['dst_len'])
+                out['type'] = f"{route['iptype']}-prefix-list"
+                out['value'] = f"{route['RTA_PREFSRC']}_{route['dst_len']}"
                 self._addRouteEntry(**out)
                 # nextHop to default route? Is it needed?
 
@@ -202,16 +202,16 @@ class NodeInfo():
         if 'vlan_range' in list(intfDict.keys()):
             self.newGraph.add((self.genUriRef('site', newuri),
                                self.genUriRef('nml', 'hasLabelGroup'),
-                               self.genUriRef('site', "%s:vlan-range" % newuri)))
+                               self.genUriRef('site', f"{newuri}:vlan-range")))
 
-            self.newGraph.add((self.genUriRef('site', "%s:vlan-range" % newuri),
+            self.newGraph.add((self.genUriRef('site', f"{newuri}:vlan-range"),
                                self.genUriRef('rdf', 'type'),
                                self.genUriRef('nml', 'LabelGroup')))
 
-            self.newGraph.add((self.genUriRef('site', "%s:vlan-range" % newuri),
+            self.newGraph.add((self.genUriRef('site', f"{newuri}:vlan-range"),
                                self.genUriRef('nml', 'labeltype'),
                                self.genUriRef('schema', '#vlan')))
-            self._nmlLiteral("%s:vlan-range" % newuri, 'values', intfDict['vlan_range'])
+            self._nmlLiteral(f"{newuri}:vlan-range", 'values', intfDict['vlan_range'])
 
         self.shared = 'notshared'
         if 'shared' in intfDict:
@@ -264,14 +264,14 @@ class NodeInfo():
                     if 'vlanid' in list(vlanDict.keys()):
                         self.newGraph.add((self.genUriRef('site', vlanuri),
                                            self.genUriRef('nml', 'hasLabel'),
-                                           self.genUriRef('site', "%s:vlan" % vlanuri)))
-                        self.newGraph.add((self.genUriRef('site', "%s:vlan" % vlanuri),
+                                           self.genUriRef('site', f"{vlanuri}:vlan")))
+                        self.newGraph.add((self.genUriRef('site', f"{vlanuri}:vlan"),
                                            self.genUriRef('rdf', 'type'),
                                            self.genUriRef('nml', 'Label')))
-                        self.newGraph.add((self.genUriRef('site', "%s:vlan" % vlanuri),
+                        self.newGraph.add((self.genUriRef('site', f"{vlanuri}:vlan"),
                                            self.genUriRef('nml', 'labeltype'),
                                            self.genUriRef('schema', '#vlan')))
-                        self.newGraph.add((self.genUriRef('site', "%s:vlan" % vlanuri),
+                        self.newGraph.add((self.genUriRef('site', f"{vlanuri}:vlan"),
                                            self.genUriRef('nml', 'value'),
                                            self.genLiteral(vlanDict['vlanid'])))
                     # Add hasNetworkAddress for vlan
