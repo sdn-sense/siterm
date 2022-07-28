@@ -112,8 +112,7 @@ class StateMachine():
     def _stateChangerHost(self, dbObj, hid, **kwargs):
         """Change state for host."""
         tNow = getUTCnow()
-        self.logger.info('Changing delta %s hoststate %s to %s' %
-                         (kwargs['deltaid'], kwargs['hostname'], kwargs['state']))
+        self.logger.info(f"Changing delta {kwargs['deltaid']} hoststate {kwargs['hostname']} to {kwargs['state']}")
         dbObj.update('hoststates', [{'deltaid': kwargs['deltaid'],
                                      'state': kwargs['state'],
                                      'updatedate': tNow,

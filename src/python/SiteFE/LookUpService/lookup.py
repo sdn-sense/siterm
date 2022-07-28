@@ -58,8 +58,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         now = datetime.datetime.now()
         saveDir = f"{self.config.get(self.sitename, 'privatedir')}/{'LookUpService'}"
         createDirs(saveDir)
-        return "%s/%s-%s-%s:%s:%s:%s.mrml" % (saveDir, now.year, now.month,
-                                              now.day, now.hour, now.minute, now.second)
+        return f"{saveDir}/{now.year}-{now.month}-{now.day}:{now.hour}:{now.minute}:{now.second}.mrml"
 
     def defineTopology(self):
         """Defined Topology and Main Services available."""

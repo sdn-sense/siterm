@@ -21,9 +21,9 @@ class RDFHelper():
         prefixes = {}
         for key in ['mrs', 'nml', 'owl', 'rdf', 'xml', 'xsd', 'rdfs', 'schema', 'sd']:
             prefixes[key] = self.config.get('prefixes', key)
-        prefixSite = "%s:%s:%s" % (self.config.get('prefixes', 'site'),
-                                   self.config.get(self.sitename, 'domain'),
-                                   self.config.get(self.sitename, 'year'))
+        prefixSite = (f"{self.config.get('prefixes', 'site')}"
+                      f":{self.config.get(self.sitename, 'domain')}"
+                      f":{self.config.get(self.sitename, 'year')}")
         prefixes['site'] = prefixSite
         for switchName in self.config.get(self.sitename, 'switch').split(','):
             for key in ['vsw', 'rst']:

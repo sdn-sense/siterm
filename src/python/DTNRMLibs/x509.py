@@ -74,19 +74,16 @@ class CertHandler():
                 raise Exception('Unauthorized access')
         # Check time before
         if environ['CERTINFO']['notBefore'] > timestamp:
-            print('Certificate Invalid. Current Time: %s NotBefore: %s' % (timestamp,
-                                                                           environ['CERTINFO']['notBefore']))
+            print(f"Certificate Invalid. Current Time: {timestamp} NotBefore: environ['CERTINFO']['notBefore']")
             raise Exception(f"Certificate Invalid. Full Info: {environ['CERTINFO']}")
         # Check time after
         if environ['CERTINFO']['notAfter'] < timestamp:
-            print('Certificate Invalid. Current Time: %s NotAfter: %s' % (timestamp,
-                                                                          environ['CERTINFO']['notAfter']))
+            print(f"Certificate Invalid. Current Time: {timestamp} NotAfter: {environ['CERTINFO']['notAfter']}")
             raise Exception(f"Certificate Invalid. Full Info: {environ['CERTINFO']}")
         # Check if reload of auth list is needed.
         self.loadAuthorized()
         # Check DN in authorized list
         if environ['CERTINFO']['fullDN'] not in self.allowedCerts:
-            print('User DN %s is not in authorized list. Full info: %s' % (environ['CERTINFO']['fullDN'],
-                                                                           environ['CERTINFO']))
+            print(f"User DN {environ['CERTINFO']['fullDN']} is not in authorized list. Full info: {environ['CERTINFO']}")
             raise Exception('Unauthorized access')
         return self.allowedCerts[environ['CERTINFO']['fullDN']]

@@ -303,8 +303,8 @@ class PolicyService(RDFHelper):
         del switchName
         self.logger.info(f"Lets try to get connection ID subject for {self.prefixes['main']}")
         connectionID = None
-        out = self.queryGraph(gIn, URIRef(self.prefixes['main']), search=URIRef('%s%s' % (self.prefixes['mrs'],
-                                                                                          'providesSubnet')))
+        out = self.queryGraph(gIn, URIRef(self.prefixes['main']),
+                              search=URIRef(f"{self.prefixes['mrs']}providesSubnet"))
         for connectionID in out:
             self._recordMapping(connectionID, returnout, 'SubnetMapping', 'providesSubnet')
             returnout.setdefault('vsw', {})

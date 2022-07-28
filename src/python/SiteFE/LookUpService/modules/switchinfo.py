@@ -104,11 +104,11 @@ class SwitchInfo():
         if not subkey:
             return
         val = generateVal(self, val, key, False)
-        labeluri = '%s:%s' % (newuri, "%s+%s" % (key, subkey))
+        labeluri = f"{newuri}:{key}+{subkey}"
         reptype = key
         if key in ['ipv4', 'ipv6']:
             reptype = f'{key}-address'
-            labeluri = '%s:%s' % (newuri, "%s-address+%s" % (key, subkey))
+            labeluri = f"{newuri}:{key}-address+{subkey}"
         self.addToGraph(['site', newuri],
                         ['mrs', 'hasNetworkAddress'],
                         ['site', labeluri])
@@ -173,7 +173,7 @@ class SwitchInfo():
                 continue
             try:
                 rst = self.config.get(switchName, 'rst')
-            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+            except (configparser.NoOptionError, configparser.NoSectionError):
                 rst = False
             for portName, portSwitch in list(switchDict.items()):
                 newuri = f":{switchName}:{portName}"
@@ -184,7 +184,7 @@ class SwitchInfo():
 
     def _addSwitchVlanLabel(self, vlanuri, value):
         """Add Switch Vlan Label"""
-        labeluri = '%s:%s' % (vlanuri, "label+%s" % str(value))
+        labeluri = f"{vlanuri}:label+{str(value)}"
         self.addToGraph(['site', vlanuri],
                         ['nml', 'hasLabel'],
                         ['site', labeluri])
@@ -213,7 +213,8 @@ class SwitchInfo():
                     # TODO: LOG LINE
                     continue
                 for taggedIntf in portSwitch['tagged']:
-                    vlanuri = self._addVlanPort(hostname=switchName, portName=taggedIntf, vsw=vsw, vtype='vlanport', vlan=portSwitch['value'])
+                    vlanuri = self._addVlanPort(hostname=switchName, portName=taggedIntf, vsw=vsw,
+                                                vtype='vlanport', vlan=portSwitch['value'])
                     self._addSwitchVlanLabel(vlanuri, portSwitch['value'])
                     if 'vlan_range' in portSwitch:
                         # Vlan range for vlan - this is default coming from switch yaml conf
@@ -266,7 +267,7 @@ class SwitchInfo():
             out = {'hostname': switchName}
             try:
                 out['rst'] = self.config.get(switchName, 'rst')
-            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+            except (configparser.NoOptionError, configparser.NoSectionError):
                 continue
             if 'rst' in out and out['rst']:
                 try:

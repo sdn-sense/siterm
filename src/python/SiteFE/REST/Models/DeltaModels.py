@@ -156,8 +156,8 @@ class frontendDeltaModels():
         print(f'Commit Action for delta {delta}')
         # Now we go directly to commited in case of commit
         if delta['state'] != 'accepted':
-            msg = "Delta    state in the system is not in accepted state. \
-                  State on the system: %s. Not allowed to change." % delta['state']
+            msg = (f"Delta state in the system is not in accepted state."
+                   f"State on the system: {delta['state']}. Not allowed to change.")
             print(msg)
             raise WrongDeltaStatusTransition(msg)
         self.stateM.commit(dbobj, {'uid': deltaID, 'state': 'committing'})

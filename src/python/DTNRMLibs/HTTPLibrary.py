@@ -115,8 +115,8 @@ class Requests(dict):
 
     def addBasicAuth(self, username, password):
         """Add basic auth headers to request if user/pass is used."""
-        authString = "Basic %s" % base64.encodestring('%s:%s' % (
-            username, password)).strip()
+        b64 = base64.encodestring(f'{username}:{password}').strip()
+        authString = f"Basic {b64}"
         self.additionalHeaders["Authorization"] = authString
 
     def get(self, uri=None, data=None, incoming_headers=None,

@@ -156,7 +156,7 @@ class RequestHandler():
             curl.setopt(pycurl.POST, 1)
             if encoded_data:
                 curl.setopt(pycurl.POSTFIELDS, encoded_data)
-        elif verb == 'DELETE' or verb == 'PUT':
+        elif verb in ['DELETE', 'PUT']:
             curl.setopt(pycurl.CUSTOMREQUEST, verb)
             curl.setopt(pycurl.HTTPHEADER, ['Transfer-Encoding: chunked'])
             if encoded_data:
@@ -194,7 +194,7 @@ class RequestHandler():
 
     def debug(self, debug_type, debug_msg):
         """Debug callback implementation."""
-        print("debug(%d): %s" % (debug_type, debug_msg))
+        print(f"debug({debug_type}): {debug_msg}")
 
     def parse_body(self, data, decode=False):
         """Parse body part of URL request (by default use json).
@@ -300,8 +300,7 @@ class RequestHandler():
                             item.update(params)
                             yield item
                         else:
-                            err = 'Unsupported data format: data=%s, type=%s'\
-                                % (item, type(item))
+                            err = f'Unsupported data format: data={item}, type={type(item)}'
                             raise Exception(err)
                 bbuf.flush()
                 hbuf.flush()

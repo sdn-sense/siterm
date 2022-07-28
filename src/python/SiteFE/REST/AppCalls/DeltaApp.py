@@ -173,8 +173,9 @@ def deltas_id(environ, **kwargs):
     if not kwargs['urlParams']['summary']:
         current['addition'] = encodebase64(delta['addition'], kwargs['urlParams']['encode'])
         current['reduction'] = encodebase64(delta['reduction'], kwargs['urlParams']['encode'])
-    print('Returning delta %s information. Few details: ModelID: %s, State: %s, LastModified: %s' % \
-          (current["id"], current["modelId"], current["state"], current["lastModified"]))
+    print((f"Returning delta {current['id']} information. Few details:"
+           f"ModelID: {current['modelId']} State: {current['state']},"
+           f"LastModified: current['lastModified']"))
     kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], [('Last-Modified', httpdate(delta['updatedate']))])
     return [current]
 

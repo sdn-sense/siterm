@@ -46,12 +46,12 @@ class Routing():
         for routel in vlan['routes']:
             if 'routeTo' in list(routel.keys()) and 'nextHop' in list(routel.keys()):
                 if 'value' in list(routel['routeTo'].keys()) and 'value' in list(routel['nextHop'].keys()):
-                    command = "ip route add %s via %s" % (routel['routeTo']['value'],
-                                                          routel['nextHop']['value'].split('/')[0])
+                    subnet = routel['nextHop']['value'].split('/')[0]
+                    command = f"ip route add {routel['routeTo']['value']} via {subnet}"
                     execute(command, self.logger, raiseError)
             else:
-                self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
-                                 % routel)
+                self.logger.info((f"Parsed delta did not had routeTo or nextHop keys in route info."
+                                  f"Route details: {routel}"))
 
     def removeRoute(self, vlan, raiseError=False):
         """Remove Route from DTN"""
@@ -64,8 +64,8 @@ class Routing():
                                                           routel['nextHop']['value'].split('/')[0])
                     out.append(execute(command, self.logger, raiseError))
             else:
-                self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
-                                 % routel)
+                self.logger.info((f"Parsed delta did not had routeTo or nextHop keys in route info."
+                                  f"Route details: {routel}"))
 
     def statusRoute(self, vlan, raiseError=False):
         """Check Status of Route on DTN"""
@@ -76,5 +76,5 @@ class Routing():
                     command = f"ip route get {routel['routeTo']['value']}"
                     execute(command, self.logger, raiseError)
             else:
-                self.logger.info('Parsed delta did not had routeTo or nextHop keys in route info. Route details: %s'
-                                 % routel)
+                self.logger.info((f"Parsed delta did not had routeTo or nextHop keys in route info."
+                                  f"Route details: {routel}"))
