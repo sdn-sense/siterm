@@ -1,0 +1,24 @@
+
+
+
+
+1.0.0
+First major release of Site Resource Manager.
+This includes model generation, communication with SENSE Orchestrator.
+Layer2 and Layer3 Control on Host and switches (Dell OS 9, Arista EOS, Sonic) using ansible.
+BGP control for Dell OS9 and Sonic using ansible.
+Fractional and Static QoS control per VLAN and or IPv[46] Range. More details: https://github.com/sdn-sense/siterm/blob/master/src/python/DTNRMAgent/Ruler/QOS.py#L5-L60
+Code base moved to Python 3.8.
+Templates ready for Kubernetes and Docker installation. More details: https://github.com/sdn-sense/siterm-startup
+
+Supported systems: x86_64 and ppc64le
+Installation details: https://sdn-sense.github.io/Installation.html
+
+Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
+Docker version for this release:
+x86_64:
+  Agent: sdnsense/site-agent-sense:latest-20220729 (Or use latest)
+  Frontend: sdnsense/site-rm-sense:latest-20220729 (Or use latest)
+ppc64le:
+  Agent: sdnsense/site-agent-sense:latest-ppc64le-20220729 (Or use latest)
+  Frontend: sdnsense/site-rm-sense:latest-ppc64le-20220729 (Or use latest)
