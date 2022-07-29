@@ -28,8 +28,8 @@ fi
 
 NEW_VERSION=$1
 
-sed -i "s/.*VERSION = .*/VERSION = '$NEW_VERSION'/" $FDIR/../setupUtilities.py
-sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/__init__.py
-sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/SiteFE/__init__.py
-sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/DTNRMLibs/__init__.py
-sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/DTNRMAgent/__init__.py
+sed -i "s/.*VERSION = .*/VERSION = '$NEW_VERSION'/" $FDIR/setupUtilities.py
+sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/src/python/__init__.py
+sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/src/python/SiteFE/__init__.py
+sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/src/python/DTNRMLibs/__init__.py
+sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/src/python/DTNRMAgent/__init__.py
