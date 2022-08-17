@@ -685,5 +685,3 @@ def writeActiveDeltas(cls, newConfig):
         cls.dbI.insert('activeDeltas', [activeDeltas])
     elif action == 'update':
         cls.dbI.update('activeDeltas', [activeDeltas])
-    activeDeltas['output'] = evaldict(activeDeltas['output'])
-    return activeDeltas

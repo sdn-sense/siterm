@@ -193,6 +193,14 @@ class StateMachine():
                 self._stateChangerDelta(dbObj, 'removed', **delta)
                 self.modelstatecancel(dbObj, **delta)
 
+    def removed(self, dbObj):
+        """Check on all remove state deltas."""
+        # Remove fully from database
+        for delta in dbObj.get('deltas', search=[['state', 'removed']]):
+            print('Remove %s delta' % delta['id'])
+            dbObj.delete('deltas', [['id', delta['id']]])
+
+
     def failed(self, dbObj, delta):
         """Marks delta as failed. This is only during submission"""
         self._newdelta(dbObj, delta, 'failed')

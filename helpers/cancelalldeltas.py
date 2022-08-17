@@ -3,15 +3,15 @@
 from __future__ import print_function
 import sys
 from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.MainUtilities import getStreamLogger
+from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.FECalls import getDBConn
 from SiteFE.PolicyService.stateMachine import StateMachine
 
 
-LOGGER = getStreamLogger()
 CONFIG = getConfig()
-STATEMACHINE = StateMachine(LOGGER, CONFIG)
+LOGGER = getLoggingObject(config=CONFIG, service='Helpers')
+STATEMACHINE = StateMachine(CONFIG)
 
 
 def deleteAll(sitename, deltaUID=None):
