@@ -31,7 +31,7 @@ class Switch(Node):
         self.output = {'switches': {}, 'ports': {},
                        'vlans': {}, 'routes': {},
                        'lldp': {}, 'info': {},
-                       'portMapping': {}}
+                       'portMapping': {}, 'nametomac': {}}
         self.plugin = None
         if self.config[site]['plugin'] == 'ansible':
             self.plugin = Ansible(self.config, self.site)
@@ -60,7 +60,7 @@ class Switch(Node):
         self.output = {'switches': {}, 'ports': {},
                        'vlans': {}, 'routes': {},
                        'lldp': {}, 'info': {},
-                       'portMapping': {}}
+                       'portMapping': {}, 'nametomac': {}}
 
     def _delPortFromOut(self, switch, portname):
         """Delete Port from Output"""
@@ -203,6 +203,7 @@ class Switch(Node):
         self.output['routes'][switch]['ipv4'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_ipv4')
         self.output['routes'][switch]['ipv6'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_ipv6')
         self.output['lldp'][switch] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_lldp')
+        self.output['nametomac'][switch] = self.plugin.nametomac(self.switches['output'][switch], switch)
 
 
     def getinfo(self, renew=False):

@@ -133,6 +133,8 @@ class Sonic():
                     match = re.search(regex['rules'][1], entry, re.M)
                     if match:
                         entryOut[regName] = match.group(1)
+            if 'remote_port_id' not in entryOut:
+                entryOut['remote_port_id'] = entryOut.get('remote_chassis_id', '')
             if 'local_port_id' in entryOut:
                 out[entryOut['local_port_id']] = entryOut
         return out

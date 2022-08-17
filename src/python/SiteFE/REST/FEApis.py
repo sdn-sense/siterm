@@ -49,6 +49,11 @@ class FrontendRM():
         dbobj = getVal(self.dbI, **kwargs)
         return dbobj.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
 
+    def getswitchdata(self, **kwargs):
+        """Return all Switches information"""
+        dbobj = getVal(self.dbI, **kwargs)
+        return dbobj.get('switches', orderby=['updatedate', 'DESC'], limit=1000)
+
     def addhost(self, inputDict, **kwargs):
         """Adding new host to DB.
 
