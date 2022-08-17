@@ -165,7 +165,7 @@ class SwitchInfo():
     def _addSwitchPortInfo(self, key, switchInfo):
         """Add Switch Port Info for ports, vlans"""
         for switchName, switchDict in list(switchInfo[key].items()):
-            self.logger.debug(f'Working on1 {switchName}')
+            self.logger.debug(f'Adding Switch Port Info {switchName}')
             try:
                 vsw = self.config.get(switchName, 'vsw')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
@@ -201,7 +201,7 @@ class SwitchInfo():
     def _addSwitchVlanInfo(self, key, switchInfo):
         """Add All Vlan Info from switch"""
         for switchName, switchDict in list(switchInfo[key].items()):
-            self.logger.debug(f'Working on {switchName}')
+            self.logger.debug(f'Adding Switch Vlan Info {switchName}')
             try:
                 vsw = self.config.get(switchName, 'vsw')
             except (configparser.NoOptionError, configparser.NoSectionError) as ex:
@@ -210,7 +210,7 @@ class SwitchInfo():
 
             for portName, portSwitch in list(switchDict.items()):
                 if 'tagged' not in portSwitch:
-                    # TODO: LOG LINE
+                    # This simply means vlan created but no tagged ports added. Ignoring it.
                     continue
                 for taggedIntf in portSwitch['tagged']:
                     vlanuri = self._addVlanPort(hostname=switchName, portName=taggedIntf, vsw=vsw,
@@ -225,20 +225,25 @@ class SwitchInfo():
 
     def _addSwitchLldpInfo(self, switchInfo):
         """ADD LLDP Info to MRML"""
-        for hostname, macDict in switchInfo['info'].items():
-            if 'mac' in macDict:
-                mac = macDict['mac']
-            else:
-                continue
-            for lldpHost, lldpDict in switchInfo['lldp'].items():
-                if lldpHost == hostname:
-                    # Loops? No way
+        def getSwitchSiteRMName(allMacs, macLookUp):
+            """SiteRM uses uniques names for switches.
+               Need to map it back via mac address"""
+            for hName, hMacs in allMacs.items():
+                if macLookUp in hMacs:
+                    return hName
+            return None
+
+        for lldpHost, lldpDict in switchInfo['lldp'].items():
+            for lldpIntf, intfDict in lldpDict.items():
+                if 'remote_port_id' not in intfDict:
+                    self.logger.debug(f'Remote port id not available from lldp info. lldp enabled? Full port info {intfDict}')
                     continue
-                for lldpIntf, intfDict in lldpDict.items():
-                    if intfDict['remote_chassis_id'] == mac:
-                        remoteuri = f"{self.prefixes['site']}:{lldpHost}:{self.switch.getSystemValidPortName(lldpIntf)}"
-                        localuri = f":{hostname}:{self.switch.getSystemValidPortName(intfDict['remote_port_id'])}"
-                        self._addIsAlias(uri=localuri, isAlias=remoteuri)
+                macName = getSwitchSiteRMName(switchInfo['nametomac'], intfDict['remote_chassis_id'])
+                if not macName:
+                    continue
+                remoteuri = f"{self.prefixes['site']}:{macName}:{self.switch.getSystemValidPortName(intfDict['remote_port_id'])}"
+                localuri = f":{lldpHost}:{self.switch.getSystemValidPortName(lldpIntf)}"
+                self._addIsAlias(uri=localuri, isAlias=remoteuri)
 
     def _addAddressPool(self, uri):
         """Add Address Pools"""
@@ -263,7 +268,7 @@ class SwitchInfo():
         """Add Route info to MRML"""
 
         for switchName, rstEntries in switchInfo.get('routes', {}).items():
-            self.logger.debug(f'Working on1 {switchName}')
+            self.logger.debug(f'Adding Switch Routes {switchName}')
             out = {'hostname': switchName}
             try:
                 out['rst'] = self.config.get(switchName, 'rst')

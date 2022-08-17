@@ -95,3 +95,7 @@ class Switch():
         if port.startswith('Vlan'):
             return int(port[4:])
         return port
+
+    def nametomac(self, inData, key):
+        """Return all mac's associated to that host. Not in use for RAW plugin"""
+        return []

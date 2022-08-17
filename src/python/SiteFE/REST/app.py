@@ -52,7 +52,6 @@ from DTNRMLibs.MainUtilities import getHeaders
 from DTNRMLibs.MainUtilities import getUrlParams
 from DTNRMLibs.MainUtilities import read_input_data
 from DTNRMLibs.MainUtilities import getCustomOutMsg
-from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.CustomExceptions import HTTPResponses
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.CustomExceptions import NotSupportedArgument
@@ -102,8 +101,9 @@ def feconfig(environ, **kwargs):
     return _CP['MAIN']
 
 
-_FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|deletehost|getdata|servicestate)$')
-_FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata},
+_FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|deletehost|getdata|getswitchdata|servicestate)$')
+_FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata,
+                             'getswitchdata': _FRONTEND_RM.getswitchdata},
                      'PUT': {'addhost': _FRONTEND_RM.addhost,
                              'updatehost': _FRONTEND_RM.updatehost,
                              'deletehost': _FRONTEND_RM.deletehost,

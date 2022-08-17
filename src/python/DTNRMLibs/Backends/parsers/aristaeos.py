@@ -80,8 +80,7 @@ class AristaEOS():
         """Get Info. So far mainly mac address is used"""
         return {'mac': ansibleOut['systemMacAddress']}
 
-    @staticmethod
-    def getlldpneighbors(ansibleOut):
+    def getlldpneighbors(self, ansibleOut):
         """Get LLDP Neighbors information"""
         out = {}
         for localPort, neighbors in ansibleOut['lldpNeighbors'].items():
@@ -103,10 +102,12 @@ class AristaEOS():
                 tmpEntry['remote_system_name'] = lldpInfo['systemName']
             if lldpInfo['neighborInterfaceInfo']['interfaceIdType'] == 'macAddress':
                 # Means this port goes to server itself
-                tmpEntry['remote_port_id'] = lldpInfo['neighborInterfaceInfo']['interfaceDescription']
+                tmpEntry['remote_port_id'] = self.getSystemValidPortName(lldpInfo['neighborInterfaceInfo']['interfaceDescription'])
             elif lldpInfo['neighborInterfaceInfo']['interfaceIdType'] == 'interfaceName':
                 # Means this port goes to another switch
-                tmpEntry['remote_port_id'] = lldpInfo['neighborInterfaceInfo']['interfaceId']
+                tmpEntry['remote_port_id'] = self.getSystemValidPortName(lldpInfo['neighborInterfaceInfo']['interfaceId'])
+            elif lldpInfo['neighborInterfaceInfo']['interfaceIdType'] == 'local':
+                tmpEntry['remote_port_id'] = self.getSystemValidPortName(lldpInfo['neighborInterfaceInfo']['interfaceDescription'])
             out[localPort] = tmpEntry
         return out
 

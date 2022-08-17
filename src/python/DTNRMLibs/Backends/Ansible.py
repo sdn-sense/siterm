@@ -125,10 +125,16 @@ class Switch():
                         if action == '_command':
                             self.logger.info(f'WARNING. ansible_network_os is not defined for {host} host. Ignoring this host')
                             continue
+                        if action not in self.parsers.keys():
+                            self.logger.info('WARNING. ansible action not defined in site-rm code base. Unsupported switch?')
+                            continue
                         hOut.setdefault(keyMapping[self.cmdCounter], {})
                         hOut[keyMapping[self.cmdCounter]] = parserWrapper(self.cmdCounter, host_events['event_data']['res'])
                         self.cmdCounter += 1
                     else:
+                        if action not in self.parsers.keys():
+                            self.logger.info('WARNING. ansible action not defined in site-rm code base. Unsupported switch?')
+                            continue
                         for val, key in keyMapping.items():
                             hOut.setdefault(key, {})
                             hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
@@ -210,3 +216,13 @@ class Switch():
     def getfactvalues(inData, key):
         """Get custom command output from ansible output, like routing, lldp, mac"""
         return inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get(key, {})
+
+    def nametomac(self, inData, key):
+        """Return all mac's associated to that host. Not in use for RAW plugin"""
+        macs = inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get('ansible_command_info', {}).get('mac', [])
+        if macs and isinstance(macs, str):
+            return [macs]
+        if macs and isinstance(macs, list):
+            return macs
+        self.logger.debug(f'Warning. Mac info not available for switch {key}. Path links might be broken.')
+        return []
