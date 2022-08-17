@@ -35,7 +35,9 @@ class FrontendRM():
     def __init__(self):
         self.initialized = False
         self.config = getConfig()
-        self.logger = getLoggingObject(config=self.config, logFile='/var/log/dtnrm-site-fe/http-api/', service='http-api')
+        self.logger = getLoggingObject(config=self.config,
+                                       logFile='/var/log/dtnrm-site-fe/http-api/',
+                                       service='http-api')
         self.siteDB = contentDB(config=self.config)
         self.dbI = getDBConn('REST-Frontend', self)
 
@@ -53,6 +55,11 @@ class FrontendRM():
         """Return all Switches information"""
         dbobj = getVal(self.dbI, **kwargs)
         return dbobj.get('switches', orderby=['updatedate', 'DESC'], limit=1000)
+
+    def getactivedeltas(self, **kwargs):
+        """Return all Active Deltas"""
+        dbobj = getVal(self.dbI, **kwargs)
+        return dbobj.get('activeDeltas', orderby=['updatedate', 'DESC'], limit=1000)
 
     def addhost(self, inputDict, **kwargs):
         """Adding new host to DB.
@@ -135,6 +142,7 @@ class FrontendRM():
         return dbobj.get('debugrequestsids', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getalldebughostname(self, **kwargs):
+        """Get all Debug Requests for hostname"""
         dbobj = getVal(self.dbI, **kwargs)
         search = [['hostname', kwargs['mReg'][1]], ['state', 'new']]
         return dbobj.get('debugrequests', orderby=['updatedate', 'DESC'], search=search, limit=1000)

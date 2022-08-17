@@ -9,6 +9,7 @@ Date: 2021/12/01
 """
 import os
 import sys
+import copy
 import tempfile
 import pprint
 import time
@@ -30,6 +31,7 @@ from DTNRMLibs.MainUtilities import getVal
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to general
+from SiteFE.LookUpService.lookup import execute as updateModel
 
 def getError(ex):
     """Get Error from Exception."""
@@ -61,12 +63,16 @@ class PolicyService(RDFHelper):
         self.scannedPorts = {}
         self.scannedRoutes = []
         self.conflictChecker = ConflictChecker()
+        self.currentActive = {}
+        self.newActive = {}
 
     def __clean(self):
         """Clean params of PolicyService"""
         self.bidPorts = {}
         self.scannedPorts = {}
         self.scannedRoutes = []
+        self.currentActive = {}
+        self.newActive = {}
 
     def intOut(self, inport, out):
         """
@@ -348,8 +354,10 @@ class PolicyService(RDFHelper):
     def generateActiveConfigDict(self):
         """Generate new config from parser model."""
         _, currentGraph = getCurrentModel(self, True)
-        currentActive = getActiveDeltas(self)
+        forceModelUpdate = False
         for delta in self.dbI.get('deltas', search=[['state', 'activating'], ['modadd', 'add']]):
+            self.currentActive = getActiveDeltas(self)
+            self.newActive = copy.deepcopy(self.currentActive)
             # Deltas keep string in DB, so we need to eval that
             # 1. Get delta content for reduction, addition
             # 2. Add into model and see if it overlaps with any
@@ -371,27 +379,31 @@ class PolicyService(RDFHelper):
                         currentGraph += gIn
                     os.unlink(tmpFile)
             # Now we parse new model and generate new currentActive config
-            newConfig = self.parseModel(currentGraph)
+            self.newActive['output'] = self.parseModel(currentGraph)
             # Now we ready to check if any of deltas overlap
             # if they do - means new delta should not be added
             # And we should get again clean model for next delta check
-            if not self.conflictChecker.checkConflicts(self, newConfig, currentActive['output']):
-                currentActive['output'] = newConfig
-                currentActive = writeActiveDeltas(self, currentActive['output'])
+            if not self.conflictChecker.checkConflicts(self, self.newActive['output'], self.currentActive['output']):
                 self.stateMachine._modelstatechanger(self.dbI, 'added', **delta)
+                writeActiveDeltas(self, self.newActive['output'])
+                self.currentActive['output'] = copy.deepcopy(self.newActive['output'])
+                forceModelUpdate = True
             else:
                 self.stateMachine._modelstatechanger(self.dbI, 'failed', **delta)
+                forceModelUpdate = True
 
-        self.logger.info('Parsing Current Model')
-        self.parseModel(currentGraph)
+        self.currentActive = getActiveDeltas(self)
         # 3. Check if any delta expired, remove it from dictionary
         self.logger.info('Conflict Check of expired entities')
-        newconf, cleaned = self.conflictChecker.checkActiveConfig(currentActive['output'])
-        self.logger.info('Conflict Check for diff outcomes')
-        if cleaned or self.conflictChecker.checkConflicts(self, newconf, currentActive['output']):
+        newconf, cleaned = self.conflictChecker.checkActiveConfig(self.currentActive['output'])
+        if cleaned:
             self.logger.info('IMPORTANT: State changed. Writing new config to DB.')
-            currentActive['output'] = newconf
-            writeActiveDeltas(self, currentActive['output'])
+            self.currentActive['output'] = newconf
+            writeActiveDeltas(self, self.currentActive['output'])
+            self.currentActive = getActiveDeltas(self)
+        if forceModelUpdate:
+            self.logger.info('Config Changed. Forcing Model update')
+            updateModel()
 
     def startwork(self):
         """Start Policy Service."""
@@ -406,7 +418,9 @@ class PolicyService(RDFHelper):
         for job in [['committing', self.stateMachine.committing],
                     ['committed', self.stateMachine.committed],
                     ['activating', self.stateMachine.activating],
-                    ['activated', self.stateMachine.activated]]:
+                    ['activated', self.stateMachine.activated],
+                    ['remove', self.stateMachine.remove],
+                    ['removed', self.stateMachine.removed]]:
             self.logger.info(f"Starting check on {job[0]} deltas")
             job[1](self.dbI)
 
@@ -431,6 +445,7 @@ class PolicyService(RDFHelper):
     def acceptDelta(self, deltapath):
         """Accept delta."""
         currentGraph = self.deltaToModel(None, None, None)
+        self.currentActive = getActiveDeltas(self)
         deltapath = self.siteDB.moveFile(deltapath,
                                          os.path.join(self.config.get(self.sitename, 'privatedir'), "PolicyService/"))
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
