@@ -21,6 +21,7 @@ class Switch():
     """Ansible Switch Module"""
     def __init__(self, config, sitename):
         self.parsers = parsers.ALL
+        self.defVlans = parsers.MAPPING
         self.config = config
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service='SwitchBackends')

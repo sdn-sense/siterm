@@ -30,6 +30,7 @@ class Sonic():
         # You can find more details here of other possible switches.
         # https://docs.w3cub.com/ansible/
         self.factName = ['sonic_command']
+        self.defVlanNaming = 'Vlan%(vlanid)s'
         self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
         self.runnincConf = {}
 

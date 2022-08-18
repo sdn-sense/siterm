@@ -18,6 +18,7 @@ class DellOS9():
     """Dell OS 9 Parser"""
     def __init__(self, **kwargs):
         self.factName = ['dellemc.os9.os9_facts', 'dellemc.os9.os9_command']
+        self.defVlanNaming = 'Vlan %(vlanid)s'
         self.regexs = [r'^tagged (.+) (.+)', r'^untagged (.+) (.+)', r'^channel-member (.+) (.+)', r'^(Port-channel) (.+)']
         self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
 
