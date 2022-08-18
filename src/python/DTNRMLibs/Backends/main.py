@@ -31,8 +31,7 @@ class Switch(Node):
         self.output = {'switches': {}, 'ports': {},
                        'vlans': {}, 'routes': {},
                        'lldp': {}, 'info': {},
-                       'portMapping': {}, 'nametomac': {},
-                       'defaultVlanName': {}}
+                       'portMapping': {}, 'nametomac': {}}
         self.plugin = None
         if self.config[site]['plugin'] == 'ansible':
             self.plugin = Ansible(self.config, self.site)
@@ -61,8 +60,7 @@ class Switch(Node):
         self.output = {'switches': {}, 'ports': {},
                        'vlans': {}, 'routes': {},
                        'lldp': {}, 'info': {},
-                       'portMapping': {}, 'nametomac': {},
-                       'defaultVlanName': {}}
+                       'portMapping': {}, 'nametomac': {}}
 
     def _delPortFromOut(self, switch, portname):
         """Delete Port from Output"""
