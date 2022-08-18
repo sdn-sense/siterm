@@ -18,8 +18,10 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
+from DTNRMLibs.ipaddr import normalizedip
 
-def dictCompare(inDict, oldDict):
+
+def dictCompare(inDict, oldDict, key1):
     """Compare dict and set any remaining items
        from current ansible yaml as absent in new one if
        it's status is present"""
@@ -28,17 +30,20 @@ def dictCompare(inDict, oldDict):
         return
     for key, val in oldDict.items():
         if isinstance(val, dict):
-            dictCompare(inDict.setdefault(key, {}), val)
+            dictCompare(inDict.setdefault(key, {}), val, key1)
             if not inDict[key]:
                 # if it is empty after back from loop, delete
                 del inDict[key]
             continue
-        if val == 'present' and key not in inDict.keys():
+        tmpKey = key
+        if key1 in ['ipv4_address', 'ipv6_address']:
+            tmpKey = normalizedip(key)
+        if val == 'present' and tmpKey not in inDict.keys():
             # Means current state is present, but model does not know anything
-            inDict[key] = 'absent'
+            inDict[tmpKey] = 'absent'
         elif val not in ['present', 'absent']:
             # Ensure we pre-keep all other keys
-            inDict[key] = val
+            inDict[tmpKey] = val
     return
 
 class VirtualSwitchingService():
@@ -79,14 +84,16 @@ class VirtualSwitchingService():
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
         if portDict.get('hasNetworkAddress', {}).get('ipv4-address', {}).get('value', ""):
             vlanDict.setdefault('ipv4_address', {})
-            vlanDict['ipv4_address'][portDict['hasNetworkAddress']['ipv4-address']['value']] = 'present'
+            ip = normalizedip(portDict['hasNetworkAddress']['ipv4-address']['value'])
+            vlanDict['ipv4_address'][ip] = 'present'
 
     def _addIPv6Address(self, host, port, portDict):
         """Add IPv6 to expected yaml conf"""
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
         if portDict.get('hasNetworkAddress', {}).get('ipv6-address', {}).get('value', ""):
             vlanDict.setdefault('ipv6_address', {})
-            vlanDict['ipv6_address'][portDict['hasNetworkAddress']['ipv6-address']['value']] = 'present'
+            ip = normalizedip(portDict['hasNetworkAddress']['ipv6-address']['value'])
+            vlanDict['ipv6_address'][ip] = 'present'
 
     def _presetDefaultParams(self, host, port, portDict):
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
@@ -126,6 +133,6 @@ class VirtualSwitchingService():
             for key1, val1 in val.items():
                 if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ipv4_address', 'ipv6_address']:
                     yamlOut = self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, {})
-                    dictCompare(yamlOut, val1)
+                    dictCompare(yamlOut, val1, key1)
                 elif isinstance(val1, (dict, list)):
                     raise Exception(f'Got unexpected dictionary in comparison {val}')
