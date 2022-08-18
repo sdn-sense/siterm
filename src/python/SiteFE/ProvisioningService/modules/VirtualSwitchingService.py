@@ -63,7 +63,7 @@ class VirtualSwitchingService():
         if 'hasLabel' not in portDict or 'value' not in portDict['hasLabel']:
             raise Exception(f'Bad running config. Missing vlan entry: {host} {port} {portDict}')
         vlan = portDict['hasLabel']['value']
-        vlanName = self.switch._getSwitchPortName(host, f'Vlan{vlan}', vlan)
+        vlanName = self.switch._getSwitchPortName(host, f'Vlan{vlan}', {'vlanid': vlan})
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault('name', vlanName)
         tmpVrf = self.getConfigValue(host, 'vrf')

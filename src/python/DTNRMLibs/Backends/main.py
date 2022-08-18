@@ -118,10 +118,12 @@ class Switch(Node):
         # as you can see in getSystemValidPortName -
         # Port name from Orchestrator will come modified.
         # We need a way to revert it back to systematic switch port name
+        if vlanid:
+            netOS = self.plugin.getAnsNetworkOS(switchName)
+            if netOS in self.plugin.defVlans:
+                return self.plugin.defVlans[netOS] % vlanid
         sysPort = self.output['portMapping'].get(switchName, {}).get(portName, "")
-        if not sysPort and vlanid:
-            sysPort = f'Vlan {vlanid}'
-        elif not sysPort:
+        if not sysPort:
             sysPort = portName
         return sysPort
 

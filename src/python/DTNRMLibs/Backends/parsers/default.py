@@ -26,6 +26,7 @@ class Default():
         # You can find more details here of other possible switches.
         # https://docs.w3cub.com/ansible/
         self.factName = ['default_facts', 'default_command']
+        self.defVlanNaming = 'Vlan%(vlanid)s'
         self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
 
     def getinfo(self, ansibleOut):
