@@ -30,7 +30,7 @@ from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import publishToSiteFE
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
-
+from DTNRMLibs.CustomExceptions import FailedGetDataFromFE
 
 COMPONENT = 'Debugger'
 
@@ -52,7 +52,7 @@ class Debugger():
         if out[2] != 'OK':
             msg = f'Received a failure getting information from Site Frontend {str(out)}'
             self.logger.critical(msg)
-            return {}
+            raise FailedGetDataFromFE(msg)
         return evaldict(out[0])
 
     def getAllAssignedtoHost(self):
