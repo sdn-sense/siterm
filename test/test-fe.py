@@ -44,6 +44,7 @@ class TestUtils(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        """Set Up Class. Set CERT/KEY env params"""
         os.environ["X509_USER_KEY"] = cls.PARAMS['key']
         os.environ["X509_USER_CERT"] = cls.PARAMS['cert']
 
@@ -234,7 +235,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(out[2], 'OK')
         if len(out) >= 1:
             modeloptions = [['encode', True, 200, "OK"], ['summary', True, 200, "OK"],
-                            ['encode', False, 200, "OK"], ['summary', False, 200, "OK"],]
+                            ['encode', False, 200, "OK"], ['summary', False, 200, "OK"]]
             model = out[0][0]
             hurl = model['href'][len(self.PARAMS['hostname']):]
             out = makeRequest(self, hurl, {'verb': 'GET', 'data': {}})
@@ -291,5 +292,4 @@ if __name__ == '__main__':
     with open('test-config.yaml', 'r', encoding='utf-8') as fd:
         conf = yaml.safe_load(fd)
     TestUtils.PARAMS = conf
-    #{'hostname': "https://sdn-login-1.ultralight.org:8443", 'sitename': 'T2_US_Caltech_Test'}
     unittest.main()
