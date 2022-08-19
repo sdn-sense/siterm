@@ -4,6 +4,7 @@ import json
 import unittest
 import pathlib
 import http.client
+import yaml
 from DTNRMLibs.HTTPLibrary import Requests
 from DTNRMLibs.MainUtilities import getUTCnow
 
@@ -40,6 +41,12 @@ def debugActions(cls, dataIn, dataUpd):
 class TestUtils(unittest.TestCase):
     """UnitTest"""
     PARAMS = {}
+
+    @classmethod
+    def setUpClass(cls):
+        """Set Up Class. Set CERT/KEY env params"""
+        os.environ["X509_USER_KEY"] = cls.PARAMS['key']
+        os.environ["X509_USER_CERT"] = cls.PARAMS['cert']
 
     def test_fake_url(self):
         """Test Fake Url"""
@@ -196,35 +203,93 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
 
-# "%(sitename)/sitefe/json/frontend/servicestate" PUT
-# TODO Write Unit tests for get deltas, submit delta, check model.
-# _DELTAS_RE = re.compile(r'^/*v1/deltas/?$')
-#          (_DELTAS_RE, deltas, ['GET', 'POST'], [{"key": "summary", "default": True, "type": bool},
-#                                                 {"key": "oldview", "default": False, "type": bool},
-#                                                 {"key": "encode", "default": True, "type": bool},
-#                                                 {"key": "model", "default": "turtle", "type": str, "options": ['turtle']}], []),
-#          
-# _DELTA_STATES_RE = re.compile(r'^/*v1/deltastates/([-_A-Za-z0-9]+)/?$')
-#            (_DELTA_STATES_RE, delta_states, ['GET'], [], []),]
-# _DELTAS_ID_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/?$')
-#          (_DELTAS_ID_RE, deltas_id, ['GET', 'DELETE'], [{"key": "model", "default": "turtle", "type": str, "options": ['turtle']},
-#                                                         {"key": "encode", "default": True, "type": bool},
-#                                                         {"key": "oldview", "default": False, "type": bool},
-#                                                         {"key": "summary", "default": False, "type": bool}], []),
-# _DELTAS_ID_ACTION_RE = re.compile(r'^/*v1/deltas/([-_A-Za-z0-9]+)/actions/commit/?$')
-#          (_DELTAS_ID_ACTION_RE, deltas_action, ['PUT', 'GET'], [], []),
-# _MODELS_RE = re.compile(r'^/*v1/models/?$')
-#          (_MODELS_RE, models, ['GET'], [{"key": "current", "default": False, "type": bool},
-#                                         {"key": "summary", "default": True, "type": bool},
-#                                         {"key": "oldview", "default": False, "type": bool},
-#                                         {"key": "encode", "default": True, "type": bool},
-#                                         {"key": "model", "default": "turtle", "type": str, "options": ['turtle']}], []),
-# _MODELS_ID_RE = re.compile(r'^/*v1/models/([-_A-Za-z0-9]+)/?$')
-# [(_MODELS_ID_RE, models_id, ['GET'], [{"key": "encode", "default": False, "type": bool},
-#                                               {"key": "summary", "default": False, "type": bool}], []),
-# _ACTIVE_DELTAS = re.compile(r'^/*v1/activedeltas/?$')
-#          (_ACTIVE_DELTAS, active_deltas, ['GET'], [], []),
+    def test_getactivedeltas(self):
+        """Test getactivedeltas"""
+        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getactivedeltas"
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
+        self.assertEqual(out[1], 200)
+        self.assertEqual(out[2], 'OK')
+
+    def test_getswitchdata(self):
+        """Test getswitchdata"""
+        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getswitchdata"
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
+        self.assertEqual(out[1], 200)
+        self.assertEqual(out[2], 'OK')
+
+    def test_getmodels(self):
+        """Test models"""
+        options = [['summary', True, 200, "OK"], ['current', True, 200, "OK"],
+                   ['oldview', True, 200, "OK"], ['encode', True, 200, "OK"],
+                   ['model', 'turtle', 200, "OK"], ['summary', False, 200, "OK"],
+                   ['current', False, 200, "OK"], ['oldview', False, 200, "OK"],
+                   ['encode', False, 200, "OK"], ['model', 'dummyRandom', 400, "Bad Request"]]
+        url = f"/{self.PARAMS['sitename']}/sitefe/v1/models"
+        for option in options:
+            tmpurl = url + f"?{option[0]}={option[1]}"
+            out = makeRequest(self, tmpurl, {'verb': 'GET', 'data': {}})
+            self.assertEqual(out[1], option[2])
+            self.assertEqual(out[2], option[3])
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
+        self.assertEqual(out[1], 200)
+        self.assertEqual(out[2], 'OK')
+        if len(out) >= 1:
+            modeloptions = [['encode', True, 200, "OK"], ['summary', True, 200, "OK"],
+                            ['encode', False, 200, "OK"], ['summary', False, 200, "OK"]]
+            model = out[0][0]
+            hurl = model['href'][len(self.PARAMS['hostname']):]
+            out = makeRequest(self, hurl, {'verb': 'GET', 'data': {}})
+            self.assertEqual(out[1], 200)
+            self.assertEqual(out[2], 'OK')
+            for option in modeloptions:
+                tmpurl = hurl + f"?{option[0]}={option[1]}"
+                out = makeRequest(self, tmpurl, {'verb': 'GET', 'data': {}})
+                self.assertEqual(out[1], option[2])
+                self.assertEqual(out[2], option[3])
+
+    def test_deltas(self):
+        """Test deltas"""
+        options = [['summary', True, 200, "OK"], ['oldview', True, 200, "OK"],
+                   ['encode', True, 200, "OK"], ['model', 'turtle', 200, "OK"],
+                   ['summary', False, 200, "OK"], ['oldview', False, 200, "OK"],
+                   ['encode', False, 200, "OK"], ['model', 'dummyRandom', 400, "Bad Request"]]
+        url = f"/{self.PARAMS['sitename']}/sitefe/v1/deltas"
+        for option in options:
+            tmpurl = url + f"?{option[0]}={option[1]}"
+            out = makeRequest(self, tmpurl, {'verb': 'GET', 'data': {}})
+            self.assertEqual(out[1], option[2])
+            self.assertEqual(out[2], option[3])
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
+        self.assertEqual(out[1], 200)
+        self.assertEqual(out[2], 'OK')
+        if len(out) >= 1:
+            delta = out[0][0]
+            # Delta states
+            url = f"/{self.PARAMS['sitename']}/sitefe/v1/deltastates/{delta['id']}/"
+            out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
+            self.assertEqual(out[1], 200)
+            self.assertEqual(out[2], 'OK')
+            # Delta via href
+            hurl = delta['href'][len(self.PARAMS['hostname']):]
+            out = makeRequest(self, hurl, {'verb': 'GET', 'data': {}})
+            self.assertEqual(out[1], 200)
+            self.assertEqual(out[2], 'OK')
+            for option in options:
+                tmpurl = hurl + f"?{option[0]}={option[1]}"
+                out = makeRequest(self, tmpurl, {'verb': 'GET', 'data': {}})
+                self.assertEqual(out[1], option[2])
+                self.assertEqual(out[2], option[3])
+
+# TODO: Test Full cycle: Submit good delta, Check that delta becomes active
+#                        Check that it get's added to model
+#                        Cancel delta and check that delta becomes active
+#                        And it get's removed from the model
 
 if __name__ == '__main__':
-    TestUtils.PARAMS = {'hostname': "https://sdn-login-1.ultralight.org:8443", 'sitename': 'T2_US_Caltech_Test'}
+    conf = {}
+    if not os.path.isfile('test-config.yaml'):
+        raise Exception('Configuration file not available for unit test')
+    with open('test-config.yaml', 'r', encoding='utf-8') as fd:
+        conf = yaml.safe_load(fd)
+    TestUtils.PARAMS = conf
     unittest.main()
