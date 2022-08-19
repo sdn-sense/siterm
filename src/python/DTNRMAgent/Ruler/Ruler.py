@@ -17,7 +17,7 @@ from DTNRMLibs.MainUtilities import createDirs, getFullUrl, contentDB, getFileCo
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getLoggingObject
-
+from DTNRMLibs.CustomExceptions import FailedGetDataFromFE
 
 COMPONENT = 'Ruler'
 
@@ -44,7 +44,7 @@ class Ruler(QOS, contentDB):
         if out[2] != 'OK':
             msg = f'Received a failure getting information from Site Frontend {str(out)}'
             self.logger.critical(msg)
-            return {}
+            raise FailedGetDataFromFE(msg)
         self.logger.info('End function checkdeltas')
         return evaldict(out[0])
 
