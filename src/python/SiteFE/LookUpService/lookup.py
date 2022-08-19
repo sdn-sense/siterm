@@ -27,7 +27,7 @@ from SiteFE.LookUpService.modules.switchinfo import SwitchInfo
 from SiteFE.LookUpService.modules.nodeinfo import NodeInfo
 from SiteFE.LookUpService.modules.deltainfo import DeltaInfo
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper
-
+from SiteFE.PolicyService.policyService import PolicyService
 
 class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     """Lookup Service prepares MRML model about the system."""
@@ -42,6 +42,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         self.renewSwitchConfig = False
         self.switch = Switch(config, sitename)
         self.prefixes = {}
+        self.police = PolicyService(self.config, self.sitename)
         self.tmpout = {}
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
@@ -106,6 +107,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         # 5, Add all active running config
         # ==================================================================================
         self.addDeltaInfo()
+        changesApplied = self.police.startwork(self.newGraph)
+        if changesApplied:
+            self.addDeltaInfo()
 
         saveName = self.getModelSavePath()
         with open(saveName, "w", encoding='utf-8') as fd:

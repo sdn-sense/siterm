@@ -121,8 +121,7 @@ class FrontendRM():
         """Set Service State in DB."""
         # Only 3 Services are supported to report via URL
         # DTNRM-Agent | DTNRM-Ruler | DTNRM-Debugger
-        if inputDict['servicename'] not in ['Agent', 'Ruler', 'Debugger', 'LookUpService',
-                                            'PolicyService', 'ProvisioningService']:
+        if inputDict['servicename'] not in ['Agent', 'Ruler', 'Debugger', 'LookUpService', 'ProvisioningService']:
             raise NotFoundError(f"This Service {inputDict['servicename']} is not supported by Frontend")
         reportServiceStatus(**{'servicename': inputDict['servicename'], 'servicestate': inputDict['servicestate'],
                                'sitename': kwargs['sitename'], 'hostname': inputDict['hostname'],

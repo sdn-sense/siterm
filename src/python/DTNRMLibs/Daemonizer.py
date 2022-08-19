@@ -259,7 +259,7 @@ class Daemon():
             if not timeeq:
                 self.logger.info('Re-initiating Service with new configuration from GIT')
                 self._refreshConfig()
-                rthread = self.refreshThreads()
+                runThreads = self.refreshThreads()
 
     @staticmethod
     def getThreads():
