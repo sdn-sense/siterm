@@ -113,13 +113,23 @@ class NodeInfo():
 
     def _defL3IPv6(self, hostname, route):
         """Define L3 IPv6 Routing information inside the model for host"""
-        # TODO IPv6 Host Routing
-        # Currently this is what we get from Agent:
-        # {'dst_len': 96, 'iptype': 'ipv6', 'RTA_DST': '::'}
-        # {'dst_len': 96, 'iptype': 'ipv6', 'RTA_DST': '::ffff:0.0.0.0'}
-        # {'dst_len': 24, 'iptype': 'ipv6', 'RTA_DST': '2002:a00::'}
-        # {'dst_len': 24, 'iptype': 'ipv6', 'RTA_DST': '2002:7f00::'}
-        return
+        out = {'hostname': hostname,
+               'rstname': f"rst-{route['iptype']}",
+               'iptype': route['iptype']}
+        for tablegress in['table+defaultIngress', 'table+defaultEgress']:
+            out['rt-table'] = tablegress
+            if 'RTA_GATEWAY' in list(route.keys()):
+                out['routename'] = 'default'
+                out['routetype'] = 'routeTo'
+                out['type'] = f"{route['iptype']}-address"
+                out['value'] = route['RTA_GATEWAY']
+                self._addRouteEntry(**out)
+            elif 'RTA_DST'  in route.keys() and 'dst_len' in route.keys():
+                out['routename'] = validMRMLName(f"{route['RTA_DST']}/{route['dst_len']}")
+                out['routetype'] = 'routeTo'
+                out['type'] = f"{route['iptype']}-prefix-list"
+                out['value'] = f"{route['RTA_DST']}_{route['dst_len']}"
+                self._addRouteEntry(**out)
 
     def _defL3IPv4(self, hostname, route):
         """Define L3 IPv4 Routing information inside the model for host"""
