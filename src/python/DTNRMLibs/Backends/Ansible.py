@@ -15,7 +15,7 @@ import yaml
 import ansible_runner
 from DTNRMLibs.Backends import parsers
 from DTNRMLibs.MainUtilities import getLoggingObject
-
+from DTNRMLibs.CustomExceptions import ConfigException
 
 class Switch():
     """Ansible Switch Module"""
@@ -69,7 +69,11 @@ class Switch():
 
     def _applyNewConfig(self):
         """Apply new config and run ansible playbook"""
-        ansOut = self._executeAnsible('applyconfig.yaml')
+        ansOut = {}
+        try:
+            ansOut = self._executeAnsible('applyconfig.yaml')
+        except ValueError as ex:
+            raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}")
         return ansOut
 
     # 0 - command show version, system. Mainly to get mac address, but might use for more info later.
@@ -103,7 +107,11 @@ class Switch():
 
         keyMapping = {0: 'info', 1: 'lldp', 2: 'ipv4', 3: 'ipv6'}
         out = {}
-        ansOut = self._executeAnsible('maclldproute.yaml')
+        ansOut = {}
+        try:
+            ansOut = self._executeAnsible('maclldproute.yaml')
+        except ValueError as ex:
+            raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}")
         for host, _ in ansOut.stats['ok'].items():
             hOut = out.setdefault(host, {})
             for host_events in ansOut.host_events(host):
@@ -143,7 +151,11 @@ class Switch():
 
     def _getFacts(self):
         """Get All Facts for all Ansible Hosts"""
-        ansOut = self._executeAnsible('getfacts.yaml')
+        ansOut = {}
+        try:
+            ansOut = self._executeAnsible('getfacts.yaml')
+        except ValueError as ex:
+            raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}")
         out = {}
         for host, _ in ansOut.stats['ok'].items():
             out.setdefault(host, {})
