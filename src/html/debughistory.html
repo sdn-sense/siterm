@@ -69,10 +69,9 @@
 
        function loadDebug(debugID, sitename)
        {
-          var data;
           $.ajax({url: sitename + '/sitefe/json/frontend/getdebug/'+ debugID,
             dataType: 'json',
-            data: data,
+            data: {},
             async: false,
             success: function(json){
               json = json[0];
@@ -133,7 +132,7 @@
                  sitename = data['general']['sites'][i];
                  $.ajax({url: sitename + '/sitefe/json/frontend/getdebug/ALL',
                    dataType: 'json',
-                   data: data,
+                   data: {},
                    async: false,
                    success: function(json){
                      data['debug'][sitename] = json;

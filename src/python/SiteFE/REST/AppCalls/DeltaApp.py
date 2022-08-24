@@ -163,6 +163,8 @@ def deltas_id(environ, **kwargs):
         return []
     if kwargs['urlParams']['oldview']:
         kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], [('Last-Modified', httpdate(delta['updatedate']))])
+        delta['insertdate'] = convertTSToDatetime(delta['insertdate'])
+        delta['updatedate'] = convertTSToDatetime(delta['updatedate'])
         return [delta]
     current = {}
     current = {"id": delta['uid'],
