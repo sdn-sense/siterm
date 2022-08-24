@@ -27,37 +27,35 @@
           tableTag.append(theadTag);
           for (rowid in dataIn){
               trow = $('<tr><\/tr>');
-              for (key in dictkeys){trow.append('<td>'+dataIn[rowid][dictkeys[key]]+'<\/td>');}
+              for (key in dictkeys){
+                  console.log(dictkeys[key]);
+		  if (dictkeys[key] === "insertdate"){
+	              var date = new Date(dataIn[rowid][dictkeys[key]] * 1000);
+                      trow.append("<td>"+date.getDate()+"/"+(date.getMonth()+1)+"/"+date.getFullYear()+" "+date.getHours()+":"+date.getMinutes()+":"+date.getSeconds()+"<\/td>");
+                     console.log(date);
+		  }
+                  else {
+                      trow.append('<td>'+dataIn[rowid][dictkeys[key]]+'<\/td>');
+                  }
+	      }
               tableTag.append(trow); 
           }
           saveObj.append(tableTag);
        }
        function deltaStates(deltaID, sitename, saveObj){
-          var data;
           $.ajax({url: sitename + '/sitefe/v1/deltastates/'+ deltaID,
-            dataType: 'json', data: data, async: false,
+            dataType: 'json', data: {}, async: false,
             success: function(json){
                 tableAdd(json, ['id', 'deltaid', 'insertdate', 'state'], saveObj);
             }
          });
        }
 
-       function deltaHostStatesHistory(deltaID, sitename, saveObj){
-          var data;
-          $.ajax({url: sitename + '/sitefe/v1/deltahoststateshistory/'+ deltaID,
-            dataType: 'json', data: data, async: false,
-            success: function(json){
-                tableAdd(json, ['id', 'deltaid', 'hostname', 'insertdate', 'state'], saveObj);
-            }
-         });
-       }
-
        function loadDelta(deltaID, sitename)
        {
-          var data;
           $.ajax({url: sitename + '/sitefe/v1/deltas/'+ deltaID + '?encode=false&summary=false&oldview=true',
             dataType: 'json',
-            data: data,
+            data: {},
             async: false,
             success: function(json){
               json = json[0];
@@ -82,7 +80,7 @@
               model.append('<div class="row">============================================<\/div>');
               var myObject = (0, eval)('(' + json['content'] + ')');
               model.append('<div class="row"><b>    Delta ID: <\/b>' + myObject['id'] + '<\/div>');
-              model.append('<div class="row"><b>    Last Modified: <\/b>' + myObject['lastModified'] + '<\/div>');
+	      model.append('<div class="row"><b>    Last Modified: <\/b>' + myObject['lastModified'] + '<\/div>');
               model.append('<div class="row"><b>    Model ID: <\/b>' + myObject['modelId'] + '<\/div>');
               model.append('<div class="row"><b>    Model Addition: <\/b><\/div>');
               mrmlSaver(myObject['addition'], model);
@@ -91,9 +89,6 @@
               model.append('<div class="row"><b>DELTA STATES:<\/b><\/div>');
               model.append('<div class="row">============================================<\/div>');
               deltaStates(deltaID, sitename, model);
-              model.append('<div class="row"><b>DELTA HOST STATES:<\/b><\/div>');
-              model.append('<div class="row">============================================<\/div>');
-              deltaHostStatesHistory(deltaID, sitename, model);
               $('#v-pills-' + deltaID).empty();
               $('#v-pills-' + deltaID).append(model);
           }});
@@ -126,7 +121,7 @@
                  sitename = data['general']['sites'][i];
                  $.ajax({url: sitename + '/sitefe/v1/deltas',
                    dataType: 'json',
-                   data: data,
+                   data: {},
                    async: false,
                    success: function(json){
                      data['deltas'][sitename] = json;
@@ -136,7 +131,7 @@
             })};
   //]]>
   </script>
-  <title>Site-RM: Frontend Configuration</title>
+  <title>Site-RM: Deltas Information</title>
 </head>
 <body>
   <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">

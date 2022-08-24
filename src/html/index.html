@@ -23,7 +23,7 @@
                 sitename = data['general']['sites'][i];
                 $.ajax({url: data['general']['sites'][i] + '/sitefe/json/frontend/getdata', 
                   dataType: 'json',
-                  data: data,
+                  data: {},
                   async: false, 
                   success: function(json){
                       for (j=0; j < json.length; j++){

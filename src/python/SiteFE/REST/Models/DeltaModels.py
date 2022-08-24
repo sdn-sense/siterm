@@ -90,7 +90,7 @@ class frontendDeltaModels():
         dbobj = getVal(self.dbI, **kwargs)
         if not deltaID:
             return dbobj.get('deltas')
-        out = dbobj.get('deltas', search=[['uid', deltaID]])
+        out = dbobj.get('deltas', search=[['uid', deltaID]], orderby=['insertdate', 'ASC'])
         if not out:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out[0]
@@ -101,22 +101,6 @@ class frontendDeltaModels():
         out = dbobj.get('states', search=[['deltaid', deltaID]])
         if not out:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
-        return out
-
-    def getdeltahoststates(self, deltaID, **kwargs):
-        """Get delta host states from database."""
-        dbobj = getVal(self.dbI, **kwargs)
-        out = dbobj.get('hoststates', search=[['deltaid', deltaID]])
-        if not out:
-            raise DeltaNotFound(f"Delta Host States with {deltaID} id was not found in the system")
-        return out
-
-    def getdeltahoststateshistory(self, deltaID, **kwargs):
-        """Get delta host states history from database."""
-        dbobj = getVal(self.dbI, **kwargs)
-        out = dbobj.get('hoststateshistory', search=[['deltaid', deltaID]])
-        if not out:
-            raise DeltaNotFound(f"Delta Host States with {deltaID} id was not found in the system")
         return out
 
     def getHostNameIDs(self, hostname, state, **kwargs):

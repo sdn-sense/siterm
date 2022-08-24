@@ -19,10 +19,9 @@
 
        function loadModel(modelID, sitename)
        {
-          var data;
           $.ajax({url: sitename + '/sitefe/v1/models/'+ modelID,
             dataType: 'json',
-            data: data,
+            data: {},
             async: false,
             success: function(json){
               model = $('<div><\/div>');
@@ -68,7 +67,7 @@
                  sitename = data['general']['sites'][i];
                  $.ajax({url: sitename + '/sitefe/v1/models',
                    dataType: 'json',
-                   data: data,
+                   data: {},
                    async: false,
                    success: function(json){
                      data['models'][sitename] = json;
