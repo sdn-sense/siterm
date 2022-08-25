@@ -12,6 +12,7 @@ from DTNRMLibs.ipaddr import validMRMLName
 from DTNRMLibs.CustomExceptions import NoOptionError
 from DTNRMLibs.CustomExceptions import NoSectionError
 
+
 def generateVal(cls, inval, inkey, esc=False):
     """Generate mrml valid val/key for ipv4/ipv6"""
     if isinstance(inval, dict) and inkey == 'ipv4':

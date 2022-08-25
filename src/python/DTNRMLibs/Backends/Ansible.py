@@ -35,6 +35,7 @@ class Switch():
         return True
 
     def _getInventoryInfo(self, hosts=None):
+        """Get Inventory Info. If hosts specified, only return for specific hosts"""
         out = {}
         with open(self.config.get('ansible', 'inventory'), 'r', encoding='utf-8') as fd:
             out = yaml.safe_load(fd.read())
@@ -43,7 +44,7 @@ class Switch():
             for osName, oshosts in out.items():
                 for hostname, hostdict in oshosts.get('hosts', {}).items():
                     if hostname in hosts:
-                        tmpOut.setdefault(osName, {'hosts':{}})
+                        tmpOut.setdefault(osName, {'hosts': {}})
                         tmpOut[osName]['hosts'].setdefault(hostname, hostdict)
             return tmpOut
         return out
@@ -54,8 +55,8 @@ class Switch():
                                   inventory=self._getInventoryInfo(hosts),
                                   playbook=playbook,
                                   rotate_artifacts=self.config.get('ansible', 'rotate_artifacts'),
-                                  debug = self.config.getboolean('ansible', 'debug'),
-                                  ignore_logging = self.config.getboolean('ansible', 'ignore_logging'))
+                                  debug=self.config.getboolean('ansible', 'debug'),
+                                  ignore_logging=self.config.getboolean('ansible', 'ignore_logging'))
 
     def getAnsNetworkOS(self, host):
         """Get Ansible network os from hosts file"""

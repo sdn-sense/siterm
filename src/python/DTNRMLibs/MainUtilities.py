@@ -275,6 +275,7 @@ class GitConfig():
                 self.config[key] = requirement['default']
 
     def __addDefaults(self, defaults):
+        """Add default config parameters"""
         for key1, val1 in defaults.items():
             self.config.setdefault(key1, {})
             for key2, val2 in val1.items():
@@ -283,6 +284,7 @@ class GitConfig():
                     self.config[key1][key2].setdefault(key3, val3)
 
     def presetAgentDefaultConfigs(self):
+        """Preset default config parameters for Agent"""
         defConfig = {'MAIN': {'general': {'logDir': '/var/log/dtnrm-agent/',
                                           'logLevel': 'INFO',
                                           'private_dir': '/opt/siterm/config/'}}}
@@ -358,9 +360,9 @@ class getConfig():
 
     def get(self, key, subkey):
         """Custom get from dictionary in a way like configparser"""
-        if not key in self.git.config['MAIN']:
+        if key not in self.git.config['MAIN']:
             raise NoSectionError(f'{key} is not available in configuration.')
-        if not subkey in self.git.config['MAIN'][key]:
+        if subkey not in self.git.config['MAIN'][key]:
             raise NoOptionError(f'{subkey} is not available under {key} section in configuration.')
         return self.git.config['MAIN'].get(key, {}).get(subkey, {})
 
