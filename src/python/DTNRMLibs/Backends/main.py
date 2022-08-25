@@ -208,18 +208,18 @@ class Switch(Node):
         self.output['nametomac'][switch] = self.plugin.nametomac(self.switches['output'][switch], switch)
 
 
-    def getinfo(self, renew=False):
+    def getinfo(self, renew=False, hosts=None):
         """Get info about RAW plugin."""
         # If renew or switches var empty - get latest
         # And update in DB
         if renew or not self.switches:
-            out = self.plugin._getFacts()
+            out = self.plugin._getFacts(hosts)
             self._insertToDB(out)
         self._getDBOut()
         # Clean and prepare output which is returned to caller
         self._cleanOutput()
         switch = self.config.get(self.site, 'switch')
-        for switchn in switch.split(','):
+        for switchn in switch:
             self._setDefaults(switchn)
             self._mergeYamlAndSwitch(switchn)
         self.output = cleanupEmpty(self.nodeinfo())
@@ -231,7 +231,7 @@ def execute(config=None):
     """Main Execute."""
     if not config:
         config = getConfig()
-    for siteName in config.get('general', 'sites').split(','):
+    for siteName in config.get('general', 'sites'):
         switchM = Switch(config, siteName)
         out = switchM.getinfo()
         print(out)

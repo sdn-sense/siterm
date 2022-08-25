@@ -25,7 +25,6 @@ import datetime
 import subprocess
 import hashlib
 import email.utils as eut
-import configparser
 import logging
 import logging.handlers
 from past.builtins import basestring
@@ -41,6 +40,8 @@ from DTNRMLibs.CustomExceptions import WrongInputError
 from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
 from DTNRMLibs.CustomExceptions import NotSupportedArgument
 from DTNRMLibs.CustomExceptions import FailedInterfaceCommand
+from DTNRMLibs.CustomExceptions import NoSectionError
+from DTNRMLibs.CustomExceptions import NoOptionError
 from DTNRMLibs.HTTPLibrary import Requests
 from DTNRMLibs.DBBackend import dbinterface
 
@@ -273,16 +274,57 @@ class GitConfig():
                     raise Exception(f'Configuration /etc/dtnrm.yaml missing non optional config parameter {key}')
                 self.config[key] = requirement['default']
 
+    def __addDefaults(self, defaults):
+        """Add default config parameters"""
+        for key1, val1 in defaults.items():
+            self.config.setdefault(key1, {})
+            for key2, val2 in val1.items():
+                self.config[key1].setdefault(key2, {})
+                for key3, val3 in val2.items():
+                    self.config[key1][key2].setdefault(key3, val3)
+
+    def presetAgentDefaultConfigs(self):
+        """Preset default config parameters for Agent"""
+        defConfig = {'MAIN': {'general': {'logDir': '/var/log/dtnrm-agent/',
+                                          'logLevel': 'INFO',
+                                          'private_dir': '/opt/siterm/config/'}}}
+        self.__addDefaults(defConfig)
+
     def getGitAgentConfig(self):
         """Get Git Agent Config."""
         if self.config['MAPPING']['type'] == 'Agent':
             self.config['MAIN'] = self.gitConfigCache('Agent-main')
+            self.presetAgentDefaultConfigs()
+
+    def presetFEDefaultConfigs(self):
+        """Preset default config parameters for FE"""
+        defConfig = {'MAIN': {'general': {'logDir': '/var/log/dtnrm-site-fe/',
+                                          'logLevel': 'INFO',
+                                          'private_dir': '/opt/siterm/config/'},
+                              'ansible': {'private_data_dir': '/opt/siterm/config/ansible/sense/',
+                                          'inventory': '/opt/siterm/config/ansible/sense/inventory/inventory.yaml',
+                                          'rotate_artifacts': 100,
+                                          'ignore_logging': False,
+                                          'debug': False,
+                                          'inventory_host_vars_dir': '/opt/siterm/config/ansible/sense/inventory/host_vars/'},
+                              'prefixes': {'mrs': "http://schemas.ogf.org/mrs/2013/12/topology#",
+                                           'nml': "http://schemas.ogf.org/nml/2013/03/base#",
+                                           'owl': "http://www.w3.org/2002/07/owl#",
+                                           'rdf': "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                                           'rdfs': "http://www.w3.org/2000/01/rdf-schema#",
+                                           'schema': "http://schemas.ogf.org/nml/2012/10/ethernet",
+                                           'sd': "http://schemas.ogf.org/nsi/2013/12/services/definition#",
+                                           'site': "urn:ogf:network",
+                                           'xml': "http://www.w3.org/XML/1998/namespace#",
+                                           'xsd': "http://www.w3.org/2001/XMLSchema#"}}}
+        self.__addDefaults(defConfig)
 
     def getGitFEConfig(self):
         """Get Git FE Config."""
         if self.config['MAPPING']['type'] == 'FE':
             self.config['MAIN'] = self.gitConfigCache('FE-main')
             self.config['AUTH'] = self.gitConfigCache('FE-auth')
+            self.presetFEDefaultConfigs()
 
     def getGitConfig(self):
         """Get git config from configured github repo."""
@@ -305,37 +347,49 @@ def getGitConfig():
     gitConf.getGitConfig()
     return gitConf.config
 
-def getConfig():
-    """Get parsed configuration in ConfigParser Format.
 
-    This is used till everyone move to YAML based config.
-    TODO: Move all to getGitConfig.
-    """
-    config = getGitConfig()
-    tmpCp = configparser.ConfigParser()
-    if not isinstance(config, dict):
-        print('ERROR: Config from Git returned not dictionary. Malformed yaml?')
-        return None
-    for key, item in list(config['MAIN'].items()):
-        tmpCp.add_section(key)
-        for key1, item1 in list(item.items()):
-            out = item1
-            if isinstance(item1, list):
-                out = ",".join(item1)
-            tmpCp.set(key, key1, str(out))
-    return tmpCp
+class getConfig():
+    """Get Config"""
+    def __init__(self):
+        self.git = GitConfig()
+        self.git.getGitConfig()
 
+    def __getitem__(self, item):
+        """Subscribable item lookup"""
+        return self.git.config['MAIN'][item]
 
-def configToDict(config):
-    """
-    Converts a Config Parser object into a dictionary.
-    """
-    retDict = {}
-    for section in config.sections():
-        retDict[section] = {}
-        for key, val in config.items(section):
-            retDict[section][key] = val
-    return retDict
+    def get(self, key, subkey):
+        """Custom get from dictionary in a way like configparser"""
+        if key not in self.git.config['MAIN']:
+            raise NoSectionError(f'{key} is not available in configuration.')
+        if subkey not in self.git.config['MAIN'][key]:
+            raise NoOptionError(f'{subkey} is not available under {key} section in configuration.')
+        return self.git.config['MAIN'].get(key, {}).get(subkey, {})
+
+    def getraw(self, key):
+        """Get RAW DICT of key"""
+        return self.git.config.get(key, {})
+
+    def getboolean(self, key, subkey):
+        """Return boolean"""
+        val = self.get(key, subkey)
+        if isinstance(val, bool):
+            return val
+        return str(val).lower() in ('yes', 'true', '1')
+
+    def has_section(self, key):
+        """Check if section available"""
+        if self.git.config['MAIN'].get(key, {}):
+            return True
+        return False
+
+    def has_option(self, key, subkey):
+        """Check if option available"""
+        if not self.git.config['MAIN'].get(key, {}):
+            raise NoSectionError(f'{key} section is not available in configuration.')
+        if self.git.config['MAIN'].get(key, {}).get(subkey, {}):
+            return True
+        return False
 
 
 def getFileContentAsJson(inputFile):
@@ -592,7 +646,7 @@ def getDBConn(serviceName='', cls=None):
         config = cls.config
     else:
         config = getConfig()
-    for sitename in config.get('general', 'sites').split(','):
+    for sitename in config.get('general', 'sites'):
         if hasattr(cls, 'dbI'):
             if hasattr(cls.dbI, sitename):
                 # DB Object is already in place!
@@ -616,7 +670,7 @@ def reportServiceStatus(**kwargs):
             dbobj.insert('servicestates', [dbOut])
         else:
             dbobj.update('servicestates', [dbOut])
-    except configparser.NoOptionError:
+    except NoOptionError:
         reported = False
     except Exception:
         excType, excValue = sys.exc_info()[:2]

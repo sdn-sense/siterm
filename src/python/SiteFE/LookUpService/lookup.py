@@ -11,7 +11,6 @@ Date: 2021/12/01
 from __future__ import division
 import os
 import datetime
-import configparser
 from rdflib import Graph
 from rdflib.compare import isomorphic
 from DTNRMLibs.MainUtilities import getLoggingObject
@@ -22,6 +21,8 @@ from DTNRMLibs.MainUtilities import getCurrentModel
 from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.CustomExceptions import NoOptionError
+from DTNRMLibs.CustomExceptions import NoSectionError
 from DTNRMLibs.Backends.main import Switch
 from SiteFE.LookUpService.modules.switchinfo import SwitchInfo
 from SiteFE.LookUpService.modules.nodeinfo import NodeInfo
@@ -67,16 +68,16 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         out = {'sitename': self.sitename, 'labelswapping': "false"}
         self._addSite(**out)
         # Add Service for each Switch
-        for switchName in self.config.get(self.sitename, 'switch').split(','):
+        for switchName in self.config.get(self.sitename, 'switch'):
             out['hostname'] = switchName
             try:
                 out['vsw'] = self.config.get(switchName, 'vsw')
-            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+            except (NoOptionError, NoSectionError) as ex:
                 self.logger.debug('Warning: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
             try:
                 out['labelswapping'] = self.config.get(switchName, 'labelswapping')
-            except configparser.NoOptionError:
+            except NoOptionError:
                 self.logger.debug('Warning. Labelswapping parameter is not defined. Default is False.')
             out['nodeuri'] = self._addNode(**out)
             out['switchingserviceuri'] = self._addSwitchingService(**out)
@@ -102,7 +103,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         # ==================================================================================
         # 4. Define Switch information from Switch Lookup Plugin
         # ==================================================================================
-        self.addSwitchInfo()
+        self.addSwitchInfo(self.renewSwitchConfig)
         # ==================================================================================
         # 5, Add all active running config
         # ==================================================================================
@@ -153,7 +154,7 @@ def execute(config=None):
     """Main Execute."""
     if not config:
         config = getConfig()
-    for siteName in config.get('general', 'sites').split(','):
+    for siteName in config.get('general', 'sites'):
         policer = LookUpService(config, siteName)
         policer.startwork()
 

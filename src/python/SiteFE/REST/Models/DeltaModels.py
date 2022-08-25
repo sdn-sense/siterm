@@ -41,7 +41,7 @@ class frontendDeltaModels():
         else:
             self.dbI = getDBConn('REST-DELTA', self)
         self.policer = {}
-        for sitename in self.config.get('general', 'sites').split(','):
+        for sitename in self.config.get('general', 'sites'):
             policer = polS.PolicyService(config, sitename)
             self.policer[sitename] = policer
         self.stateM = stateM.StateMachine(self.config)

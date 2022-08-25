@@ -8,11 +8,10 @@ Authors:
 
 Date: 2021/12/01
 """
-
-import configparser
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.ipaddr import validMRMLName
 from DTNRMLibs.FECalls import getAllHosts
+from DTNRMLibs.CustomExceptions import NoOptionError
 
 def ignoreInterface(intfKey, intfDict):
     """
@@ -37,7 +36,7 @@ class NodeInfo():
     @staticmethod
     def __getRstsEnabled(hostinfo):
         """Get RSTS Enabled from Agent Config"""
-        rstsEnabled = hostinfo.get('Summary', {}).get('config', {}).get('agent', {}).get('rsts_enabled', '').split(',')
+        rstsEnabled = hostinfo.get('Summary', {}).get('config', {}).get('agent', {}).get('rsts_enabled', [])
         rstsEnabled = list(filter(None, rstsEnabled))
         return rstsEnabled
 
@@ -71,7 +70,7 @@ class NodeInfo():
         try:
             self._nmlLiteral(hosturi, 'latitude', self.config.get(self.sitename, 'latitude'))
             self._nmlLiteral(hosturi, 'longitude', self.config.get(self.sitename, 'longitude'))
-        except configparser.NoOptionError:
+        except NoOptionError:
             self.logger.debug('Either one or both (latitude,longitude) are not defined. Continuing as normal')
 
     def addIntfInfo(self, inputDict, prefixuri, main=True):

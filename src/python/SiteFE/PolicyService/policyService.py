@@ -54,7 +54,7 @@ class PolicyService(RDFHelper):
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.stateMachine = StateMachine(self.config)
         self.hosts = getAllHosts(self.sitename, self.logger)
-        for siteName in self.config.get('general', 'sites').split(','):
+        for siteName in self.config.get('general', 'sites'):
             workDir = os.path.join(self.config.get(siteName, 'privatedir'), "PolicyService/")
             createDirs(workDir)
         self.getSavedPrefixes(self.hosts.keys())
@@ -138,7 +138,7 @@ class PolicyService(RDFHelper):
         self.__clean()
         out = {}
         for key in ['vsw', 'rst']:
-            for switchName in self.config.get(self.sitename, 'switch').split(','):
+            for switchName in self.config.get(self.sitename, 'switch'):
                 if switchName not in self.prefixes.get(key, {}):
                     self.logger.debug('Warning: %s parameter is not defined for %s.', key, switchName)
                     continue
@@ -497,7 +497,7 @@ def execute(config=None, args=None):
                 out = policer.parseModel(newModel)
                 pprint.pprint(out)
         elif args.action == 'fullRun':
-            for sitename in config.get('general', 'sites').split(','):
+            for sitename in config.get('general', 'sites'):
                 policer = PolicyService(config, sitename)
                 currentGraph = policer.deltaToModel(None, None, None)
                 policer.startwork(currentGraph)

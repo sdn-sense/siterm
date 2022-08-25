@@ -33,7 +33,7 @@ class Switch():
         confFName = f"{self.workDir}/{host}.yaml"
         if os.path.isfile(confFName):
             with open(confFName, 'r', encoding='utf-8') as fd:
-                out = yaml.load(fd.read())
+                out = yaml.safe_load(fd.read())
         return out
 
     def _writeHostConfig(self, host, out):
@@ -43,17 +43,17 @@ class Switch():
         with open(confFName, 'w', encoding='utf-8') as fd:
             fd.write(yaml.dump(out))
 
-    def _applyNewConfig(self):
+    def _applyNewConfig(self, hosts=None):
         """RAW Plugin does not apply anything."""
         return {}
 
-    def _getFacts(self):
+    def _getFacts(self, hosts=None):
         """Get Facts for RAW plugin"""
         self.config = getConfig()
         out = {}
-        for switchn in self.config.get(self.sitename, 'switch').split(','):
+        for switchn in self.config.get(self.sitename, 'switch'):
             hOut = out.setdefault(switchn, {})
-            for port in self.config.get(switchn, 'ports').split(','):
+            for port in self.config.get(switchn, 'ports'):
                 portOut = hOut.setdefault('event_data', {}).setdefault('res', {}).setdefault('ansible_facts', {}).setdefault('ansible_net_interfaces', {})
                 portOut[port] = {}
         return out
@@ -73,6 +73,11 @@ class Switch():
     def getvlans(self, inData):
         """Get vlans from output"""
         # In RAW plugin - there is no vlans
+        return []
+
+    def _getMacLLDPRoute(self, hosts=None):
+        """Get mac lldp routes"""
+        # In RAW plugin - there is no macvlan mappings
         return []
 
     @staticmethod
