@@ -130,10 +130,10 @@ class VirtualSwitchingService():
                 # we dont need to set it again. Switch is unhappy to apply
                 # same command if service is not present.
                 self.yamlconf[switch]['interface'].setdefault(key, {'state': 'absent'})
-                continue
-            for key1, val1 in val.items():
-                if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ipv4_address', 'ipv6_address']:
-                    yamlOut = self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, {})
-                    dictCompare(yamlOut, val1, key1)
-                elif isinstance(val1, (dict, list)):
-                    raise Exception(f'Got unexpected dictionary in comparison {val}')
+            if val['state'] != 'absent':
+                for key1, val1 in val.items():
+                    if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ipv4_address', 'ipv6_address']:
+                        yamlOut = self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, {})
+                        dictCompare(yamlOut, val1, key1)
+                    if isinstance(val1, str) and key1 in 'vlanid':
+                        self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, val1)

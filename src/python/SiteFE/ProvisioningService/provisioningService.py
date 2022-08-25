@@ -20,6 +20,7 @@ Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
 import sys
+import copy
 import time
 import json
 import datetime
@@ -53,7 +54,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.lastApplied = None
 
     def _forceApply(self):
-        curDate = datetime.datetime.now().strftime('%Y-%m-%d-%H')
+        curDate = datetime.datetime.now().strftime('%Y-%m-%d')
         if self.lastApplied != curDate:
             self.lastApplied = curDate
             return True
@@ -62,6 +63,12 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
     def __cleanup(self):
         """Cleanup yaml conf output"""
         self.yamlconf = {}
+
+    def __logChanges(self, host):
+        self.logger.info('New Interfaces Config:')
+        self.logger.info(json.dumps(self.yamlconf[host].get('interface', {}), indent=4))
+        self.logger.info('New BGP Config:')
+        self.logger.info(json.dumps(self.yamlconf[host].get('sense_bgp', {}), indent=4))
 
     def getConfigValue(self, section, option, raiseError=False):
         """Get Config Val"""
@@ -142,19 +149,22 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
                     self.yamlconf[host][key] = val
             # Into the host itself append all except interfaces key
             if curActiveConf != self.yamlconf[host]:
-                self.logger.debug('Yaml config changed. New config:')
-                self.logger.debug(json.dumps(self.yamlconf[host], indent=4))
+                self.logger.info('Yaml config changed. New config:')
+                self.__logChanges(host)
                 configChanged = True
                 hosts.append(host)
                 self.switch.plugin._writeHostConfig(host, self.yamlconf[host])
-        if configChanged or self._forceApply():
-            self.logger.info('Apply Config')
+        if configChanged:
+            self.logger.info('Configuration changed. Applying New Configuration')
             # This executes the double apply and it is because of Dell (and might be others)
             # Dell seems to ignore some statements via ansible and requires second aplly
             # TODO: Review this using paramiko and not network_cli.
             self.applyConfig(raiseExc=True, hosts=hosts)
             time.sleep(1)
             self.applyConfig(raiseExc=False, hosts=hosts)
+        if self._forceApply() and not configChanged:
+            self.logger.info('Force Config Apply. Because of Service restart or new day start.')
+            self.applyConfig(raiseExc=True, hosts=hosts)
 
 def execute(config=None, args=None):
     """Main Execute."""
