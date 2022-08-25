@@ -19,6 +19,7 @@ Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
 from DTNRMLibs.MainUtilities import generateMD5
+from DTNRMLibs.ipaddr import normalizedip
 
 def dictCompare(inDict, oldDict):
     """Compare dict and set any remaining items
@@ -65,7 +66,8 @@ class RoutingService():
         tmpD['vrf'] = self.getConfigValue(host, 'vrf')
         if not tmpD['vrf']:
             del tmpD['vrf']
-        tmpD['state'] = 'present'
+        if tmpD:
+            tmpD['state'] = 'present'
         return tmpD
 
     def _addOwnRoutes(self, host, rDict):
@@ -84,6 +86,7 @@ class RoutingService():
             remasn = rDict.get('routeTo', {}).get('bgp-private-asn', {}).get('value', None)
             remip = rDict.get('nextHop', {}).get(f'{iptype}-address', {}).get('value', None)
             if remasn and remip:
+                remip = normalizedip(remip)
                 neighbor = bgpdict.setdefault('neighbor', {}).setdefault(iptype, {}).setdefault(remip, {})
                 if neighbor:
                     raise Exception('Neighbor already defined. MultiPath neighbors not supported')
