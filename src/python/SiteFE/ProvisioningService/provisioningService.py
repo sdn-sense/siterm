@@ -20,7 +20,6 @@ Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
 import sys
-import copy
 import time
 import json
 import datetime
@@ -65,6 +64,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.yamlconf = {}
 
     def __logChanges(self, host):
+        """Log new ansible yaml config"""
         self.logger.info('New Interfaces Config:')
         self.logger.info(json.dumps(self.yamlconf[host].get('interface', {}), indent=4))
         self.logger.info('New BGP Config:')
