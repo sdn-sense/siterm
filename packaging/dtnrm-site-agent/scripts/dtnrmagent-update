@@ -21,7 +21,7 @@ class MyDaemon(Daemon):
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
         outThreads = {}
-        for sitename in self.config.get('general', 'sitename').split(','):
+        for sitename in self.config.get('general', 'sitename'):
             recAgent = RecurringAction(self.config, sitename)
             outThreads[sitename] = recAgent
         return outThreads
