@@ -8,9 +8,9 @@ Authors:
 
 Date: 2021/12/01
 """
-import configparser
 from DTNRMLibs.ipaddr import validMRMLName
-
+from DTNRMLibs.CustomExceptions import NoOptionError
+from DTNRMLibs.CustomExceptions import NoSectionError
 
 def generateVal(cls, inval, inkey, esc=False):
     """Generate mrml valid val/key for ipv4/ipv6"""
@@ -168,12 +168,12 @@ class SwitchInfo():
             self.logger.debug(f'Adding Switch Port Info {switchName}')
             try:
                 vsw = self.config.get(switchName, 'vsw')
-            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+            except (NoOptionError, NoSectionError) as ex:
                 self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
             try:
                 rst = self.config.get(switchName, 'rst')
-            except (configparser.NoOptionError, configparser.NoSectionError):
+            except (NoOptionError, NoSectionError):
                 rst = False
             for portName, portSwitch in list(switchDict.items()):
                 newuri = f":{switchName}:{portName}"
@@ -204,7 +204,7 @@ class SwitchInfo():
             self.logger.debug(f'Adding Switch Vlan Info {switchName}')
             try:
                 vsw = self.config.get(switchName, 'vsw')
-            except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+            except (NoOptionError, NoSectionError) as ex:
                 self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
 
@@ -260,7 +260,7 @@ class SwitchInfo():
                 outVal = self.config.get(key, name)
             else:
                 outVal = self.config.get(self.sitename, name)
-        except (configparser.NoOptionError, configparser.NoSectionError):
+        except (NoOptionError, NoSectionError):
             pass
         return outVal
 
@@ -272,12 +272,12 @@ class SwitchInfo():
             out = {'hostname': switchName}
             try:
                 out['rst'] = self.config.get(switchName, 'rst')
-            except (configparser.NoOptionError, configparser.NoSectionError):
+            except (NoOptionError, NoSectionError):
                 continue
             if 'rst' in out and out['rst']:
                 try:
                     out['private_asn'] = self.config.get(switchName, 'private_asn')
-                except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+                except (NoOptionError, NoSectionError) as ex:
                     self.logger.debug('ERROR: private_asn parameter is not defined (MISCONFIG. Contact Support) for %s. Err: %s', switchName, ex)
                     continue
             for ipX, routeList in rstEntries.items():
@@ -308,10 +308,10 @@ class SwitchInfo():
                         out['value'] = route['from']
                         self._addRouteEntry(**out)
 
-    def addSwitchInfo(self):
+    def addSwitchInfo(self, renew):
         """Add All Switch information from switch Backends plugin."""
         # Get switch information...
-        switchInfo = self.switch.getinfo(True)
+        switchInfo = self.switch.getinfo(renew)
         # Add Switch information to MRML
         self._addSwitchPortInfo('ports', switchInfo)
         self._addSwitchVlanInfo('vlans', switchInfo)

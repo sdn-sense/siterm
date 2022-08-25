@@ -8,9 +8,9 @@ Authors:
 
 Date: 2021/12/01
 """
-import configparser
 from rdflib import URIRef, Literal
 from rdflib.namespace import XSD
+from DTNRMLibs.CustomExceptions import NoOptionError
 
 class RDFHelper():
     """RDF Helper preparation class."""
@@ -25,7 +25,7 @@ class RDFHelper():
                       f":{self.config.get(self.sitename, 'domain')}"
                       f":{self.config.get(self.sitename, 'year')}")
         prefixes['site'] = prefixSite
-        for switchName in self.config.get(self.sitename, 'switch').split(','):
+        for switchName in self.config.get(self.sitename, 'switch'):
             for key in ['vsw', 'rst']:
                 try:
                     tKey = self.config.get(switchName, key)
@@ -34,7 +34,7 @@ class RDFHelper():
                         continue
                     prefixes.setdefault(key, {})
                     prefixes[key][switchName] = f"{prefixes['site']}:{tKey}:service+{key}"
-                except configparser.NoOptionError:
+                except NoOptionError:
                     self.logger.debug('ERROR: %s parameter is not defined for %s.', key, switchName)
                     continue
         self.prefixes = prefixes
@@ -395,8 +395,8 @@ class RDFHelper():
         iptypes = []
         if kwargs.get('nodetype', '') == 'switch' and kwargs.get('hostname', 'no-host') in self.prefixes.get('rst', {}):
             try:
-                iptypes = self.config.get(kwargs['hostname'], 'rsts_enabled').split(',')
-            except configparser.NoOptionError:
+                iptypes = self.config.get(kwargs['hostname'], 'rsts_enabled')
+            except NoOptionError:
                 iptypes = []
         elif kwargs.get('nodetype', '') == 'server' and kwargs.get('rsts_enabled', ''):
             iptypes = kwargs.get('rsts_enabled')

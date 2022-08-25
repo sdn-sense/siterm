@@ -22,7 +22,6 @@ UpdateDate              : 2022/05/09
 import sys
 import time
 import json
-import configparser
 import datetime
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getLoggingObject
@@ -32,6 +31,8 @@ from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.Backends.main import Switch
+from DTNRMLibs.CustomExceptions import NoOptionError
+from DTNRMLibs.CustomExceptions import NoSectionError
 from SiteFE.ProvisioningService.modules.RoutingService import RoutingService
 from SiteFE.ProvisioningService.modules.VirtualSwitchingService import VirtualSwitchingService
 
@@ -66,7 +67,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         """Get Config Val"""
         try:
             return self.config.get(section, option)
-        except (configparser.NoOptionError, configparser.NoSectionError) as ex:
+        except (NoOptionError, NoSectionError) as ex:
             if raiseError:
                 raise ex
         return ''
@@ -92,9 +93,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.addvsw(activeConfig, switches)
         self.addrst(activeConfig, switches)
 
-    def applyConfig(self, raiseExc=True):
+    def applyConfig(self, raiseExc=True, hosts=None):
         """Apply yaml config on Switch"""
-        ansOut = self.switch.plugin._applyNewConfig()
+        ansOut = self.switch.plugin._applyNewConfig(hosts)
         if not ansOut:
             return
         for host, _ in ansOut.stats.get('failures', {}).items():
@@ -123,6 +124,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.prepareYamlConf(activeDeltas['output'], switches)
 
         configChanged = False
+        hosts = []
         for host in switches:
             curActiveConf = self.switch.plugin._getHostConfig(host)
             # Add all keys  from curActiveConf, except interface key
@@ -143,15 +145,16 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
                 self.logger.debug('Yaml config changed. New config:')
                 self.logger.debug(json.dumps(self.yamlconf[host], indent=4))
                 configChanged = True
+                hosts.append(host)
                 self.switch.plugin._writeHostConfig(host, self.yamlconf[host])
         if configChanged or self._forceApply():
             self.logger.info('Apply Config')
             # This executes the double apply and it is because of Dell (and might be others)
             # Dell seems to ignore some statements via ansible and requires second aplly
             # TODO: Review this using paramiko and not network_cli.
-            self.applyConfig()
+            self.applyConfig(raiseExc=True, hosts=hosts)
             time.sleep(1)
-            self.applyConfig(raiseExc=False)
+            self.applyConfig(raiseExc=False, hosts=hosts)
 
 def execute(config=None, args=None):
     """Main Execute."""
@@ -161,7 +164,7 @@ def execute(config=None, args=None):
         provisioner = ProvisioningService(config, args[1])
         provisioner.startwork()
     else:
-        for sitename in config.get('general', 'sites').split(','):
+        for sitename in config.get('general', 'sites'):
             provisioner = ProvisioningService(config, sitename)
             provisioner.startwork()
 

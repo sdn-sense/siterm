@@ -34,46 +34,58 @@ class Switch():
         """Activating state actions."""
         return True
 
-    @staticmethod
-    def _executeAnsible(playbook):
+    def _getInventoryInfo(self, hosts=None):
+        out = {}
+        with open(self.config.get('ansible', 'inventory'), 'r', encoding='utf-8') as fd:
+            out = yaml.safe_load(fd.read())
+        if hosts:
+            tmpOut = {}
+            for osName, oshosts in out.items():
+                for hostname, hostdict in oshosts.get('hosts', {}).items():
+                    if hostname in hosts:
+                        tmpOut.setdefault(osName, {'hosts':{}})
+                        tmpOut[osName]['hosts'].setdefault(hostname, hostdict)
+            return tmpOut
+        return out
+
+    def _executeAnsible(self, playbook, hosts=None):
         """Execute Ansible playbook"""
-        # TODO control ansible runner params or use default
-        return ansible_runner.run(private_data_dir='/opt/siterm/config/ansible/sense/',
-                                  inventory='/opt/siterm/config/ansible/sense/inventory/inventory.yaml',
+        return ansible_runner.run(private_data_dir=self.config.get('ansible', 'private_data_dir'),
+                                  inventory=self._getInventoryInfo(hosts),
                                   playbook=playbook,
-                                  rotate_artifacts=100)
-                                  #debug = True,
-                                  #ignore_logging = False)
+                                  rotate_artifacts=self.config.get('ansible', 'rotate_artifacts'),
+                                  debug = self.config.getboolean('ansible', 'debug'),
+                                  ignore_logging = self.config.getboolean('ansible', 'ignore_logging'))
 
     def getAnsNetworkOS(self, host):
         """Get Ansible network os from hosts file"""
         return self._getHostConfig(host).get('ansible_network_os', '')
 
-    @staticmethod
-    def _getHostConfig(host):
+    def _getHostConfig(self, host):
         """Get Ansible Host Config"""
-        if not os.path.isfile(f'/opt/siterm/config/ansible/sense/inventory/host_vars/{host}.yaml'):
+        fname = f"{self.config.get('ansible', 'inventory_host_vars_dir')}/{host}.yaml"
+        if not os.path.isfile(fname):
             raise Exception(f'Ansible config file for {host} not available.')
-        with open(f'/opt/siterm/config/ansible/sense/inventory/host_vars/{host}.yaml', 'r', encoding='utf-8') as fd:
-            out = yaml.load(fd.read())
+        with open(fname, 'r', encoding='utf-8') as fd:
+            out = yaml.safe_load(fd.read())
         return out
 
-    @staticmethod
-    def _writeHostConfig(host, out):
+    def _writeHostConfig(self, host, out):
         """Write Ansible Host config file"""
-        if not os.path.isfile(f'/opt/siterm/config/ansible/sense/inventory/host_vars/{host}.yaml'):
+        fname = f"{self.config.get('ansible', 'inventory_host_vars_dir')}/{host}.yaml"
+        if not os.path.isfile(fname):
             raise Exception(f'Ansible config file for {host} not available.')
-        with open(f'/opt/siterm/config/ansible/sense/inventory/host_vars/{host}.yaml', 'w', encoding='utf-8') as fd:
+        with open(fname, 'w', encoding='utf-8') as fd:
             fd.write(yaml.dump(out))
 
 
-    def _applyNewConfig(self):
+    def _applyNewConfig(self, hosts=None):
         """Apply new config and run ansible playbook"""
         ansOut = {}
         try:
-            ansOut = self._executeAnsible('applyconfig.yaml')
+            ansOut = self._executeAnsible('applyconfig.yaml', hosts)
         except ValueError as ex:
-            raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}")
+            raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}") from ex
         return ansOut
 
     # 0 - command show version, system. Mainly to get mac address, but might use for more info later.
@@ -85,7 +97,7 @@ class Switch():
     # For Azure Sonic - we use normal ssh and command line. - There is also Dell Sonic Module
     # but that one depends on sonic-cli - which is broken in latest Azure Image (py2/py3 mainly),
     # See https://github.com/Azure/SONiC/issues/781
-    def _getMacLLDPRoute(self):
+    def _getMacLLDPRoute(self, hosts=None):
         """Parser for Mac/LLDP/Route Ansible playbook"""
         def parserWrapper(num, andsiblestdout):
             """Parser wrapper to call specific parser function"""
@@ -109,9 +121,9 @@ class Switch():
         out = {}
         ansOut = {}
         try:
-            ansOut = self._executeAnsible('maclldproute.yaml')
+            ansOut = self._executeAnsible('maclldproute.yaml', hosts)
         except ValueError as ex:
-            raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}")
+            raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}") from ex
         for host, _ in ansOut.stats['ok'].items():
             hOut = out.setdefault(host, {})
             for host_events in ansOut.host_events(host):
@@ -149,13 +161,13 @@ class Switch():
                             hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
         return out
 
-    def _getFacts(self):
+    def _getFacts(self, hosts=None):
         """Get All Facts for all Ansible Hosts"""
         ansOut = {}
         try:
-            ansOut = self._executeAnsible('getfacts.yaml')
+            ansOut = self._executeAnsible('getfacts.yaml', hosts)
         except ValueError as ex:
-            raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}")
+            raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}") from ex
         out = {}
         for host, _ in ansOut.stats['ok'].items():
             out.setdefault(host, {})
@@ -184,7 +196,7 @@ class Switch():
                         host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'][portName].update(portVals)
                 out[host] = host_events
         try:
-            maclldproute = self._getMacLLDPRoute()
+            maclldproute = self._getMacLLDPRoute(hosts)
             for host, hitems in maclldproute.items():
                 if host in out:
                     for key, vals in hitems.items():

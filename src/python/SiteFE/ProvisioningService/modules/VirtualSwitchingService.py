@@ -66,6 +66,7 @@ class VirtualSwitchingService():
         vlanName = self.switch._getSwitchPortName(host, f'Vlan{vlan}', {'vlanid': vlan})
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault('name', vlanName)
+        vlanDict.setdefault('vlanid', vlan)
         tmpVrf = self.getConfigValue(host, 'vrf')
         if tmpVrf:
             vlanDict.setdefault('vrf', tmpVrf)

@@ -25,7 +25,7 @@ NAME = 'NetInfo'
 
 def presetMacVlans(netInfo, mainIntf, config):
     """Preset macvlan info in output"""
-    for macvlan in config.get(mainIntf, 'macvlans').split(','):
+    for macvlan in config.get(mainIntf, 'macvlans'):
         nicInfo = netInfo.setdefault(macvlan, {})
         nicInfo['parent'] = mainIntf
         nicInfo['switch_port'] = str(config.get(mainIntf, "port")).replace('/', '-').replace(' ', '_')
@@ -36,7 +36,7 @@ def get(config):
     """Get all network information"""
     netInfo = {}
     logger = getLoggingObject(logType='StreamLogger')
-    interfaces = config.get('agent', "interfaces").split(",")
+    interfaces = config.get('agent', "interfaces")
     for intf in interfaces:
         nicInfo = netInfo.setdefault(intf, {})
         if config.has_option(intf, 'isAlias'):
