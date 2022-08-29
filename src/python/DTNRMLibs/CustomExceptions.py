@@ -78,6 +78,9 @@ class UnrecognizedDeltaOption(ExceptionTemplate):
 class FailedInterfaceCommand(ExceptionTemplate):
     """Failed to execute Interface command."""
 
+class FailedRoutingCommand(ExceptionTemplate):
+    """Failed to execute Routing command."""
+
 class TooManyArgumentalValues(ExceptionTemplate):
     """Too many argumental values."""
 
