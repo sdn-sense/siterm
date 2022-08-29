@@ -11,6 +11,7 @@ from DTNRMLibs.MainUtilities import externalCommand
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.CustomExceptions import FailedRoutingCommand
 
+
 class Rules():
     """Rules Class"""
     def __init__(self):
@@ -90,6 +91,7 @@ class Routing():
         self._refreshRuleList()
 
     def _refreshRuleList(self):
+        """Refresh Rule list from System"""
         self.rules.clean()
         command = "ip -6 rule list"
         cmdOut = externalCommand(command, False)
@@ -97,12 +99,12 @@ class Routing():
         if cmdOut.returncode != 0:
             raise FailedRoutingCommand(f"Failed to get rule list. Out: {out}, Err: {err}")
         for line in out.split(b'\n'):
-            match = re.match(b'(\d+):[ \t]+from ([^ \t]+) lookup ([^ \t]+)$', line)
+            match = re.match(br'(\d+):[ \t]+from ([^ \t]+) lookup ([^ \t]+)$', line)
             if match:
                 matched = match.groups()
                 self.rules.add_rule(matched[0], matched[1], None, matched[2])
                 continue
-            match = re.match(b'(\d+):[ \t]+from ([^ \t]+) to ([^ \t]+) lookup ([^ \t]+)', line)
+            match = re.match(br'(\d+):[ \t]+from ([^ \t]+) to ([^ \t]+) lookup ([^ \t]+)', line)
             if match:
                 matched = match.groups()
                 self.rules.add_rule(matched[0], matched[1], matched[2], matched[3])
@@ -114,9 +116,8 @@ class Routing():
     def terminate(self, route):
         """Terminate rules"""
         self._refreshRuleList()
-        if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', ''):
-            if self.rules.lookup_to(route['dst_ipv6']):
-                self.apply_rule(f"ip -6 rule del to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
+        if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', '') and self.rules.lookup_to(route['dst_ipv6']):
+            self.apply_rule(f"ip -6 rule del to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
         if route.get('src_ipv6', '') and route.get('src_ipv6_intf', ''):
             if self.rules.lookup_from_lookup(f"{route['src_ipv6']}/128", route['src_ipv6_intf']):
                 self.apply_rule("ip -6 rule del from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
@@ -126,9 +127,8 @@ class Routing():
     def activate(self, route):
         """Activate routes"""
         self._refreshRuleList()
-        if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', ''):
-            if not self.rules.lookup_to(route['dst_ipv6']):
-                self.apply_rule(f"ip -6 rule add to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
+        if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', '') and not self.rules.lookup_to(route['dst_ipv6']):
+            self.apply_rule(f"ip -6 rule add to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
         if route.get('src_ipv6', '') and route.get('src_ipv6_intf', ''):
             if not self.rules.lookup_from_lookup(f"{route['src_ipv6']}/128", route['src_ipv6_intf']):
                 self.apply_rule("ip -6 rule add from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")

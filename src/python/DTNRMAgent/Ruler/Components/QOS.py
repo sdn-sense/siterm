@@ -107,8 +107,6 @@ class QOS():
     # Seems there are issues with QoS when we use really big bites and it complains about this.
     # Solution is to convert to next lower value...
     def convertToRate(self, params):
-        # ['unit'], int(inputDict['params']['reservableCapacity']
-        # ['unit'], int(servParams['rules']['reservableCapacity'])
         """Convert input to rate understandable to fireqos."""
         self.logger.info(f'Converting rate for QoS. Input {params}')
         inputVal, inputRate = params['reservableCapacity'], params['unit']
@@ -157,7 +155,6 @@ class QOS():
         else:
             raise ConfigException('ConfigError: Public Interface not defined. See public_intf config param')
 
-
     @staticmethod
     def _started(inConf):
         """Check if service started"""
@@ -179,11 +176,9 @@ class QOS():
         """Get vlan qos dict"""
         vlans = []
         for key, vals in inParams.items():
-            vlan = {}
-            vlan['destport'] = key
-            vlan['vlan'] = vals.get('hasLabel', {}).get('value', '')
-            vlan['params'] = vals.get('hasService', {})
-            vlans.append(vlan)
+            vlans.append({'destport': key,
+                          'vlan': vals.get('hasLabel', {}).get('value', ''),
+                          'params': vals.get('hasService', {})})
         return vlans
 
     def getAllQOSed(self):
@@ -207,7 +202,7 @@ class QOS():
             self.getMaxThrg()
             self.params['maxtype'] = 'mbit'
             self.params['maxThrgRemaining'] = self.params['maxThrgIntf'] - self.params['defThrgIntf']
-            self.params['maxName'] =  f"{self.params['maxThrgIntf']}{self.params['maxtype']}"
+            self.params['maxName'] = f"{self.params['maxThrgIntf']}{self.params['maxtype']}"
             self.params['l3enabled'] = True
         except ConfigException as ex:
             print(f'L3 DTN Config public intf not defined. Will not add QoS for L3. Exception {ex}')
@@ -293,7 +288,6 @@ class QOS():
             tmpFD.write('  # Default - all remaining traffic gets mapped to default class\n')
             tmpFD.write(f"  class default commit {params['defThrgIntf']}{params['defThrgType']} max {params['maxDefault']}\n")
             tmpFD.write('    match all\n\n')
-
 
     def startqos(self):
         """Main Start."""

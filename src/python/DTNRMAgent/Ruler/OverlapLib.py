@@ -8,6 +8,8 @@ Date: 2022/08/29
 """
 import ipaddress
 import netifaces
+
+
 def getAllIPs():
     """Get All IPs on the system"""
     allIPs = {'ipv4': {}, 'ipv6': {}}
@@ -23,6 +25,7 @@ def getAllIPs():
                     allIPs['ipv6'][address] = intf
     return allIPs
 
+
 def networkOverlap(net1, net2):
     """Check if 2 networks overlap"""
     try:
@@ -34,6 +37,7 @@ def networkOverlap(net1, net2):
         pass
     return False
 
+
 def findOverlaps(service, iprange, allIPs, iptype):
     """Find all networks which overlap and add it to service list"""
     for ipPresent in allIPs.get(iptype, []):
@@ -41,6 +45,7 @@ def findOverlaps(service, iprange, allIPs, iptype):
             service[f"src_{iptype}"] = ipPresent.split('/')[0]
             service[f"src_{iptype}_intf"] = allIPs[iptype][ipPresent]
             break
+
 
 def getAllOverlaps(activeDeltas):
     """Get all overlaps"""
