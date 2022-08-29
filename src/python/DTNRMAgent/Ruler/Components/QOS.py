@@ -71,8 +71,6 @@ import copy
 import tempfile
 import filecmp
 import shutil
-import ipaddress
-import netifaces
 from DTNRMLibs.MainUtilities import createDirs, contentDB
 from DTNRMLibs.MainUtilities import execute as executeCmd
 from DTNRMLibs.MainUtilities import getLoggingObject
@@ -81,44 +79,10 @@ from DTNRMLibs.MainUtilities import getFileContentAsJson
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.CustomExceptions import ConfigException
 from DTNRMLibs.CustomExceptions import OverSubscribeException
+from DTNRMAgent.Ruler.OverlapLib import getAllOverlaps
 
 COMPONENT = 'QOS'
 
-def getAllIPs():
-    """Get All IPs on the system"""
-    allIPs = {'ipv4': [], 'ipv6': []}
-    for intf in netifaces.interfaces():
-        for intType, intDict in netifaces.ifaddresses(intf).items():
-            if int(intType) == 2:
-                for ipv4 in intDict:
-                    address = f"{ipv4.get('addr')}/{ipv4.get('netmask')}"
-                    allIPs['ipv4'].append(address)
-            elif int(intType) == 10:
-                for ipv6 in intDict:
-                    address = f"{ipv6.get('addr')}/{ipv6.get('netmask').split('/')[1]}"
-                    allIPs['ipv6'].append(address)
-    return allIPs
-        #{17: [{'addr': '00:25:90:94:8c:0d', 'broadcast': 'ff:ff:ff:ff:ff:ff'}],
-        # 2: [{'addr': '198.32.43.14', 'netmask': '255.255.255.0', 'broadcast': '198.32.43.255'}],
-        # 10: [{'addr': '2605:d9c0:2:10::2', 'netmask': 'ffff:ffff:ffff:fff0::/60'},
-        #    {'addr': 'fe80::225:90ff:fe94:8c0d%enp5s0f1.43', 'netmask': 'ffff:ffff:ffff:ffff::/64'}]}
-
-def networkOverlap(net1, net2):
-    """Check if 2 networks overlap"""
-    try:
-        net1Net = ipaddress.ip_network(net1, strict=False)
-        net2Net = ipaddress.ip_network(net2, strict=False)
-        if net1Net.overlaps(net2Net):
-            return True
-    except ValueError:
-        pass
-    return False
-
-def findOverlaps(service, iprange, allIPs, iptype):
-    """Find all networks which overlap and add it to service list"""
-    for ipPresent in allIPs.get(iptype, []):
-        if networkOverlap(iprange, ipPresent):
-            service[iptype].append(ipPresent.split('/')[0])
 
 class QOS():
     """QOS class to install new limit rules."""
@@ -143,8 +107,6 @@ class QOS():
     # Seems there are issues with QoS when we use really big bites and it complains about this.
     # Solution is to convert to next lower value...
     def convertToRate(self, params):
-        # ['unit'], int(inputDict['params']['reservableCapacity']
-        # ['unit'], int(servParams['rules']['reservableCapacity'])
         """Convert input to rate understandable to fireqos."""
         self.logger.info(f'Converting rate for QoS. Input {params}')
         inputVal, inputRate = params['reservableCapacity'], params['unit']
@@ -193,7 +155,6 @@ class QOS():
         else:
             raise ConfigException('ConfigError: Public Interface not defined. See public_intf config param')
 
-
     @staticmethod
     def _started(inConf):
         """Check if service started"""
@@ -215,11 +176,9 @@ class QOS():
         """Get vlan qos dict"""
         vlans = []
         for key, vals in inParams.items():
-            vlan = {}
-            vlan['destport'] = key
-            vlan['vlan'] = vals.get('hasLabel', {}).get('value', '')
-            vlan['params'] = vals.get('hasService', {})
-            vlans.append(vlan)
+            vlans.append({'destport': key,
+                          'vlan': vals.get('hasLabel', {}).get('value', ''),
+                          'params': vals.get('hasService', {})})
         return vlans
 
     def getAllQOSed(self):
@@ -243,7 +202,7 @@ class QOS():
             self.getMaxThrg()
             self.params['maxtype'] = 'mbit'
             self.params['maxThrgRemaining'] = self.params['maxThrgIntf'] - self.params['defThrgIntf']
-            self.params['maxName'] =  f"{self.params['maxThrgIntf']}{self.params['maxtype']}"
+            self.params['maxName'] = f"{self.params['maxThrgIntf']}{self.params['maxtype']}"
             self.params['l3enabled'] = True
         except ConfigException as ex:
             print(f'L3 DTN Config public intf not defined. Will not add QoS for L3. Exception {ex}')
@@ -302,20 +261,7 @@ class QOS():
         """BW Requests do not reach Agent. Loop over all RST definitions and
         if any our range is with-in network namespace, we add QoS as defined for RST
         """
-        allIPs = getAllIPs()
-        overlapServices = {}
-        for _key, vals in self.activeDeltas.get('output', {}).get('rst', {}).items():
-            for _, ipDict in vals.items():
-                for iptype, routes in ipDict.items():
-                    if 'hasService' not in routes:
-                        continue
-                    service = overlapServices.setdefault(routes['hasService']['bwuri'], {'ipv4': [],
-                                                                                         'ipv6': [],
-                                                                                         'rules': {}})
-                    service['rules'] = routes['hasService']
-                    for _, routeInfo in routes.get('hasRoute').items():
-                        iprange = routeInfo.get('routeFrom', {}).get(f'{iptype}-prefix-list', {}).get('value', None)
-                        findOverlaps(service, iprange, allIPs, iptype)
+        overlapServices = getAllOverlaps(self.activeDeltas)
         self.findTotalRSTAllocation(overlapServices)
         for qosType in ['input', 'output']:
             params = copy.deepcopy(self.params)
@@ -333,16 +279,15 @@ class QOS():
                 params['resvName'] = f"{params['resvRate']}{params['resvType']}"
                 tmpFD.write(f"  # priority{params['counter']} belongs to {servName} service\n")
                 tmpFD.write(f"  class priority{params['counter']} commit {params['resvName']} max {params['maxName']}\n")
-                for ipval in servParams.get('ipv4', []):
+                for ipval in servParams.get('src_ipv4', []):
                     tmpFD.write(f"    match {params['matchtype']} {ipval}\n")
-                for ipval in servParams.get('ipv6', []):
+                for ipval in servParams.get('src_ipv6', []):
                     tmpFD.write(f"    match6 {params['matchtype']} {ipval}\n")
                 tmpFD.write('\n')
             params['maxDefault'] = f"{int(params['maxThrgIntf'] / (len(overlapServices) + 1))}{params['maxtype']}"
             tmpFD.write('  # Default - all remaining traffic gets mapped to default class\n')
             tmpFD.write(f"  class default commit {params['defThrgIntf']}{params['defThrgType']} max {params['maxDefault']}\n")
             tmpFD.write('    match all\n\n')
-
 
     def startqos(self):
         """Main Start."""
