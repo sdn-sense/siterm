@@ -28,6 +28,7 @@ from DTNRMLibs.MainUtilities import getCurrentModel, getActiveDeltas, writeActiv
 from DTNRMLibs.FECalls import getAllHosts
 from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getVal
+from DTNRMLibs.CustomExceptions import OverlapException
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to general
@@ -35,13 +36,15 @@ from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to ge
 def getError(ex):
     """Get Error from Exception."""
     errors = {IOError: -1, KeyError: -2, AttributeError: -3, IndentationError: -4,
-              ValueError: -5, BadSyntax: -6}
+              ValueError: -5, BadSyntax: -6, OverlapException: -7}
     out = {'errType': 'Unrecognized', 'errNo': -100, 'errMsg': 'Unset'}
-    if ex.__class__ in errors.keys():
-        out['errType'] = str(ex.__class__)
+    out['errType'] = str(ex.__class__)
+    if ex.__class__ in errors:
         out['errNo'] = str(errors[ex.__class__])
     if hasattr(ex, 'message'):
         out['errMsg'] = ex.message
+    else:
+        out['errMsg'] = str(ex)
     return out
 
 class PolicyService(RDFHelper):
@@ -383,11 +386,16 @@ class PolicyService(RDFHelper):
             # Now we ready to check if any of deltas overlap
             # if they do - means new delta should not be added
             # And we should get again clean model for next delta check
-            if not self.conflictChecker.checkConflicts(self, self.newActive['output'], self.currentActive['output']):
+            try:
+                self.conflictChecker.checkConflicts(self, self.newActive['output'], self.currentActive['output'])
                 self.stateMachine._modelstatechanger(self.dbI, 'added', **delta)
                 changesApplied = True
-            else:
+            except OverlapException as ex:
                 self.stateMachine._modelstatechanger(self.dbI, 'failed', **delta)
+                # If delta apply failed we return right away without writing new Active config
+                self.logger.info(f"There was failure applying delta. Failure {ex}")
+                # We return True, so model is regenerated again from scratch
+                return True
 
         if not modelParseRan:
             self.newActive['output'] = self.parseModel(currentGraph)
@@ -449,12 +457,15 @@ class PolicyService(RDFHelper):
         """Accept delta."""
         currentGraph = self.deltaToModel(None, None, None)
         self.currentActive = getActiveDeltas(self)
+        self.newActive = {'output': {}}
         deltapath = self.siteDB.moveFile(deltapath,
                                          os.path.join(self.config.get(self.sitename, 'privatedir'), "PolicyService/"))
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
         self.logger.info(f'Called Accept Delta. Content Location: {deltapath}')
         toDict = dict(fileContent)
         toDict["State"] = "accepting"
+        toDict['Type'] = 'submission'
+        toDict['modadd'] = 'idle'
         try:
             for key in ['reduction', 'addition']:
                 if toDict.get("Content", {}).get(key, {}):
@@ -468,15 +479,21 @@ class PolicyService(RDFHelper):
                             fd.write(decodebase64(toDict["Content"][key]))
                     currentGraph = self.deltaToModel(currentGraph, tmpFile, key)
                     os.unlink(tmpFile)
-            self.parseModel(currentGraph)
+            self.newActive['output'] = self.parseModel(currentGraph)
+            try:
+                self.conflictChecker.checkConflicts(self, self.newActive['output'], self.currentActive['output'])
+            except OverlapException as ex:
+                self.logger.info(f"There was failure accepting delta. Failure {ex}")
+                toDict["State"] = "failed"
+                toDict["Error"] = getError(ex)
+                self.stateMachine.failed(self.dbI, toDict)
+                return toDict
         except IOError as ex:
             toDict["State"] = "failed"
             toDict["Error"] = getError(ex)
             self.stateMachine.failed(self.dbI, toDict)
         else:
             toDict["State"] = "accepted"
-            toDict['modadd'] = 'idle'
-            toDict['Type'] = 'submission'
             self.stateMachine.accepted(self.dbI, toDict)
             # =================================
         return toDict
