@@ -117,19 +117,20 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site'),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Topology')))
-        self.addToGraph(['site'],
-                        ['mrs', 'hasNetworkAddress'],
-                        ['site', 'sitename'])
-        self.addToGraph(['site', 'sitename'],
-                        ['rdf', 'type'],
-                        ['mrs', 'NetworkAddress'])
-        self.addToGraph(['site', 'sitename'],
-                        ['mrs', 'type'],
-                        ['sitename'])
-        self.addToGraph(['site', 'sitename'],
-                        ['mrs', 'value'],
-                        [kwargs['sitename']])
+        self.newGraph.add((self.genUriRef('site'),
+                           self.genUriRef('nml', 'sitename'),
+                           self.genLiteral(kwargs['sitename'])))
+        self.newGraph.add((self.genUriRef('site'),
+                           self.genUriRef('nml', 'name'),
+                           self.genLiteral(kwargs['name'])))
+        self.newGraph.add((self.genUriRef('site'),
+                           self.genUriRef('nml', 'version'),
+                           self.genLiteral(kwargs['version'])))
 
+    def _updateVersion(self, **kwargs):
+        self.newGraph.set((self.genUriRef('site'),
+                              self.genUriRef('nml', 'version'),
+                              self.genLiteral(kwargs['version'])))
 
     def _addNode(self, **kwargs):
         """Add Node to Model"""

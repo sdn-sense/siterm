@@ -12,6 +12,7 @@ from __future__ import division
 import os
 import datetime
 from rdflib import Graph
+from rdflib import URIRef
 from rdflib.compare import isomorphic
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getConfig
@@ -45,6 +46,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         self.prefixes = {}
         self.police = PolicyService(self.config, self.sitename)
         self.tmpout = {}
+        self.modelVersion = ""
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
 
@@ -60,13 +62,34 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         now = datetime.datetime.now()
         saveDir = f"{self.config.get(self.sitename, 'privatedir')}/{'LookUpService'}"
         createDirs(saveDir)
-        return f"{saveDir}/{now.year}-{now.month}-{now.day}:{now.hour}:{now.minute}:{now.second}.mrml"
+        self.modelVersion = f"{now.year}-{now.month}-{now.day}:{now.hour}:{now.minute}:{now.second}"
+        return f"{saveDir}/{self.modelVersion}.mrml"
+
+    def saveModel(self, saveName):
+        """Save Model."""
+        with open(saveName, "w", encoding='utf-8') as fd:
+            fd.write(self.newGraph.serialize(format='turtle'))
+
+    def getVersionFromCurrentModel(self):
+        """Get Current Version from Model."""
+        _, currentGraph = getCurrentModel(self, False)
+        out = self.police.queryGraph(currentGraph, URIRef(self.prefixes['site']),
+                                     search=URIRef(f"{self.prefixes['nml']}version"))
+        if out:
+            self.modelVersion = str(out[0])
+        else:
+            self.getModelSavePath()
+
+    def _addTopTology(self):
+        out = {'sitename': self.sitename, 'labelswapping': "false",
+               "name": self.prefixes['site'], 'version': self.modelVersion}
+        self._addSite(**out)
+        return out
 
     def defineTopology(self):
         """Defined Topology and Main Services available."""
         # Add main Topology
-        out = {'sitename': self.sitename, 'labelswapping': "false"}
-        self._addSite(**out)
+        out = self._addTopTology()
         # Add Service for each Switch
         for switchName in self.config.get(self.sitename, 'switch'):
             out['hostname'] = switchName
@@ -91,21 +114,24 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         # 1. Define Basic MRML Prefixes
         # ==================================================================================
         self.defineMRMLPrefixes()
+        # 2. Get old model and version number
         # ==================================================================================
-        # 2. Define Topology Site
+        self.getVersionFromCurrentModel()
+        # ==================================================================================
+        # 3. Define Topology Site
         # ==================================================================================
         self.defineTopology()
         self.hosts = {}
         # ==================================================================================
-        # 3. Define Node inside yaml
+        # 4. Define Node inside yaml
         # ==================================================================================
         self.addNodeInfo()
         # ==================================================================================
-        # 4. Define Switch information from Switch Lookup Plugin
+        # 5. Define Switch information from Switch Lookup Plugin
         # ==================================================================================
         self.addSwitchInfo(self.renewSwitchConfig)
         # ==================================================================================
-        # 5, Add all active running config
+        # 6. Add all active running config
         # ==================================================================================
         self.addDeltaInfo()
         changesApplied = self.police.startwork(self.newGraph)
@@ -113,8 +139,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
             self.addDeltaInfo()
 
         saveName = self.getModelSavePath()
-        with open(saveName, "w", encoding='utf-8') as fd:
-            fd.write(self.newGraph.serialize(format='turtle'))
+        self.saveModel(saveName)
         hashNum = generateHash(self.newGraph.serialize(format='turtle'))
 
         self.logger.info('Checking if new model is different from previous')
@@ -125,6 +150,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
             if modelinDB[0]['insertdate'] < int(getUTCnow() - 3600):
                 # Force to update model every hour, Even there is no update;
                 self.logger.info('Forcefully update model in db as it is older than 1h')
+                # Force version update
+                self._updateVersion(**{'version': self.modelVersion}) # This will force to update Version to new value
+                self.saveModel(saveName)
                 self.dbI.insert('models', [lastKnownModel])
                 # Also next run get new info from switch plugin
                 self.renewSwitchConfig = True
@@ -134,6 +162,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
                 os.unlink(saveName)
         else:
             self.logger.info('Models are different. Update DB')
+            self._updateVersion(**{'version': self.modelVersion}) # This will force to update Version to new value
+            self.saveModel(saveName)
             self.dbI.insert('models', [lastKnownModel])
             # Also next run get new info from switch plugin
             self.renewSwitchConfig = True
