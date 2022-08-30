@@ -22,6 +22,7 @@ class ConflictChecker():
 
     @staticmethod
     def _ipOverlap(ip1, ip2, iptype):
+        """Check if IP Overlap. Return True/False"""
         overlap = False
         if iptype == 'ipv4':
             net1 = IPv4Network(ip1, False)
@@ -34,15 +35,16 @@ class ConflictChecker():
         return overlap
 
     @staticmethod
-    def _checkVlanInRange(cls, vlan, hostname):
+    def _checkVlanInRange(polcls, vlan, hostname):
         """Check if VLAN in Allowed range"""
         if not vlan:
             return
         # TODO: In future we should exclude all form activeDeltas
         # Which should be done during config preparation and changed
         # everytime activedeltas changes.
-        if vlan not in cls.config.getraw('MAIN').get(hostname, {}).get('vlan_range_list', []):
-            raise OverlapException(f'Vlan {vlan} not available for {hostname} in configuration. Either used or not configured.')
+        if vlan not in polcls.config.getraw('MAIN').get(hostname, {}).get('vlan_range_list', []):
+            raise OverlapException(f'Vlan {vlan} not available for {hostname} in configuration. \
+                                   Either used or not configured.')
 
     def _checkifIPInRange(self, cls, ipval, iptype, hostname):
         """Check if IP in Allowed range"""
@@ -54,19 +56,25 @@ class ConflictChecker():
         for vrange in cls.config.getraw('MAIN').get(hostname, {}).get(f'{iptype}-address-pool-list', []):
             if self._ipOverlap(vrange, ipval, iptype):
                 return
-        raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. Either used or not configured.')
+        raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. \
+                               Either used or not configured.')
 
     def _checkIfVlanOverlap(self, vlan1, vlan2):
+        """Check if Vlan equal. Raise error if True"""
         if vlan1 == vlan2:
-            raise OverlapException(f'New Request VLANs Overlap on same controlled resources. Overlap resources: {self.newid} and {self.oldid}')
+            raise OverlapException(f'New Request VLANs Overlap on same controlled resources. \
+                                   Overlap resources: {self.newid} and {self.oldid}')
 
     def _checkIfIPOverlap(self, ip1, ip2, iptype):
+        """Check if IP Overlap. Raise error if True"""
         overlap = self._ipOverlap(ip1, ip2, iptype)
         if overlap:
-            raise OverlapException(f'New Request {iptype} overlap on same controlled resources. Overlap resources: {self.newid} and {self.oldid}')
+            raise OverlapException(f'New Request {iptype} overlap on same controlled resources. \
+                                   Overlap resources: {self.newid} and {self.oldid}')
 
     @staticmethod
     def _getVlanIPs(dataIn):
+        """Get Vlan IPs"""
         out = {}
         for _, val in dataIn.items():
             for key1, val1 in val.items():
@@ -104,6 +112,7 @@ class ConflictChecker():
         return timeRange
 
     def _checkIfOverlap(self, newitem, oldItem):
+        """Check if 2 deltas overlap for timing"""
         dates1 = self._getTimings(newitem)
         dates2 = self._getTimings(oldItem)
         if self._overlap_count(dates1, dates2):

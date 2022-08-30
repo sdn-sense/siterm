@@ -239,7 +239,8 @@ class GitConfig():
                          'GIT_BRANCH': {'optional': True, 'default': 'master'},
                          'MD5':        {'optional': False}}
 
-    def gitConfigCache(self, name):
+    @staticmethod
+    def gitConfigCache(name):
         """Get Config file from tmp dir"""
         output = None
         filename = f'/tmp/dtnrm-link-{name}.yaml'
@@ -296,7 +297,8 @@ class GitConfig():
             self.config['MAIN'] = self.gitConfigCache('Agent-main')
             self.presetAgentDefaultConfigs()
 
-    def __generateVlanList(self, vals):
+    @staticmethod
+    def __generateVlanList(vals):
         """Generate Vlan List. which can be separated by comma, dash"""
         retVals = []
         if isinstance(vals, list):
@@ -309,14 +311,15 @@ class GitConfig():
                 # Need to loop as it is range;
                 # In case second val is bigger than 1st - raise Exception
                 if int(tmpvals[0]) >= int(tmpvals[1]):
-                    raise Exception(f'Configuration Error. Vlan Range first value lower or equal to second value in range. Vals: {tmpvals}')
+                    raise Exception(f'Configuration Error. Vlan Range equal or lower. Vals: {tmpvals}')
                 for i in range(int(tmpvals[0]), int(tmpvals[1])+1):
                     retVals.append(i)
             else:
                 retVals.append(int(tmpvals[0]))
         return retVals
 
-    def __generateIPList(self, vals):
+    @staticmethod
+    def __generateIPList(vals):
         """Split by command and return list"""
         if isinstance(vals, list):
             return vals
@@ -342,7 +345,8 @@ class GitConfig():
                             nlist = self.__generateIPList(self.config['MAIN'][switch][f"{iptype}-{key}"])
                             self.config['MAIN'][switch][f"{iptype}-{key}-list"] = nlist
                         elif f"{iptype}-{key}-list" in self.config['MAIN'][sitename]:
-                            self.config['MAIN'][switch][f"{iptype}-{key}-list"] = self.config['MAIN'][sitename][f"{iptype}-{key}-list"]
+                            tmp = self.config['MAIN'][sitename][f"{iptype}-{key}-list"]
+                            self.config['MAIN'][switch][f"{iptype}-{key}-list"] = tmp
                 if 'vlan_range' in self.config['MAIN'][switch]:
                     nlist = self.__generateVlanList(self.config['MAIN'][switch]["vlan_range"])
                     self.config['MAIN'][switch]["vlan_range_list"] = nlist
@@ -720,7 +724,8 @@ def reportServiceStatus(**kwargs):
                  'updatedate': getUTCnow()}
         dbI = getDBConn(dbOut['servicename'], kwargs.get('cls', None))
         dbobj = getVal(dbI, **{'sitename': kwargs.get('sitename', 'UNSET')})
-        services = dbobj.get('servicestates', search=[['hostname', dbOut['hostname']], ['servicename', dbOut['servicename']]])
+        services = dbobj.get('servicestates', search=[['hostname', dbOut['hostname']],
+                                                      ['servicename', dbOut['servicename']]])
         if not services:
             dbobj.insert('servicestates', [dbOut])
         else:
