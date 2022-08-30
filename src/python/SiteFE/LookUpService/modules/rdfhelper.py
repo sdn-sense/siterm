@@ -128,9 +128,10 @@ class RDFHelper():
                            self.genLiteral(kwargs['version'])))
 
     def _updateVersion(self, **kwargs):
+        """Update Version in model"""
         self.newGraph.set((self.genUriRef('site'),
-                              self.genUriRef('nml', 'version'),
-                              self.genLiteral(kwargs['version'])))
+                           self.genUriRef('nml', 'version'),
+                           self.genLiteral(kwargs['version'])))
 
     def _addNode(self, **kwargs):
         """Add Node to Model"""

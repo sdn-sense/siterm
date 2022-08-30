@@ -81,6 +81,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
             self.getModelSavePath()
 
     def _addTopTology(self):
+        """Add Main Topology definition to Model."""
         out = {'sitename': self.sitename, 'labelswapping': "false",
                "name": self.prefixes['site'], 'version': self.modelVersion}
         self._addSite(**out)
@@ -151,7 +152,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
                 # Force to update model every hour, Even there is no update;
                 self.logger.info('Forcefully update model in db as it is older than 1h')
                 # Force version update
-                self._updateVersion(**{'version': self.modelVersion}) # This will force to update Version to new value
+                self._updateVersion(**{'version': self.modelVersion})  # This will force to update Version to new value
                 self.saveModel(saveName)
                 self.dbI.insert('models', [lastKnownModel])
                 # Also next run get new info from switch plugin
@@ -162,7 +163,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
                 os.unlink(saveName)
         else:
             self.logger.info('Models are different. Update DB')
-            self._updateVersion(**{'version': self.modelVersion}) # This will force to update Version to new value
+            self._updateVersion(**{'version': self.modelVersion})  # This will force to update Version to new value
             self.saveModel(saveName)
             self.dbI.insert('models', [lastKnownModel])
             # Also next run get new info from switch plugin
