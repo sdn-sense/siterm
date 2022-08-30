@@ -225,8 +225,10 @@ class QOS():
                 self.logger.info('This specific vlan request did not provided any QOS. Ignoring QOS Rules for it')
                 continue
             outrate, outtype = self.convertToRate(inputDict['params'])
-            if self.params['maxThrgRemaining'] - outrate <= 0:
-                raise OverSubscribeException("Node is oversubscribed. Will not modify present QoS.")
+            if 'maxThrgRemaining' in self.params:
+                if self.params['maxThrgRemaining'] - outrate <= 0:
+                    raise OverSubscribeException("Node is oversubscribed. Will not modify present QoS.")
+                self.params['maxThrgRemaining'] -= outrate
             tmpFD.write("# SENSE CREATED VLAN %s %s %s %s\n" % (inputDict['vlan'],
                                                                 inputDict['destport'],
                                                                 outrate, outtype))
@@ -234,7 +236,6 @@ class QOS():
                                                                     inputName, outrate, outtype))
             tmpFD.write("interface vlan.%s %s output rate %s%s\n" % (inputDict['vlan'],
                                                                      outputName, outrate, outtype))
-            self.params['maxThrgRemaining'] -= outrate
 
     def calculateRSTFairshare(self, reqRate):
         """Calculate L3 RST Fairshare throughput. Equivalent Fractions finding."""
