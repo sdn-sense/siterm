@@ -1,10 +1,21 @@
-First major release of Site Resource Manager.
-This includes model generation, communication with SENSE Orchestrator.
-Layer2 and Layer3 Control on Host and switches (Dell OS 9, Arista EOS, Sonic) using ansible.
-BGP control for Dell OS9 and Sonic using ansible.
-Fractional and Static QoS control per VLAN and or IPv[46] Range. More details: https://github.com/sdn-sense/siterm/blob/master/src/python/DTNRMAgent/Ruler/QOS.py#L5-L60
-Code base moved to Python 3.8.
-Templates ready for Kubernetes and Docker installation. More details: https://github.com/sdn-sense/siterm-startup
+This release includes:
+  ALL:
+    Config parameters (for FE/Agent/Ansible) must be in YAML format. No INI format support.
+    Gentle stop for all containers (using trap) - so services are stopped nicely (not hard kill)
+  Switches:
+    FreeRTR Ansible Module and support FreeRTR for visualization (no control support yet)
+    Sonic route-map clean up fix. It was not deleting routing maps during cancelation.
+    Arista EOS templates updated
+  Frontend:
+    Compute path between switches using lldp information;
+    Multiple Delta's support in single request or from multiple separate Orchestrators;
+    IP and Vlan Normalization for diff Ansible modules. (e.g. Dell uses Vlan 3600, Arista wants Vlan3600, FreeRTR - sdn5.3600)
+    Add IPv6 Routing information to Model from agents(DTNs).
+    Add Version, Name, Sitename to Model.
+    HTML GUI Update to fix visualization (normal dates, Desc order to list deltas/models)
+    UnitTests for Frontend
+  Agent:
+    Apply IPv6 Routing for BGP Requests (if DTN has IPv6 in range of BGP Requested override, it will add specific rules to redirect traffic to mavlan)
 
 Supported systems: x86_64 and ppc64le
 Installation details: https://sdn-sense.github.io/Installation.html
@@ -12,8 +23,5 @@ Installation details: https://sdn-sense.github.io/Installation.html
 Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
 Docker version for this release:
 x86_64:
-  Agent: sdnsense/site-agent-sense:latest-20220729 (Or use latest)
-  Frontend: sdnsense/site-rm-sense:latest-20220729 (Or use latest)
-ppc64le:
-  Agent: sdnsense/site-agent-sense:latest-ppc64le-20220729 (Or use latest)
-  Frontend: sdnsense/site-rm-sense:latest-ppc64le-20220729 (Or use latest)
+  Agent: sdnsense/site-agent-sense:dev-20220830 (Or use dev)
+  Frontend: sdnsense/site-rm-sense:dev-20220830 (Or use dev)
