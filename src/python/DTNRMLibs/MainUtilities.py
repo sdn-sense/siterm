@@ -239,7 +239,8 @@ class GitConfig():
                          'GIT_BRANCH': {'optional': True, 'default': 'master'},
                          'MD5':        {'optional': False}}
 
-    def gitConfigCache(self, name):
+    @staticmethod
+    def gitConfigCache(name):
         """Get Config file from tmp dir"""
         output = None
         filename = f'/tmp/dtnrm-link-{name}.yaml'
@@ -296,6 +297,62 @@ class GitConfig():
             self.config['MAIN'] = self.gitConfigCache('Agent-main')
             self.presetAgentDefaultConfigs()
 
+    @staticmethod
+    def __generateVlanList(vals):
+        """Generate Vlan List. which can be separated by comma, dash"""
+        retVals = []
+        if isinstance(vals, list):
+            for val in vals:
+                retVals.append(int(val))
+            return retVals
+        for val in vals.split(','):
+            tmpvals = val.split('-')
+            if len(tmpvals) == 2:
+                # Need to loop as it is range;
+                # In case second val is bigger than 1st - raise Exception
+                if int(tmpvals[0]) >= int(tmpvals[1]):
+                    raise Exception(f'Configuration Error. Vlan Range equal or lower. Vals: {tmpvals}')
+                for i in range(int(tmpvals[0]), int(tmpvals[1])+1):
+                    retVals.append(i)
+            else:
+                retVals.append(int(tmpvals[0]))
+        return retVals
+
+    @staticmethod
+    def __generateIPList(vals):
+        """Split by command and return list"""
+        if isinstance(vals, list):
+            return vals
+        return list(filter(None, vals.split(',')))
+
+    def __generatevlaniplists(self):
+        """Generate list for vlans and ips. config might have it in str"""
+        for sitename in self.config['MAIN']['general']['sites']:
+            for iptype in ['ipv6', 'ipv4']:
+                for key in ['subnet-pool', 'address-pool']:
+                    if f"{iptype}-{key}" in self.config['MAIN'][sitename].keys():
+                        nlist = self.__generateIPList(self.config['MAIN'][sitename][f"{iptype}-{key}"])
+                        self.config['MAIN'][sitename][f"{iptype}-{key}-list"] = nlist
+            if 'vlan_range' in self.config['MAIN'][sitename]:
+                nlist = self.__generateVlanList(self.config['MAIN'][sitename]["vlan_range"])
+                self.config['MAIN'][sitename]["vlan_range_list"] = nlist
+            # Now we do all individual switches. If key not available;
+            # Will use the default if available
+            for switch in self.config['MAIN'][sitename]['switch']:
+                for iptype in ['ipv6', 'ipv4']:
+                    for key in ['subnet-pool', 'address-pool']:
+                        if f"{iptype}-{key}" in self.config['MAIN'][switch].keys():
+                            nlist = self.__generateIPList(self.config['MAIN'][switch][f"{iptype}-{key}"])
+                            self.config['MAIN'][switch][f"{iptype}-{key}-list"] = nlist
+                        elif f"{iptype}-{key}-list" in self.config['MAIN'][sitename]:
+                            tmp = self.config['MAIN'][sitename][f"{iptype}-{key}-list"]
+                            self.config['MAIN'][switch][f"{iptype}-{key}-list"] = tmp
+                if 'vlan_range' in self.config['MAIN'][switch]:
+                    nlist = self.__generateVlanList(self.config['MAIN'][switch]["vlan_range"])
+                    self.config['MAIN'][switch]["vlan_range_list"] = nlist
+                elif 'vlan_range_list' in self.config['MAIN'][sitename]:
+                    self.config['MAIN'][switch]["vlan_range_list"] = self.config['MAIN'][sitename]['vlan_range_list']
+
     def presetFEDefaultConfigs(self):
         """Preset default config parameters for FE"""
         defConfig = {'MAIN': {'general': {'logDir': '/var/log/dtnrm-site-fe/',
@@ -318,6 +375,8 @@ class GitConfig():
                                            'xml': "http://www.w3.org/XML/1998/namespace#",
                                            'xsd': "http://www.w3.org/2001/XMLSchema#"}}}
         self.__addDefaults(defConfig)
+        # Generate list vals - not in a str format. Needed in delta checks
+        self.__generatevlaniplists()
 
     def getGitFEConfig(self):
         """Get Git FE Config."""
@@ -665,7 +724,8 @@ def reportServiceStatus(**kwargs):
                  'updatedate': getUTCnow()}
         dbI = getDBConn(dbOut['servicename'], kwargs.get('cls', None))
         dbobj = getVal(dbI, **{'sitename': kwargs.get('sitename', 'UNSET')})
-        services = dbobj.get('servicestates', search=[['hostname', dbOut['hostname']], ['servicename', dbOut['servicename']]])
+        services = dbobj.get('servicestates', search=[['hostname', dbOut['hostname']],
+                                                      ['servicename', dbOut['servicename']]])
         if not services:
             dbobj.insert('servicestates', [dbOut])
         else:
