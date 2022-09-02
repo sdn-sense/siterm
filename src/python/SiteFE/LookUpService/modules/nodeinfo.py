@@ -179,7 +179,7 @@ class NodeInfo():
         # ==========================================================================================
         for key in ['ipv4-address-pool-list', 'ipv4-subnet-pool-list', 'ipv6-address-pool-list', 'ipv6-subnet-pool-list']:
             if key in list(intfDict.keys()):
-                self._addNetworkAddress(newuri, key, ",".join(map(str, intfDict[key])))
+                self._addNetworkAddress(newuri, key[:-5], ",".join(map(str, intfDict[key])))
 
         # Add is Alias - So that it has link to Switch.
         # We could use LLDP Info In future.
@@ -218,7 +218,7 @@ class NodeInfo():
             self.newGraph.add((self.genUriRef('site', f"{newuri}:vlan-range"),
                                self.genUriRef('nml', 'labeltype'),
                                self.genUriRef('schema', '#vlan')))
-            self._nmlLiteral(f"{newuri}:vlan-range", 'values', ",".join(map(str, intfDict['vlan_range'])))
+            self._nmlLiteral(f"{newuri}:vlan-range", 'values', ",".join(map(str, intfDict['vlan_range_list'])))
 
         self.shared = 'notshared'
         if 'shared' in intfDict:

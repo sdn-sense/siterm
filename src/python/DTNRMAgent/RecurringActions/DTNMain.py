@@ -88,7 +88,7 @@ class RecurringAction():
         workDir = self.config.get('general', 'private_dir') + "/DTNRM/"
         createDirs(workDir)
         dic, excMsg = self.prepareJsonOut()
-        fullUrl = getFullUrl(self.config)
+        fullUrl = getFullUrl(self.config, self.sitename)
         dic = self.appendConfig(dic)
 
         agent = contentDB(config=self.config)
