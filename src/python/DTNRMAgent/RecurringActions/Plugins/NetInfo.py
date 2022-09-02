@@ -18,6 +18,8 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 
 def str2bool(val):
     """Check if str is true boolean."""
+    if isinstance(val, bool):
+        return val
     return val.lower() in ("yes", "true", "t", "1")
 
 NAME = 'NetInfo'
@@ -45,11 +47,11 @@ def get(config):
             if config.has_option(intf, key):
                 nicInfo[key] = config.get(intf, key)
                 # Make lists
-                nicInfo["%s-list" % key] = config.__generateIPList(nicInfo[key])
+                nicInfo["%s-list" % key] = config.git.generateIPList(nicInfo[key])
         if config.has_option(intf, 'macvlans'):
             presetMacVlans(netInfo, intf, config)
         nicInfo['vlan_range'] = config.get(intf, "vlans")
-        nicInfo['vlan_range_list'] = config.__generateVlanList(nicInfo['vlan_range'])
+        nicInfo['vlan_range_list'] = config.git.generateVlanList(nicInfo['vlan_range'])
         nicInfo['min_bandwidth'] = int(config.get(intf, "vlan_min"))
         nicInfo['max_bandwidth'] = int(config.get(intf, "vlan_max"))
         nicInfo['switch_port'] = str(config.get(intf, "port")).replace('/', '-').replace(' ', '_')
@@ -130,7 +132,7 @@ def get(config):
     outputForFE = {"interfaces": {}, "routes": []}
     for intfName, intfDict in netInfo.items():
         if intfName.split('.')[0] not in foundInterfaces:
-            logger.debug('This interface was defined in configuration, but not available. Will not add it to final output')
+            logger.debug(f'This interface {intfName} was defined in configuration, but not available. Will not add it to final output')
         else:
             outputForFE["interfaces"][intfName] = intfDict
     # Get Routing Information

@@ -335,6 +335,10 @@ class GitConfig():
             return vals
         return list(filter(None, vals.split(',')))
 
+    # TODO: Move all to public function, not private. Needed for agents
+    generateIPList=__generateIPList
+    generateVlanList=__generateVlanList
+
     def __generatevlaniplists(self):
         """Generate list for vlans and ips. config might have it in str"""
         for sitename in self.config['MAIN']['general']['sites']:
