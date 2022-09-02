@@ -298,24 +298,34 @@ class GitConfig():
             self.presetAgentDefaultConfigs()
 
     @staticmethod
-    def __generateVlanList(vals):
+    def __genValFromItem(inVal):
+        """Generate int value from vlan range item"""
+        if isinstance(inVal, int):
+            return [inVal]
+        retVals = []
+        tmpvals = inVal.split('-')
+        if len(tmpvals) == 2:
+            # Need to loop as it is range;
+            # In case second val is bigger than 1st - raise Exception
+            if int(tmpvals[0]) >= int(tmpvals[1]):
+                raise Exception(f'Configuration Error. Vlan Range equal or lower. Vals: {tmpvals}')
+            for i in range(int(tmpvals[0]), int(tmpvals[1])+1):
+                retVals.append(i)
+        else:
+            retVals.append(int(tmpvals[0]))
+        return retVals
+
+    def __generateVlanList(self, vals):
         """Generate Vlan List. which can be separated by comma, dash"""
         retVals = []
-        if isinstance(vals, list):
-            for val in vals:
-                retVals.append(int(val))
-            return retVals
-        for val in vals.split(','):
-            tmpvals = val.split('-')
-            if len(tmpvals) == 2:
-                # Need to loop as it is range;
-                # In case second val is bigger than 1st - raise Exception
-                if int(tmpvals[0]) >= int(tmpvals[1]):
-                    raise Exception(f'Configuration Error. Vlan Range equal or lower. Vals: {tmpvals}')
-                for i in range(int(tmpvals[0]), int(tmpvals[1])+1):
-                    retVals.append(i)
-            else:
-                retVals.append(int(tmpvals[0]))
+        tmpVals = vals
+        if isinstance(vals, int):
+            return [vals]
+        if not isinstance(vals, list):
+            tmpVals = vals.split(',')
+        for val in tmpVals:
+            for lval in self.__genValFromItem(val):
+                retVals.append(int(lval))
         return retVals
 
     @staticmethod
@@ -352,6 +362,11 @@ class GitConfig():
                     self.config['MAIN'][switch]["vlan_range_list"] = nlist
                 elif 'vlan_range_list' in self.config['MAIN'][sitename]:
                     self.config['MAIN'][switch]["vlan_range_list"] = self.config['MAIN'][sitename]['vlan_range_list']
+                # Also review all predefined vlan_ranges for individual ports and make a list
+                for key in list(self.config['MAIN'][switch].keys()):
+                    if key.startswith('port_') and key.endswith('vlan_range'):
+                        nlist = self.__generateVlanList(self.config['MAIN'][switch][key])
+                        self.config['MAIN'][switch][f"{key}_list"] = nlist
 
     def presetFEDefaultConfigs(self):
         """Preset default config parameters for FE"""
