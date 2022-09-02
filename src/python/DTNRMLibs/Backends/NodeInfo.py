@@ -26,7 +26,7 @@ class Node():
             hostinfo = evaldict(nodeDict['hostinfo'])
             for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
                 breakLoop = False
-                for key in ['switch_port', 'switch', 'vlan_range', 'available_bandwidth']:
+                for key in ['switch_port', 'switch', 'vlan_range_list', 'available_bandwidth']:
                     if key not in list(intfDict.keys()):
                         breakLoop = True
                 if breakLoop:
@@ -42,7 +42,7 @@ class Node():
                     switchDict['destport'] = intfKey
                     switchDict['hostname'] = nodeDict['hostname']
                     switchDict['desttype'] = 'server'
-                    switchDict['vlan_range'] = intfDict['vlan_range']
+                    switchDict['vlan_range_list'] = intfDict['vlan_range_list']
                     switchDict['capacity'] = intfDict['available_bandwidth']
                     if 'isAlias' in list(intfDict.keys()):
                         switchDict['isAlias'] = intfDict['isAlias']

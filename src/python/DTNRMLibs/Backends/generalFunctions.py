@@ -38,7 +38,7 @@ def getValFromConfig(config, switch, port, key, portKey="port_%s_%s"):
     tmpVal = config.get(switch, portKey % (port, key))
     try:
         tmpVal = int(tmpVal)
-    except ValueError:
+    except (ValueError, TypeError):
         pass
     return tmpVal
 
@@ -55,8 +55,8 @@ def getConfigParams(config, switch, cls=None):
         ports = cls.plugin.getports(cls.switches['output'][switch])
     elif config.has_option(switch, 'ports'):
         ports = config.get(switch, 'ports')
-    if config.has_option(switch, 'vlan_range'):
-        vlanRange = config.get(switch, 'vlan_range')
+    if config.has_option(switch, 'vlan_range_list'):
+        vlanRange = config.get(switch, 'vlan_range_list')
     if config.has_option(switch, 'ports_ignore'):
         portsIgnore = config.get(switch, 'ports_ignore')
     return ports, vlanRange, portsIgnore

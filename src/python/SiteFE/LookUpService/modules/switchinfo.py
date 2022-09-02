@@ -128,7 +128,7 @@ class SwitchInfo():
         for key, val in portSwitch.items():
             if not val:
                 continue
-            if key == 'vlan_range':
+            if key == 'vlan_range_list':
                 self.addToGraph(['site', newuri],
                                 ['nml', 'hasLabelGroup'],
                                 ['site', f"{newuri}:{'vlan-range'}"])
@@ -140,7 +140,7 @@ class SwitchInfo():
                                 ['schema', '#vlan'])
                 self.addToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['nml', 'values'],
-                                [portSwitch['vlan_range']])
+                                [",".join(map(str, portSwitch['vlan_range_list']))])
                 # Generate host alias or adds' isAlias
                 self._addIsAlias(uri=newuri, isAlias=portSwitch.get('isAlias'), hostname=switchName, portName=portName, nodetype='switch')
                 continue
@@ -217,10 +217,10 @@ class SwitchInfo():
                     vlanuri = self._addVlanPort(hostname=switchName, portName=taggedIntf, vsw=vsw,
                                                 vtype='vlanport', vlan=portSwitch['value'])
                     self._addSwitchVlanLabel(vlanuri, portSwitch['value'])
-                    if 'vlan_range' in portSwitch:
+                    if 'vlan_range_list' in portSwitch:
                         # Vlan range for vlan - this is default coming from switch yaml conf
                         # But for sure we dont want to add into model
-                        del portSwitch['vlan_range']
+                        del portSwitch['vlan_range_list']
                     self.addSwitchIntfInfo(switchName, portName, portSwitch, vlanuri)
 
 
@@ -248,10 +248,10 @@ class SwitchInfo():
 
     def _addAddressPool(self, uri):
         """Add Address Pools"""
-        for key in ['ipv4-address-pool', 'ipv6-address-pool']:
+        for key in ['ipv4-address-pool-list', 'ipv6-address-pool-list']:
             tmp = self.__getValFromConfig(key)
             if tmp:
-                self._addNetworkAddress(uri, key, str(tmp))
+                self._addNetworkAddress(uri, key[:-5], ",".join(map(str, tmp)))
 
     def __getValFromConfig(self, name, key=''):
         """Get Floating val from configuration"""
@@ -285,10 +285,10 @@ class SwitchInfo():
                 out['rstname'] = f'rst-{ipX}'
                 for route in routeList:
                     # get ipv6/ipv4 floating ranges
-                    for key in ['ipv4-subnet-pool', 'ipv6-subnet-pool']:
+                    for key in ['ipv4-subnet-pool-list', 'ipv6-subnet-pool-list']:
                         tmp = self.__getValFromConfig(key)
                         if tmp:
-                            out[key] = tmp
+                            out[key] = ",".join(map(str, tmp))
                     out['iptype'] = ipX
                     out['rt-table'] = 'main' if 'vrf' not in route else f"vrf-{route['vrf']}"
                     if 'from' in route:

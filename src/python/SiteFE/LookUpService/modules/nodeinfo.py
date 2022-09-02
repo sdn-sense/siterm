@@ -177,9 +177,9 @@ class NodeInfo():
         """Agent Configuration params to Model."""
         # Add floating ip pool list for interface from the agent
         # ==========================================================================================
-        for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
+        for key in ['ipv4-address-pool-list', 'ipv4-subnet-pool-list', 'ipv6-address-pool-list', 'ipv6-subnet-pool-list']:
             if key in list(intfDict.keys()):
-                self._addNetworkAddress(newuri, key, str(intfDict[key]))
+                self._addNetworkAddress(newuri, key, ",".join(map(str, intfDict[key])))
 
         # Add is Alias - So that it has link to Switch.
         # We could use LLDP Info In future.
@@ -206,7 +206,7 @@ class NodeInfo():
             # ==========================================================================================
         if 'capacity' in list(intfDict.keys()):
             self._mrsLiteral(bws, 'capacity', intfDict['capacity'])
-        if 'vlan_range' in list(intfDict.keys()):
+        if 'vlan_range_list' in list(intfDict.keys()):
             self.newGraph.add((self.genUriRef('site', newuri),
                                self.genUriRef('nml', 'hasLabelGroup'),
                                self.genUriRef('site', f"{newuri}:vlan-range")))
@@ -218,7 +218,7 @@ class NodeInfo():
             self.newGraph.add((self.genUriRef('site', f"{newuri}:vlan-range"),
                                self.genUriRef('nml', 'labeltype'),
                                self.genUriRef('schema', '#vlan')))
-            self._nmlLiteral(f"{newuri}:vlan-range", 'values', intfDict['vlan_range'])
+            self._nmlLiteral(f"{newuri}:vlan-range", 'values', ",".join(map(str, intfDict['vlan_range'])))
 
         self.shared = 'notshared'
         if 'shared' in intfDict:

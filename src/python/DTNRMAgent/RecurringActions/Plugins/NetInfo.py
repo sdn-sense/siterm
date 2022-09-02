@@ -44,9 +44,12 @@ def get(config):
         for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
             if config.has_option(intf, key):
                 nicInfo[key] = config.get(intf, key)
+                # Make lists
+                nicInfo["%s-list" key] = config.__generateIPList(nicInfo[key])
         if config.has_option(intf, 'macvlans'):
             presetMacVlans(netInfo, intf, config)
         nicInfo['vlan_range'] = config.get(intf, "vlans")
+        nicInfo['vlan_range_list'] = config.__generateVlanList(nicInfo['vlan_range'])
         nicInfo['min_bandwidth'] = int(config.get(intf, "vlan_min"))
         nicInfo['max_bandwidth'] = int(config.get(intf, "vlan_max"))
         nicInfo['switch_port'] = str(config.get(intf, "port")).replace('/', '-').replace(' ', '_')
