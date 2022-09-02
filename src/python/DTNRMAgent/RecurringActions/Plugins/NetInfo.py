@@ -45,7 +45,7 @@ def get(config):
             if config.has_option(intf, key):
                 nicInfo[key] = config.get(intf, key)
                 # Make lists
-                nicInfo["%s-list" key] = config.__generateIPList(nicInfo[key])
+                nicInfo["%s-list" % key] = config.__generateIPList(nicInfo[key])
         if config.has_option(intf, 'macvlans'):
             presetMacVlans(netInfo, intf, config)
         nicInfo['vlan_range'] = config.get(intf, "vlans")

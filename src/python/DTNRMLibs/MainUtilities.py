@@ -366,8 +366,7 @@ class GitConfig():
                 for key in list(self.config['MAIN'][switch].keys()):
                     if key.startswith('port_') and key.endswith('vlan_range'):
                         nlist = self.__generateVlanList(self.config['MAIN'][switch][key])
-                        self.config['MAIN'][switch]["%s_list" % key] = nlist
-
+                        self.config['MAIN'][switch][f"{key}_list"] = nlist
 
     def presetFEDefaultConfigs(self):
         """Preset default config parameters for FE"""
