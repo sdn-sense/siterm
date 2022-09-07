@@ -156,12 +156,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
                 self.switch.plugin._writeHostConfig(host, self.yamlconf[host])
         if configChanged:
             self.logger.info('Configuration changed. Applying New Configuration')
-            # This executes the double apply and it is because of Dell (and might be others)
-            # Dell seems to ignore some statements via ansible and requires second aplly
-            # TODO: Review this using paramiko and not network_cli.
             self.applyConfig(raiseExc=True, hosts=hosts)
-            time.sleep(1)
-            self.applyConfig(raiseExc=False, hosts=hosts)
         if self._forceApply() and not configChanged:
             self.logger.info('Force Config Apply. Because of Service restart or new day start.')
             self.applyConfig(raiseExc=True, hosts=hosts)
