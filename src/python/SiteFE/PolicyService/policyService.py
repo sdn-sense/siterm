@@ -56,7 +56,7 @@ class PolicyService(RDFHelper):
         self.siteDB = contentDB(config=self.config)
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.stateMachine = StateMachine(self.config)
-        self.hosts = getAllHosts(self.sitename, self.logger)
+        self.hosts = {}
         for siteName in self.config.get('general', 'sites'):
             workDir = os.path.join(self.config.get(siteName, 'privatedir'), "PolicyService/")
             createDirs(workDir)
@@ -67,6 +67,14 @@ class PolicyService(RDFHelper):
         self.conflictChecker = ConflictChecker()
         self.currentActive = getActiveDeltas(self)
         self.newActive = {}
+        self._refreshHosts()
+
+    def _refreshHosts(self):
+        """Refresh all hosts informations"""
+        self.hosts = {}
+        for host, hostDict in getAllHosts(self.sitename, self.logger).items():
+            self.hosts.setdefault(host, hostDict)
+            self.hosts[host]['hostinfo'] = evaldict(hostDict['hostinfo'])
 
     def __clean(self):
         """Clean params of PolicyService"""
@@ -439,7 +447,7 @@ class PolicyService(RDFHelper):
         """Add delta to current Model. If no delta provided, returns current Model"""
         if not currentGraph:
             _, currentGraph = getCurrentModel(self, True)
-            self.hosts = getAllHosts(self.sitename, self.logger)
+            self._refreshHosts()
             self.getSavedPrefixes(self.hosts.keys())
         if deltaPath and action:
             gIn = Graph()
@@ -455,6 +463,7 @@ class PolicyService(RDFHelper):
 
     def acceptDelta(self, deltapath):
         """Accept delta."""
+        self._refreshHosts()
         currentGraph = self.deltaToModel(None, None, None)
         self.currentActive = getActiveDeltas(self)
         self.newActive = {'output': {}}

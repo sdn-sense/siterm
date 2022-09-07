@@ -13,7 +13,7 @@ from DTNRMLibs.ipaddr import validMRMLName
 from DTNRMLibs.FECalls import getAllHosts
 from DTNRMLibs.CustomExceptions import NoOptionError
 
-def ignoreInterface(intfKey, intfDict):
+def ignoreInterface(intfKey, intfDict, hostinfo):
     """
     Check if ignore interface for putting it inside model.
     If ends with -ifb - means interface is for QoS, ignoring
@@ -25,6 +25,8 @@ def ignoreInterface(intfKey, intfDict):
     elif 'switch' not in list(intfDict.keys()):
         returnMsg = True
     elif 'switch_port' not in list(intfDict.keys()):
+        returnMsg = True
+    if intfKey not in hostinfo.get('Summary', {}).get('config', {}).get('agent', {}).get('interfaces', []):
         returnMsg = True
     return returnMsg
 
@@ -177,7 +179,8 @@ class NodeInfo():
         """Agent Configuration params to Model."""
         # Add floating ip pool list for interface from the agent
         # ==========================================================================================
-        for key in ['ipv4-address-pool-list', 'ipv4-subnet-pool-list', 'ipv6-address-pool-list', 'ipv6-subnet-pool-list']:
+        for key in ['ipv4-address-pool-list', 'ipv4-subnet-pool-list',
+                    'ipv6-address-pool-list', 'ipv6-subnet-pool-list']:
             if key in list(intfDict.keys()):
                 self._addNetworkAddress(newuri, key[:-5], ",".join(map(str, intfDict[key])))
 
@@ -234,7 +237,7 @@ class NodeInfo():
         for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
             # We exclude QoS interfaces from adding them to MRML.
             # Even so, I still want to have this inside DB for debugging purposes
-            if ignoreInterface(intfKey, intfDict):
+            if ignoreInterface(intfKey, intfDict, hostinfo):
                 continue
             self.hosts[nodeDict['hostname']].append({'switchName': intfDict['switch'],
                                                      'switchPort': intfDict['switch_port'],

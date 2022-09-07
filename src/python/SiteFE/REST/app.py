@@ -41,6 +41,7 @@ from __future__ import print_function
 import re
 import importlib
 import collections
+import traceback
 import simplejson as json
 from SiteFE.REST.FEApis import FrontendRM
 from SiteFE.REST.prometheus_exporter import PrometheusAPI
@@ -183,7 +184,7 @@ def internallCall(caller, environ, **kwargs):
         kwargs['http_respond'].ret_404('application/json', kwargs['start_response'], None)
         returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=404)
     except (ValueError, IOError) as ex:
-        exception = f'{caller}: Received Exception: {ex}'
+        exception = f'{caller}: Received Exception: {ex}. Full traceback {traceback.print_exc()}'
         kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
         returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=500)
     except BadRequestError as ex:
