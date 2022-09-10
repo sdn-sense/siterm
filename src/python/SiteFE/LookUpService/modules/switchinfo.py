@@ -288,7 +288,7 @@ class SwitchInfo():
                     for key in ['ipv4-subnet-pool-list', 'ipv6-subnet-pool-list']:
                         tmp = self.__getValFromConfig(key)
                         if tmp:
-                            out[key] = ",".join(map(str, tmp))
+                            out[key[:-5]] = ",".join(map(str, tmp))
                     out['iptype'] = ipX
                     out['rt-table'] = 'main' if 'vrf' not in route else f"vrf-{route['vrf']}"
                     if 'from' in route:
