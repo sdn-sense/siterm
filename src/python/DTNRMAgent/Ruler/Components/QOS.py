@@ -280,10 +280,14 @@ class QOS():
                 params['resvName'] = f"{params['resvRate']}{params['resvType']}"
                 tmpFD.write(f"  # priority{params['counter']} belongs to {servName} service\n")
                 tmpFD.write(f"  class priority{params['counter']} commit {params['resvName']} max {params['maxName']}\n")
-                for ipval in servParams.get('src_ipv4', []):
-                    tmpFD.write(f"    match {params['matchtype']} {ipval}\n")
-                for ipval in servParams.get('src_ipv6', []):
-                    tmpFD.write(f"    match6 {params['matchtype']} {ipval}\n")
+                for key, match in {f"{params['matchtype']}_ipv4": "match",
+                                   f"{params['matchtype']}_ipv6": "match6"}.items():
+                    tmpVals = servParams.get(key, [])
+                    if tmpVals and isinstance(tmpVals, str):
+                        tmpFD.write(f"    {match} {params['matchtype']} {tmpVals}\n")
+                    elif tmpVals and isinstance(tmpVals, list):
+                        for ipval in tmpVals:
+                            tmpFD.write(f"    {match} {params['matchtype']} {ipval}\n")
                 tmpFD.write('\n')
             params['maxDefault'] = f"{int(params['maxThrgIntf'] / (len(overlapServices) + 1))}{params['maxtype']}"
             tmpFD.write('  # Default - all remaining traffic gets mapped to default class\n')

@@ -120,9 +120,9 @@ class Routing():
             self.apply_rule(f"ip -6 rule del to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
         if route.get('src_ipv6', '') and route.get('src_ipv6_intf', ''):
             if self.rules.lookup_from_lookup(f"{route['src_ipv6']}/128", route['src_ipv6_intf']):
-                self.apply_rule("ip -6 rule del from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
+                self.apply_rule(f"ip -6 rule del from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
             if self.rules.lookup_to_lookup(f"{route['src_ipv6']}/128", route['src_ipv6_intf']):
-                self.apply_rule("ip -6 rule del to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
+                self.apply_rule(f"ip -6 rule del to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
 
     def activate(self, route):
         """Activate routes"""
@@ -131,6 +131,6 @@ class Routing():
             self.apply_rule(f"ip -6 rule add to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
         if route.get('src_ipv6', '') and route.get('src_ipv6_intf', ''):
             if not self.rules.lookup_from_lookup(f"{route['src_ipv6']}/128", route['src_ipv6_intf']):
-                self.apply_rule("ip -6 rule add from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
+                self.apply_rule(f"ip -6 rule add from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
             if not self.rules.lookup_to_lookup(f"{route['src_ipv6']}/128", route['src_ipv6_intf']):
-                self.apply_rule("ip -6 rule add to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
+                self.apply_rule(f"ip -6 rule add to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
