@@ -8,7 +8,7 @@ Authors:
 
 Date: 2021/12/01
 """
-from DTNRMLibs.MainUtilities import evaldict
+from DTNRMLibs.MainUtilities import evaldict, strtolist
 from DTNRMLibs.ipaddr import validMRMLName
 from DTNRMLibs.FECalls import getAllHosts
 from DTNRMLibs.CustomExceptions import NoOptionError
@@ -39,8 +39,7 @@ class NodeInfo():
     def __getRstsEnabled(hostinfo):
         """Get RSTS Enabled from Agent Config"""
         rstsEnabled = hostinfo.get('Summary', {}).get('config', {}).get('agent', {}).get('rsts_enabled', [])
-        rstsEnabled = list(filter(None, rstsEnabled))
-        return rstsEnabled
+        return strtolist(rstsEnabled, ',')
 
     def addNodeInfo(self):
         """Add Agent Node Information"""
