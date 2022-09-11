@@ -818,3 +818,10 @@ def writeActiveDeltas(cls, newConfig):
         cls.dbI.insert('activeDeltas', [activeDeltas])
     elif action == 'update':
         cls.dbI.update('activeDeltas', [activeDeltas])
+
+def strtolist(intext, splitter):
+    """Str To List, separated by splitter"""
+    if isinstance(intext, list):
+        return intext
+    out = intext.split(splitter)
+    return list(filter(None, out))

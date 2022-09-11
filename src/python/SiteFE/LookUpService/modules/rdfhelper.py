@@ -11,6 +11,7 @@ Date: 2021/12/01
 from rdflib import URIRef, Literal
 from rdflib.namespace import XSD
 from DTNRMLibs.CustomExceptions import NoOptionError
+from DTNRMLibs.MainUtilities import strtolist
 
 class RDFHelper():
     """RDF Helper preparation class."""
@@ -402,7 +403,7 @@ class RDFHelper():
                 iptypes = []
         elif kwargs.get('nodetype', '') == 'server' and kwargs.get('rsts_enabled', ''):
             iptypes = kwargs.get('rsts_enabled')
-        for iptype in iptypes:
+        for iptype in strtolist(iptypes, ','):
             if iptype not in ['ipv4', 'ipv6']:
                 continue
             self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:service+rst-{iptype}"),
