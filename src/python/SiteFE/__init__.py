@@ -9,4 +9,4 @@ __all__ = ["LookUpService", "ProvisioningService", "REST"]
 # src/python/SiteFE/__init__.py
 # src/python/DTNRMAgent/__init__.py
 # src/python/DTNRMLibs/__init__.py
-__version__ = '1.1.0-dev'
+__version__ = '1.1.0-dev1'

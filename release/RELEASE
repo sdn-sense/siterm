@@ -1,3 +1,24 @@
+1.1.0-dev1
+This release includes bugfixes for 1.1.0-dev release:
+  Switches:
+    SN3700 - Check for ASN in INT (no str == int comparisons)
+  Frontend:
+    Add RST Ports. (Double split issue)
+    Check delta with config and not allow conflicts.
+  Agent:
+    Use new formatting for defining vlan_range and ip4/6 list
+    RuleDB Check just IP without Range (no multitime apply of rules)
+    Formatting 'f' use in ip rule commands, QoS fix (either list or str for IP range)
+
+Supported systems: x86_64 and ppc64le
+Installation details: https://sdn-sense.github.io/Installation.html
+
+Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
+Docker version for this release:
+x86_64:
+  Agent: sdnsense/site-agent-sense:dev-20220912 (Or use dev)
+  Frontend: sdnsense/site-rm-sense:dev-20220912 (Or use dev)
+
 1.1.0-dev
 This release includes:
   ALL:

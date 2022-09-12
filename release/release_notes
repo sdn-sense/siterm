@@ -1,21 +1,13 @@
-This release includes:
-  ALL:
-    Config parameters (for FE/Agent/Ansible) must be in YAML format. No INI format support.
-    Gentle stop for all containers (using trap) - so services are stopped nicely (not hard kill)
+This release includes bugfixes for 1.1.0-dev release:
   Switches:
-    FreeRTR Ansible Module and support FreeRTR for visualization (no control support yet)
-    Sonic route-map clean up fix. It was not deleting routing maps during cancelation.
-    Arista EOS templates updated
+    SN3700 - Check for ASN in INT (no str == int comparisons)
   Frontend:
-    Compute path between switches using lldp information;
-    Multiple Delta's support in single request or from multiple separate Orchestrators;
-    IP and Vlan Normalization for diff Ansible modules. (e.g. Dell uses Vlan 3600, Arista wants Vlan3600, FreeRTR - sdn5.3600)
-    Add IPv6 Routing information to Model from agents(DTNs).
-    Add Version, Name, Sitename to Model.
-    HTML GUI Update to fix visualization (normal dates, Desc order to list deltas/models)
-    UnitTests for Frontend
+    Add RST Ports. (Double split issue)
+    Check delta with config and not allow conflicts.
   Agent:
-    Apply IPv6 Routing for BGP Requests (if DTN has IPv6 in range of BGP Requested override, it will add specific rules to redirect traffic to mavlan)
+    Use new formatting for defining vlan_range and ip4/6 list
+    RuleDB Check just IP without Range (no multitime apply of rules)
+    Formatting 'f' use in ip rule commands, QoS fix (either list or str for IP range)
 
 Supported systems: x86_64 and ppc64le
 Installation details: https://sdn-sense.github.io/Installation.html
@@ -23,5 +15,5 @@ Installation details: https://sdn-sense.github.io/Installation.html
 Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
 Docker version for this release:
 x86_64:
-  Agent: sdnsense/site-agent-sense:dev-20220830 (Or use dev)
-  Frontend: sdnsense/site-rm-sense:dev-20220830 (Or use dev)
+  Agent: sdnsense/site-agent-sense:dev-20220912 (Or use dev)
+  Frontend: sdnsense/site-rm-sense:dev-20220912 (Or use dev)
