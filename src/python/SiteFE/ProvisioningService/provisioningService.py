@@ -157,6 +157,13 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         if configChanged:
             self.logger.info('Configuration changed. Applying New Configuration')
             self.applyConfig(raiseExc=True, hosts=hosts)
+            # This executes the double apply and it is because of Dell (and might be others)
+            # Dell seems to ignore some statements via ansible and requires second aplly
+            # Problem is with Dell OS9 and IPv6 neighbor definition inside ipv4. 
+            # TODO: Need to look how to improve the DellOS9 jinja without double apply in code
+            time.sleep(1)
+            self.applyConfig(raiseExc=False, hosts=hosts)
+
         if self._forceApply() and not configChanged:
             self.logger.info('Force Config Apply. Because of Service restart or new day start.')
             self.applyConfig(raiseExc=True, hosts=hosts)
