@@ -19,6 +19,7 @@ class Switch():
     def __init__(self, config, sitename):
         self.config = config
         self.sitename = sitename
+        self.defVlans = []
         self.name = 'RAW'
         self.workDir = os.path.join(self.config.get(sitename, 'privatedir'), "RAW-Switch-Config/")
         createDirs(self.workDir)
@@ -47,6 +48,10 @@ class Switch():
         """RAW Plugin does not apply anything."""
         return {}
 
+    def getAnsNetworkOS(self, host):
+        """Get Ansible network os from hosts file"""
+        return self._getHostConfig(host).get('ansible_network_os', '')
+    
     def _getFacts(self, hosts=None):
         """Get Facts for RAW plugin"""
         self.config = getConfig()
