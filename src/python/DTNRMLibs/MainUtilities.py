@@ -122,6 +122,7 @@ def getTimeRotLogger(**kwargs):
     logFile = kwargs.get('logFile', '') + kwargs.get('logOutName', 'api.log')
     logger = logging.getLogger(kwargs.get('service', __name__))
     if not handler:
+        createDirs(logFile)
         handler = logging.handlers.TimedRotatingFileHandler(logFile,
                                                             when=kwargs.get('rotateTime', 'midnight'),
                                                             backupCount=kwargs.get('backupCount', 5))
