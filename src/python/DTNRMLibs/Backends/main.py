@@ -172,6 +172,8 @@ class Switch(Node):
         """Merge yaml and Switch Info. Yaml info overwrites
            any parameter in switch  configuration."""
         ports, defVlans, portsIgn = getConfigParams(self.config, switch, self)
+        if switch not in self.switches['output']:
+            return
         vlans = self.plugin.getvlans(self.switches['output'][switch])
         for port in ports:
             if port in portsIgn:
@@ -209,17 +211,21 @@ class Switch(Node):
 
 
     def getinfo(self, renew=False, hosts=None):
-        """Get info about RAW plugin."""
+        """Get info about Network Devices using plugin defined in configuration."""
         # If renew or switches var empty - get latest
         # And update in DB
+        out, err = {}, {}
         if renew or not self.switches:
-            out = self.plugin._getFacts(hosts)
+            out, err = self.plugin._getFacts(hosts)
+            # TODO: Add err in DB.
             self._insertToDB(out)
         self._getDBOut()
         # Clean and prepare output which is returned to caller
         self._cleanOutput()
         switch = self.config.get(self.site, 'switch')
         for switchn in switch:
+            if switchn in err:
+                continue
             self._setDefaults(switchn)
             self._mergeYamlAndSwitch(switchn)
         self.output = cleanupEmpty(self.nodeinfo())

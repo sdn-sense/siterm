@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import argparse
+import traceback
 import atexit
 import psutil
 from DTNRMLibs import __version__ as runningVersion
@@ -221,8 +222,8 @@ class Daemon():
                 runThreads = self.getThreads()
                 return runThreads
             except:
-                excType, excValue = sys.exc_info()[:2]
-                self.logger.critical("Exception!!! Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
+                exc = traceback.format_exc()
+                self.logger.critical("Exception!!! Error details:  %s", exc)
                 time.sleep(10)
 
     def run(self):
@@ -241,8 +242,8 @@ class Daemon():
                     except:
                         hadFailure = True
                         self.reporter('FAILED', sitename)
-                        excType, excValue = sys.exc_info()[:2]
-                        self.logger.critical("Error details. ErrorType: %s, ErrMsg: %s", str(excType.__name__), excValue)
+                        exc = traceback.format_exc()
+                        self.logger.critical("Exception!!! Error details:  %s", exc)
                 if self.runLoop():
                     time.sleep(10)
             except KeyboardInterrupt as ex:

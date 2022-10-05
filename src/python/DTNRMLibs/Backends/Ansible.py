@@ -28,11 +28,23 @@ class Switch():
         # cmd counter is used only for command with items (e.g. sonic, p4)
         # the one switches which do not have ansible modules.
         self.cmdCounter = 0
+        self.ansible_errs = {}
 
     @staticmethod
     def activate(_inputDict, _actionState):
         """Activating state actions."""
         return True
+
+    def __getAnsErrors(self, ansOut):
+        """Get Ansible errors"""
+        for fkey in ['dark', 'failures']:
+            for host, _ in ansOut.stats[fkey].items():
+                for host_events in ansOut.host_events(host):
+                    if host_events.get('event', '') == 'runner_on_unreachable':
+                        err = host_events.get('event_data', {}).get('res', {})
+                        self.ansible_errs.setdefault(host, [])
+                        self.ansible_errs[host].append(err)
+                        self.logger.info('Ansible Error for %s: %s', host, err)
 
     def _getInventoryInfo(self, hosts=None):
         """Get Inventory Info. If hosts specified, only return for specific hosts"""
@@ -160,6 +172,7 @@ class Switch():
                         for val, key in keyMapping.items():
                             hOut.setdefault(key, {})
                             hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
+        self.__getAnsErrors(ansOut)
         return out
 
     def _getFacts(self, hosts=None):
@@ -170,6 +183,7 @@ class Switch():
         except ValueError as ex:
             raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}") from ex
         out = {}
+        self.ansible_errs = {}
         for host, _ in ansOut.stats['ok'].items():
             out.setdefault(host, {})
             for host_events in ansOut.host_events(host):
@@ -196,6 +210,7 @@ class Switch():
                         host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'].setdefault(portName, {})
                         host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'][portName].update(portVals)
                 out[host] = host_events
+        self.__getAnsErrors(ansOut)
         try:
             maclldproute = self._getMacLLDPRoute(hosts)
             for host, hitems in maclldproute.items():
@@ -204,7 +219,7 @@ class Switch():
                         out[host]['event_data']['res']['ansible_facts'][f'ansible_command_{key}'] = vals
         finally:
             self.cmdCounter = 0
-        return out
+        return out, self.ansible_errs
 
     @staticmethod
     def getports(inData):
