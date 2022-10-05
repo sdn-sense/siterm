@@ -51,7 +51,7 @@ class Switch():
     def getAnsNetworkOS(self, host):
         """Get Ansible network os from hosts file"""
         return self._getHostConfig(host).get('ansible_network_os', '')
-    
+
     def _getFacts(self, hosts=None):
         """Get Facts for RAW plugin"""
         self.config = getConfig()
@@ -61,7 +61,7 @@ class Switch():
             for port in self.config.get(switchn, 'ports'):
                 portOut = hOut.setdefault('event_data', {}).setdefault('res', {}).setdefault('ansible_facts', {}).setdefault('ansible_net_interfaces', {})
                 portOut[port] = {}
-        return out
+        return out, {}
 
     @staticmethod
     def getports(inData):
