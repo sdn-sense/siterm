@@ -37,6 +37,9 @@ class AristaEOS():
         """Get All vlans list assigned to port"""
         out = []
         tmpVlans = inLine.split()[-1:][0] # Get the last item from split, e.g. 1127,1779-1799,2803
+        if tmpVlans == 'none':
+            # Arista needs to define none vlans (if none are configured on the link)
+            return out
         for splPorts in tmpVlans.split(','):
             splRange = splPorts.split('-')
             if len(splRange) == 2:

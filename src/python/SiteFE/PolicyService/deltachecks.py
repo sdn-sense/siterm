@@ -79,23 +79,24 @@ class ConflictChecker():
         # Which should be done during config preparation and changed
         # everytime activedeltas changes.
         iptoCheck = ipval[f'{iptype}-address']
-        if hostname in polcls.config.getraw('MAIN'):
-            inrange = polcls.config.getraw('MAIN').get(hostname, {}).get(f'{iptype}-address-pool-list', [])
-            overlap = checkOverlap(inrange, iptoCheck, iptype)
-            if not overlap:
-                raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. \
-                          Either used or not configured.')
-        elif hostname in polcls.hosts:
-            interfaces = polcls.hosts[hostname].get('hostinfo', {}).get('NetInfo', {}).get('interfaces', {})
-            if ipval['interface'] not in interfaces:
-                raise OverlapException(f'Interface not available for dtn {hostname} in configuration.')
-            inrange = interfaces.get(ipval['interface'], {}).get(f'{iptype}-address-pool', [])
-            overlap = checkOverlap(inrange, iptoCheck, iptype)
-            if not overlap:
-                raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. \
-                          Either used or not configured.')
-        else:
-            raise OverlapException(f'Hostname {hostname} not available in this Frontend.')
+
+        #if hostname in polcls.config.getraw('MAIN'):
+        #    inrange = polcls.config.getraw('MAIN').get(hostname, {}).get(f'{iptype}-address-pool-list', [])
+        #    overlap = checkOverlap(inrange, iptoCheck, iptype)
+        #    if not overlap:
+        #        raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. \
+        #                  Either used or not configured.')
+        #elif hostname in polcls.hosts:
+        #    interfaces = polcls.hosts[hostname].get('hostinfo', {}).get('NetInfo', {}).get('interfaces', {})
+        #    if ipval['interface'] not in interfaces:
+        #        raise OverlapException(f'Interface not available for dtn {hostname} in configuration.')
+        #    inrange = interfaces.get(ipval['interface'], {}).get(f'{iptype}-address-pool-list', [])
+        #    overlap = checkOverlap(inrange, iptoCheck, iptype)
+        #    if not overlap:
+        #        raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. \
+        #                  Either used or not configured.')
+        #else:
+        #    raise OverlapException(f'Hostname {hostname} not available in this Frontend.')
 
     def _checkIfVlanOverlap(self, vlan1, vlan2):
         """Check if Vlan equal. Raise error if True"""
