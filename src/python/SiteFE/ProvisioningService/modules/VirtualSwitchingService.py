@@ -129,7 +129,7 @@ class VirtualSwitchingService():
                 # set vlan to state: 'absent'. In case it is absent already
                 # we dont need to set it again. Switch is unhappy to apply
                 # same command if service is not present.
-                self.yamlconf[switch]['interface'].setdefault(key, {'state': 'absent'})
+                self.yamlconf[switch]['interface'].setdefault(key, {'state': 'absent', 'vlanid': val['vlanid']})
             if val['state'] != 'absent':
                 for key1, val1 in val.items():
                     if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ipv4_address', 'ipv6_address']:
