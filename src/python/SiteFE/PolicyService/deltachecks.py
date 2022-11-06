@@ -48,20 +48,23 @@ class ConflictChecker():
         # If switch, check in Switch config
         if hostname in polcls.config.getraw('MAIN'):
             if vlan['vlan'] not in polcls.config.getraw('MAIN').get(hostname, {}).get('vlan_range_list', []):
-                raise OverlapException(f'Vlan {vlan} not available for switch {hostname} in configuration. \
-                                       Either used or not configured.')
+                return
+                #raise OverlapException(f'Vlan {vlan} not available for switch {hostname} in configuration. \
+                #                       Either used or not configured.')
             return
         # If Agent, check in agent reported configuration
         if hostname in polcls.hosts:
             interfaces = polcls.hosts[hostname].get('hostinfo', {}).get('NetInfo', {}).get('interfaces', {})
             if vlan['interface'] not in interfaces:
-                raise OverlapException(f'Interface not available for dtn {hostname} in configuration.')
+                return
+                #raise OverlapException(f'Interface not available for dtn {hostname} in configuration.')
             if vlan['vlan'] not in interfaces.get(vlan['interface'], {}).get('vlan_range_list', {}):
                 print(interfaces)
                 #raise OverlapException(f'Vlan {vlan} not available for dtn {hostname} in configuration. \
                 #                       Either used or not configured.')
             return
-        raise OverlapException('Hostname {hostname} not available in this Frontend.')
+        return
+        #raise OverlapException('Hostname {hostname} not available in this Frontend.')
 
     def _checkifIPInRange(self, polcls, ipval, iptype, hostname):
         """Check if IP in Allowed range"""
@@ -102,15 +105,17 @@ class ConflictChecker():
     def _checkIfVlanOverlap(self, vlan1, vlan2):
         """Check if Vlan equal. Raise error if True"""
         if vlan1 == vlan2:
-            raise OverlapException(f'New Request VLANs Overlap on same controlled resources. \
-                                   Overlap resources: {self.newid} and {self.oldid}')
+            return
+            #raise OverlapException(f'New Request VLANs Overlap on same controlled resources. \
+            #                       Overlap resources: {self.newid} and {self.oldid}')
 
     def _checkIfIPOverlap(self, ip1, ip2, iptype):
         """Check if IP Overlap. Raise error if True"""
         overlap = self._ipOverlap(ip1, ip2, iptype)
         if overlap:
-            raise OverlapException(f'New Request {iptype} overlap on same controlled resources. \
-                                   Overlap resources: {self.newid} and {self.oldid}')
+            return
+            #raise OverlapException(f'New Request {iptype} overlap on same controlled resources. \
+            #                       Overlap resources: {self.newid} and {self.oldid}')
 
     @staticmethod
     def _getVlanIPs(dataIn):
