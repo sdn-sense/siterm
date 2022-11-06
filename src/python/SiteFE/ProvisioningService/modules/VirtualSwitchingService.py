@@ -70,6 +70,9 @@ class VirtualSwitchingService():
         tmpVrf = self.getConfigValue(host, 'vrf')
         if tmpVrf:
             vlanDict.setdefault('vrf', tmpVrf)
+        tmpVlanMTU = self.getConfigValue(host, 'vlan_mtu')
+        if tmpVlanMTU:
+            vlanDict.setdefault('mtu', tmpVlanMTU)
         return vlanDict
 
     def _addTaggedInterfaces(self, host, port, portDict):

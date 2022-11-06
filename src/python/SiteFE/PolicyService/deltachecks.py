@@ -57,8 +57,9 @@ class ConflictChecker():
             if vlan['interface'] not in interfaces:
                 raise OverlapException(f'Interface not available for dtn {hostname} in configuration.')
             if vlan['vlan'] not in interfaces.get(vlan['interface'], {}).get('vlan_range_list', {}):
-                raise OverlapException(f'Vlan {vlan} not available for dtn {hostname} in configuration. \
-                                       Either used or not configured.')
+                print(interfaces)
+                #raise OverlapException(f'Vlan {vlan} not available for dtn {hostname} in configuration. \
+                #                       Either used or not configured.')
             return
         raise OverlapException('Hostname {hostname} not available in this Frontend.')
 

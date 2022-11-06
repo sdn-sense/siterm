@@ -268,9 +268,13 @@ class QOS():
             params = copy.deepcopy(self.params)
             params['counter'] = 0
             params['type'] = qosType
-            params['matchtype'] = 'dst' if qosType == 'input' else 'src'
+            # Get qos params if defined in configuration
+            # "mtu 9000 mpu 9000 quantum 200000 burst 300000 cburst 300000 qdisc sfq"
+            qosparams = ""
+            if self.config.has_option('agent', 'qos_params'):
+                qosparams = self.config.get('agent', 'qos_params')
             tmpFD.write(f"# SENSE Controlled Interface {params['type']} {params['intfName']} {params['maxName']}\n")
-            tmpFD.write(f"interface46 {params['intfName']} {params['type']}-{params['intfName']} {params['type']} rate {params['maxName']}\n")
+            tmpFD.write(f"interface46 {params['intfName']} {params['type']}-{params['intfName']} {params['type']} rate {params['maxName']} {qosparams}\n")
             for servName, servParams in overlapServices.items():
                 if 'rules' not in servParams:
                     continue
@@ -280,14 +284,16 @@ class QOS():
                 params['resvName'] = f"{params['resvRate']}{params['resvType']}"
                 tmpFD.write(f"  # priority{params['counter']} belongs to {servName} service\n")
                 tmpFD.write(f"  class priority{params['counter']} commit {params['resvName']} max {params['maxName']}\n")
-                for key, match in {f"{params['matchtype']}_ipv4": "match",
-                                   f"{params['matchtype']}_ipv6": "match6"}.items():
+                for key, match in {"src_ipv4": "match", "dst_ipv4": "match",
+                                   "src_ipv6": "match6", "dst_ipv6": "match6"}.items():
                     tmpVals = servParams.get(key, [])
                     if tmpVals and isinstance(tmpVals, str):
-                        tmpFD.write(f"    {match} {params['matchtype']} {tmpVals}\n")
+                        tmpFD.write(f"    {match} src {tmpVals}\n")
+                        tmpFD.write(f"    {match} dst {tmpVals}\n")
                     elif tmpVals and isinstance(tmpVals, list):
                         for ipval in tmpVals:
-                            tmpFD.write(f"    {match} {params['matchtype']} {ipval}\n")
+                            tmpFD.write(f"    {match} src {ipval}\n")
+                            tmpFD.write(f"    {match} dst {ipval}\n")
                 tmpFD.write('\n')
             params['maxDefault'] = f"{int(params['maxThrgIntf'] / (len(overlapServices) + 1))}{params['maxtype']}"
             tmpFD.write('  # Default - all remaining traffic gets mapped to default class\n')
