@@ -109,7 +109,9 @@ class QOS():
     def convertToRate(self, params):
         """Convert input to rate understandable to fireqos."""
         self.logger.info(f'Converting rate for QoS. Input {params}')
-        inputVal, inputRate = params['reservableCapacity'], params['unit']
+        inputVal, inputRate = params.get('reservableCapacity', 0), params.get('unit', 'undef')
+        if inputVal == 0 and inputRate == 'undef':
+            return 0, 'mbit'
         outRate = -1
         outType = ''
         if inputRate == 'bps':
