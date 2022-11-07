@@ -45,6 +45,11 @@ class Switch():
                         self.ansible_errs.setdefault(host, [])
                         self.ansible_errs[host].append(err)
                         self.logger.info('Ansible Error for %s: %s', host, err)
+                    else:
+                        err = host_events.get('event_data', {}).get('res', {})
+                        self.ansible_errs.setdefault(host, [])
+                        self.ansible_errs[host].append(err)
+                        self.logger.info('Ansible Error for %s: %s', host, err)
 
     def _getInventoryInfo(self, hosts=None):
         """Get Inventory Info. If hosts specified, only return for specific hosts"""
@@ -177,6 +182,7 @@ class Switch():
 
     def _getFacts(self, hosts=None):
         """Get All Facts for all Ansible Hosts"""
+        self.ansible_errs = {}
         ansOut = {}
         try:
             ansOut = self._executeAnsible('getfacts.yaml', hosts)

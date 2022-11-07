@@ -219,6 +219,8 @@ class Switch(Node):
             out, err = self.plugin._getFacts(hosts)
             # TODO: Add err in DB.
             self._insertToDB(out)
+            if err:
+                raise Exception('Failed ANSIBLE Runtime. See Error %s' % str(err))
         self._getDBOut()
         # Clean and prepare output which is returned to caller
         self._cleanOutput()
