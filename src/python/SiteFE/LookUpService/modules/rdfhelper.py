@@ -118,20 +118,26 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site'),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Topology')))
-        self.newGraph.add((self.genUriRef('site'),
-                           self.genUriRef('nml', 'sitename'),
-                           self.genLiteral(kwargs['sitename'])))
-        self.newGraph.add((self.genUriRef('site'),
-                           self.genUriRef('nml', 'name'),
-                           self.genLiteral(kwargs['name'])))
-        self.newGraph.add((self.genUriRef('site'),
-                           self.genUriRef('nml', 'version'),
-                           self.genLiteral(kwargs['version'])))
+        for uri in ['sitename', 'version']:
+            if uri not in kwargs:
+                continue
+            self.addToGraph(['site'],
+                            ['mrs', 'hasNetworkAddress'],
+                            ['site', f'{uri}'])
+            self.addToGraph(['site', f'{uri}'],
+                            ['rdf', 'type'],
+                            ['mrs', 'NetworkAddress'])
+            self.addToGraph(['site', f"{uri}"],
+                            ['mrs', 'type'],
+                            [uri])
+            self.addToGraph(['site', f"{uri}"],
+                            ['mrs', 'value'],
+                            [kwargs[uri]])
 
     def _updateVersion(self, **kwargs):
         """Update Version in model"""
-        self.newGraph.set((self.genUriRef('site'),
-                           self.genUriRef('nml', 'version'),
+        self.newGraph.set((self.genUriRef('site', 'version'),
+                           self.genUriRef('mrs', 'value'),
                            self.genLiteral(kwargs['version'])))
 
     def _addNode(self, **kwargs):
