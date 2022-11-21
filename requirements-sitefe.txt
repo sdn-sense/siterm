@@ -21,3 +21,4 @@ typing-extensions
 ansible
 setuptools-rust
 PyYAML
+easysnmp
