@@ -54,6 +54,7 @@ def isValFloat(inVal):
         return False
     return True
 
+
 def getUTCnow():
     """Get UTC Time."""
     now = datetime.datetime.utcnow()

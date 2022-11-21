@@ -25,6 +25,7 @@ from prometheus_client import generate_latest, CollectorRegistry
 from prometheus_client import Enum, Info, CONTENT_TYPE_LATEST
 from prometheus_client import Gauge
 
+
 class PrometheusAPI():
     """Prometheus exporter class."""
     def __init__(self):
@@ -61,10 +62,10 @@ class PrometheusAPI():
         snmpData = self.dbI[kwargs['sitename']].get('snmpmon')
         g = Gauge('interface_statistics', 'Interface Statistics', ['ifDescr', 'ifType', 'ifAlias', 'hostname', 'Key'], registry=registry)
         for item in snmpData:
-            if int(timenow - service['updatedate']) < 120:
+            if int(timenow - item['updatedate']) < 120:
                 continue
             out = json.loads(item['output'])
-            for key, val in out.items():
+            for _key, val in out.items():
                 keys = {'ifDescr': val.get('ifDescr', ''), 'ifType': val.get('ifType', ''), 'ifAlias': val.get('ifAlias', ''), 'hostname': item['hostname']}
                 for key1 in ['ifMtu', 'ifAdminStatus', 'ifOperStatus', 'ifHighSpeed', 'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards', 'ifOutDiscards',
                              'ifInErrors', 'ifOutErrors', 'ifHCInUcastPkts', 'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts',

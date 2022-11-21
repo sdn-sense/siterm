@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+"""
+    SNMPMonitoring gets all information from switches using SNMP and writes to DB.
+
+
+Authors:
+  Justas Balcas jbalcas (at) caltech.edu
+
+Date: 2022/11/21
+"""
 import sys
 import json
 from easysnmp import Session
@@ -10,8 +20,9 @@ from DTNRMLibs.Backends.main import Switch
 from DTNRMLibs.MainUtilities import getConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
 
+
 class SNMPMonitoring():
-    """"""
+    """SNMP Monitoring Class"""
     def __init__(self, config, sitename):
         super().__init__()
         self.config = config
@@ -32,6 +43,7 @@ class SNMPMonitoring():
             self.dbI.insert('snmpmon', [out])
 
     def startwork(self):
+        """Scan all switches and get snmp data"""
         self.switch.getinfo(False)
         switches = self.switch._getAllSwitches()
         err = []
@@ -40,15 +52,18 @@ class SNMPMonitoring():
             if self.config.has_option(host, 'snmp_monitoring'):
                 snmpEnabled = self.config.get(host, 'snmp_monitoring')
             if not snmpEnabled:
-                self.logger.info('SNMP config for %s:snmp_monitoring not enabled' % host)
+                self.logger.info(f'SNMP config for {host}:snmp_monitoring not enabled')
                 continue
             hostconf = self.switch.plugin._getHostConfig(host)
             if 'snmp_monitoring' not in hostconf:
-                self.logger.info('Ansible host config does not have snmp_monitoring parameters' % host)
+                self.logger.info(f'Ansible host: {host} config does not have snmp_monitoring parameters')
                 continue
             session = Session(**hostconf['snmp_monitoring'])
             out = {}
-            for key in ['ifDescr', 'ifType', 'ifMtu', 'ifAdminStatus', 'ifOperStatus', 'ifHighSpeed', 'ifAlias', 'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards', 'ifOutDiscards', 'ifInErrors', 'ifOutErrors', 'ifHCInUcastPkts', 'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts', 'ifHCInBroadcastPkts', 'ifHCOutBroadcastPkts']:
+            for key in ['ifDescr', 'ifType', 'ifMtu', 'ifAdminStatus', 'ifOperStatus', 'ifHighSpeed', 'ifAlias',
+                        'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards', 'ifOutDiscards', 'ifInErrors', 'ifOutErrors',
+                        'ifHCInUcastPkts', 'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts',
+                        'ifHCInBroadcastPkts', 'ifHCOutBroadcastPkts']:
                 try:
                     allvals = session.walk(key)
                 except EasySNMPUnknownObjectIDError as ex:
@@ -67,6 +82,7 @@ class SNMPMonitoring():
         if err:
             raise Exception(f'SNMP Monitoring Errors: {err}')
 
+
 def execute(config=None, args=None):
     """Main Execute."""
     if not config:
@@ -78,6 +94,7 @@ def execute(config=None, args=None):
         for sitename in config.get('general', 'sites'):
             snmpmon = SNMPMonitoring(config, sitename)
             snmpmon.startwork()
+
 
 if __name__ == '__main__':
     print('WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.')
