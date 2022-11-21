@@ -66,9 +66,9 @@ class PrometheusAPI():
             out = json.loads(item['output'])
             for key, val in out.items():
                 keys = {'ifDescr': val.get('ifDescr', ''), 'ifType': val.get('ifType', ''), 'ifAlias': val.get('ifAlias', ''), 'hostname': item['hostname']}
-                for key1 in  ['ifMtu', 'ifAdminStatus', 'ifOperStatus', 'ifHighSpeed', 'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards', 'ifOutDiscards',
-                              'ifInErrors', 'ifOutErrors', 'ifHCInUcastPkts', 'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts',
-                              'ifHCInBroadcastPkts', 'ifHCOutBroadcastPkts']:
+                for key1 in ['ifMtu', 'ifAdminStatus', 'ifOperStatus', 'ifHighSpeed', 'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards', 'ifOutDiscards',
+                             'ifInErrors', 'ifOutErrors', 'ifHCInUcastPkts', 'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts',
+                             'ifHCInBroadcastPkts', 'ifHCOutBroadcastPkts']:
                     if key1 in val and isValFloat(val[key1]):
                         keys['Key'] = key1
                         g.labels(**keys).set(val[key1])

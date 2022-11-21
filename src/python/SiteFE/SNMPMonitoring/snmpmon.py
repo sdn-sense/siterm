@@ -38,7 +38,7 @@ class SNMPMonitoring():
         for host in switches:
             snmpEnabled = False
             if self.config.has_option(host, 'snmp_monitoring'):
-                snmpEnabled =  self.config.get(host, 'snmp_monitoring')
+                snmpEnabled = self.config.get(host, 'snmp_monitoring')
             if not snmpEnabled:
                 self.logger.info('SNMP config for %s:snmp_monitoring not enabled' % host)
                 continue
