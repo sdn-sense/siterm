@@ -17,11 +17,13 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2020 California Institute of Technology
 Date                    : 2020/09/25
 """
+import json
 from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import isValFloat
 from prometheus_client import generate_latest, CollectorRegistry
 from prometheus_client import Enum, Info, CONTENT_TYPE_LATEST
-
+from prometheus_client import Gauge
 
 class PrometheusAPI():
     """Prometheus exporter class."""
@@ -55,6 +57,21 @@ class PrometheusAPI():
                 state = service['servicestate']
             serviceState.labels(servicename=service['servicename'], hostname=service.get('hostname', 'UNSET')).state(state)
             infoState.labels(servicename=service['servicename'], hostname=service.get('hostname', 'UNSET')).info({'version': service['version']})
+        # Here get info from DB for switch snmp details
+        snmpData = self.dbI[kwargs['sitename']].get('snmpmon')
+        g = Gauge('interface_statistics', 'Interface Statistics', ['ifDescr', 'ifType', 'ifAlias', 'hostname', 'Key'], registry=registry)
+        for item in snmpData:
+            if int(timenow - service['updatedate']) < 120:
+                continue
+            out = json.loads(item['output'])
+            for key, val in out.items():
+                keys = {'ifDescr': val.get('ifDescr', ''), 'ifType': val.get('ifType', ''), 'ifAlias': val.get('ifAlias', ''), 'hostname': item['hostname']}
+                for key1 in  ['ifMtu', 'ifAdminStatus', 'ifOperStatus', 'ifHighSpeed', 'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards', 'ifOutDiscards',
+                              'ifInErrors', 'ifOutErrors', 'ifHCInUcastPkts', 'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts',
+                              'ifHCInBroadcastPkts', 'ifHCOutBroadcastPkts']:
+                    if key1 in val and isValFloat(val[key1]):
+                        keys['Key'] = key1
+                        g.labels(**keys).set(val[key1])
 
     def metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""

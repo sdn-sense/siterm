@@ -110,7 +110,13 @@ create_activeDeltas = """CREATE TABLE IF NOT EXISTS activeDeltas(
                           updatedate int NOT NULL,
                           output longtext NOT NULL,
                           primary key(id))"""
-
+create_snmpmon = """CREATE TABLE IF NOT EXISTS snmpmon(
+                          id int auto_increment,
+                          hostname text NOT NULL,
+                          insertdate int NOT NULL,
+                          updatedate int NOT NULL,
+                          output longtext NOT NULL,
+                          primary key(id))"""
 
 insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s, %(content)s)"
 insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, reduction, addition, reductionid, modadd, connectionid)
@@ -125,6 +131,7 @@ insert_switches = "INSERT INTO switches(sitename, insertdate, updatedate, output
 insert_activeDeltas = "INSERT INTO activeDeltas(insertdate, updatedate, output) VALUES(%(insertdate)s, %(updatedate)s, %(output)s)"
 insert_servicestates = "INSERT INTO servicestates(hostname, servicename, servicestate, version, updatedate) VALUES(%(hostname)s, %(servicename)s, %(servicestate)s, %(version)s, %(updatedate)s)"
 insert_debugrequests = "INSERT INTO debugrequests(hostname, state, requestdict, output, insertdate, updatedate) VALUES(%(hostname)s, %(state)s, %(requestdict)s, %(output)s, %(insertdate)s, %(updatedate)s)"
+insert_snmpmon = "INSERT INTO snmpmon(hostname, insertdate, updatedate, output) VALUES(%(hostname)s, %(insertdate)s, %(updatedate)s, %(output)s)"
 
 get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
 get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, reduction, addition, reductionid, modadd, connectionid FROM deltas"
@@ -139,6 +146,7 @@ get_activeDeltas = "SELECT id, insertdate, updatedate, output FROM activeDeltas"
 get_servicestates = "SELECT id, hostname, servicename, servicestate, version, updatedate FROM servicestates"
 get_debugrequests = "SELECT id, hostname, state, requestdict, output, insertdate, updatedate FROM debugrequests"
 get_debugrequestsids = "SELECT id FROM debugrequests"
+get_snmpmon = "SELECT id, hostname, insertdate, updatedate, output FROM snmpmon"
 
 update_deltas = "UPDATE deltas SET updatedate = %(updatedate)s, state = %(state)s WHERE uid = %(uid)s"
 update_delta_connections = "UPDATE delta_connections SET state = %(state)s WHERE connectionid = %(connectionid)s AND deltaid = %(deltaid)s"
@@ -149,6 +157,7 @@ update_switches = "UPDATE switches SET sitename = %(sitename)s, updatedate = %(u
 update_activeDeltas = "UPDATE activeDeltas SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
 update_servicestates = "UPDATE servicestates SET servicestate = %(servicestate)s, updatedate = %(updatedate)s, version = %(version)s WHERE hostname = %(hostname)s AND servicename = %(servicename)s"
 update_debugrequests = "UPDATE debugrequests SET state = %(state)s, output = %(output)s, updatedate = %(updatedate)s WHERE id = %(id)s"
+update_snmpmon = "UPDATE snmpmon SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s AND hostname = %(hostname)s"
 
 delete_models = "DELETE FROM models"
 delete_deltas = "DELETE FROM deltas"
@@ -162,3 +171,4 @@ delete_switches = "DELETE FROM switches"
 delete_servicestates = "DELETE FROM servicestates"
 delete_debugrequests = "DELETE FROM debugrequests"
 delete_activeDeltas = "DELETE FROM activeDeltas"
+delete_snmpmon = "DELETE FROM snmpmon"
