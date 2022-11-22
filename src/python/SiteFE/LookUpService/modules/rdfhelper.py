@@ -123,20 +123,20 @@ class RDFHelper():
                 continue
             self.addToGraph(['site'],
                             ['mrs', 'hasNetworkAddress'],
-                            ['site', f'{uri}'])
-            self.addToGraph(['site', f'{uri}'],
+                            ['site', f':{uri}'])
+            self.addToGraph(['site', f':{uri}'],
                             ['rdf', 'type'],
                             ['mrs', 'NetworkAddress'])
-            self.addToGraph(['site', f"{uri}"],
+            self.addToGraph(['site', f":{uri}"],
                             ['mrs', 'type'],
                             [uri])
-            self.addToGraph(['site', f"{uri}"],
+            self.addToGraph(['site', f":{uri}"],
                             ['mrs', 'value'],
                             [kwargs[uri]])
 
     def _updateVersion(self, **kwargs):
         """Update Version in model"""
-        self.newGraph.set((self.genUriRef('site', 'version'),
+        self.newGraph.set((self.genUriRef('site', ':version'),
                            self.genUriRef('mrs', 'value'),
                            self.genLiteral(kwargs['version'])))
 

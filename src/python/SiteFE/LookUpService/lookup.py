@@ -73,10 +73,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     def getVersionFromCurrentModel(self):
         """Get Current Version from Model."""
         _, currentGraph = getCurrentModel(self, False)
-        out = self.police.queryGraph(currentGraph, URIRef(self.prefixes['site']),
-                                     search=URIRef(f"{self.prefixes['nml']}version"))
+        out = self.police.queryGraph(currentGraph, URIRef(f"{self.prefixes['site']}:version"))
         if out:
-            self.modelVersion = str(out[0])
+            self.modelVersion = str(out[2])
         else:
             self.getModelSavePath()
 
