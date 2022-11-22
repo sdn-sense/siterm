@@ -46,6 +46,15 @@ from DTNRMLibs.HTTPLibrary import Requests
 from DTNRMLibs.DBBackend import dbinterface
 
 
+def isValFloat(inVal):
+    """Check if inVal is float"""
+    try:
+        float(inVal)
+    except ValueError:
+        return False
+    return True
+
+
 def getUTCnow():
     """Get UTC Time."""
     now = datetime.datetime.utcnow()
