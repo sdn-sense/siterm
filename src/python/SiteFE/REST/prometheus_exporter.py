@@ -62,7 +62,7 @@ class PrometheusAPI():
         snmpData = self.dbI[kwargs['sitename']].get('snmpmon')
         g = Gauge('interface_statistics', 'Interface Statistics', ['ifDescr', 'ifType', 'ifAlias', 'hostname', 'Key'], registry=registry)
         for item in snmpData:
-            if int(timenow - item['updatedate']) < 120:
+            if int(timenow - item['updatedate']) > 120:
                 continue
             out = json.loads(item['output'])
             for _key, val in out.items():
