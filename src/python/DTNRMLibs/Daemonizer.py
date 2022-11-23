@@ -201,12 +201,13 @@ class Daemon():
             sys.exit(2)
         sys.exit(0)
 
-    def reporter(self, state, sitename):
+    def reporter(self, state, sitename, stwork):
         """Report Service State to FE"""
+        runtime = int(time.time()) - stwork
         if not self.inargs.noreporting:
             pubStateRemote(cls=self, servicename=self.component,
                            servicestate=state, sitename=sitename,
-                           version=runningVersion)
+                           version=runningVersion, runtime=runtime)
 
     def runLoop(self):
         """Return True if it is not onetime run."""
@@ -217,6 +218,7 @@ class Daemon():
         return True
 
     def refreshThreads(self):
+        """Refresh threads"""
         while True:
             try:
                 runThreads = self.getThreads()
@@ -233,21 +235,23 @@ class Daemon():
         while self.runLoop():
             self.runCount += 1
             hadFailure = False
+            stwork = int(time.time())
             try:
                 for sitename, rthread in list(runThreads.items()):
+                    stwork = int(time.time())
                     self.logger.info('Start worker for %s site', sitename)
                     try:
                         rthread.startwork()
-                        self.reporter('OK', sitename)
+                        self.reporter('OK', sitename, stwork)
                     except:
                         hadFailure = True
-                        self.reporter('FAILED', sitename)
+                        self.reporter('FAILED', sitename, stwork)
                         exc = traceback.format_exc()
                         self.logger.critical("Exception!!! Error details:  %s", exc)
                 if self.runLoop():
                     time.sleep(10)
             except KeyboardInterrupt as ex:
-                self.reporter('KEYBOARDINTERRUPT', sitename)
+                self.reporter('KEYBOARDINTERRUPT', sitename, stwork)
                 self.logger.critical("Received KeyboardInterrupt: %s ", ex)
                 sys.exit(3)
             if hadFailure:

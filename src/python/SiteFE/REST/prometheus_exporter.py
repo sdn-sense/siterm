@@ -37,30 +37,12 @@ class PrometheusAPI():
         registry = CollectorRegistry()
         return registry
 
-    def getServiceStates(self, registry, **kwargs):
-        """Get all Services states."""
-        serviceState = Enum('service_state', 'Description of enum',
-                            labelnames=['servicename', 'hostname'],
-                            states=['OK', 'UNKNOWN', 'FAILED', 'KEYBOARDINTERRUPT', 'UNSET'],
-                            registry=registry)
-        infoState = Info('running_version', 'Running Code Version.',
-                         labelnames=['servicename', 'hostname'],
-                         registry=registry)
-        services = self.dbI[kwargs['sitename']].get('servicestates')
-        # {'servicestate': u'OK', 'hostname': u'4df8c7b989d1',
-        #  'servicename': u'LookUpService', 'id': 1, 'updatedate': 1601047007,
-        #  'version': '220727'}
-        timenow = int(getUTCnow())
-        for service in services:
-            state = 'UNKNOWN'
-            if int(timenow - service['updatedate']) < 120:
-                # If we are not getting service state for 2 mins, leave state as unknown
-                state = service['servicestate']
-            serviceState.labels(servicename=service['servicename'], hostname=service.get('hostname', 'UNSET')).state(state)
-            infoState.labels(servicename=service['servicename'], hostname=service.get('hostname', 'UNSET')).info({'version': service['version']})
+    def getSNMPData(self, registry, **kwargs):
+        """Add SNMP Data to prometheus output"""
         # Here get info from DB for switch snmp details
+        timenow = int(getUTCnow())
         snmpData = self.dbI[kwargs['sitename']].get('snmpmon')
-        g = Gauge('interface_statistics', 'Interface Statistics', ['ifDescr', 'ifType', 'ifAlias', 'hostname', 'Key'], registry=registry)
+        snmpGauge = Gauge('interface_statistics', 'Interface Statistics', ['ifDescr', 'ifType', 'ifAlias', 'hostname', 'Key'], registry=registry)
         for item in snmpData:
             if int(timenow - item['updatedate']) > 120:
                 continue
@@ -72,7 +54,35 @@ class PrometheusAPI():
                              'ifHCInBroadcastPkts', 'ifHCOutBroadcastPkts']:
                     if key1 in val and isValFloat(val[key1]):
                         keys['Key'] = key1
-                        g.labels(**keys).set(val[key1])
+                        snmpGauge.labels(**keys).set(val[key1])
+
+    def getServiceStates(self, registry, **kwargs):
+        """Get all Services states."""
+        serviceState = Enum('service_state', 'Description of enum',
+                            labelnames=['servicename', 'hostname'],
+                            states=['OK', 'UNKNOWN', 'FAILED', 'KEYBOARDINTERRUPT', 'UNSET'],
+                            registry=registry)
+        runtimeInfo = Gauge('service_runtime', 'Service Runtime', ['servicename', 'hostname'], registry=registry)
+        infoState = Info('running_version', 'Running Code Version.',
+                         labelnames=['servicename', 'hostname'],
+                         registry=registry)
+        services = self.dbI[kwargs['sitename']].get('servicestates')
+        # {'servicestate': u'OK', 'hostname': u'4df8c7b989d1',
+        #  'servicename': u'LookUpService', 'id': 1, 'updatedate': 1601047007,
+        #  'version': '220727'}
+        timenow = int(getUTCnow())
+        for service in services:
+            state = 'UNKNOWN'
+            runtime = -1
+            if int(timenow - service['updatedate']) < 120:
+                # If we are not getting service state for 2 mins, leave state as unknown
+                state = service['servicestate']
+                runtime = service['runtime']
+            labels = {'servicename': service['servicename'], 'hostname': service.get('hostname', 'UNSET')}
+            serviceState.labels(**labels).state(state)
+            infoState.labels(**labels).info({'version': service['version']})
+            runtimeInfo.labels(**labels).set(runtime)
+        self.getSNMPData(registry, **kwargs)
 
     def metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""
