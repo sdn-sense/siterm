@@ -64,7 +64,7 @@ def getUTCnow():
 
 def getVal(conDict, **kwargs):
     """Get value from configuration."""
-    if 'sitename' in list(kwargs.keys()):
+    if 'sitename' in kwargs:
         if kwargs['sitename'] in list(conDict.keys()):
             return conDict[kwargs['sitename']]
         raise Exception('This SiteName is not configured on the Frontend. Contact Support')
@@ -749,6 +749,7 @@ def reportServiceStatus(**kwargs):
         dbOut = {'hostname': kwargs.get('hostname', 'default'),
                  'servicestate': kwargs.get('servicestate', 'UNSET'),
                  'servicename': kwargs.get('servicename', 'UNSET'),
+                 'runtime': kwargs.get('runtime', -1),
                  'version': kwargs.get('version', runningVersion),
                  'updatedate': getUTCnow()}
         dbI = getDBConn(dbOut['servicename'], kwargs.get('cls', None))
@@ -780,8 +781,9 @@ def pubStateRemote(**kwargs):
         dic = {'servicename': kwargs['servicename'],
                'servicestate': kwargs['servicestate'],
                'sitename': kwargs['sitename'],
+               'runtime': kwargs['runtime'],
                'hostname': socket.gethostname(),
-               'version': runningVersion
+               'version': runningVersion,
                }
         publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
     except Exception:
