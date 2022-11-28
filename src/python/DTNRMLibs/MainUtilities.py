@@ -336,14 +336,14 @@ class GitConfig():
         for val in tmpVals:
             for lval in self.__genValFromItem(val):
                 retVals.append(int(lval))
-        return retVals
+        return list(set(retVals))
 
     @staticmethod
     def __generateIPList(vals):
         """Split by command and return list"""
         if isinstance(vals, list):
             return vals
-        return list(filter(None, vals.split(',')))
+        return list(set(list(filter(None, vals.split(',')))))
 
     # TODO: Move all to public function, not private. Needed for agents
     generateIPList=__generateIPList
