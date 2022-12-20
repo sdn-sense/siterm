@@ -247,7 +247,7 @@ class GitConfig():
                          'GIT_REPO':   {'optional': True, 'default': 'sdn-sense/rm-configs'},
                          'GIT_URL':    {'optional': True, 'default': 'https://raw.githubusercontent.com/'},
                          'GIT_BRANCH': {'optional': True, 'default': 'master'},
-                         'MD5':        {'optional': False}}
+                         'MD5':        {'optional': True, 'default': generateMD5(getHostname())}}
 
     @staticmethod
     def gitConfigCache(name):
@@ -619,6 +619,10 @@ def generateMD5(inText):
     hashObj = hashlib.md5(inText.encode())
     return hashObj.hexdigest()
 
+def getHostname():
+    """Return running server hostname"""
+    return socket.gethostname()
+
 def generateHash(inText):
     """Generate unique using uuid."""
     return str(uuid.uuid1(len(inText)))
@@ -782,7 +786,7 @@ def pubStateRemote(**kwargs):
                'servicestate': kwargs['servicestate'],
                'sitename': kwargs['sitename'],
                'runtime': kwargs['runtime'],
-               'hostname': socket.gethostname(),
+               'hostname': getHostname(),
                'version': runningVersion,
                }
         publishToSiteFE(dic, fullUrl, '/json/frontend/servicestate')
