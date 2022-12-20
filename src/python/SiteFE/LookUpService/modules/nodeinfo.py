@@ -282,7 +282,7 @@ class NodeInfo():
                                            self.genUriRef('schema', '#vlan')))
                         self.newGraph.add((self.genUriRef('site', f"{vlanuri}:vlan"),
                                            self.genUriRef('nml', 'value'),
-                                           self.genLiteral(vlanDict['vlanid'])))
+                                           self.genLiteral(str(vlanDict['vlanid']))))
                     # Add hasNetworkAddress for vlan
                     # Now the mapping of the interface information:
                     self.addIntfInfo(vlanDict, vlanuri, False)

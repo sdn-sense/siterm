@@ -197,7 +197,7 @@ class SwitchInfo():
                         ['schema', '#vlan'])
         self.addToGraph(['site', labeluri],
                         ['nml', 'value'],
-                        [value])
+                        [str(value)])
 
     def _addSwitchVlanInfo(self, key, switchInfo):
         """Add All Vlan Info from switch"""

@@ -449,7 +449,7 @@ class RDFHelper():
                            self.genUriRef('schema', '#vlan')))
         self.newGraph.add((self.genUriRef('site', labeluri),
                            self.genUriRef('nml', 'value'),
-                           self.genLiteral(int(kwargs['vlan']))))
+                           self.genLiteral(str(kwargs['vlan']))))
         return labeluri
 
     def _addLabelSwapping(self, **kwargs):
