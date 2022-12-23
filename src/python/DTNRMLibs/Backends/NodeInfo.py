@@ -9,7 +9,7 @@ Authors:
 Date: 2021/12/01
 """
 from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.FECalls import getAllHosts
+from DTNRMLibs.MainUtilities import getAllHosts
 
 
 class Node():
@@ -19,7 +19,7 @@ class Node():
 
     def nodeinfo(self, output=None):
         """put  all node information from node reported stats."""
-        nodesInfo = getAllHosts(self.site, self.logger)
+        nodesInfo = getAllHosts(self.dbI)
         if not output:
             output = self.output
         for _, nodeDict in list(nodesInfo.items()):

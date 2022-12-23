@@ -809,6 +809,15 @@ def getCurrentModel(cls, raiseException=False):
         raise NotFoundError("There is no model in DB. LookUpService is running?")
     return currentModel, currentGraph
 
+
+def getAllHosts(dbI):
+    """Get all hosts from database."""
+    jOut = {}
+    for site in dbI.get('hosts'):
+        jOut[site['hostname']] = site
+    return jOut
+
+
 def getActiveDeltas(cls):
     """Get Active deltas from DB."""
     activeDeltas = cls.dbI.get('activeDeltas')

@@ -4,12 +4,12 @@ import sys
 import tempfile
 import ast
 import pprint
-from DTNRMLibs.FECalls import getAllHosts
+from DTNRMLibs.MainUtilities import getAllHosts
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import decodebase64
 from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
-from DTNRMLibs.FECalls import getDBConn
+from DTNRMLibs.MainUtilities import getDBConn
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteFE.PolicyService import policyService as polS
 
@@ -55,7 +55,7 @@ def getdeltaAll(sitename, deltaUID):
                     for hstatehistory in dbobj.get('hoststateshistory', search=[['deltaid', delta['uid']], ['hostname', hostname]]):
                         print('State: %s, Date: %s' % (hstatehistory['state'], hstatehistory['insertdate']))
         toDict = ast.literal_eval(str(delta['content']))
-        jOut = getAllHosts(sitename, LOGGER)
+        jOut = getAllHosts(dbI)
         for key in ['reduction', 'addition']:
             print(list(toDict.keys()))
             if key in toDict and toDict[key]:

@@ -8,9 +8,8 @@ Authors:
 
 Date: 2021/12/01
 """
-from DTNRMLibs.MainUtilities import evaldict, strtolist
+from DTNRMLibs.MainUtilities import evaldict, strtolist, getAllHosts
 from DTNRMLibs.ipaddr import validMRMLName
-from DTNRMLibs.FECalls import getAllHosts
 from DTNRMLibs.CustomExceptions import NoOptionError
 
 def ignoreInterface(intfKey, intfDict, hostinfo):
@@ -43,7 +42,7 @@ class NodeInfo():
 
     def addNodeInfo(self):
         """Add Agent Node Information"""
-        jOut = getAllHosts(self.sitename, self.logger)
+        jOut = getAllHosts(self.dbI)
         for _, nodeDict in list(jOut.items()):
             nodeDict['hostinfo'] = evaldict(nodeDict['hostinfo'])
             # ==================================================================================
