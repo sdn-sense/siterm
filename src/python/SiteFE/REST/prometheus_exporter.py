@@ -19,8 +19,10 @@ Date                    : 2020/09/25
 """
 import json
 from DTNRMLibs.MainUtilities import getDBConn
+from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import isValFloat
+from DTNRMLibs.MainUtilities import getAllHosts
 from prometheus_client import generate_latest, CollectorRegistry
 from prometheus_client import Enum, Info, CONTENT_TYPE_LATEST
 from prometheus_client import Gauge
@@ -30,6 +32,11 @@ class PrometheusAPI():
     """Prometheus exporter class."""
     def __init__(self):
         self.dbI = getDBConn('Prometheus', self)
+        self.timenow = int(getUTCnow())
+
+    def _refreshTimeNow(self):
+        """Refresh timenow"""
+        self.timenow = int(getUTCnow())
 
     @staticmethod
     def cleanRegistry():
@@ -37,14 +44,25 @@ class PrometheusAPI():
         registry = CollectorRegistry()
         return registry
 
+    def getAgentData(self, registry, **kwargs):
+        """Add Agent Data (Cert validity) to prometheus output"""
+        agentCertValid = Gauge('agent_cert', 'Agent Certificate Validity', ['hostname', 'Key'], registry=registry)
+        for host, hostDict in getAllHosts(self.dbI[kwargs['sitename']]).items():
+            hostDict['hostinfo'] = evaldict(hostDict['hostinfo'])
+            if int(self.timenow - hostDict['updatedate']) > 300:
+                continue
+            if 'CertInfo' in hostDict.get('hostinfo', {}).keys():
+                for key in ['notAfter', 'notBefore']:
+                    keys = {'hostname': host, 'Key': key}
+                    agentCertValid.labels(**keys).set(hostDict['hostinfo']['CertInfo'].get(key, 0))
+
     def getSNMPData(self, registry, **kwargs):
         """Add SNMP Data to prometheus output"""
         # Here get info from DB for switch snmp details
-        timenow = int(getUTCnow())
         snmpData = self.dbI[kwargs['sitename']].get('snmpmon')
         snmpGauge = Gauge('interface_statistics', 'Interface Statistics', ['ifDescr', 'ifType', 'ifAlias', 'hostname', 'Key'], registry=registry)
         for item in snmpData:
-            if int(timenow - item['updatedate']) > 120:
+            if int(self.timenow - item['updatedate']) > 300:
                 continue
             out = json.loads(item['output'])
             for _key, val in out.items():
@@ -70,11 +88,10 @@ class PrometheusAPI():
         # {'servicestate': u'OK', 'hostname': u'4df8c7b989d1',
         #  'servicename': u'LookUpService', 'id': 1, 'updatedate': 1601047007,
         #  'version': '220727'}
-        timenow = int(getUTCnow())
         for service in services:
             state = 'UNKNOWN'
             runtime = -1
-            if int(timenow - service['updatedate']) < 120:
+            if int(self.timenow - service['updatedate']) < 300:
                 # If we are not getting service state for 2 mins, leave state as unknown
                 state = service['servicestate']
                 runtime = service['runtime']
@@ -83,9 +100,11 @@ class PrometheusAPI():
             infoState.labels(**labels).info({'version': service['version']})
             runtimeInfo.labels(**labels).set(runtime)
         self.getSNMPData(registry, **kwargs)
+        self.getAgentData(registry, **kwargs)
 
     def metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""
+        self._refreshTimeNow()
         registry = self.cleanRegistry()
         self.getServiceStates(registry, **kwargs)
         data = generate_latest(registry)

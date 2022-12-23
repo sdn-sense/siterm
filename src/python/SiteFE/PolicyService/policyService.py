@@ -25,7 +25,7 @@ from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import decodebase64
 from DTNRMLibs.MainUtilities import getCurrentModel, getActiveDeltas, writeActiveDeltas
-from DTNRMLibs.FECalls import getAllHosts
+from DTNRMLibs.MainUtilities import getAllHosts
 from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.CustomExceptions import OverlapException
@@ -72,7 +72,7 @@ class PolicyService(RDFHelper):
     def _refreshHosts(self):
         """Refresh all hosts informations"""
         self.hosts = {}
-        for host, hostDict in getAllHosts(self.sitename, self.logger).items():
+        for host, hostDict in getAllHosts(self.dbI).items():
             self.hosts.setdefault(host, hostDict)
             self.hosts[host]['hostinfo'] = evaldict(hostDict['hostinfo'])
 
