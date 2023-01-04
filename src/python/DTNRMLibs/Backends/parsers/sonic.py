@@ -11,8 +11,8 @@ Authors:
 
 Date: 2022/04/13
 """
-import json
 import re
+import simplejson as json
 from DTNRMLibs.ipaddr import ipVersion, getsubnet, normalizedip
 from DTNRMLibs.MainUtilities import getLoggingObject
 

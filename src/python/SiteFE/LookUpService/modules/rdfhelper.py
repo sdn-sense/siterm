@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """
     RDF Helper, prefixes, add to model.
 

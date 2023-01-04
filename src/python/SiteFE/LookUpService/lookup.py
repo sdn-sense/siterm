@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """
     LookUpService gets all information and prepares MRML schema.
 
@@ -15,7 +16,7 @@ from rdflib import Graph
 from rdflib import URIRef
 from rdflib.compare import isomorphic
 from DTNRMLibs.MainUtilities import getLoggingObject
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import generateHash
 from DTNRMLibs.MainUtilities import getCurrentModel
@@ -183,7 +184,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
 def execute(config=None):
     """Main Execute."""
     if not config:
-        config = getConfig()
+        config = getGitConfig()
     for siteName in config.get('general', 'sites'):
         policer = LookUpService(config, siteName)
         policer.startwork()

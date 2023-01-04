@@ -28,7 +28,7 @@ class Switch():
         # cmd counter is used only for command with items (e.g. sonic, p4)
         # the one switches which do not have ansible modules.
         self.cmdCounter = 0
-        self.ansible_errs = {}
+        self.ansibleErrs = {}
 
     @staticmethod
     def activate(_inputDict, _actionState):
@@ -42,13 +42,13 @@ class Switch():
                 for host_events in ansOut.host_events(host):
                     if host_events.get('event', '') == 'runner_on_unreachable':
                         err = host_events.get('event_data', {}).get('res', {})
-                        self.ansible_errs.setdefault(host, [])
-                        self.ansible_errs[host].append(err)
+                        self.ansibleErrs.setdefault(host, [])
+                        self.ansibleErrs[host].append(err)
                         self.logger.info('Ansible Error for %s: %s', host, err)
                     else:
                         err = host_events.get('event_data', {}).get('res', {})
-                        self.ansible_errs.setdefault(host, [])
-                        self.ansible_errs[host].append(err)
+                        self.ansibleErrs.setdefault(host, [])
+                        self.ansibleErrs[host].append(err)
                         self.logger.info('Ansible Error for %s: %s', host, err)
 
     def _getInventoryInfo(self, hosts=None):
@@ -104,6 +104,7 @@ class Switch():
             ansOut = self._executeAnsible('applyconfig.yaml', hosts)
         except ValueError as ex:
             raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}") from ex
+        self.__getAnsErrors(ansOut)
         return ansOut
 
     # 0 - command show version, system. Mainly to get mac address, but might use for more info later.
@@ -182,14 +183,13 @@ class Switch():
 
     def _getFacts(self, hosts=None):
         """Get All Facts for all Ansible Hosts"""
-        self.ansible_errs = {}
+        self.ansibleErrs = {}
         ansOut = {}
         try:
             ansOut = self._executeAnsible('getfacts.yaml', hosts)
         except ValueError as ex:
             raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}") from ex
         out = {}
-        self.ansible_errs = {}
         for host, _ in ansOut.stats['ok'].items():
             out.setdefault(host, {})
             for host_events in ansOut.host_events(host):
@@ -225,7 +225,7 @@ class Switch():
                         out[host]['event_data']['res']['ansible_facts'][f'ansible_command_{key}'] = vals
         finally:
             self.cmdCounter = 0
-        return out, self.ansible_errs
+        return out, self.ansibleErrs
 
     @staticmethod
     def getports(inData):

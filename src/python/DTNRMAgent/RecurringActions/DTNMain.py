@@ -14,7 +14,7 @@ from DTNRMLibs.MainUtilities import publishToSiteFE, createDirs
 from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.CustomExceptions import PluginException
 
@@ -91,7 +91,7 @@ class RecurringAction():
         fullUrl = getFullUrl(self.config, self.sitename)
         dic = self.appendConfig(dic)
 
-        agent = contentDB(config=self.config)
+        agent = contentDB()
         agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
 
         self.logger.info('Will try to publish information to SiteFE')
@@ -108,12 +108,12 @@ class RecurringAction():
 def execute(config):
     """Main Execute."""
     if not config:
-        config = getConfig()
+        config = getGitConfig()
     rec = RecurringAction(config, None)
     rec.startwork()
 
 
 if __name__ == '__main__':
-    CONFIG = getConfig()
+    CONFIG = getGitConfig()
     getLoggingObject(logType='StreamLogger', service='Agent')
     execute(CONFIG)

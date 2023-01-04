@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # pylint: disable=W0212
+# pylint: disable=line-too-long
 """Provisioning service is provision everything on the switches;
 
 Copyright 2021 California Institute of Technology
@@ -21,11 +22,11 @@ UpdateDate              : 2022/05/09
 """
 import sys
 import time
-import json
 import datetime
+import simplejson as json
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getLoggingObject
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import createDirs
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getVal
@@ -38,8 +39,10 @@ from SiteFE.ProvisioningService.modules.VirtualSwitchingService import VirtualSw
 
 
 class ProvisioningService(RoutingService, VirtualSwitchingService):
-    """Provisioning service communicates with Local controllers and applies
-    network changes."""
+    """
+    Provisioning service communicates with Local controllers and applies
+    network changes.
+    """
     def __init__(self, config, sitename):
         super().__init__()
         self.config = config
@@ -113,7 +116,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             # TODO: Would be nice to save in DB and see errors from WEB UI)
             raise Exception("There was configuration apply issue. Please contact support and provide this log file.")
 
-
     def startwork(self):
         """Start Provisioning Service main worker."""
         # Workflow is as follow
@@ -159,7 +161,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             self.applyConfig(raiseExc=True, hosts=hosts)
             # This executes the double apply and it is because of Dell (and might be others)
             # Dell seems to ignore some statements via ansible and requires second aplly
-            # Problem is with Dell OS9 and IPv6 neighbor definition inside ipv4. 
+            # Problem is with Dell OS9 and IPv6 neighbor definition inside ipv4.
             # TODO: Need to look how to improve the DellOS9 jinja without double apply in code
             time.sleep(1)
             self.applyConfig(raiseExc=False, hosts=hosts)
@@ -168,10 +170,11 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             self.logger.info('Force Config Apply. Because of Service restart or new day start.')
             self.applyConfig(raiseExc=True, hosts=hosts)
 
+
 def execute(config=None, args=None):
     """Main Execute."""
     if not config:
-        config = getConfig()
+        config = getGitConfig()
     if args:
         provisioner = ProvisioningService(config, args[1])
         provisioner.startwork()
@@ -179,6 +182,7 @@ def execute(config=None, args=None):
         for sitename in config.get('general', 'sites'):
             provisioner = ProvisioningService(config, sitename)
             provisioner.startwork()
+
 
 if __name__ == '__main__':
     print('WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.')

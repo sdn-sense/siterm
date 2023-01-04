@@ -15,7 +15,7 @@ from DTNRMAgent.Ruler.Components.Routing import Routing
 from DTNRMAgent.Ruler.OverlapLib import getAllOverlaps
 from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict
 from DTNRMLibs.MainUtilities import createDirs, getFullUrl, contentDB, getFileContentAsJson
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.CustomExceptions import FailedGetDataFromFE
@@ -26,7 +26,7 @@ COMPONENT = 'Ruler'
 class Ruler(contentDB):
     """Ruler class to create interfaces on the system."""
     def __init__(self, config, sitename):
-        self.config = config if config else getConfig()
+        self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service='Ruler')
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         createDirs(self.workDir)

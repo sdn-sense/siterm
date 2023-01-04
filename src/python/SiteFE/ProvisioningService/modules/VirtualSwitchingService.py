@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """Virtual Switching module to prepare/compare with ansible config.
 
 Copyright 2021 California Institute of Technology

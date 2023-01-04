@@ -17,8 +17,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2021 California Institute of Technology
 Date                    : 2021/03/12
 """
-from __future__ import absolute_import
-import json
+import simplejson as json
 from DTNRMAgent.Debugger.Actions.arptable import arptable
 from DTNRMAgent.Debugger.Actions.iperf import iperf
 from DTNRMAgent.Debugger.Actions.rapidping import rapidping
@@ -28,7 +27,7 @@ from DTNRMAgent.Debugger.Actions.iperfserver import iperfserver
 from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict
 from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import publishToSiteFE
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.CustomExceptions import FailedGetDataFromFE
 
@@ -38,7 +37,7 @@ COMPONENT = 'Debugger'
 class Debugger():
     """Debugger main process"""
     def __init__(self, config, sitename):
-        self.config = config if config else getConfig()
+        self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service='Debugger')
         self.fullURL = getFullUrl(self.config, sitename)
         self.sitename = sitename
@@ -87,7 +86,9 @@ class Debugger():
             except (ValueError, KeyError, OSError) as ex:
                 err = ex
                 exitCode = 501
-            output = {'out': out, 'err': err, 'exitCode': exitCode}
+            output = {'out': out, 'err': str(err), 'exitCode': exitCode}
+            print(output)
+            print(1)
             item['output'] = json.dumps(output)
             if exitCode != 0:
                 item['state'] = 'failed'

@@ -1,6 +1,6 @@
 """Test Frontend"""
 import os
-import json
+import simplejson as json
 import unittest
 import pathlib
 import http.client
@@ -262,7 +262,7 @@ class TestUtils(unittest.TestCase):
         out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
-        if len(out) >= 1:
+        if len(out) >= 1 and len(out[0]) >= 1:
             delta = out[0][0]
             # Delta states
             url = f"/{self.PARAMS['sitename']}/sitefe/v1/deltastates/{delta['id']}/"

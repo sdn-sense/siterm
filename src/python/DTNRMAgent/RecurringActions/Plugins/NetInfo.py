@@ -12,7 +12,7 @@ import pprint
 import psutil
 from pyroute2 import IPRoute
 from DTNRMAgent.RecurringActions.Utilities import externalCommand
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
 
 
@@ -47,11 +47,11 @@ def get(config):
             if config.has_option(intf, key):
                 nicInfo[key] = config.get(intf, key)
                 # Make lists
-                nicInfo["%s-list" % key] = config.git.generateIPList(nicInfo[key])
+                nicInfo["%s-list" % key] = config.generateIPList(nicInfo[key])
         if config.has_option(intf, 'macvlans'):
             presetMacVlans(netInfo, intf, config)
         nicInfo['vlan_range'] = config.get(intf, "vlans")
-        nicInfo['vlan_range_list'] = config.git.generateVlanList(nicInfo['vlan_range'])
+        nicInfo['vlan_range_list'] = config.generateVlanList(nicInfo['vlan_range'])
         nicInfo['min_bandwidth'] = int(config.get(intf, "vlan_min"))
         nicInfo['max_bandwidth'] = int(config.get(intf, "vlan_max"))
         nicInfo['switch_port'] = str(config.get(intf, "port")).replace('/', '-').replace(' ', '_')
@@ -162,4 +162,4 @@ def getRoutes():
 if __name__ == "__main__":
     getLoggingObject(logType='StreamLogger', service='Agent')
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getConfig()))
+    PRETTY.pprint(get(getGitConfig()))
