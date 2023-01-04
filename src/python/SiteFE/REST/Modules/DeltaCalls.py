@@ -153,6 +153,7 @@ class DeltaCalls():
         return activeDeltas
 
     def __deltas_get(self, environ, **kwargs):
+        """Private Function for Delta GET API"""
         modTime = getModTime(kwargs['headers'])
         outdeltas = self.__getdeltaINT(None, **kwargs)
         if kwargs['urlParams']['oldview']:
@@ -187,6 +188,7 @@ class DeltaCalls():
         return outM["deltas"]
 
     def __deltas_post(self, environ, **kwargs):
+        """Private Function for Delta POST API"""
         out = {}
         postRequest = False
         if environ['REQUEST_METHOD'].upper() == 'POST':

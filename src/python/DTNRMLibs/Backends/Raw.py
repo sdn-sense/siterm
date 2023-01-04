@@ -110,6 +110,6 @@ class Switch():
         return port
 
     @staticmethod
-    def nametomac(self, inData, key):
+    def nametomac(inData, key):
         """Return all mac's associated to that host. Not in use for RAW plugin"""
         return []

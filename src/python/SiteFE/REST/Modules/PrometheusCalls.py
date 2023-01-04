@@ -111,15 +111,15 @@ class PrometheusCalls():
         self.__getSNMPData(registry, **kwargs)
         self.__getAgentData(registry, **kwargs)
 
-    def __metrics(self, environ, **kwargs):
+    def __metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""
         self.__refreshTimeNow()
         registry = self.__cleanRegistry()
         self.__getServiceStates(registry, **kwargs)
         data = generate_latest(registry)
-        self.responseHeaders(environ, **kwargs)
+        self.httpresp.ret_200(CONTENT_TYPE_LATEST, kwargs['start_response'], None)
         return iter([data])
 
     def prometheus(self, environ, **kwargs):
         """Return prometheus stats."""
-        return self.__metrics(environ, **kwargs)
+        return self.__metrics(**kwargs)
