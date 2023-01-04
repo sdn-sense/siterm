@@ -39,8 +39,10 @@ from SiteFE.ProvisioningService.modules.VirtualSwitchingService import VirtualSw
 
 
 class ProvisioningService(RoutingService, VirtualSwitchingService):
-    """Provisioning service communicates with Local controllers and applies
-    network changes."""
+    """
+    Provisioning service communicates with Local controllers and applies
+    network changes.
+    """
     def __init__(self, config, sitename):
         super().__init__()
         self.config = config
@@ -114,7 +116,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             # TODO: Would be nice to save in DB and see errors from WEB UI)
             raise Exception("There was configuration apply issue. Please contact support and provide this log file.")
 
-
     def startwork(self):
         """Start Provisioning Service main worker."""
         # Workflow is as follow
@@ -169,6 +170,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             self.logger.info('Force Config Apply. Because of Service restart or new day start.')
             self.applyConfig(raiseExc=True, hosts=hosts)
 
+
 def execute(config=None, args=None):
     """Main Execute."""
     if not config:
@@ -180,6 +182,7 @@ def execute(config=None, args=None):
         for sitename in config.get('general', 'sites'):
             provisioner = ProvisioningService(config, sitename)
             provisioner.startwork()
+
 
 if __name__ == '__main__':
     print('WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.')

@@ -49,9 +49,6 @@ class HostCalls():
         self.routeMap.connect("deletehost", "/json/frontend/deletehost", action="deletehost")
         self.routeMap.connect("servicestate", "/json/frontend/servicestate", action="servicestate")
 
-    def __responseHeaders(self, environ, **kwargs):
-        self.httpresp.ret_200('application/json', kwargs["start_response"], None)
-
     def addhost(self, environ, **kwargs):
         """Adding new host to DB.
 
@@ -76,7 +73,7 @@ class HostCalls():
         else:
             print('This host is already in db. Why to add several times?')
             raise BadRequestError('This host is already in db. Why to add several times?')
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return {"Status": 'ADDED'}
 
     def updatehost(self, environ, **kwargs):
@@ -99,7 +96,7 @@ class HostCalls():
                'updatedate': getUTCnow(),
                'hostinfo': json.dumps(inputDict)}
         self.dbobj.update('hosts', [out])
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return {"Status": 'UPDATED'}
 
     def deletehost(self, environ, **kwargs):
@@ -110,7 +107,7 @@ class HostCalls():
         if not host:
             raise NotFoundError(f"This IP {inputDict['ip']} is not registered at all.")
         self.dbobj.delete('hosts', [['id', host[0]['id']]])
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return {"Status": 'DELETED'}
 
     def servicestate(self, environ, **kwargs):
@@ -126,5 +123,5 @@ class HostCalls():
                                'servicestate': inputDict['servicestate'],
                                'sitename': kwargs['sitename'], 'hostname': inputDict['hostname'],
                                'version': inputDict['version'], 'cls': self})
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return {"Status": 'REPORTED'}

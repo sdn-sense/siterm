@@ -24,7 +24,8 @@ class Switch():
         self.workDir = os.path.join(self.config.get(sitename, 'privatedir'), "RAW-Switch-Config/")
         createDirs(self.workDir)
 
-    def activate(self, inputDict, actionState):
+    @staticmethod
+    def activate(inputDict, actionState):
         """Activating state actions."""
         return True
 
@@ -44,7 +45,8 @@ class Switch():
         with open(confFName, 'w', encoding='utf-8') as fd:
             fd.write(yaml.dump(out))
 
-    def _applyNewConfig(self, hosts=None):
+    @staticmethod
+    def _applyNewConfig(hosts=None):
         """RAW Plugin does not apply anything."""
         return {}, {}
 
@@ -74,13 +76,14 @@ class Switch():
         # In RAW plugin - there is no data on port details
         return {}
 
-
-    def getvlans(self, inData):
+    @staticmethod
+    def getvlans(inData):
         """Get vlans from output"""
         # In RAW plugin - there is no vlans
         return []
 
-    def _getMacLLDPRoute(self, hosts=None):
+    @staticmethod
+    def _getMacLLDPRoute(hosts=None):
         """Get mac lldp routes"""
         # In RAW plugin - there is no macvlan mappings
         return []
@@ -106,6 +109,7 @@ class Switch():
             return int(port[4:])
         return port
 
+    @staticmethod
     def nametomac(self, inData, key):
         """Return all mac's associated to that host. Not in use for RAW plugin"""
         return []

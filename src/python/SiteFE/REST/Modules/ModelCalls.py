@@ -27,6 +27,7 @@ from DTNRMLibs.MainUtilities import encodebase64
 from DTNRMLibs.MainUtilities import convertTSToDatetime
 from DTNRMLibs.CustomExceptions import ModelNotFound
 
+
 class ModelCalls():
     """Model Calls API Module"""
     # pylint: disable=E1101
@@ -52,9 +53,6 @@ class ModelCalls():
         """Define Routes for this class"""
         self.routeMap.connect("models", "/v1/models", action="models")
         self.routeMap.connect("modelsid", "/v1/models/:modelid", action="modelsid")
-
-    def __responseHeaders(self, environ, **kwargs):
-        self.httpresp.ret_200('application/json', kwargs["start_response"], None)
 
     def __getmodel(self, environ, modelID=None, content=False, **kwargs):
         """Get all models."""

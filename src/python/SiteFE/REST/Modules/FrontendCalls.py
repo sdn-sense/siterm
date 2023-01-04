@@ -19,6 +19,8 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
+
+
 class FrontendCalls():
     """Frontend Calls API Module"""
     # pylint: disable=E1101
@@ -43,30 +45,27 @@ class FrontendCalls():
         self.routeMap.connect("getswitchdata", "/json/frontend/getswitchdata", action="getswitchdata")
         self.routeMap.connect("getactivedeltas", "/json/frontend/getactivedeltas", action="getactivedeltas")
 
-    def __responseHeaders(self, environ, **kwargs):
-        self.httpresp.ret_200('application/json', kwargs["start_response"], None)
-
     def feconfig(self, environ, **kwargs):
         """Returns Frontend configuration"""
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return self.config['MAIN']
 
     def gethosts(self, environ, **kwargs):
         """Return all available Hosts, where key is IP address."""
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return self.dbobj.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getdata(self, environ, **kwargs):
         """Return all available Hosts data, where key is IP address."""
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return self.dbobj.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getswitchdata(self, environ, **kwargs):
         """Return all Switches information"""
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return self.dbobj.get('switches', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getactivedeltas(self, environ, **kwargs):
         """Return all Active Deltas"""
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return self.dbobj.get('activeDeltas', orderby=['updatedate', 'DESC'], limit=1000)

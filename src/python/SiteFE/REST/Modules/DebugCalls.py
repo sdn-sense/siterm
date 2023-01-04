@@ -24,6 +24,7 @@ from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.MainUtilities import read_input_data
 
+
 class DebugCalls():
     """Site Frontend calls."""
     # pylint: disable=E1101
@@ -46,28 +47,24 @@ class DebugCalls():
         self.routeMap.connect("submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug")
         self.routeMap.connect("updatedebug", "/json/frontend/updatedebug/:debugvar", action="updatedebug")
 
-
-    def __responseHeaders(self, environ, **kwargs):
-        self.httpresp.ret_200('application/json', kwargs["start_response"], None)
-
     def getdebug(self, environ, **kwargs):
         """Get Debug action for specific ID."""
         search = None
         if kwargs['debugvar'] != 'ALL':
             search = [['id', kwargs['debugvar']]]
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return self.dbobj.get('debugrequests', orderby=['insertdate', 'DESC'],
                               search=search, limit=1000)
 
     def getalldebugids(self, environ, **kwargs):
         """Get All Debug IDs."""
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return self.dbobj.get('debugrequestsids', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getalldebughostname(self, environ, **kwargs):
         """Get all Debug Requests for hostname"""
         search = [['hostname', kwargs['debugvar']], ['state', 'new']]
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return self.dbobj.get('debugrequests', orderby=['updatedate', 'DESC'],
                               search=search, limit=1000)
 
@@ -85,7 +82,7 @@ class DebugCalls():
                'insertdate': getUTCnow(),
                'updatedate': getUTCnow()}
         insOut = self.dbobj.insert('debugrequests', [out])
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return {'Status': insOut[0], 'ID': insOut[2]}
 
     def updatedebug(self, environ, **kwargs):
@@ -96,5 +93,5 @@ class DebugCalls():
                'output': inputDict['output'],
                'updatedate': getUTCnow()}
         updOut = self.dbobj.update('debugrequests', [out])
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return {'Status': updOut[0], 'ID': updOut[2]}

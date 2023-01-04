@@ -45,9 +45,11 @@ from DTNRMLibs.CustomExceptions import ModelNotFound
 from DTNRMLibs.CustomExceptions import MethodNotSupported
 from DTNRMLibs.CustomExceptions import NotAcceptedHeader
 
+
 def isiterable(inVal):
     """Check if inVal is not str"""
     return not isinstance(inVal, str)
+
 
 def returnDump(out):
     """Return output based on it's type."""
@@ -85,6 +87,10 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
         if environ['REQUEST_METHOD'].upper() not in self.urlParams[actionName].get('allowedMethods', []):
             raise MethodNotSupported("Method not supported")
         return
+
+    def responseHeaders(self, environ, **kwargs):
+        """Response with 200 Header. OK"""
+        self.httpresp.ret_200('application/json', kwargs["start_response"], None)
 
     def internallCall(self, environ, **kwargs):
         """Delta internal call which catches all exception."""
@@ -130,7 +136,6 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
         if exception:
             print(exception)
         return returnDump(returnDict)
-
 
     def mainCall(self, environ, start_response):
         """Main start.

@@ -97,9 +97,6 @@ class PrometheusCalls():
                          labelnames=['servicename', 'hostname'],
                          registry=registry)
         services = self.dbobj.get('servicestates')
-        # {'servicestate': u'OK', 'hostname': u'4df8c7b989d1',
-        #  'servicename': u'LookUpService', 'id': 1, 'updatedate': 1601047007,
-        #  'version': '220727'}
         for service in services:
             state = 'UNKNOWN'
             runtime = -1
@@ -114,15 +111,15 @@ class PrometheusCalls():
         self.__getSNMPData(registry, **kwargs)
         self.__getAgentData(registry, **kwargs)
 
-    def __metrics(self, **kwargs):
+    def __metrics(self, environ, **kwargs):
         """Return all available Hosts, where key is IP address."""
         self.__refreshTimeNow()
         registry = self.__cleanRegistry()
         self.__getServiceStates(registry, **kwargs)
         data = generate_latest(registry)
-        self.httpresp.ret_200(CONTENT_TYPE_LATEST, kwargs['start_response'], None)
+        self.responseHeaders(environ, **kwargs)
         return iter([data])
 
     def prometheus(self, environ, **kwargs):
         """Return prometheus stats."""
-        return self.__metrics(**kwargs)
+        return self.__metrics(environ, **kwargs)

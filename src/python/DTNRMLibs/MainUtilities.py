@@ -345,7 +345,6 @@ class GitConfig():
             return vals
         return list(set(list(filter(None, vals.split(',')))))
 
-
     def __generatevlaniplists(self):
         """Generate list for vlans and ips. config might have it in str"""
         for sitename in self.config['MAIN']['general']['sites']:
@@ -462,6 +461,7 @@ class GitConfig():
         if self.config['MAIN'].get(key, {}).get(subkey, {}):
             return True
         return False
+
 
 def getGitConfig():
     """Wrapper before git config class. Returns dictionary."""

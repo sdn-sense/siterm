@@ -69,9 +69,6 @@ class DeltaCalls():
         self.routeMap.connect("activedeltas", "/v1/activedeltas", action="activedeltas")
         self.routeMap.connect("deltastates", "/v1/deltastates/:deltaid", action="deltastates")
 
-    def __responseHeaders(self, environ, **kwargs):
-        self.httpresp.ret_200('application/json', kwargs["start_response"], None)
-
     def __addNewDeltaINT(self, uploadContent, environ, **kwargs):
         """Add new delta."""
         hashNum = uploadContent['id']
@@ -244,7 +241,7 @@ class DeltaCalls():
         Examples: https://server-host/sitefe/v1/deltastates/([-_A-Za-z0-9]+)/
         """
         outstates = self.__getdeltastatesINT(kwargs['deltaid'], **kwargs)
-        self.__responseHeaders(environ, **kwargs)
+        self.responseHeaders(environ, **kwargs)
         return outstates
 
     def deltasid(self, environ, **kwargs):
@@ -286,7 +283,6 @@ class DeltaCalls():
         self.httpresp.ret_200('application/json', kwargs["start_response"], [('Last-Modified', httpdate(delta['updatedate']))])
         return [current]
 
-
     def deltasaction(self, environ, **kwargs):
         """
         API Call for commiting delta or tiering down.
@@ -309,5 +305,5 @@ class DeltaCalls():
         Examples: https://server-host/sitefe/v1/activedeltas
         """
         print('Called to get all active deltas')
-        self.httpresp.ret_200('application/json', kwargs["start_response"], None)
+        self.responseHeaders(environ, **kwargs)
         return self.__getActiveDeltas(environ, **kwargs)
