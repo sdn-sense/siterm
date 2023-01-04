@@ -1,27 +1,9 @@
 #!/usr/bin/env python3
 # pylint: disable=line-too-long
-"""All APIS and regural expresions for url requests. Code style example:
+"""
+WSGI Application main class.
 
-===== Function
-_request_re = re.compile(r'^/*([-_A-Za-z0-9]+)/?$')
-def request(environ, start_response):
-    status = '200 OK' # HTTP Status
-    headers = [('Content-type', 'text/html'),
-              ('Cache-Control', 'max-age=60, public')]
-    start_response(status, headers)
-
-    path = environ.get('PATH_INFO', '')
-    m = _request_re.match(path)
-    request = m.groups()[0]
-
-    tmpl = request
-
-    return [ tmpl ]
-===== CODE Style
-Please follow PEP8 Rules and Pylint.
-Each API has to have detailed description
-
-Copyright 2017 California Institute of Technology
+Copyright 2023 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -31,27 +13,28 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title                   : dtnrm
+Title                   : siterm
 Author                  : Justas Balcas
-Email                   : justas.balcas (at) cern.ch
-@Copyright              : Copyright (C) 2016 California Institute of Technology
-Date                    : 2017/09/26
+Email                   : jbalcas (at) caltech (dot) edu
+@Copyright              : Copyright (C) 2023 California Institute of Technology
+Date                    : 2023/01/03
 """
-from __future__ import print_function
-import re
-import importlib
-import collections
 import traceback
 import simplejson as json
-from SiteFE.REST.FEApis import FrontendRM
-from SiteFE.REST.prometheus_exporter import PrometheusAPI
-import SiteFE.REST.AppCalls as AllCalls
+from routes import Mapper
+from SiteFE.REST.Modules.HostCalls import HostCalls
+from SiteFE.REST.Modules.DebugCalls import DebugCalls
+from SiteFE.REST.Modules.DeltaCalls import DeltaCalls
+from SiteFE.REST.Modules.ModelCalls import ModelCalls
+from SiteFE.REST.Modules.FrontendCalls import FrontendCalls
+from SiteFE.REST.Modules.PrometheusCalls import PrometheusCalls
 from DTNRMLibs.x509 import CertHandler
-from DTNRMLibs.RESTInteractions import get_match_regex
+from DTNRMLibs.MainUtilities import contentDB
+from DTNRMLibs.MainUtilities import getDBConn
+from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getHeaders
 from DTNRMLibs.MainUtilities import getUrlParams
-from DTNRMLibs.MainUtilities import read_input_data
 from DTNRMLibs.MainUtilities import getCustomOutMsg
 from DTNRMLibs.CustomExceptions import HTTPResponses
 from DTNRMLibs.CustomExceptions import BadRequestError
@@ -59,147 +42,12 @@ from DTNRMLibs.CustomExceptions import NotSupportedArgument
 from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
 from DTNRMLibs.CustomExceptions import DeltaNotFound
 from DTNRMLibs.CustomExceptions import ModelNotFound
-
-# Initialization is done only 1 time
-_INITIALIZED = None
-# Configuration global variable
-_CP = None
-# Frontend Resource manager
-_FRONTEND_RM = FrontendRM()
-_PROMETHEUS = PrometheusAPI()
-_SITES = ["MAIN"]
-# TODO: This is just a hack for now until we rewrite all
-# httpd application. We should have a separate API for normal calls
-# which do not require site name
-_HTTPRESPONDER = HTTPResponses()
-_CERTHANDLER = CertHandler()
-
-# This would also allow to move all catches to here... and get all errors in one place
-# ==============================================
-#              DEFAULT Functions
-# ==============================================
-def check_initialized(environ):
-    """Env and configuration initialization."""
-    del environ
-    global _INITIALIZED
-    global _CP
-    global _SITES
-    if not _INITIALIZED:
-        _CP = getGitConfig()
-        _SITES += _CP['MAIN']['general']['sites']
-        _INITIALIZED = True
-
-# =====================================================================================================================
-# =====================================================================================================================
-_FECONFIG_RE = re.compile(r'^/*json/frontend/configuration$')
-
-
-def feconfig(environ, **kwargs):
-    """Returns Frontend configuration"""
-    del environ
-    global _CP
-    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
-    return _CP['MAIN']
-
-
-_FRONTEND_RE = re.compile(r'^/*json/frontend/(addhost|updatehost|deletehost|getdata|getswitchdata|getactivedeltas|servicestate)$')
-_FRONTEND_ACTIONS = {'GET': {'getdata': _FRONTEND_RM.getdata,
-                             'getswitchdata': _FRONTEND_RM.getswitchdata,
-                             'getactivedeltas': _FRONTEND_RM.getactivedeltas},
-                     'PUT': {'addhost': _FRONTEND_RM.addhost,
-                             'updatehost': _FRONTEND_RM.updatehost,
-                             'deletehost': _FRONTEND_RM.deletehost,
-                             'servicestate': _FRONTEND_RM.servicestate}}
-
-
-def frontend(environ, **kwargs):
-    """Frontend information.
-    Method: GET
-    Calls: ips | actions | getdata
-    Output: application/json
-    Examples: https://server-host/json/frontend/getdata # Will return info about all hosts hosts
-    Method: PUT
-    Calls: addhost | updatehost | servicestate | deletehost
-    Output: application/json
-    Examples: https://server-host/json/frontend/addhost # Will add new host. Raises error if it is already there
-    """
-    methodType = environ['REQUEST_METHOD'].upper()
-    command = _FRONTEND_ACTIONS[methodType].get(kwargs['mReg'][0])
-    if not command:
-        raise BadRequestError(f"Unsupported Call. Contact support. Call details: {methodType} {kwargs['mReg'][0]}")
-    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
-    if methodType == 'GET':
-        return command(**kwargs)
-    # Get input data and pass it to function.
-    inputDict = read_input_data(environ)
-    command(inputDict, **kwargs)
-    return {"Status": 'OK'}
-
-
-_DEBUG_RE = re.compile(r'^/*json/frontend/(submitdebug|updatedebug|getdebug|getalldebughostname)/([-_\.A-Za-z0-9]+)$')
-_DEBUG_ACTIONS = {'GET': {'getdebug': _FRONTEND_RM.getdebug,
-                          'getalldebughostname': _FRONTEND_RM.getalldebughostname},
-                  'POST': {'submitdebug': _FRONTEND_RM.submitdebug},
-                  'PUT':  {'updatedebug': _FRONTEND_RM.updatedebug}}
-
-
-def debug(environ, **kwargs):
-    """Debug ations
-    Method: GET; Calls: getdebug
-    Output: application/json
-    Method: POST; Calls: submitdebug
-    Output: application/json
-    Method: PUT; Calls: updatedebug
-    Output: application/json
-    """
-    methodType = environ['REQUEST_METHOD'].upper()
-    command = _DEBUG_ACTIONS[methodType].get(kwargs['mReg'][0], "")
-    if not command:
-        raise BadRequestError(f"Unsupported Call. Contact support. Call details: {methodType} {kwargs['mReg'][0]}")
-    kwargs['http_respond'].ret_200('application/json', kwargs['start_response'], None)
-    if methodType == 'GET':
-        return command(**kwargs)
-    # Get input data and pass it to function.
-    inputDict = read_input_data(environ)
-    out = command(inputDict, **kwargs)
-    return {"Status": out[0], 'ID': out[2]}
-
-_PROMETHEUS_RE = re.compile(r'^/*json/frontend/metrics$')
-
-
-def prometheus(environ, **kwargs):
-    """Return prometheus stats."""
-    del environ
-    return _PROMETHEUS.metrics(**kwargs)
-
-
-def internallCall(caller, environ, **kwargs):
-    """Delta internal call which catches all exception."""
-    returnDict = {}
-    exception = ""
-    try:
-        return caller(environ, **kwargs)
-    except (ModelNotFound, DeltaNotFound) as ex:
-        exception = f'{caller}: Received Exception: {ex}'
-        kwargs['http_respond'].ret_404('application/json', kwargs['start_response'], None)
-        returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=404)
-    except (ValueError, IOError) as ex:
-        exception = f'{caller}: Received Exception: {ex}. Full traceback {traceback.print_exc()}'
-        kwargs['http_respond'].ret_500('application/json', kwargs['start_response'], None)
-        returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=500)
-    except BadRequestError as ex:
-        exception = f'{caller}: Received BadRequestError: {ex}'
-        kwargs['http_respond'].ret_400('application/json', kwargs['start_response'], None)
-        returnDict = getCustomOutMsg(errMsg=ex.__str__(), errCode=400)
-    if exception:
-        print(exception)
-    return returnDict
-
+from DTNRMLibs.CustomExceptions import MethodNotSupported
+from DTNRMLibs.CustomExceptions import NotAcceptedHeader
 
 def isiterable(inVal):
-    """Check if inVal is iterable"""
-    return not isinstance(inVal, str) and isinstance(inVal, collections.Iterable)
-
+    """Check if inVal is not str"""
+    return not isinstance(inVal, str)
 
 def returnDump(out):
     """Return output based on it's type."""
@@ -210,79 +58,98 @@ def returnDump(out):
     return out
 
 
-def application(environ, start_response):
-    """Main start.
+class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCalls, DeltaCalls, ModelCalls):
+    """Main WSGI Frontend for accepting and authorizing calls to backend"""
+    def __init__(self):
+        self.config = getGitConfig()
+        self.sites = ["MAIN"] + self.config['MAIN']['general']['sites']
+        self.httpresp = HTTPResponses()
+        self.siteDB = contentDB()
+        self.dbI = getDBConn('REST-Frontend', self)
+        self.dbobj = None
+        self.urlParams = {}
+        self.routeMap = Mapper()
+        CertHandler.__init__(self)
+        FrontendCalls.__init__(self)
+        PrometheusCalls.__init__(self)
+        HostCalls.__init__(self)
+        DebugCalls.__init__(self)
+        DeltaCalls.__init__(self)
+        ModelCalls.__init__(self)
 
-    WSGI will always call this function, which will check if call is
-    allowed.
-    """
-    # HTTP responses var
-    check_initialized(environ)
-    global _SITES
-    try:
-        environ['CERTINFO'] = _CERTHANDLER.getCertInfo(environ)
-        _CERTHANDLER.validateCertificate(environ)
-    except Exception as ex:
-        _HTTPRESPONDER.ret_401('application/json', start_response, None)
-        return [bytes(json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=401)), 'UTF-8')]
-    path = environ.get('PATH_INFO', '').lstrip('/')
-    sitename = environ.get('REQUEST_URI', '').split('/')[1]
-    if sitename not in _SITES:
-        _HTTPRESPONDER.ret_404('application/json', start_response, None)
-        return [bytes(json.dumps(getCustomOutMsg(errMsg="Sitename %s is not configured. Contact Support."
-                                           % sitename, errCode=404)), 'UTF-8')]
-    for regex, callback, methods, params, acceptheader in URLS:
-        match = regex.match(path)
-        if match:
-            regMatch = get_match_regex(environ, regex)
-            if environ['REQUEST_METHOD'].upper() not in methods:
-                _HTTPRESPONDER.ret_405('application/json', start_response, [('Location', '/')])
-                return [bytes(json.dumps(getCustomOutMsg(errMsg="Method %s is not supported in %s"
-                                                   % (environ['REQUEST_METHOD'].upper(),
-                                                      callback), errCode=405)), 'UTF-8')]
-            environ['jobview.url_args'] = match.groups()
-            try:
-                headers = getHeaders(environ)
-                # by default only 'application/json' is accepted. It can be overwritten for each API inside
-                # definition of URLs or headers are passed to the API call and can be checked there.
-                # Preference is to keep them inside URL definitions.
-                if 'ACCEPT' not in headers:
-                    headers['ACCEPT'] = 'application/json'
-                if acceptheader and headers['ACCEPT'] not in acceptheader:
-                    _HTTPRESPONDER.ret_406('application/json', start_response, None)
-                    return [bytes(json.dumps(getCustomOutMsg(errMsg="Not Acceptable Header. Provided: %s, Acceptable: %s"
-                                                       % (headers['ACCEPT'], acceptheader), errCode=406)), 'UTF-8')]
-                out = internallCall(caller=callback, environ=environ, start_response=start_response,
-                                    mReg=regMatch.groups(), http_respond=_HTTPRESPONDER,
-                                    urlParams=getUrlParams(environ, params),
-                                    headers=headers, sitename=sitename)
-                return returnDump(out)
-            except (NotSupportedArgument, TooManyArgumentalValues) as ex:
-                print(f'Send 400 error. More details: {json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400))}')
-                _HTTPRESPONDER.ret_400('application/json', start_response, None)
-                return [bytes(json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=400)), 'UTF-8')]
-            except IOError as ex: # Exception as ex:
-                print(f'Send 500 error. More details: {json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500))}')
-                _HTTPRESPONDER.ret_500('application/json', start_response, None)
-                return [bytes(json.dumps(getCustomOutMsg(errMsg=ex.__str__(), errCode=500)), 'UTF-8')]
-    errMsg = "Such API does not exist. Not Implemented"
-    print(f'Send 501 error. More details: {json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501))}')
-    _HTTPRESPONDER.ret_501('application/json', start_response, [('Location', '/')])
-    return [bytes(json.dumps(getCustomOutMsg(errMsg=errMsg, errCode=501)), 'UTF-8')]
+    def checkIfMethodAllowed(self, environ, actionName):
+        """Check if Method (GET/PUT/POST/HEAD) is allowed"""
+        if not self.urlParams.get(actionName, {}).get('allowedMethods', []):
+            print(f'Warning. Undefined behavior. Allowed Methods not defined for {actionName}')
+            return
+        if environ['REQUEST_METHOD'].upper() not in self.urlParams[actionName].get('allowedMethods', []):
+            raise MethodNotSupported("Method not supported")
+        return
+
+    def internallCall(self, environ, **kwargs):
+        """Delta internal call which catches all exception."""
+        returnDict = {}
+        exception = ""
+        try:
+            routeMatch = self.routeMap.match(environ.get('PATH_INFO', '').rstrip('/'))
+            if routeMatch and hasattr(self, routeMatch.get('action', '')):
+                self.checkIfMethodAllowed(environ, routeMatch['action'])
+                kwargs.update(routeMatch)
+                if self.urlParams.get(routeMatch['action'], {}).get('urlParams', []):
+                    kwargs.update({'urlParams': getUrlParams(environ, self.urlParams[routeMatch['action']]['urlParams'])})
+                kwargs.update({'headers': getHeaders(environ)})
+                returnDict = getattr(self, routeMatch['action'])(environ, **kwargs)
+            if not routeMatch:
+                self.httpresp.ret_501('application/json', kwargs['start_response'], None)
+                exception = f"No such API. {environ.get('PATH_INFO', '').rstrip('/')} call."
+                returnDict = getCustomOutMsg(errMsg=str(exception), errCode=501)
+        except (ModelNotFound, DeltaNotFound) as ex:
+            exception = f'Received Exception: {ex}'
+            self.httpresp.ret_404('application/json', kwargs['start_response'], None)
+            returnDict = getCustomOutMsg(errMsg=str(ex), errCode=404)
+        except (ValueError, IOError) as ex:
+            exception = f'Received Exception: {ex}. Full traceback {traceback.print_exc()}'
+            self.httpresp.ret_500('application/json', kwargs['start_response'], None)
+            returnDict = getCustomOutMsg(errMsg=str(ex), errCode=500)
+        except BadRequestError as ex:
+            exception = f'Received BadRequestError: {ex}'
+            self.httpresp.ret_400('application/json', kwargs['start_response'], None)
+            returnDict = getCustomOutMsg(errMsg=str(ex), errCode=400)
+        except (NotSupportedArgument, TooManyArgumentalValues) as ex:
+            exception = f'Send 400 error. More details: {json.dumps(getCustomOutMsg(errMsg=str(ex), errCode=400))}'
+            self.httpresp.ret_400('application/json', kwargs['start_response'], None)
+            returnDict = getCustomOutMsg(errMsg=str(ex), errCode=400)
+        except MethodNotSupported as ex:
+            exception = f'Received BadRequestError: {ex}'
+            self.httpresp.ret_405('application/json', kwargs['start_response'], None)
+            returnDict = getCustomOutMsg(errMsg=str(ex), errCode=405)
+        except NotAcceptedHeader as ex:
+            exception = f'Received BadRequestError: {ex}'
+            self.httpresp.ret_406('application/json', kwargs['start_response'], None)
+            returnDict = getCustomOutMsg(errMsg=str(ex), errCode=406)
+        if exception:
+            print(exception)
+        return returnDump(returnDict)
 
 
-URLS = [(_FECONFIG_RE, feconfig, ['GET'], [], []),
-        (_FRONTEND_RE, frontend, ['GET', 'PUT'], [], []),
-        (_DEBUG_RE, debug, ['GET', 'POST', 'PUT'], [], []),
-        (_PROMETHEUS_RE, prometheus, ['GET'], [], [])]
+    def mainCall(self, environ, start_response):
+        """Main start.
 
-if '__all__' in dir(AllCalls):
-    for callableF in AllCalls.__all__:
-        name = f"SiteFE.REST.AppCalls.{callableF}"
-        method = importlib.import_module(name)
-        if hasattr(method, 'CALLS'):
-            for item in method.CALLS:
-                URLS.append(item)
-            tmpCalls = method.CALLS
-        else:
-            continue
+        WSGI will always call this function, which will check if call is
+        allowed.
+        """
+        # Certificate must be valid
+        try:
+            environ['CERTINFO'] = self.getCertInfo(environ)
+            self.validateCertificate(environ)
+        except Exception as ex:
+            self.httpresp.ret_401('application/json', start_response, None)
+            return [bytes(json.dumps(getCustomOutMsg(errMsg=str(ex), errCode=401)), 'UTF-8')]
+        # Sitename must be configured on FE
+        sitename = environ.get('REQUEST_URI', '').split('/')[1]
+        if sitename not in self.sites:
+            self.httpresp.ret_404('application/json', start_response, None)
+            return [bytes(json.dumps(getCustomOutMsg(errMsg=f"Sitename {sitename} is not configured. Contact Support.",
+                                                     errCode=404)), 'UTF-8')]
+        self.dbobj = getVal(self.dbI, **{'sitename': sitename})
+        return self.internallCall(environ=environ, start_response=start_response, sitename=sitename)

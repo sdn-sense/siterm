@@ -48,16 +48,6 @@ class getContent():
             raise BadRequestError from ex
 
 
-def get_match_regex(environ, regexp):
-    """Matches regexp and return its type.
-
-    This does not raise any error.
-    """
-    path = environ.get('PATH_INFO', '')
-    mReg = regexp.match(path)
-    return mReg
-
-
 def is_application_json(environ):
     """Check if environ has set content type to json."""
     content_type = environ.get('CONTENT_TYPE', 'application/json')

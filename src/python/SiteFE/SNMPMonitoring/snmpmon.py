@@ -9,7 +9,7 @@ Authors:
 Date: 2022/11/21
 """
 import sys
-import json
+import simplejson as json
 from easysnmp import Session
 from easysnmp.exceptions import EasySNMPUnknownObjectIDError
 from easysnmp.exceptions import EasySNMPTimeoutError
@@ -17,7 +17,7 @@ from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.Backends.main import Switch
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
 
 
@@ -60,9 +60,10 @@ class SNMPMonitoring():
                 continue
             session = Session(**hostconf['snmp_monitoring'])
             out = {}
-            for key in ['ifDescr', 'ifType', 'ifMtu', 'ifAdminStatus', 'ifOperStatus', 'ifHighSpeed', 'ifAlias',
-                        'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards', 'ifOutDiscards', 'ifInErrors', 'ifOutErrors',
-                        'ifHCInUcastPkts', 'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts',
+            for key in ['ifDescr', 'ifType', 'ifMtu', 'ifAdminStatus', 'ifOperStatus',
+                        'ifHighSpeed', 'ifAlias', 'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards',
+                        'ifOutDiscards', 'ifInErrors', 'ifOutErrors', 'ifHCInUcastPkts',
+                        'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts',
                         'ifHCInBroadcastPkts', 'ifHCOutBroadcastPkts']:
                 try:
                     allvals = session.walk(key)
@@ -86,7 +87,7 @@ class SNMPMonitoring():
 def execute(config=None, args=None):
     """Main Execute."""
     if not config:
-        config = getConfig()
+        config = getGitConfig()
     if args:
         snmpmon = SNMPMonitoring(config, args[1])
         snmpmon.startwork()

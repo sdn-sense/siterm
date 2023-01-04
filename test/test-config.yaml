@@ -1,6 +1,6 @@
 ---
 
-hostname: https://sdn-login-1.ultralight.org:8443
+hostname: https://sense-caltech-fe.ultralight.org
 sitename: T2_US_Caltech_Test
 cert: /home/jbalcas/hostcert.pem
 key: /home/jbalcas/hostkey.pem

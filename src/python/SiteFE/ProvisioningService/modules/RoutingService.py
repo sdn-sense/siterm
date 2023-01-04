@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """Routing Service (BGP Control) preparation/comparison
 
 Copyright 2021 California Institute of Technology

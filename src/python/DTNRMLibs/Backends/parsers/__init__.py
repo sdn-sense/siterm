@@ -10,14 +10,15 @@ Date: 2021/12/01
 from os.path import dirname, basename, isfile, join
 import glob
 import importlib
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
+
 modules = glob.glob(join(dirname(__file__), "*.py"))
 __all__ = [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]
 
 ALL = {}
 MAPPING = {}
 for module in __all__:
-    config = getConfig()
+    config = getGitConfig()
     tmpMod = importlib.import_module(f"DTNRMLibs.Backends.parsers.{module}")
     _tmp = tmpMod.MODULE(config=config)
     for name in _tmp.factName:

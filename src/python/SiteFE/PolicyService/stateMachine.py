@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """Everything goes here when they do not fit anywhere else.
 
 Copyright 2017 California Institute of Technology
@@ -197,7 +198,7 @@ class StateMachine():
         """Check on all remove state deltas."""
         # Remove fully from database
         for delta in dbObj.get('deltas', search=[['state', 'removed']]):
-            print('Remove %s delta' % delta['id'])
+            print(f"Remove {delta['id']} delta")
             dbObj.delete('deltas', [['id', delta['id']]])
 
 

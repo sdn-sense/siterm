@@ -8,14 +8,14 @@ Authors:
 
 Date: 2021/12/01
 """
-import json
+import simplejson as json
 from DTNRMLibs.Backends.Ansible import Switch as Ansible
 from DTNRMLibs.Backends.Raw import Switch as Raw
 from DTNRMLibs.Backends.NodeInfo import Node
 from DTNRMLibs.Backends.generalFunctions import checkConfig
 from DTNRMLibs.Backends.generalFunctions import cleanupEmpty
 from DTNRMLibs.Backends.generalFunctions import getConfigParams, getValFromConfig
-from DTNRMLibs.MainUtilities import getConfig, getLoggingObject, getUTCnow
+from DTNRMLibs.MainUtilities import getGitConfig, getLoggingObject, getUTCnow
 from DTNRMLibs.MainUtilities import getDBConn
 
 
@@ -238,7 +238,7 @@ class Switch(Node):
 def execute(config=None):
     """Main Execute."""
     if not config:
-        config = getConfig()
+        config = getGitConfig()
     for siteName in config.get('general', 'sites'):
         switchM = Switch(config, siteName)
         out = switchM.getinfo()

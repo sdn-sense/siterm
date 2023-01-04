@@ -15,7 +15,7 @@ import traceback
 import atexit
 import psutil
 from DTNRMLibs import __version__ as runningVersion
-from DTNRMLibs.MainUtilities import getConfig, getLoggingObject
+from DTNRMLibs.MainUtilities import getGitConfig, getLoggingObject
 from DTNRMLibs.MainUtilities import reCacheConfig
 from DTNRMLibs.MainUtilities import pubStateRemote
 
@@ -53,7 +53,7 @@ class Daemon():
         self.inargs = inargs
         self.runCount = 0
         self.pidfile = f'/tmp/end-site-rm-{component}.pid'
-        self.config = getConfig()
+        self.config = getGitConfig()
         self.logger = getLoggingObject(config=self.config,
                                        logfile=f"{self.config.get('general', 'logDir')}/{component}/",
                                        logLevel=self.config.get('general', 'logLevel'), logType=logType,
@@ -61,7 +61,7 @@ class Daemon():
 
     def _refreshConfig(self):
         """Config refresh call"""
-        self.config = getConfig()
+        self.config = getGitConfig()
 
     def daemonize(self):
         """do the UNIX double-fork magic, see Stevens' "Advanced Programming in

@@ -74,7 +74,7 @@ import shutil
 from DTNRMLibs.MainUtilities import createDirs, contentDB
 from DTNRMLibs.MainUtilities import execute as executeCmd
 from DTNRMLibs.MainUtilities import getLoggingObject
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getFileContentAsJson
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.CustomExceptions import ConfigException
@@ -87,12 +87,12 @@ COMPONENT = 'QOS'
 class QOS():
     """QOS class to install new limit rules."""
     def __init__(self, config):
-        self.config = config if config else getConfig()
+        self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service='QOS')
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         self.hostname = self.config.get('agent', 'hostname')
         createDirs(self.workDir)
-        self.agentdb = contentDB(config=self.config)
+        self.agentdb = contentDB()
         self.activeDeltas = {}
         self.params = {}
 

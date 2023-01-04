@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """
 Policy Service which manipulates delta, connection states in DB.
 
@@ -19,7 +20,7 @@ from rdflib import URIRef
 from rdflib.plugins.parsers.notation3 import BadSyntax
 from dateutil import parser
 from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import createDirs
@@ -53,7 +54,7 @@ class PolicyService(RDFHelper):
         self.sitename = sitename
         self.config = config
         self.logger = getLoggingObject(config=self.config, service='PolicyService')
-        self.siteDB = contentDB(config=self.config)
+        self.siteDB = contentDB()
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.stateMachine = StateMachine(self.config)
         self.hosts = {}
@@ -511,7 +512,7 @@ class PolicyService(RDFHelper):
 def execute(config=None, args=None):
     """Main Execute."""
     if not config:
-        config = getConfig()
+        config = getGitConfig()
     if args:
         if args.sitename:
             policer = PolicyService(config, args.sitename)

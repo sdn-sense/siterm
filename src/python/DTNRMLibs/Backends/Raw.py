@@ -10,7 +10,7 @@ Date: 2021/12/01
 """
 import os
 import yaml
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import createDirs
 
 
@@ -46,7 +46,7 @@ class Switch():
 
     def _applyNewConfig(self, hosts=None):
         """RAW Plugin does not apply anything."""
-        return {}
+        return {}, {}
 
     def getAnsNetworkOS(self, host):
         """Get Ansible network os from hosts file"""
@@ -54,7 +54,7 @@ class Switch():
 
     def _getFacts(self, hosts=None):
         """Get Facts for RAW plugin"""
-        self.config = getConfig()
+        self.config = getGitConfig()
         out = {}
         for switchn in self.config.get(self.sitename, 'switch'):
             hOut = out.setdefault(switchn, {})

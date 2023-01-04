@@ -12,7 +12,7 @@ import ipaddress
 import netifaces
 from pyroute2 import IPRoute
 from DTNRMLibs.MainUtilities import execute
-from DTNRMLibs.MainUtilities import getConfig
+from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.ipaddr import normalizedip, normalizedipwithnet
 
@@ -32,7 +32,7 @@ def intfUp(intf):
 class VInterfaces():
     """Virtual interface class."""
     def __init__(self, config):
-        self.config = config if config else getConfig()
+        self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service='Ruler')
 
     def _add(self, vlan, raiseError=False):

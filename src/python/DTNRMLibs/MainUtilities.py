@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """Everything goes here when they do not fit anywhere else.
 
 Authors:
@@ -68,7 +69,6 @@ def getVal(conDict, **kwargs):
         if kwargs['sitename'] in list(conDict.keys()):
             return conDict[kwargs['sitename']]
         raise Exception('This SiteName is not configured on the Frontend. Contact Support')
-    print(kwargs)
     raise Exception('This Call Should not happen. Contact Support')
 
 
@@ -325,7 +325,7 @@ class GitConfig():
             retVals.append(int(tmpvals[0]))
         return retVals
 
-    def __generateVlanList(self, vals):
+    def generateVlanList(self, vals):
         """Generate Vlan List. which can be separated by comma, dash"""
         retVals = []
         tmpVals = vals
@@ -339,15 +339,12 @@ class GitConfig():
         return list(set(retVals))
 
     @staticmethod
-    def __generateIPList(vals):
+    def generateIPList(vals):
         """Split by command and return list"""
         if isinstance(vals, list):
             return vals
         return list(set(list(filter(None, vals.split(',')))))
 
-    # TODO: Move all to public function, not private. Needed for agents
-    generateIPList=__generateIPList
-    generateVlanList=__generateVlanList
 
     def __generatevlaniplists(self):
         """Generate list for vlans and ips. config might have it in str"""
@@ -355,10 +352,10 @@ class GitConfig():
             for iptype in ['ipv6', 'ipv4']:
                 for key in ['subnet-pool', 'address-pool']:
                     if f"{iptype}-{key}" in self.config['MAIN'][sitename].keys():
-                        nlist = self.__generateIPList(self.config['MAIN'][sitename][f"{iptype}-{key}"])
+                        nlist = self.generateIPList(self.config['MAIN'][sitename][f"{iptype}-{key}"])
                         self.config['MAIN'][sitename][f"{iptype}-{key}-list"] = nlist
             if 'vlan_range' in self.config['MAIN'][sitename]:
-                nlist = self.__generateVlanList(self.config['MAIN'][sitename]["vlan_range"])
+                nlist = self.generateVlanList(self.config['MAIN'][sitename]["vlan_range"])
                 self.config['MAIN'][sitename]["vlan_range_list"] = nlist
             # Now we do all individual switches. If key not available;
             # Will use the default if available
@@ -366,20 +363,20 @@ class GitConfig():
                 for iptype in ['ipv6', 'ipv4']:
                     for key in ['subnet-pool', 'address-pool']:
                         if f"{iptype}-{key}" in self.config['MAIN'][switch].keys():
-                            nlist = self.__generateIPList(self.config['MAIN'][switch][f"{iptype}-{key}"])
+                            nlist = self.generateIPList(self.config['MAIN'][switch][f"{iptype}-{key}"])
                             self.config['MAIN'][switch][f"{iptype}-{key}-list"] = nlist
                         elif f"{iptype}-{key}-list" in self.config['MAIN'][sitename]:
                             tmp = self.config['MAIN'][sitename][f"{iptype}-{key}-list"]
                             self.config['MAIN'][switch][f"{iptype}-{key}-list"] = tmp
                 if 'vlan_range' in self.config['MAIN'][switch]:
-                    nlist = self.__generateVlanList(self.config['MAIN'][switch]["vlan_range"])
+                    nlist = self.generateVlanList(self.config['MAIN'][switch]["vlan_range"])
                     self.config['MAIN'][switch]["vlan_range_list"] = nlist
                 elif 'vlan_range_list' in self.config['MAIN'][sitename]:
                     self.config['MAIN'][switch]["vlan_range_list"] = self.config['MAIN'][sitename]['vlan_range_list']
                 # Also review all predefined vlan_ranges for individual ports and make a list
                 for key in list(self.config['MAIN'][switch].keys()):
                     if key.startswith('port_') and key.endswith('vlan_range'):
-                        nlist = self.__generateVlanList(self.config['MAIN'][switch][key])
+                        nlist = self.generateVlanList(self.config['MAIN'][switch][key])
                         self.config['MAIN'][switch][f"{key}_list"] = nlist
 
     def presetFEDefaultConfigs(self):
@@ -420,43 +417,30 @@ class GitConfig():
             self.getLocalConfig()
         mapping = self.gitConfigCache('mapping')
         if self.config['MD5'] not in list(mapping.keys()):
-            msg = 'Configuration is not available for this MD5 %s tag in GIT REPO %s' % \
-                            (self.config['MD5'], self.config['GIT_REPO'])
+            msg = f"Configuration is not available for this MD5 {self.config['MD5']} tag in GIT REPO {self.config['GIT_REPO']}"
             print(msg)
             raise Exception(msg)
         self.config['MAPPING'] = copy.deepcopy(mapping[self.config['MD5']])
         self.getGitFEConfig()
         self.getGitAgentConfig()
 
-
-def getGitConfig():
-    """Wrapper before git config class. Returns dictionary."""
-    gitConf = GitConfig()
-    gitConf.getGitConfig()
-    return gitConf.config
-
-
-class getConfig():
-    """Get Config"""
-    def __init__(self):
-        self.git = GitConfig()
-        self.git.getGitConfig()
-
     def __getitem__(self, item):
-        """Subscribable item lookup"""
-        return self.git.config['MAIN'][item]
+        """Subscripable item lookup"""
+        if item in ['MAIN', 'AUTH']:
+            return self.config[item]
+        return self.config['MAIN'][item]
 
     def get(self, key, subkey):
         """Custom get from dictionary in a way like configparser"""
-        if key not in self.git.config['MAIN']:
+        if key not in self.config['MAIN']:
             raise NoSectionError(f'{key} is not available in configuration.')
-        if subkey not in self.git.config['MAIN'][key]:
+        if subkey not in self.config['MAIN'][key]:
             raise NoOptionError(f'{subkey} is not available under {key} section in configuration.')
-        return self.git.config['MAIN'].get(key, {}).get(subkey, {})
+        return self.config['MAIN'].get(key, {}).get(subkey, {})
 
     def getraw(self, key):
         """Get RAW DICT of key"""
-        return self.git.config.get(key, {})
+        return self.config.get(key, {})
 
     def getboolean(self, key, subkey):
         """Return boolean"""
@@ -467,17 +451,23 @@ class getConfig():
 
     def has_section(self, key):
         """Check if section available"""
-        if self.git.config['MAIN'].get(key, {}):
+        if self.config['MAIN'].get(key, {}):
             return True
         return False
 
     def has_option(self, key, subkey):
         """Check if option available"""
-        if not self.git.config['MAIN'].get(key, {}):
+        if not self.config['MAIN'].get(key, {}):
             raise NoSectionError(f'{key} section is not available in configuration.')
-        if self.git.config['MAIN'].get(key, {}).get(subkey, {}):
+        if self.config['MAIN'].get(key, {}).get(subkey, {}):
             return True
         return False
+
+def getGitConfig():
+    """Wrapper before git config class. Returns dictionary."""
+    gitConf = GitConfig()
+    gitConf.getGitConfig()
+    return gitConf
 
 
 def getFileContentAsJson(inputFile):
@@ -508,9 +498,6 @@ def getUsername():
 
 class contentDB():
     """File Saver, loader class."""
-    def __init__(self, config=None):
-        self.config = config if config else getConfig()
-        self.logger = getLoggingObject(config=self.config, service='contentdb')
 
     @staticmethod
     def getFileContentAsJson(inputFile):
@@ -664,11 +651,9 @@ def getUrlParams(environ, paramsList):
                 elif outVals[0] in ['false', 'False']:
                     outParams[param['key']] = False
                 else:
-                    raise NotSupportedArgument("Parameter %s value not acceptable. Allowed options: [tT]rue,[fF]alse" %
-                                               param['key'])
+                    raise NotSupportedArgument(f"Parameter {param['key']} value not acceptable. Allowed options: [tT]rue,[fF]alse")
             elif param['type'] == str and outVals[0] not in param['options']:
-                raise NotSupportedArgument("Server does not support parameter %s=%s. Supported: %s" %
-                                           (param['key'], outVals[0], param['options']))
+                raise NotSupportedArgument(f"Server does not support parameter {param['key']}={outVals[0]}. Supported: param['options']")
         elif not outVals:
             outParams[param['key']] = param['default']
     print(outParams)
@@ -737,8 +722,8 @@ def getDBConn(serviceName='', cls=None):
     if hasattr(cls, 'config'):
         config = cls.config
     else:
-        config = getConfig()
-    for sitename in config.get('general', 'sites'):
+        config = getGitConfig()
+    for sitename in config['MAIN']['general']['sites'] + ['MAIN']:
         if hasattr(cls, 'dbI'):
             if hasattr(cls.dbI, sitename):
                 # DB Object is already in place!
@@ -750,13 +735,17 @@ def reportServiceStatus(**kwargs):
     """Report service state to DB."""
     reported = True
     try:
+        dbI = None
         dbOut = {'hostname': kwargs.get('hostname', 'default'),
                  'servicestate': kwargs.get('servicestate', 'UNSET'),
                  'servicename': kwargs.get('servicename', 'UNSET'),
                  'runtime': kwargs.get('runtime', -1),
                  'version': kwargs.get('version', runningVersion),
                  'updatedate': getUTCnow()}
-        dbI = getDBConn(dbOut['servicename'], kwargs.get('cls', None))
+        try:
+            dbI = getDBConn(dbOut['servicename'], kwargs.get('cls', None))
+        except KeyError:
+            return False
         dbobj = getVal(dbI, **{'sitename': kwargs.get('sitename', 'UNSET')})
         services = dbobj.get('servicestates', search=[['hostname', dbOut['hostname']],
                                                       ['servicename', dbOut['servicename']]])
@@ -776,8 +765,7 @@ def reportServiceStatus(**kwargs):
 
 def pubStateRemote(**kwargs):
     """Publish state from remote services."""
-    reported = reportServiceStatus(**kwargs)
-    if reported:
+    if reportServiceStatus(**kwargs):
         return
     try:
         fullUrl = getFullUrl(kwargs['cls'].config, kwargs['sitename'])

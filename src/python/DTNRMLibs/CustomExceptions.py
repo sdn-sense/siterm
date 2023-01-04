@@ -123,12 +123,20 @@ class OverSubscribeException(ExceptionTemplate):
 class FailedGetDataFromFE(ExceptionTemplate):
     """Failed to Get Data from FE"""
 
+class MethodNotSupported(ExceptionTemplate):
+    """Method Not Supported"""
+
+class NotAcceptedHeader(ExceptionTemplate):
+    """Not Accepted Header"""
+
+class ConflictEntries(ExceptionTemplate):
+    """Conflict Entries"""
 
 class HTTPResponses():
     """Frontend HTTP Responses."""
     def __init__(self):
-        self.cacheHeaders = [(u'Cache-Control', u'no-cache, no-store, must-revalidate'),
-                             (u'Pragma', u'no-cache'), (u'Expires', u'0')]
+        self.cacheHeaders = [('Cache-Control', 'no-cache, no-store, must-revalidate'),
+                             ('Pragma', 'no-cache'), ('Expires', '0')]
 
     def _header_append(self, headers, head_append, nocache=True):
         outheaders = []
