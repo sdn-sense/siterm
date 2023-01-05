@@ -122,6 +122,7 @@ class HostCalls():
         reportServiceStatus(**{'servicename': inputDict['servicename'],
                                'servicestate': inputDict['servicestate'],
                                'sitename': kwargs['sitename'], 'hostname': inputDict['hostname'],
-                               'version': inputDict['version'], 'cls': self})
+                               'version': inputDict['version'], 'runtime': inputDict['runtime'],
+                               'cls': self})
         self.responseHeaders(environ, **kwargs)
         return {"Status": 'REPORTED'}
