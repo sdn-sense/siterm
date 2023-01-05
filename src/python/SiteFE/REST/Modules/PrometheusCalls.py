@@ -19,6 +19,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
+import psutil
 import simplejson as json
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
@@ -36,6 +37,7 @@ class PrometheusCalls():
         self.timenow = int(getUTCnow())
         self.__defineRoutes()
         self.__urlParams()
+        self.memMonitor = {}
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -55,6 +57,31 @@ class PrometheusCalls():
         """Get new/clean prometheus registry."""
         registry = CollectorRegistry()
         return registry
+
+    def __processStats(self, proc, services, lookupid):
+        """Get Process Stats - memory"""
+        if len(proc.cmdline()) > lookupid:
+            for serviceName in services:
+                if proc.cmdline()[lookupid].endswith(serviceName):
+                    self.memMonitor.setdefault(serviceName, {'rss': 0, 'vms': 0,
+                                                             'shared': 0, 'text': 0,
+                                                             'lib': 0, 'data': 0,
+                                                             'dirty': 0})
+                    for key in self.memMonitor[serviceName].keys():
+                        if hasattr(proc.memory_info(), key):
+                            self.memMonitor[serviceName][key] += getattr(proc.memory_info(), key)
+
+    def __memStats(self, registry, **kwargs):
+        """Refresh all Memory Statistics in FE"""
+        self.memMonitor = {}
+        for proc in psutil.process_iter(attrs=None, ad_value=None):
+            self.__processStats(proc, ['mariadbd', 'httpd'], 0)
+            self.__processStats(proc, ['Config-Fetcher', 'SNMPMonitoring-update', 'ProvisioningService-update', 'LookUpService-update'], 1)
+        memInfo = Gauge('memory_usage', 'Memory Usage for Service', ['servicename', 'key'], registry=registry)
+        for serviceName, vals in self.memMonitor.items():
+            for key, val in vals.items():
+                labels = {'servicename': serviceName, 'key': key}
+                memInfo.labels(**labels).set(val)
 
     def __getAgentData(self, registry, **kwargs):
         """Add Agent Data (Cert validity) to prometheus output"""
@@ -110,6 +137,7 @@ class PrometheusCalls():
             runtimeInfo.labels(**labels).set(runtime)
         self.__getSNMPData(registry, **kwargs)
         self.__getAgentData(registry, **kwargs)
+        self.__memStats(registry, **kwargs)
 
     def __metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""
