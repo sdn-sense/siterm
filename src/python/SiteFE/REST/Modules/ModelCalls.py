@@ -54,7 +54,7 @@ class ModelCalls():
         self.routeMap.connect("models", "/v1/models", action="models")
         self.routeMap.connect("modelsid", "/v1/models/:modelid", action="modelsid")
 
-    def __getmodel(self, environ, modelID=None, content=False, **kwargs):
+    def getmodel(self, environ, modelID=None, content=False, **kwargs):
         """Get all models."""
         if not modelID:
             return self.dbobj.get('models', orderby=['insertdate', 'DESC'])
@@ -74,7 +74,7 @@ class ModelCalls():
         Examples: https://server-host/sitefe/v1/models/ # Returns list of all models;
         """
         modTime = getModTime(kwargs['headers'])
-        outmodels = self.__getmodel(environ, None, False, **kwargs)
+        outmodels = self.getmodel(environ, None, False, **kwargs)
         if not outmodels:
             raise ModelNotFound('LastModel does not exist in dictionary. First time run? See documentation')
         outmodels = [outmodels] if isinstance(outmodels, dict) else outmodels
@@ -92,7 +92,7 @@ class ModelCalls():
         outM = {"models": []}
         if kwargs['urlParams']['current']:
             if not kwargs['urlParams']['summary']:
-                current['model'] = encodebase64(self.__getmodel(environ,
+                current['model'] = encodebase64(self.getmodel(environ,
                                                                 outmodels[0]['uid'],
                                                                 content=True, **kwargs),
                                                 kwargs['urlParams']['encode'])
@@ -105,7 +105,7 @@ class ModelCalls():
                            "creationTime": convertTSToDatetime(model['insertdate']),
                            "href": f"{environ['SCRIPT_URI']}/{model['uid']}"}
                 if not kwargs['urlParams']['summary']:
-                    tmpDict['model'] = encodebase64(self.__getmodel(environ,
+                    tmpDict['model'] = encodebase64(self.getmodel(environ,
                                                                     model['uid'],
                                                                     content=True, **kwargs),
                                                     kwargs['urlParams']['encode'])
@@ -121,7 +121,7 @@ class ModelCalls():
         Output: application/json
         """
         modTime = getModTime(kwargs['headers'])
-        outmodels = self.__getmodel(kwargs['modelid'], **kwargs)
+        outmodels = self.getmodel(kwargs['modelid'], **kwargs)
         model = outmodels if isinstance(outmodels, dict) else outmodels[0]
         if modTime > model['insertdate']:
             print(f"Model with ID {kwargs['modelid']} was not updated so far. Time request comparison requested")
@@ -132,7 +132,7 @@ class ModelCalls():
                    "creationTime": convertTSToDatetime(model['insertdate']),
                    "href": f"{environ['SCRIPT_URI']}/{model['uid']}"}
         if not kwargs['urlParams']['summary']:
-            current['model'] = encodebase64(self.__getmodel(environ,
+            current['model'] = encodebase64(self.getmodel(environ,
                                                             model['uid'],
                                                             content=True, **kwargs),
                                             kwargs['urlParams']['encode'])
