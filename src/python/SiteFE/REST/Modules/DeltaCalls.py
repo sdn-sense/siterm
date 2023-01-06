@@ -33,8 +33,8 @@ from DTNRMLibs.RESTInteractions import get_json_post_form
 from DTNRMLibs.RESTInteractions import is_post_request
 from DTNRMLibs.RESTInteractions import is_application_json
 from DTNRMLibs.CustomExceptions import ConflictEntries, BadRequestError, DeltaNotFound, WrongDeltaStatusTransition
+from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
-
 
 class DeltaCalls():
     """Delta Calls API Module"""
@@ -43,6 +43,10 @@ class DeltaCalls():
         self.stateM = stateM.StateMachine(self.config)
         self.__defineRoutes()
         self.__urlParams()
+        self.policer = {}
+        for sitename in self.sites:
+             if sitename != 'MAIN':
+                 self.policer[sitename] = polS.PolicyService(self.config, sitename)
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -78,7 +82,7 @@ class DeltaCalls():
             raise ConflictEntries(msg)
         tmpfd = NamedTemporaryFile(delete=False, mode="w+")
         tmpfd.close()
-        self.getmodel(uploadContent['modelId'], **kwargs)
+        self.getmodel(environ, uploadContent['modelId'], None, **kwargs)
         outContent = {"ID": hashNum,
                       "InsertTime": getUTCnow(),
                       "UpdateTime": getUTCnow(),
@@ -87,18 +91,17 @@ class DeltaCalls():
                       "modelId": uploadContent['modelId']}
         self.siteDB.saveContent(tmpfd.name, outContent)
         out = self.policer[kwargs['sitename']].acceptDelta(tmpfd.name)
-        outDict = {'id': hashNum,
-                   'lastModified': convertTSToDatetime(outContent['UpdateTime']),
-                   'href': f"{environ['SCRIPT_URI']}/{hashNum}",
-                   'modelId': out['modelId'],
-                   'state': out['State']}
-        print(f"Delta was {out['State']}. Returning info {outDict}")
-        if out['State'] not in ['accepted']:
+        outContent['State'] = out['State']
+        outContent['id'] = hashNum
+        outContent['lastModified'] = convertTSToDatetime(outContent['UpdateTime'])
+        outContent['href'] = f"{environ['SCRIPT_URI']}/{hashNum}"
+        print(f"Delta was {outContent['State']}. Returning info {outContent}")
+        if outContent['State'] not in ['accepted']:
             if 'Error' not in out:
-                outDict['Error'] = f"Unknown Error. Dump all out content {json.dumps(out)}"
+                outContent['Error'] = f"Unknown Error. Dump all out content {json.dumps(out)}"
             else:
-                outDict['Error'] = out['Error']
-        return outDict
+                outContent['Error'] = out['Error']
+        return outContent
 
     def __getdeltaINT(self, deltaID=None, **kwargs):
         """Get delta from database."""
