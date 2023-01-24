@@ -108,6 +108,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         ansOut = self.switch.plugin._applyNewConfig(hosts)
         if not ansOut:
             return
+        if not hasattr(ansOut, 'stats'):
+            return
         for host, _ in ansOut.stats.get('failures', {}).items():
             for host_events in ansOut.host_events(host):
                 self.logger.info(f"Ansible runtime log of {host_events['event']} event")
