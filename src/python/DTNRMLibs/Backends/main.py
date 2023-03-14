@@ -135,11 +135,12 @@ class Switch(Node):
 
 
     def _insertToDB(self, data):
-        """Insert to databse new switches data"""
+        """Insert to database new switches data"""
         self._getDBOut()
         out = {'sitename': self.site,
                'updatedate': getUTCnow(),
-               'output': json.dumps(data)}
+               'output': json.dumps(data),
+               'error': '[]'}
         if not self.switches:
             out['insertdate'] = getUTCnow()
             self.logger.debug('No switches in database. Calling add')
@@ -148,6 +149,21 @@ class Switch(Node):
             out['id'] = self.switches['id']
             self.logger.debug('Update switches in database.')
             self.dbI.update('switches', [out])
+        # Once updated, inserted. Update var from db
+        self._getDBOut()
+
+    def _insertErrToDB(self, err):
+        """Insert Error from switch to database"""
+        self._getDBOut()
+        out = {'sitename': self.site,
+               'updatedate': getUTCnow(),
+               'error': json.dumps(err)}
+        if self.switches:
+            out['id'] = self.switches['id']
+            self.logger.debug('Update switches in database.')
+            self.dbI.update('switches_error', [out])
+        else:
+            self.logger.info('No switches in DB. Will not update errors in database.')
         # Once updated, inserted. Update var from db
         self._getDBOut()
 
@@ -217,10 +233,10 @@ class Switch(Node):
         out, err = {}, {}
         if renew or not self.switches:
             out, err = self.plugin._getFacts(hosts)
-            # TODO: Add err in DB.
-            self._insertToDB(out)
             if err:
+                self._insertErrToDB(err)
                 raise Exception('Failed ANSIBLE Runtime. See Error %s' % str(err))
+            self._insertToDB(out)
         self._getDBOut()
         # Clean and prepare output which is returned to caller
         self._cleanOutput()

@@ -150,7 +150,7 @@ class RDFHelper():
                            self.genUriRef('site', f":{kwargs['hostname']}")))
         self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}"),
                            self.genUriRef('nml', 'name'),
-                           self.genLiteral(kwargs['hostname'])))
+                           self.genLiteral(f"{self.sitename}:{kwargs['hostname']}")))
         self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}"),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Node')))

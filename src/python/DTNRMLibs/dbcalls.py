@@ -86,6 +86,7 @@ create_switches = """CREATE TABLE IF NOT EXISTS switches(
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
                           output longtext NOT NULL,
+                          error longtext NOT NULL,
                           primary key(id))"""
 create_servicestates = """CREATE TABLE IF NOT EXISTS servicestates(
                           id int auto_increment,
@@ -128,7 +129,7 @@ insert_hoststates = "INSERT INTO hoststates(deltaid, state, insertdate, updateda
 insert_hoststateshistory = "INSERT INTO hoststateshistory(deltaid, state, insertdate, hostname) VALUES(%(deltaid)s, %(state)s, %(insertdate)s, %(hostname)s)"
 insert_parsed = "INSERT INTO parsed(deltaid, vals, insertdate) VALUES(%(deltaid)s, %(vals)s, %(insertdate)s)"
 insert_hosts = "INSERT INTO hosts(ip, hostname, insertdate, updatedate, hostinfo) VALUES(%(ip)s, %(hostname)s, %(insertdate)s, %(updatedate)s, %(hostinfo)s)"
-insert_switches = "INSERT INTO switches(sitename, insertdate, updatedate, output) VALUES(%(sitename)s, %(insertdate)s, %(updatedate)s, %(output)s)"
+insert_switches = "INSERT INTO switches(sitename, insertdate, updatedate, output, error) VALUES(%(sitename)s, %(insertdate)s, %(updatedate)s, %(output)s, %(error)s)"
 insert_activeDeltas = "INSERT INTO activeDeltas(insertdate, updatedate, output) VALUES(%(insertdate)s, %(updatedate)s, %(output)s)"
 insert_servicestates = "INSERT INTO servicestates(hostname, servicename, servicestate, runtime, version, updatedate) VALUES(%(hostname)s, %(servicename)s, %(servicestate)s, %(runtime)s, %(version)s, %(updatedate)s)"
 insert_debugrequests = "INSERT INTO debugrequests(hostname, state, requestdict, output, insertdate, updatedate) VALUES(%(hostname)s, %(state)s, %(requestdict)s, %(output)s, %(insertdate)s, %(updatedate)s)"
@@ -155,6 +156,7 @@ update_deltasmod = "UPDATE deltas SET updatedate = %(updatedate)s, modadd = %(mo
 update_hoststates = "UPDATE hoststates SET state = %(state)s, updatedate = %(updatedate)s WHERE id = %(id)s"
 update_hosts = "UPDATE hosts SET ip = %(ip)s, hostname = %(hostname)s, updatedate = %(updatedate)s, hostinfo = %(hostinfo)s WHERE id = %(id)s"
 update_switches = "UPDATE switches SET sitename = %(sitename)s, updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
+update_switches_error = "UPDATE switches SET sitename = %(sitename)s, updatedate = %(updatedate)s, error = %(error)s WHERE id = %(id)s"
 update_activeDeltas = "UPDATE activeDeltas SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
 update_servicestates = "UPDATE servicestates SET servicestate = %(servicestate)s, updatedate = %(updatedate)s, runtime = %(runtime)s, version = %(version)s WHERE hostname = %(hostname)s AND servicename = %(servicename)s"
 update_debugrequests = "UPDATE debugrequests SET state = %(state)s, output = %(output)s, updatedate = %(updatedate)s WHERE id = %(id)s"
