@@ -74,6 +74,43 @@ class NodeInfo():
         except NoOptionError:
             self.logger.debug('Either one or both (latitude,longitude) are not defined. Continuing as normal')
 
+    def addMonName(self, nodeDict, intfKey, uri, main=True):
+        """Add Mon name to model for SENSE RT Monitoring mapping"""
+        self.addToGraph(['site', uri],
+                        ['mrs', 'hasNetworkAddress'],
+                        ['site', f'{uri}:sense-rtmon+realportname'])
+        self.addToGraph(['site', f'{uri}:sense-rtmon+realportname'],
+                        ['rdf', 'type'],
+                        ['mrs', 'NetworkAddress'])
+        self.addToGraph(['site', f"{uri}:sense-rtmon+realportname"],
+                        ['mrs', 'type'],
+                        ["sense-rtmon:name"])
+        self.addToGraph(['site', f"{uri}:sense-rtmon+realportname"],
+                        ['mrs', 'value'],
+                        [intfKey])
+
+    def _addNetworkAddress(self, uri, name, value):
+        """Add NetworkAddress to Model"""
+        sname = name
+        if isinstance(name, list):
+            sname = name[1]
+            name = name[0]
+        self.addToGraph(['site', uri],
+                        ['mrs', 'hasNetworkAddress'],
+                        ['site', f'{uri}:{name}'])
+        self.addToGraph(['site', f'{uri}:{name}'],
+                        ['rdf', 'type'],
+                        ['mrs', 'NetworkAddress'])
+        self.addToGraph(['site', f"{uri}:{name}"],
+                        ['mrs', 'type'],
+                        [sname])
+        self.addToGraph(['site', f"{uri}:{name}"],
+                        ['mrs', 'value'],
+                        [value])
+
+
+
+
     def addIntfInfo(self, inputDict, prefixuri, main=True):
         """This will add all information about specific interface."""
         # '2' is for ipv4 information
@@ -252,7 +289,8 @@ class NodeInfo():
             # =====================================================================
             self.addAgentConfigtoMRML(intfDict, newuri, nodeDict['hostname'], intfKey)
             # Now lets also list all interface information to MRML
-            self.addIntfInfo(intfDict, newuri)
+            self.addIntfInfo(intfDict, newuri, True)
+            self.addMonName(nodeDict, intfKey, newuri, True)
             # List each VLAN:
             if 'vlans' in list(intfDict.keys()):
                 for vlanName, vlanDict in list(intfDict['vlans'].items()):
@@ -263,11 +301,11 @@ class NodeInfo():
                     if not isinstance(vlanDict, dict):
                         continue
                     # '2' is for ipv4 information
-                    vlanName = vlanName.split('.')
+                    vlanNameSpl = vlanName.split('.')
                     vlanuri = self._addVlanPort(hostname=nodeDict['hostname'], portName=intfKey,
-                                                vtype='vlanport', vlan=vlanName[1])
+                                                vtype='vlanport', vlan=vlanNameSpl[1])
                     self._addRstPort(hostname=nodeDict['hostname'], portName=intfKey, vtype='vlanport',
-                                     vlan=vlanName[1], nodetype='server', rsts_enabled=rstsEnabled)
+                                     vlan=vlanNameSpl[1], nodetype='server', rsts_enabled=rstsEnabled)
                     self._mrsLiteral(vlanuri, 'type', self.shared)
 
                     if 'vlanid' in list(vlanDict.keys()):
@@ -286,3 +324,4 @@ class NodeInfo():
                     # Add hasNetworkAddress for vlan
                     # Now the mapping of the interface information:
                     self.addIntfInfo(vlanDict, vlanuri, False)
+                    self.addMonName(nodeDict, vlanName, vlanuri, False)

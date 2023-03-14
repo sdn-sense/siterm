@@ -111,6 +111,8 @@ class SwitchInfo():
         if key in ['ipv4', 'ipv6']:
             reptype = f'{key}-address'
             labeluri = f"{newuri}:{key}-address+{subkey}"
+        elif key == 'sense-rtmon':
+            reptype = f'{key}:name'
         self.addToGraph(['site', newuri],
                         ['mrs', 'hasNetworkAddress'],
                         ['site', labeluri])
@@ -163,6 +165,9 @@ class SwitchInfo():
                 # TODO: Allow specify availableCapacity and granularity from config
                 # reservableCapacity calculated automatically based on available - allAllocated.
                 self._mrsLiteral(newuri, key, int(portSwitch.get(key))*1000)
+            if key in ['realportname']:
+                # Add real Port Name for Monitoring mapping
+                self._addVals('sense-rtmon', key, val, newuri)
 
     def _addSwitchPortInfo(self, key, switchInfo):
         """Add Switch Port Info for ports, vlans"""
