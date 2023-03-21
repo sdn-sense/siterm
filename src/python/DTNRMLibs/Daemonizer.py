@@ -24,12 +24,19 @@ def getParser(description):
     """Returns the argparse parser."""
     oparser = argparse.ArgumentParser(description=description,
                                       prog=os.path.basename(sys.argv[0]), add_help=True)
-    oparser.add_argument('--action', dest='action', default='', help='Action - start, stop, status, restart service.')
-    oparser.add_argument('--foreground', action='store_true', help="Run program in foreground. Default no")
+    oparser.add_argument('--action', dest='action', default='',
+                         help='Action - start, stop, status, restart service.')
+    oparser.add_argument('--foreground', action='store_true',
+                         help="Run program in foreground. Default no")
     oparser.set_defaults(foreground=False)
-    oparser.add_argument('--logtostdout', action='store_true', help="Log to stdout and not to file. Default false")
-    oparser.add_argument('--onetimerun', action='store_true', help="Run once and exit from loop (Only for start). Default false")
-    oparser.add_argument('--noreporting', action='store_true', help="Do not report service Status to FE (Only for start/restart). Default false")
+    oparser.add_argument('--logtostdout', action='store_true',
+                         help="Log to stdout and not to file. Default false")
+    oparser.add_argument('--onetimerun', action='store_true',
+                         help="Run once and exit from loop (Only for start). Default false")
+    oparser.add_argument('--noreporting', action='store_true',
+                         help="Do not report service Status to FE (Only for start/restart). Default false")
+    oparser.add_argument('--runnum', dest='runnum', default='1',
+                         help="Run Number. Default 1. Used only for multi thread debugging purpose. No need to specify manually")
     oparser.set_defaults(logtostdout=False)
     return oparser
 
@@ -52,12 +59,14 @@ class Daemon():
         self.component = component
         self.inargs = inargs
         self.runCount = 0
-        self.pidfile = f'/tmp/end-site-rm-{component}.pid'
+        self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}.pid"
         self.config = getGitConfig()
         self.logger = getLoggingObject(config=self.config,
                                        logfile=f"{self.config.get('general', 'logDir')}/{component}/",
                                        logLevel=self.config.get('general', 'logLevel'), logType=logType,
                                        service=self.component)
+        self.sleepTimers = {'ok': 10, 'failure': 30}
+        self.totalRuntime = 0
 
     def _refreshConfig(self):
         """Config refresh call"""
@@ -223,10 +232,14 @@ class Daemon():
             try:
                 runThreads = self.getThreads()
                 return runThreads
+            except SystemExit:
+                exc = traceback.format_exc()
+                self.logger.critical("SystemExit!!! Error details:  %s", exc)
+                sys.exit(1)
             except:
                 exc = traceback.format_exc()
                 self.logger.critical("Exception!!! Error details:  %s", exc)
-                time.sleep(10)
+                time.sleep(self.sleepTimers['failure'])
 
     def run(self):
         """Run main execution"""
@@ -249,7 +262,7 @@ class Daemon():
                         exc = traceback.format_exc()
                         self.logger.critical("Exception!!! Error details:  %s", exc)
                 if self.runLoop():
-                    time.sleep(10)
+                    time.sleep(self.sleepTimers['ok'])
             except KeyboardInterrupt as ex:
                 self.reporter('KEYBOARDINTERRUPT', sitename, stwork)
                 self.logger.critical("Received KeyboardInterrupt: %s ", ex)
@@ -257,14 +270,18 @@ class Daemon():
             if hadFailure:
                 self.logger.info('Had Runtime Failure. Sleep for 30 seconds')
                 if self.runLoop():
-                    time.sleep(30)
+                    time.sleep(self.sleepTimers['failure'])
                 else:
                     sys.exit(4)
+            if self.totalRuntime != 0 and self.totalRuntime <= int(time.time()):
+                self.logger.info('Total Runtime expired. Stopping Service')
+                sys.exit(0)
             timeeq, currentHour = reCacheConfig(currentHour)
             if not timeeq:
                 self.logger.info('Re-initiating Service with new configuration from GIT')
                 self._refreshConfig()
                 runThreads = self.refreshThreads()
+
 
     @staticmethod
     def getThreads():

@@ -17,13 +17,17 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2021 California Institute of Technology
 Date                    : 2021/03/12
 """
+import os
 import simplejson as json
 from DTNRMAgent.Debugger.Actions.arptable import arptable
 from DTNRMAgent.Debugger.Actions.iperf import iperf
 from DTNRMAgent.Debugger.Actions.rapidping import rapidping
 from DTNRMAgent.Debugger.Actions.tcpdump import tcpdump
 from DTNRMAgent.Debugger.Actions.iperfserver import iperfserver
+from DTNRMAgent.Debugger.Actions.prometheuspush import prometheuspush
 
+from DTNRMLibs.MainUtilities import createDirs
+from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict
 from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import publishToSiteFE
@@ -42,6 +46,7 @@ class Debugger():
         self.fullURL = getFullUrl(self.config, sitename)
         self.sitename = sitename
         self.hostname = self.config.get('agent', 'hostname')
+        self.diragent = contentDB()
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
 
     def getData(self, url):
@@ -55,19 +60,57 @@ class Debugger():
         return evaldict(out[0])
 
     def getAllAssignedtoHost(self):
-        """Get All Assigned to Host"""
-        return self.getData(f"/sitefe/json/frontend/getalldebughostname/{self.hostname}")
+        """Get All Assigned/Active to Host"""
+        allAssigned = []
+        for call in [f"/sitefe/json/frontend/getalldebughostname/{self.hostname}",
+                     f"/sitefe/json/frontend/getalldebughostnameactive/{self.hostname}"]:
+            data = self.getData(call)
+            if data:
+                allAssigned += data
+        return allAssigned
 
     def publishToFE(self, inDic):
         """Publish debug runtime to FE"""
         publishToSiteFE(inDic, self.fullURL, f"/sitefe/json/frontend/updatedebug/{inDic['id']}")
+
+    def _startbackgroundwork(self, item):
+        """Start Background work, like prometheus push, arppush"""
+        workDir = self.config.get('general', 'private_dir') + "/DTNRM/background/"
+        createDirs(workDir)
+        fname = workDir + f"/background-process-{item['id']}.json"
+        if not os.path.isfile(fname):
+            self.diragent.dumpFileContentAsJson(fname, item)
+        newstate = ""
+        try:
+            out, err, exitCode = prometheuspush(item)
+        except (ValueError, KeyError, OSError) as ex:
+            out = ""
+            err = ex
+            exitCode = 501
+        output = {'out': out, 'err': str(err), 'exitCode': exitCode}
+        self.logger.info(f"Finish work on: {output}")
+        # 501, 1 - error - set to failed
+        # 2 - active
+        # 3 - finished
+        if exitCode in [501, 1]:
+            newstate = 'failed'
+        elif exitCode in [0]:
+            newstate = 'active'
+        elif exitCode in [3]:
+            self.diragent.removeFile(fname)
+            newstate = 'finished'
+        else:
+            newstate = 'unknown'
+        if item['state'] != newstate:
+            item['state'] = newstate
+            self.publishToFE(item)
 
     def startwork(self):
         """Start execution and get new requests from FE"""
         allWork = self.getAllAssignedtoHost()
         out, err, exitCode = "", "", 0
         for item in allWork:
-            self.logger.debug(f"Work on: {item}")
+            self.logger.info(f"Work on: {item}")
             try:
                 item['requestdict'] = evaldict(item['requestdict'])
                 if item['requestdict']['type'] == 'rapidping':
@@ -80,6 +123,9 @@ class Debugger():
                     out, err, exitCode = iperf(item['requestdict'])
                 elif item['requestdict']['type'] == 'iperfserver':
                     out, err, exitCode = iperfserver(item['requestdict'])
+                elif item['requestdict']['type'] in ['prometheus-push', 'arp-push']:
+                    self._startbackgroundwork(item)
+                    continue
                 else:
                     err = "Unknown Request"
                     exitCode = 500
@@ -87,8 +133,6 @@ class Debugger():
                 err = ex
                 exitCode = 501
             output = {'out': out, 'err': str(err), 'exitCode': exitCode}
-            print(output)
-            print(1)
             item['output'] = json.dumps(output)
             if exitCode != 0:
                 item['state'] = 'failed'
@@ -100,7 +144,7 @@ class Debugger():
 
 def execute(config=None):
     """Execute main script for Debugger execution."""
-    debugger = Debugger(config, None)
+    debugger = Debugger(config, 'T2_US_Caltech_Test')
     debugger.startwork()
 
 if __name__ == '__main__':

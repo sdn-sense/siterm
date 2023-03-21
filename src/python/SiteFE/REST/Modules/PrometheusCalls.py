@@ -25,6 +25,12 @@ from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import isValFloat
 from DTNRMLibs.MainUtilities import getAllHosts
+from DTNRMLibs.MainUtilities import httpdate
+from DTNRMLibs.RESTInteractions import get_post_form
+from DTNRMLibs.RESTInteractions import get_json_post_form
+from DTNRMLibs.RESTInteractions import is_post_request
+from DTNRMLibs.RESTInteractions import is_application_json
+from DTNRMLibs.CustomExceptions import BadRequestError
 from prometheus_client import generate_latest, CollectorRegistry
 from prometheus_client import Enum, Info, CONTENT_TYPE_LATEST
 from prometheus_client import Gauge
@@ -100,15 +106,21 @@ class PrometheusCalls():
         # Here get info from DB for switch snmp details
         snmpData = self.dbobj.get('snmpmon')
         snmpGauge = Gauge('interface_statistics', 'Interface Statistics', ['ifDescr', 'ifType', 'ifAlias', 'hostname', 'Key'], registry=registry)
+        macState = Info('mac_table', 'Mac Address Table', labelnames=['numb', 'vlan', 'hostname'], registry=registry)
         for item in snmpData:
             if int(self.timenow - item['updatedate']) > 300:
                 continue
             out = json.loads(item['output'])
-            for _key, val in out.items():
+            for key, val in out.items():
+                if key == 'macs':
+                    if 'vlans' in val:
+                        for key1, val1, in val['vlans'].items():
+                            for index, macaddr in enumerate(val1):
+                                labels = {'numb': index, 'vlan': key1, 'hostname': item['hostname']}
+                                macState.labels(**labels).info({'macaddress': macaddr})
+                    continue
                 keys = {'ifDescr': val.get('ifDescr', ''), 'ifType': val.get('ifType', ''), 'ifAlias': val.get('ifAlias', ''), 'hostname': item['hostname']}
-                for key1 in ['ifMtu', 'ifAdminStatus', 'ifOperStatus', 'ifHighSpeed', 'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards', 'ifOutDiscards',
-                             'ifInErrors', 'ifOutErrors', 'ifHCInUcastPkts', 'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts',
-                             'ifHCInBroadcastPkts', 'ifHCOutBroadcastPkts']:
+                for key1 in self.config['MAIN']['snmp']['mibs']:
                     if key1 in val and isValFloat(val[key1]):
                         keys['Key'] = key1
                         snmpGauge.labels(**keys).set(val[key1])

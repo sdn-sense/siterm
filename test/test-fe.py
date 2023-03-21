@@ -1,5 +1,6 @@
 """Test Frontend"""
 import os
+import time
 import simplejson as json
 import unittest
 import pathlib
@@ -101,7 +102,7 @@ class TestUtils(unittest.TestCase):
     def test_debug_ping(self):
         """Test Debug ping API"""
         # rapidping, tcpdump, arptable, iperf, iperfserver
-        data = {"type": "rapidping", "sitename": "", "dtn": "dummyhostname", "ip": "1.2.3.4",
+        data = {"type": "rapidping", "sitename": "", "hostname": "dummyhostname", "ip": "1.2.3.4",
                 "packetsize": "32", "interval": "1", "interface": "dummyinterface", "time": "60"}
         outsuc = {"out": ["ping success", "from unittest"], "err": "", "exitCode": 0}
         dataupd = {'state': 'success', 'output': json.dumps(outsuc)}
@@ -109,21 +110,21 @@ class TestUtils(unittest.TestCase):
 
     def test_debug_arptable(self):
         """Test Debug arptable API"""
-        data = {"type": "arptable", "sitename": "", "dtn": "dummyhostname", "interface": "dummyinterface"}
+        data = {"type": "arptable", "sitename": "", "hostname": "dummyhostname", "interface": "dummyinterface"}
         outsuc = {"out": ["arp success", "from unittest"], "err": "", "exitCode": 0}
         dataupd = {'state': 'success', 'output': json.dumps(outsuc)}
         debugActions(self, data, dataupd)
 
     def test_debug_tcpdump(self):
         """Test Debug TCPDump API"""
-        data = {"type": "tcpdump", "sitename": "", "dtn": "dummyhostname", "interface": "dummyinterface"}
+        data = {"type": "tcpdump", "sitename": "", "hostname": "dummyhostname", "interface": "dummyinterface"}
         outsuc = {"out": ["tcpdump success", "from unittest"], "err": "", "exitCode": 0}
         dataupd = {'state': 'success', 'output': json.dumps(outsuc)}
         debugActions(self, data, dataupd)
 
     def test_debug_iperf(self):
         """Test Debug Iperf API"""
-        data = {"type": "iperf", "sitename": "", "dtn": "dummyhostname",
+        data = {"type": "iperf", "sitename": "", "hostname": "dummyhostname",
                 "interface": "dummyinterface", "ip": "1.2.3.4", "port": "1234", "time": "60"}
         outsuc = {"out": ["iperf success", "from unittest"], "err": "", "exitCode": 0}
         dataupd = {'state': 'success', 'output': json.dumps(outsuc)}
@@ -131,11 +132,30 @@ class TestUtils(unittest.TestCase):
 
     def test_debug_iperfserver(self):
         """Test Debug IperfServer API"""
-        data = {"type": "iperfserver", "sitename": "", "dtn": "dummyhostname",
+        data = {"type": "iperfserver", "sitename": "", "hostname": "dummyhostname",
                 "interface": "dummyinterface", "ip": "1.2.3.4", "port": "1234", "time": "60"}
         outsuc = {"out": ["iperf server success", "from unittest"], "err": "", "exitCode": 0}
         dataupd = {'state': 'success', 'output': json.dumps(outsuc)}
         debugActions(self, data, dataupd)
+
+    def test_debug_prometheus_push(self):
+        """Test Prometheus Push Debug API"""
+        data = {'hostname': 'dummyhostname', # hostname
+                'hosttype': 'host', # switch or host
+                'type': 'arp-push', # type of action (prometheus-push - for switch/host, arp-push - for host)
+                'metadata': {'key': 'value'}, # Only supported for switch hosttype, Optional
+                'gateway': 'gateway-url', # gateway url
+                'runtime': str(int(time.time())+300), # runtime until time in seconds since the epoch
+                'resolution': '5'} # resolution time
+                #'mibs': "list of mibs separated by comma"} # Optional parameter
+        outsuc = {"out": ["running"], "err": "", "exitCode": 0}
+        dataupd = {'state': 'new', 'output': json.dumps(outsuc)}
+        debugActions(self, data, dataupd)
+
+# TODO:
+#        self.routeMap.connect("getalldebughostnameactive", "/json/frontend/getalldebughostnameactive/:debugvar", action="getalldebughostnameactive")
+
+
 
     def test_fake_cert(self):
         """Test Fake Cert Failure"""
