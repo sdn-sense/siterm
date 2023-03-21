@@ -47,14 +47,14 @@
             dataType: 'json', data: {}, async: false,
             success: function(json){
                 for (j=0; j < json.length; j++){
-                    addDropDown(json[j]['hostname'], $("#" + ids + "dtn"));
+                    addDropDown(json[j]['hostname'], $("#" + ids + "hostname"));
                 }
             }
         });
         }
 
         function doDTNUpdate(ids) {
-        strDTN = document.getElementById(ids + "dtn").value;
+        strDTN = document.getElementById(ids + "hostname").value;
         strSite = document.getElementById(ids + "sitename").value;
         $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
             dataType: 'json', data: {}, async: false,
@@ -148,9 +148,9 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">DTN</label> <select class="form-control" id="f1_dtn" name="dtn" onchange="doDTNUpdate('f1_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f1_hostname" name="hostname" onchange="doDTNUpdate('f1_');" required="">
                     <option value="">
-                      Choose DTN
+                      Choose Hostname
                     </option>
                   </select>
                 </div>
@@ -202,9 +202,9 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">DTN</label> <select class="form-control" id="f2_dtn" name="dtn" onchange="doDTNUpdate('f2_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f2_hostname" name="hostname" onchange="doDTNUpdate('f2_');" required="">
                     <option value="">
-                      Choose DTN
+                      Choose Hostname
                     </option>
                   </select>
                 </div>
@@ -237,9 +237,9 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">DTN</label> <select class="form-control" id="f3_dtn" name="dtn" onchange="doDTNUpdate('f3_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f3_hostname" name="hostname" onchange="doDTNUpdate('f3_');" required="">
                     <option value="">
-                      Choose DTN
+                      Choose Hostname
                     </option>
                   </select>
                 </div>
@@ -272,9 +272,9 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">DTN</label> <select class="form-control" id="f4_dtn" name="dtn" onchange="doDTNUpdate('f4_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f4_hostname" name="hostname" onchange="doDTNUpdate('f4_');" required="">
                     <option value="">
-                      Choose DTN
+                      Choose Hostname
                     </option>
                   </select>
                 </div>
@@ -329,9 +329,9 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">DTN</label> <select class="form-control" id="f5_dtn" name="dtn" onchange="doDTNUpdate('f5_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f5_hostname" name="hostname" onchange="doDTNUpdate('f5_');" required="">
                     <option value="">
-                      Choose DTN
+                      Choose Hostname
                     </option>
                   </select>
                 </div>

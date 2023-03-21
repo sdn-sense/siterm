@@ -16,7 +16,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2021 California Institute of Technology
 Date                    : 2021/03/12
 """
-import concurrent.futures._base
+from asyncio.exceptions import TimeoutError
 import pyshark
 
 
@@ -40,7 +40,7 @@ class ParsePackets():
         capture = pyshark.LiveCapture(interface=inputDict['interface'])
         try:
             capture.apply_on_packets(self.packetProcess, timeout=30)
-        except concurrent.futures._base.TimeoutError:
+        except TimeoutError:
             pass
         capture.clear()
         capture.close()

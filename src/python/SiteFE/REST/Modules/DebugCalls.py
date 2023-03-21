@@ -36,6 +36,7 @@ class DebugCalls():
         """Define URL Params for this class"""
         urlParams = {'getdebug': {'allowedMethods': ['GET']},
                      'getalldebughostname': {'allowedMethods': ['GET']},
+                     'getalldebughostnameactive': {'allowedMethods': ['GET']},
                      'submitdebug': {'allowedMethods': ['PUT', 'POST']},
                      'updatedebug': {'allowedMethods': ['PUT', 'POST']}}
         self.urlParams.update(urlParams)
@@ -44,6 +45,7 @@ class DebugCalls():
         """Define Routes for this class"""
         self.routeMap.connect("getdebug", "/json/frontend/getdebug/:debugvar", action="getdebug")
         self.routeMap.connect("getalldebughostname", "/json/frontend/getalldebughostname/:debugvar", action="getalldebughostname")
+        self.routeMap.connect("getalldebughostnameactive", "/json/frontend/getalldebughostnameactive/:debugvar", action="getalldebughostnameactive")
         self.routeMap.connect("submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug")
         self.routeMap.connect("updatedebug", "/json/frontend/updatedebug/:debugvar", action="updatedebug")
 
@@ -68,6 +70,13 @@ class DebugCalls():
         return self.dbobj.get('debugrequests', orderby=['updatedate', 'DESC'],
                               search=search, limit=1000)
 
+    def getalldebughostnameactive(self, environ, **kwargs):
+        """Get all Debug Requests for hostname"""
+        search = [['hostname', kwargs['debugvar']], ['state', 'active']]
+        self.responseHeaders(environ, **kwargs)
+        return self.dbobj.get('debugrequests', orderby=['updatedate', 'DESC'],
+                              search=search, limit=1000)
+
     def submitdebug(self, environ, **kwargs):
         """Submit new debug action request."""
         inputDict = read_input_data(environ)
@@ -75,7 +84,10 @@ class DebugCalls():
         for symbol in [";", "&"]:
             if symbol in jsondump:
                 raise BadRequestError('Unsupported symbol in input request. Contact Support')
-        out = {'hostname': inputDict['dtn'],
+        if 'hostname' not in inputDict:
+            raise BadRequestError('Hostname not specified in debug request.')
+        # TODO: VALIDATION OF SUBMITTED DEBUG ACTION!
+        out = {'hostname': inputDict['hostname'],
                'state': 'new',
                'requestdict': jsondump,
                'output': '',

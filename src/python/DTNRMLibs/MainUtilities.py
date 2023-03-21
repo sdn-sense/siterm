@@ -228,9 +228,14 @@ def getDataFromSiteFE(inputDict, host, url):
     return out
 
 def getWebContentFromURL(url):
-    """TODO: Add some catches in future."""
+    """GET from URL"""
     out = requests.get(url)
     return out
+
+def postWebContentToURL(url, **kwargs):
+    """POST to URL"""
+    response = requests.post(url, **kwargs)
+    return response
 
 def reCacheConfig(prevHour=None):
     """Return prevHour == currentHour, currentHour and used in Service Object
@@ -398,7 +403,12 @@ class GitConfig():
                                            'sd': "http://schemas.ogf.org/nsi/2013/12/services/definition#",
                                            'site': "urn:ogf:network",
                                            'xml': "http://www.w3.org/XML/1998/namespace#",
-                                           'xsd': "http://www.w3.org/2001/XMLSchema#"}}}
+                                           'xsd': "http://www.w3.org/2001/XMLSchema#"},
+                              'snmp': {'mibs': ['ifDescr', 'ifType', 'ifMtu', 'ifAdminStatus', 'ifOperStatus',
+                                                'ifHighSpeed', 'ifAlias', 'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards',
+                                                'ifOutDiscards', 'ifInErrors', 'ifOutErrors', 'ifHCInUcastPkts',
+                                                'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts',
+                                                'ifHCInBroadcastPkts', 'ifHCOutBroadcastPkts']}}}
         self.__addDefaults(defConfig)
         # Generate list vals - not in a str format. Needed in delta checks
         self.__generatevlaniplists()

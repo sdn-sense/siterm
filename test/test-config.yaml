@@ -1,6 +1,6 @@
 ---
 
-hostname: https://sense-caltech-fe.ultralight.org
+hostname: https://sense-caltech-fe.sdn-lb.ultralight.org
 sitename: T2_US_Caltech_Test
-cert: /home/jbalcas/hostcert.pem
-key: /home/jbalcas/hostkey.pem
+cert: /etc/grid-security/hostcert.pem
+key: /etc/grid-security/hostkey.pem
