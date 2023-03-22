@@ -20,19 +20,6 @@ DAEMON = None
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
-    def __init__(self, component, inargs):
-        logType = 'TimedRotatingFileHandler'
-        if inargs.logtostdout:
-            logType = 'StreamLogger'
-        self.component = component
-        self.inargs = inargs
-        self.config = None
-        self.runCount = 0
-        self.pidfile = '/tmp/end-site-rm-%s.pid' % component
-        self.logger = getLoggingObject(logFile="%s/%s-" % ('/var/log/', component),
-                                       logLevel='DEBUG', logType=logType,
-                                       service=self.component)
-
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
         outThreads = {}
@@ -46,5 +33,5 @@ if __name__ == "__main__":
         parser.print_help()
     inargs = parser.parse_args(sys.argv[1:])
     validateArgs(inargs)
-    DAEMON = MyDaemon(COMPONENT, inargs)
+    DAEMON = MyDaemon(COMPONENT, inargs, False)
     DAEMON.command()
