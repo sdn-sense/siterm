@@ -177,7 +177,10 @@ class Switch():
                             continue
                         for val, key in keyMapping.items():
                             hOut.setdefault(key, {})
-                            hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
+                            if val in host_events['event_data']['res']['stdout']:
+                                hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
+                            else:
+                                hOut[key] = parserWrapper(val, None)
         self.__getAnsErrors(ansOut)
         return out
 
