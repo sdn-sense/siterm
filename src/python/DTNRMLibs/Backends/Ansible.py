@@ -39,17 +39,11 @@ class Switch():
         """Get Ansible errors"""
         for fkey in ['dark', 'failures']:
             for host, _ in ansOut.stats[fkey].items():
-                for host_events in ansOut.host_events(host):
-                    if host_events.get('event', '') == 'runner_on_unreachable':
-                        err = host_events.get('event_data', {}).get('res', {})
-                        self.ansibleErrs.setdefault(host, [])
-                        self.ansibleErrs[host].append(err)
-                        self.logger.info('Ansible Error for %s: %s', host, err)
-                    else:
-                        err = host_events.get('event_data', {}).get('res', {})
-                        self.ansibleErrs.setdefault(host, [])
-                        self.ansibleErrs[host].append(err)
-                        self.logger.info('Ansible Error for %s: %s', host, err)
+                for hostEvents in ansOut.host_events(host):
+                    err = hostEvents.get('event_data', {}).get('res', {})
+                    self.ansibleErrs.setdefault(host, [])
+                    self.ansibleErrs[host].append(err)
+                    self.logger.info('Ansible Error for %s: %s', host, err)
 
     def _getInventoryInfo(self, hosts=None):
         """Get Inventory Info. If hosts specified, only return for specific hosts"""
@@ -177,7 +171,10 @@ class Switch():
                             continue
                         for val, key in keyMapping.items():
                             hOut.setdefault(key, {})
-                            hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
+                            if val in host_events['event_data']['res']['stdout']:
+                                hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
+                            else:
+                                hOut[key] = parserWrapper(val, None)
         self.__getAnsErrors(ansOut)
         return out
 
