@@ -171,7 +171,7 @@ class Switch():
                             continue
                         for val, key in keyMapping.items():
                             hOut.setdefault(key, {})
-                            if val in host_events['event_data']['res']['stdout']:
+                            if val < len(host_events['event_data']['res']['stdout']):
                                 hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
                             else:
                                 hOut[key] = parserWrapper(val, None)
