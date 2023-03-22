@@ -52,7 +52,7 @@ class Daemon():
     Usage: subclass the Daemon class and override the run() method.
     """
 
-    def __init__(self, component, inargs, getGitConfig=True):
+    def __init__(self, component, inargs, getGitConf=True):
         logType = 'TimedRotatingFileHandler'
         if inargs.logtostdout:
             logType = 'StreamLogger'
@@ -61,7 +61,7 @@ class Daemon():
         self.runCount = 0
         self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}.pid"
         self.config = None
-        if getGitConfig:
+        if getGitConf:
             self.config = getGitConfig()
         self.logger = getLoggingObject(config=self.config,
                                        logfile=f"{self.config.get('general', 'logDir')}/{component}/",
