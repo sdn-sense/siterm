@@ -61,12 +61,17 @@ class Daemon():
         self.runCount = 0
         self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}.pid"
         self.config = None
+        self.logger = None
         if getGitConf:
             self.config = getGitConfig()
-        self.logger = getLoggingObject(config=self.config,
-                                       logfile=f"{self.config.get('general', 'logDir')}/{component}/",
-                                       logLevel=self.config.get('general', 'logLevel'), logType=logType,
-                                       service=self.component)
+            self.logger = getLoggingObject(config=self.config,
+                                           logfile=f"{self.config.get('general', 'logDir')}/{component}/",
+                                           logLevel=self.config.get('general', 'logLevel'), logType=logType,
+                                           service=self.component)
+        else:
+            self.logger = getLoggingObject(logFile="%s/%s-" % ('/var/log/', component),
+                                           logLevel='DEBUG', logType=logType,
+                                           service=self.component)
         self.sleepTimers = {'ok': 10, 'failure': 30}
         self.totalRuntime = 0
 
