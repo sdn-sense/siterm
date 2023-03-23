@@ -25,13 +25,11 @@ import mariadb
 from DTNRMLibs import dbcalls
 
 
-
 def getUTCnow():
     """Get UTC Time."""
     now = datetime.datetime.utcnow()
     timestamp = int(time.mktime(now.timetuple()))
     return timestamp
-
 
 
 class DBBackend():

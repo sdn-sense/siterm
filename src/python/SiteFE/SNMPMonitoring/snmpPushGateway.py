@@ -7,29 +7,12 @@ Authors:
 
 Date: 2023/03/17
 """
-import simplejson as json
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.MainUtilities import getDBConn
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.Backends.main import Switch
-from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
-import psutil
-from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import isValFloat
-from DTNRMLibs.MainUtilities import getAllHosts
-
 from SiteFE.SNMPMonitoring.snmpmon import SNMPMonitoring
 from prometheus_client import CollectorRegistry, push_to_gateway
-from prometheus_client import Enum, Info, CONTENT_TYPE_LATEST
-from prometheus_client import Gauge
+from prometheus_client import Info, Gauge
 
-#from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
-#
-##registry = CollectorRegistry()
-#g = Gauge('job_last_success_unixtime', 'Last time a batch job successfully finished', registry=registry)
-#g.set_to_current_time()
-#push_to_gateway('localhost:9091', job='batchA', registry=registry)
 
 class PromPush():
     """SNMP PushGateway Class"""
@@ -48,6 +31,7 @@ class PromPush():
         return registry
 
     def __pushToGateway(self, registry):
+        """Push registry to remote gateway"""
         push_to_gateway(self.backgConfig['requestdict']['gateway'],
                         job=f"job-{self.backgConfig['id']}",
                         registry=registry)
@@ -64,8 +48,6 @@ class PromPush():
             mibs = self.config['MAIN']['snmp']['mibs']
         registry = self.__cleanRegistry()
         snmpData = self.SNMPMonClass.startRealTime(hostname, mibs)
-
-
         snmpGauge = Gauge('interface_statistics', 'Interface Statistics',
                           ['ifDescr', 'ifType', 'ifAlias', 'hostname', 'Key'], registry=registry)
         macState = Info('mac_table', 'Mac Address Table',
@@ -88,33 +70,4 @@ class PromPush():
                 if key1 in val and isValFloat(val[key1]):
                     keys['Key'] = key1
                     snmpGauge.labels(**keys).set(val[key1])
-
-
-        return
-
-
-
-#CONF = {'hostname': '<STR>:VALUE_OF_HOSTNAME',
-#        'hosttype': 'switch|host',
-#        'type': 'prometheus-push', 
-#        'metadata': {'key': 'value'}, # Only supported for switch hosttype;
-#        'gateway': 'gateway-url',
-#        'runtime': 'seconds',
-#        'resolution': 'seconds',
-#        'mibs': "list of mibs separated by comma"
-#}
-
-# MIBS [1]
-#'ifDescr', 'ifType', 'ifMtu', 'ifAdminStatus', 'ifOperStatus',
-#'ifHighSpeed', 'ifAlias', 'ifHCInOctets', 'ifHCOutOctets', 'ifInDiscards',
-#'ifOutDiscards', 'ifInErrors', 'ifOutErrors', 'ifHCInUcastPkts',
-#'ifHCOutUcastPkts', 'ifHCInMulticastPkts', 'ifHCOutMulticastPkts',
-#'ifHCInBroadcastPkts', 'ifHCOutBroadcastPkts'
-#}
-#
-#
-#
-#
-#
-#
-
+        self.__pushToGateway(registry)

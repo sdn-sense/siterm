@@ -19,6 +19,7 @@ Date                    : 2021/03/12
 from DTNRMLibs.MainUtilities import externalCommand
 from DTNRMLibs.ipaddr import getInterfaces
 
+
 def arptable(inputDict):
     """Return arptable for specific vlan"""
     if inputDict['interface'] not in getInterfaces():

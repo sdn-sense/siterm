@@ -37,6 +37,7 @@ from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.PromPush import PromPushService
 
+
 class SNMPMonitoring():
     """SNMP Monitoring Class"""
     def __init__(self, config, sitename):
@@ -157,7 +158,7 @@ class SNMPMonitoring():
         allAssigned = []
         for call in ["new", "active"]:
             data = self.dbI.get('debugrequests', orderby=['updatedate', 'DESC'],
-                                search=[['hostname', host], ['state', 'active']],
+                                search=[['hostname', host], ['state', call]],
                                 limit=1000)
             if data:
                 allAssigned += data
@@ -199,7 +200,6 @@ class SNMPMonitoring():
                    'output': output,
                    'updatedate': getUTCnow()}
             self.dbI.update('debugrequests', [out])
-
 
     def startRealTime(self, host, mibs=None):
         """This is used to get a real time stats for SENSE RTMON via actions"""

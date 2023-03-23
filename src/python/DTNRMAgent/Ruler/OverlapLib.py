@@ -11,7 +11,6 @@ from DTNRMLibs.ipaddr import getInterfaceIP
 from DTNRMLibs.ipaddr import getsubnet
 
 
-
 def getAllIPs():
     """Get All IPs on the system"""
     allIPs = {'ipv4': {}, 'ipv6': {}}

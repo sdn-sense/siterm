@@ -15,9 +15,11 @@ def getInterfaces():
     """Get all interface names"""
     return netifaces.interfaces()
 
+
 def getInterfaceIP(interface):
     """Get Interface IP"""
     return netifaces.ifaddresses(interface)
+
 
 def normalizedipwithnet(ipInput, netmask):
     """Normalize IP with separate netmask"""
@@ -26,6 +28,7 @@ def normalizedipwithnet(ipInput, netmask):
         return normalizedip(ipInput)
     tmpNet = netmask.split('/')
     return normalizedip(f"{ipInput}/{tmpNet[1]}")
+
 
 def normalizedip(ipInput):
     """
@@ -45,9 +48,11 @@ def normalizedip(ipInput):
     # We return what we get here, because it had multiple / (which is not really valid)
     return ipInput
 
+
 def getsubnet(ipInput, strict=False):
     """Get subnet if IP address"""
     return ip_network(ipInput, strict=strict).compressed
+
 
 def ipVersion(ipInput, strict=False):
     """Check if IP is valid.
@@ -67,10 +72,12 @@ def ipVersion(ipInput, strict=False):
         pass
     return version
 
+
 def getBroadCast(inIP):
     """Return broadcast IP."""
     myNet = ip_network(str(inIP), strict=False)
     return str(myNet.broadcast_address)
+
 
 def validMRMLName(valIn):
     """Generate valid MRML Name. [:/ ] not supported"""

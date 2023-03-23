@@ -19,6 +19,7 @@ Date                    : 2021/03/12
 from DTNRMLibs.MainUtilities import externalCommand
 from DTNRMLibs.ipaddr import getInterfaces, ipVersion
 
+
 def iperf(inputDict):
     """Run TCP IPerf"""
     if inputDict['interface'] not in getInterfaces():

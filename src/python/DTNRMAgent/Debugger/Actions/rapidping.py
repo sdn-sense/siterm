@@ -20,6 +20,7 @@ from DTNRMLibs.MainUtilities import externalCommand
 from DTNRMLibs.ipaddr import getInterfaces
 from DTNRMLibs.ipaddr import ipVersion
 
+
 def rapidping(inputDict):
     """Return arptable for specific vlan"""
     if inputDict['interface'] not in getInterfaces():

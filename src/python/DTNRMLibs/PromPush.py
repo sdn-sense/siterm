@@ -7,9 +7,9 @@ Authors:
 
 Date: 2023/03/22
 """
-import time
 from DTNRMLibs.MainUtilities import externalCommand
 from DTNRMLibs.MainUtilities import getUTCnow
+
 
 def PromPushService(inputDict):
     """Run a prometheus push thread"""
