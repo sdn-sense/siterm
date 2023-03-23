@@ -7,7 +7,17 @@ Authors:
 
 Date: 2022/04/08
 """
+import netifaces
 from ipaddress import ip_address, ip_network
+
+
+def getInterfaces():
+    """Get all interface names"""
+    return netifaces.interfaces()
+
+def getInterfaceIP(interface):
+    """Get Interface IP"""
+    return netifaces.ifaddresses(interface)
 
 def normalizedipwithnet(ipInput, netmask):
     """Normalize IP with separate netmask"""
@@ -57,6 +67,10 @@ def ipVersion(ipInput, strict=False):
         pass
     return version
 
+def getBroadCast(inIP):
+    """Return broadcast IP."""
+    myNet = ip_network(str(inIP), strict=False)
+    return str(myNet.broadcast_address)
 
 def validMRMLName(valIn):
     """Generate valid MRML Name. [:/ ] not supported"""

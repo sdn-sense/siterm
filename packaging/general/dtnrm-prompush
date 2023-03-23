@@ -11,10 +11,13 @@ import os
 import sys
 from DTNRMLibs.Daemonizer import Daemon, getParser, validateArgs
 from DTNRMLibs.MainUtilities import getFileContentAsJson
-from DTNRMAgent.Debugger.BackgroundRuns import PromPush
+try:
+    from DTNRMAgent.Debugger.BackgroundRuns import PromPush
+except ModuleNotFoundError:
+    from SiteFE.SNMPMonitoring.snmpPushGateway import PromPush
 
 COMPONENT = 'Prometheus-Push'
-DESCRIPTION = "Push Prometheus status. This daemon is run automatically by Debugger."
+DESCRIPTION = "Push Prometheus status. This daemon is run automatically by Debugger/SNMPMonitoring"
 DAEMON = None
 
 class MyDaemon(Daemon):

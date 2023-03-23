@@ -6,15 +6,17 @@ Authors:
 
 Date: 2022/08/29
 """
-import ipaddress
-import netifaces
+from DTNRMLibs.ipaddr import getInterfaces
+from DTNRMLibs.ipaddr import getInterfaceIP
+from DTNRMLibs.ipaddr import getsubnet
+
 
 
 def getAllIPs():
     """Get All IPs on the system"""
     allIPs = {'ipv4': {}, 'ipv6': {}}
-    for intf in netifaces.interfaces():
-        for intType, intDict in netifaces.ifaddresses(intf).items():
+    for intf in getInterfaces():
+        for intType, intDict in getInterfaceIP(intf).items():
             if int(intType) == 2:
                 for ipv4 in intDict:
                     address = f"{ipv4.get('addr')}/{ipv4.get('netmask')}"
@@ -29,8 +31,8 @@ def getAllIPs():
 def networkOverlap(net1, net2):
     """Check if 2 networks overlap"""
     try:
-        net1Net = ipaddress.ip_network(net1, strict=False)
-        net2Net = ipaddress.ip_network(net2, strict=False)
+        net1Net = getsubnet(net1, strict=False)
+        net2Net = getsubnet(net2, strict=False)
         if net1Net.overlaps(net2Net):
             return True
     except ValueError:
