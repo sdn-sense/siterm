@@ -18,6 +18,7 @@ Date                    : 2021/03/12
 """
 from asyncio.exceptions import TimeoutError
 import pyshark
+from DTNRMLibs.ipaddr import getInterfaces
 
 
 class ParsePackets():
@@ -49,8 +50,8 @@ class ParsePackets():
 
 def tcpdump(inputDict):
     """Do TCP Dump"""
-    # TODO Check
-    # Interface exists
+    if inputDict['interface'] not in getInterfaces():
+        return [], "Interface is not available on the node", 3
     parser = ParsePackets()
     allPackets = parser.sniff(inputDict)
     err, exitCode = "", 0
@@ -61,5 +62,5 @@ def tcpdump(inputDict):
 
 if __name__ == "__main__":
     testData = {'type': 'tcpdump', 'sitename': 'T2_US_Caltech_Test1',
-                'dtn': 'sdn-sc-nodea.ultralight.org', 'interface': 'enp4s0f0.43'}
+                'hostname': 'sdn-sc-nodea.ultralight.org', 'interface': 'enp4s0f0.43'}
     print(tcpdump(testData))

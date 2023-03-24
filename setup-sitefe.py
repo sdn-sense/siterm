@@ -13,7 +13,7 @@ from setupUtilities import list_packages, get_py_modules, get_web_files, VERSION
 # Also another cronjob, which monitors config file and modifies cronjobs if needed.
 # Currently it is allowed to specify only minutes and up to 30 minutes.
 # This is how CRONJOBS are handled and division is done only for the current hour.
-SCRIPTS = ["packaging/general/Config-Fetcher"]
+SCRIPTS = ["packaging/general/Config-Fetcher", "packaging/general/dtnrm-prompush"]
 for sectionName in ['LookUpService', 'ProvisioningService', 'SNMPMonitoring']:
     SCRIPTS.append('packaging/dtnrm-site-fe/scripts/%s-update' % sectionName)
 

@@ -17,14 +17,16 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2021/03/12
 """
 from DTNRMLibs.MainUtilities import externalCommand
+from DTNRMLibs.ipaddr import getInterfaces, ipVersion
 
 
 def iperf(inputDict):
     """Run TCP IPerf"""
-    # TODO Checks:
-    # IP Is valid;
-    # Ping works;
-    # Telnet to default port works (5201)
+    if inputDict['interface'] not in getInterfaces():
+        return [], "Interface is not available on the node", 3
+    if ipVersion(inputDict['ip']) == -1:
+        return [], f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6", 4
+
     command = f"iperf3 -c {inputDict['ip']} -B {inputDict['interface']} -t {inputDict['time']}"
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
@@ -32,6 +34,6 @@ def iperf(inputDict):
 
 if __name__ == "__main__":
     testData = {'type': 'iperf', 'sitename': 'T2_US_Caltech_Test1',
-                'dtn': 'sdn-sc-nodea.ultralight.org', 'ip': '1.2.3.4',
+                'hostname': 'sdn-sc-nodea.ultralight.org', 'ip': '1.2.3.4',
                 'interface': 'vlan.3604', 'time': '120'}
     print(iperf(testData))

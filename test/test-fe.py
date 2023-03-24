@@ -1,10 +1,9 @@
 """Test Frontend"""
 import os
-import time
-import simplejson as json
 import unittest
 import pathlib
 import http.client
+import simplejson as json
 import yaml
 from DTNRMLibs.HTTPLibrary import Requests
 from DTNRMLibs.MainUtilities import getUTCnow
@@ -132,7 +131,7 @@ class TestUtils(unittest.TestCase):
 
     def test_debug_iperfserver(self):
         """Test Debug IperfServer API"""
-        data = {"type": "iperfserver", "sitename": "", "hostname": "dummyhostname",
+        data = {"type": "iperfserver", "sitename": "", "hostname": "dummyhostname", "onetime": "True",
                 "interface": "dummyinterface", "ip": "1.2.3.4", "port": "1234", "time": "60"}
         outsuc = {"out": ["iperf server success", "from unittest"], "err": "", "exitCode": 0}
         dataupd = {'state': 'success', 'output': json.dumps(outsuc)}
@@ -140,22 +139,22 @@ class TestUtils(unittest.TestCase):
 
     def test_debug_prometheus_push(self):
         """Test Prometheus Push Debug API"""
-        data = {'hostname': 'dummyhostname', # hostname
-                'hosttype': 'host', # switch or host
-                'type': 'arp-push', # type of action (prometheus-push - for switch/host, arp-push - for host)
-                'metadata': {'key': 'value'}, # Only supported for switch hosttype, Optional
-                'gateway': 'gateway-url', # gateway url
-                'runtime': str(int(time.time())+300), # runtime until time in seconds since the epoch
-                'resolution': '5'} # resolution time
+        data = {'hostname': 'dummyhostname',  # hostname
+                'hosttype': 'host',  # switch or host
+                'type': 'arp-push',  # type of action (prometheus-push - for switch/host, arp-push - for host)
+                'metadata': {'key': 'value'},  # Only supported for switch hosttype, Optional
+                'gateway': 'gateway-url',  # gateway url
+                'runtime': str(int(getUTCnow())+1200),  # runtime until time in seconds since the epoch
+                'resolution': '5'}  # resolution time
                 #'mibs': "list of mibs separated by comma"} # Optional parameter
         outsuc = {"out": ["running"], "err": "", "exitCode": 0}
-        dataupd = {'state': 'new', 'output': json.dumps(outsuc)}
+        dataupd = {'state': 'active', 'output': json.dumps(outsuc)}
         debugActions(self, data, dataupd)
 
-# TODO:
-#        self.routeMap.connect("getalldebughostnameactive", "/json/frontend/getalldebughostnameactive/:debugvar", action="getalldebughostnameactive")
-
-
+        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getalldebughostnameactive/dummyhostname"
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
+        self.assertEqual(out[1], 200)
+        self.assertEqual(out[2], 'OK')
 
     def test_fake_cert(self):
         """Test Fake Cert Failure"""

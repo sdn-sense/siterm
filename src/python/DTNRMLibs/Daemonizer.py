@@ -18,6 +18,7 @@ from DTNRMLibs import __version__ as runningVersion
 from DTNRMLibs.MainUtilities import getGitConfig, getLoggingObject
 from DTNRMLibs.MainUtilities import reCacheConfig
 from DTNRMLibs.MainUtilities import pubStateRemote
+from DTNRMLibs.MainUtilities import getUTCnow
 
 
 def getParser(description):
@@ -219,7 +220,7 @@ class Daemon():
 
     def reporter(self, state, sitename, stwork):
         """Report Service State to FE"""
-        runtime = int(time.time()) - stwork
+        runtime = int(getUTCnow()) - stwork
         if not self.inargs.noreporting:
             pubStateRemote(cls=self, servicename=self.component,
                            servicestate=state, sitename=sitename,
@@ -255,10 +256,10 @@ class Daemon():
         while self.runLoop():
             self.runCount += 1
             hadFailure = False
-            stwork = int(time.time())
+            stwork = int(getUTCnow())
             try:
                 for sitename, rthread in list(runThreads.items()):
-                    stwork = int(time.time())
+                    stwork = int(getUTCnow())
                     self.logger.info('Start worker for %s site', sitename)
                     try:
                         rthread.startwork()
@@ -280,7 +281,7 @@ class Daemon():
                     time.sleep(self.sleepTimers['failure'])
                 else:
                     sys.exit(4)
-            if self.totalRuntime != 0 and self.totalRuntime <= int(time.time()):
+            if self.totalRuntime != 0 and self.totalRuntime <= int(getUTCnow()):
                 self.logger.info('Total Runtime expired. Stopping Service')
                 sys.exit(0)
             timeeq, currentHour = reCacheConfig(currentHour)

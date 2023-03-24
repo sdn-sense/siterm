@@ -25,12 +25,105 @@ from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.MainUtilities import read_input_data
 
 
+class CallValidator():
+    """Validator class for Debug Actions"""
+    def __init__(self, config):
+        self.supportedActions = ['arp-push', 'prometheus-push', 'rapidping',
+                                 'tcpdump', 'arptable', 'iperf', 'iperfserver']
+        self.functions = {'arptable': self.__validateArp,
+                          'iperf': self.__validateIperf,
+                          'iperfserver': self.__validateIperfserver,
+                          'rapidping': self.__validateRapidping,
+                          'tcpdump': self.__validateTcpdump,
+                          'prometheus-push': self.__validatePrompush,
+                          'arp-push': self.__validateArppush}
+        self.config = config
+
+    @staticmethod
+    def __validateArp(inputDict):
+        """Validate aprdump debug request."""
+        if 'interface' not in inputDict:
+            raise BadRequestError('Key interface not specified in debug request.')
+
+    @staticmethod
+    def __validateIperf(inputDict):
+        """Validate iperfclient debug request."""
+        for key in ['interface', 'ip', 'time']:
+            if key not in inputDict:
+                raise BadRequestError(f'Key {key} not specified in debug request.')
+            # Do not allow time to be more than 10mins
+            if int(inputDict['time']) > 600:
+                raise BadRequestError('Requested Runtime for debug request is more than 10mins.')
+
+    @staticmethod
+    def __validateIperfserver(inputDict):
+        """Validate iperf server debug request."""
+        for key in ['port', 'ip', 'time', 'onetime']:
+            if key not in inputDict:
+                raise BadRequestError(f'Key {key} not specified in debug request.')
+
+    @staticmethod
+    def __validateRapidping(inputDict):
+        """Validate rapid ping debug request."""
+        for key in ['ip', 'time', 'packetsize', 'interface']:
+            if key not in inputDict:
+                raise BadRequestError(f'Key {key} not specified in debug request.')
+        # interval is optional - not allow more than 1 minute
+        if 'interval' in inputDict and int(inputDict['interval']) > 60:
+            raise BadRequestError('Requested Runtime for debug request is more than 1mins.')
+
+    @staticmethod
+    def __validateTcpdump(inputDict):
+        """Validate tcpdump debug request."""
+        if 'interface' not in inputDict:
+            raise BadRequestError('Key interface not specified in debug request.')
+
+    def __validatePrompush(self, inputDict):
+        """Validate prometheus push debug request."""
+        for key in ['hosttype', 'metadata', 'gateway', 'runtime', 'resolution']:
+            if key not in inputDict:
+                raise BadRequestError(f'Key {key} not specified in debug request.')
+        if inputDict['hosttype'] not in ['host', 'switch']:
+            raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
+        totalRuntime = int(inputDict['runtime'] - getUTCnow())
+        if totalRuntime < 600 or totalRuntime > 3600:
+            raise BadRequestError("Total Runtime must be within range of 600 > x > 3600 seconds since epoch.")
+
+        if 'mibs' in inputDict:
+            if len('mibs') > len(self.config['MAIN']['snmp']['mibs']):
+                raise BadRequestError(f"Requested more mibs than are supported. Supported mibs: {self.config['MAIN']['snmp']['mibs']}")
+            for mib in inputDict:
+                if mib not in self.config['MAIN']['snmp']['mibs']:
+                    raise BadRequestError(f"MIB {mib} not supported. Supported mibs: {self.config['MAIN']['snmp']['mibs']}")
+
+    @staticmethod
+    def __validateArppush(inputDict):
+        """Validate arp push debug request."""
+        for key in ['hosttype', 'metadata', 'gateway', 'runtime', 'resolution']:
+            if key not in inputDict:
+                raise BadRequestError(f'Key {key} not specified in debug request.')
+        if inputDict['hosttype'] != 'host':
+            raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
+        totalRuntime = int(inputDict['runtime']) - getUTCnow()
+        if totalRuntime < 600 or totalRuntime > 3600:
+            raise BadRequestError("Total Runtime must be within range of 600 > x > 3600 seconds since epoch.")
+
+    def validate(self, inputDict):
+        """Validate wrapper for debug action."""
+        if 'hostname' not in inputDict:
+            raise BadRequestError('Hostname not specified in debug request.')
+        if 'type' in inputDict and inputDict['type'] not in self.supportedActions:
+            raise BadRequestError(f"Action {inputDict['type']} not supported. Supported actions: {self.supportedActions}")
+        self.functions[inputDict['type']](inputDict)
+
+
 class DebugCalls():
     """Site Frontend calls."""
     # pylint: disable=E1101
     def __init__(self):
         self.__defineRoutes()
         self.__urlParams()
+        self.validator = CallValidator(self.config)
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -84,9 +177,7 @@ class DebugCalls():
         for symbol in [";", "&"]:
             if symbol in jsondump:
                 raise BadRequestError('Unsupported symbol in input request. Contact Support')
-        if 'hostname' not in inputDict:
-            raise BadRequestError('Hostname not specified in debug request.')
-        # TODO: VALIDATION OF SUBMITTED DEBUG ACTION!
+        self.validator.validate(inputDict)
         out = {'hostname': inputDict['hostname'],
                'state': 'new',
                'requestdict': jsondump,

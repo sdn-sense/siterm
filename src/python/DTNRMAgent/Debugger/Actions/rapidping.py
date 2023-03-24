@@ -17,12 +17,17 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2021/03/12
 """
 from DTNRMLibs.MainUtilities import externalCommand
+from DTNRMLibs.ipaddr import getInterfaces
+from DTNRMLibs.ipaddr import ipVersion
 
 
 def rapidping(inputDict):
     """Return arptable for specific vlan"""
-    # TODO Checks:
-    # Interface is available;
+    if inputDict['interface'] not in getInterfaces():
+        return [], "Interface is not available on the node", 3
+    if ipVersion(inputDict['ip']) == -1:
+        return [], f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6", 4
+
     command = f"ping -i {inputDict.get('interval', 1)} -w {inputDict['time']} {inputDict['ip']} -s {inputDict['packetsize']} -I {inputDict['interface']}"
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
@@ -30,7 +35,7 @@ def rapidping(inputDict):
 
 if __name__ == "__main__":
     testData = {'type': 'rapidping', 'sitename': 'T2_US_Caltech_Test1',
-                'dtn': 'sdn-sc-nodea.ultralight.org', 'ip': '1.1.1.1',
+                'hostname': 'sdn-sc-nodea.ultralight.org', 'ip': '1.1.1.1',
                 'interface': 'vlan.3604', 'time': '60', "packetsize": "32",
                 "interval": "1"}
     print(rapidping(testData))

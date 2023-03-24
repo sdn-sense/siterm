@@ -17,10 +17,13 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2021/03/12
 """
 from DTNRMLibs.MainUtilities import externalCommand
+from DTNRMLibs.ipaddr import getInterfaces
 
 
 def arptable(inputDict):
     """Return arptable for specific vlan"""
+    if inputDict['interface'] not in getInterfaces():
+        return [], "Interface is not available on the node", 3
     command = "ip neigh"
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
@@ -33,5 +36,5 @@ def arptable(inputDict):
 
 if __name__ == "__main__":
     testData = {'type': 'arptable', 'sitename': 'T2_US_Caltech_Test1',
-                'dtn': 'sdn-sc-nodea.ultralight.org', 'interface': 'vlan.3610'}
+                'hostname': 'sdn-sc-nodea.ultralight.org', 'interface': 'vlan.3610'}
     print(arptable(testData))

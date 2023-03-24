@@ -8,18 +8,15 @@ Authors:
 Date: 2022/01/20
 """
 # TODO. Configure also MTU and txqueuelen
-import ipaddress
-import netifaces
 from pyroute2 import IPRoute
 from DTNRMLibs.MainUtilities import execute
 from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
-from DTNRMLibs.ipaddr import normalizedip, normalizedipwithnet
-
-def getBroadCast(inIP):
-    """Return broadcast IP."""
-    myNet = ipaddress.ip_network(str(inIP), strict=False)
-    return str(myNet.broadcast_address)
+from DTNRMLibs.ipaddr import getBroadCast
+from DTNRMLibs.ipaddr import normalizedip
+from DTNRMLibs.ipaddr import getInterfaces
+from DTNRMLibs.ipaddr import getInterfaceIP
+from DTNRMLibs.ipaddr import normalizedipwithnet
 
 def intfUp(intf):
     """Check if Interface is up"""
@@ -89,7 +86,7 @@ class VInterfaces():
     def _statusvlan(vlan, raiseError=False):
         """Get status of specific vlan."""
         del raiseError
-        allInterfaces = netifaces.interfaces()
+        allInterfaces = getInterfaces
         if f"vlan.{vlan['vlan']}" not in allInterfaces:
             return False
         return True
@@ -98,7 +95,7 @@ class VInterfaces():
     def _statusvlanIP(vlan, raiseError=False):
         """Check if IP set on vlan"""
         del raiseError
-        allIPs = netifaces.ifaddresses(f"vlan.{vlan['vlan']}")
+        allIPs = getInterfaceIP(f"vlan.{vlan['vlan']}")
         ip4Exists = False
         if 'ip' in vlan and vlan['ip']:
             serviceIp = vlan['ip'].split('/')[0]

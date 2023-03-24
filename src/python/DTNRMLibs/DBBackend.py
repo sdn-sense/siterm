@@ -20,8 +20,16 @@ Date                    : 2019/05/01
 """
 import os
 import time
+import datetime
 import mariadb
 from DTNRMLibs import dbcalls
+
+
+def getUTCnow():
+    """Get UTC Time."""
+    now = datetime.datetime.utcnow()
+    timestamp = int(time.mktime(now.timetuple()))
+    return timestamp
 
 
 class DBBackend():
@@ -146,18 +154,11 @@ class dbinterface():
     def _setStartCallTime(self, calltype):
         """Set Call Start timer."""
         del calltype
-        self.callStart = float(time.time())
+        self.callStart = float(getUTCnow())
 
     def _setEndCallTime(self, calltype, callExit):
         """Set Call End timer."""
-        self.callEnd = float(time.time())
-        self._calldiff(calltype, callExit)
-
-    def _calldiff(self, calltype, callExit):
-        """Log timing for call."""
-        diff = self.callEnd - self.callStart
-        msg = f"DB: {self.serviceName} {calltype} {str(diff)} {callExit}"
-        print(msg)
+        self.callEnd = float(getUTCnow())
 
     @staticmethod
     def getcall(callaction, calltype):

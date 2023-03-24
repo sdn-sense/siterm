@@ -21,6 +21,7 @@ Authors:
 
 Date: 2022/11/21
 """
+import os
 import sys
 import simplejson as json
 from easysnmp import Session
@@ -29,9 +30,12 @@ from easysnmp.exceptions import EasySNMPTimeoutError
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import createDirs
+from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.Backends.main import Switch
 from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
+from DTNRMLibs.PromPush import PromPushService
 
 
 class SNMPMonitoring():
@@ -43,6 +47,7 @@ class SNMPMonitoring():
         self.sitename = sitename
         self.switch = Switch(config, sitename)
         self.dbI = getVal(getDBConn('SNMPMonitoring', self), **{'sitename': self.sitename})
+        self.diragent = contentDB()
         self.switches = {}
         self.session = None
         self.err = []
@@ -145,8 +150,56 @@ class SNMPMonitoring():
                     out[indx][key] = item.value.replace('\x00', '')
             out['macs'] = macs[host]
             self._writeToDB(host, out)
+            self._promBackground(host)
         if self.err:
             raise Exception(f'SNMP Monitoring Errors: {self.err}')
+
+    def _promBackground(self, host):
+        allAssigned = []
+        for call in ["new", "active"]:
+            data = self.dbI.get('debugrequests', orderby=['updatedate', 'DESC'],
+                                search=[['hostname', host], ['state', call]],
+                                limit=1000)
+            if data:
+                allAssigned += data
+        for item in allAssigned:
+            self._checkBackgroundProcesses(item)
+
+    def _checkBackgroundProcesses(self, item):
+        """Start Background work, like prometheus push"""
+        workDir = self.config.get('general', 'private_dir') + "/DTNRM/background/"
+        createDirs(workDir)
+        fname = workDir + f"/background-process-{item['id']}.json"
+        if not os.path.isfile(fname):
+            self.diragent.dumpFileContentAsJson(fname, item)
+        newstate = ""
+        try:
+            out, err, exitCode = PromPushService(item)
+        except (ValueError, KeyError, OSError) as ex:
+            out = ""
+            err = ex
+            exitCode = 501
+        output = {'out': out, 'err': str(err), 'exitCode': exitCode}
+        self.logger.info(f"Finish work on: {output}")
+        # 501, 1 - error - set to failed
+        # 2 - active
+        # 3 - finished
+        if exitCode in [501, 1]:
+            newstate = 'failed'
+        elif exitCode in [0]:
+            newstate = 'active'
+        elif exitCode in [3]:
+            self.diragent.removeFile(fname)
+            newstate = 'finished'
+        else:
+            newstate = 'unknown'
+        if item['state'] != newstate:
+            item['state'] = newstate
+            out = {'id': item['id'],
+                   'state': item['state'],
+                   'output': output,
+                   'updatedate': getUTCnow()}
+            self.dbI.update('debugrequests', [out])
 
     def startRealTime(self, host, mibs=None):
         """This is used to get a real time stats for SENSE RTMON via actions"""
