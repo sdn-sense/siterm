@@ -45,14 +45,35 @@ def _getArpVals():
             yblock = {x.replace(' ', ''): v for x, v in block.items()}
             yield yblock
 
+
 class PromPush():
     """Prom Push class loops over"""
     def __init__(self, config, sitename, backgConfig):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.logger = getLoggingObject(config=self.config, service=f"PromPush")
+        self.logger = getLoggingObject(config=self.config, service="PromPush")
+        self.arpLabels = {'Device': '', 'Flags': '', 'HWaddress': '',
+                          'HWtype': '', 'IPaddress': '', 'Mask': ''}
+        self.arpLabels.update(self.__getMetadataParams())
         self.logger.info("====== PromPush Start Work. Config: %s", self.backgConfig)
+
+    def __getMetadataParams(self):
+        """Get metadata parameters"""
+        if 'metadata' in self.backgConfig['requestdict']:
+            return self.backgConfig['requestdict']['metadata']
+        return {}
+
+    def __generatePromPushUrl(self):
+        """For posting node_exporter data, we need to generate full URL."""
+        postUrl = self.backgConfig['requestdict']['gateway']
+        if not postUrl.startswith('http'):
+            postUrl = f"http://{postUrl}"
+        postUrl += f"/metrics/job/job-{self.backgConfig['id']}"
+        if self.__getMetadataParams():
+            joinedLabels = '/'.join('/'.join((key, val)) for (key, val) in self.__getMetadataParams().items())
+            postUrl += f"/{joinedLabels}"
+        return postUrl
 
     def nodeExporterPush(self):
         """Push Node Exporter Output to Push Gateway"""
@@ -64,8 +85,10 @@ class PromPush():
             nodeExporterUrl = f'http://{nodeExporterUrl}'
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
         nodeOut = getWebContentFromURL(f'{nodeExporterUrl}/metrics')
-        postWebContentToURL(self.backgConfig['requestdict']['gateway'],
-                            data=nodeOut.content, headers=headers)
+        response = postWebContentToURL(self.__generatePromPushUrl(),
+                                       data=nodeOut.content,
+                                       headers=headers)
+        self.logger.info(f"Pushed Node Exporter data. Return code: {response.status_code}")
 
     def __cleanRegistry(self):
         """Get new/clean prometheus registry."""
@@ -73,18 +96,21 @@ class PromPush():
         return registry
 
     def __pushToGateway(self, registry):
+        """Push registry to remote gateway"""
         push_to_gateway(self.backgConfig['requestdict']['gateway'],
                         job=f"job-{self.backgConfig['id']}",
-                        registry=registry)
+                        registry=registry,
+                        grouping_key=self.__getMetadataParams())
 
     def arpPush(self):
         """Push ARP Output to Push Gateway"""
         registry = self.__cleanRegistry()
         arpState = Gauge('arp_state', 'ARP Address Table',
-                         labelnames=['Device', 'Flags', 'HWaddress', 'HWtype', 'IPaddress', 'Mask'],
+                         labelnames=self.arpLabels.keys(),
                          registry=registry)
         for arpEntry in _getArpVals():
-            arpState.labels(**arpEntry).set(1)
+            self.arpLabels.update(arpEntry)
+            arpState.labels(**self.arpLabels).set(1)
         self.__pushToGateway(registry)
 
     def startwork(self):

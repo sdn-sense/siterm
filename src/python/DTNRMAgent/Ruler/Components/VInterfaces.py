@@ -18,6 +18,29 @@ from DTNRMLibs.ipaddr import getInterfaces
 from DTNRMLibs.ipaddr import getInterfaceIP
 from DTNRMLibs.ipaddr import normalizedipwithnet
 
+
+def getDefaultMTU(config, intfKey):
+    """Get Default MTU"""
+    if config.has_section(intfKey):
+        if config.has_option(intfKey, 'defaultMTU'):
+            return int(config.get(intfKey, 'defaultMTU'))
+    elif config.has_section('agent'):
+        if config.has_option('agent', 'defaultMTU'):
+            return int(config.get('agent', 'defaultMTU'))
+    return 1500
+
+
+def getDefaultTXQ(config, intfKey):
+    """Get Default Txqueuelen"""
+    if config.has_section(intfKey):
+        if config.has_option(intfKey, 'defaultTXQueuelen'):
+            return int(config.get(intfKey, 'defaultTXQueuelen'))
+    elif config.has_section('agent'):
+        if config.has_option('agent', 'defaultTXQueuelen'):
+            return int(config.get('agent', 'defaultTXQueuelen'))
+    return 1000
+
+
 def intfUp(intf):
     """Check if Interface is up"""
     state = 'DOWN'
@@ -117,8 +140,7 @@ class VInterfaces():
             ip6Exists = True
         return ip4Exists and ip6Exists
 
-    @staticmethod
-    def _getvlanlist(inParams):
+    def _getvlanlist(self, inParams):
         """Get All Vlan List"""
         vlans = []
         for key, vals in inParams.items():
@@ -127,6 +149,8 @@ class VInterfaces():
             vlan['vlan'] = vals.get('hasLabel', {}).get('value', '')
             vlan['ip'] = vals.get('hasNetworkAddress', {}).get('ipv4-address', {}).get('value', '')
             vlan['ipv6'] = vals.get('hasNetworkAddress', {}).get('ipv6-address', {}).get('value', '')
+            vlan['mtu'] = vals.get('hasNetworkAddress', {}).get('mtu', {}).get('value', getDefaultMTU(self.config, key))
+            vlan['txqueuelen'] = vals.get('hasNetworkAddress', {}).get('txqueuelen', {}).get('value', getDefaultTXQ(self.config, key))
             vlans.append(vlan)
         return vlans
 
