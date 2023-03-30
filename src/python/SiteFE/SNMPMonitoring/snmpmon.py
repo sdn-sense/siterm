@@ -197,7 +197,7 @@ class SNMPMonitoring():
             item['state'] = newstate
             out = {'id': item['id'],
                    'state': item['state'],
-                   'output': output,
+                   'output': json.dumps(output),
                    'updatedate': getUTCnow()}
             self.dbI.update('debugrequests', [out])
 
@@ -208,13 +208,13 @@ class SNMPMonitoring():
         macs = {}
         if host not in self.switches:
             return {}
-        self._getSNMPSession(self.switches[host])
+        self._getSNMPSession(host)
         if not self.session:
             return {}
         if not mibs:
             mibs = self.config['MAIN']['snmp']['mibs']
         out = {}
-        self._getMacAddrSession(self.switches[host], macs)
+        self._getMacAddrSession(host, macs)
         for key in mibs:
             allvals = self._getSNMPVals(key)
             for item in allvals:

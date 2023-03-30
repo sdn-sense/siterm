@@ -85,7 +85,7 @@ class CallValidator():
                 raise BadRequestError(f'Key {key} not specified in debug request.')
         if inputDict['hosttype'] not in ['host', 'switch']:
             raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
-        totalRuntime = int(inputDict['runtime'] - getUTCnow())
+        totalRuntime = int(int(inputDict['runtime']) - getUTCnow())
         if totalRuntime < 600 or totalRuntime > 3600:
             raise BadRequestError("Total Runtime must be within range of 600 > x > 3600 seconds since epoch.")
 

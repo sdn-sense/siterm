@@ -18,6 +18,12 @@ from DTNRMLibs.ipaddr import getInterfaces
 from DTNRMLibs.ipaddr import getInterfaceIP
 from DTNRMLibs.ipaddr import normalizedipwithnet
 
+def getDefaultMTU(config, intfKey):
+    return
+
+def getDefaultTXQ(config, intfKey):
+    return
+
 def intfUp(intf):
     """Check if Interface is up"""
     state = 'DOWN'
@@ -117,8 +123,7 @@ class VInterfaces():
             ip6Exists = True
         return ip4Exists and ip6Exists
 
-    @staticmethod
-    def _getvlanlist(inParams):
+    def _getvlanlist(self, inParams):
         """Get All Vlan List"""
         vlans = []
         for key, vals in inParams.items():
@@ -127,6 +132,8 @@ class VInterfaces():
             vlan['vlan'] = vals.get('hasLabel', {}).get('value', '')
             vlan['ip'] = vals.get('hasNetworkAddress', {}).get('ipv4-address', {}).get('value', '')
             vlan['ipv6'] = vals.get('hasNetworkAddress', {}).get('ipv6-address', {}).get('value', '')
+            vlan['mtu'] = vals.get('hasNetworkAddress', {}).get('mtu', {}).get('value', getDefaultMTU(self.config, key))
+            vlan['txqueuelen'] = vals.get('hasNetworkAddress', {}).get('txqueuelen', {}).get('value', getDefaultTXQ(self.config, key))
             vlans.append(vlan)
         return vlans
 
