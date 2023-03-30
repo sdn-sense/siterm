@@ -27,6 +27,6 @@ setup(
     scripts=["packaging/dtnrm-site-agent/scripts/dtnrmagent-update",
              "packaging/dtnrm-site-agent/scripts/dtnrm-ruler",
              "packaging/dtnrm-site-agent/scripts/dtnrm-debugger",
-             "packaging/general/dtnrm-prompush",
+             "packaging/dtnrm-site-agent/scripts/dtnrm-prompush",
              "packaging/general/Config-Fetcher"]
 )

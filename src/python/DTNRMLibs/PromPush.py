@@ -9,7 +9,7 @@ Date: 2023/03/22
 """
 from DTNRMLibs.MainUtilities import externalCommand
 from DTNRMLibs.MainUtilities import getUTCnow
-
+from DTNRMLibs.MainUtilities import evaldict
 
 def PromPushService(inputDict):
     """Run a prometheus push thread"""
@@ -17,6 +17,7 @@ def PromPushService(inputDict):
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
     retOut = []
+    inputDict['requestdict'] = evaldict(inputDict['requestdict'])
     # Check if return 0, allow to run up to 1 min longer.
     # If keeps running after 1min, stop process.
     if cmdOut.returncode == 0 and int(inputDict['requestdict']['runtime'])+60 <= int(getUTCnow()):

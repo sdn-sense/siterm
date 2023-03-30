@@ -9,6 +9,7 @@ Date: 2023/03/17
 """
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import isValFloat
+from DTNRMLibs.MainUtilities import evaldict
 from SiteFE.SNMPMonitoring.snmpmon import SNMPMonitoring
 from prometheus_client import CollectorRegistry, push_to_gateway
 from prometheus_client import Info, Gauge
@@ -19,10 +20,20 @@ class PromPush():
     def __init__(self, config, sitename, backgConfig):
         self.config = config
         self.sitename = sitename
+        backgConfig['requestdict'] = evaldict(backgConfig['requestdict'])
         self.backgConfig = backgConfig
         self.logger = getLoggingObject(config=self.config, service="PromPush")
         self.logger.info("====== PromPush Start Work. Config: %s", self.backgConfig)
+        self.promLabels = {'Key': '', 'ifDescr': '', 'ifType': '', 'ifAlias': '', 'hostname': ''}
+        self.promLabels.update(self.__getMetadataParams())
+        self.snmpLabels = {'numb': '', 'vlan': '', 'hostname': ''}
+        self.snmpLabels.update(self.__getMetadataParams())
         self.SNMPMonClass = SNMPMonitoring(config, sitename)
+
+    def __getMetadataParams(self):
+        if 'metadata' in self.backgConfig['requestdict']:
+            return self.backgConfig['requestdict']['metadata']
+        return {}
 
     @staticmethod
     def __cleanRegistry():
@@ -32,9 +43,11 @@ class PromPush():
 
     def __pushToGateway(self, registry):
         """Push registry to remote gateway"""
+        self.logger.info(self.__getMetadataParams())
         push_to_gateway(self.backgConfig['requestdict']['gateway'],
                         job=f"job-{self.backgConfig['id']}",
-                        registry=registry)
+                        registry=registry,
+                        grouping_key=self.__getMetadataParams())
 
     def startwork(self):
         """Start PushGateway Work"""
@@ -49,25 +62,27 @@ class PromPush():
         registry = self.__cleanRegistry()
         snmpData = self.SNMPMonClass.startRealTime(hostname, mibs)
         snmpGauge = Gauge('interface_statistics', 'Interface Statistics',
-                          ['ifDescr', 'ifType', 'ifAlias', 'hostname', 'Key'], registry=registry)
+                          self.promLabels.keys(), registry=registry)
         macState = Info('mac_table', 'Mac Address Table',
-                        labelnames=['numb', 'vlan', 'hostname'],
+                        labelnames=self.snmpLabels.keys(),
                         registry=registry)
-        for key, val in snmpData:
+        # Set Collector label for hostname
+        self.snmpLabels['hostname'] = hostname
+        self.promLabels['hostname'] = hostname
+        for key, val in snmpData.items():
             if key == 'macs':
                 if 'vlans' in val:
                     for key1, val1, in val['vlans'].items():
                         for index, macaddr in enumerate(val1):
-                            labels = {'numb': index, 'vlan': key1,
-                                      'hostname': hostname}
-                            macState.labels(**labels).info({'macaddress': macaddr})
+                            self.snmpLabels['numb'] = index
+                            self.snmpLabels['vlan'] = key1
+                            macState.labels(**self.snmpLabels).info({'macaddress': macaddr})
                 continue
-            keys = {'ifDescr': val.get('ifDescr', ''),
-                    'ifType': val.get('ifType', ''),
-                    'ifAlias': val.get('ifAlias', ''),
-                    'hostname': hostname}
+            self.promLabels['ifDescr'] = val.get('ifDescr', '')
+            self.promLabels['ifType'] = val.get('ifType', '')
+            self.promLabels['ifAlias'] = val.get('ifAlias', '')
             for key1 in mibs:
                 if key1 in val and isValFloat(val[key1]):
-                    keys['Key'] = key1
-                    snmpGauge.labels(**keys).set(val[key1])
+                    self.promLabels['Key'] = key1
+                    snmpGauge.labels(**self.promLabels).set(val[key1])
         self.__pushToGateway(registry)

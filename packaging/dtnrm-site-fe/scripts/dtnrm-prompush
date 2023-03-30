@@ -11,10 +11,8 @@ import os
 import sys
 from DTNRMLibs.Daemonizer import Daemon, getParser, validateArgs
 from DTNRMLibs.MainUtilities import getFileContentAsJson
-try:
-    from DTNRMAgent.Debugger.BackgroundRuns import PromPush
-except ModuleNotFoundError:
-    from SiteFE.SNMPMonitoring.snmpPushGateway import PromPush
+from DTNRMLibs.MainUtilities import evaldict
+from SiteFE.SNMPMonitoring.snmpPushGateway import PromPush
 
 COMPONENT = 'Prometheus-Push'
 DESCRIPTION = "Push Prometheus status. This daemon is run automatically by Debugger/SNMPMonitoring"
@@ -33,12 +31,15 @@ class MyDaemon(Daemon):
             self.logger.warning(f'Filename {fname} not available for background process. Exiting')
             sys.exit(1)
         backgConfig = getFileContentAsJson(fname)
-
+        backgConfig['requestdict'] = evaldict(backgConfig['requestdict'])
         self.totalRuntime = int(backgConfig['requestdict']['runtime'])
         self.sleepTimers['ok'] = int(backgConfig['requestdict']['resolution'])
-        for sitename in self.config.get('general', 'sitename'):
-            promAgent = PromPush.PromPush(self.config, sitename, backgConfig)
-            outThreads[sitename] = promAgent
+        if self.config.has_option('general', 'sites'):
+            for sitename in self.config.get('general', 'sites'):
+                promAgent = PromPush(self.config, sitename, backgConfig)
+                outThreads[sitename] = promAgent
+        if not outThreads:
+            raise Exception('BlaBla')
         return outThreads
 
 if __name__ == "__main__":

@@ -117,7 +117,7 @@ class HostCalls():
         # DTNRM-Agent | DTNRM-Ruler | DTNRM-Debugger
         if inputDict['servicename'] not in ['Agent', 'Ruler', 'Debugger',
                                             'LookUpService', 'ProvisioningService',
-                                            'SNMPMonitoring']:
+                                            'SNMPMonitoring', 'Prometheus-Push', 'Arp-Push']:
             raise NotFoundError(f"This Service {inputDict['servicename']} is not supported by Frontend")
         reportServiceStatus(**{'servicename': inputDict['servicename'],
                                'servicestate': inputDict['servicestate'],

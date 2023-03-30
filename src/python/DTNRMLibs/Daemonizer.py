@@ -196,9 +196,13 @@ class Daemon():
         try:
             with open(self.pidfile, 'r', encoding='utf-8') as fd:
                 pid = int(fd.read().strip())
+                psutil.Process(pid)
                 print(f'Application info: PID {pid}')
+        except psutil.NoSuchProcess:
+            print(f'PID lock present, but process not running. Remove lock file {self.pidfile}')
+            sys.exit(1)
         except IOError:
-            print('Is application running?')
+            print(f'Is application running? No Lock file {self.pidfile}')
             sys.exit(1)
 
     def command(self):
