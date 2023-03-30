@@ -1,7 +1,6 @@
-"""Test Frontend"""
+"""Test Debug Prometheus Push"""
 import os
 import unittest
-import pathlib
 import http.client
 import simplejson as json
 import yaml
@@ -48,7 +47,6 @@ class TestUtils(unittest.TestCase):
         os.environ["X509_USER_KEY"] = cls.PARAMS['key']
         os.environ["X509_USER_CERT"] = cls.PARAMS['cert']
 
-
     def test_debug_prometheus_push(self):
         """Test Prometheus Push Debug API"""
         for data in [{'hostname': 'sdn-dtn-1-7.ultralight.org', 'hosttype': 'host',
@@ -71,6 +69,7 @@ class TestUtils(unittest.TestCase):
             out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
             self.assertEqual(out[1], 200)
             self.assertEqual(out[2], 'OK')
+
 
 if __name__ == '__main__':
     conf = {}

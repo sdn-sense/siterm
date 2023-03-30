@@ -31,6 +31,7 @@ class PromPush():
         self.SNMPMonClass = SNMPMonitoring(config, sitename)
 
     def __getMetadataParams(self):
+        """Get metadata parameters"""
         if 'metadata' in self.backgConfig['requestdict']:
             return self.backgConfig['requestdict']['metadata']
         return {}

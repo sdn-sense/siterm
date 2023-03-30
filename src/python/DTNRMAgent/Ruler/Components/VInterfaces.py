@@ -18,11 +18,28 @@ from DTNRMLibs.ipaddr import getInterfaces
 from DTNRMLibs.ipaddr import getInterfaceIP
 from DTNRMLibs.ipaddr import normalizedipwithnet
 
+
 def getDefaultMTU(config, intfKey):
-    return
+    """Get Default MTU"""
+    if config.has_section(intfKey):
+        if config.has_option(intfKey, 'defaultMTU'):
+            return int(config.get(intfKey, 'defaultMTU'))
+    elif config.has_section('agent'):
+        if config.has_option('agent', 'defaultMTU'):
+            return int(config.get('agent', 'defaultMTU'))
+    return 1500
+
 
 def getDefaultTXQ(config, intfKey):
-    return
+    """Get Default Txqueuelen"""
+    if config.has_section(intfKey):
+        if config.has_option(intfKey, 'defaultTXQueuelen'):
+            return int(config.get(intfKey, 'defaultTXQueuelen'))
+    elif config.has_section('agent'):
+        if config.has_option('agent', 'defaultTXQueuelen'):
+            return int(config.get('agent', 'defaultTXQueuelen'))
+    return 1000
+
 
 def intfUp(intf):
     """Check if Interface is up"""
