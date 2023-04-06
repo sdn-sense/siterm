@@ -24,7 +24,7 @@ class Node():
             output = self.output
         for _, nodeDict in list(nodesInfo.items()):
             hostinfo = evaldict(nodeDict['hostinfo'])
-            for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
+            for intfKey, intfDict in list(hostinfo['NetInfo'].get("interfaces", {}).items()):
                 breakLoop = False
                 for key in ['switch_port', 'switch', 'vlan_range_list', 'available_bandwidth']:
                     if key not in list(intfDict.keys()):
