@@ -22,7 +22,7 @@ jobs:
     - name: Build the Docker image
       run: | 
         cd siterm-startup/agent/container-build-files/
-        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%s) --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}
+        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: docker login
       env:
@@ -30,8 +30,10 @@ jobs:
         DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
       run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
 
-    - name: Docker Push Image with tag
-      run: docker push sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}
-
     - name: Docker Push Image with tag and date
-      run: docker push sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%s)
+      run: docker push sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+
+    - name: Docker Push Image with tag
+      run: |
+        docker tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}
+        docker push sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}
