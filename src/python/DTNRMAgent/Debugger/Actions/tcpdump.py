@@ -16,7 +16,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2021 California Institute of Technology
 Date                    : 2021/03/12
 """
-from asyncio.exceptions import TimeoutError
+import asyncio.exceptions
 import pyshark
 from DTNRMLibs.ipaddr import getInterfaces
 
@@ -41,7 +41,7 @@ class ParsePackets():
         capture = pyshark.LiveCapture(interface=inputDict['interface'])
         try:
             capture.apply_on_packets(self.packetProcess, timeout=30)
-        except TimeoutError:
+        except asyncio.exceptions.TimeoutError:
             pass
         capture.clear()
         capture.close()

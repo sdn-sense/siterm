@@ -38,6 +38,8 @@ class getContent():
     def get_method(url):
         """Only used inside the site for forwardning requests."""
         try:
+            if not url.lower().startswith('http'):
+                raise ValueError from None
             req = urllib.request.Request(url)
             with urllib.request.urlopen(req) as response:
                 thePage = response.read()

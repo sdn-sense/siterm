@@ -29,7 +29,7 @@ class Switch():
         """Activating state actions."""
         return True
 
-    def _getHostConfig(self, host):
+    def getHostConfig(self, host):
         """Get config of RAW local file."""
         out = {}
         confFName = f"{self.workDir}/{host}.yaml"
@@ -52,7 +52,7 @@ class Switch():
 
     def getAnsNetworkOS(self, host):
         """Get Ansible network os from hosts file"""
-        return self._getHostConfig(host).get('ansible_network_os', '')
+        return self.getHostConfig(host).get('ansible_network_os', '')
 
     def _getFacts(self, hosts=None):
         """Get Facts for RAW plugin"""

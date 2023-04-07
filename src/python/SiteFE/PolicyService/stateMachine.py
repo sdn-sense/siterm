@@ -84,7 +84,7 @@ class StateMachine():
         self.limit = 100
         self.connMgr = ConnectionMachine(config)
 
-    def _stateChangerDelta(self, dbObj, newState, **kwargs):
+    def stateChangerDelta(self, dbObj, newState, **kwargs):
         """Delta State change."""
         tNow = getUTCnow()
         self.logger.info(f"Changing delta {kwargs['uid']} to {newState}")
@@ -96,7 +96,7 @@ class StateMachine():
                                  'insertdate': tNow}])
 
     @staticmethod
-    def _modelstatechanger(dbObj, newState, **kwargs):
+    def modelstatechanger(dbObj, newState, **kwargs):
         """Model State change."""
         tNow = getUTCnow()
         dbObj.update('deltasmod', [{'uid': kwargs['uid'],
@@ -106,11 +106,11 @@ class StateMachine():
     def modelstatecancel(self, dbObj, **kwargs):
         """Cancel Model addition."""
         if kwargs['modadd'] in ['idle']:
-            self._modelstatechanger(dbObj, 'removed', **kwargs)
+            self.modelstatechanger(dbObj, 'removed', **kwargs)
         elif kwargs['modadd'] in ['add', 'added']:
-            self._modelstatechanger(dbObj, 'remove', **kwargs)
+            self.modelstatechanger(dbObj, 'remove', **kwargs)
 
-    def _stateChangerHost(self, dbObj, hid, **kwargs):
+    def stateChangerHost(self, dbObj, hid, **kwargs):
         """Change state for host."""
         tNow = getUTCnow()
         self.logger.info(f"Changing delta {kwargs['deltaid']} hoststate {kwargs['hostname']} to {kwargs['state']}")
@@ -138,7 +138,7 @@ class StateMachine():
         dbObj.insert('deltas', [dbOut])
         self.connMgr.accepted(dbObj, dbOut)
         dbOut['state'] = delta['State']
-        self._stateChangerDelta(dbObj, delta['State'], **dbOut)
+        self.stateChangerDelta(dbObj, delta['State'], **dbOut)
 
     @staticmethod
     def _newhoststate(dbObj, **kwargs):
@@ -154,44 +154,44 @@ class StateMachine():
 
     def commit(self, dbObj, delta):
         """Marks delta as committing."""
-        self._stateChangerDelta(dbObj, 'committing', **delta)
+        self.stateChangerDelta(dbObj, 'committing', **delta)
 
     def stateChange(self, dbObj, delta):
         """Set new state for delta."""
-        self._stateChangerDelta(dbObj, delta['state'], **delta)
+        self.stateChangerDelta(dbObj, delta['state'], **delta)
 
     def committing(self, dbObj):
         """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committing']]):
-            self._stateChangerDelta(dbObj, 'committed', **delta)
-            self._modelstatechanger(dbObj, 'add', **delta)
+            self.stateChangerDelta(dbObj, 'committed', **delta)
+            self.modelstatechanger(dbObj, 'add', **delta)
             self.connMgr.committed(dbObj, delta)
 
     def committed(self, dbObj):
         """Committing state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committed']]):
-            self._stateChangerDelta(dbObj, 'activating', **delta)
+            self.stateChangerDelta(dbObj, 'activating', **delta)
 
     def activating(self, dbObj):
         """Check on all deltas in state activating."""
         for delta in dbObj.get('deltas', search=[['state', 'activating']]):
             if delta['modadd'] in ['added', 'removed']:
-                self._stateChangerDelta(dbObj, 'activated', **delta)
+                self.stateChangerDelta(dbObj, 'activated', **delta)
             if delta['modadd'] == 'failed':
-                self._stateChangerDelta(dbObj, 'failed', **delta)
+                self.stateChangerDelta(dbObj, 'failed', **delta)
 
     def activated(self, dbObj):
         """Check on all activated state deltas."""
         for delta in dbObj.get('deltas', search=[['state', 'activated']]):
             if delta['modadd'] == 'removed':
-                self._stateChangerDelta(dbObj, 'remove', **delta)
+                self.stateChangerDelta(dbObj, 'remove', **delta)
 
     def remove(self, dbObj):
         """Check on all remove state deltas."""
         # Remove fully from database
         for delta in dbObj.get('deltas', search=[['state', 'remove']]):
             if delta['updatedate'] < int(getUTCnow() - 600):
-                self._stateChangerDelta(dbObj, 'removed', **delta)
+                self.stateChangerDelta(dbObj, 'removed', **delta)
                 self.modelstatecancel(dbObj, **delta)
 
     def removed(self, dbObj):

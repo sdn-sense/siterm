@@ -22,7 +22,6 @@ import os
 import base64
 import urllib.parse
 import urllib.request
-import urllib.error
 from DTNRMLibs.pycurl_manager import RequestHandler
 from DTNRMLibs.CustomExceptions import ValidityFailure
 

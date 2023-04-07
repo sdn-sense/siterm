@@ -37,7 +37,7 @@ def getdeltaAll(sitename, deltaUID):
 
     policer.acceptDelta(tmpFile.name, sitename)
     delta, dbObj = getdeltainfo(sitename, deltaUID)
-    STATEMACHINE._stateChangerDelta(dbObj, 'activating', **delta)
+    STATEMACHINE.stateChangerDelta(dbObj, 'activating', **delta)
 
 
 def getdeltainfo(sitename, deltaUID):

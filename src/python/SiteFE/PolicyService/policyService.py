@@ -397,10 +397,10 @@ class PolicyService(RDFHelper):
             # And we should get again clean model for next delta check
             try:
                 self.conflictChecker.checkConflicts(self, self.newActive['output'], self.currentActive['output'])
-                self.stateMachine._modelstatechanger(self.dbI, 'added', **delta)
+                self.stateMachine.modelstatechanger(self.dbI, 'added', **delta)
                 changesApplied = True
             except OverlapException as ex:
-                self.stateMachine._modelstatechanger(self.dbI, 'failed', **delta)
+                self.stateMachine.modelstatechanger(self.dbI, 'failed', **delta)
                 # If delta apply failed we return right away without writing new Active config
                 self.logger.info(f"There was failure applying delta. Failure {ex}")
                 # We return True, so model is regenerated again from scratch
