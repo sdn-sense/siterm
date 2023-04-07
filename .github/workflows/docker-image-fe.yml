@@ -28,7 +28,7 @@ jobs:
     - name: Build the BASE Docker image
       run: | 
         cd siterm-startup/helpers/base_images/fe/
-        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --tag sdnsense/sitefe-base:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker build . --file Dockerfile --build-arg ARCH=amd64 --build-arg RELEASE=${{ github.event.inputs.buildtag }} --tag sdnsense/sitefe-base:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push BASE Image with tag and date
       run: docker push sdnsense/sitefe-base:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
