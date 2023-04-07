@@ -17,4 +17,6 @@ jobs:
         path: siterm-startup
 
     - name: Build the Docker image
-      run: docker build . --file siterm-startup/agent/container-build-files/Dockerfile --tag my-image-name:$(date +%s)
+      run: | 
+        cd siterm-startup/agent/container-build-files/
+        docker build . --file Dockerfile --tag my-image-name:$(date +%s)
