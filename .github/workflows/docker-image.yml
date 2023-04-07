@@ -2,7 +2,6 @@ name: Docker Image CI
 
 on:
   workflow_dispatch:
-    branches: [ "master" ]
     inputs:
       buildtag:
         description: "Build Tag"
