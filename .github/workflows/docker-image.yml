@@ -22,4 +22,4 @@ jobs:
     - name: Build the Docker image
       run: | 
         cd siterm-startup/agent/container-build-files/
-        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} . --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%s) --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}
+        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%s) --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}
