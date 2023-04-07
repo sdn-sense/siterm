@@ -13,6 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+
     - name: Checkout tools repo
       uses: actions/checkout@v3
       with:
@@ -23,3 +24,14 @@ jobs:
       run: | 
         cd siterm-startup/agent/container-build-files/
         docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%s) --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}
+
+    - name: docker login
+      env:
+        DOCKER_USER: ${{secrets.DOCKER_USER}}
+        DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+
+    - name: Docker Push Image with tag
+      run: docker push sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}
+
+    - name: Docker Push Image with tag and date
+      run: docker push sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%s)
