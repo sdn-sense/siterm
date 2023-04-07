@@ -112,7 +112,7 @@ class Switch(Node):
                     else:
                         self.output['portMapping'][switch][portKey] = realportname
 
-    def _getSwitchPortName(self, switchName, portName, vlanid=None):
+    def getSwitchPortName(self, switchName, portName, vlanid=None):
         """Get Switch Port Name"""
         # Get the portName which is uses in Switch
         # as you can see in getSystemValidPortName -
@@ -127,7 +127,7 @@ class Switch(Node):
             sysPort = portName
         return sysPort
 
-    def _getAllSwitches(self, switchName=None):
+    def getAllSwitches(self, switchName=None):
         """Get All Switches"""
         if switchName:
             return [switchName] if switchName in self.output['switches'] else []

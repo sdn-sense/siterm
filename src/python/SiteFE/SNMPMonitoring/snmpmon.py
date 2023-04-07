@@ -55,7 +55,7 @@ class SNMPMonitoring():
 
     def _start(self):
         self.switch.getinfo(False)
-        self.switches = self.switch._getAllSwitches()
+        self.switches = self.switch.getAllSwitches()
 
     def _getSNMPSession(self, host):
         self.session = None
@@ -66,7 +66,7 @@ class SNMPMonitoring():
             self.logger.info(f'SNMP config for {host}:snmp_monitoring not enabled')
             return
         self.hostconf.setdefault(host, {})
-        self.hostconf[host] = self.switch.plugin._getHostConfig(host)
+        self.hostconf[host] = self.switch.plugin.getHostConfig(host)
         if 'snmp_monitoring' not in self.hostconf[host]:
             self.logger.info(f'Ansible host: {host} config does not have snmp_monitoring parameters')
             return

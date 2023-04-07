@@ -131,13 +131,13 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             activeDeltas = {'output': {}}
 
         self.switch.getinfo(False)
-        switches = self.switch._getAllSwitches()
+        switches = self.switch.getAllSwitches()
         self.prepareYamlConf(activeDeltas['output'], switches)
 
         configChanged = False
         hosts = []
         for host in switches:
-            curActiveConf = self.switch.plugin._getHostConfig(host)
+            curActiveConf = self.switch.plugin.getHostConfig(host)
             # Add all keys  from curActiveConf, except interface key
             if host not in self.yamlconf:
                 continue

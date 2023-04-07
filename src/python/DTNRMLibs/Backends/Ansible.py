@@ -71,9 +71,9 @@ class Switch():
 
     def getAnsNetworkOS(self, host):
         """Get Ansible network os from hosts file"""
-        return self._getHostConfig(host).get('ansible_network_os', '')
+        return self.getHostConfig(host).get('ansible_network_os', '')
 
-    def _getHostConfig(self, host):
+    def getHostConfig(self, host):
         """Get Ansible Host Config"""
         fname = f"{self.config.get('ansible', 'inventory_host_vars_dir')}/{host}.yaml"
         if not os.path.isfile(fname):

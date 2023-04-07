@@ -126,10 +126,10 @@ class DeltaCalls():
             if not out:
                 msg = f'This query did not returned any host states for {deltaID} {hostname}'
                 raise WrongDeltaStatusTransition(msg)
-            self.stateM._stateChangerHost(self.dbobj, out[0]['id'], **{'deltaid': deltaID,
-                                                                       'state': newState,
-                                                                       'insertdate': getUTCnow(),
-                                                                       'hostname': hostname})
+            self.stateM.stateChangerHost(self.dbobj, out[0]['id'], **{'deltaid': deltaID,
+                                                                      'state': newState,
+                                                                      'insertdate': getUTCnow(),
+                                                                      'hostname': hostname})
             if newState == 'remove':
                 # Remove state comes only from modify
                 self.stateM.stateChange(self.dbobj, {'uid': deltaID, 'state': newState})

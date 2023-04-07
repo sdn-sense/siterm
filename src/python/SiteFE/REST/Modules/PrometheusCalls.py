@@ -25,12 +25,6 @@ from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import isValFloat
 from DTNRMLibs.MainUtilities import getAllHosts
-from DTNRMLibs.MainUtilities import httpdate
-from DTNRMLibs.RESTInteractions import get_post_form
-from DTNRMLibs.RESTInteractions import get_json_post_form
-from DTNRMLibs.RESTInteractions import is_post_request
-from DTNRMLibs.RESTInteractions import is_application_json
-from DTNRMLibs.CustomExceptions import BadRequestError
 from prometheus_client import generate_latest, CollectorRegistry
 from prometheus_client import Enum, Info, CONTENT_TYPE_LATEST
 from prometheus_client import Gauge

@@ -22,7 +22,7 @@ def deleteAll(sitename, deltaUID=None):
         if deltaUID and delta['uid'] != deltaUID:
             continue
         print('Cancel %s' % delta['uid'])
-        STATEMACHINE._stateChangerDelta(dbobj, 'remove', **delta)
+        STATEMACHINE.stateChangerDelta(dbobj, 'remove', **delta)
 
 if __name__ == "__main__":
     print(len(sys.argv))
