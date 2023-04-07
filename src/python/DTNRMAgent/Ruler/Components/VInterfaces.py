@@ -109,8 +109,7 @@ class VInterfaces():
     def _statusvlan(vlan, raiseError=False):
         """Get status of specific vlan."""
         del raiseError
-        allInterfaces = getInterfaces
-        if f"vlan.{vlan['vlan']}" not in allInterfaces:
+        if f"vlan.{vlan['vlan']}" not in getInterfaces():
             return False
         return True
 
