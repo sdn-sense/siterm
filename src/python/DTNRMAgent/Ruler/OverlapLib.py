@@ -9,7 +9,7 @@ Date: 2022/08/29
 from DTNRMLibs.ipaddr import getInterfaces
 from DTNRMLibs.ipaddr import getInterfaceIP
 from DTNRMLibs.ipaddr import getsubnet
-
+from DTNRMLibs.ipaddr import checkoverlap
 
 def getAllIPs():
     """Get All IPs on the system"""
@@ -32,7 +32,7 @@ def networkOverlap(net1, net2):
     try:
         net1Net = getsubnet(net1, strict=False)
         net2Net = getsubnet(net2, strict=False)
-        if net1Net.overlaps(net2Net):
+        if checkoverlap(net1Net, net2Net):
             return True
     except ValueError:
         pass

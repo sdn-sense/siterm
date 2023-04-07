@@ -53,6 +53,11 @@ def getsubnet(ipInput, strict=False):
     """Get subnet if IP address"""
     return ip_network(ipInput, strict=strict).compressed
 
+def checkoverlap(net1, net2):
+    try:
+        return ip_network(net1).overlaps(ip_network(net2))
+    except ValueError:
+        return False
 
 def ipVersion(ipInput, strict=False):
     """Check if IP is valid.
