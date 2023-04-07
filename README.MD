@@ -1,1 +1,2 @@
-[![Docker Image CI](https://github.com/sdn-sense/siterm/actions/workflows/docker-image.yml/badge.svg)](https://github.com/sdn-sense/siterm/actions/workflows/docker-image.yml)
+[![Docker Image Build For SiteRM FE](https://github.com/sdn-sense/siterm/actions/workflows/docker-image-fe.yml/badge.svg)](https://github.com/sdn-sense/siterm/actions/workflows/docker-image-fe.yml)
+[![Docker Image Build For SiteRM Agent](https://github.com/sdn-sense/siterm/actions/workflows/docker-image-agent.yml/badge.svg)](https://github.com/sdn-sense/siterm/actions/workflows/docker-image-agent.yml)
