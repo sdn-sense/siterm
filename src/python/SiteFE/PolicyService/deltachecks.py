@@ -40,13 +40,13 @@ class ConflictChecker():
     @staticmethod
     def _checkVlanInRange(polcls, vlan, hostname):
         """Check if VLAN in Allowed range"""
-        # {'interface': 'Port-channel_103', 'vlan': 3874, 'ipv6-address': 'fc00:1799::1:7b22/64'}
         if not vlan or not vlan.get('vlan', ''):
             return
         # If switch, check in Switch config
-        vlanRange = polcls.config.getraw('MAIN').get(hostname, {}).get('vlan_range_list', [])
-        if hostname in polcls.config.getraw('MAIN'):
-            vlanRange = polcls.config.getraw('MAIN').get(hostname, {}).get(f"port_{vlan['interface']}_vlan_range_list", vlanRange)
+        rawConf = polcls.config.getraw('MAIN')
+        vlanRange = rawConf.get(hostname, {}).get('vlan_range_list', [])
+        if hostname in rawConf:
+            vlanRange = rawConf.get(hostname, {}).get(f"port_{vlan['interface']}_vlan_range_list", vlanRange)
             if vlanRange and vlan['vlan'] not in vlanRange:
                 raise OverlapException(f'Vlan {vlan} not available for switch {hostname} in configuration. \
                                        Either used or not configured. Allowed Vlans: {vlanRange}')
@@ -54,7 +54,8 @@ class ConflictChecker():
         elif hostname in polcls.hosts:
             interfaces = polcls.hosts[hostname].get('hostinfo', {}).get('NetInfo', {}).get('interfaces', {})
             if vlan['interface'] not in interfaces:
-                raise OverlapException(f'Interface not available for dtn {hostname} in configuration. Available interfaces: {interfaces}')
+                raise OverlapException(f'Interface not available for dtn {hostname} in configuration. \
+                                       Available interfaces: {interfaces}')
             vlanRange = interfaces.get(vlan['interface'], {}).get('vlan_range_list', {})
             if vlanRange and vlan['vlan'] not in vlanRange:
                 raise OverlapException(f'Vlan {vlan} not available for dtn {hostname} in configuration. \
@@ -86,7 +87,8 @@ class ConflictChecker():
         elif hostname in polcls.hosts:
             interfaces = polcls.hosts[hostname].get('hostinfo', {}).get('NetInfo', {}).get('interfaces', {})
             if ipval['interface'] not in interfaces:
-                raise OverlapException(f'Interface not available for dtn {hostname} in configuration. Available interfaces: {interfaces}')
+                raise OverlapException(f'Interface not available for dtn {hostname} in configuration. \
+                                       Available interfaces: {interfaces}')
             ipRange = interfaces.get(ipval['interface'], {}).get(f'{iptype}-address-pool-list', [])
             if not checkOverlap(ipRange, iptoCheck, iptype):
                 raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. \
