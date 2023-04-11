@@ -41,8 +41,8 @@ class Switch():
             for host, _ in ansOut.stats[fkey].items():
                 for hostEvents in ansOut.host_events(host):
                     err = hostEvents.get('event_data', {}).get('res', {})
-                    self.ansibleErrs.setdefault(host, [])
-                    self.ansibleErrs[host].append(err)
+                    self.ansibleErrs.setdefault(host, {}).setdefault(fkey, [])
+                    self.ansibleErrs[host][fkey].append(err)
                     self.logger.info('Ansible Error for %s: %s', host, err)
 
     def _getInventoryInfo(self, hosts=None):

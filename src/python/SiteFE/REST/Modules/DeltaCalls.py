@@ -45,8 +45,8 @@ class DeltaCalls():
         self.__urlParams()
         self.policer = {}
         for sitename in self.sites:
-             if sitename != 'MAIN':
-                 self.policer[sitename] = polS.PolicyService(self.config, sitename)
+            if sitename != 'MAIN':
+                self.policer[sitename] = polS.PolicyService(self.config, sitename)
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -216,7 +216,7 @@ class DeltaCalls():
             self.httpresp.ret_201('application/json', kwargs["start_response"],
                                   [('Last-Modified', httpdate(out['UpdateTime'])), ('Location', out['href'])])
             return out
-        raise BadRequestError(f'Failed add new delta. See output: {out}')
+        raise BadRequestError(f"Failed add new delta. Error Message: {out.get('Error', '')}.")
 
     def deltas(self, environ, **kwargs):
         """

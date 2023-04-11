@@ -140,7 +140,7 @@ class Switch(Node):
         out = {'sitename': self.site,
                'updatedate': getUTCnow(),
                'output': json.dumps(data),
-               'error': '[]'}
+               'error': '{}'}
         if not self.switches:
             out['insertdate'] = getUTCnow()
             self.logger.debug('No switches in database. Calling add')
