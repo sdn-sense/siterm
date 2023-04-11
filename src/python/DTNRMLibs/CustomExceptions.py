@@ -116,6 +116,10 @@ class OverlapException(ExceptionTemplate):
     """Overlap Exception."""
 
 
+class WrongIPAddress(ExceptionTemplate):
+    """Wrong IP Address Exception"""
+
+
 class OverSubscribeException(ExceptionTemplate):
     """OverSubscribe Exception."""
 
