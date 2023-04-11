@@ -10,9 +10,10 @@ Date: 2021/01/20
 import copy
 from datetime import datetime
 from collections import namedtuple
-from ipaddress import IPv4Network, IPv6Network
+from ipaddress import IPv4Network, IPv6Network, AddressValueError
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.CustomExceptions import OverlapException
+from DTNRMLibs.CustomExceptions import WrongIPAddress
 
 
 class ConflictChecker():
@@ -21,19 +22,42 @@ class ConflictChecker():
         self.newid = ""
         self.oldid = ""
 
+    def checkOverlap(self, inrange, ipval, iptype):
+        """Check if overlap"""
+        overlap = False
+        for vrange in inrange:
+            overlap = self._ipOverlap(vrange, ipval, iptype)
+            if overlap:
+                return overlap
+        return overlap
+
     @staticmethod
     def _ipOverlap(ip1, ip2, iptype):
         """Check if IP Overlap. Return True/False"""
+        def ipv4Wrapper(ipInput):
+            "IPv4 Wrapper to check if IP Valid. Raise Custom Exception if not"
+            try:
+                return IPv4Network(ipInput, False)
+            except AddressValueError as ex:
+                raise WrongIPAddress from ex
+
+        def ipv6Wrapper(ipInput):
+            "IPv6 Wrapper to check if IP Valid. Raise Custom Exception if not"
+            try:
+                return IPv6Network(ipInput, False)
+            except AddressValueError as ex:
+                raise WrongIPAddress from ex
+
         overlap = False
         if not ip1 or not ip2:
             return overlap
         if iptype == 'ipv4':
-            net1 = IPv4Network(ip1, False)
-            net2 = IPv4Network(ip2, False)
+            net1 = ipv4Wrapper(ip1)
+            net2 = ipv4Wrapper(ip2)
             overlap = net1.subnet_of(net2) or net2.subnet_of(net1)
         if iptype == 'ipv6':
-            net1 = IPv6Network(ip1, False)
-            net2 = IPv6Network(ip2, False)
+            net1 = ipv6Wrapper(ip1)
+            net2 = ipv6Wrapper(ip2)
             overlap = net1.subnet_of(net2) or net2.subnet_of(net1)
         return overlap
 
@@ -42,81 +66,88 @@ class ConflictChecker():
         """Check if VLAN in Allowed range"""
         if not vlan or not vlan.get('vlan', ''):
             return
-        # TODO: In future we should exclude all form activeDeltas
-        # Which should be done during config preparation and changed
-        # everytime activedeltas changes.
-        #
         # If switch, check in Switch config
-        if hostname in polcls.config.getraw('MAIN'):
-            if vlan['vlan'] not in polcls.config.getraw('MAIN').get(hostname, {}).get('vlan_range_list', []):
-                return
-                #raise OverlapException(f'Vlan {vlan} not available for switch {hostname} in configuration. \
-                #                       Either used or not configured.')
-            return
+        rawConf = polcls.config.getraw('MAIN')
+        vlanRange = rawConf.get(hostname, {}).get('vlan_range_list', [])
+        if hostname in rawConf:
+            vlanRange = rawConf.get(hostname, {}).get(f"port_{vlan['interface']}_vlan_range_list", vlanRange)
+            if vlanRange and vlan['vlan'] not in vlanRange:
+                raise OverlapException(f'Vlan {vlan} not available for switch {hostname} in configuration. \
+                                       Either used or not configured. Allowed Vlans: {vlanRange}')
         # If Agent, check in agent reported configuration
-        if hostname in polcls.hosts:
+        elif hostname in polcls.hosts:
             interfaces = polcls.hosts[hostname].get('hostinfo', {}).get('NetInfo', {}).get('interfaces', {})
             if vlan['interface'] not in interfaces:
-                return
-                #raise OverlapException(f'Interface not available for dtn {hostname} in configuration.')
-            if vlan['vlan'] not in interfaces.get(vlan['interface'], {}).get('vlan_range_list', {}):
-                print(interfaces)
-                #raise OverlapException(f'Vlan {vlan} not available for dtn {hostname} in configuration. \
-                #                       Either used or not configured.')
-            return
-        return
-        #raise OverlapException('Hostname {hostname} not available in this Frontend.')
+                raise OverlapException(f'Interface not available for dtn {hostname} in configuration. \
+                                       Available interfaces: {interfaces}')
+            vlanRange = interfaces.get(vlan['interface'], {}).get('vlan_range_list', {})
+            if vlanRange and vlan['vlan'] not in vlanRange:
+                raise OverlapException(f'Vlan {vlan} not available for dtn {hostname} in configuration. \
+                                       Either used or not configured. Allowed Vlans: {vlanRange}')
+        else:
+            raise OverlapException('Hostname {hostname} not available in this Frontend.')
 
     def _checkifIPInRange(self, polcls, ipval, iptype, hostname):
         """Check if IP in Allowed range"""
-
-        def checkOverlap(inrange, ipval, iptype):
-            overlap = False
-            for vrange in inrange:
-                overlap = self._ipOverlap(vrange, ipval, iptype)
-                if overlap:
-                    return overlap
-            return overlap
-
         if not ipval or not ipval.get(f'{iptype}-address', ''):
             return
-        # TODO: In future we should exclude all form activeDeltas
-        # Which should be done during config preparation and changed
-        # everytime activedeltas changes.
         iptoCheck = ipval[f'{iptype}-address']
 
-        #if hostname in polcls.config.getraw('MAIN'):
-        #    inrange = polcls.config.getraw('MAIN').get(hostname, {}).get(f'{iptype}-address-pool-list', [])
-        #    overlap = checkOverlap(inrange, iptoCheck, iptype)
-        #    if not overlap:
-        #        raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. \
-        #                  Either used or not configured.')
-        #elif hostname in polcls.hosts:
-        #    interfaces = polcls.hosts[hostname].get('hostinfo', {}).get('NetInfo', {}).get('interfaces', {})
-        #    if ipval['interface'] not in interfaces:
-        #        raise OverlapException(f'Interface not available for dtn {hostname} in configuration.')
-        #    inrange = interfaces.get(ipval['interface'], {}).get(f'{iptype}-address-pool-list', [])
-        #    overlap = checkOverlap(inrange, iptoCheck, iptype)
-        #    if not overlap:
-        #        raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. \
-        #                  Either used or not configured.')
-        #else:
-        #    raise OverlapException(f'Hostname {hostname} not available in this Frontend.')
+        ipRange = polcls.config.getraw('MAIN').get(polcls.sitename, {}).get(f'{iptype}-address-pool-list', [])
+        if hostname in polcls.config.getraw('MAIN'):
+            ipRange = polcls.config.getraw('MAIN').get(hostname, {}).get(f'{iptype}-address-pool-list', ipRange)
+            if ipRange and not self.checkOverlap(ipRange, iptoCheck, iptype):
+                raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. \
+                          Either used or not configured. Allowed IPs: {ipRange}')
+        elif hostname in polcls.hosts:
+            interfaces = polcls.hosts[hostname].get('hostinfo', {}).get('NetInfo', {}).get('interfaces', {})
+            if ipval['interface'] not in interfaces:
+                raise OverlapException(f'Interface not available for dtn {hostname} in configuration. \
+                                       Available interfaces: {interfaces}')
+            ipRange = interfaces.get(ipval['interface'], {}).get(f'{iptype}-address-pool-list', [])
+            if not self.checkOverlap(ipRange, iptoCheck, iptype):
+                raise OverlapException(f'IP {ipval} not available for {hostname} in configuration. \
+                          Either used or not configured. Allowed IPs: {ipRange}')
+        else:
+            raise OverlapException(f'Hostname {hostname} not available in this Frontend.')
 
     def _checkIfVlanOverlap(self, vlan1, vlan2):
         """Check if Vlan equal. Raise error if True"""
         if vlan1 == vlan2:
-            return
-            #raise OverlapException(f'New Request VLANs Overlap on same controlled resources. \
-            #                       Overlap resources: {self.newid} and {self.oldid}')
+            raise OverlapException(f'New Request VLANs Overlap on same controlled resources. \
+                                   Overlap resources: {self.newid} and {self.oldid}')
 
     def _checkIfIPOverlap(self, ip1, ip2, iptype):
         """Check if IP Overlap. Raise error if True"""
         overlap = self._ipOverlap(ip1, ip2, iptype)
         if overlap:
+            raise OverlapException(f'New Request {iptype} overlap on same controlled resources. \
+                                   Overlap resources: {self.newid} and {self.oldid}')
+
+    def _checkIfIPRouteAll(self, polcls, ipval, iptype, hostname):
+        """Check if IP Range is in allowed configuration"""
+        # If switch, check in Switch config
+        if not ipval.get(iptype, {}):
             return
-            #raise OverlapException(f'New Request {iptype} overlap on same controlled resources. \
-            #                       Overlap resources: {self.newid} and {self.oldid}')
+        rawConf = polcls.config.getraw('MAIN')
+        if hostname not in rawConf:
+            raise OverlapException('Hostname {hostname} not available in this Frontend.')
+        if ipval and ipval.get(iptype, {}).get('nextHop', ''):
+            iptoCheck = ipval[iptype]['nextHop']
+            ipRange = rawConf.get(polcls.sitename, {}).get(f'{iptype}-address-pool-list', [])
+            if hostname in rawConf:
+                ipRange = rawConf.get(hostname, {}).get(f'{iptype}-address-pool-list', ipRange)
+            if ipRange and not self.checkOverlap(ipRange, iptoCheck, iptype):
+                raise WrongIPAddress(f'IP {ipval} not available for {hostname} in configuration. \
+                          Either used or not configured. Allowed IPs: {ipRange}')
+        if ipval and ipval.get(iptype, {}).get('routeFrom', ''):
+            iptoCheck = ipval[iptype]['routeFrom']
+            ipRange = rawConf.get(polcls.sitename, {}).get(f'{iptype}-subnet-pool-list', [])
+            if hostname in rawConf:
+                ipRange = rawConf.get(hostname, {}).get(f'{iptype}-subnet-pool-list', ipRange)
+            if ipRange and not self.checkOverlap(ipRange, iptoCheck, iptype):
+                raise WrongIPAddress(f'IP {ipval} not available for {hostname} in configuration. \
+                          Either used or not configured. Allowed IPs: {ipRange}')
 
     @staticmethod
     def _getVlanIPs(dataIn):
@@ -132,6 +163,22 @@ class ConflictChecker():
                     out.setdefault('ipv6-address', val1['ipv6-address']['value'])
                 if key1 == 'hasNetworkAddress' and 'ipv4-address' in val1:
                     out.setdefault('ipv4-address', val1['ipv4-address']['value'])
+        return out
+
+    @staticmethod
+    def _getRSTIPs(dataIn):
+        """Get All IPs from RST definition"""
+        out = {}
+        for key in ['ipv4', 'ipv6']:
+            for _route, routeItems in dataIn.get(key, {}).get('hasRoute', {}).items():
+                nextHop = routeItems.get('nextHop', {}).get(f'{key}-address', {}).get('value', None)
+                if nextHop:
+                    out.setdefault(key, {})
+                    out[key]['nextHop'] = nextHop
+                routeFrom = routeItems.get('routeFrom', {}).get(f'{key}-prefix-list', {}).get('value', None)
+                if routeFrom:
+                    out.setdefault(key, {})
+                    out[key]['routeFrom'] = routeFrom
         return out
 
     @staticmethod
@@ -166,56 +213,98 @@ class ConflictChecker():
             return True
         return False
 
-    def checkvsw(self, cls, newConfig, oldConfig):
+    def checkvsw(self, cls, svc, svcitems, oldConfig):
         """Check vsw Service"""
-        for svc, svcitems in newConfig.items():
-            if svc in ['SubnetMapping', 'RoutingMapping']:
-                continue
-            for connID, connItems in svcitems.items():
-                self.newid = connID
-                # If Connection ID in oldConfig - it is either == or it is a modify call.
-                if connID in oldConfig.get(svc, {}):
-                    if oldConfig[svc][connID] != connItems:
-                        print('MODIFY!!!')
-                        # TODO Checks for Modify. For Now just continue
+        for connID, connItems in svcitems.items():
+            self.newid = connID
+            # If Connection ID in oldConfig - it is either == or it is a modify call.
+            if connID in oldConfig.get(svc, {}):
+                if oldConfig[svc][connID] != connItems:
+                    print('MODIFY!!!')
+                    continue
+                if oldConfig[svc][connID] == connItems:
+                    # No Changes - connID is same, ignoring it
+                    continue
+            for hostname, hostitems in connItems.items():
+                if hostname == '_params':
+                    continue
+                nStats = self._getVlanIPs(hostitems)
+                # Check if vlan is in allowed list;
+                self._checkVlanInRange(cls, nStats, hostname)
+                # check if ip address with-in available ranges
+                self._checkifIPInRange(cls, nStats, 'ipv4', hostname)
+                self._checkifIPInRange(cls, nStats, 'ipv6', hostname)
+                for oldID, oldItems in oldConfig.get(svc, {}).items():
+                    # connID == oldID was checked in step3. Skipping it
+                    self.oldid = oldID
+                    if oldID == connID:
                         continue
-                    if oldConfig[svc][connID] == connItems:
-                        # No Changes - connID is same, ignoring it
+                    # Check if 2 items overlap
+                    overlap = self._checkIfOverlap(connItems, oldItems)
+                    if overlap:
+                        # If 2 items overlap, and have same host for config
+                        # Check that vlans and IPs are not overlapping
+                        if oldItems.get(hostname, {}):
+                            oStats = self._getVlanIPs(oldItems[hostname])
+                            self._checkIfVlanOverlap(nStats.get('vlan', ''), oStats.get('vlan', ''))
+                            self._checkIfIPOverlap(nStats.get('ipv6-address', ''),
+                                                   oStats.get('ipv6-address', ''),
+                                                   'ipv6')
+                            self._checkIfIPOverlap(nStats.get('ipv4-address', ''),
+                                                   oStats.get('ipv4-address', ''),
+                                                   'ipv4')
+
+    def checkrst(self, cls, rst, rstitems, oldConfig):
+        """Check rst Service"""
+        for connID, connItems in rstitems.items():
+            self.newid = connID
+            # If Connection ID in oldConfig - it is either == or it is a modify call.
+            if connID in oldConfig.get(rst, {}):
+                if oldConfig[rst][connID] != connItems:
+                    print('MODIFY!!!')
+                    continue
+                if oldConfig[rst][connID] == connItems:
+                    # No Changes - connID is same, ignoring it
+                    continue
+            for hostname, hostitems in connItems.items():
+                if hostname == '_params':
+                    continue
+                nStats = self._getRSTIPs(hostitems)
+                # Check if vlan is in allowed list;
+                self._checkVlanInRange(cls, nStats, hostname)
+                # check if ip address with-in available ranges
+                self._checkifIPInRange(cls, nStats, 'ipv4', hostname)
+                self._checkifIPInRange(cls, nStats, 'ipv6', hostname)
+                self._checkIfIPRouteAll(cls, nStats, 'ipv6', hostname)
+                self._checkIfIPRouteAll(cls, nStats, 'ipv4', hostname)
+                for oldID, oldItems in oldConfig.get(rst, {}).items():
+                    # connID == oldID was checked in step3. Skipping it
+                    self.oldid = oldID
+                    if oldID == connID:
                         continue
-                for hostname, hostitems in connItems.items():
-                    if hostname == '_params':
-                        continue
-                    nStats = self._getVlanIPs(hostitems)
-                    # Check if vlan is in allowed list;
-                    self._checkVlanInRange(cls, nStats, hostname)
-                    # check if ip address with-in available ranges
-                    self._checkifIPInRange(cls, nStats, 'ipv4', hostname)
-                    self._checkifIPInRange(cls, nStats, 'ipv6', hostname)
-                    for oldID, oldItems in oldConfig.get(svc, {}).items():
-                        # connID == oldID was checked in step3. Skipping it
-                        self.oldid = oldID
-                        if oldID == connID:
-                            continue
-                        # Check if 2 items overlap
-                        overlap = self._checkIfOverlap(connItems, oldItems)
-                        if overlap:
-                            # If 2 items overlap, and have same host for config
-                            # Check that vlans and IPs are not overlapping
-                            if oldItems.get(hostname, {}):
-                                oStats = self._getVlanIPs(oldItems[hostname])
-                                self._checkIfVlanOverlap(nStats.get('vlan', ''), oStats.get('vlan', ''))
-                                self._checkIfIPOverlap(nStats.get('ipv6-address', ''),
-                                                       oStats.get('ipv6-address', ''),
-                                                       'ipv6')
-                                self._checkIfIPOverlap(nStats.get('ipv4-address', ''),
-                                                       oStats.get('ipv4-address', ''),
-                                                       'ipv4')
+                    # Check if 2 items overlap
+                    overlap = self._checkIfOverlap(connItems, oldItems)
+                    if overlap:
+                        # If 2 items overlap, and have same host for config
+                        # Check that vlans and IPs are not overlapping
+                        if oldItems.get(hostname, {}):
+                            oStats = self._getRSTIPs(oldItems[hostname])
+                            self._checkIfIPOverlap(nStats.get('ipv6', {}).get('nextHop', ''),
+                                                   oStats.get('ipv6', {}).get('nextHop', ''),
+                                                   'ipv6')
+                            self._checkIfIPOverlap(nStats.get('ipv4', {}).get('nextHop', ''),
+                                                   oStats.get('ipv4', {}).get('nextHop', ''),
+                                                   'ipv4')
 
     def checkConflicts(self, cls, newConfig, oldConfig):
         """Check conflicting resources and not allow them"""
         if newConfig == oldConfig:
             return False
-        self.checkvsw(cls, newConfig, oldConfig)
+        for dkey, ditems in newConfig.items():
+            if dkey == 'vsw':
+                self.checkvsw(cls, dkey, ditems, oldConfig)
+            elif dkey == 'rst':
+                self.checkrst(cls, dkey, ditems, oldConfig)
         return False
 
     @staticmethod

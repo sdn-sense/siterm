@@ -30,6 +30,7 @@ from DTNRMLibs.MainUtilities import getAllHosts
 from DTNRMLibs.MainUtilities import getDBConn
 from DTNRMLibs.MainUtilities import getVal
 from DTNRMLibs.CustomExceptions import OverlapException
+from DTNRMLibs.CustomExceptions import WrongIPAddress
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to general
@@ -37,7 +38,7 @@ from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to ge
 def getError(ex):
     """Get Error from Exception."""
     errors = {IOError: -1, KeyError: -2, AttributeError: -3, IndentationError: -4,
-              ValueError: -5, BadSyntax: -6, OverlapException: -7}
+              ValueError: -5, BadSyntax: -6, OverlapException: -7, WrongIPAddress: -8}
     out = {'errType': 'Unrecognized', 'errNo': -100, 'errMsg': 'Unset'}
     out['errType'] = str(ex.__class__)
     if ex.__class__ in errors:
@@ -399,7 +400,7 @@ class PolicyService(RDFHelper):
                 self.conflictChecker.checkConflicts(self, self.newActive['output'], self.currentActive['output'])
                 self.stateMachine.modelstatechanger(self.dbI, 'added', **delta)
                 changesApplied = True
-            except OverlapException as ex:
+            except (OverlapException, WrongIPAddress) as ex:
                 self.stateMachine.modelstatechanger(self.dbI, 'failed', **delta)
                 # If delta apply failed we return right away without writing new Active config
                 self.logger.info(f"There was failure applying delta. Failure {ex}")
@@ -420,7 +421,7 @@ class PolicyService(RDFHelper):
             self.currentActive['output'] = newconf
             writeActiveDeltas(self, self.currentActive['output'])
             changesApplied = True
-
+        self.conflictChecker.checkConflicts(self, self.newActive['output'], self.currentActive['output'])
         return changesApplied
 
 
@@ -492,7 +493,7 @@ class PolicyService(RDFHelper):
             self.newActive['output'] = self.parseModel(currentGraph)
             try:
                 self.conflictChecker.checkConflicts(self, self.newActive['output'], self.currentActive['output'])
-            except OverlapException as ex:
+            except (OverlapException, WrongIPAddress) as ex:
                 self.logger.info(f"There was failure accepting delta. Failure {ex}")
                 toDict["State"] = "failed"
                 toDict["Error"] = getError(ex)
