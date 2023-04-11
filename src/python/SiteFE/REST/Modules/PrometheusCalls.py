@@ -95,6 +95,19 @@ class PrometheusCalls():
                     keys = {'hostname': host, 'Key': key}
                     agentCertValid.labels(**keys).set(hostDict['hostinfo']['CertInfo'].get(key, 0))
 
+    def __getSwitchErrors(self, registry, **kwargs):
+        """Add Switch Errors to prometheus output"""
+        dbOut = self.dbobj.get('switches')
+        switchErrorsGauge = Gauge('switch_errors', 'Switch Errors', ['hostname', 'errortype'], registry=registry)
+        for item in dbOut:
+            if int(self.timenow - item['updatedate']) > 300:
+                continue
+            out = json.loads(item['error'])
+            for hostname, hostitems in out.items():
+                for errorkey, errors in hostitems.items():
+                    labels = {'errortype': errorkey, 'hostname': hostname}
+                    switchErrorsGauge.labels(**labels).set(len(errors))
+
     def __getSNMPData(self, registry, **kwargs):
         """Add SNMP Data to prometheus output"""
         # Here get info from DB for switch snmp details
@@ -144,6 +157,7 @@ class PrometheusCalls():
         self.__getSNMPData(registry, **kwargs)
         self.__getAgentData(registry, **kwargs)
         self.__memStats(registry, **kwargs)
+        self.__getSwitchErrors(registry, **kwargs)
 
     def __metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""
