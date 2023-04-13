@@ -23,7 +23,6 @@ Date: 2022/11/21
 """
 import os
 import sys
-import simplejson as json
 from easysnmp import Session
 from easysnmp.exceptions import EasySNMPUnknownObjectIDError
 from easysnmp.exceptions import EasySNMPTimeoutError
@@ -35,6 +34,7 @@ from DTNRMLibs.MainUtilities import contentDB
 from DTNRMLibs.Backends.main import Switch
 from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
+from DTNRMLibs.MainUtilities import jsondumps
 from DTNRMLibs.PromPush import PromPushService
 
 
@@ -90,7 +90,7 @@ class SNMPMonitoring():
     def _writeToDB(self, host, output):
         """Write SNMP Data to DB"""
         out = {'id': 0, 'insertdate': getUTCnow(), 'updatedate': getUTCnow(),
-               'hostname': host, 'output': json.dumps(output)}
+               'hostname': host, 'output': jsondumps(output)}
         dbOut = self.dbI.get('snmpmon', limit=1, search=[['hostname', host]])
         if dbOut:
             out['id'] = dbOut[0]['id']
@@ -197,7 +197,7 @@ class SNMPMonitoring():
             item['state'] = newstate
             out = {'id': item['id'],
                    'state': item['state'],
-                   'output': json.dumps(output),
+                   'output': jsondumps(output),
                    'updatedate': getUTCnow()}
             self.dbI.update('debugrequests', [out])
 

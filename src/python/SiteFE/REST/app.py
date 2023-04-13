@@ -20,7 +20,6 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2023/01/03
 """
 import traceback
-import simplejson as json
 from routes import Mapper
 from SiteFE.REST.Modules.HostCalls import HostCalls
 from SiteFE.REST.Modules.DebugCalls import DebugCalls
@@ -36,6 +35,7 @@ from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getHeaders
 from DTNRMLibs.MainUtilities import getUrlParams
 from DTNRMLibs.MainUtilities import getCustomOutMsg
+from DTNRMLibs.MainUtilities import jsondumps
 from DTNRMLibs.CustomExceptions import HTTPResponses
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.CustomExceptions import NotSupportedArgument
@@ -54,7 +54,7 @@ def isiterable(inVal):
 def returnDump(out):
     """Return output based on it's type."""
     if isinstance(out, (list, dict)):
-        out = [json.dumps(out).encode('UTF-8')]
+        out = [jsondumps(out).encode('UTF-8')]
     elif not isiterable(out):
         out = [out.encode('UTF-8')]
     return out
@@ -122,7 +122,7 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
             self.httpresp.ret_400('application/json', kwargs['start_response'], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=400)
         except (NotSupportedArgument, TooManyArgumentalValues) as ex:
-            exception = f'Send 400 error. More details: {json.dumps(getCustomOutMsg(errMsg=str(ex), errCode=400))}'
+            exception = f'Send 400 error. More details: {jsondumps(getCustomOutMsg(errMsg=str(ex), errCode=400))}'
             self.httpresp.ret_400('application/json', kwargs['start_response'], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=400)
         except MethodNotSupported as ex:
@@ -149,12 +149,12 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
             self.validateCertificate(environ)
         except Exception as ex:
             self.httpresp.ret_401('application/json', start_response, None)
-            return [bytes(json.dumps(getCustomOutMsg(errMsg=str(ex), errCode=401)), 'UTF-8')]
+            return [bytes(jsondumps(getCustomOutMsg(errMsg=str(ex), errCode=401)), 'UTF-8')]
         # Sitename must be configured on FE
         sitename = environ.get('REQUEST_URI', '').split('/')[1]
         if sitename not in self.sites:
             self.httpresp.ret_404('application/json', start_response, None)
-            return [bytes(json.dumps(getCustomOutMsg(errMsg=f"Sitename {sitename} is not configured. Contact Support.",
+            return [bytes(jsondumps(getCustomOutMsg(errMsg=f"Sitename {sitename} is not configured. Contact Support.",
                                                      errCode=404)), 'UTF-8')]
         self.dbobj = getVal(self.dbI, **{'sitename': sitename})
         return self.internallCall(environ=environ, start_response=start_response, sitename=sitename)

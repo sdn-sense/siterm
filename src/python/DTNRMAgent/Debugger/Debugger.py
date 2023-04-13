@@ -18,7 +18,6 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2021/03/12
 """
 import os
-import simplejson as json
 from DTNRMAgent.Debugger.Actions.arptable import arptable
 from DTNRMAgent.Debugger.Actions.iperf import iperf
 from DTNRMAgent.Debugger.Actions.rapidping import rapidping
@@ -33,6 +32,7 @@ from DTNRMLibs.MainUtilities import getFullUrl
 from DTNRMLibs.MainUtilities import publishToSiteFE
 from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import getLoggingObject
+from DTNRMLibs.MainUtilities import jsondumps
 from DTNRMLibs.CustomExceptions import FailedGetDataFromFE
 
 COMPONENT = 'Debugger'
@@ -133,7 +133,7 @@ class Debugger():
                 err = ex
                 exitCode = 501
             output = {'out': out, 'err': str(err), 'exitCode': exitCode}
-            item['output'] = json.dumps(output)
+            item['output'] = jsondumps(output)
             if exitCode != 0:
                 item['state'] = 'failed'
             else:

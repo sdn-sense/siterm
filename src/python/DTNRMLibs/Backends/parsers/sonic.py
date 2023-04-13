@@ -12,9 +12,9 @@ Authors:
 Date: 2022/04/13
 """
 import re
-import simplejson as json
 from DTNRMLibs.ipaddr import ipVersion, getsubnet, normalizedip
 from DTNRMLibs.MainUtilities import getLoggingObject
+from DTNRMLibs.MainUtilities import evaldict
 
 class Sonic():
     """Default class example for building new parsers"""
@@ -192,7 +192,7 @@ class Sonic():
         # Out must be {'<interface_name>': {'key': 'value'}} OR
         #             {'<interface_name>': {'key': ['value1', 'value2']}
         # dict as value are not supported (not found use case yet for this)
-        tmpJson = json.loads(ansibleOut['event_data']['res']['stdout'])
+        tmpJson = evaldict(ansibleOut['event_data']['res']['stdout'])
         self.runnincConf = tmpJson
         mac = self.__getMac()
         # Add All Ports
