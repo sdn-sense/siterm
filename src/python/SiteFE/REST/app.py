@@ -155,6 +155,6 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
         if sitename not in self.sites:
             self.httpresp.ret_404('application/json', start_response, None)
             return [bytes(jsondumps(getCustomOutMsg(errMsg=f"Sitename {sitename} is not configured. Contact Support.",
-                                                     errCode=404)), 'UTF-8')]
+                                                    errCode=404)), 'UTF-8')]
         self.dbobj = getVal(self.dbI, **{'sitename': sitename})
         return self.internallCall(environ=environ, start_response=start_response, sitename=sitename)

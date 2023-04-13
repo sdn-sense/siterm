@@ -159,6 +159,7 @@ def evaldict(inputDict):
         raise WrongInputError(f"SyntaxError: Failed to literal eval dict. Err:{ex} ") from ex
     return out
 
+
 def jsondumps(inputDict):
     """Dump JSON to string"""
     return json.dumps(inputDict)

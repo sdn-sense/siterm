@@ -24,7 +24,6 @@ from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import isValFloat
 from DTNRMLibs.MainUtilities import getAllHosts
-from DTNRMLibs.MainUtilities import evaldict
 from prometheus_client import generate_latest, CollectorRegistry
 from prometheus_client import Enum, Info, CONTENT_TYPE_LATEST
 from prometheus_client import Gauge
