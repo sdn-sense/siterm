@@ -21,7 +21,6 @@ Date                    : 2017/09/26
 import os
 import base64
 import urllib.parse
-import urllib.request
 from DTNRMLibs.pycurl_manager import RequestHandler
 from DTNRMLibs.CustomExceptions import ValidityFailure
 

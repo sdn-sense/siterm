@@ -44,9 +44,7 @@ import re
 import sys
 import http.client
 import logging
-import urllib.request
 import urllib.parse
-import urllib.error
 import subprocess
 from past.builtins import basestring
 import simplejson as json
@@ -101,7 +99,8 @@ class RequestHandler():
         self.followlocation = config.get('followlocation', 1)
         self.maxredirs = config.get('maxredirs', 5)
 
-    def encode_params(self, params, verb, doseq):
+    @staticmethod
+    def encode_params(params, verb, doseq):
         """Encode request parameters for usage with the 4 verbs.
 
         Assume params is alrady encoded if it is a string and uses a
@@ -192,11 +191,13 @@ class RequestHandler():
             curl.setopt(pycurl.DEBUGFUNCTION, self.debug)
         return bbuf, hbuf
 
-    def debug(self, debug_type, debug_msg):
+    @staticmethod
+    def debug(debug_type, debug_msg):
         """Debug callback implementation."""
         print(f"debug({debug_type}): {debug_msg}")
 
-    def parse_body(self, data, decode=False):
+    @staticmethod
+    def parse_body(data, decode=False):
         """Parse body part of URL request (by default use json).
 
         This method can be overwritten.
@@ -211,7 +212,8 @@ class RequestHandler():
             return res
         return data
 
-    def parse_header(self, header):
+    @staticmethod
+    def parse_header(header):
         """Parse response header.
 
         This method can be overwritten.

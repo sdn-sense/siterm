@@ -176,13 +176,11 @@ class PolicyService(RDFHelper):
                 mrstypes = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'type'}"))
                 mrsvals = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'value'}"))
                 if mrstypes and mrsvals and len(mrstypes) == len(mrsvals):
-                    for ind in range(len(mrstypes)):
-                        mrtype = str(mrstypes[ind])
-                        mrval = str(mrsvals[ind])
-                        if mrtype and mrval:
+                    for index, mrtype in enumerate(mrstypes):
+                        if mrtype and mrsvals[index]:
                             routeVals = routeout.setdefault(rtype, {}).setdefault(mrtype, {})
                             routeVals['type'] = mrtype
-                            routeVals['value'] = mrval
+                            routeVals['value'] = str(mrsvals[index])
                             routeVals['key'] = str(item)
                 else:
                     self.logger.warning(f'Either val or type not defined. Key: {str(item)}, Type: {mrstypes}, Val: {mrsvals}')

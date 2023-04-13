@@ -66,7 +66,6 @@ class DeltaInfo():
         self.newGraph.add((timeuri,
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Lifetime')))
-        # end;start
         if 'start' in timeline:
             self.newGraph.add((timeuri,
                                self.genUriRef('nml', 'start'),
@@ -83,7 +82,6 @@ class DeltaInfo():
         """Add all params, like tag, belongsTo, labelSwapping, timeline"""
         if '_params' not in params:
             return
-        # ['key', 'type', 'literal']
         for key in [['tag', 'mrs', True], ['labelSwapping', 'nml', True],
                     ['belongsTo', 'nml', False], ['encoding', 'nml', False]]:
             val = ""
@@ -147,7 +145,6 @@ class DeltaInfo():
         for host, vals in activeDeltas.get('output', {}).get('RoutingMapping', {}).items():
             for routeTable, iptypes in vals.get('providesRoutingTable', {}).items():
                 for iptype in iptypes.keys():
-                    # uri = self._addRoutingService(hostname=host, rstname="rst-%s" % iptype)
                     self._addRoutingTable(hostname=host, rstname=f"rst-{iptype}", rtableuri=routeTable)
                     for route in list(activeDeltas.get('output', {}).get('rst', {}).get(routeTable, {}).get(host, {}).get(iptype, {}).get('hasRoute', {})):
                         self._addRoute(hostname=host, rstname=f"rst-{iptype}", rtableuri=routeTable, routeuri=route)
@@ -157,8 +154,6 @@ class DeltaInfo():
         for host, vals in activeDeltas.get('output', {}).get('RoutingMapping', {}).items():
             for routeTable, iptypes in vals.get('providesRoute', {}).items():
                 for iptype in iptypes.keys():
-                    # uri = self._addRoutingService(hostname=host, rstname="rst-%s" % iptype)
-                    #self._addRoutingTable(hostname=host, rstname="rst-%s" % iptype, rtableuri=routeTable)
                     routedict = activeDeltas.get('output', {}).get('rst', {}).get(routeTable, {}).get(host, {}).get(iptype, {})
                     rtableuri = routedict.get("belongsToRoutingTable", "")
                     for route, routeInfo in routedict.get('hasRoute', {}).items():

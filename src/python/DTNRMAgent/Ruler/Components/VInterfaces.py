@@ -143,13 +143,13 @@ class VInterfaces():
         """Get All Vlan List"""
         vlans = []
         for key, vals in inParams.items():
-            vlan = {}
-            vlan['destport'] = key
-            vlan['vlan'] = vals.get('hasLabel', {}).get('value', '')
-            vlan['ip'] = vals.get('hasNetworkAddress', {}).get('ipv4-address', {}).get('value', '')
-            vlan['ipv6'] = vals.get('hasNetworkAddress', {}).get('ipv6-address', {}).get('value', '')
-            vlan['mtu'] = vals.get('hasNetworkAddress', {}).get('mtu', {}).get('value', getDefaultMTU(self.config, key))
-            vlan['txqueuelen'] = vals.get('hasNetworkAddress', {}).get('txqueuelen', {}).get('value', getDefaultTXQ(self.config, key))
+            netInfo = vals.get('hasNetworkAddress', {})
+            vlan = {'destport': key,
+                    'vlan': vals.get('hasLabel', {}).get('value', ''),
+                    'ip': netInfo.get('ipv4-address', {}).get('value', ''),
+                    'ipv6': netInfo.get('ipv6-address', {}).get('value', ''),
+                    'mtu': netInfo.get('mtu', {}).get('value', getDefaultMTU(self.config, key)),
+                    'txqueuelen': netInfo.get('txqueuelen', {}).get('value', getDefaultTXQ(self.config, key))}
             vlans.append(vlan)
         return vlans
 

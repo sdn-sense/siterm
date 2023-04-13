@@ -41,7 +41,7 @@ class RecurringAction():
                         tmpName = method.NAME
                     else:
                         tmpName = callableF
-                    if method.NAME in list(outputDict.keys()):
+                    if method.NAME in outputDict:
                         msg = f'{method.NAME} name is already defined in output dictionary'
                         self.logger.error(msg)
                         raise KeyError(msg)
