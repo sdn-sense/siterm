@@ -82,12 +82,7 @@ def get(config):
         foundInterfaces.append(nic)
         for vals in addrs:
             nicInfo.setdefault(str(vals.family.value), [])
-            familyInfo = {}
-            # vals - family=2, address='127.0.0.1', netmask='255.0.0.0', broadcast=None, ptp=None
-            # For family more information look here: http://lxr.free-electrons.com/source/include/linux/socket.h#L160
-            familyInfo["family"] = vals.family.value
-            familyInfo["address"] = vals.address
-            familyInfo["netmask"] = vals.netmask
+            familyInfo = {'family': vals.family.value, 'address': vals.address, 'netmask': vals.netmask}
             if int(vals.family.value) in [2, 10] and vals.address and vals.netmask:
                 try:
                     ipwithnetmask = ipaddress.ip_interface(f"{vals.address}/{vals.netmask}")
@@ -104,7 +99,6 @@ def get(config):
                 familyInfo["mac-address"] = vals.address
             familyInfo["broadcast"] = vals.broadcast
             familyInfo["ptp"] = vals.ptp
-            # tmpifStats - snicstats(isup=True, duplex=0, speed=0, mtu=1500)
             if vals.family.value == 2:
                 familyInfo["UP"] = tmpifStats[nic].isup
                 familyInfo["duplex"] = tmpifStats[nic].duplex.value

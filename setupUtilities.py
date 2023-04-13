@@ -70,13 +70,11 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
                             if fileName.startswith('__init__.') or \
                                fileName.endswith('.pyc') or \
                                not fileName.endswith('.py'):
-                                # print('Ignoring %s' % fileName)
                                 continue
                             relName = fileName.rsplit('.', 1)
                             modules.append("%s.%s" % ('.'.join(relPath), relName[0]))
                 else:
                     continue
-                    # print('Ignoring %s' % dirpath)
         else:
             relPath = os.path.relpath(aDir, get_path_to_root())
             relPath = relPath.split('/')[2:]

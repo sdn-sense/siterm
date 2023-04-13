@@ -34,21 +34,21 @@ def parseOut(tmpOut, storageInfo):
                 if newList:
                     localOut["Values"].append(newList)
     for oneLine in localOut["Values"]:
-        for countNum in range(len(oneLine)):
-            if oneLine[0] not in list(storageInfo["Values"].keys()):
-                storageInfo["Values"][oneLine[0]] = {}
-            key = localOut["Keys"][countNum].replace("%", "Percentage")
+        #for countNum in range(len(oneLine)):
+        storageInfo["Values"].setdefault(oneLine[0], {})
+        for index, elem in enumerate(oneLine):
+            key = localOut["Keys"][index].replace("%", "Percentage")
             # Append size and also change to underscore
             if key in ['Avail', 'Used', 'Size']:
                 key = f'{key}_gb'
                 try:
-                    storageInfo["Values"][oneLine[0]][key] = oneLine[countNum][:1]
+                    storageInfo["Values"][oneLine[0]][key] = elem[:1]
                 except TypeError:
-                    storageInfo["Values"][oneLine[0]][key] = oneLine[countNum]
+                    storageInfo["Values"][oneLine[0]][key] = elem
                 continue
             if key == '1024-blocks':
                 key = '1024_blocks'
-            storageInfo["Values"][oneLine[0]][key] = oneLine[countNum]
+            storageInfo["Values"][oneLine[0]][key] = elem
     return storageInfo, True
 
 

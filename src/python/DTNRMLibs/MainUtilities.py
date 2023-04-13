@@ -649,8 +649,6 @@ def getUrlParams(environ, paramsList):
     form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ)
     outParams = {}
     for param in paramsList:
-        # {"key": "summary", "default": True, "type": bool},
-        # {"key": "model", "default": "turtle", "type": str, "options": ['turtle']}
         outVals = form.getlist(param['key'])
         if len(outVals) > 1:
             raise TooManyArgumentalValues(f"Parameter {param['key']} has too many defined values")

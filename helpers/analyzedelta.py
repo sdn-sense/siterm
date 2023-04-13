@@ -67,7 +67,6 @@ def getdeltaAll(sitename, deltaUID):
                     print('Received ValueError. More details %s. Try to write normally with decode', ex)
                     tmpFile.write(decodebase64(toDict["Content"][key]))
                 tmpFile.close()
-                # outputDict[key] = self.parseDeltaRequest(tmpFile.name, jOut)
                 print("For %s this is delta location %s" % (key, tmpFile.name))
             out = policer.parseDeltaRequest(tmpFile.name, jOut)
             if not out:

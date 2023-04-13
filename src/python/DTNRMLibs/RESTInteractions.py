@@ -20,7 +20,6 @@ Date                    : 2017/09/26
 import cgi
 import urllib.request
 import urllib.error
-import urllib.parse
 import simplejson as json
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import BadRequestError
@@ -87,7 +86,6 @@ def get_json_post_form(environ):
 
 def get_post_form(environ):
     """Get content submitted through POST method."""
-    # assert is_post_request(environ)
     postEnv = environ.copy()
     postEnv['QUERY_STRING'] = ''
     inputP = environ['wsgi.input']

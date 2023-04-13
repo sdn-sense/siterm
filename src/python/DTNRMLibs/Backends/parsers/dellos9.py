@@ -54,7 +54,6 @@ class DellOS9():
                 if '-' in vals:
                     stVal, enVal = vals.split('-')[0], vals.split('-')[1]
                     if int(stVal) > int(enVal):
-                        #self.logger.debug('WARNING. Ignore this port (endVal > stVal): %s %s' % (portName, vals))
                         continue
                     for val in range(int(stVal), int(enVal)+1, __identifyStep()):
                         out.append(val)
@@ -283,7 +282,6 @@ class DellOS9():
     @staticmethod
     def getIPv4Routing(ansibleOut):
         """Get IPv4 Routing from running config"""
-        #self.logger.debug('Call ipv4 routing DellOS9')
         out = []
         for inline in ansibleOut.split('\n'):
             inline = inline.strip() # Remove all white spaces
@@ -313,7 +311,6 @@ class DellOS9():
     @staticmethod
     def getIPv6Routing(ansibleOut):
         """Get IPv6 Routing from running config"""
-        #self.logger.debug('Call ipv6 routing DellOS9')
         out = []
         for inline in ansibleOut.split('\n'):
             inline = inline.strip() # Remove all white spaces

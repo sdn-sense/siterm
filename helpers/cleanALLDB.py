@@ -9,7 +9,6 @@ def cleanDB(sitename):
     dbI = getVal(getDBConn('Delete'), **{'sitename': sitename})
     dbI._clean('ALL', 'ALL')
     dbI._cleantable('servicestates', '')
-    #dbI._clean('ALL', 'ALL')
 
 if __name__ == "__main__":
     cleanDB(sys.argv[1])

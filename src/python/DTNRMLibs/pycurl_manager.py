@@ -44,9 +44,7 @@ import re
 import sys
 import http.client
 import logging
-import urllib.request
 import urllib.parse
-import urllib.error
 import subprocess
 from past.builtins import basestring
 import simplejson as json
