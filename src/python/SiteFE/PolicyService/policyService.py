@@ -176,7 +176,6 @@ class PolicyService(RDFHelper):
                 mrstypes = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'type'}"))
                 mrsvals = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'value'}"))
                 if mrstypes and mrsvals and len(mrstypes) == len(mrsvals):
-                    #for ind in range(len(mrstypes)):
                     for index, mrtype in enumerate(mrstypes):
                         if mrtype and mrsvals[index]:
                             routeVals = routeout.setdefault(rtype, {}).setdefault(mrtype, {})

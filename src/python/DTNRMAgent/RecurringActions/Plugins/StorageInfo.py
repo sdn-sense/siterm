@@ -34,7 +34,6 @@ def parseOut(tmpOut, storageInfo):
                 if newList:
                     localOut["Values"].append(newList)
     for oneLine in localOut["Values"]:
-        #for countNum in range(len(oneLine)):
         storageInfo["Values"].setdefault(oneLine[0], {})
         for index, elem in enumerate(oneLine):
             key = localOut["Keys"][index].replace("%", "Percentage")
