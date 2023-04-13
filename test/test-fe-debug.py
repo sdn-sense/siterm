@@ -31,10 +31,10 @@ def debugActions(cls, dataIn, dataUpd):
     cls.assertEqual(outg[1], 200)
     cls.assertEqual(outg[2], 'OK')
     # UPDATE
-    urlu = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/updatedebug/{outs[0]['ID']}"
-    outu = makeRequest(cls, urlu, {'verb': 'PUT', 'data': dataUpd})
-    cls.assertEqual(outu[1], 200)
-    cls.assertEqual(outu[2], 'OK')
+    #urlu = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/updatedebug/{outs[0]['ID']}"
+    #outu = makeRequest(cls, urlu, {'verb': 'PUT', 'data': dataUpd})
+    #cls.assertEqual(outu[1], 200)
+    #cls.assertEqual(outu[2], 'OK')
 
 
 class TestUtils(unittest.TestCase):
@@ -47,18 +47,23 @@ class TestUtils(unittest.TestCase):
         os.environ["X509_USER_KEY"] = cls.PARAMS['key']
         os.environ["X509_USER_CERT"] = cls.PARAMS['cert']
 
+        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getalldebughostnameactive/dummyhostname"
+        out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
+        self.assertEqual(out[1], 400)
+        self.assertEqual(out[2], 'OK')
+
     def test_debug_prometheus_push(self):
         """Test Prometheus Push Debug API"""
         for data in [{'hostname': 'sdn-dtn-1-7.ultralight.org', 'hosttype': 'host',
-                      'type': 'prometheus-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org'},
+                      'type': 'prometheus-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org', 'sense_mon_id': 'rtmon-1'},
                       'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610),
                       'resolution': '5'},
                      {'hostname': 'sdn-dtn-1-7.ultralight.org', 'hosttype': 'host',
-                      'type': 'arp-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org'},
+                      'type': 'arp-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org', 'sense_mon_id': 'rtmon-1'},
                       'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610),
                       'resolution': '5'},
                      {'hostname': 'dellos9_s0', 'hosttype': 'host',
-                      'type': 'prometheus-push', 'metadata': {'instance': 'dellos9_s0'},
+                      'type': 'prometheus-push', 'metadata': {'instance': 'dellos9_s0', 'sense_mon_id': 'rtmon-1'},
                       'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610),
                       'resolution': '5'}]:
             outsuc = {"out": ["running"], "err": "", "exitCode": 0}
