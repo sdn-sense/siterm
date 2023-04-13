@@ -20,7 +20,6 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2023/01/03
 """
 import psutil
-import simplejson as json
 from DTNRMLibs.MainUtilities import evaldict
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import isValFloat
@@ -60,9 +59,10 @@ class PrometheusCalls():
 
     def __processStats(self, proc, services, lookupid):
         """Get Process Stats - memory"""
-        if len(proc.cmdline()) > lookupid:
+        procList = proc.cmdline()
+        if len(procList) > lookupid:
             for serviceName in services:
-                if proc.cmdline()[lookupid].endswith(serviceName):
+                if procList[lookupid].endswith(serviceName):
                     self.memMonitor.setdefault(serviceName, {'rss': 0, 'vms': 0,
                                                              'shared': 0, 'text': 0,
                                                              'lib': 0, 'data': 0,
@@ -102,7 +102,7 @@ class PrometheusCalls():
         for item in dbOut:
             if int(self.timenow - item['updatedate']) > 300:
                 continue
-            out = json.loads(item['error'])
+            out = evaldict(item.get('error', {}))
             for hostname, hostitems in out.items():
                 for errorkey, errors in hostitems.items():
                     labels = {'errortype': errorkey, 'hostname': hostname}
@@ -117,7 +117,7 @@ class PrometheusCalls():
         for item in snmpData:
             if int(self.timenow - item['updatedate']) > 300:
                 continue
-            out = json.loads(item['output'])
+            out = evaldict(item.get('output', {}))
             for key, val in out.items():
                 if key == 'macs':
                     if 'vlans' in val:

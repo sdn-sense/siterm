@@ -159,6 +159,11 @@ def evaldict(inputDict):
         raise WrongInputError(f"SyntaxError: Failed to literal eval dict. Err:{ex} ") from ex
     return out
 
+
+def jsondumps(inputDict):
+    """Dump JSON to string"""
+    return json.dumps(inputDict)
+
 def readFile(fileName):
     """Read all file lines to a list and rstrips the ending."""
     try:
@@ -590,7 +595,7 @@ def read_input_data(environ):
         body = io.StringIO(environ['wsgi.input'].read(length))
     outjson = {}
     try:
-        outjson = json.loads(body.getvalue())
+        outjson = evaldict(body.getvalue())
     except ValueError as ex:
         outjson = parse_gui_form_post(body.getvalue())
         if not outjson:

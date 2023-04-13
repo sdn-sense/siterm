@@ -8,7 +8,6 @@ Authors:
 
 Date: 2021/12/01
 """
-import simplejson as json
 from DTNRMLibs.Backends.Ansible import Switch as Ansible
 from DTNRMLibs.Backends.Raw import Switch as Raw
 from DTNRMLibs.Backends.NodeInfo import Node
@@ -16,7 +15,7 @@ from DTNRMLibs.Backends.generalFunctions import checkConfig
 from DTNRMLibs.Backends.generalFunctions import cleanupEmpty
 from DTNRMLibs.Backends.generalFunctions import getConfigParams, getValFromConfig
 from DTNRMLibs.MainUtilities import getGitConfig, getLoggingObject, getUTCnow
-from DTNRMLibs.MainUtilities import getDBConn
+from DTNRMLibs.MainUtilities import getDBConn, evaldict, jsondumps
 
 
 class Switch(Node):
@@ -73,7 +72,7 @@ class Switch(Node):
         tmp = self.dbI.get('switches', limit=1, search=[['sitename', self.site]])
         if tmp:
             self.switches = tmp[0]
-            self.switches['output'] = json.loads(self.switches['output'])
+            self.switches['output'] = evaldict(self.switches['output'])
         if not self.switches:
             self.logger.debug('No switches in database.')
 
@@ -139,7 +138,7 @@ class Switch(Node):
         self._getDBOut()
         out = {'sitename': self.site,
                'updatedate': getUTCnow(),
-               'output': json.dumps(data),
+               'output': jsondumps(data),
                'error': '{}'}
         if not self.switches:
             out['insertdate'] = getUTCnow()
@@ -157,7 +156,7 @@ class Switch(Node):
         self._getDBOut()
         out = {'sitename': self.site,
                'updatedate': getUTCnow(),
-               'error': json.dumps(err)}
+               'error': jsondumps(err)}
         if self.switches:
             out['id'] = self.switches['id']
             self.logger.debug('Update switches in database.')

@@ -23,8 +23,8 @@ UpdateDate              : 2022/05/09
 import sys
 import time
 import datetime
-import simplejson as json
 from DTNRMLibs.MainUtilities import evaldict
+from DTNRMLibs.MainUtilities import jsondumps
 from DTNRMLibs.MainUtilities import getLoggingObject
 from DTNRMLibs.MainUtilities import getGitConfig
 from DTNRMLibs.MainUtilities import createDirs
@@ -69,9 +69,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
     def __logChanges(self, host):
         """Log new ansible yaml config"""
         self.logger.info('New Interfaces Config:')
-        self.logger.info(json.dumps(self.yamlconf[host].get('interface', {}), indent=4))
+        self.logger.info(jsondumps(self.yamlconf[host].get('interface', {}), indent=4))
         self.logger.info('New BGP Config:')
-        self.logger.info(json.dumps(self.yamlconf[host].get('sense_bgp', {}), indent=4))
+        self.logger.info(jsondumps(self.yamlconf[host].get('sense_bgp', {}), indent=4))
 
     def getConfigValue(self, section, option, raiseError=False):
         """Get Config Val"""
@@ -113,7 +113,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         for host, _ in ansOut.stats.get('failures', {}).items():
             for host_events in ansOut.host_events(host):
                 self.logger.info(f"Ansible runtime log of {host_events['event']} event")
-                self.logger.info(json.dumps(host_events, indent=4))
+                self.logger.info(jsondumps(host_events, indent=4))
         if ansOut.stats.get('failures', {}) and raiseExc:
             # TODO: Would be nice to save in DB and see errors from WEB UI)
             raise Exception("There was configuration apply issue. Please contact support and provide this log file.")

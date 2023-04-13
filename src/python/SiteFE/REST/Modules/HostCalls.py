@@ -19,9 +19,9 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
-import simplejson as json
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import reportServiceStatus
+from DTNRMLibs.MainUtilities import jsondumps
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.MainUtilities import read_input_data
@@ -68,7 +68,7 @@ class HostCalls():
                    'ip': inputDict['ip'],
                    'insertdate': inputDict['insertTime'],
                    'updatedate': inputDict['updateTime'],
-                   'hostinfo': json.dumps(inputDict)}
+                   'hostinfo': jsondumps(inputDict)}
             self.dbobj.insert('hosts', [out])
         else:
             print('This host is already in db. Why to add several times?')
@@ -94,7 +94,7 @@ class HostCalls():
                'hostname': inputDict['hostname'],
                'ip': inputDict['ip'],
                'updatedate': getUTCnow(),
-               'hostinfo': json.dumps(inputDict)}
+               'hostinfo': jsondumps(inputDict)}
         self.dbobj.update('hosts', [out])
         self.responseHeaders(environ, **kwargs)
         return {"Status": 'UPDATED'}

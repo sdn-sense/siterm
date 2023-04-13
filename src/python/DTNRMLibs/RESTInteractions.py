@@ -20,7 +20,6 @@ Date                    : 2017/09/26
 import cgi
 import urllib.request
 import urllib.error
-import simplejson as json
 from DTNRMLibs.CustomExceptions import NotFoundError
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.MainUtilities import evaldict
@@ -72,12 +71,12 @@ def get_json_post_form(environ):
         request_body_size = 0
     request_body = environ['wsgi.input'].read(request_body_size)
     try:
-        params = json.loads(request_body)
+        params = evaldict(request_body)
     except:
         print('Reached except in data load')
         params = evaldict(request_body)
         if not isinstance(params, dict):
-            params = json.loads(params)
+            params = evaldict(params)
     environ.setdefault('params', {})
     for key in list(params.keys()):
         environ['params'][key] = params[key]

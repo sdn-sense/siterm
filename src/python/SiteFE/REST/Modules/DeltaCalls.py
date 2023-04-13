@@ -20,7 +20,6 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2023/01/03
 """
 from tempfile import NamedTemporaryFile
-import simplejson as json
 from DTNRMLibs.MainUtilities import httpdate
 from DTNRMLibs.MainUtilities import getModTime
 from DTNRMLibs.MainUtilities import encodebase64
@@ -28,6 +27,7 @@ from DTNRMLibs.MainUtilities import decodebase64
 from DTNRMLibs.MainUtilities import convertTSToDatetime
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import evaldict
+from DTNRMLibs.MainUtilities import jsondumps
 from DTNRMLibs.RESTInteractions import get_post_form
 from DTNRMLibs.RESTInteractions import get_json_post_form
 from DTNRMLibs.RESTInteractions import is_post_request
@@ -98,7 +98,7 @@ class DeltaCalls():
         print(f"Delta was {outContent['State']}. Returning info {outContent}")
         if outContent['State'] not in ['accepted']:
             if 'Error' not in out:
-                outContent['Error'] = f"Unknown Error. Dump all out content {json.dumps(out)}"
+                outContent['Error'] = f"Unknown Error. Dump all out content {jsondumps(out)}"
             else:
                 outContent['Error'] = out['Error']
         return outContent

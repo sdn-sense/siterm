@@ -19,8 +19,8 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
-import simplejson as json
 from DTNRMLibs.MainUtilities import getUTCnow
+from DTNRMLibs.MainUtilities import jsondumps
 from DTNRMLibs.CustomExceptions import BadRequestError
 from DTNRMLibs.MainUtilities import read_input_data
 
@@ -173,7 +173,7 @@ class DebugCalls():
     def submitdebug(self, environ, **kwargs):
         """Submit new debug action request."""
         inputDict = read_input_data(environ)
-        jsondump = json.dumps(inputDict)
+        jsondump = jsondumps(inputDict)
         for symbol in [";", "&"]:
             if symbol in jsondump:
                 raise BadRequestError('Unsupported symbol in input request. Contact Support')
