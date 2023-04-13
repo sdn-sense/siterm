@@ -19,6 +19,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
+import re
 from DTNRMLibs.MainUtilities import getUTCnow
 from DTNRMLibs.MainUtilities import jsondumps
 from DTNRMLibs.CustomExceptions import BadRequestError
@@ -88,7 +89,16 @@ class CallValidator():
         totalRuntime = int(int(inputDict['runtime']) - getUTCnow())
         if totalRuntime < 600 or totalRuntime > 3600:
             raise BadRequestError("Total Runtime must be within range of 600 > x > 3600 seconds since epoch.")
-
+        # Check all metadata label parameters
+        if 'metadata' in inputDict:
+            # Instance must be dictionary
+            if not isinstance(inputDict['metadata'], dict):
+                raise BadRequestError("Requested dictionary metadata is not dictionary")
+            for key, val in inputDict['metadata'].items():
+                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', key):
+                    raise BadRequestError(f"Metadata Key {key} does not match prometheus label format")
+                if not isinstance(val, str):
+                    raise BadRequestError(f"Metadata Key {key} value is not str. Only str supported")
         if 'mibs' in inputDict:
             if len('mibs') > len(self.config['MAIN']['snmp']['mibs']):
                 raise BadRequestError(f"Requested more mibs than are supported. Supported mibs: {self.config['MAIN']['snmp']['mibs']}")
