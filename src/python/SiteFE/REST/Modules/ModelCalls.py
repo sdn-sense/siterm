@@ -58,7 +58,6 @@ class ModelCalls():
         """Get all models."""
         if not modelID:
             return self.dbobj.get('models', orderby=['insertdate', 'DESC'])
-        print(modelID)
         model = self.dbobj.get('models', limit=1, search=[['uid', modelID]])
         if not model:
             raise ModelNotFound(f"Model with {modelID} id was not found in the system")
@@ -97,7 +96,6 @@ class ModelCalls():
                                                                 content=True, **kwargs),
                                                 kwargs['urlParams']['encode'])
             outM['models'].append(current)
-            print(f"Requested only current model. Return 200. Last Model {outmodels[0]['uid']}")
             return [current]
         if not kwargs['urlParams']['current']:
             for model in outmodels:
@@ -110,7 +108,6 @@ class ModelCalls():
                                                                     content=True, **kwargs),
                                                     kwargs['urlParams']['encode'])
                 outM['models'].append(tmpDict)
-            print('Returning all models known to the system. Return 200')
             return outM['models']
         return []
 
@@ -124,7 +121,6 @@ class ModelCalls():
         outmodels = self.getmodel(kwargs['modelid'], **kwargs)
         model = outmodels if isinstance(outmodels, dict) else outmodels[0]
         if modTime > model['insertdate']:
-            print(f"Model with ID {kwargs['modelid']} was not updated so far. Time request comparison requested")
             self.httpresp.ret_304('application/json', kwargs["start_response"],
                                   [('Last-Modified', httpdate(model['insertdate']))])
             return []
@@ -136,7 +132,6 @@ class ModelCalls():
                                                             model['uid'],
                                                             content=True, **kwargs),
                                             kwargs['urlParams']['encode'])
-        print(f"Requested a specific model with id {kwargs['modelid']}")
         self.httpresp.ret_200('application/json', kwargs["start_response"],
                               [('Last-Modified', httpdate(model['insertdate']))])
         return current
