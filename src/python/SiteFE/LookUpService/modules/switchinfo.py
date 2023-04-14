@@ -273,7 +273,6 @@ class SwitchInfo():
 
     def _addSwitchRoutes(self, switchInfo):
         """Add Route info to MRML"""
-
         for switchName, rstEntries in switchInfo.get('routes', {}).items():
             self.logger.debug(f'Adding Switch Routes {switchName}')
             out = {'hostname': switchName}

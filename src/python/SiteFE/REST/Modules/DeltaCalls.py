@@ -95,7 +95,6 @@ class DeltaCalls():
         outContent['id'] = hashNum
         outContent['lastModified'] = convertTSToDatetime(outContent['UpdateTime'])
         outContent['href'] = f"{environ['SCRIPT_URI']}/{hashNum}"
-        print(f"Delta was {outContent['State']}. Returning info {outContent}")
         if outContent['State'] not in ['accepted']:
             if 'Error' not in out:
                 outContent['Error'] = f"Unknown Error. Dump all out content {jsondumps(out)}"
@@ -135,12 +134,10 @@ class DeltaCalls():
                 self.stateM.stateChange(self.dbobj, {'uid': deltaID, 'state': newState})
             return {'status': 'OK', 'msg': 'Internal State change approved'}
         delta = self.__getdeltaINT(deltaID, **kwargs)
-        print(f'Commit Action for delta {delta}')
         # Now we go directly to commited in case of commit
         if delta['state'] != 'accepted':
             msg = (f"Delta state in the system is not in accepted state."
                    f"State on the system: {delta['state']}. Not allowed to change.")
-            print(msg)
             raise WrongDeltaStatusTransition(msg)
         self.stateM.commit(self.dbobj, {'uid': deltaID, 'state': 'committing'})
         return {'status': 'OK'}
@@ -160,13 +157,11 @@ class DeltaCalls():
         modTime = getModTime(kwargs['headers'])
         outdeltas = self.__getdeltaINT(None, **kwargs)
         if kwargs['urlParams']['oldview']:
-            print('Return All deltas. 200 OK')
             self.httpresp.ret_200('application/json', kwargs["start_response"], None)
             return outdeltas
         outM = {"deltas": []}
         if not outdeltas:
             self.httpresp.ret_200('application/json', kwargs["start_response"], [('Last-Modified', httpdate(getUTCnow()))])
-            print('Return empty list. There are no deltas on the system')
             return []
         updateTimestamp = 0
         for delta in outdeltas:
@@ -187,7 +182,6 @@ class DeltaCalls():
             self.httpresp.ret_304('application/json', kwargs["start_response"], [('Last-Modified', httpdate(modTime))])
             return []
         self.httpresp.ret_200('application/json', kwargs["start_response"], [('Last-Modified', httpdate(updateTimestamp))])
-        print('Return Last Delta. 200 OK')
         return outM["deltas"]
 
     def __deltas_post(self, environ, **kwargs):
@@ -257,15 +251,12 @@ class DeltaCalls():
         Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+) # Will return info about specific delta
         """
         modTime = getModTime(kwargs['headers'])
-        print(f"Delta Status query for {kwargs['deltaid']}")
         delta = self.__getdeltaINT(kwargs['deltaid'], **kwargs)
         if not delta:
             self.httpresp.ret_204('application/json', kwargs["start_response"],
                                   [('Last-Modified', httpdate(getUTCnow()))])
-            print('Return empty list. There are no deltas on the system')
             return []
         if modTime > delta['updatedate']:
-            print(f"Delta with ID {kwargs['mReg'][0]} was not updated so far. Time request comparison requested")
             self.httpresp.ret_304('application/json', kwargs["start_response"], [('Last-Modified', httpdate(delta['updatedate']))])
             return []
         if kwargs['urlParams']['oldview']:
@@ -282,9 +273,6 @@ class DeltaCalls():
         if not kwargs['urlParams']['summary']:
             current['addition'] = encodebase64(delta['addition'], kwargs['urlParams']['encode'])
             current['reduction'] = encodebase64(delta['reduction'], kwargs['urlParams']['encode'])
-        print((f"Returning delta {current['id']} information. Few details:"
-               f"ModelID: {current['modelId']} State: {current['state']},"
-               f"LastModified: current['lastModified']"))
         self.httpresp.ret_200('application/json', kwargs["start_response"], [('Last-Modified', httpdate(delta['updatedate']))])
         return [current]
 
@@ -299,7 +287,6 @@ class DeltaCalls():
         """
         msgOut = self.__commitdelta(kwargs['deltaid'], environ, **kwargs)
         self.httpresp.ret_204('application/json', kwargs["start_response"], None)
-        print(f"Delta {kwargs['deltaid']} committed. Return 204")
         return msgOut
 
     def activedeltas(self, environ, **kwargs):
@@ -309,6 +296,5 @@ class DeltaCalls():
         Output: application/json
         Examples: https://server-host/sitefe/v1/activedeltas
         """
-        print('Called to get all active deltas')
         self.responseHeaders(environ, **kwargs)
         return self.__getActiveDeltas(environ, **kwargs)

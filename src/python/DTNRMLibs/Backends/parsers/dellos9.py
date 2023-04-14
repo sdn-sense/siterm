@@ -21,6 +21,7 @@ class DellOS9():
         self.defVlanNaming = 'Vlan %(vlanid)s'
         self.regexs = [r'^tagged (.+) (.+)', r'^untagged (.+) (.+)', r'^channel-member (.+) (.+)', r'^(Port-channel) (.+)']
         self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
+        self.runnincConf = None
 
     @staticmethod
     def getSystemValidPortName(port):
@@ -182,12 +183,13 @@ class DellOS9():
 
     def parser(self, ansibleOut):
         """General Parser to parse ansible config"""
+        self.runnincConf = ansibleOut.get('event_data', {}).get('res', {}).get('ansible_facts', {})
         out = {}
         # Out must be {'<interface_name>': {'key': 'value'}} OR
         #             {'<interface_name>': {'key': ['value1', 'value2']}
         # dict as value are not supported (not found use case yet for this)
         interfaceSt = False
-        for line in ansibleOut['event_data']['res']['ansible_facts']['ansible_net_config'].split('\n'):
+        for line in self.runnincConf['ansible_net_config'].split('\n'):
             line = line.strip() # Remove all white spaces
             if line == "!" and interfaceSt:
                 interfaceSt = False # This means interface ended!
@@ -203,8 +205,7 @@ class DellOS9():
                         out[key][line.split()[0]] += tmpOut
         return out
 
-    @staticmethod
-    def getinfo(ansibleOut):
+    def getinfo(self, ansibleOut):
         """
         Get info from ansible out, Mainly mac. Output example:
         Stack MAC                  : 4c:76:25:e8:44:c0
@@ -227,6 +228,8 @@ class DellOS9():
         Burned In MAC              : 4c:76:25:e8:44:c0
         No Of MACs                 : 3
         """
+        if not ansibleOut and self.runnincConf:
+            return self.getinfo(self.runnincConf.get('ansible_net_config', ""))
         regexs = {'mac': r'^Stack MAC\s*:\s*(.+)'}
         out = {}
         for line in ansibleOut.split('\n'):
@@ -236,8 +239,7 @@ class DellOS9():
                     out[regName] = match.group(1)
         return out
 
-    @staticmethod
-    def getlldpneighbors(ansibleOut):
+    def getlldpneighbors(self, ansibleOut):
         """
         Get all lldp neighbors. Each entry will contain:
          Local Interface Hu 1/1 has 1 neighbor
@@ -264,6 +266,9 @@ class DellOS9():
             Time since last information change of this neighbor:  2w2d16h
            ---------------------------------------------------------------------------
         """
+        if not ansibleOut and self.runnincConf:
+            return self.getlldpneighbors(self.runnincConf.get('ansible_net_config', ""))
+        out = []
         regexs = {'local_port_id': r'Local Port ID:\s*(.+)',
                   'remote_system_name': r'Remote System Name:\s*(.+)',
                   'remote_port_id': r'Remote Port ID:\s*(.+)',
@@ -279,9 +284,10 @@ class DellOS9():
                 out[entryOut['local_port_id']] = entryOut
         return out
 
-    @staticmethod
-    def getIPv4Routing(ansibleOut):
+    def getIPv4Routing(self, ansibleOut):
         """Get IPv4 Routing from running config"""
+        if not ansibleOut and self.runnincConf:
+            return self.getIPv4Routing(self.runnincConf.get('ansible_net_config', ""))
         out = []
         for inline in ansibleOut.split('\n'):
             inline = inline.strip() # Remove all white spaces
@@ -308,9 +314,10 @@ class DellOS9():
                             'intf': f"{match.groups()[2]} {match.groups()[3]}", 'from': match.groups()[4]})
         return out
 
-    @staticmethod
-    def getIPv6Routing(ansibleOut):
+    def getIPv6Routing(self, ansibleOut):
         """Get IPv6 Routing from running config"""
+        if not ansibleOut and self.runnincConf:
+            return self.getIPv6Routing(self.runnincConf.get('ansible_net_config', ""))
         out = []
         for inline in ansibleOut.split('\n'):
             inline = inline.strip() # Remove all white spaces

@@ -71,7 +71,6 @@ class HostCalls():
                    'hostinfo': jsondumps(inputDict)}
             self.dbobj.insert('hosts', [out])
         else:
-            print('This host is already in db. Why to add several times?')
             raise BadRequestError('This host is already in db. Why to add several times?')
         self.responseHeaders(environ, **kwargs)
         return {"Status": 'ADDED'}

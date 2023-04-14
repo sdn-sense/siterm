@@ -169,12 +169,10 @@ class Switch():
                         if action not in self.parsers.keys():
                             self.logger.info('WARNING. ansible action not defined in site-rm code base. Unsupported switch?')
                             continue
-                        for val, key in keyMapping.items():
-                            hOut.setdefault(key, {})
-                            if val < len(host_events['event_data']['res']['stdout']):
-                                hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
-                            else:
-                                hOut[key] = parserWrapper(val, None)
+            for val, key in keyMapping.items():
+                if key not in hOut:
+                    hOut.setdefault(key, {})
+                    hOut[key] = parserWrapper(val, None)
         self.__getAnsErrors(ansOut)
         return out
 
