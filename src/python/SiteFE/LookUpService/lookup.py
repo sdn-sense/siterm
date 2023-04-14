@@ -161,6 +161,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
                 self.logger.info('Models are equal.')
                 lastKnownModel = modelinDB[0]
                 os.unlink(saveName)
+                self.renewSwitchConfig = False
         else:
             self.logger.info('Models are different. Update DB')
             self._updateVersion(**{'version': self.modelVersion})  # This will force to update Version to new value
