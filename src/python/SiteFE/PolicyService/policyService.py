@@ -178,7 +178,7 @@ class PolicyService(RDFHelper):
                 if mrstypes and mrsvals and len(mrstypes) == len(mrsvals):
                     for index, mrtype in enumerate(mrstypes):
                         if mrtype and mrsvals[index]:
-                            routeVals = routeout.setdefault(rtype, {}).setdefault(mrtype, {})
+                            routeVals = routeout.setdefault(rtype, {}).setdefault(str(mrtype), {})
                             routeVals['type'] = str(mrtype)
                             routeVals['value'] = str(mrsvals[index])
                             routeVals['key'] = str(item)
