@@ -285,7 +285,7 @@ class QOS():
                 # Need to calculate the remaining traffic
                 params['resvName'] = f"{params['resvRate']}{params['resvType']}"
                 tmpFD.write(f"  # priority{params['counter']} belongs to {servName} service\n")
-                tmpFD.write(f"  class priority{params['counter']} commit {params['resvName']} max {params['maxName']}\n")
+                tmpFD.write(f"  class priority{params['counter']} commit {params['resvName']} max {params['resvName']}\n")
                 for key, match in {"src_ipv4": "match", "dst_ipv4": "match",
                                    "src_ipv6": "match6", "dst_ipv6": "match6"}.items():
                     tmpVals = servParams.get(key, [])
