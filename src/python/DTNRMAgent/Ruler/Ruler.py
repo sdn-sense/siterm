@@ -7,12 +7,11 @@ Authors:
 
 Date: 2022/01/20
 """
-from __future__ import absolute_import
 import os
 from DTNRMAgent.Ruler.Components.QOS import QOS
 from DTNRMAgent.Ruler.Components.VInterfaces import VInterfaces
 from DTNRMAgent.Ruler.Components.Routing import Routing
-from DTNRMAgent.Ruler.OverlapLib import getAllOverlaps
+from DTNRMAgent.Ruler.OverlapLib import OverlapLib
 from DTNRMLibs.MainUtilities import getDataFromSiteFE, evaldict
 from DTNRMLibs.MainUtilities import createDirs, getFullUrl, contentDB, getFileContentAsJson
 from DTNRMLibs.MainUtilities import getGitConfig
@@ -23,7 +22,7 @@ from DTNRMLibs.CustomExceptions import FailedGetDataFromFE
 COMPONENT = 'Ruler'
 
 
-class Ruler(contentDB):
+class Ruler(contentDB, QOS, OverlapLib):
     """Ruler class to create interfaces on the system."""
     def __init__(self, config, sitename):
         self.config = config if config else getGitConfig()
@@ -31,23 +30,26 @@ class Ruler(contentDB):
         self.workDir = self.config.get('general', 'private_dir') + "/DTNRM/RulerAgent/"
         createDirs(self.workDir)
         self.fullURL = getFullUrl(self.config, sitename)
-        self.sitename = sitename
         self.hostname = self.config.get('agent', 'hostname')
         self.logger.info("====== Ruler Start Work. Hostname: %s", self.hostname)
+        # L2,L3 move it to Class Imports at top.
         self.layer2 = VInterfaces(self.config)
         self.layer3 = Routing(self.config)
-        self.qos = QOS(self.config)
+        self.activeDeltas = {}
+        self.activeFromFE = {}
+        self.activeNew = {}
+        self.activeNow = {}
+        QOS.__init__(self)
+        OverlapLib.__init__(self)
 
 
     def getData(self, url):
         """Get data from FE."""
-        self.logger.info(f'Query: {self.fullURL}{url}')
         out = getDataFromSiteFE({}, self.fullURL, url)
         if out[2] != 'OK':
             msg = f'Received a failure getting information from Site Frontend {str(out)}'
             self.logger.critical(msg)
             raise FailedGetDataFromFE(msg)
-        self.logger.info('End function checkdeltas')
         return evaldict(out[0])
 
     def getActiveDeltas(self):
@@ -74,40 +76,36 @@ class Ruler(contentDB):
             return True
         return False
 
-    def activeComparison(self, activeFile, activeFE, actKey, actCall):
+    def activeComparison(self, actKey, actCall):
         """Compare active vs file on node config"""
         self.logger.info(f'Active Comparison for {actKey}')
         if actKey == 'vsw':
-            for key, vals in activeFile.get('output', {}).get(actKey, {}).items():
+            for key, vals in self.activeDeltas.get('output', {}).get(actKey, {}).items():
                 if self.hostname in vals:
                     if not self._started(vals):
                         # This resource has not started yet. Continue.
                         continue
-                    if key in activeFE.get('output', {}).get(actKey, {}).keys():
-                        if self.hostname in activeFE['output'][actKey][key].keys():
-                            if vals[self.hostname] == activeFE['output'][actKey][key][self.hostname]:
-                                continue
-                            actCall.modify(vals[self.hostname], activeFE['output'][actKey][key][self.hostname])
-                        else:
-                            actCall.terminate(vals[self.hostname])
+                    if key in self.activeFromFE.get('output', {}).get(actKey, {}).keys() and \
+                    self.hostname in self.activeFromFE['output'][actKey][key].keys():
+                        if vals[self.hostname] == self.activeFromFE['output'][actKey][key][self.hostname]:
+                            continue
+                        actCall.modify(vals[self.hostname], self.activeFromFE['output'][actKey][key][self.hostname])
                     else:
                         actCall.terminate(vals[self.hostname])
-        if actKey == 'rst':
-            activeNew = getAllOverlaps(activeFE)
-            activeNow = getAllOverlaps(activeFile)
-            for key, val in getAllOverlaps(activeNow).items():
-                if key not in activeNew:
+        if actKey == 'rst' and self.qosPolicy == 'hostlevel':
+            for key, val in self.activeNow.items():
+                if key not in self.activeNew:
                     actCall.terminate(val)
                     continue
-                if val != activeNew[key]:
+                if val != self.activeNew[key]:
                     actCall.terminate(val)
             return
 
-    def activeEnsure(self, activeConf, actKey, actCall):
+    def activeEnsure(self, actKey, actCall):
         """Ensure all active resources are enabled, configured"""
         self.logger.info(f'Active Ensure for {actKey}')
         if actKey == 'vsw':
-            for _key, vals in activeConf.get('output', {}).get(actKey, {}).items():
+            for _key, vals in self.activeFromFE.get('output', {}).get(actKey, {}).items():
                 if self.hostname in vals:
                     if self._started(vals) and not self._ended(vals):
                         # Means resource is active at given time.
@@ -119,8 +117,8 @@ class Ruler(contentDB):
                         # So we are not doing anything to terminate it and termination
                         # will happen at activeComparison - once delta is removed in FE.
                         continue
-        if actKey == 'rst':
-            for _, val in getAllOverlaps(activeConf).items():
+        if actKey == 'rst' and self.qosPolicy == 'hostlevel':
+            for _, val in self.activeNew.items():
                 actCall.activate(val)
             return
 
@@ -130,31 +128,39 @@ class Ruler(contentDB):
         # Comparison is needed to identify if any param has changed.
         # Otherwise - do precheck if all resources are active
         # And start QOS Ruler if it is configured so.
-        activeDeltas = {}
         activeDeltasFile = f"{self.workDir}/activedeltas.json"
         if os.path.isfile(activeDeltasFile):
-            activeDeltas = getFileContentAsJson(activeDeltasFile)
-        activeFromFE = self.getActiveDeltas()
-        updated = False
-        if activeDeltas != activeFromFE:
-            updated = True
-            self.dumpFileContentAsJson(activeDeltasFile, activeFromFE)
+            self.activeDeltas = getFileContentAsJson(activeDeltasFile)
+        self.activeNow = self.getAllOverlaps(self.activeDeltas)
+
+        self.activeFromFE = self.getActiveDeltas()
+        self.activeNew = self.getAllOverlaps(self.activeFromFE)
+        if self.activeDeltas != self.activeFromFE:
+            self.dumpFileContentAsJson(activeDeltasFile, self.activeFromFE)
+
+        import pprint
+        pprint.pprint(self.activeNow)
 
         if not self.config.getboolean('agent', 'norules'):
             self.logger.info('Agent is configured to apply rules')
             for actKey, actCall in {'vsw': self.layer2, 'rst': self.layer3}.items():
-                if updated:
-                    self.activeComparison(activeDeltas, activeFromFE, actKey, actCall)
-                self.activeEnsure(activeFromFE, actKey,actCall)
-            self.qos.startqos()
+                if self.activeDeltas != self.activeFromFE:
+                    self.activeComparison(actKey, actCall)
+                self.activeEnsure(actKey, actCall)
+            # QoS Can be modified and depends only on Active
+            self.activeNow = self.activeNew
+            self.startqos()
         else:
             self.logger.info('Agent is not configured to apply rules')
         self.logger.info('Ended function start')
 
 def execute(config=None):
     """Execute main script for DTN-RM Agent output preparation."""
-    ruler = Ruler(config, None)
-    ruler.startwork()
+    if not config:
+        config = getGitConfig()
+    for sitename in config.get('general', 'sitename'):
+        ruler = Ruler(config, sitename)
+        ruler.startwork()
 
 if __name__ == '__main__':
     getLoggingObject(logType='StreamLogger', service='Ruler')
