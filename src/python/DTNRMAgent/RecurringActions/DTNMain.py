@@ -100,7 +100,7 @@ class RecurringAction():
         self.logger.debug('Update Host result %s', outVals)
         if outVals[2] != 'OK' or outVals[1] != 200 and outVals[3]:
             outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/addhost')
-            self.logger.debug('Update Host result %s', outVals)
+            self.logger.debug('Insert Host result %s', outVals)
         if excMsg:
             raise PluginException(excMsg)
 
@@ -109,8 +109,9 @@ def execute(config):
     """Main Execute."""
     if not config:
         config = getGitConfig()
-    rec = RecurringAction(config, None)
-    rec.startwork()
+    for sitename in config.get('general', 'sitename'):
+        rec = RecurringAction(config, sitename)
+        rec.startwork()
 
 
 if __name__ == '__main__':

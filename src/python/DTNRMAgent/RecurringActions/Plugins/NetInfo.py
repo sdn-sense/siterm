@@ -6,7 +6,6 @@ Authors:
 
 Date: 2022/01/29
 """
-from __future__ import print_function
 import ipaddress
 import pprint
 import psutil
@@ -25,20 +24,11 @@ def str2bool(val):
 NAME = 'NetInfo'
 
 
-def presetMacVlans(netInfo, mainIntf, config):
-    """Preset macvlan info in output"""
-    for macvlan in config.get(mainIntf, 'macvlans'):
-        nicInfo = netInfo.setdefault(macvlan, {})
-        nicInfo['parent'] = mainIntf
-        nicInfo['switch_port'] = str(config.get(mainIntf, "port")).replace('/', '-').replace(' ', '_')
-        nicInfo['switch'] = str(config.get(mainIntf, "switch"))
-        nicInfo['shared'] = str2bool(config.get(mainIntf, "shared"))
-
 def get(config):
     """Get all network information"""
     netInfo = {}
     logger = getLoggingObject(logType='StreamLogger')
-    interfaces = config.get('agent', "interfaces")
+    interfaces = config.get('agent', 'interfaces')
     for intf in interfaces:
         nicInfo = netInfo.setdefault(intf, {})
         if config.has_option(intf, 'isAlias'):
@@ -46,14 +36,11 @@ def get(config):
         for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
             if config.has_option(intf, key):
                 nicInfo[key] = config.get(intf, key)
-                # Make lists
-                nicInfo["%s-list" % key] = config.generateIPList(nicInfo[key])
-        if config.has_option(intf, 'macvlans'):
-            presetMacVlans(netInfo, intf, config)
-        nicInfo['vlan_range'] = config.get(intf, "vlans")
+                nicInfo[f'{key}-list'] = config.generateIPList(nicInfo[key])
+        nicInfo['vlan_range'] = config.get(intf, "vlan_range")
         nicInfo['vlan_range_list'] = config.generateVlanList(nicInfo['vlan_range'])
-        nicInfo['min_bandwidth'] = int(config.get(intf, "vlan_min"))
-        nicInfo['max_bandwidth'] = int(config.get(intf, "vlan_max"))
+        nicInfo['min_bandwidth'] = int(config.get(intf, "min_bandwidth"))
+        nicInfo['max_bandwidth'] = int(config.get(intf, "max_bandwidth"))
         nicInfo['switch_port'] = str(config.get(intf, "port")).replace('/', '-').replace(' ', '_')
         nicInfo['switch'] = str(config.get(intf, "switch"))
         nicInfo['shared'] = str2bool(config.get(intf, "shared"))
@@ -147,7 +134,6 @@ def getRoutes():
         for route in ipr.get_routes(table=254, family=10):
             newroute = {"dst_len": route['dst_len'], 'iptype': 'ipv6'}
             for item in route['attrs']:
-                # TODO: Need to test this. New feature of node assign IPv6
                 if item[0] in ['RTA_GATEWAY', 'RTA_DST', 'RTA_PREFSRC']:
                     newroute[item[0]] = item[1]
             routes.append(newroute)

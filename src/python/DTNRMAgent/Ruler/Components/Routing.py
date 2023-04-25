@@ -126,6 +126,7 @@ class Routing():
 
     def activate(self, route):
         """Activate routes"""
+        print(route)
         self._refreshRuleList()
         if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', '') and not self.rules.lookup_to(route['dst_ipv6']):
             self.apply_rule(f"ip -6 rule add to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
