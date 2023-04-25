@@ -86,7 +86,7 @@ class Ruler(contentDB, QOS, OverlapLib):
                         # This resource has not started yet. Continue.
                         continue
                     if key in self.activeFromFE.get('output', {}).get(actKey, {}).keys() and \
-                              self.hostname in self.activeFromFE['output'][actKey][key].keys():
+                    self.hostname in self.activeFromFE['output'][actKey][key].keys():
                         if vals[self.hostname] == self.activeFromFE['output'][actKey][key][self.hostname]:
                             continue
                         actCall.modify(vals[self.hostname], self.activeFromFE['output'][actKey][key][self.hostname])

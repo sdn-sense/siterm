@@ -12,6 +12,7 @@ from DTNRMLibs.ipaddr import getsubnet
 from DTNRMLibs.ipaddr import checkoverlap
 
 class OverlapLib():
+    """OverLap Lib - checks and prepares configs for overlap calculations"""
     # pylint: disable=E1101
     def __init__(self):
         self.allIPs = {'ipv4': {}, 'ipv6': {}}
@@ -84,8 +85,8 @@ class OverlapLib():
         self.__getAllIPsHost()
         self.__getAllIPsNetNS()
 
-
-    def networkOverlap(self, net1, net2):
+    @staticmethod
+    def networkOverlap(net1, net2):
         """Check if 2 networks overlap"""
         try:
             net1Net = getsubnet(net1, strict=False)
@@ -95,7 +96,6 @@ class OverlapLib():
         except ValueError:
             pass
         return False
-
 
     def findOverlaps(self, iprange, iptype):
         """Find all networks which overlap and add it to service list"""

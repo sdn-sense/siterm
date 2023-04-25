@@ -65,7 +65,7 @@ class QOS():
         self.activeL2 = []
         self.params = {}
         self.qosPolicy = self.config.get('qos', 'policy')
-        self.qos = self.config.get('qos', 'qos_params')
+        self.qosparams = self.config.get('qos', 'qos_params')
         self.classmax = self.config.get('qos', 'class_max')
         self.qosTotals = []
 
@@ -93,7 +93,7 @@ class QOS():
         """Get vlan qos dict"""
         self.activeL2 = []
         for _key, vals in self.activeDeltas.get('output', {}).get('vsw', {}).items():
-            if not self.hostname in vals:
+            if self.hostname not in vals:
                 continue
             if not self._started(vals):
                 # This resource has not started yet. Continue.
@@ -163,8 +163,6 @@ class QOS():
         # do a fractional calculation for fairshare
         if nodeThrgShare >= intfMax or nodeThrgShare > totalAll:
             fractReq = self.reqRatio(intfMax, reqRate, totalAll)
-            #self.logger.debug(f"Requested: {reqRate}, Ratio: {ratio}, IntfMax: {intfMax}, \
-            #                    IntfShare: {nodeThrgShare}, NewRate: {fractReq}")
             reqRate = fractReq
         # Min for QoS we use 1Gb/s.
         reqRate = max(int(reqRate), 1000)
@@ -183,7 +181,7 @@ class QOS():
                 added.setdefault(intf, {'input': 0, 'output': 0})
                 total = items['total'] + items['reserved']
                 tmpFD.write("\n# SENSE L3 Routing Private NS Request\n")
-                tmpFD.write(f"interface46 {intf} {intf}-{qosType} {qosType} rate {total}mbit {self.qos}\n")
+                tmpFD.write(f"interface46 {intf} {intf}-{qosType} {qosType} rate {total}mbit {self.qosparams}\n")
                 for item in items['items']:
                     tmpFD.write(f"  # priority{added[intf][qosType]} belongs to {item['bwuri']} service\n")
                     if self.classmax:
@@ -203,6 +201,7 @@ class QOS():
                 tmpFD.write('    match all\n')
 
     def _calculateQoS(self, tmpFD, useMasterIntf=False):
+        """Calculate and Prepare QoS File"""
         self.calculateTotalPerInterface()
         allQoS = {}
         for intf, intfDict in self.activeNow.items():
@@ -220,7 +219,6 @@ class QOS():
                 allQoS[intfKey]['items'].append(newThrg)
         if allQoS:
             self.prepareQoSFileL3(tmpFD, allQoS)
-
 
     def addRSTQoS(self, tmpFD):
         """BW Requests do not reach Agent. Loop over all RST definitions and

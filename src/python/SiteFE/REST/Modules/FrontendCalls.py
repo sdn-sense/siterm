@@ -21,6 +21,7 @@ Date                    : 2023/01/03
 """
 from DTNRMLibs.MainUtilities import evaldict
 
+
 class FrontendCalls():
     """Frontend Calls API Module"""
     # pylint: disable=E1101
