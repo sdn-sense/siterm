@@ -47,10 +47,10 @@ def get(config):
         nicInfo['vlans'] = {}
         # TODO. It should calculate available capacity, depending on installed vlans.
         # Currently we set it same as max_bandwidth.
-        nicInfo['available_bandwidth'] = int(config.get(intf, "vlan_max"))  # TODO
+        nicInfo['available_bandwidth'] = int(config.get(intf, "max_bandwidth"))  # TODO
         # TODO. It should also calculate reservable capacity depending on installed vlans;
         # Currently we set it to max available;
-        nicInfo['reservable_bandwidth'] = int(config.get(intf, "vlan_max"))  # TODO
+        nicInfo['reservable_bandwidth'] = int(config.get(intf, "max_bandwidth"))  # TODO
     tmpifAddr = psutil.net_if_addrs()
     tmpifStats = psutil.net_if_stats()
     tmpIOCount = psutil.net_io_counters(pernic=True)
