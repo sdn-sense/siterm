@@ -270,7 +270,7 @@ class NodeInfo():
         Add All interfaces info.
         """
         rstsEnabled = self.__getRstsEnabled(hostinfo)
-        for intfKey, intfDict in list(hostinfo['NetInfo']["interfaces"].items()):
+        for intfKey, intfDict in list(hostinfo.get('NetInfo', {}).get("interfaces", {}).items()):
             # We exclude QoS interfaces from adding them to MRML.
             # Even so, I still want to have this inside DB for debugging purposes
             if ignoreInterface(intfKey, intfDict, hostinfo):
