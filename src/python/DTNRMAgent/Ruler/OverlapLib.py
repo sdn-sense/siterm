@@ -71,6 +71,10 @@ class OverlapLib():
 
     def __getAllIPsNetNS(self):
         """Mapping for Private NS comes from Agent configuration"""
+        if not self.config.has_section('qos'):
+            return
+        if not self.config.has_option('qos', 'interfaces'):
+            return
         for intf, params in self.config.get('qos', 'interfaces').items():
             for key in ['ipv6', 'ipv4']:
                 iprange = params.get(f'{key}_range')
