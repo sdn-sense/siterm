@@ -114,6 +114,8 @@ class QOS():
                     params[item[0]] = self.config.get(interface, item[0])
                 else:
                     params[item[0]] = item[1]
+            # Take out reserved from intf_max
+            self.params[interface]['intf_max'] -= self.params[interface]['intf_reserve']
 
     def calculateTotalPerInterface(self):
         """Calculate total allocated per interface"""
