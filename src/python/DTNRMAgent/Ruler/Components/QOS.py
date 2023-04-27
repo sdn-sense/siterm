@@ -121,8 +121,10 @@ class QOS():
             for _, bwDict in intfDict.items():
                 self.params.setdefault(bwDict['master_intf'], {})
                 self.params[bwDict['master_intf']].setdefault('total_allocated', 0)
+                self.params[bwDict['master_intf']].setdefault('total_requests', 0)
                 rate = self.convertToRate(bwDict['rules'])
                 self.params[bwDict['master_intf']]['total_allocated'] += rate[0]
+                self.params[bwDict['master_intf']]['total_requests'] += 1
                 self.params[bwDict['master_intf']].setdefault(intf, 0)
                 self.params[bwDict['master_intf']][intf] += rate[0]
 
@@ -165,7 +167,7 @@ class QOS():
             fractReq = self.reqRatio(intfMax, reqRate, totalAll)
             reqRate = fractReq
         # Min for QoS we use 1Gb/s.
-        reqRate = max(int(reqRate), 1000)
+        reqRate = max(int(nodeThrgShare), 1000)
         return {'reqRate': reqRate, 'reserved': reserved}
 
     @staticmethod
@@ -173,21 +175,27 @@ class QOS():
         """Add match entry for ip"""
         tmpFD.write(f"    {match} {mtype} {val}\n")
 
+    def _calcTotalMax(self, item, masterIntf, slaveIntf):
+        """Calculate total Max based on flags in config"""
+        if self.classmax:
+            total = int((self.params[masterIntf]['intf_max']*self.params[masterIntf][slaveIntf]))
+            total = int(total/self.params[masterIntf]['total_allocated'])+item['reserved']
+            totalAll = item['reqRate'] + item['reserved']
+            return max(total, totalAll)
+        return item['reqRate'] + item['reserved']
+
     def prepareQoSFileL3(self, tmpFD, allQoS):
         """Add L3 QoS TC Rules"""
         added = {}
         for qosType, mtype in {'input': 'src', 'output': 'dst'}.items():
             for intf, items in allQoS.items():
-                added.setdefault(intf, {'input': 0, 'output': 0})
-                total = items['total'] + items['reserved']
-                tmpFD.write("\n# SENSE L3 Routing Private NS Request\n")
-                tmpFD.write(f"interface46 {intf} {intf}-{qosType} {qosType} rate {total}mbit {self.qosparams}\n")
                 for item in items['items']:
+                    if intf not in added or added[intf][qosType] == 0:
+                        added.setdefault(intf, {'input': 0, 'output': 0})
+                        tmpFD.write("\n# SENSE L3 Routing Private NS Request\n")
+                        tmpFD.write(f"interface46 {intf} {intf}-{qosType} {qosType} rate {items['total']}mbit {self.qosparams}\n")
                     tmpFD.write(f"  # priority{added[intf][qosType]} belongs to {item['bwuri']} service\n")
-                    if self.classmax:
-                        tmpFD.write(f"  class priority{added[intf][qosType]} commit {item['reqRate']}mbit max {total}mbit\n")
-                    else:
-                        tmpFD.write(f"  class priority{added[intf][qosType]} commit {item['reqRate']}mbit max {item['reqRate']}mbit\n")
+                    tmpFD.write(f"  class priority{added[intf][qosType]} commit {item['reqRate']}mbit max {items['total']}mbit\n")
                     added[intf][qosType] += 1
                     for key, match in {"dst_ipv4": "match", "dst_ipv6": "match6"}.items():
                         tmpVals = item['bwDict'].get(key, [])
@@ -216,7 +224,12 @@ class QOS():
                 allQoS.setdefault(intf, {'items': [], 'total': 0, 'reserved': 0})
                 allQoS[intfKey]['total'] += newThrg['reqRate']
                 allQoS[intfKey]['reserved'] = newThrg['reserved']
+                allQoS[intfKey]['master_intf'] = bwDict['master_intf']
                 allQoS[intfKey]['items'].append(newThrg)
+        for intf, items in allQoS.items():
+            for item in items['items']:
+                total = self._calcTotalMax(item, items['master_intf'], intf)
+                allQoS[intf]['total'] = total
         if allQoS:
             self.prepareQoSFileL3(tmpFD, allQoS)
 
