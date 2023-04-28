@@ -16,7 +16,7 @@ from DTNRMLibs.MainUtilities import getLoggingObject
 class AristaEOS():
     """Arista EOS Ansible wrapper."""
     def __init__(self, **kwargs):
-        self.factName = ['arista.eos.eos_facts', 'arista.eos.eos_command']
+        self.factName = ['arista.eos.eos_facts', 'arista.eos.facts', 'arista.eos.eos_command']
         self.defVlanNaming = 'Vlan%(vlanid)s'
         self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
 

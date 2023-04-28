@@ -165,10 +165,14 @@ class Switch():
                         hOut.setdefault(keyMapping[self.cmdCounter], {})
                         hOut[keyMapping[self.cmdCounter]] = parserWrapper(self.cmdCounter, host_events['event_data']['res'])
                         self.cmdCounter += 1
+                    elif action not in self.parsers.keys():
+                        self.logger.info('WARNING. ansible action not defined in site-rm code base. Unsupported switch?')
+                        continue
                     else:
-                        if action not in self.parsers.keys():
-                            self.logger.info('WARNING. ansible action not defined in site-rm code base. Unsupported switch?')
-                            continue
+                        for val, key in keyMapping.items():
+                            if val < len(host_events.get('event_data', {}).get('res', {}).get('stdout', [])):
+                                hOut.setdefault(key, {})
+                                hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
             for val, key in keyMapping.items():
                 if key not in hOut:
                     hOut.setdefault(key, {})
