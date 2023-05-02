@@ -80,7 +80,10 @@ class FrontendCalls():
         out = {}
         for host in hosts:
             tmpH = evaldict(host.get('hostinfo', {}))
-            for intf, intfDict in tmpH.get('Summary', {}).get('config', {}).get('qos', {}).get('interfaces', {}).items():
+            tmpInf = tmpH.get('Summary', {}).get('config', {}).get('qos', {}).get('interfaces', {})
+            if not tmpInf:
+                continue
+            for intf, intfDict in tmpInf.items():
                 maxThrg = tmpH.get('Summary', {}).get('config', {}).get(intfDict['master_intf'], {}).get('intf_max', None)
                 if maxThrg:
                     print(intf, intfDict, maxThrg)
@@ -89,4 +92,6 @@ class FrontendCalls():
                         if tmpIP:
                             out.setdefault(tmpIP, 0)
                             out[tmpIP] += maxThrg
+                else:
+                  print(f"QoS Configure for {intfDict['master_intf']}, but it is not defined in agent config. Misconfig.")
         return [out]
