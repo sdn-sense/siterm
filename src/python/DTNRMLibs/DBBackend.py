@@ -31,6 +31,7 @@ def getUTCnow():
     timestamp = int(time.mktime(now.timetuple()))
     return timestamp
 
+
 def loadEnv(envFile='/etc/siterm-mariadb'):
     """Load Environment file and export variables"""
     with open(envFile, 'r', encoding='utf-8') as fd:
