@@ -31,10 +31,21 @@ def getUTCnow():
     timestamp = int(time.mktime(now.timetuple()))
     return timestamp
 
+def loadEnv(envFile='/etc/siterm-mariadb'):
+    """Load Environment file and export variables"""
+    with open(envFile, 'r', encoding='utf-8') as fd:
+        for line in fd:
+            if line.startswith('#') or not line.strip():
+                continue
+            key, val = line.strip().split('=', 1)
+            if not os.environ.get(key):
+                os.environ[key] = val
+
 
 class DBBackend():
     """Database Backend class."""
     def __init__(self):
+        loadEnv()
         self.mpass = os.getenv('MARIA_DB_PASSWORD')
         self.muser = os.getenv('MARIA_DB_USER', 'root')
         self.mhost = os.getenv('MARIA_DB_HOST', 'localhost')
