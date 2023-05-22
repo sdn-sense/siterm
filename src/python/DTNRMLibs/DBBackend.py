@@ -34,6 +34,8 @@ def getUTCnow():
 
 def loadEnv(envFile='/etc/siterm-mariadb'):
     """Load Environment file and export variables"""
+    if not os.path.isfile(envFile):
+        return
     with open(envFile, 'r', encoding='utf-8') as fd:
         for line in fd:
             if line.startswith('#') or not line.strip():
