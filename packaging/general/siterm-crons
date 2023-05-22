@@ -3,4 +3,6 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 MAILTO=root
 # Cron job running by default every 3 hours, at 45 minutes past the hour
 45 */3 * * * root /etc/cron-scripts/siterm-ca-cron.sh > /var/log/cron.log 2>&1
+# Run at every reboot CA Cron fetch
 @reboot root /etc/cron-scripts/siterm-ca-cron.sh > /var/log/cron.log 2>&1
+
