@@ -80,6 +80,9 @@ class VirtualSwitchingService():
         """Add Tagged Interfaces to expected yaml conf"""
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
         portName = self.switch.getSwitchPortName(host, port)
+        # Replace virtual port name to real portname if defined
+        if self.config.has_option(host, f'port_{portName}_realport'):
+            portName = self.config.config['MAIN'][host][f'port_{portName}_realport']
         vlanDict.setdefault('tagged_members', {})
         vlanDict['tagged_members'][portName] = 'present'
 
