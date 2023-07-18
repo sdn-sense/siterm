@@ -79,7 +79,8 @@ class CallValidator():
         if 'interface' not in inputDict:
             raise BadRequestError('Key interface not specified in debug request.')
 
-    def __validatePrompush(self, inputDict):
+    @staticmethod
+    def __validatePrompush(inputDict):
         """Validate prometheus push debug request."""
         for key in ['hosttype', 'metadata', 'gateway', 'runtime', 'resolution']:
             if key not in inputDict:

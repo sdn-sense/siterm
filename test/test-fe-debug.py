@@ -48,17 +48,18 @@ class TestUtils(unittest.TestCase):
         """Test Prometheus Push Debug API"""
         for data in [
             {'hostname': 'sdn-dtn-1-7.ultralight.org', 'hosttype': 'host',
-                      'type': 'prometheus-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org',
-                                                              'sense_mon_id': 'rtmon-1'},
-                      'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610), 'resolution': 10},
-                     {'hostname': 'sdn-dtn-1-7.ultralight.org', 'hosttype': 'host',
-                      'type': 'arp-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org',
-                                                       'sense_mon_id': 'rtmon-1'},
-                      'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610), 'resolution': 10},
-                     {'hostname': 'dellos9_s0', 'hosttype': 'host',
-                      'type': 'prometheus-push', 'metadata': {'instance': 'dellos9_s0', 'sense_mon_id': f'rtmon-{int(time.time())}'},
-                      'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610), 'resolution': 10,
-                      'filter': {'snmp': {'operator': 'or', 'queries': {'ifDescr': 'hundredGigE 1/1', 'Key': ['ifHCInOctets', 'ifHCOutOctets']}}}}]:
+             'type': 'prometheus-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org',
+                                                     'sense_mon_id': 'rtmon-1'},
+             'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610), 'resolution': 10},
+            {'hostname': 'sdn-dtn-1-7.ultralight.org', 'hosttype': 'host',
+             'type': 'arp-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org',
+                                              'sense_mon_id': 'rtmon-1'},
+             'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610), 'resolution': 10},
+            {'hostname': 'dellos9_s0', 'hosttype': 'host',
+             'type': 'prometheus-push', 'metadata': {'instance': 'dellos9_s0', 'sense_mon_id': f'rtmon-{int(time.time())}'},
+             'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610), 'resolution': 10,
+             'filter': {'snmp': {'operator': 'or', 'queries': {'ifDescr': 'hundredGigE 1/1',
+                                                               'Key': ['ifHCInOctets', 'ifHCOutOctets']}}}}]:
             outsuc = {"out": ["running"], "err": "", "exitCode": 0}
             dataupd = {'state': 'active', 'output': json.dumps(outsuc)}
             debugActions(self, data, dataupd)

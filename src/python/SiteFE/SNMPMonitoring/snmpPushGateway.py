@@ -50,7 +50,8 @@ class PromPush():
                         registry=registry,
                         grouping_key=self.__getMetadataParams())
 
-    def __filterOutput(self, filterRules, keys):
+    @staticmethod
+    def __filterOutput(filterRules, keys):
         """
         Allows to filter output send to Prometheus based on Keys. Full input:
         {"filter": {'snmp': {'operator': "and|or", queries: {Key1: Val1, Key2: [Val2, Val3]}},
@@ -74,7 +75,6 @@ class PromPush():
         if filterRules['operator'] == "or" and any(filterChecks):
             return True
         return False
-
 
     def startwork(self):
         """Start PushGateway Work"""
