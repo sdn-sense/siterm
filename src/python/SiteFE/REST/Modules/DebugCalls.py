@@ -79,7 +79,8 @@ class CallValidator():
         if 'interface' not in inputDict:
             raise BadRequestError('Key interface not specified in debug request.')
 
-    def __validatePrompush(self, inputDict):
+    @staticmethod
+    def __validatePrompush(inputDict):
         """Validate prometheus push debug request."""
         for key in ['hosttype', 'metadata', 'gateway', 'runtime', 'resolution']:
             if key not in inputDict:
@@ -99,12 +100,19 @@ class CallValidator():
                     raise BadRequestError(f"Metadata Key {key} does not match prometheus label format")
                 if not isinstance(val, str):
                     raise BadRequestError(f"Metadata Key {key} value is not str. Only str supported")
-        if 'mibs' in inputDict:
-            if len('mibs') > len(self.config['MAIN']['snmp']['mibs']):
-                raise BadRequestError(f"Requested more mibs than are supported. Supported mibs: {self.config['MAIN']['snmp']['mibs']}")
-            for mib in inputDict:
-                if mib not in self.config['MAIN']['snmp']['mibs']:
-                    raise BadRequestError(f"MIB {mib} not supported. Supported mibs: {self.config['MAIN']['snmp']['mibs']}")
+        # Check all filter parameters
+        if 'filter' in inputDict:
+            if not isinstance(inputDict['filter'], dict):
+                raise BadRequestError("Requested filter must be dictionary type")
+            for filterKey, filterVals in inputDict['filter'].items():
+                if filterKey not in ["mac", "snmp"]:
+                    raise BadRequestError(f"Requested filter {filterKey} not supported.")
+                if 'operator' not in filterVals:
+                    raise BadRequestError(f"Requested filter: {filterVals}, does not have operator key")
+                if filterVals['operator'] not in ["and", "or"]:
+                    raise BadRequestError("Only 'and' or 'or' are supported filter operators")
+                if 'queries' not in filterVals:
+                    raise BadRequestError("Requested filter does not have queries key")
 
     @staticmethod
     def __validateArppush(inputDict):

@@ -1,5 +1,6 @@
 """Test Debug Prometheus Push"""
 import os
+import time
 import unittest
 import http.client
 import simplejson as json
@@ -23,13 +24,15 @@ def debugActions(cls, dataIn, dataUpd):
     # SUBMIT
     urls = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/submitdebug/NEW"
     outs = makeRequest(cls, urls, {'verb': 'POST', 'data': dataIn})
-    cls.assertEqual(outs[1], 200)
-    cls.assertEqual(outs[2], 'OK')
+
+    cls.assertEqual(outs[1], 200, msg=f'{str(outs)}')
+    cls.assertEqual(outs[2], 'OK', msg=f'{str(outs)}')
     # GET
     urlg = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/getdebug/{outs[0]['ID']}"
     outg = makeRequest(cls, urlg, {'verb': 'GET', 'data': {}})
-    cls.assertEqual(outg[1], 200)
-    cls.assertEqual(outg[2], 'OK')
+    cls.assertEqual(outg[1], 200, msg=f'{str(outs)}')
+    cls.assertEqual(outg[2], 'OK', msg=f'{str(outs)}')
+
 
 class TestUtils(unittest.TestCase):
     """UnitTest"""
@@ -43,28 +46,28 @@ class TestUtils(unittest.TestCase):
 
     def test_debug_prometheus_push(self):
         """Test Prometheus Push Debug API"""
-        for data in [{'hostname': 'sdn-dtn-1-7.ultralight.org', 'hosttype': 'host',
-                      'type': 'prometheus-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org',
-                                                              'sense_mon_id': 'rtmon-1'},
-                      'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610),
-                      'resolution': '5'},
-                     {'hostname': 'sdn-dtn-1-7.ultralight.org', 'hosttype': 'host',
-                      'type': 'arp-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org',
-                                                       'sense_mon_id': 'rtmon-1'},
-                      'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610),
-                      'resolution': '5'},
-                     {'hostname': 'dellos9_s0', 'hosttype': 'host',
-                      'type': 'prometheus-push', 'metadata': {'instance': 'dellos9_s0', 'sense_mon_id': 'rtmon-1'},
-                      'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610),
-                      'resolution': '5'}]:
+        for data in [
+            {'hostname': 'sdn-dtn-1-7.ultralight.org', 'hosttype': 'host',
+             'type': 'prometheus-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org',
+                                                     'sense_mon_id': 'rtmon-1'},
+             'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610), 'resolution': 10},
+            {'hostname': 'sdn-dtn-1-7.ultralight.org', 'hosttype': 'host',
+             'type': 'arp-push', 'metadata': {'instance': 'sdn-dtn-1-7.ultralight.org',
+                                              'sense_mon_id': 'rtmon-1'},
+             'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610), 'resolution': 10},
+            {'hostname': 'dellos9_s0', 'hosttype': 'host',
+             'type': 'prometheus-push', 'metadata': {'instance': 'dellos9_s0', 'sense_mon_id': f'rtmon-{int(time.time())}'},
+             'gateway': 'dev2.virnao.com:9091', 'runtime': str(int(getUTCnow())+610), 'resolution': 10,
+             'filter': {'snmp': {'operator': 'or', 'queries': {'ifDescr': 'hundredGigE 1/1',
+                                                               'Key': ['ifHCInOctets', 'ifHCOutOctets']}}}}]:
             outsuc = {"out": ["running"], "err": "", "exitCode": 0}
             dataupd = {'state': 'active', 'output': json.dumps(outsuc)}
             debugActions(self, data, dataupd)
 
             url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getalldebughostnameactive/dummyhostname"
             out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
-            self.assertEqual(out[1], 200)
-            self.assertEqual(out[2], 'OK')
+            self.assertEqual(out[1], 200, msg=f'{str(out)}')
+            self.assertEqual(out[2], 'OK', msg=f'{str(out)}')
 
 
 if __name__ == '__main__':
