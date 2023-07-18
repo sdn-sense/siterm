@@ -2,8 +2,6 @@
 # pylint: disable=line-too-long
 """
     LookUpService gets all information and prepares MRML schema.
-
-
 Authors:
   Justas Balcas jbalcas (at) caltech.edu
 

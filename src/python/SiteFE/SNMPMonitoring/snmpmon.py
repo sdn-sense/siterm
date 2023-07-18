@@ -201,31 +201,6 @@ class SNMPMonitoring():
                    'updatedate': getUTCnow()}
             self.dbI.update('debugrequests', [out])
 
-    def startRealTime(self, host, mibs=None):
-        """This is used to get a real time stats for SENSE RTMON via actions"""
-        self.err = []
-        self._start()
-        macs = {}
-        if host not in self.switches:
-            return {}
-        self._getSNMPSession(host)
-        if not self.session:
-            return {}
-        if not mibs:
-            mibs = self.config['MAIN']['snmp']['mibs']
-        out = {}
-        self._getMacAddrSession(host, macs)
-        for key in mibs:
-            allvals = self._getSNMPVals(key)
-            for item in allvals:
-                indx = item.oid_index
-                out.setdefault(indx, {})
-                out[indx][key] = item.value.replace('\x00', '')
-        out['macs'] = macs[host]
-        if self.err:
-            self.logger.warning(f'SNMP Monitoring Errors: {self.err}')
-        return out
-
 
 def execute(config=None, args=None):
     """Main Execute."""
