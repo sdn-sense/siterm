@@ -19,7 +19,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
-from DTNRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import evaldict
 
 
 class FrontendCalls():

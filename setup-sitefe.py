@@ -13,12 +13,12 @@ from setupUtilities import list_packages, get_py_modules, get_web_files, VERSION
 # Also another cronjob, which monitors config file and modifies cronjobs if needed.
 # Currently it is allowed to specify only minutes and up to 30 minutes.
 # This is how CRONJOBS are handled and division is done only for the current hour.
-SCRIPTS = ["packaging/general/Config-Fetcher", "packaging/dtnrm-site-fe/scripts/dtnrm-prompush"]
+SCRIPTS = ["packaging/general/Config-Fetcher", "packaging/siterm-site-fe/scripts/siterm-prompush"]
 for sectionName in ['LookUpService', 'ProvisioningService', 'SNMPMonitoring']:
-    SCRIPTS.append('packaging/dtnrm-site-fe/scripts/%s-update' % sectionName)
+    SCRIPTS.append('packaging/siterm-site-fe/scripts/%s-update' % sectionName)
 
 setup(
-    name='DTNRMSiteFE',
+    name='SiteRMSiteFE',
     version="%s" % VERSION,
     long_description="End Site-RM Site installation",
     author="Justas Balcas",
@@ -27,13 +27,13 @@ setup(
     download_url=f"https://github.com/sdn-sense/siterm/archive/refs/tags/{VERSION}.tar.gz",
     keywords=['End Site-RM', 'system', 'monitor', 'SDN', 'end-to-end'],
     package_dir={'': 'src/python/'},
-    packages=['SiteFE', 'DTNRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/DTNRMLibs/']),
+    packages=['SiteFE', 'SiteRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/SiteRMLibs/']),
     install_requires=[],
-    data_files=[("/var/www/wsgi-scripts/", ["packaging/dtnrm-site-fe/sitefe.wsgi"]),
-                ("/etc/httpd/conf.d/", ["packaging/dtnrm-site-fe/sitefe-httpd.conf",
-                                        "packaging/dtnrm-site-fe/welcome.conf"]),
+    data_files=[("/var/www/wsgi-scripts/", ["packaging/siterm-site-fe/sitefe.wsgi"]),
+                ("/etc/httpd/conf.d/", ["packaging/siterm-site-fe/sitefe-httpd.conf",
+                                        "packaging/siterm-site-fe/welcome.conf"]),
                 ("/etc/cron.d/", ["packaging/general/siterm-crons"]),
                 ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh"])] + get_web_files(),
-    py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/DTNRMLibs']),
+    py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/SiteRMLibs']),
     scripts=SCRIPTS
 )

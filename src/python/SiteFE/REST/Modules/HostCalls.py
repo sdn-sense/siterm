@@ -19,12 +19,12 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import reportServiceStatus
-from DTNRMLibs.MainUtilities import jsondumps
-from DTNRMLibs.CustomExceptions import NotFoundError
-from DTNRMLibs.CustomExceptions import BadRequestError
-from DTNRMLibs.MainUtilities import read_input_data
+from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.MainUtilities import reportServiceStatus
+from SiteRMLibs.MainUtilities import jsondumps
+from SiteRMLibs.CustomExceptions import NotFoundError
+from SiteRMLibs.CustomExceptions import BadRequestError
+from SiteRMLibs.MainUtilities import read_input_data
 
 
 class HostCalls():
@@ -58,7 +58,7 @@ class HostCalls():
               lat      -> latitude, enought to provide approximately site location
               lon      -> longitude, enought to provide approximately site location
         Examples:
-        GOOD: {"hostname": "dtn-rm.ultralight.org",
+        GOOD: {"hostname": "siterm.ultralight.org",
                "ip": "1.2.3.4"}
         """
         inputDict = read_input_data(environ)
@@ -113,7 +113,7 @@ class HostCalls():
         """Set Service State in DB."""
         inputDict = read_input_data(environ)
         # Only 3 Services are supported to report via URL
-        # DTNRM-Agent | DTNRM-Ruler | DTNRM-Debugger
+        # SiteRM-Agent | SiteRM-Ruler | SiteRM-Debugger
         if inputDict['servicename'] not in ['Agent', 'Ruler', 'Debugger',
                                             'LookUpService', 'ProvisioningService',
                                             'SNMPMonitoring', 'Prometheus-Push', 'Arp-Push']:

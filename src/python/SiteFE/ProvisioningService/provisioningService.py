@@ -23,17 +23,17 @@ UpdateDate              : 2022/05/09
 import sys
 import time
 import datetime
-from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import jsondumps
-from DTNRMLibs.MainUtilities import getLoggingObject
-from DTNRMLibs.MainUtilities import getGitConfig
-from DTNRMLibs.MainUtilities import createDirs
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.MainUtilities import getDBConn
-from DTNRMLibs.Backends.main import Switch
-from DTNRMLibs.CustomExceptions import NoOptionError
-from DTNRMLibs.CustomExceptions import NoSectionError
+from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import jsondumps
+from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.MainUtilities import createDirs
+from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import getDBConn
+from SiteRMLibs.Backends.main import Switch
+from SiteRMLibs.CustomExceptions import NoOptionError
+from SiteRMLibs.CustomExceptions import NoSectionError
 from SiteFE.ProvisioningService.modules.RoutingService import RoutingService
 from SiteFE.ProvisioningService.modules.VirtualSwitchingService import VirtualSwitchingService
 

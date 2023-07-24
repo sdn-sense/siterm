@@ -9,7 +9,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-# Title             : dtnrm
+# Title             : siterm
 # Author            : Justas Balcas
 # Email             : justas.balcas (at) cern.ch
 # @Copyright        : Copyright (C) 2021 California Institute of Technology
@@ -41,8 +41,8 @@ if [ $git_tag_conflict -ne 0 ];
 sed -i "s/.*VERSION = .*/VERSION = '$NEW_VERSION'/" $FDIR/../setupUtilities.py
 sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/__init__.py
 sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/SiteFE/__init__.py
-sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/DTNRMLibs/__init__.py
-sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/DTNRMAgent/__init__.py
+sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/SiteRMLibs/__init__.py
+sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/SiteRMAgent/__init__.py
 
 echo "IMPORTANT: Please update release_notes file with changes from previous version"
 echo "Issue `git add` command and add all new version files"

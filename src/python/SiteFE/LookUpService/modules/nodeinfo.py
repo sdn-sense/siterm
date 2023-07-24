@@ -9,9 +9,9 @@ Authors:
 
 Date: 2021/12/01
 """
-from DTNRMLibs.MainUtilities import evaldict, strtolist, getAllHosts
-from DTNRMLibs.ipaddr import validMRMLName
-from DTNRMLibs.CustomExceptions import NoOptionError
+from SiteRMLibs.MainUtilities import evaldict, strtolist, getAllHosts
+from SiteRMLibs.ipaddr import validMRMLName
+from SiteRMLibs.CustomExceptions import NoOptionError
 
 def ignoreInterface(intfKey, intfDict, hostinfo):
     """

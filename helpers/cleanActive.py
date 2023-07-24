@@ -2,8 +2,8 @@
 """Clean up all active deltas and make it empty"""
 import sys
 import pprint
-from DTNRMLibs.FECalls import getDBConn
-from DTNRMLibs.MainUtilities import getVal, evaldict, getUTCnow
+from SiteRMLibs.FECalls import getDBConn
+from SiteRMLibs.MainUtilities import getVal, evaldict, getUTCnow
 
 
 def cleanup(sitename):

@@ -11,8 +11,8 @@ Date: 2021/12/01
 """
 from rdflib import URIRef, Literal
 from rdflib.namespace import XSD
-from DTNRMLibs.CustomExceptions import NoOptionError
-from DTNRMLibs.MainUtilities import strtolist
+from SiteRMLibs.CustomExceptions import NoOptionError
+from SiteRMLibs.MainUtilities import strtolist
 
 class RDFHelper():
     """RDF Helper preparation class."""

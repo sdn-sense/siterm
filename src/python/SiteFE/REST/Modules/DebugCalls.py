@@ -20,10 +20,10 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2023/01/03
 """
 import re
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import jsondumps
-from DTNRMLibs.CustomExceptions import BadRequestError
-from DTNRMLibs.MainUtilities import read_input_data
+from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.MainUtilities import jsondumps
+from SiteRMLibs.CustomExceptions import BadRequestError
+from SiteRMLibs.MainUtilities import read_input_data
 
 
 class CallValidator():

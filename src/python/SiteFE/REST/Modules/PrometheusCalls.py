@@ -20,10 +20,10 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2023/01/03
 """
 import psutil
-from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import isValFloat
-from DTNRMLibs.MainUtilities import getAllHosts
+from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.MainUtilities import isValFloat
+from SiteRMLibs.MainUtilities import getAllHosts
 from prometheus_client import generate_latest, CollectorRegistry
 from prometheus_client import Enum, Info, CONTENT_TYPE_LATEST
 from prometheus_client import Gauge

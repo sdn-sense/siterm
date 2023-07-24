@@ -19,7 +19,7 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
-from DTNRMLibs.ipaddr import normalizedip
+from SiteRMLibs.ipaddr import normalizedip
 
 
 def dictCompare(inDict, oldDict, key1):

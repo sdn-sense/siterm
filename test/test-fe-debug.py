@@ -5,8 +5,8 @@ import unittest
 import http.client
 import simplejson as json
 import yaml
-from DTNRMLibs.HTTPLibrary import Requests
-from DTNRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.HTTPLibrary import Requests
+from SiteRMLibs.MainUtilities import getUTCnow
 
 
 def makeRequest(cls, url, params):

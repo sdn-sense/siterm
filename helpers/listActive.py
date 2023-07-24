@@ -2,8 +2,8 @@
 """List Active configuration"""
 import sys
 import pprint
-from DTNRMLibs.FECalls import getDBConn
-from DTNRMLibs.MainUtilities import getVal, evaldict
+from SiteRMLibs.FECalls import getDBConn
+from SiteRMLibs.MainUtilities import getVal, evaldict
 
 
 def listActive(sitename):

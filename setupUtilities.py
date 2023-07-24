@@ -11,7 +11,7 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title                   : dtnrm
+Title                   : siterm
 Author                  : Justas Balcas
 Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
@@ -24,8 +24,8 @@ import sys
 # setupUtilities.py
 # src/python/__init__.py
 # src/python/SiteFE/__init__.py
-# src/python/DTNRMAgent/__init__.py
-# src/python/DTNRMLibs/__init__.py
+# src/python/SiteRMAgent/__init__.py
+# src/python/SiteRMLibs/__init__.py
 VERSION = '1.2.0'
 
 
@@ -43,12 +43,12 @@ def get_path_to_root(appendLocation=None):
 
 def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=False):
     """Take a list of directories and return a list of all packages under those
-    directories, Skipping 'CVS', '.svn', 'svn', '.git', '', 'dtnrmagent.egg-
+    directories, Skipping 'CVS', '.svn', 'svn', '.git', '', 'sitermagent.egg-
     info' files."""
     if not packageDirs:
         packageDirs = []
     if not ignoreThese:
-        ignoreThese = set(['CVS', '.svn', 'svn', '.git', '', 'dtnrmagent.egg-info'])
+        ignoreThese = set(['CVS', '.svn', 'svn', '.git', '', 'sitermagent.egg-info'])
     else:
         ignoreThese = set(ignoreThese)
     packages = []

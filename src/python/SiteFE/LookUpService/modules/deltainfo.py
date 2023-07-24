@@ -12,11 +12,11 @@ Authors:
 Date: 2021/12/01
 """
 from rdflib.namespace import XSD
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import getActiveDeltas
-from DTNRMLibs.MainUtilities import convertTSToDatetime
-from DTNRMLibs.ipaddr import validMRMLName
-from DTNRMLibs.ipaddr import normalizedip
+from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.MainUtilities import getActiveDeltas
+from SiteRMLibs.MainUtilities import convertTSToDatetime
+from SiteRMLibs.ipaddr import validMRMLName
+from SiteRMLibs.ipaddr import normalizedip
 
 
 class DeltaInfo():
