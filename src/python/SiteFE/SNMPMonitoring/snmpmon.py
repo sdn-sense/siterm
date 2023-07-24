@@ -26,16 +26,16 @@ import sys
 from easysnmp import Session
 from easysnmp.exceptions import EasySNMPUnknownObjectIDError
 from easysnmp.exceptions import EasySNMPTimeoutError
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.MainUtilities import getDBConn
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import createDirs
-from DTNRMLibs.MainUtilities import contentDB
-from DTNRMLibs.Backends.main import Switch
-from DTNRMLibs.MainUtilities import getGitConfig
-from DTNRMLibs.MainUtilities import getLoggingObject
-from DTNRMLibs.MainUtilities import jsondumps
-from DTNRMLibs.PromPush import PromPushService
+from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import getDBConn
+from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.MainUtilities import createDirs
+from SiteRMLibs.MainUtilities import contentDB
+from SiteRMLibs.Backends.main import Switch
+from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import jsondumps
+from SiteRMLibs.PromPush import PromPushService
 
 
 class SNMPMonitoring():
@@ -167,7 +167,7 @@ class SNMPMonitoring():
 
     def _checkBackgroundProcesses(self, item):
         """Start Background work, like prometheus push"""
-        workDir = self.config.get('general', 'private_dir') + "/DTNRM/background/"
+        workDir = self.config.get('general', 'private_dir') + "/SiteRM/background/"
         createDirs(workDir)
         fname = workDir + f"/background-process-{item['id']}.json"
         if not os.path.isfile(fname):

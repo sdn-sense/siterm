@@ -20,12 +20,12 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2023/01/03
 """
 from SiteFE.PolicyService import stateMachine as stateM
-from DTNRMLibs.MainUtilities import getAllFileContent
-from DTNRMLibs.MainUtilities import getModTime
-from DTNRMLibs.MainUtilities import httpdate
-from DTNRMLibs.MainUtilities import encodebase64
-from DTNRMLibs.MainUtilities import convertTSToDatetime
-from DTNRMLibs.CustomExceptions import ModelNotFound
+from SiteRMLibs.MainUtilities import getAllFileContent
+from SiteRMLibs.MainUtilities import getModTime
+from SiteRMLibs.MainUtilities import httpdate
+from SiteRMLibs.MainUtilities import encodebase64
+from SiteRMLibs.MainUtilities import convertTSToDatetime
+from SiteRMLibs.CustomExceptions import ModelNotFound
 
 
 class ModelCalls():

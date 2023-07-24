@@ -2,10 +2,10 @@
 """Cancel all deltas in Site Frontend."""
 from __future__ import print_function
 import sys
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.MainUtilities import getLoggingObject
-from DTNRMLibs.MainUtilities import getConfig
-from DTNRMLibs.FECalls import getDBConn
+from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import getConfig
+from SiteRMLibs.FECalls import getDBConn
 from SiteFE.PolicyService.stateMachine import StateMachine
 
 

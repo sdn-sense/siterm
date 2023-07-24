@@ -27,23 +27,23 @@ from SiteFE.REST.Modules.DeltaCalls import DeltaCalls
 from SiteFE.REST.Modules.ModelCalls import ModelCalls
 from SiteFE.REST.Modules.FrontendCalls import FrontendCalls
 from SiteFE.REST.Modules.PrometheusCalls import PrometheusCalls
-from DTNRMLibs.x509 import CertHandler
-from DTNRMLibs.MainUtilities import contentDB
-from DTNRMLibs.MainUtilities import getDBConn
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.MainUtilities import getGitConfig
-from DTNRMLibs.MainUtilities import getHeaders
-from DTNRMLibs.MainUtilities import getUrlParams
-from DTNRMLibs.MainUtilities import getCustomOutMsg
-from DTNRMLibs.MainUtilities import jsondumps
-from DTNRMLibs.CustomExceptions import HTTPResponses
-from DTNRMLibs.CustomExceptions import BadRequestError
-from DTNRMLibs.CustomExceptions import NotSupportedArgument
-from DTNRMLibs.CustomExceptions import TooManyArgumentalValues
-from DTNRMLibs.CustomExceptions import DeltaNotFound
-from DTNRMLibs.CustomExceptions import ModelNotFound
-from DTNRMLibs.CustomExceptions import MethodNotSupported
-from DTNRMLibs.CustomExceptions import NotAcceptedHeader
+from SiteRMLibs.x509 import CertHandler
+from SiteRMLibs.MainUtilities import contentDB
+from SiteRMLibs.MainUtilities import getDBConn
+from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.MainUtilities import getHeaders
+from SiteRMLibs.MainUtilities import getUrlParams
+from SiteRMLibs.MainUtilities import getCustomOutMsg
+from SiteRMLibs.MainUtilities import jsondumps
+from SiteRMLibs.CustomExceptions import HTTPResponses
+from SiteRMLibs.CustomExceptions import BadRequestError
+from SiteRMLibs.CustomExceptions import NotSupportedArgument
+from SiteRMLibs.CustomExceptions import TooManyArgumentalValues
+from SiteRMLibs.CustomExceptions import DeltaNotFound
+from SiteRMLibs.CustomExceptions import ModelNotFound
+from SiteRMLibs.CustomExceptions import MethodNotSupported
+from SiteRMLibs.CustomExceptions import NotAcceptedHeader
 
 
 def isiterable(inVal):

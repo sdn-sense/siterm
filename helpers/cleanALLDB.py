@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Clean all database"""
 import sys
-from DTNRMLibs.MainUtilities import getDBConn
-from DTNRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import getDBConn
+from SiteRMLibs.MainUtilities import getVal
 
 def cleanDB(sitename):
     """Clean All DB"""

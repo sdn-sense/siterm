@@ -1,7 +1,7 @@
 #!/bin/sh
 
 TMP_DIR=$(mktemp -d)
-GIT_REPO=`cat /etc/dtnrm.yaml | grep 'GIT_REPO' | awk '{print $2}' | tr -d '"' | tr -d "'"`
+GIT_REPO=`cat /etc/siterm.yaml | grep 'GIT_REPO' | awk '{print $2}' | tr -d '"' | tr -d "'"`
 CA_DIR=/etc/grid-security/certificates
 
 cd $TMP_DIR

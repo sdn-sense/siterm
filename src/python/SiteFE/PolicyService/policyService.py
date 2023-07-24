@@ -19,18 +19,18 @@ from rdflib import Graph
 from rdflib import URIRef
 from rdflib.plugins.parsers.notation3 import BadSyntax
 from dateutil import parser
-from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import getGitConfig
-from DTNRMLibs.MainUtilities import getLoggingObject
-from DTNRMLibs.MainUtilities import contentDB
-from DTNRMLibs.MainUtilities import createDirs
-from DTNRMLibs.MainUtilities import decodebase64
-from DTNRMLibs.MainUtilities import getCurrentModel, getActiveDeltas, writeActiveDeltas
-from DTNRMLibs.MainUtilities import getAllHosts
-from DTNRMLibs.MainUtilities import getDBConn
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.CustomExceptions import OverlapException
-from DTNRMLibs.CustomExceptions import WrongIPAddress
+from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import contentDB
+from SiteRMLibs.MainUtilities import createDirs
+from SiteRMLibs.MainUtilities import decodebase64
+from SiteRMLibs.MainUtilities import getCurrentModel, getActiveDeltas, writeActiveDeltas
+from SiteRMLibs.MainUtilities import getAllHosts
+from SiteRMLibs.MainUtilities import getDBConn
+from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.CustomExceptions import OverlapException
+from SiteRMLibs.CustomExceptions import WrongIPAddress
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to general

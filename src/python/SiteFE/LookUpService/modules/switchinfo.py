@@ -9,9 +9,9 @@ Authors:
 
 Date: 2021/12/01
 """
-from DTNRMLibs.ipaddr import validMRMLName
-from DTNRMLibs.CustomExceptions import NoOptionError
-from DTNRMLibs.CustomExceptions import NoSectionError
+from SiteRMLibs.ipaddr import validMRMLName
+from SiteRMLibs.CustomExceptions import NoOptionError
+from SiteRMLibs.CustomExceptions import NoSectionError
 
 
 def generateVal(cls, inval, inkey, esc=False):

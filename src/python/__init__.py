@@ -3,6 +3,6 @@
 # setupUtilities.py
 # src/python/__init__.py
 # src/python/SiteFE/__init__.py
-# src/python/DTNRMAgent/__init__.py
-# src/python/DTNRMLibs/__init__.py
+# src/python/SiteRMAgent/__init__.py
+# src/python/SiteRMLibs/__init__.py
 __version__ = '1.2.0'

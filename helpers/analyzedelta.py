@@ -4,12 +4,12 @@ import sys
 import tempfile
 import ast
 import pprint
-from DTNRMLibs.MainUtilities import getAllHosts
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import decodebase64
-from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
-from DTNRMLibs.MainUtilities import getDBConn
+from SiteRMLibs.MainUtilities import getAllHosts
+from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import decodebase64
+from SiteRMLibs.MainUtilities import getConfig, getStreamLogger
+from SiteRMLibs.MainUtilities import getDBConn
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteFE.PolicyService import policyService as polS
 

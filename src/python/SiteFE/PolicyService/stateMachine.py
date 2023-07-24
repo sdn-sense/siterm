@@ -12,15 +12,15 @@ Copyright 2017 California Institute of Technology
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-Title                   : dtnrm
+Title                   : siterm
 Author                  : Justas Balcas
 Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2018/11/26
 """
-from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.MainUtilities import getLoggingObject
 
 class ConnectionMachine():
     """Connection State machine.Maps Deltas with 1 to N connections"""

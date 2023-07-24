@@ -3,11 +3,11 @@
 import sys
 import tempfile
 import ast
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import contentDB
-from DTNRMLibs.MainUtilities import getConfig, getStreamLogger
-from DTNRMLibs.FECalls import getDBConn
+from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import contentDB
+from SiteRMLibs.MainUtilities import getConfig, getStreamLogger
+from SiteRMLibs.FECalls import getDBConn
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteFE.PolicyService import policyService as polS
 

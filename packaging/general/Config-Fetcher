@@ -8,9 +8,9 @@ Changes applied to this code:
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
 import sys
-from DTNRMLibs.Daemonizer import Daemon, getParser, validateArgs
-from DTNRMLibs.ConfigFetcher import ConfigFetcher
-from DTNRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
+from SiteRMLibs.ConfigFetcher import ConfigFetcher
+from SiteRMLibs.MainUtilities import getLoggingObject
 
 
 COMPONENT = 'ConfigFetcher'

@@ -2,10 +2,10 @@
 """List all deltas inFrontend."""
 from __future__ import print_function
 import sys
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import getConfig, getLoggingObject
-from DTNRMLibs.FECalls import getDBConn
+from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import getConfig, getLoggingObject
+from SiteRMLibs.FECalls import getDBConn
 from SiteFE.PolicyService.stateMachine import StateMachine
 
 

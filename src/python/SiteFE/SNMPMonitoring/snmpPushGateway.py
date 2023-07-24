@@ -7,11 +7,11 @@ Authors:
 
 Date: 2023/03/17
 """
-from DTNRMLibs.MainUtilities import getLoggingObject
-from DTNRMLibs.MainUtilities import isValFloat
-from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import getVal
-from DTNRMLibs.MainUtilities import getDBConn
+from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import isValFloat
+from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import getDBConn
 from prometheus_client import CollectorRegistry, push_to_gateway
 from prometheus_client import Info, Gauge
 

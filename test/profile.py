@@ -5,7 +5,7 @@ import os
 import psutil
 import inspect
 from SiteFE.LookUpService import lookup as LS
-from DTNRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.MainUtilities import getGitConfig
 
 
 def elapsedSince(start):

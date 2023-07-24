@@ -20,19 +20,19 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2023/01/03
 """
 from tempfile import NamedTemporaryFile
-from DTNRMLibs.MainUtilities import httpdate
-from DTNRMLibs.MainUtilities import getModTime
-from DTNRMLibs.MainUtilities import encodebase64
-from DTNRMLibs.MainUtilities import decodebase64
-from DTNRMLibs.MainUtilities import convertTSToDatetime
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.MainUtilities import evaldict
-from DTNRMLibs.MainUtilities import jsondumps
-from DTNRMLibs.RESTInteractions import get_post_form
-from DTNRMLibs.RESTInteractions import get_json_post_form
-from DTNRMLibs.RESTInteractions import is_post_request
-from DTNRMLibs.RESTInteractions import is_application_json
-from DTNRMLibs.CustomExceptions import ConflictEntries, BadRequestError, DeltaNotFound, WrongDeltaStatusTransition
+from SiteRMLibs.MainUtilities import httpdate
+from SiteRMLibs.MainUtilities import getModTime
+from SiteRMLibs.MainUtilities import encodebase64
+from SiteRMLibs.MainUtilities import decodebase64
+from SiteRMLibs.MainUtilities import convertTSToDatetime
+from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import jsondumps
+from SiteRMLibs.RESTInteractions import get_post_form
+from SiteRMLibs.RESTInteractions import get_json_post_form
+from SiteRMLibs.RESTInteractions import is_post_request
+from SiteRMLibs.RESTInteractions import is_application_json
+from SiteRMLibs.CustomExceptions import ConflictEntries, BadRequestError, DeltaNotFound, WrongDeltaStatusTransition
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
 
@@ -283,7 +283,7 @@ class DeltaCalls():
         Output: application/json
         Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/actions/(commit)
                   # Will commit or remove specific delta. remove is allowed only from same host or
-                    dtnrm-site-frontend
+                    siterm-site-frontend
         """
         msgOut = self.__commitdelta(kwargs['deltaid'], environ, **kwargs)
         self.httpresp.ret_204('application/json', kwargs["start_response"], None)

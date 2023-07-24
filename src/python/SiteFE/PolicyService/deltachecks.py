@@ -11,9 +11,9 @@ import copy
 from datetime import datetime
 from collections import namedtuple
 from ipaddress import IPv4Network, IPv6Network, AddressValueError
-from DTNRMLibs.MainUtilities import getUTCnow
-from DTNRMLibs.CustomExceptions import OverlapException
-from DTNRMLibs.CustomExceptions import WrongIPAddress
+from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.CustomExceptions import OverlapException
+from SiteRMLibs.CustomExceptions import WrongIPAddress
 
 
 class ConflictChecker():
