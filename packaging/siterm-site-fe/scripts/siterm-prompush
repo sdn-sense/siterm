@@ -24,7 +24,7 @@ class MyDaemon(Daemon):
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
         outThreads = {}
-        workDir = self.config.get('general', 'private_dir') + "/SiteRM/background/"
+        workDir = self.config.get('general', 'privatedir') + "/SiteRM/background/"
         # get run ID;
         fname = workDir + f"/background-process-{self.inargs.runnum}.json"
         if not os.path.isfile(fname):

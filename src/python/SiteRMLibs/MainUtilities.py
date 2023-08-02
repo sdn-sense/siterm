@@ -308,7 +308,7 @@ class GitConfig():
         """Preset default config parameters for Agent"""
         defConfig = {'MAIN': {'general': {'logDir': '/var/log/siterm-agent/',
                                           'logLevel': 'INFO',
-                                          'private_dir': '/opt/siterm/config/'},
+                                          'privatedir': '/opt/siterm/config/'},
                               'agent': {'norules': False,
                                         'rsts_enabled': 'ipv4,ipv6'},
                               'qos': {'policy': 'default-not-set',
@@ -398,7 +398,7 @@ class GitConfig():
         """Preset default config parameters for FE"""
         defConfig = {'MAIN': {'general': {'logDir': '/var/log/siterm-site-fe/',
                                           'logLevel': 'INFO',
-                                          'private_dir': '/opt/siterm/config/'},
+                                          'privatedir': '/opt/siterm/config/'},
                               'ansible': {'private_data_dir': '/opt/siterm/config/ansible/sense/',
                                           'inventory': '/opt/siterm/config/ansible/sense/inventory/inventory.yaml',
                                           'rotate_artifacts': 100,
