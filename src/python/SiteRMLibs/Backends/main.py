@@ -218,6 +218,7 @@ class Switch(Node):
                 if 'switchport' in portDict.keys() and portDict['switchport']:
                     portDict['desttype'] = 'switch'
         # Add route information and lldp information to output dictionary
+
         self.output['info'][switch] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_net_info')
         self.output['routes'][switch]['ipv4'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_net_ipv4')
         self.output['routes'][switch]['ipv6'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_net_ipv6')
