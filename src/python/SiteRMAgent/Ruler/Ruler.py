@@ -27,7 +27,7 @@ class Ruler(contentDB, QOS, OverlapLib):
     def __init__(self, config, sitename):
         self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service='Ruler')
-        self.workDir = self.config.get('general', 'private_dir') + "/SiteRM/RulerAgent/"
+        self.workDir = self.config.get('general', 'privatedir') + "/SiteRM/RulerAgent/"
         createDirs(self.workDir)
         self.fullURL = getFullUrl(self.config, sitename)
         self.hostname = self.config.get('agent', 'hostname')

@@ -85,7 +85,7 @@ class RecurringAction():
     def startwork(self):
         """Execute main script for SiteRM Agent output preparation."""
 
-        workDir = self.config.get('general', 'private_dir') + "/SiteRM/"
+        workDir = self.config.get('general', 'privatedir') + "/SiteRM/"
         createDirs(workDir)
         dic, excMsg = self.prepareJsonOut()
         fullUrl = getFullUrl(self.config, self.sitename)

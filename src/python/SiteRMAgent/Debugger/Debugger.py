@@ -75,7 +75,7 @@ class Debugger():
 
     def _startbackgroundwork(self, item):
         """Start Background work, like prometheus push, arppush"""
-        workDir = self.config.get('general', 'private_dir') + "/SiteRM/background/"
+        workDir = self.config.get('general', 'privatedir') + "/SiteRM/background/"
         createDirs(workDir)
         fname = workDir + f"/background-process-{item['id']}.json"
         if not os.path.isfile(fname):

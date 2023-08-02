@@ -167,7 +167,7 @@ class SNMPMonitoring():
 
     def _checkBackgroundProcesses(self, item):
         """Start Background work, like prometheus push"""
-        workDir = self.config.get('general', 'private_dir') + "/SiteRM/background/"
+        workDir = self.config.get('general', 'privatedir') + "/SiteRM/background/"
         createDirs(workDir)
         fname = workDir + f"/background-process-{item['id']}.json"
         if not os.path.isfile(fname):
