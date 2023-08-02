@@ -84,7 +84,7 @@ class Switch(Node):
         # Also - mrml does not expect to get string in nml. so need to replace all
         # Inside the output of dictionary
         # Also - sometimes lldp reports multiple quotes for interface name from ansible out
-        for rpl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""]]:
+        for rpl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""], [":", "_"]]:
             port = port.replace(rpl[0], rpl[1])
         return port
 
@@ -218,10 +218,11 @@ class Switch(Node):
                 if 'switchport' in portDict.keys() and portDict['switchport']:
                     portDict['desttype'] = 'switch'
         # Add route information and lldp information to output dictionary
-        self.output['info'][switch] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_info')
-        self.output['routes'][switch]['ipv4'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_ipv4')
-        self.output['routes'][switch]['ipv6'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_ipv6')
-        self.output['lldp'][switch] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_command_lldp')
+
+        self.output['info'][switch] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_net_info')
+        self.output['routes'][switch]['ipv4'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_net_ipv4')
+        self.output['routes'][switch]['ipv6'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_net_ipv6')
+        self.output['lldp'][switch] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_net_lldp')
         self.output['nametomac'][switch] = self.plugin.nametomac(self.switches['output'][switch], switch)
 
 

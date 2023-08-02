@@ -161,17 +161,18 @@ class RDFHelper():
         self._addNode(**kwargs)
         if not kwargs['hostname'] or not kwargs['portName']:
             return ""
+        newuri = f":{kwargs['hostname']}:{self.switch.getSystemValidPortName(kwargs['portName'])}"
         self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}"),
                            self.genUriRef('nml', 'hasBidirectionalPort'),
-                           self.genUriRef('site', f":{kwargs['hostname']}:{kwargs['portName']}")))
-        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:{kwargs['portName']}"),
+                           self.genUriRef('site', newuri)))
+        self.newGraph.add((self.genUriRef('site', newuri),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'BidirectionalPort')))
         if 'parent' in kwargs and kwargs['parent']:
             self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:{kwargs['parent']}"),
                                self.genUriRef('nml', 'hasBidirectionalPort'),
-                               self.genUriRef('site', f":{kwargs['hostname']}:{kwargs['portName']}")))
-        return f":{kwargs['hostname']}:{kwargs['portName']}"
+                               self.genUriRef('site', newuri)))
+        return newuri
 
     def _addSwitchingService(self, **kwargs):
         """Add Switching Service to Model"""
@@ -422,7 +423,8 @@ class RDFHelper():
         """Add Vlan Port to Model"""
         if not kwargs['vlan'] and not kwargs['vtype']:
             return ""
-        vlanuri = f":{kwargs['hostname']}:{kwargs['portName']}:{kwargs['vtype']}+{kwargs['vlan']}"
+        uri = self._addPort(**kwargs)
+        vlanuri = f"{uri}:{kwargs['vtype']}+{kwargs['vlan']}"
         if not kwargs['portName'].startswith('Vlan_'):
             uri = self._addPort(**kwargs)
             self.newGraph.add((self.genUriRef('site', uri),

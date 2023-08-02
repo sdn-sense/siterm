@@ -183,7 +183,7 @@ class SwitchInfo():
             except (NoOptionError, NoSectionError):
                 rst = False
             for portName, portSwitch in list(switchDict.items()):
-                newuri = f":{switchName}:{portName}"
+                newuri = f":{switchName}:{self.switch.getSystemValidPortName(portName)}"
                 self._addVswPort(hostname=switchName, portName=portName, vsw=vsw)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
                 if rst:
@@ -239,11 +239,10 @@ class SwitchInfo():
                 if macLookUp in hMacs:
                     return hName
             return None
-
         for lldpHost, lldpDict in switchInfo['lldp'].items():
             for lldpIntf, intfDict in lldpDict.items():
                 if 'remote_port_id' not in intfDict:
-                    self.logger.debug(f'Remote port id not available from lldp info. lldp enabled? Full port info {intfDict}')
+                    self.logger.debug(f'Remote port id not available from lldp info. lldp enabled? Full port info {lldpHost} {lldpIntf} {intfDict}')
                     continue
                 macName = getSwitchSiteRMName(switchInfo['nametomac'], intfDict['remote_chassis_id'])
                 if not macName:
