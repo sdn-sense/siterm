@@ -21,18 +21,6 @@ class AristaEOS():
         self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
 
     @staticmethod
-    def getSystemValidPortName(port):
-        """Get Systematic port name. MRML expects it without spaces"""
-        # Spaces from port name are replaced with _
-        # Backslashes are replaced with dash
-        # Also - mrml does not expect to get string in nml. so need to replace all
-        # Inside the output of dictionary
-        # Also - sometimes lldp reports multiple quotes for interface name from ansible out
-        for rpl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""]]:
-            port = port.replace(rpl[0], rpl[1])
-        return port
-
-    @staticmethod
     def _getVlans(inLine):
         """Get All vlans list assigned to port"""
         out = []

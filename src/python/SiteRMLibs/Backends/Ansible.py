@@ -25,9 +25,6 @@ class Switch():
         self.config = config
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service='SwitchBackends')
-        # cmd counter is used only for command with items (e.g. sonic, p4)
-        # the one switches which do not have ansible modules.
-        self.cmdCounter = 0
         self.ansibleErrs = {}
 
     @staticmethod
@@ -101,84 +98,6 @@ class Switch():
         self.__getAnsErrors(ansOut)
         return ansOut
 
-    # 0 - command show version, system. Mainly to get mac address, but might use for more info later.
-    # 1 - command to get lldp neighbors details.
-    # 2 - ip route information;
-    # 3 - ipv6 route information
-    # For Dell OS 9 - best is to use show running config;
-    # For Arista EOS - show ip route vrf all | json || show ipv6 route vrf all | json
-    # For Azure Sonic - we use normal ssh and command line. - There is also Dell Sonic Module
-    # but that one depends on sonic-cli - which is broken in latest Azure Image (py2/py3 mainly),
-    # See https://github.com/Azure/SONiC/issues/781
-    def _getMacLLDPRoute(self, hosts=None):
-        """Parser for Mac/LLDP/Route Ansible playbook"""
-        def parserWrapper(num, andsiblestdout):
-            """Parser wrapper to call specific parser function"""
-            cmdList = {0: self.parsers[action].getinfo,
-                       1: self.parsers[action].getlldpneighbors,
-                       2: self.parsers[action].getIPv4Routing,
-                       3: self.parsers[action].getIPv6Routing}
-            tmpOut = {}
-            try:
-                if num not in cmdList:
-                    self.logger.info('UNDEFINED FUNCTION num X. Return empty')
-                else:
-                    tmpOut = cmdList[num](andsiblestdout)
-            except NotImplementedError as ex:
-                self.logger.debug(f"Got Not Implemented Error. {ex}")
-            except (AttributeError, IndexError) as ex:
-                self.logger.debug(f'Got Exception calling switch module for {action} and Num {num}. Error: {ex}')
-            return tmpOut
-
-        keyMapping = {0: 'info', 1: 'lldp', 2: 'ipv4', 3: 'ipv6'}
-        out = {}
-        ansOut = {}
-        try:
-            ansOut = self._executeAnsible('maclldproute.yaml', hosts)
-        except ValueError as ex:
-            raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}") from ex
-        for host, _ in ansOut.stats['ok'].items():
-            hOut = out.setdefault(host, {})
-            for host_events in ansOut.host_events(host):
-                if host_events['event'] not in ['runner_on_ok', 'runner_item_on_ok']:
-                    continue
-                if 'stdout' in host_events['event_data']['res']:
-                    # 0 - command to get mainly mac
-                    action = host_events['event_data']['task_action']
-                    # In case of command, we pass most event_data back to Backend parser
-                    # because it does not group output in a single ansible even
-                    # as ansible network modules.
-                    if action == 'command':
-                        # This means it is not using any special ansible module
-                        # to communicate with switch/router. In this case, we get
-                        # ansible_network_os and use that for loading module
-                        action = f"{self.getAnsNetworkOS(host)}_command"
-                        # And in case action is not set - means it is badly configured
-                        # inside the ansible module by sys/net admin.
-                        # We log this inside te log, and ignore that switch
-                        if action == '_command':
-                            self.logger.info(f'WARNING. ansible_network_os is not defined for {host} host. Ignoring this host')
-                            continue
-                        if action not in self.parsers.keys():
-                            self.logger.info('WARNING. ansible action not defined in site-rm code base. Unsupported switch?')
-                            continue
-                        hOut.setdefault(keyMapping[self.cmdCounter], {})
-                        hOut[keyMapping[self.cmdCounter]] = parserWrapper(self.cmdCounter, host_events['event_data']['res'])
-                        self.cmdCounter += 1
-                    elif action not in self.parsers.keys():
-                        self.logger.info('WARNING. ansible action not defined in site-rm code base. Unsupported switch?')
-                        continue
-                    else:
-                        for val, key in keyMapping.items():
-                            if val < len(host_events.get('event_data', {}).get('res', {}).get('stdout', [])):
-                                hOut.setdefault(key, {})
-                                hOut[key] = parserWrapper(val, host_events['event_data']['res']['stdout'][val])
-            for val, key in keyMapping.items():
-                if key not in hOut:
-                    hOut.setdefault(key, {})
-                    hOut[key] = parserWrapper(val, None)
-        self.__getAnsErrors(ansOut)
-        return out
 
     def _getFacts(self, hosts=None):
         """Get All Facts for all Ansible Hosts"""
@@ -195,35 +114,14 @@ class Switch():
                 if host_events['event'] != 'runner_on_ok':
                     continue
                 action = host_events['event_data']['task_action']
-                if action == 'command':
-                    # This means it is not using any special ansible module
-                    # to communicate with switch/router. In this case, we get
-                    # ansible_network_os and use that for loading module
-                    action = f"{self.getAnsNetworkOS(host)}_command"
-                    # And in case action is not set - means it is badly configured
-                    # inside the ansible module by sys/net admin.
-                    # We log this inside te log, and ignore that switch
-                    if action == '_command':
-                        self.logger.info(f'WARNING. ansible_network_os is not defined for {host} host. Ignoring this host')
-                        continue
-                ansNetIntf = host_events.setdefault('event_data', {}).setdefault('res', {}).setdefault('ansible_facts', {}).setdefault('ansible_net_interfaces', {})
-                if action in self.parsers.keys():
-                    tmpOut = self.parsers[action].parser(host_events)
-                    for portName, portVals in tmpOut.items():
-                        ansNetIntf.setdefault(portName, {})
-                        ansNetIntf[portName].update(portVals)
-                        host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'].setdefault(portName, {})
-                        host_events['event_data']['res']['ansible_facts']['ansible_net_interfaces'][portName].update(portVals)
+                if action not in self.parsers.keys():
+                    self.logger.warning(f'Unsupported NOS. There might be issues. Contact dev team')
                 out[host] = host_events
+                ansNetIntf = host_events.setdefault('event_data', {}).setdefault('res', {}).setdefault('ansible_facts',{})
+                print(ansNetIntf.keys())
+                print(out[host].keys())
         self.__getAnsErrors(ansOut)
-        try:
-            maclldproute = self._getMacLLDPRoute(hosts)
-            for host, hitems in maclldproute.items():
-                if host in out:
-                    for key, vals in hitems.items():
-                        out[host]['event_data']['res']['ansible_facts'][f'ansible_command_{key}'] = vals
-        finally:
-            self.cmdCounter = 0
+        # TODO: add lldp, routing info
         return out, self.ansibleErrs
 
     @staticmethod
@@ -265,7 +163,7 @@ class Switch():
 
     def nametomac(self, inData, key):
         """Return all mac's associated to that host. Not in use for RAW plugin"""
-        macs = inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get('ansible_command_info', {}).get('mac', [])
+        macs = inData.get('event_data', {}).get('res', {}).get('ansible_facts', {}).get('ansible_net_info', {}).get('macs', [])
         if macs and isinstance(macs, str):
             return [macs]
         if macs and isinstance(macs, list):
