@@ -86,7 +86,6 @@ class FrontendCalls():
             for intf, intfDict in tmpInf.items():
                 maxThrg = tmpH.get('Summary', {}).get('config', {}).get(intfDict['master_intf'], {}).get('intf_max', None)
                 if maxThrg:
-                    print(intf, intfDict, maxThrg)
                     for ipkey in ['ipv4', 'ipv6']:
                         tmpIP = intfDict.get(f'{ipkey}_range', None)
                         if tmpIP:

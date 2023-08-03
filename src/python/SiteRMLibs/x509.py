@@ -19,7 +19,6 @@ Date                    : 2019/10/01
 """
 import time
 from datetime import datetime
-from OpenSSL import crypto
 from SiteRMLibs.MainUtilities import getGitConfig
 
 
@@ -48,19 +47,14 @@ class CertHandler():
     def getCertInfo(environ):
         """Get certificate info."""
         out = {}
-        if 'SSL_CLIENT_CERT' not in environ:
-            print('Request without certificate. Unauthorized')
-            raise Exception('Unauthorized access. Request without certificate.')
-        cert = crypto.load_certificate(crypto.FILETYPE_PEM, environ['SSL_CLIENT_CERT'])
-        subject = cert.get_subject()
-        out['subject'] = "".join(f"/{name.decode():s}={value.decode():s}"
-                                 for name, value in subject.get_components())
-        out['notAfter'] = int(time.mktime(datetime.strptime(cert.get_notAfter().decode('UTF-8'),
-                                                            '%Y%m%d%H%M%SZ').timetuple()))
-        out['notBefore'] = int(time.mktime(datetime.strptime(cert.get_notBefore().decode('UTF-8'),
-                                                             '%Y%m%d%H%M%SZ').timetuple()))
-        out['issuer'] = "".join(f"/{name.decode():s}={value.decode():s}"
-                                for name, value in cert.get_issuer().get_components())
+        for key in ['SSL_CLIENT_V_REMAIN', 'SSL_CLIENT_S_DN', 'SSL_CLIENT_I_DN', 'SSL_CLIENT_V_START', 'SSL_CLIENT_V_END']:
+            if key not in environ:
+                print('Request without certificate. Unauthorized')
+                raise Exception('Unauthorized access. Request without certificate.')
+        out['subject'] = environ['SSL_CLIENT_S_DN']
+        out['notAfter'] = int(time.mktime(datetime.strptime(environ['SSL_CLIENT_V_END'], "%b %d %H:%M:%S %Y %Z").timetuple()))
+        out['notBefore'] = int(time.mktime(datetime.strptime(environ['SSL_CLIENT_V_START'], "%b %d %H:%M:%S %Y %Z").timetuple()))
+        out['issuer'] = environ['SSL_CLIENT_I_DN']
         out['fullDN'] = f"{out['issuer']}{out['subject']}"
         return out
 
@@ -76,7 +70,7 @@ class CertHandler():
                 raise Exception('Unauthorized access')
         # Check time before
         if environ['CERTINFO']['notBefore'] > timestamp:
-            print(f"Certificate Invalid. Current Time: {timestamp} NotBefore: environ['CERTINFO']['notBefore']")
+            print(f"Certificate Invalid. Current Time: {timestamp} NotBefore: {environ['CERTINFO']['notBefore']}")
             raise Exception(f"Certificate Invalid. Full Info: {environ['CERTINFO']}")
         # Check time after
         if environ['CERTINFO']['notAfter'] < timestamp:

@@ -4,12 +4,13 @@ from __future__ import print_function
 import sys
 from SiteRMLibs.MainUtilities import getVal
 from SiteRMLibs.MainUtilities import evaldict
-from SiteRMLibs.MainUtilities import getConfig, getLoggingObject
-from SiteRMLibs.FECalls import getDBConn
+from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.MainUtilities import getDBConn
 from SiteFE.PolicyService.stateMachine import StateMachine
 
 
-CONFIG = getConfig()
+CONFIG = getGitConfig()
 LOGGER = getLoggingObject(config=CONFIG, service='Helpers')
 STATEMACHINE = StateMachine(CONFIG)
 
