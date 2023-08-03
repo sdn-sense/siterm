@@ -11,7 +11,6 @@ Authors:
 
 Date: 2022/04/13
 """
-from SiteRMLibs.MainUtilities import getLoggingObject
 
 class FreeRTR():
     """Default class example for building new parsers"""

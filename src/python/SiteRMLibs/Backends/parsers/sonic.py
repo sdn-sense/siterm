@@ -11,10 +11,6 @@ Authors:
 
 Date: 2022/04/13
 """
-import re
-from SiteRMLibs.ipaddr import ipVersion, getsubnet, normalizedip
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import evaldict
 
 class Sonic():
     """Default class example for building new parsers"""

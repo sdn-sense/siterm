@@ -6,7 +6,6 @@ from SiteRMLibs.MainUtilities import getVal, evaldict
 from SiteRMLibs.MainUtilities import getDBConn
 
 
-
 def listActive(sitename):
     """List Active"""
     dbI = getVal(getDBConn('List'), **{'sitename': sitename})
