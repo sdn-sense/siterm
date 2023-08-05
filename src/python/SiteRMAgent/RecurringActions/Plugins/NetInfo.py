@@ -11,6 +11,7 @@ import pprint
 import psutil
 from pyroute2 import IPRoute
 from SiteRMAgent.RecurringActions.Utilities import externalCommand
+from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
 
@@ -110,18 +111,44 @@ def get(config):
                 familyInfo["txqueuelen"] = txQueueLen[0].strip()
             nicInfo[str(vals.family.value)].append(familyInfo)
     # Check in the end which interfaces where defined in config but not available...
-    outputForFE = {"interfaces": {}, "routes": []}
+    outputForFE = {"interfaces": {}, "routes": [], "lldp": {}}
     for intfName, intfDict in netInfo.items():
         if intfName.split('.')[0] not in foundInterfaces:
             logger.debug(f'This interface {intfName} was defined in configuration, but not available. Will not add it to final output')
         else:
             outputForFE["interfaces"][intfName] = intfDict
     # Get Routing Information
-    outputForFE["routes"] = getRoutes()
+    outputForFE["routes"] = getRoutes(logger)
+    outputForFE["lldp"] = getLLDP(logger)
     return outputForFE
 
+def getLLDP(logger):
+    """Get LLDP Info, if socket is available and lldpcli command does not raise exception"""
+    try:
+        lldpOut = externalCommand('lldpcli show neighbors -f json')
+        lldpObj = evaldict(lldpOut[0].decode('utf-8'))
+        out = {}
+        for item in lldpObj.get('lldp', {}).get('interface', []):
+            for intf, vals in item.items():
+                mac = ''
+                remintf = ''
+                for _switch, swvals in vals.get('chassis', {}).items():
+                    if swvals.get('id', {}).get('type', '') == 'mac':
+                        mac = swvals['id']['value']
+                # lets get remote port info
+                if vals.get('port', {}).get('id', {}).get('type', '') == 'ifname':
+                    remintf = vals['port']['id']['value']
+                if mac and remintf:
+                    out[intf] = {'remote_chassis_id': mac,
+                                 'remote_port_id': remintf,
+                                 'local_port_id': intf}
+        return out
+    except:
+        logger.debug('Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?')
+    return {}
 
-def getRoutes():
+
+def getRoutes(logger):
     """Get Routing information from host"""
     routes = []
     with IPRoute() as ipr:
