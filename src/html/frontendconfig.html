@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.4.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="assets/css/bootstrap.css" rel="stylesheet">
+  <link href="assets/css/custom.css" rel="stylesheet">
+  <script src="assets/js/jquery.min.js" type="text/javascript"></script>
+  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  <script src="assets/js/main.js" type="text/javascript"></script>
+  <script type="text/javascript">
+  //<![CDATA[
+        google.load('visualization', '1', {packages:['table', 'controls']});
+        $(document).ready(function() {
+            load_data();
+        });
+
+        function load_data() {
+            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
+              data['hostinfo'] = {};
+              for (i=0; i < data['general']['sites'].length; i++){
+                sitename = data['general']['sites'][i];
+                $.ajax({url: data['general']['sites'][i] + '/sitefe/json/frontend/getdata', 
+                  dataType: 'json',
+                  data: {},
+                  async: false, 
+                  success: function(json){
+                      for (j=0; j < json.length; j++){
+                      var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
+                      json[j]['hostinfo'] = myObject;
+                    }
+                    data['hostinfo'][sitename] = json;
+                  }
+                });
+            defineSites(data);
+            for (i=0; i < data['general']['sites'].length; i++){
+                sitename = data['general']['sites'][i];
+                defineSitesConfig(data, sitename);
+                for (j=0; j < data['hostinfo'][sitename].length; j++){
+                  defineDTNConfig(data['hostinfo'][sitename][j], sitename, data['hostinfo'][sitename][j]['hostname']);
+                }
+            };
+            }}
+       )};
+  //]]>
+  </script>
+  <title>Site-RM: Frontend Configuration</title>
+</head>
+<body>
+  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
+  </header>
+  <div class="container-fluid">
+    <div class="row">
+      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+        <div class="position-sticky pt-3">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link" href="/index.html">Topology</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="/frontendconfig.html">Frontend Configuration</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/models.html">Models</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/deltas.html">Deltas</a>
+            </li>
+          </ul>
+          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"><span>Debugging tools</span> <a class="link-secondary" href="#" aria-label="Debugging tools"></a></h6>
+          <ul class="nav flex-column mb-2">
+            <li class="nav-item">
+              <a class="nav-link" href="/newdebug.html">Request new debug action</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/debughistory.html">Debug history</a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">Dashboard</h1>
+        </div>
+        <div class="row" id="maindiv"></div>
+        <div id="sites_tab"></div>
+        <div id="main_tab"></div>
+      </main>
+    </div>
+  </div>
+  <script src="assets/js/bootstrap.bundle.js"></script>
+  <script src="assets/js/bootstrap.js"></script>
+  <script>
+      $('#myTab a').click(function (e) {
+        e.preventDefault();
+        $(this).tab('show');
+      })
+</script>
+</body>
+</html>
