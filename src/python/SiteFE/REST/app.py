@@ -27,6 +27,7 @@ from SiteFE.REST.Modules.DeltaCalls import DeltaCalls
 from SiteFE.REST.Modules.ModelCalls import ModelCalls
 from SiteFE.REST.Modules.FrontendCalls import FrontendCalls
 from SiteFE.REST.Modules.PrometheusCalls import PrometheusCalls
+from SiteFE.REST.Modules.TopoCalls import TopoCalls
 from SiteRMLibs.x509 import CertHandler
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getDBConn
@@ -60,7 +61,7 @@ def returnDump(out):
     return out
 
 
-class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCalls, DeltaCalls, ModelCalls):
+class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCalls, DeltaCalls, ModelCalls, TopoCalls):
     """Main WSGI Frontend for accepting and authorizing calls to backend"""
     def __init__(self):
         self.config = getGitConfig()
@@ -78,6 +79,7 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
         DebugCalls.__init__(self)
         DeltaCalls.__init__(self)
         ModelCalls.__init__(self)
+        TopoCalls.__init__(self)
 
     def checkIfMethodAllowed(self, environ, actionName):
         """Check if Method (GET/PUT/POST/HEAD) is allowed"""
