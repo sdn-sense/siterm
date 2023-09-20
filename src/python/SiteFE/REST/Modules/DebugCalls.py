@@ -92,8 +92,7 @@ class CallValidator():
                 if not isinstance(val, str):
                     raise BadRequestError(f"Metadata Key {key} value is not str. Only str supported")
 
-    @staticmethod
-    def __validatePrompush(inputDict):
+    def __validatePrompush(self, inputDict):
         """Validate prometheus push debug request."""
         for key in ['hosttype', 'gateway', 'runtime', 'resolution']:
             if key not in inputDict:
@@ -119,8 +118,7 @@ class CallValidator():
                 if 'queries' not in filterVals:
                     raise BadRequestError("Requested filter does not have queries key")
 
-    @staticmethod
-    def __validateArppush(inputDict):
+    def __validateArppush(self, inputDict):
         """Validate arp push debug request."""
         for key in ['hosttype', 'gateway', 'runtime', 'resolution']:
             if key not in inputDict:
