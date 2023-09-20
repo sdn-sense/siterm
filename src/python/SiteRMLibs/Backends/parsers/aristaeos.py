@@ -10,8 +10,6 @@ Authors:
 
 Date: 2021/12/01
 """
-import re
-from SiteRMLibs.MainUtilities import getLoggingObject
 
 class AristaEOS():
     """Arista EOS Ansible wrapper."""
