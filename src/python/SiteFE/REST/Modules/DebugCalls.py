@@ -80,17 +80,8 @@ class CallValidator():
             raise BadRequestError('Key interface not specified in debug request.')
 
     @staticmethod
-    def __validatePrompush(inputDict):
-        """Validate prometheus push debug request."""
-        for key in ['hosttype', 'metadata', 'gateway', 'runtime', 'resolution']:
-            if key not in inputDict:
-                raise BadRequestError(f'Key {key} not specified in debug request.')
-        if inputDict['hosttype'] not in ['host', 'switch']:
-            raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
-        totalRuntime = int(int(inputDict['runtime']) - getUTCnow())
-        if totalRuntime < 600 or totalRuntime > 3600:
-            raise BadRequestError("Total Runtime must be within range of 600 > x > 3600 seconds since epoch.")
-        # Check all metadata label parameters
+    def __validateMetadata(inputDict):
+        """Validate Metadata Parameters"""
         if 'metadata' in inputDict:
             # Instance must be dictionary
             if not isinstance(inputDict['metadata'], dict):
@@ -100,6 +91,19 @@ class CallValidator():
                     raise BadRequestError(f"Metadata Key {key} does not match prometheus label format")
                 if not isinstance(val, str):
                     raise BadRequestError(f"Metadata Key {key} value is not str. Only str supported")
+
+    def __validatePrompush(self, inputDict):
+        """Validate prometheus push debug request."""
+        for key in ['hosttype', 'gateway', 'runtime', 'resolution']:
+            if key not in inputDict:
+                raise BadRequestError(f'Key {key} not specified in debug request.')
+        if inputDict['hosttype'] not in ['host', 'switch']:
+            raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
+        totalRuntime = int(int(inputDict['runtime']) - getUTCnow())
+        if totalRuntime < 600 or totalRuntime > 3600:
+            raise BadRequestError("Total Runtime must be within range of 600 > x > 3600 seconds since epoch.")
+        # Check all metadata label parameters
+        self.__validateMetadata(inputDict)
         # Check all filter parameters
         if 'filter' in inputDict:
             if not isinstance(inputDict['filter'], dict):
@@ -114,10 +118,9 @@ class CallValidator():
                 if 'queries' not in filterVals:
                     raise BadRequestError("Requested filter does not have queries key")
 
-    @staticmethod
-    def __validateArppush(inputDict):
+    def __validateArppush(self, inputDict):
         """Validate arp push debug request."""
-        for key in ['hosttype', 'metadata', 'gateway', 'runtime', 'resolution']:
+        for key in ['hosttype', 'gateway', 'runtime', 'resolution']:
             if key not in inputDict:
                 raise BadRequestError(f'Key {key} not specified in debug request.')
         if inputDict['hosttype'] != 'host':
@@ -125,6 +128,8 @@ class CallValidator():
         totalRuntime = int(inputDict['runtime']) - getUTCnow()
         if totalRuntime < 600 or totalRuntime > 3600:
             raise BadRequestError("Total Runtime must be within range of 600 > x > 3600 seconds since epoch.")
+        # Check all metadata label parameters
+        self.__validateMetadata(inputDict)
 
     def validate(self, inputDict):
         """Validate wrapper for debug action."""
