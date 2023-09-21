@@ -83,9 +83,14 @@ def getBroadCast(inIP):
     myNet = ip_network(str(inIP), strict=False)
     return str(myNet.broadcast_address)
 
+def replaceSpecialSymbols(valIn):
+    """Replace all symbols [:/'" ] as they not supported in mrml tag"""
+    for repl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""], [":", "__"]]:
+        valIn = valIn.replace(repl[0], repl[1])
+    return valIn
 
 def validMRMLName(valIn):
-    """Generate valid MRML Name. [:/ ] not supported"""
+    """Generate valid MRML Name for ipv6 value"""
     # In case of IPv6, it does allow multiple ways to list IP address, like:
     # 2001:0DB8:0000:CD30:0000:0000:0000:0000/60
     # 2001:0DB8::CD30:0:0:0:0/60
@@ -94,6 +99,4 @@ def validMRMLName(valIn):
     # Because of this - we always use a short version
     if ipVersion(valIn) == 6:
         valIn = ip_address(valIn.split('/')[0]).compressed
-    for repl in [[':', '_'], ['/', '_'], [' ', '_']]:
-        valIn = valIn.replace(repl[0], repl[1])
-    return valIn
+    replaceSpecialSymbols(valIn)

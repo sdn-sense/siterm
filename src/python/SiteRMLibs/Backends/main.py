@@ -16,7 +16,7 @@ from SiteRMLibs.Backends.generalFunctions import cleanupEmpty
 from SiteRMLibs.Backends.generalFunctions import getConfigParams, getValFromConfig
 from SiteRMLibs.MainUtilities import getGitConfig, getLoggingObject, getUTCnow
 from SiteRMLibs.MainUtilities import getDBConn, evaldict, jsondumps
-
+from SiteRMLibs.ipaddr import replaceSpecialSymbols
 
 class Switch(Node):
     """Main Switch Class. It will load module based on config"""
@@ -84,9 +84,7 @@ class Switch(Node):
         # Also - mrml does not expect to get string in nml. so need to replace all
         # Inside the output of dictionary
         # Also - sometimes lldp reports multiple quotes for interface name from ansible out
-        for rpl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""], [":", "__"]]:
-            port = port.replace(rpl[0], rpl[1])
-        return port
+        return replaceSpecialSymbols(port)
 
     def _getPortMapping(self):
         """Get Port Mapping. Normalizing diff port representations"""
@@ -198,7 +196,7 @@ class Switch(Node):
             # Backslashes are replaced with dash
             # Also - mrml does not expect to get string in nml. so need to replace all
             # Inside the output of dictionary
-            nportName = port.replace(" ", "_").replace("/", "-")
+            nportName = replaceSpecialSymbols(port)
             tmpData = self.plugin.getportdata(self.switches['output'][switch], port)
             if port in vlans:
                 tmpData = self.plugin.getvlandata(self.switches['output'][switch], port)
