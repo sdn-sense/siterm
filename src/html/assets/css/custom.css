@@ -2,7 +2,9 @@
   margin-left: 0px;
   margin-right: 0px;
 }
-
+.row {
+  height: auto;
+}
 #breakword {
   word-wrap: break-word;
   white-space: normal;
