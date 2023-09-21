@@ -14,6 +14,7 @@ from SiteRMAgent.RecurringActions.Utilities import externalCommand
 from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.ipaddr import replaceSpecialSymbols
 
 
 def str2bool(val):
@@ -42,7 +43,7 @@ def get(config):
         nicInfo['vlan_range_list'] = config.generateVlanList(nicInfo['vlan_range'])
         nicInfo['min_bandwidth'] = int(config.get(intf, "min_bandwidth"))
         nicInfo['max_bandwidth'] = int(config.get(intf, "max_bandwidth"))
-        nicInfo['switch_port'] = str(config.get(intf, "port")).replace('/', '-').replace(' ', '_').replace(':', '__')
+        nicInfo['switch_port'] = replaceSpecialSymbols(str(config.get(intf, "port")))
         nicInfo['switch'] = str(config.get(intf, "switch"))
         nicInfo['shared'] = str2bool(config.get(intf, "shared"))
         nicInfo['vlans'] = {}

@@ -10,6 +10,7 @@ Authors:
 Date: 2021/12/01
 """
 from SiteRMLibs.ipaddr import validMRMLName
+from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.CustomExceptions import NoSectionError
 
@@ -78,7 +79,7 @@ def _genIPv6(cls, inval, inkey, esc=True):
 def generateKey(cls, inval, inkey):
     """Generate keys for mrml and escape special charts"""
     if isinstance(inval, str):
-        return inval.replace(':', '_').replace('/', '-')
+        return replaceSpecialSymbols(inval)
     if isinstance(inval, int):
         return str(inval)
     if inkey == 'ipv4':
