@@ -156,7 +156,8 @@
         }
         sourceid = value["_id"];
         targetid = data[intval["device"]]["_id"]
-        topologyData["links"].push({"source": sourceid, "target": targetid, "id": tmpid})
+        ports = key + ":" + intkey + "<->" + intval["device"] + ":" + intval["port"]
+        topologyData["links"].push({"source": sourceid, "target": targetid, "id": tmpid, "ports": ports})
       }
     }
   }
