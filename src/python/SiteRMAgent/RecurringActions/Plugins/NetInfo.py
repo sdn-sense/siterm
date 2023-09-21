@@ -42,7 +42,7 @@ def get(config):
         nicInfo['vlan_range_list'] = config.generateVlanList(nicInfo['vlan_range'])
         nicInfo['min_bandwidth'] = int(config.get(intf, "min_bandwidth"))
         nicInfo['max_bandwidth'] = int(config.get(intf, "max_bandwidth"))
-        nicInfo['switch_port'] = str(config.get(intf, "port")).replace('/', '-').replace(' ', '_')
+        nicInfo['switch_port'] = str(config.get(intf, "port")).replace('/', '-').replace(' ', '_').replace(':', '__')
         nicInfo['switch'] = str(config.get(intf, "switch"))
         nicInfo['shared'] = str2bool(config.get(intf, "shared"))
         nicInfo['vlans'] = {}

@@ -84,7 +84,7 @@ class Switch(Node):
         # Also - mrml does not expect to get string in nml. so need to replace all
         # Inside the output of dictionary
         # Also - sometimes lldp reports multiple quotes for interface name from ansible out
-        for rpl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""], [":", "_"]]:
+        for rpl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""], [":", "__"]]:
             port = port.replace(rpl[0], rpl[1])
         return port
 
