@@ -165,7 +165,7 @@ class NodeInfo():
                 out['routename'] = validMRMLName(f"{route['RTA_DST']}/{route['dst_len']}")
                 out['routetype'] = 'routeTo'
                 out['type'] = f"{route['iptype']}-prefix-list"
-                out['value'] = f"{route['RTA_DST']}_{route['dst_len']}"
+                out['value'] = f"{route['RTA_DST']}/{route['dst_len']}"
                 self._addRouteEntry(**out)
 
     def _defL3IPv4(self, hostname, route):
@@ -195,7 +195,7 @@ class NodeInfo():
                 out['routename'] = validMRMLName(f"{route['RTA_PREFSRC']}/{route['dst_len']}")
                 out['routetype'] = 'routeTo'
                 out['type'] = f"{route['iptype']}-prefix-list"
-                out['value'] = f"{route['RTA_PREFSRC']}_{route['dst_len']}"
+                out['value'] = f"{route['RTA_PREFSRC']}/{route['dst_len']}"
                 self._addRouteEntry(**out)
                 # nextHop to default route? Is it needed?
 
