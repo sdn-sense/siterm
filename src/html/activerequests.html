@@ -14,38 +14,45 @@
         google.load('visualization', '1', {packages:['table', 'controls']});
         $(document).ready(function() {
             load_data();
+            //setInterval(load_data, 300000);
         });
+
+       function loadModel(sitename)
+       {
+          $.ajax({url: sitename + '/sitefe/v1/activedeltas/',
+            dataType: 'json',
+            data: {},
+            async: false,
+            success: function(json){
+              var str = JSON.stringify(json, undefined, 4);
+              model = $('<pre><\/pre>');
+              model.append(syntaxHighlight(str));
+              $('#v-pills-latest-' + sitename).empty();
+              $('#v-pills-latest-' + sitename).append(model);
+          }});
+       }
+
+        function defineAllModels(sitename) {
+          menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"><\/div>');
+          cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
+          modID = 'latest-'+ sitename;
+          menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadModel(\''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ modID +'<\/a>');
+          cntDiv.append('<div class="tab-pane fade" id="v-pills-'+modID+'" role="tabpanel" aria-labelledby="v-pills-'+modID+'-tab"><\/div>');
+          nRow = $('<div class="row">');
+          menCol = $('<div class="col-1">').append(menCol);
+          cntDiv = $('<div class="col-11">').append(cntDiv);
+          nRow.append(menCol).append(cntDiv);
+          $('#view_fe_'+sitename).append(nRow);
+        }
 
         function load_data() {
             $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
-              data['hostinfo'] = {};
-              for (i=0; i < data['general']['sites'].length; i++){
-                sitename = data['general']['sites'][i];
-                $.ajax({url: data['general']['sites'][i] + '/sitefe/json/frontend/getdata', 
-                  dataType: 'json',
-                  data: {},
-                  async: false, 
-                  success: function(json){
-                      for (j=0; j < json.length; j++){
-                      var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
-                      json[j]['hostinfo'] = myObject;
-                    }
-                    data['hostinfo'][sitename] = json;
-                  }
-                });
-            defineSites(data);
-            for (i=0; i < data['general']['sites'].length; i++){
-                sitename = data['general']['sites'][i];
-                defineSitesConfig(data, sitename);
-                for (j=0; j < data['hostinfo'][sitename].length; j++){
-                  defineDTNConfig(data['hostinfo'][sitename][j], sitename, data['hostinfo'][sitename][j]['hostname']);
-                }
-            };
-            }}
-       )};
+              defineSites(data, false);
+              defineAllModels(sitename);
+            })};
   //]]>
   </script>
-  <title>Site-RM: Frontend Configuration</title>
+  <title>Site-RM: Frontend Active Requests</title>
 </head>
 <body>
   <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
@@ -60,16 +67,16 @@
               <a class="nav-link" href="/index.html">Topology</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="/frontendconfig.html">Frontend Configuration</a>
+              <a class="nav-link" href="/frontendconfig.html">Frontend Configuration</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="/models.html">Models</a>
+              <a class="nav-link" aria-current="page" href="/models.html">Models</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="/deltas.html">Deltas</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="/activerequests.html">Active Requests</a>
+              <a class="nav-link active" href="/activerequests.html">Active Requests</a>
             </li>
           </ul>
           <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"><span>Debugging tools</span> <a class="link-secondary" href="#" aria-label="Debugging tools"></a></h6>
@@ -93,13 +100,14 @@
       </main>
     </div>
   </div>
-  <script src="assets/js/bootstrap.bundle.js"></script>
-  <script src="assets/js/bootstrap.js"></script>
+  <script src="assets/js/bootstrap.bundle.js"></script> 
+  <script src="assets/js/bootstrap.js"></script> 
   <script>
+
       $('#myTab a').click(function (e) {
         e.preventDefault();
         $(this).tab('show');
       })
-</script>
+  </script>
 </body>
 </html>
