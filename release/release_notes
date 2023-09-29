@@ -1,11 +1,18 @@
-This release includes:
-  QoS Improvements; Cisco Backend; Overlap check; Memory leak fix for apache; Automatic builds; Realtime Sense Monitoring API.
-
+This release includes (highlight main items):
+  Conflict Check for rst, exclude vlans from modelling #169
+  Debugger check improvements; # 205
+  Allow configure  mtu and txqueuelen via config #206
+  Dell OS 10 Vlan and BGP Control #173
+  Log and report ansible errors #216 #194
+  Report cert validity to FE and in prometheus #226
+  Rewrite Ansible SoNIC plugin #292
+  Minimal support for Cisco NX 9 #291
+Full list of issues solved are here: https://github.com/sdn-sense/siterm/issues?q=is%3Aissue+milestone%3A%221.3.0+Release%22+is%3Aclosed
 Supported systems: x86_64 and ppc64le
 Installation details: https://sdn-sense.github.io/Installation.html
 
 Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
 Docker version for this release:
 x86_64:
-  Agent: sdnsense/site-agent-sense:latest-20220920 (Or use latest)
-  Frontend: sdnsense/site-rm-sense:latest-20220920 (Or use latest)
+  Agent: sdnsense/site-agent-sense:latest-20230929 (Or use latest)
+  Frontend: sdnsense/site-rm-sense:latest-20230929 (Or use latest)
