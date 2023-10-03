@@ -78,8 +78,9 @@ class DeltaCalls:
         self.routeMap.connect("deltastates", "/v1/deltastates/:deltaid", action="deltastates")
         self.routeMap.connect("deltatimestates", "/v1/deltatimestates", action="deltatimestates")
 
-    def __intGetPostData(self, environ, **kwargs):
-        # POST
+    @staticmethod
+    def __intGetPostData(environ, **kwargs):
+        """Parse POST Data"""
         out = {}
         postRequest = False
         if environ['REQUEST_METHOD'].upper() == 'POST':
@@ -322,7 +323,7 @@ class DeltaCalls:
                  'uuid': out['uuid'],
                  'uuidtype': out['uuidtype'],
                  'hostname': out['hostname'],
-                 'uuidstate': out['uuidstate'],}
+                 'uuidstate': out['uuidstate']}
         self.dbobj.insert('deltatimestates', [dbout])
         self.responseHeaders(environ, **kwargs)
         return {'status': 'Recorded'}

@@ -123,7 +123,6 @@ class Switch:
                 print(ansNetIntf.keys())
                 print(out[host].keys())
         self.__getAnsErrors(ansOut)
-        # TODO: add lldp, routing info
         return out, self.ansibleErrs
 
     @staticmethod

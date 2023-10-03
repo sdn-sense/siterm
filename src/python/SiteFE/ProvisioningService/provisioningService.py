@@ -136,7 +136,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
                  }
         self.dbI.insert('deltatimestates', [dbOut])
 
-    def __identifyReportState(self, items, **kwargs):
+    @staticmethod
+    def __identifyReportState(items, **kwargs):
         """Identify report state. Default unknown, and will be one of:
            activated, activate-error, deactivated, deactive-error
         """
@@ -186,12 +187,11 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         except SwitchException:
             networkstate = 'error'
         self.__reportDeltaState(**{'swname': swname,
-                                    'uuid': uuid,
-                                    'acttype': acttype,
-                                    'key': key,
-                                    'applied': curActiveConf[key],
-                                    'uuidstate': networkstate})
-        return
+                                   'uuid': uuid,
+                                   'acttype': acttype,
+                                   'key': key,
+                                   'applied': curActiveConf[key],
+                                   'uuidstate': networkstate})
 
     def compareIndv(self, switches):
         """Compare individual entries and report it's status"""
@@ -212,6 +212,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
                                 self.applyIndvConfig(swname, uuid, key, acttype)
 
     def compareAll(self, switches):
+        """Compare all config file"""
         configChanged = False
         hosts = []
         for host in switches:

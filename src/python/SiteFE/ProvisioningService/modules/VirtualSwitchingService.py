@@ -124,11 +124,12 @@ class VirtualSwitchingService():
             for host, hostDict in connDict.items():
                 if host in switches:
                     for port, portDict in hostDict.items():
-                        if port == '_params': continue  ## TODO REMOVE
+                        if port == '_params':
+                            continue
                         self._presetDefaultParams(host, port, portDict)
                         self._addTaggedInterfaces(host, port, portDict)
                         self._addIPv4Address(host, port, portDict)
-                        self._addIPv6Address(host, port, portDict) 
+                        self._addIPv6Address(host, port, portDict)
 
     def addvsw(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for vsw)"""
