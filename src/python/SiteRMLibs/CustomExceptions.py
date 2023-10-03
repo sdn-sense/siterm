@@ -139,6 +139,9 @@ class NotAcceptedHeader(ExceptionTemplate):
 class ConflictEntries(ExceptionTemplate):
     """Conflict Entries"""
 
+class SwitchException(ExceptionTemplate):
+    """Switch communication exception"""
+
 
 class HTTPResponses():
     """Frontend HTTP Responses."""

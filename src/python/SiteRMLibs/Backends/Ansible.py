@@ -17,7 +17,8 @@ from SiteRMLibs.Backends import parsers
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.CustomExceptions import ConfigException
 
-class Switch():
+
+class Switch:
     """Ansible Switch Module"""
     def __init__(self, config, sitename):
         self.parsers = parsers.ALL
@@ -42,10 +43,15 @@ class Switch():
                     self.ansibleErrs[host][fkey].append(err)
                     self.logger.info('Ansible Error for %s: %s', host, err)
 
-    def _getInventoryInfo(self, hosts=None):
+    def _writeInventoryInfo(self, out, subitem=''):
+        """Write Ansible Inventory file (used only in a single apply)"""
+        fname = f"{self.config.get('ansible', 'inventory' + subitem)}"
+        with open(fname, 'w', encoding='utf-8') as fd:
+            fd.write(yaml.dump(out))
+
+    def _getInventoryInfo(self, hosts=None, subitem=''):
         """Get Inventory Info. If hosts specified, only return for specific hosts"""
-        out = {}
-        with open(self.config.get('ansible', 'inventory'), 'r', encoding='utf-8') as fd:
+        with open(self.config.get('ansible', 'inventory' + subitem), 'r', encoding='utf-8') as fd:
             out = yaml.safe_load(fd.read())
         if hosts:
             tmpOut = {}
@@ -57,54 +63,50 @@ class Switch():
             return tmpOut
         return out
 
-    def _executeAnsible(self, playbook, hosts=None):
+    def _executeAnsible(self, playbook, hosts=None, subitem=''):
         """Execute Ansible playbook"""
-        return ansible_runner.run(private_data_dir=self.config.get('ansible', 'private_data_dir'),
-                                  inventory=self._getInventoryInfo(hosts),
+        return ansible_runner.run(private_data_dir=self.config.get('ansible', 'private_data_dir' + subitem),
+                                  inventory=self._getInventoryInfo(hosts, subitem),
                                   playbook=playbook,
-                                  rotate_artifacts=self.config.get('ansible', 'rotate_artifacts'),
-                                  debug=self.config.getboolean('ansible', 'debug'),
-                                  ignore_logging=self.config.getboolean('ansible', 'ignore_logging'))
+                                  rotate_artifacts=self.config.get('ansible', 'rotate_artifacts' + subitem),
+                                  debug=self.config.getboolean('ansible', 'debug' + subitem),
+                                  ignore_logging=self.config.getboolean('ansible', 'ignore_logging' + subitem))
 
-    def getAnsNetworkOS(self, host):
+    def getAnsNetworkOS(self, host, subitem=''):
         """Get Ansible network os from hosts file"""
-        return self.getHostConfig(host).get('ansible_network_os', '')
+        return self.getHostConfig(host, subitem).get('ansible_network_os', '')
 
-    def getHostConfig(self, host):
+    def getHostConfig(self, host, subitem=''):
         """Get Ansible Host Config"""
-        fname = f"{self.config.get('ansible', 'inventory_host_vars_dir')}/{host}.yaml"
+        fname = f"{self.config.get('ansible', 'inventory_host_vars_dir'+ subitem)}/{host}.yaml"
         if not os.path.isfile(fname):
             raise Exception(f'Ansible config file for {host} not available.')
         with open(fname, 'r', encoding='utf-8') as fd:
             out = yaml.safe_load(fd.read())
         return out
 
-    def _writeHostConfig(self, host, out):
+    def _writeHostConfig(self, host, out, subitem=''):
         """Write Ansible Host config file"""
-        fname = f"{self.config.get('ansible', 'inventory_host_vars_dir')}/{host}.yaml"
-        if not os.path.isfile(fname):
+        fname = f"{self.config.get('ansible', 'inventory_host_vars_dir' + subitem)}/{host}.yaml"
+        if not subitem and not os.path.isfile(fname):
             raise Exception(f'Ansible config file for {host} not available.')
         with open(fname, 'w', encoding='utf-8') as fd:
             fd.write(yaml.dump(out))
 
-
-    def _applyNewConfig(self, hosts=None):
+    def _applyNewConfig(self, hosts=None, subitem=''):
         """Apply new config and run ansible playbook"""
-        ansOut = {}
         try:
-            ansOut = self._executeAnsible('applyconfig.yaml', hosts)
+            ansOut = self._executeAnsible('applyconfig.yaml', hosts, subitem)
         except ValueError as ex:
             raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}") from ex
         self.__getAnsErrors(ansOut)
         return ansOut
 
-
-    def _getFacts(self, hosts=None):
+    def _getFacts(self, hosts=None, subitem=''):
         """Get All Facts for all Ansible Hosts"""
         self.ansibleErrs = {}
-        ansOut = {}
         try:
-            ansOut = self._executeAnsible('getfacts.yaml', hosts)
+            ansOut = self._executeAnsible('getfacts.yaml', hosts, subitem)
         except ValueError as ex:
             raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}") from ex
         out = {}
@@ -117,7 +119,7 @@ class Switch():
                 if action not in self.parsers.keys():
                     self.logger.warning(f'Unsupported NOS. There might be issues. Contact dev team')
                 out[host] = host_events
-                ansNetIntf = host_events.setdefault('event_data', {}).setdefault('res', {}).setdefault('ansible_facts',{})
+                ansNetIntf = host_events.setdefault('event_data', {}).setdefault('res', {}).setdefault('ansible_facts', {})
                 print(ansNetIntf.keys())
                 print(out[host].keys())
         self.__getAnsErrors(ansOut)

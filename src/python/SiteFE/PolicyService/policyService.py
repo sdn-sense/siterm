@@ -134,7 +134,7 @@ class PolicyService(RDFHelper):
         """
         out = self.queryGraph(gIn, connectionID, search=URIRef(f"{self.prefixes['nml']}{'existsDuring'}"))
         for timeline in out:
-            times = connOut.setdefault('_params', {}).setdefault('existsDuring', {'uri': str(timeline)})
+            times = connOut.setdefault('_params', {}).setdefault('existsDuring', {'uri': str(timeline), 'state': 'deactivated'})
             for timev in ['end', 'start']:
                 tout = self.queryGraph(gIn, timeline, search=URIRef(f"{self.prefixes['nml']}{timev}"))
                 temptime = None
@@ -360,6 +360,27 @@ class PolicyService(RDFHelper):
                     self._portScanFinish(bidPort)
         return returnout
 
+    def recordDeltaStates(self):
+        """Record delta states in activeDeltas output"""
+        changed = False
+        for dbout in self.dbI.get('deltatimestates', limit=100, orderby=['insertdate', 'DESC']):
+            if self.newActive['output'].get(dbout['uuidtype'], {}).get(
+                    dbout['uuid'], {}).get(
+                    dbout['hostname'], {}).get(
+                    dbout['hostport'], {}):
+                actEntry = self.newActive['output'].setdefault(
+                            dbout['uuidtype'], {}).setdefault(
+                            dbout['uuid'], {}).setdefault(
+                            dbout['hostname'], {}).setdefault(
+                            dbout['hostport'], {})
+                actEntry.setdefault('_params', {})
+                actEntry['_params']['networkstatus'] = dbout['uuidstate']
+                if 'hasService' in actEntry:
+                    actEntry['hasService']['networkstatus'] = dbout['uuidstate']
+            changed = True
+            self.dbI.delete('deltatimestates', [['id', dbout['id']]])
+        return changed
+
     def generateActiveConfigDict(self, currentGraph):
         """Generate new config from parser model."""
         changesApplied = False
@@ -407,6 +428,10 @@ class PolicyService(RDFHelper):
 
         if not modelParseRan:
             self.newActive['output'] = self.parseModel(currentGraph)
+
+        # Record all states
+        if self.recordDeltaStates():
+            changesApplied = True
 
         if self.newActive['output'] != self.currentActive['output']:
             writeActiveDeltas(self, self.newActive['output'])

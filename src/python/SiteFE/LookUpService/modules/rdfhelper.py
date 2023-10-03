@@ -241,6 +241,7 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site', bws),
                            self.genUriRef('mrs', 'type'),
                            self.genLiteral('guaranteedCapped')))
+        # add
         # TODO: In future we should allow not only guaranteedCapped, but also other types.
         # Requires mainly change on Agents to apply diff Traffic Shaping policies
         return bws
