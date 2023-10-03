@@ -54,7 +54,13 @@ class VirtualSwitchingService():
         super().__init__()
 
     def __getdefaultIntf(self, host):
-        tmpD = self.yamlconf.setdefault(host, {})
+        if self.reqid == 0:
+            tmpD = self.yamlconf.setdefault(host, {})
+        elif self.reqid == 1:
+            tmpD = self.yamlconfuuid.setdefault('vsw', {}).setdefault(self.connID, {})
+            tmpD = tmpD.setdefault(host, {})
+        else:
+            raise Exception('Wrong code. Should not reach this part. VirtualSwitchingService')
         tmpD = tmpD.setdefault('interface', {})
         return tmpD
 
@@ -106,41 +112,59 @@ class VirtualSwitchingService():
     def _presetDefaultParams(self, host, port, portDict):
         vlanDict = self.__getdefaultVlan(host,  port, portDict)
         vlanDict['description'] = portDict.get('_params', {}).get('tag', "SENSE-VLAN-Without-Tag")
+        vlanDict['belongsTo'] = portDict.get('_params', {}).get('belongsTo', "SENSE-VLAN-Without-belongsTo")
         vlanDict['state'] = 'present'
+
+    def _addparamsVsw(self, connDict, switches):
+        """Wrapper for add params, to put individual request info too inside dictionary"""
+        # 0 - Main which adds all requests into a single yaml file for ansible
+        # 1 - Adds Vlan request into a unique uuid request dictionary and used by ansible
+        for reqid in [0, 1]:
+            self.reqid = reqid
+            for host, hostDict in connDict.items():
+                if host in switches:
+                    for port, portDict in hostDict.items():
+                        if port == '_params':
+                            continue
+                        self._presetDefaultParams(host, port, portDict)
+                        self._addTaggedInterfaces(host, port, portDict)
+                        self._addIPv4Address(host, port, portDict)
+                        self._addIPv6Address(host, port, portDict)
 
     def addvsw(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for vsw)"""
         if 'vsw' in activeConfig:
-            for _, connDict in activeConfig['vsw'].items():
+            for connID, connDict in activeConfig['vsw'].items():
+                self.connID = connID
                 if not self.checkIfStarted(connDict):
                     continue
-                # Get _params and existsDuring - if start < currentTime and currentTime < end
-                # Otherwise log details of the start/stop/currentTime.
-                for host, hostDict in connDict.items():
-                    if host in switches:
-                        for port, portDict in hostDict.items():
-                            self._presetDefaultParams(host, port, portDict)
-                            self._addTaggedInterfaces(host, port, portDict)
-                            self._addIPv4Address(host, port, portDict)
-                            self._addIPv6Address(host, port, portDict)
-        for host in switches:
-            self.__getdefaultIntf(host)
+                self._addparamsVsw(connDict, switches)
+        for reqid in [0, 1]:
+            self.reqid = reqid
+            for host in switches:
+                self.__getdefaultIntf(host)
 
-    def compareVsw(self, switch, runningConf):
+    def compareVsw(self, switch, runningConf, uuid=''):
         """Compare expected and running conf"""
-        if self.yamlconf[switch]['interface'] == runningConf:
-            return # equal config
+        if uuid:
+            tmpD = self.yamlconfuuid.setdefault('vsw', {}).setdefault(uuid, {}).setdefault(switch, {})
+        else:
+            tmpD = self.yamlconf.setdefault(switch)
+        tmpD = tmpD.setdefault('interface', {})
+        if tmpD == runningConf:
+            return False  # equal config
         for key, val in runningConf.items():
-            if key not in self.yamlconf[switch]['interface'].keys() and val['state'] != 'absent':
+            if key not in tmpD.keys() and val['state'] != 'absent':
                 # Vlan is present in ansible config, but not in new config
                 # set vlan to state: 'absent'. In case it is absent already
                 # we dont need to set it again. Switch is unhappy to apply
                 # same command if service is not present.
-                self.yamlconf[switch]['interface'].setdefault(key, {'state': 'absent', 'vlanid': val['vlanid']})
+                tmpD.setdefault(key, {'state': 'absent', 'vlanid': val['vlanid']})
             if val['state'] != 'absent':
                 for key1, val1 in val.items():
                     if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ipv4_address', 'ipv6_address']:
-                        yamlOut = self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, {})
+                        yamlOut = tmpD.setdefault(key, {}).setdefault(key1, {})
                         dictCompare(yamlOut, val1, key1)
-                    if isinstance(val1, str) and key1 in 'vlanid':
-                        self.yamlconf[switch]['interface'].setdefault(key, {}).setdefault(key1, val1)
+                    if isinstance(val1, str) and key1 == 'vlanid':
+                        tmpD.setdefault(key, {}).setdefault(key1, val1)
+        return True

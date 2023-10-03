@@ -59,9 +59,16 @@ class RoutingService():
 
     def _getDefaultBGP(self, host):
         """Default yaml dict setup"""
-        tmpD = self.yamlconf.setdefault(host, {})
+        if self.reqid == 0:
+            tmpD = self.yamlconf.setdefault(host, {})
+        elif self.reqid == 1:
+            tmpD = self.yamlconfuuid.setdefault('rst', {}).setdefault(self.connID, {})
+            tmpD = tmpD.setdefault(host, {})
+        else:
+            raise Exception('Wrong code. Should not reach this part. VirtualSwitchingService')
         tmpD = tmpD.setdefault('sense_bgp', {})
         tmpD['asn'] = self.getConfigValue(host, 'private_asn')
+        tmpD['belongsTo'] = self.connID
         if not tmpD['asn']:
             del tmpD['asn']
         tmpD['vrf'] = self.getConfigValue(host, 'vrf')
@@ -119,31 +126,49 @@ class RoutingService():
             permitst += len(routeMap.get(name, {}))
             routeMap.setdefault(name, {}).setdefault(int(permitst), {match: 'present'})
 
+    def _addparamsrst(self, connDict, switches):
+        """Wrapper for add params, to put individual request info too inside dictionary"""
+        # 0 - Main which adds all requests into a single yaml file for ansible
+        # 1 - Adds Vlan request into a unique uuid request dictionary and used by ansible
+        for reqid in [0, 1]:
+            self.reqid = reqid
+            for host, hostDict in connDict.items():
+                if host not in switches:
+                    continue
+                for _, rFullDict in hostDict.items():
+                    for rtag, rDict in rFullDict.get('hasRoute', {}).items():
+                        ruid = generateMD5(rtag)
+                        self._getDefaultBGP(host)
+                        self._addOwnRoutes(host, rDict)
+                        self._addNeighbors(host, ruid, rDict)
+                        self._addPrefixList(host, ruid, rDict)
+
     def addrst(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for rst)"""
         if 'rst' in activeConfig:
-            for _, connDict in activeConfig['rst'].items():
+            for connID, connDict in activeConfig['rst'].items():
+                self.connID = connID
                 if not self.checkIfStarted(connDict):
                     continue
-                for host, hostDict in connDict.items():
-                    if host not in switches:
-                        continue
-                    for _, rFullDict in hostDict.items():
-                        for rtag, rDict in rFullDict.get('hasRoute', {}).items():
-                            ruid = generateMD5(rtag)
-                            self._getDefaultBGP(host)
-                            self._addOwnRoutes(host, rDict)
-                            self._addNeighbors(host, ruid, rDict)
-                            self._addPrefixList(host, ruid, rDict)
-        for host in switches:
-            self._getDefaultBGP(host)
+                self._addparamsrst(connDict, switches)
 
-    def compareBGP(self, switch, runningConf):
+        for reqid in [0, 1]:
+            self.reqid = reqid
+            for host in switches:
+                self._getDefaultBGP(host)
+
+    def compareBGP(self, switch, runningConf, uuid=''):
         """Compare L3 BGP"""
-        if self.yamlconf[switch]['sense_bgp'] == runningConf:
-            return # equal config
+        if uuid:
+            tmpD = self.yamlconfuuid.setdefault('rst', {}).setdefault(uuid, {}).setdefault(switch, {})
+        else:
+            tmpD = self.yamlconf.setdefault(switch)
+        tmpD = tmpD.setdefault('sense_bgp', {})
+        if tmpD == runningConf:
+            return False  # equal config
         for key, val in runningConf.items():
             # ipv6_network, ipv4_network, neighbor, prefix_list, route_map
             if key in ['ipv6_network', 'ipv4_network', 'prefix_list', 'route_map', 'neighbor']:
-                yamlOut = self.yamlconf[switch]['sense_bgp'].setdefault(key, {})
+                yamlOut = tmpD.setdefault(key, {})
                 dictCompare(yamlOut, val)
+        return True

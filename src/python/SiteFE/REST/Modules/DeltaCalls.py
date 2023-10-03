@@ -36,7 +36,8 @@ from SiteRMLibs.CustomExceptions import ConflictEntries, BadRequestError, DeltaN
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
 
-class DeltaCalls():
+
+class DeltaCalls:
     """Delta Calls API Module"""
     # pylint: disable=E1101
     def __init__(self):
@@ -54,15 +55,18 @@ class DeltaCalls():
                                 'urlParams': [{"key": "summary", "default": True, "type": bool},
                                               {"key": "oldview", "default": False, "type": bool},
                                               {"key": "encode", "default": True, "type": bool},
-                                              {"key": "model", "default": "turtle", "type": str, "options": ['turtle']}]},
+                                              {"key": "model", "default": "turtle", "type": str,
+                                               "options": ['turtle']}]},
                      'deltasid': {'allowedMethods': ['GET'],
-                                  'urlParams': [{"key": "model", "default": "turtle", "type": str, "options": ['turtle']},
+                                  'urlParams': [{"key": "model", "default": "turtle", "type": str,
+                                                 "options": ['turtle']},
                                                 {"key": "encode", "default": True, "type": bool},
                                                 {"key": "oldview", "default": False, "type": bool},
                                                 {"key": "summary", "default": False, "type": bool}]},
                      'deltasaction': {'allowedMethods': ['GET', 'PUT']},
                      'activedeltas': {'allowedMethods': ['GET']},
-                     'deltastates': {'allowedMethods': ['GET']}}
+                     'deltastates': {'allowedMethods': ['GET']},
+                     'deltatimestates': {'allowedMethods': ['POST']}}
         self.urlParams.update(urlParams)
 
     def __defineRoutes(self):
@@ -72,6 +76,23 @@ class DeltaCalls():
         self.routeMap.connect("deltasaction", "/v1/deltas/:deltaid/actions/commit", action="deltasaction")
         self.routeMap.connect("activedeltas", "/v1/activedeltas", action="activedeltas")
         self.routeMap.connect("deltastates", "/v1/deltastates/:deltaid", action="deltastates")
+        self.routeMap.connect("deltatimestates", "/v1/deltatimestates", action="deltatimestates")
+
+    @staticmethod
+    def __intGetPostData(environ, **kwargs):
+        """Parse POST Data"""
+        out = {}
+        postRequest = False
+        if environ['REQUEST_METHOD'].upper() == 'POST':
+            postRequest = is_post_request(environ)
+        if not postRequest:
+            if is_application_json(environ):
+                out = get_json_post_form(environ)
+            else:
+                raise BadRequestError('You did POST method, but provided CONTENT_TYPE is not correct')
+        if not out:
+            out = get_post_form(environ)
+        return out
 
     def __addNewDeltaINT(self, uploadContent, environ, **kwargs):
         """Add new delta."""
@@ -186,17 +207,7 @@ class DeltaCalls():
 
     def __deltas_post(self, environ, **kwargs):
         """Private Function for Delta POST API"""
-        out = {}
-        postRequest = False
-        if environ['REQUEST_METHOD'].upper() == 'POST':
-            postRequest = is_post_request(environ)
-        if not postRequest:
-            if is_application_json(environ):
-                out = get_json_post_form(environ)
-            else:
-                raise BadRequestError('You did POST method, but provided CONTENT_TYPE is not correct')
-        if not out:
-            out = get_post_form(environ)
+        out = self.__intGetPostData(environ, **kwargs)
         newDelta = {}
         for key in list(out.keys()):
             newDelta[key] = out.get(key, "")
@@ -298,3 +309,21 @@ class DeltaCalls():
         """
         self.responseHeaders(environ, **kwargs)
         return self.__getActiveDeltas(environ, **kwargs)
+
+    def deltatimestates(self, environ, **kwargs):
+        """
+        API Call to set delta timed activation state
+        Method: POST
+        Output: application/json
+        Examples: https://server-host/sitefe/v1/deltatimestates
+        """
+        # POST
+        out = self.__intGetPostData(environ, **kwargs)
+        dbout = {'insertdate': out['insertdate'],
+                 'uuid': out['uuid'],
+                 'uuidtype': out['uuidtype'],
+                 'hostname': out['hostname'],
+                 'uuidstate': out['uuidstate']}
+        self.dbobj.insert('deltatimestates', [dbout])
+        self.responseHeaders(environ, **kwargs)
+        return {'status': 'Recorded'}

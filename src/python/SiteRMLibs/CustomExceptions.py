@@ -140,6 +140,10 @@ class ConflictEntries(ExceptionTemplate):
     """Conflict Entries"""
 
 
+class SwitchException(ExceptionTemplate):
+    """Switch communication exception"""
+
+
 class HTTPResponses():
     """Frontend HTTP Responses."""
     def __init__(self):

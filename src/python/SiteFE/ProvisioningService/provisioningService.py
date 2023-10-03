@@ -21,6 +21,7 @@ Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
 import sys
+import copy
 import time
 import datetime
 from SiteRMLibs.MainUtilities import evaldict
@@ -34,6 +35,7 @@ from SiteRMLibs.MainUtilities import getDBConn
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.CustomExceptions import NoSectionError
+from SiteRMLibs.CustomExceptions import SwitchException
 from SiteFE.ProvisioningService.modules.RoutingService import RoutingService
 from SiteFE.ProvisioningService.modules.VirtualSwitchingService import VirtualSwitchingService
 
@@ -53,7 +55,10 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         workDir = self.config.get('general', 'privatedir') + "/ProvisioningService/"
         createDirs(workDir)
         self.yamlconf = {}
+        self.yamlconfuuid = {}
+        self.yamlconfuuidActive = {}
         self.lastApplied = None
+        self.connID = None
 
     def _forceApply(self):
         curDate = datetime.datetime.now().strftime('%Y-%m-%d')
@@ -65,6 +70,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
     def __cleanup(self):
         """Cleanup yaml conf output"""
         self.yamlconf = {}
+        self.yamlconfuuid = {}
 
     def __logChanges(self, host):
         """Log new ansible yaml config"""
@@ -103,9 +109,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.addvsw(activeConfig, switches)
         self.addrst(activeConfig, switches)
 
-    def applyConfig(self, raiseExc=True, hosts=None):
+    def applyConfig(self, raiseExc=True, hosts=None, subitem=''):
         """Apply yaml config on Switch"""
-        ansOut = self.switch.plugin._applyNewConfig(hosts)
+        ansOut = self.switch.plugin._applyNewConfig(hosts, subitem)
         if not ansOut:
             return
         if not hasattr(ansOut, 'stats'):
@@ -116,24 +122,97 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
                 self.logger.info(jsondumps(host_events))
         if ansOut.stats.get('failures', {}) and raiseExc:
             # TODO: Would be nice to save in DB and see errors from WEB UI)
-            raise Exception("There was configuration apply issue. Please contact support and provide this log file.")
+            raise SwitchException("There was configuration apply issue. Please contact support and provide this log file.")
+        return
 
-    def startwork(self):
-        """Start Provisioning Service main worker."""
-        # Workflow is as follow
-        # Get current active config;
-        self.__cleanup()
-        activeDeltas = self.dbI.get('activeDeltas')
-        if activeDeltas:
-            activeDeltas = activeDeltas[0]
-            activeDeltas['output'] = evaldict(activeDeltas['output'])
-        if not activeDeltas:
-            activeDeltas = {'output': {}}
+    def __insertDeltaStateDB(self, **kwargs):
+        """Write new state to DB"""
+        dbOut = {'insertdate': int(time.time()),
+                 'uuid': kwargs['uuid'],
+                 'uuidtype': kwargs['acttype'],
+                 'hostname': kwargs['swname'],
+                 'hostport': kwargs['hostport'],
+                 'uuidstate': kwargs['uuidstate']
+                 }
+        self.dbI.insert('deltatimestates', [dbOut])
 
-        self.switch.getinfo(False)
-        switches = self.switch.getAllSwitches()
-        self.prepareYamlConf(activeDeltas['output'], switches)
+    @staticmethod
+    def __identifyReportState(items, **kwargs):
+        """Identify report state. Default unknown, and will be one of:
+           activated, activate-error, deactivated, deactive-error
+        """
+        nstate = 'unknown'
+        if items['state'] == 'present' and kwargs['uuidstate'] == 'ok':
+            # This means it was activated;
+            nstate = 'activated'
+        elif items['state'] == 'present' and kwargs['uuidstate'] == 'error':
+            # This means it was activate-error
+            nstate = 'activate-error'
+        elif items['state'] == 'absent' and kwargs['uuidstate'] == 'ok':
+            # This means it was deactivated
+            nstate = 'deactivated'
+        elif items['state'] == 'absent' and kwargs['uuidstate'] == 'error':
+            # this means it was deactivate-error
+            nstate = 'deactivate-error'
+        return nstate
 
+    def __reportDeltaState(self, **kwargs):
+        """Report state to db (requires diff reporting based on vsw/rst)"""
+        if kwargs['acttype'] == 'vsw':
+            for _key, items in kwargs['applied'].items():
+                tmpkwargs = copy.deepcopy(kwargs)
+                tmpkwargs['uuidstate'] = self.__identifyReportState(items, **kwargs)
+                for intf in items.get('tagged_members'):
+                    tmpkwargs['hostport'] = self.switch.getSystemValidPortName(intf)
+                    self.__insertDeltaStateDB(**tmpkwargs)
+        if kwargs['acttype'] == 'rst':
+            kwargs['uuidstate'] = self.__identifyReportState(kwargs['applied'], **kwargs)
+            for key, _items in kwargs['applied'].get('neighbor', {}).items():
+                kwargs['hostport'] = key
+                self.__insertDeltaStateDB(**kwargs)
+
+    def applyIndvConfig(self, swname, uuid, key, acttype, raiseExc=True):
+        """Apply a single delta to network devices and report to DB it's state"""
+        curActiveConf = self.switch.plugin.getHostConfig(swname)
+        # Delete 2 items as we will need everything else
+        # For applying into devices
+        del curActiveConf['interface']
+        del curActiveConf['sense_bgp']
+        curActiveConf[key] = self.yamlconfuuid.get(acttype, {}).get(uuid, {}).get(swname, {}).get(key, {})
+        # Write curActiveConf to single apply dir
+        self.switch.plugin._writeHostConfig(swname, curActiveConf, '_singleapply')
+        try:
+            self.applyConfig(raiseExc, [swname], '_singleapply')
+            networkstate = 'ok'
+        except SwitchException:
+            networkstate = 'error'
+        self.__reportDeltaState(**{'swname': swname,
+                                   'uuid': uuid,
+                                   'acttype': acttype,
+                                   'key': key,
+                                   'applied': curActiveConf[key],
+                                   'uuidstate': networkstate})
+
+    def compareIndv(self, switches):
+        """Compare individual entries and report it's status"""
+        for acttype in ['vsw', 'rst']:
+            for uuid, uuidDict in self.yamlconfuuid.get(acttype, {}).items():
+                if uuidDict == self.yamlconfuuidActive.get(acttype, {}).get(uuid, {}):
+                    # Equal as old one. No need to apply.
+                    continue
+                for swname, swdict in uuidDict.items():
+                    if swname not in switches:
+                        continue
+                    for key, call in {'interface': self.compareVsw, 'sense_bgp': self.compareBGP}.items():
+                        if key in swdict:
+                            self.logger.info(f'Comparing {acttype} for {uuid} config with ansible config')
+                            curAct = self.yamlconfuuidActive.get(acttype, {}).get(uuid, {}).get(swname, {}).get(key, {})
+                            diff = call(swname, curAct, uuid)
+                            if diff:
+                                self.applyIndvConfig(swname, uuid, key, acttype)
+
+    def compareAll(self, switches):
+        """Compare all config file"""
         configChanged = False
         hosts = []
         for host in switches:
@@ -161,16 +240,38 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         if configChanged:
             self.logger.info('Configuration changed. Applying New Configuration')
             self.applyConfig(raiseExc=True, hosts=hosts)
-            # This executes the double apply and it is because of Dell (and might be others)
-            # Dell seems to ignore some statements via ansible and requires second aplly
-            # Problem is with Dell OS9 and IPv6 neighbor definition inside ipv4.
-            # TODO: Need to look how to improve the DellOS9 jinja without double apply in code
-            time.sleep(1)
-            self.applyConfig(raiseExc=False, hosts=hosts)
+        return configChanged, hosts
+
+    def startwork(self):
+        """Start Provisioning Service main worker."""
+        # Get current active config;
+        self.__cleanup()
+        activeDeltas = self.dbI.get('activeDeltas')
+        if activeDeltas:
+            activeDeltas = activeDeltas[0]
+            activeDeltas['output'] = evaldict(activeDeltas['output'])
+        if not activeDeltas:
+            activeDeltas = {'output': {}}
+
+        self.switch.getinfo(False)
+        switches = self.switch.getAllSwitches()
+        self.prepareYamlConf(activeDeltas['output'], switches)
+
+        # Write new inventory file, based on the currect active(just in case things have changed)
+        # or container was restarted
+        inventory = self.switch.plugin._getInventoryInfo()
+        self.switch.plugin._writeInventoryInfo(inventory, '_singleapply')
+
+        # Compare individual requests and report it's states
+        self.compareIndv(switches)
+        # Compare All configuration and apply
+        configChanged, hosts = self.compareAll(switches)
 
         if self._forceApply() and not configChanged:
             self.logger.info('Force Config Apply. Because of Service restart or new day start.')
             self.applyConfig(raiseExc=True, hosts=hosts)
+        # Save individual uuid conf inside memory;
+        self.yamlconfuuidActive = copy.deepcopy(self.yamlconfuuid)
 
 
 def execute(config=None, args=None):
