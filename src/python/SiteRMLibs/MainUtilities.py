@@ -226,11 +226,11 @@ def createDirs(fullDirPath):
                 raise
     return
 
-def publishToSiteFE(inputDict, host, url):
+def publishToSiteFE(inputDict, host, url, verb='PUT'):
     """Put JSON to the Site FE."""
     req = Requests(host, {})
     try:
-        out = req.makeRequest(url, verb='PUT', data=json.dumps(inputDict))
+        out = req.makeRequest(url, verb=verb, data=json.dumps(inputDict))
     except http.client.HTTPException as ex:
         return (ex.reason, ex.status, 'FAILED', True)
     except pycurl.error as ex:

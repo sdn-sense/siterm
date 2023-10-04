@@ -33,15 +33,14 @@ class Ruler(contentDB, QOS, OverlapLib):
         self.hostname = self.config.get('agent', 'hostname')
         self.logger.info("====== Ruler Start Work. Hostname: %s", self.hostname)
         # L2,L3 move it to Class Imports at top.
-        self.layer2 = VInterfaces(self.config)
-        self.layer3 = Routing(self.config)
+        self.layer2 = VInterfaces(self.config, sitename)
+        self.layer3 = Routing(self.config, sitename)
         self.activeDeltas = {}
         self.activeFromFE = {}
         self.activeNew = {}
         self.activeNow = {}
         QOS.__init__(self)
         OverlapLib.__init__(self)
-
 
     def getData(self, url):
         """Get data from FE."""
@@ -89,27 +88,27 @@ class Ruler(contentDB, QOS, OverlapLib):
                     self.hostname in self.activeFromFE['output'][actKey][key].keys():
                         if vals[self.hostname] == self.activeFromFE['output'][actKey][key][self.hostname]:
                             continue
-                        actCall.modify(vals[self.hostname], self.activeFromFE['output'][actKey][key][self.hostname])
+                        actCall.modify(vals[self.hostname], self.activeFromFE['output'][actKey][key][self.hostname], key)
                     else:
-                        actCall.terminate(vals[self.hostname])
+                        actCall.terminate(vals[self.hostname], key)
         if actKey == 'rst' and self.qosPolicy == 'hostlevel':
             for key, val in self.activeNow.items():
                 if key not in self.activeNew:
-                    actCall.terminate(val)
+                    actCall.terminate(val, key)
                     continue
                 if val != self.activeNew[key]:
-                    actCall.terminate(val)
+                    actCall.terminate(val, key)
             return
 
     def activeEnsure(self, actKey, actCall):
         """Ensure all active resources are enabled, configured"""
         self.logger.info(f'Active Ensure for {actKey}')
         if actKey == 'vsw':
-            for _key, vals in self.activeFromFE.get('output', {}).get(actKey, {}).items():
+            for key, vals in self.activeFromFE.get('output', {}).get(actKey, {}).items():
                 if self.hostname in vals:
                     if self._started(vals) and not self._ended(vals):
                         # Means resource is active at given time.
-                        actCall.activate(vals[self.hostname])
+                        actCall.activate(vals[self.hostname], key)
                     else:
                         # Termination. Here is a bit of an issue
                         # if FE is down or broken - and we have multiple deltas
@@ -118,8 +117,8 @@ class Ruler(contentDB, QOS, OverlapLib):
                         # will happen at activeComparison - once delta is removed in FE.
                         continue
         if actKey == 'rst' and self.qosPolicy == 'hostlevel':
-            for _, val in self.activeNew.items():
-                actCall.activate(val)
+            for key, val in self.activeNew.items():
+                actCall.activate(val, key)
             return
 
     def startwork(self):
@@ -154,6 +153,7 @@ class Ruler(contentDB, QOS, OverlapLib):
             self.logger.info('Agent is not configured to apply rules')
         self.logger.info('Ended function start')
 
+
 def execute(config=None):
     """Execute main script for SiteRM Agent output preparation."""
     if not config:
@@ -161,6 +161,7 @@ def execute(config=None):
     for sitename in config.get('general', 'sitename'):
         ruler = Ruler(config, sitename)
         ruler.startwork()
+
 
 if __name__ == '__main__':
     getLoggingObject(logType='StreamLogger', service='Ruler')

@@ -319,10 +319,11 @@ class DeltaCalls:
         """
         # POST
         out = self.__intGetPostData(environ, **kwargs)
-        dbout = {'insertdate': out['insertdate'],
+        dbout = {'insertdate': getUTCnow(),
                  'uuid': out['uuid'],
                  'uuidtype': out['uuidtype'],
                  'hostname': out['hostname'],
+                 'hostport': out['hostport'],
                  'uuidstate': out['uuidstate']}
         self.dbobj.insert('deltatimestates', [dbout])
         self.responseHeaders(environ, **kwargs)
