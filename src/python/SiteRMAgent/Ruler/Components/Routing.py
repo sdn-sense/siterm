@@ -22,7 +22,7 @@ def publishState(modtype, uuid, hostname, state, fullURL):
            'hostname': hostname,
            'hostport': modtype,
            'uuidstate': state}
-    publishToSiteFE(out, fullURL, f"/sitefe/v1/deltatimestates", 'POST')
+    publishToSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", 'POST')
 
 
 class Rules:

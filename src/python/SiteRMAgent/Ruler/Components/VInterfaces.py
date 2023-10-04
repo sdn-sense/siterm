@@ -31,7 +31,7 @@ def publishState(vlan, inParams, uuid, hostname, state, fullURL):
                'hostname': hostname,
                'hostport': vlan['destport'],
                'uuidstate': state}
-        publishToSiteFE(out, fullURL, f"/sitefe/v1/deltatimestates", 'POST')
+        publishToSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", 'POST')
 
 
 def getDefaultMTU(config, intfKey):
@@ -210,8 +210,3 @@ class VInterfaces():
         # TODO: check if vlan same, if not - tier down old one, set up new one
         # check if IPs ==, if not - set new IPs.
         print('Called modify. TODO')
-
-if __name__ == '__main__':
-    testdata = {'enp143s0': {'isAlias': 'urn:ogf:network:ultralight.org:2013:dellos9_s0:hundredGigE_1-23:vlanport+3610', '_params': {'tag': 'urn:ogf:network:service+27cfe535-09e4-4510-bee2-e30331fbc9f5:vt+l2-policy::Connection_1'}, 'hasLabel': {'labeltype': 'ethernet#vlan', 'value': 3610}, 'hasService': {'bwuri': 'urn:ogf:network:ultralight.org:2013:sdn-dtn-1-7.ultralight.org:enp143s0:vlanport+3610:service+bw', 'availableCapacity': 1000000000, 'granularity': 1000000, 'maximumCapacity': 1000000000, 'priority': 0, 'reservableCapacity': 1000000000, 'type': 'guaranteedCapped', 'unit': 'bps'}, 'hasNetworkAddress': {'ipv6-address': {'type': 'ipv6-address|unverifiable', 'value': 'fc00:0:0:0:0:0:0:1c/127'}}}}
-    vInt = VInterfaces(None)
-    vInt.activate(testdata)
