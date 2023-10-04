@@ -29,6 +29,7 @@ from SiteRMLibs.MainUtilities import getCurrentModel, getActiveDeltas, writeActi
 from SiteRMLibs.MainUtilities import getAllHosts
 from SiteRMLibs.MainUtilities import getDBConn
 from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import dictSearch
 from SiteRMLibs.CustomExceptions import OverlapException
 from SiteRMLibs.CustomExceptions import WrongIPAddress
 from SiteFE.PolicyService.deltachecks import ConflictChecker
@@ -375,6 +376,36 @@ class PolicyService(RDFHelper):
                     self._portScanFinish(bidPort)
         return returnout
 
+    @staticmethod
+    def identifyglobalstate(tmpstates):
+        """Based on all subdelta states, identify top level delta state"""
+        if not tmpstates:
+            return "deactivated"
+        elif 'activate-error' in tmpstates:
+            return "activate-error"
+        elif 'deactivate-error' in tmpstates:
+            return "deactivate-error"
+        elif tmpstates.count("activated") == len(tmpstates):
+            return "activated"
+        elif tmpstates.count("deactivated") == len(tmpstates):
+            return "deactivated"
+        elif 'activated' in tmpstates:
+            return "activating"
+        elif 'deactivated' in tmpstates:
+            return "deactivating"
+        return 'unknown'
+
+    def topLevelDeltaState(self):
+        """Identify and set top level delta state"""
+        for key, vals in self.newActive['output']['vsw'].items():
+            for reqkey, reqdict in vals.items():
+                if reqkey == '_params':
+                    continue
+                tmpstates = dictSearch('networkstatus', reqdict, [])
+                globst = self.identifyglobalstate(tmpstates)
+                if '_params' in vals:
+                    self.newActive['output']['vsw'][key]['_params']['networkstatus'] = globst
+
     def recordDeltaStates(self):
         """Record delta states in activeDeltas output"""
         changed = False
@@ -394,6 +425,7 @@ class PolicyService(RDFHelper):
                     actEntry['hasService']['networkstatus'] = dbout['uuidstate']
             changed = True
             self.dbI.delete('deltatimestates', [['id', dbout['id']]])
+        self.topLevelDeltaState()
         return changed
 
     def generateActiveConfigDict(self, currentGraph):

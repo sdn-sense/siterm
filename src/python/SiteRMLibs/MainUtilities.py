@@ -47,6 +47,22 @@ from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.DBBackend import dbinterface
 
 
+def dictSearch(key, var, ret):
+    """Search item in dictionary"""
+    if isinstance(var, dict):
+        for k, v in var.items():
+            if k == key:
+                ret.append(v)
+            elif isinstance(v, dict):
+                ret = dictSearch(key, v, ret)
+            elif isinstance(v, list):
+                for d in v:
+                    ret = dictSearch(key, d, ret)
+    elif isinstance(var, list):
+        for d in var:
+            ret = dictSearch(key, d, ret)
+    return ret
+
 def isValFloat(inVal):
     """Check if inVal is float"""
     try:
