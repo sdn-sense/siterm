@@ -147,7 +147,7 @@ class PolicyService(RDFHelper):
         """
         out = self.queryGraph(gIn, connectionID, search=URIRef(f"{self.prefixes['nml']}{'existsDuring'}"))
         for timeline in out:
-            times = connOut.setdefault('_params', {}).setdefault('existsDuring', {'uri': str(timeline), 'state': 'deactivated'})
+            times = connOut.setdefault('_params', {}).setdefault('existsDuring', {'uri': str(timeline)})
             for timev in ['end', 'start']:
                 tout = self.queryGraph(gIn, timeline, search=URIRef(f"{self.prefixes['nml']}{timev}"))
                 temptime = None
