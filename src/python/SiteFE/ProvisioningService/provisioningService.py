@@ -22,7 +22,6 @@ UpdateDate              : 2022/05/09
 """
 import sys
 import copy
-import time
 import datetime
 from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import jsondumps
@@ -127,7 +126,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
 
     def __insertDeltaStateDB(self, **kwargs):
         """Write new state to DB"""
-        dbOut = {'insertdate': int(time.time()),
+        dbOut = {'insertdate': getUTCnow(),
                  'uuid': kwargs['uuid'],
                  'uuidtype': kwargs['acttype'],
                  'hostname': kwargs['swname'],

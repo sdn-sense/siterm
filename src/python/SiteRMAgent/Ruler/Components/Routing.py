@@ -9,10 +9,23 @@ import re
 from SiteRMLibs.MainUtilities import execute
 from SiteRMLibs.MainUtilities import externalCommand
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import getFullUrl
+from SiteRMLibs.MainUtilities import publishToSiteFE
 from SiteRMLibs.CustomExceptions import FailedRoutingCommand
+from SiteRMLibs.CustomExceptions import FailedInterfaceCommand
 
 
-class Rules():
+def publishState(modtype, uuid, hostname, state, fullURL):
+    """Publish Agent apply state to Frontend."""
+    out = {'uuidtype': 'vsw',
+           'uuid': uuid,
+           'hostname': hostname,
+           'hostport': modtype,
+           'uuidstate': state}
+    publishToSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", 'POST')
+
+
+class Rules:
     """Rules Class"""
     def __init__(self):
         self.rule_id = []
@@ -82,10 +95,13 @@ class Rules():
         lookup_indx = self.indices(self.rule_lookup, rule_lookup)
         return self.getvals(list(set(to_indx) & set(lookup_indx)))
 
-class Routing():
+
+class Routing:
     """Virtual interface class."""
-    def __init__(self, config):
+    def __init__(self, config, sitename):
         self.config = config
+        self.hostname = self.config.get('agent', 'hostname')
+        self.fullURL = getFullUrl(self.config, sitename)
         self.logger = getLoggingObject(config=self.config, service='Ruler')
         self.rules = Rules()
         self._refreshRuleList()
@@ -109,29 +125,48 @@ class Routing():
                 matched = match.groups()
                 self.rules.add_rule(matched[0], matched[1], matched[2], matched[3])
 
-    def apply_rule(self, rule, raiseError=False):
+    def apply_rule(self, rule, raiseError=True):
         """Add specific rule."""
         return execute(rule, self.logger, raiseError)
 
-    def terminate(self, route):
+    def terminate(self, route, uuid):
         """Terminate rules"""
         self._refreshRuleList()
-        if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', '') and self.rules.lookup_to(route['dst_ipv6']):
-            self.apply_rule(f"ip -6 rule del to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
-        if route.get('src_ipv6', '') and route.get('src_ipv6_intf', ''):
-            if self.rules.lookup_from_lookup(f"{route['src_ipv6']}/128", route['src_ipv6_intf']):
-                self.apply_rule(f"ip -6 rule del from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
-            if self.rules.lookup_to_lookup(f"{route['src_ipv6']}/128", route['src_ipv6_intf']):
-                self.apply_rule(f"ip -6 rule del to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
+        initialized = False
+        try:
+            if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', '') and self.rules.lookup_to(route['dst_ipv6']):
+                initialized = True
+                self.apply_rule(f"ip -6 rule del to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
+            if route.get('src_ipv6', '') and route.get('src_ipv6_intf', ''):
+                if self.rules.lookup_from_lookup(f"{route['src_ipv6']}/128", route['src_ipv6_intf']):
+                    initialized = True
+                    self.apply_rule(f"ip -6 rule del from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
+                if self.rules.lookup_to_lookup(f"{route['src_ipv6']}/128", route['src_ipv6_intf']):
+                    initialized = True
+                    self.apply_rule(f"ip -6 rule del to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
+            if initialized:
+                publishState('ipv6', uuid, self.hostname, 'deactivated', self.fullURL)
+        except FailedInterfaceCommand:
+            if initialized:
+                publishState('ipv6', uuid, self.hostname, 'deactivate-error', self.fullURL)
 
-    def activate(self, route):
+    def activate(self, route, uuid):
         """Activate routes"""
-        print(route)
         self._refreshRuleList()
-        if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', '') and not self.rules.lookup_to(route['dst_ipv6']):
-            self.apply_rule(f"ip -6 rule add to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
-        if route.get('src_ipv6', '') and route.get('src_ipv6_intf', ''):
-            if not self.rules.lookup_from_lookup(route['src_ipv6'], route['src_ipv6_intf']):
-                self.apply_rule(f"ip -6 rule add from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
-            if not self.rules.lookup_to_lookup(route['src_ipv6'], route['src_ipv6_intf']):
-                self.apply_rule(f"ip -6 rule add to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
+        initialized = False
+        try:
+            if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', '') and not self.rules.lookup_to(route['dst_ipv6']):
+                initialized = True
+                self.apply_rule(f"ip -6 rule add to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
+            if route.get('src_ipv6', '') and route.get('src_ipv6_intf', ''):
+                if not self.rules.lookup_from_lookup(route['src_ipv6'], route['src_ipv6_intf']):
+                    initialized = True
+                    self.apply_rule(f"ip -6 rule add from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
+                if not self.rules.lookup_to_lookup(route['src_ipv6'], route['src_ipv6_intf']):
+                    initialized = True
+                    self.apply_rule(f"ip -6 rule add to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
+            if initialized:
+                publishState('ipv6', uuid, self.hostname, 'activated', self.fullURL)
+        except FailedInterfaceCommand:
+            if initialized:
+                publishState('ipv6', uuid, self.hostname, 'activate-error', self.fullURL)

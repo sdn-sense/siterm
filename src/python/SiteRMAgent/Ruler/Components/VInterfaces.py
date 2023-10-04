@@ -12,11 +12,26 @@ from pyroute2 import IPRoute
 from SiteRMLibs.MainUtilities import execute
 from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import publishToSiteFE
+from SiteRMLibs.MainUtilities import getFullUrl
+from SiteRMLibs.CustomExceptions import FailedInterfaceCommand
 from SiteRMLibs.ipaddr import getBroadCast
 from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.ipaddr import getInterfaces
 from SiteRMLibs.ipaddr import getInterfaceIP
 from SiteRMLibs.ipaddr import normalizedipwithnet
+
+
+def publishState(vlan, inParams, uuid, hostname, state, fullURL):
+    """Publish Agent apply state to Frontend."""
+    oldState = inParams.get(vlan['destport'], {}).get('_params', {}).get('networkstatus', 'unknown')
+    if state != oldState:
+        out = {'uuidtype': 'vsw',
+               'uuid': uuid,
+               'hostname': hostname,
+               'hostport': vlan['destport'],
+               'uuidstate': state}
+        publishToSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", 'POST')
 
 
 def getDefaultMTU(config, intfKey):
@@ -51,8 +66,10 @@ def intfUp(intf):
 
 class VInterfaces():
     """Virtual interface class."""
-    def __init__(self, config):
+    def __init__(self, config, sitename):
         self.config = config if config else getGitConfig()
+        self.hostname = self.config.get('agent', 'hostname')
+        self.fullURL = getFullUrl(self.config, sitename)
         self.logger = getLoggingObject(config=self.config, service='Ruler')
 
     def _add(self, vlan, raiseError=False):
@@ -153,28 +170,36 @@ class VInterfaces():
             vlans.append(vlan)
         return vlans
 
-    def activate(self, inParams):
+    def activate(self, inParams, uuid):
         """Activate Virtual Interface resources"""
         vlans = self._getvlanlist(inParams)
         for vlan in vlans:
-            if self._statusvlan(vlan):
-                if not self._statusvlanIP(vlan):
-                    self._setup(vlan)
-            else:
-                self._add(vlan)
-                self._setup(vlan)
-            if not intfUp(f"vlan.{vlan['vlan']}"):
-                self._start(vlan)
+            try:
+                if self._statusvlan(vlan, True):
+                    if not self._statusvlanIP(vlan, True):
+                        self._setup(vlan, True)
+                else:
+                    self._add(vlan, True)
+                    self._setup(vlan, True)
+                if not intfUp(f"vlan.{vlan['vlan']}"):
+                    self._start(vlan, True)
+                publishState(vlan, inParams, uuid, self.hostname, 'activated', self.fullURL)
+            except FailedInterfaceCommand:
+                publishState(vlan, inParams, uuid, self.hostname, 'activate-error', self.fullURL)
 
-    def terminate(self, inParams):
+    def terminate(self, inParams, uuid):
         """Terminate Virtual Interface resources"""
         vlans = self._getvlanlist(inParams)
         for vlan in vlans:
-            if self._statusvlan(vlan):
-                self._stop(vlan)
-                self._remove(vlan)
+            try:
+                if self._statusvlan(vlan, True):
+                    self._stop(vlan, True)
+                    self._remove(vlan, True)
+                publishState(vlan, inParams, uuid, self.hostname, 'deactivated', self.fullURL)
+            except FailedInterfaceCommand:
+                publishState(vlan, inParams, uuid, self.hostname, 'deactivate-error', self.fullURL)
 
-    def modify(self, oldParams, newParams):
+    def modify(self, oldParams, newParams, uuid):
         """Modify Virtual Interface resources"""
         old = self._getvlanlist(oldParams)
         new = self._getvlanlist(newParams)
@@ -185,8 +210,3 @@ class VInterfaces():
         # TODO: check if vlan same, if not - tier down old one, set up new one
         # check if IPs ==, if not - set new IPs.
         print('Called modify. TODO')
-
-if __name__ == '__main__':
-    testdata = {'enp143s0': {'isAlias': 'urn:ogf:network:ultralight.org:2013:dellos9_s0:hundredGigE_1-23:vlanport+3610', '_params': {'tag': 'urn:ogf:network:service+27cfe535-09e4-4510-bee2-e30331fbc9f5:vt+l2-policy::Connection_1'}, 'hasLabel': {'labeltype': 'ethernet#vlan', 'value': 3610}, 'hasService': {'bwuri': 'urn:ogf:network:ultralight.org:2013:sdn-dtn-1-7.ultralight.org:enp143s0:vlanport+3610:service+bw', 'availableCapacity': 1000000000, 'granularity': 1000000, 'maximumCapacity': 1000000000, 'priority': 0, 'reservableCapacity': 1000000000, 'type': 'guaranteedCapped', 'unit': 'bps'}, 'hasNetworkAddress': {'ipv6-address': {'type': 'ipv6-address|unverifiable', 'value': 'fc00:0:0:0:0:0:0:1c/127'}}}}
-    vInt = VInterfaces(None)
-    vInt.activate(testdata)
