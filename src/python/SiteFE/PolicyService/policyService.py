@@ -127,6 +127,18 @@ class PolicyService(RDFHelper):
                 raise Exception(f'Search returned multiple entries. Not Supported. Out: {foundItems}')
         return foundItems
 
+    def getHasNetworkStatus(self, gIn, connectionID, connOut):
+        """Identifying NetworkStatus of the service/vlan
+        In case it fails to get correct timestamp, resources will be
+        provisioned right away.
+        """
+        out = self.queryGraph(gIn, connectionID, search=URIRef(f"{self.prefixes['mrs']}{'hasNetworkStatus'}"))
+        for statusuri in out:
+            tout = self.queryGraph(gIn, statusuri, search=URIRef(f"{self.prefixes['mrs']}value"))
+            if tout:
+                scanVals = connOut.setdefault('_params', {})
+                scanVals['networkstatus'] = str(tout[0])
+
     def getTimeScheduling(self, gIn, connectionID, connOut):
         """Identifying lifetime of the service.
         In case it fails to get correct timestamp, resources will be
@@ -229,6 +241,8 @@ class PolicyService(RDFHelper):
             out = self.queryGraph(gIn, bidPort, search=URIRef(f'{self.prefixes[pref]}{tag}'), allowMultiple=True)
             if out:
                 scanVals[tag] = str("|".join(out))
+        # Get network status if exists
+        self.getHasNetworkStatus(gIn, bidPort, returnout)
 
     def _hasLabel(self, gIn, bidPort, returnout):
         """Query Graph and get Labels"""
@@ -258,6 +272,7 @@ class PolicyService(RDFHelper):
             scanVals = returnout.setdefault('hasService', {})
             scanVals['bwuri'] = str(item)
             self.getTimeScheduling(gIn, item, returnout)
+            self._hasTags(gIn, item, scanVals)
             for key in ['availableCapacity', 'granularity', 'maximumCapacity',
                         'priority', 'reservableCapacity', 'type', 'unit']:
                 out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{key}"))
