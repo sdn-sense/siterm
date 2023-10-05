@@ -10,6 +10,8 @@ from SiteRMLibs.ipaddr import getInterfaces
 from SiteRMLibs.ipaddr import getInterfaceIP
 from SiteRMLibs.ipaddr import getsubnet
 from SiteRMLibs.ipaddr import checkoverlap
+from SiteRMLibs.ipaddr import getNetmaskBits
+
 
 class OverlapLib():
     """OverLap Lib - checks and prepares configs for overlap calculations"""
@@ -82,6 +84,10 @@ class OverlapLib():
                     self.allIPs[key].setdefault(iprange, [])
                     self.allIPs[key][iprange].append({'master': params['master_intf'],
                                                       'intf': intf})
+
+    def _getNetmaskBit(self, ipinput):
+        """Get Netmask Bits"""
+        return getNetmaskBits(ipinput)
 
     def getAllIPs(self):
         """Get all IPs"""

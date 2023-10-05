@@ -332,6 +332,15 @@ class GitConfig():
                                       'class_max': True,
                                       'interfaces': []}}}
         self.__addDefaults(defConfig)
+        self.__generatevlaniplists()
+
+    def __generatevlaniplists(self):
+        """Generate list for vlans and ips. config might have it in str"""
+        for key, vals in list(self.config['MAIN'].items()):
+            for subkey, subval in list(self.config['MAIN'][key].items()):
+                self.generateIPList(key, subkey, subval)
+                self.generateVlanList(key, subkey, subval)
+
 
     def getGitAgentConfig(self):
         """Get Git Agent Config."""
@@ -357,8 +366,7 @@ class GitConfig():
             retVals.append(int(tmpvals[0]))
         return retVals
 
-    def generateVlanList(self, vals):
-        """Generate Vlan List. which can be separated by comma, dash"""
+    def __genVlansRange(self, vals):
         retVals = []
         tmpVals = vals
         if isinstance(vals, int):
@@ -370,45 +378,33 @@ class GitConfig():
                 retVals.append(int(lval))
         return list(set(retVals))
 
-    @staticmethod
-    def generateIPList(vals):
-        """Split by command and return list"""
-        if isinstance(vals, list):
-            return vals
-        return list(set(list(filter(None, vals.split(',')))))
+    def generateVlanList(self, key1, key2, vals):
+        """Generate Vlan List. which can be separated by comma, dash"""
+        runparser = False
+        if key2 == 'vlan_range':
+            runparser = True
+        if key2.startswith('port_') and key2.endswith('vlan_range'):
+            runparser = True
+        if not runparser:
+            return
+        newvlanlist = self.__genVlansRange(vals)
+        self.config['MAIN'][key1][f"{key2}_list"] = newvlanlist
+        # Add any vlan to all vlans range list.
+        allvlans = self.config['MAIN'][key1].setdefault("all_vlan_range_list", [])
+        for vlanid in newvlanlist:
+            if vlanid not in allvlans:
+                allvlans.append(vlanid)
 
-    def __generatevlaniplists(self):
-        """Generate list for vlans and ips. config might have it in str"""
-        for sitename in self.config['MAIN']['general']['sites']:
-            for iptype in ['ipv6', 'ipv4']:
-                for key in ['subnet-pool', 'address-pool']:
-                    if f"{iptype}-{key}" in self.config['MAIN'][sitename].keys():
-                        nlist = self.generateIPList(self.config['MAIN'][sitename][f"{iptype}-{key}"])
-                        self.config['MAIN'][sitename][f"{iptype}-{key}-list"] = nlist
-            if 'vlan_range' in self.config['MAIN'][sitename]:
-                nlist = self.generateVlanList(self.config['MAIN'][sitename]["vlan_range"])
-                self.config['MAIN'][sitename]["vlan_range_list"] = nlist
-            # Now we do all individual switches. If key not available;
-            # Will use the default if available
-            for switch in self.config['MAIN'][sitename]['switch']:
-                for iptype in ['ipv6', 'ipv4']:
-                    for key in ['subnet-pool', 'address-pool']:
-                        if f"{iptype}-{key}" in self.config['MAIN'][switch].keys():
-                            nlist = self.generateIPList(self.config['MAIN'][switch][f"{iptype}-{key}"])
-                            self.config['MAIN'][switch][f"{iptype}-{key}-list"] = nlist
-                        elif f"{iptype}-{key}-list" in self.config['MAIN'][sitename]:
-                            tmp = self.config['MAIN'][sitename][f"{iptype}-{key}-list"]
-                            self.config['MAIN'][switch][f"{iptype}-{key}-list"] = tmp
-                if 'vlan_range' in self.config['MAIN'][switch]:
-                    nlist = self.generateVlanList(self.config['MAIN'][switch]["vlan_range"])
-                    self.config['MAIN'][switch]["vlan_range_list"] = nlist
-                elif 'vlan_range_list' in self.config['MAIN'][sitename]:
-                    self.config['MAIN'][switch]["vlan_range_list"] = self.config['MAIN'][sitename]['vlan_range_list']
-                # Also review all predefined vlan_ranges for individual ports and make a list
-                for key in list(self.config['MAIN'][switch].keys()):
-                    if key.startswith('port_') and key.endswith('vlan_range'):
-                        nlist = self.generateVlanList(self.config['MAIN'][switch][key])
-                        self.config['MAIN'][switch][f"{key}_list"] = nlist
+    def generateIPList(self, key1, key2, vals):
+        """Split by command and return list"""
+        if key2 in ['ipv4-address-pool', 'ipv6-address-pool',
+                    'ipv4-subnet-pool', 'ipv6-subnet-pool']:
+            if isinstance(vals, list) and vals:
+                self.config['MAIN'][key1][f"{key2}-list"] = vals
+            else:
+                vals = list(set(list(filter(None, vals.split(',')))))
+                self.config['MAIN'][key1][f"{key2}-list"] = vals
+
 
     def presetFEDefaultConfigs(self):
         """Preset default config parameters for FE"""

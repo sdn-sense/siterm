@@ -36,7 +36,7 @@ class Switch:
     def __getAnsErrors(self, ansOut):
         """Get Ansible errors"""
         for fkey in ['dark', 'failures']:
-            for host, _ in ansOut.stats[fkey].items():
+            for host, _ in ansOut.stats.get(fkey, {}).items():
                 for hostEvents in ansOut.host_events(host):
                     err = hostEvents.get('event_data', {}).get('res', {})
                     self.ansibleErrs.setdefault(host, {}).setdefault(fkey, [])
@@ -137,10 +137,27 @@ class Switch:
 
     def getvlans(self, inData):
         """Get vlans from ansible output"""
-        # Dell OS 9 has Vlan XXXX
-        # Arista EOS has VlanXXXX
+        swname = inData.get('event_data', {}).get('host', '')
         ports = self.getports(inData)
-        return [vlan for vlan in ports if vlan.startswith('Vlan')]
+        tmpout = [vlan for vlan in ports if vlan.startswith('Vlan')]
+        if self.config.has_option(swname, 'allvlans') and self.config.get(swname, 'allvlans'):
+            return tmpout
+        # If we reach here, means allvlans flag is false. It should include into model only SENSE Vlans.
+        out = []
+        if self.config.has_option(swname, 'all_vlan_range_list') and self.config.get(swname, 'all_vlan_range_list'):
+            for item in tmpout:
+                vlanid = self.getVlanKey(item)
+                if isinstance(vlanid, int):
+                    if vlanid in self.config.get(swname, 'all_vlan_range_list'):
+                        out.append(item)
+                else:
+                    self.logger.warning(f'Issue with vlan name {item}. Not able to make integer')
+                    out.append(item)
+        else:
+            # This point to an issue in SiteRM configuration. In this case we return all vlans
+            self.logger.warning('There is an issue with all vlans range configuration. Contact DEV Team')
+            return tmpout
+        return out
 
     @staticmethod
     def getVlanKey(port):
