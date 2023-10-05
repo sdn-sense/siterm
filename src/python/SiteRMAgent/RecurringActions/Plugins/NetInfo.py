@@ -38,9 +38,10 @@ def get(config):
         for key in ['ipv4-address-pool', 'ipv4-subnet-pool', 'ipv6-address-pool', 'ipv6-subnet-pool']:
             if config.has_option(intf, key):
                 nicInfo[key] = config.get(intf, key)
-                nicInfo[f'{key}-list'] = config.generateIPList(nicInfo[key])
+            if config.has_option(intf, f"{key}-list"):
+                nicInfo[f"{key}-list"] = config.get(intf, f"{key}-list")
         nicInfo['vlan_range'] = config.get(intf, "vlan_range")
-        nicInfo['vlan_range_list'] = config.generateVlanList(nicInfo['vlan_range'])
+        nicInfo['vlan_range_list'] = config.get(intf, 'vlan_range_list')
         nicInfo['min_bandwidth'] = int(config.get(intf, "min_bandwidth"))
         nicInfo['max_bandwidth'] = int(config.get(intf, "max_bandwidth"))
         nicInfo['switch_port'] = replaceSpecialSymbols(str(config.get(intf, "port")))

@@ -10,7 +10,8 @@ Date: 2021/01/20
 import copy
 from datetime import datetime
 from collections import namedtuple
-from ipaddress import IPv4Network, IPv6Network, AddressValueError
+from SiteRMLibs.ipaddr import checkOverlap as incheckOverlap
+from SiteRMLibs.ipaddr import ipOverlap as inipOverlap
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.CustomExceptions import OverlapException
 from SiteRMLibs.CustomExceptions import WrongIPAddress
@@ -22,44 +23,15 @@ class ConflictChecker():
         self.newid = ""
         self.oldid = ""
 
-    def checkOverlap(self, inrange, ipval, iptype):
+    @staticmethod
+    def checkOverlap(inrange, ipval, iptype):
         """Check if overlap"""
-        overlap = False
-        for vrange in inrange:
-            overlap = self._ipOverlap(vrange, ipval, iptype)
-            if overlap:
-                return overlap
-        return overlap
+        return incheckOverlap(inrange, ipval, iptype)
 
     @staticmethod
     def _ipOverlap(ip1, ip2, iptype):
         """Check if IP Overlap. Return True/False"""
-        def ipv4Wrapper(ipInput):
-            "IPv4 Wrapper to check if IP Valid. Raise Custom Exception if not"
-            try:
-                return IPv4Network(ipInput, False)
-            except AddressValueError as ex:
-                raise WrongIPAddress from ex
-
-        def ipv6Wrapper(ipInput):
-            "IPv6 Wrapper to check if IP Valid. Raise Custom Exception if not"
-            try:
-                return IPv6Network(ipInput, False)
-            except AddressValueError as ex:
-                raise WrongIPAddress from ex
-
-        overlap = False
-        if not ip1 or not ip2:
-            return overlap
-        if iptype == 'ipv4':
-            net1 = ipv4Wrapper(ip1)
-            net2 = ipv4Wrapper(ip2)
-            overlap = net1.subnet_of(net2) or net2.subnet_of(net1)
-        if iptype == 'ipv6':
-            net1 = ipv6Wrapper(ip1)
-            net2 = ipv6Wrapper(ip2)
-            overlap = net1.subnet_of(net2) or net2.subnet_of(net1)
-        return overlap
+        inipOverlap(ip1, ip2, iptype)
 
     @staticmethod
     def _checkVlanInRange(polcls, vlan, hostname):

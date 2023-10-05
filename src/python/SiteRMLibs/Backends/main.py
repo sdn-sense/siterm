@@ -188,7 +188,7 @@ class Switch(Node):
         if switch not in self.switches['output']:
             return
         vlans = self.plugin.getvlans(self.switches['output'][switch])
-        for port in ports:
+        for port in list(ports + vlans):
             if port in portsIgn:
                 self._delPortFromOut(switch, port)
                 continue

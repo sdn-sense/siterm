@@ -9,6 +9,7 @@ Date: 2022/04/08
 """
 import netifaces
 from ipaddress import ip_address, ip_network
+from ipaddress import IPv4Network, IPv6Network, AddressValueError
 
 
 def getInterfaces():
@@ -19,6 +20,11 @@ def getInterfaces():
 def getInterfaceIP(interface):
     """Get Interface IP"""
     return netifaces.ifaddresses(interface)
+
+
+def getNetmaskBits(netmask):
+    """Get Netmask Bits"""
+    return sum([bin(int(x)).count('1') for x in netmask.split('.')])
 
 
 def normalizedipwithnet(ipInput, netmask):
@@ -53,11 +59,13 @@ def getsubnet(ipInput, strict=False):
     """Get subnet if IP address"""
     return ip_network(ipInput, strict=strict).compressed
 
+
 def checkoverlap(net1, net2):
     try:
         return ip_network(net1).overlaps(ip_network(net2))
     except ValueError:
         return False
+
 
 def ipVersion(ipInput, strict=False):
     """Check if IP is valid.
@@ -83,11 +91,13 @@ def getBroadCast(inIP):
     myNet = ip_network(str(inIP), strict=False)
     return str(myNet.broadcast_address)
 
+
 def replaceSpecialSymbols(valIn):
     """Replace all symbols [:/'" ] as they not supported in mrml tag"""
     for repl in [[" ", "_"], ["/", "-"], ['"', ''], ["'", ""], [":", "__"]]:
         valIn = valIn.replace(repl[0], repl[1])
     return valIn
+
 
 def validMRMLName(valIn):
     """Generate valid MRML Name for ipv6 value"""
@@ -99,4 +109,45 @@ def validMRMLName(valIn):
     # Because of this - we always use a short version
     if ipVersion(valIn) == 6:
         valIn = ip_address(valIn.split('/')[0]).compressed
-    replaceSpecialSymbols(valIn)
+    return replaceSpecialSymbols(valIn)
+
+
+def checkOverlap(inrange, ipval, iptype):
+    """Check if overlap"""
+    overlap = False
+    for vrange in inrange:
+        overlap = ipOverlap(vrange, ipval, iptype)
+        if overlap:
+            return overlap
+    return overlap
+
+
+def ipOverlap(ip1, ip2, iptype):
+    """Check if IP Overlap. Return True/False"""
+    def ipv4Wrapper(ipInput):
+        """IPv4 Wrapper to check if IP Valid."""
+        try:
+            return IPv4Network(ipInput, False)
+        except AddressValueError:
+            return False
+
+    def ipv6Wrapper(ipInput):
+        """IPv6 Wrapper to check if IP Valid."""
+        try:
+            return IPv6Network(ipInput, False)
+        except AddressValueError:
+            return False
+
+    overlap = False
+    if not ip1 or not ip2:
+        return overlap
+    if iptype == 'ipv4':
+        net1 = ipv4Wrapper(ip1)
+        net2 = ipv4Wrapper(ip2)
+        overlap = net1.subnet_of(net2) or net2.subnet_of(net1)
+    if iptype == 'ipv6':
+        net1 = ipv6Wrapper(ip1)
+        net2 = ipv6Wrapper(ip2)
+        overlap = net1.subnet_of(net2) or net2.subnet_of(net1)
+    return overlap
+

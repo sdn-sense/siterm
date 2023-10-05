@@ -149,6 +149,7 @@ class Routing:
         except FailedInterfaceCommand:
             if initialized:
                 publishState('ipv6', uuid, self.hostname, 'deactivate-error', self.fullURL)
+        return []
 
     def activate(self, route, uuid):
         """Activate routes"""
@@ -170,3 +171,4 @@ class Routing:
         except FailedInterfaceCommand:
             if initialized:
                 publishState('ipv6', uuid, self.hostname, 'activate-error', self.fullURL)
+        return []
