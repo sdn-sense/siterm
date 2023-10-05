@@ -125,17 +125,17 @@ def checkOverlap(inrange, ipval, iptype):
 def ipOverlap(ip1, ip2, iptype):
     """Check if IP Overlap. Return True/False"""
     def ipv4Wrapper(ipInput):
-        "IPv4 Wrapper to check if IP Valid."
+        """IPv4 Wrapper to check if IP Valid."""
         try:
             return IPv4Network(ipInput, False)
-        except AddressValueError as ex:
+        except AddressValueError:
             return False
 
     def ipv6Wrapper(ipInput):
-        "IPv6 Wrapper to check if IP Valid."
+        """IPv6 Wrapper to check if IP Valid."""
         try:
             return IPv6Network(ipInput, False)
-        except AddressValueError as ex:
+        except AddressValueError:
             return False
 
     overlap = False
@@ -150,3 +150,4 @@ def ipOverlap(ip1, ip2, iptype):
         net2 = ipv6Wrapper(ip2)
         overlap = net1.subnet_of(net2) or net2.subnet_of(net1)
     return overlap
+

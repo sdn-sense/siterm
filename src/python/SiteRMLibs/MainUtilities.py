@@ -336,11 +336,10 @@ class GitConfig():
 
     def __generatevlaniplists(self):
         """Generate list for vlans and ips. config might have it in str"""
-        for key, vals in list(self.config['MAIN'].items()):
+        for key, _ in list(self.config['MAIN'].items()):
             for subkey, subval in list(self.config['MAIN'][key].items()):
                 self.generateIPList(key, subkey, subval)
                 self.generateVlanList(key, subkey, subval)
-
 
     def getGitAgentConfig(self):
         """Get Git Agent Config."""
@@ -367,6 +366,7 @@ class GitConfig():
         return retVals
 
     def __genVlansRange(self, vals):
+        """Generate Vlans Range"""
         retVals = []
         tmpVals = vals
         if isinstance(vals, int):
@@ -404,7 +404,6 @@ class GitConfig():
             else:
                 vals = list(set(list(filter(None, vals.split(',')))))
                 self.config['MAIN'][key1][f"{key2}-list"] = vals
-
 
     def presetFEDefaultConfigs(self):
         """Preset default config parameters for FE"""

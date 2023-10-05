@@ -23,7 +23,8 @@ class ConflictChecker():
         self.newid = ""
         self.oldid = ""
 
-    def checkOverlap(self, inrange, ipval, iptype):
+    @staticmethod
+    def checkOverlap(inrange, ipval, iptype):
         """Check if overlap"""
         return incheckOverlap(inrange, ipval, iptype)
 

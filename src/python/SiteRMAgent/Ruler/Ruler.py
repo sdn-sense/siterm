@@ -98,10 +98,10 @@ class Ruler(contentDB, QOS, OverlapLib):
         if len(vlan) == 2:
             vlan = int(vlan[1])
         overlap = False
-        for intf in self.config['MAIN']['agent']['interfaces']:
-            if vlan in self.config['MAIN'][intf].get('all_vlan_range_list', []):
-                if f'{iptype}-address-pool' in self.config['MAIN'][intf]:
-                    overlap = checkOverlap(self.config['MAIN'][intf][f'{iptype}-address-pool'],
+        for mintf in self.config['MAIN']['agent']['interfaces']:
+            if vlan in self.config['MAIN'][mintf].get('all_vlan_range_list', []):
+                if f'{iptype}-address-pool' in self.config['MAIN'][mintf]:
+                    overlap = checkOverlap(self.config['MAIN'][mintf][f'{iptype}-address-pool'],
                                            ip,
                                            iptype)
                     if overlap:
@@ -130,7 +130,6 @@ class Ruler(contentDB, QOS, OverlapLib):
                                                    'vlan': intf['master'].split('.')[1]})
                         else:
                             self.logger.info(f"Not removing {ip} from {intf['master']} as it is not from configuration. Manual set IP?")
-        #self.activeIPs
 
     def activeComparison(self, actKey, actCall):
         """Compare active vs file on node config"""
@@ -211,7 +210,6 @@ class Ruler(contentDB, QOS, OverlapLib):
         self.logger.info('Ended function start')
         self.logger.info('Started IP Consistency Check')
         self.ipConsistency('ipv4')
-
 
 
 def execute(config=None):

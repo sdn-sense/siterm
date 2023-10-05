@@ -102,15 +102,11 @@ class VInterfaces():
         """Remove IP from vlan"""
         if 'ip' in vlan.keys() and vlan['ip']:
             self.logger.info(f'Called VInterface IPv4 remove IP for {str(vlan)}')
-            command = "ip addr del %s broadcast %s dev vlan.%s" % (vlan['ip'],
-                                                                   getBroadCast(vlan['ip']),
-                                                                   vlan['vlan'])
+            command = f"ip addr del {vlan['ip']} broadcast {getBroadCast(vlan['ip'])} dev vlan.{vlan['vlan']}"
             execute(command, self.logger, raiseError)
         elif 'ipv6' in vlan.keys() and vlan['ipv6']:
             self.logger.info(f'Called VInterface IPv6 remote IP for {str(vlan)}')
-            command = "ip addr del %s broadcast %s dev vlan.%s" % (vlan['ipv6'],
-                                                                   getBroadCast(vlan['ipv6']),
-                                                                   vlan['vlan'])
+            command = f"ip addr del {vlan['ipv6']} broadcast {getBroadCast(vlan['ipv6'])} dev vlan.{vlan['vlan']}"
             execute(command, self.logger, raiseError)
         else:
             self.logger.info(f'Called VInterface remove ip for {str(vlan)}, but ip/ipv6 keys are not present.')
@@ -226,7 +222,7 @@ class VInterfaces():
         if old == new:
             # This can happen if we modify QOS only. So there is no IP or VLAN
             # change.
-            return
+            return []
         # TODO: check if vlan same, if not - tier down old one, set up new one
         # check if IPs ==, if not - set new IPs.
         print('Called modify. TODO')

@@ -85,7 +85,8 @@ class OverlapLib():
                     self.allIPs[key][iprange].append({'master': params['master_intf'],
                                                       'intf': intf})
 
-    def _getNetmaskBit(self, ipinput):
+    @staticmethod
+    def _getNetmaskBit(ipinput):
         """Get Netmask Bits"""
         return getNetmaskBits(ipinput)
 
