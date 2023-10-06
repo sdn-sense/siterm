@@ -58,13 +58,22 @@ class TopoCalls:
         return {}
 
     def _getWANLinks(self, incr):
+        """Get WAN Links for visualization"""
         wan_links = {}
-        for sw, wanlinks in self.config['MAIN'].get('general', {}).get('wan', {}).items():
-            for portname, remotename in wanlinks.items():
-                splport = remotename.split(":")
-                wan_links.setdefault(f"wan{incr}", {"topo": {}, "DeviceInfo": {"type": "cloud", "name": remotename}, "_id": incr})
-                wan_links[f"wan{incr}"]["topo"].setdefault(splport[-1], {"device": sw, "port": portname})
-            incr += 1
+        for site in self.config['MAIN'].get('general', {}).get('sites', []):
+            for sw in self.config['MAIN'].get(site, {}).get('switch', []):
+                for key, val in self.config['MAIN'].get(sw, {}).items():
+                    if key.endswith('wanlink') and val:
+                        aliasKey = key.replace('wanlink', 'isAlias')
+                        remotename = self.config['MAIN'][sw].get(aliasKey, '')
+                        if remotename:
+                            splport = remotename.split(":")
+                            wan_links.setdefault(f"wan{incr}", {"_id": incr,
+                                                                "topo": {},
+                                                                "DeviceInfo": {"type": "cloud",
+                                                                               "name": remotename}})
+                            wan_links[f"wan{incr}"]["topo"].setdefault(splport[-1], {"device": sw, "port": val})
+                            incr += 1
         return wan_links
 
 
