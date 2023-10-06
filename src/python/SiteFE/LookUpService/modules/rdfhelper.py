@@ -49,8 +49,6 @@ class RDFHelper():
                 return True
         return False
 
-
-
     def genUriRef(self, prefix=None, add=None, custom=None):
         """Generate URIRef and return."""
         if custom:
@@ -68,7 +66,6 @@ class RDFHelper():
             return Literal(value, datatype=datatype)
         return Literal(value)
 
-
     def _addIsAlias(self, **kwargs):
         """Add isAlias to model"""
         if 'isAlias' in kwargs and kwargs['isAlias'] and \
@@ -79,6 +76,23 @@ class RDFHelper():
             if 'hostname' in kwargs and kwargs['hostname'] and \
                'portName' in kwargs and kwargs['portName']:
                 self._addRstPort(**kwargs)
+
+    def setToGraph(self, sub, pred, obj):
+        """Set (Means remove old and then add new) to the graph
+        Input:
+        sub (list) max len 2
+        pred (list) max len 2
+        obj (list) max len 2 if 1 will use Literal value
+        """
+        if len(obj) == 1 and len(sub) == 1:
+            sub = self.genUriRef(sub[0])
+            pred = self.genUriRef(pred[0], pred[1])
+            obj = self.genLiteral(obj[0])
+        elif len(obj) == 1 and len(sub) == 2:
+            sub = self.genUriRef(sub[0], sub[1])
+            pred = self.genUriRef(pred[0], pred[1])
+            obj = self.genLiteral(obj[0])
+        self.newGraph.set((sub, pred, obj))
 
     def addToGraph(self, sub, pred, obj):
         """Add to graph new info.
@@ -131,7 +145,7 @@ class RDFHelper():
             self.addToGraph(['site', f":{uri}"],
                             ['mrs', 'type'],
                             [uri])
-            self.addToGraph(['site', f":{uri}"],
+            self.setToGraph(['site', f":{uri}"],
                             ['mrs', 'value'],
                             [kwargs[uri]])
 
@@ -379,7 +393,7 @@ class RDFHelper():
         self.addToGraph(['site', kwargs['uri']],
                         ['mrs', 'type'],
                         [kwargs['type']])
-        self.addToGraph(['site', kwargs['uri']],
+        self.setToGraph(['site', kwargs['uri']],
                         ['mrs', 'value'],
                         [kwargs['value']])
 
@@ -451,7 +465,7 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site', labeluri),
                            self.genUriRef('nml', 'labeltype'),
                            self.genUriRef('schema', '#vlan')))
-        self.newGraph.add((self.genUriRef('site', labeluri),
+        self.newGraph.set((self.genUriRef('site', labeluri),
                            self.genUriRef('nml', 'value'),
                            self.genLiteral(str(kwargs['vlan']))))
         return labeluri
@@ -480,7 +494,7 @@ class RDFHelper():
         self.addToGraph(['site', f"{uri}:{name}"],
                         ['mrs', 'type'],
                         [sname])
-        self.addToGraph(['site', f"{uri}:{name}"],
+        self.setToGraph(['site', f"{uri}:{name}"],
                         ['mrs', 'value'],
                         [value])
 
@@ -489,12 +503,12 @@ class RDFHelper():
     # ==========================================================
     def _nmlLiteral(self, uri, nmlkey, value, datatype=None):
         """Add NML Literal to Model"""
-        self.newGraph.add((self.genUriRef('site', uri),
+        self.newGraph.set((self.genUriRef('site', uri),
                            self.genUriRef('nml', nmlkey),
                            self.genLiteral(value, datatype)))
 
     def _mrsLiteral(self, uri, mrskey, value, datatype=None):
         """Add MRS Literal to Model"""
-        self.newGraph.add((self.genUriRef('site', uri),
+        self.newGraph.set((self.genUriRef('site', uri),
                            self.genUriRef('mrs', mrskey),
                            self.genLiteral(value, datatype)))
