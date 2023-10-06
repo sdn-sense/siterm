@@ -123,7 +123,7 @@ class SwitchInfo():
         self.addToGraph(['site', labeluri],
                         ['mrs', 'type'],
                         [reptype])
-        self.addToGraph(['site', labeluri],
+        self.setToGraph(['site', labeluri],
                         ['mrs', 'value'],
                         [val])
 
@@ -142,7 +142,7 @@ class SwitchInfo():
                 self.addToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['nml', 'labeltype'],
                                 ['schema', '#vlan'])
-                self.addToGraph(['site', f"{newuri}:{'vlan-range'}"],
+                self.setToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['nml', 'values'],
                                 [",".join(map(str, portSwitch['vlan_range_list']))])
                 # Generate host alias or adds' isAlias
@@ -202,7 +202,7 @@ class SwitchInfo():
         self.addToGraph(['site', labeluri],
                         ['nml', 'labeltype'],
                         ['schema', '#vlan'])
-        self.addToGraph(['site', labeluri],
+        self.setToGraph(['site', labeluri],
                         ['nml', 'value'],
                         [str(value)])
 

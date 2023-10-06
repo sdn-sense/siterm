@@ -85,7 +85,7 @@ class NodeInfo():
         self.addToGraph(['site', f"{uri}:sense-rtmon+realportname"],
                         ['mrs', 'type'],
                         ["sense-rtmon:name"])
-        self.addToGraph(['site', f"{uri}:sense-rtmon+realportname"],
+        self.setToGraph(['site', f"{uri}:sense-rtmon+realportname"],
                         ['mrs', 'value'],
                         [intfKey])
 
@@ -104,7 +104,7 @@ class NodeInfo():
         self.addToGraph(['site', f"{uri}:{name}"],
                         ['mrs', 'type'],
                         [sname])
-        self.addToGraph(['site', f"{uri}:{name}"],
+        self.setToGraph(['site', f"{uri}:{name}"],
                         ['mrs', 'value'],
                         [value])
 
@@ -318,7 +318,7 @@ class NodeInfo():
                         self.newGraph.add((self.genUriRef('site', f"{vlanuri}:vlan"),
                                            self.genUriRef('nml', 'labeltype'),
                                            self.genUriRef('schema', '#vlan')))
-                        self.newGraph.add((self.genUriRef('site', f"{vlanuri}:vlan"),
+                        self.newGraph.set((self.genUriRef('site', f"{vlanuri}:vlan"),
                                            self.genUriRef('nml', 'value'),
                                            self.genLiteral(str(vlanDict['vlanid']))))
                     # Add hasNetworkAddress for vlan

@@ -43,7 +43,7 @@ class DeltaInfo():
         self.addToGraph(['site', f"{uri}:status"],
                         ['mrs', 'type'],
                         ["dataplane"])
-        self.addToGraph(['site', f"{uri}:status"],
+        self.setToGraph(['site', f"{uri}:status"],
                         ['mrs', 'value'],
                         [netstatus])
 
