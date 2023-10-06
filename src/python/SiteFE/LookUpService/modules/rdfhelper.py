@@ -133,7 +133,7 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site'),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Topology')))
-        for uri in ['sitename', 'version']:
+        for uri in ['sitename', 'version', 'webdomain']:
             if uri not in kwargs:
                 continue
             self.addToGraph(['site'],

@@ -82,6 +82,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         """Add Main Topology definition to Model."""
         out = {'sitename': self.sitename, 'labelswapping': "false",
                "name": self.prefixes['site'], 'version': self.modelVersion}
+        if self.config.has_option('general', 'webdomain'):
+            out['webdomain'] = self.config.get('general', 'webdomain')
         self._addSite(**out)
         return out
 
@@ -176,7 +178,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
                 try:
                     os.unlink(model['fileloc'])
                 except OSError as ex:
-                    self.logger.debug(f'Got OS Error removing this model {model}. Exc: {str(ex)}')
+                    self.logger.debug(f"Got OS Error removing this model {model['fileloc']}. Exc: {str(ex)}")
                 self.dbI.delete('models', [['id', model['id']]])
 
 
