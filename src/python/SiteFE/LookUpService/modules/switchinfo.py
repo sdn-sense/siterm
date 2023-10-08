@@ -62,9 +62,11 @@ def _genIPv6(cls, inval, inkey, esc=True):
     But for some switches, it will return dict if a single entry
     """
     if isinstance(inval, dict):
-        subnet = 128 # Default we will use /128 just to secure code from diff ansible-switch outputs
+        subnet = 64 # Default we will use /64 just to secure code from diff ansible-switch outputs
         if 'subnet' in inval:
             subnet = inval['subnet'].split('/')[-1]
+        if 'masklen' in inval:
+            subnet = inval['masklen']
         if 'address' in inval:
             if esc:
                 return validMRMLName(f"{inval['address']}/{subnet}")

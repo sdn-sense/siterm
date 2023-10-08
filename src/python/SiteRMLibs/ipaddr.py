@@ -108,7 +108,11 @@ def validMRMLName(valIn):
     # See https://datatracker.ietf.org/doc/html/rfc4291.html
     # Because of this - we always use a short version
     if ipVersion(valIn) == 6:
-        valIn = ip_address(valIn.split('/')[0]).compressed
+        tmpspl = valIn.split('/')
+        longip = ip_address(tmpspl[0]).exploded
+        if len(tmpspl) == 2:
+            return f"{longip}_{tmpspl[1]}".replace('0000', '0').replace(':', '_')
+        return f"{longip}".replace('0000', '0').replace(':', '_')
     return replaceSpecialSymbols(valIn)
 
 
