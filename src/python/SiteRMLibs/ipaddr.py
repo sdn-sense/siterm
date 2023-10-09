@@ -109,13 +109,13 @@ def _ipv6InJavaFormat(ipinput):
         tmpval = str(item)
         tmparr = []
         stoploop = False
-        for i in range(len(tmpval)):
+        for i in enumerate(tmpval):
             if not stoploop:
-                if tmpval[i] != '0':
-                    tmparr.append(tmpval[i])
+                if i[1] != '0':
+                    tmparr.append(i[1])
                     stoploop = True
                 continue
-            tmparr.append(tmpval[i])
+            tmparr.append(i[1])
         if not tmparr:
             tmparr.append('0')
         out.append("".join(tmparr))
