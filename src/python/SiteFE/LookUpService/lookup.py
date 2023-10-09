@@ -40,7 +40,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         self.newGraph = None
         self.shared = 'notshared'
         self.hosts = {}
-        self.renewSwitchConfig = False
         self.switch = Switch(config, sitename)
         self.prefixes = {}
         self.police = PolicyService(self.config, self.sitename)
@@ -130,7 +129,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         # ==================================================================================
         # 5. Define Switch information from Switch Lookup Plugin
         # ==================================================================================
-        self.addSwitchInfo(self.renewSwitchConfig)
+        self.addSwitchInfo(True)
         # ==================================================================================
         # 6. Add all active running config
         # ==================================================================================
@@ -155,20 +154,15 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
                 self._updateVersion(**{'version': self.modelVersion})  # This will force to update Version to new value
                 self.saveModel(saveName)
                 self.dbI.insert('models', [lastKnownModel])
-                # Also next run get new info from switch plugin
-                self.renewSwitchConfig = True
             else:
                 self.logger.info('Models are equal.')
                 lastKnownModel = modelinDB[0]
                 os.unlink(saveName)
-                self.renewSwitchConfig = False
         else:
             self.logger.info('Models are different. Update DB')
             self._updateVersion(**{'version': self.modelVersion})  # This will force to update Version to new value
             self.saveModel(saveName)
             self.dbI.insert('models', [lastKnownModel])
-            # Also next run get new info from switch plugin
-            self.renewSwitchConfig = True
 
         self.logger.debug(f"Last Known Model: {str(lastKnownModel['fileloc'])}")
         # Clean Up old models (older than 24h.)
