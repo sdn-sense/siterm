@@ -10,6 +10,7 @@ Authors:
 Date: 2021/12/01
 """
 from SiteRMLibs.ipaddr import validMRMLName
+from SiteRMLibs.ipaddr import normalizeipdict
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.CustomExceptions import NoSectionError
@@ -73,7 +74,7 @@ def _genIPv6(cls, inval, inkey, esc=True):
             return f"{inval['address']}/{subnet}"
         cls.logger.debug('One of params in Dict not available. Upredictable output')
     if isinstance(inval, list):
-        tmpKeys = [{'key': inkey, 'subkey': _genIPv6(cls, val, inkey), 'val': val} for val in inval]
+        tmpKeys = [{'key': inkey, 'subkey': _genIPv6(cls, val, inkey), 'val': normalizeipdict(val)} for val in inval]
         return tmpKeys
     cls.logger.debug(f'No IPv6 value. Return empty String. This might break things. Input: {inval} {inkey}')
     return ''
