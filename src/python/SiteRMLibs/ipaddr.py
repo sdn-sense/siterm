@@ -35,6 +35,12 @@ def normalizedipwithnet(ipInput, netmask):
     tmpNet = netmask.split('/')
     return normalizedip(f"{ipInput}/{tmpNet[1]}")
 
+def normalizeipdict(ipdict):
+    """Normalize IP in a dictionary"""
+    if isinstance(ipdict, dict) and 'address' in ipdict:
+        tmpval = normalizedip(ipdict['address'])
+        ipdict['address'] = tmpval
+    return ipdict
 
 def normalizedip(ipInput):
     """
@@ -44,9 +50,10 @@ def normalizedip(ipInput):
     tmp = ipInput.split('/')
     ipaddr = None
     try:
-        ipaddr = ip_address(tmp[0]).compressed
+        ipaddr = ip_address(tmp[0]).exploded
     except ValueError:
         ipaddr = tmp[0]
+    ipaddr = _ipv6InJavaFormat(ipaddr)
     if len(tmp) == 2:
         return f"{ipaddr}/{tmp[1]}"
     if len(tmp) == 1:
