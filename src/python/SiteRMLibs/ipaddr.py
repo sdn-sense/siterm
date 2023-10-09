@@ -99,6 +99,29 @@ def replaceSpecialSymbols(valIn):
     return valIn
 
 
+def _ipv6InJavaFormat(ipinput):
+    """Return IPv6 address in Java expected output format.
+        2001:0DB8:0000:0D30:0000:0000:0000:0000 becomes
+        2001:DB8:0:CD30:0:0:0:0
+    """
+    out = []
+    for item in ipinput.split(':'):
+        tmpval = str(item)
+        tmparr = []
+        stoploop = False
+        for i in enumerate(tmpval):
+            if not stoploop:
+                if i[1] != '0':
+                    tmparr.append(i[1])
+                    stoploop = True
+                continue
+            tmparr.append(i[1])
+        if not tmparr:
+            tmparr.append('0')
+        out.append("".join(tmparr))
+    return ":".join(out)
+
+
 def validMRMLName(valIn):
     """Generate valid MRML Name for ipv6 value"""
     # In case of IPv6, it does allow multiple ways to list IP address, like:
@@ -109,10 +132,10 @@ def validMRMLName(valIn):
     # Because of this - we always use a short version
     if ipVersion(valIn) == 6:
         tmpspl = valIn.split('/')
-        longip = ip_address(tmpspl[0]).exploded
+        longip = _ipv6InJavaFormat(ip_address(tmpspl[0]).exploded)
         if len(tmpspl) == 2:
-            return f"{longip}_{tmpspl[1]}".replace('0000', '0').replace(':', '_')
-        return f"{longip}".replace('0000', '0').replace(':', '_')
+            return f"{longip}_{tmpspl[1]}".replace(':', '_')
+        return f"{longip}".replace(':', '_')
     return replaceSpecialSymbols(valIn)
 
 
