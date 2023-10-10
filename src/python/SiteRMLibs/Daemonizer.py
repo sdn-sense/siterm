@@ -244,6 +244,7 @@ class Daemon():
         while True:
             try:
                 self.getThreads(houreq, dayeq)
+                return
             except SystemExit:
                 exc = traceback.format_exc()
                 self.logger.critical("SystemExit!!! Error details:  %s", exc)
