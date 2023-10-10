@@ -185,8 +185,8 @@ class PrometheusCalls:
         for service in services:
             state = 'UNKNOWN'
             runtime = -1
-            if int(self.timenow - service['updatedate']) < 300:
-                # If we are not getting service state for 2 mins, leave state as unknown
+            if int(self.timenow - service['updatedate']) < 600:
+                # If we are not getting service state for 10 mins, set state as unknown
                 state = service['servicestate']
                 runtime = service['runtime']
             labels = {'servicename': service['servicename'], 'hostname': service.get('hostname', 'UNSET')}

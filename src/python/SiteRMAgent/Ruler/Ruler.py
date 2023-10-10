@@ -44,6 +44,14 @@ class Ruler(contentDB, QOS, OverlapLib):
         QOS.__init__(self)
         OverlapLib.__init__(self)
 
+    def refreshthread(self, *_args):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.config = getGitConfig()
+        self.fullURL = getFullUrl(self.config, self.sitename)
+        self.hostname = self.config.get('agent', 'hostname')
+        self.layer2 = VInterfaces(self.config, self.sitename)
+        self.layer3 = Routing(self.config, self.sitename)
+
     def __clean(self):
         """Clean variables before run"""
         self.activeIPs = {'ipv4': {}, 'ipv6': {}}

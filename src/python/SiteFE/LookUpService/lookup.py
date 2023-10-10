@@ -48,6 +48,13 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
 
+    def refreshthread(self, *_args):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.config = getGitConfig()
+        self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
+        self.switch = Switch(self.config, self.sitename)
+        self.police = PolicyService(self.config, self.sitename)
+
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
         currentModel, currentGraph = getCurrentModel(self, False)

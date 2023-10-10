@@ -24,9 +24,13 @@ class RecurringAction():
     """Provisioning service communicates with Local controllers and applies
     network changes."""
     def __init__(self, config, sitename):
-        self.config = config
+        self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service='Agent')
         self.sitename = sitename
+
+    def refreshthread(self, *_args):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.config = getGitConfig()
 
     def prepareJsonOut(self):
         """Executes all plugins and prepares json output to FE."""

@@ -12,6 +12,7 @@ from SiteRMLibs.MainUtilities import isValFloat
 from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getVal
 from SiteRMLibs.MainUtilities import getDBConn
+from SiteRMLibs.MainUtilities import getGitConfig
 from prometheus_client import CollectorRegistry, push_to_gateway
 from prometheus_client import Info, Gauge
 
@@ -30,6 +31,11 @@ class PromPush():
         self.promLabels.update(self.__getMetadataParams())
         self.snmpLabels = {'numb': '', 'vlan': '', 'hostname': ''}
         self.snmpLabels.update(self.__getMetadataParams())
+
+    def refreshthread(self, *_args):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.config = getGitConfig()
+        self.dbI = getVal(getDBConn('PrometheusPush', self), **{'sitename': self.sitename})
 
     def __getMetadataParams(self):
         """Get metadata parameters"""

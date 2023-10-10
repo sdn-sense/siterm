@@ -20,12 +20,12 @@ DAEMON = None
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
-    def getThreads(self):
+    def getThreads(self, houreq, dayeq):
         """Multi threading. Allow multiple sites under single FE"""
-        outThreads = {}
-        confFetcher = ConfigFetcher(self.logger)
-        outThreads['DEFAULT'] = confFetcher
-        return outThreads
+        for callType in ['DEFAULT']:
+            if callType not in self.runThreads:
+                self.runThreads[callType] = ConfigFetcher(self.logger)
+            self.runThreads[callType].refreshthread(houreq, dayeq)
 
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)

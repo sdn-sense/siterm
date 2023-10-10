@@ -18,13 +18,13 @@ DAEMON = None
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
-    def getThreads(self):
+    def getThreads(self, houreq, dayeq):
         """Multi threading. Allow multiple sites under single FE"""
-        outThreads = {}
-        for sitename in self.config.get('general', 'sites'):
-            thr = prsS.ProvisioningService(self.config, sitename)
-            outThreads[sitename] = thr
-        return outThreads
+        for sitename in self.config.get('general', 'sitename'):
+            if sitename not in self.runThreads:
+                thr = prsS.ProvisioningService(self.config, sitename)
+                self.runThreads[sitename] = thr
+            self.runThreads[sitename].refreshthread(houreq, dayeq)
 
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)

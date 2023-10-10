@@ -53,6 +53,12 @@ class SNMPMonitoring():
         self.err = []
         self.hostconf = {}
 
+    def refreshthread(self, *_args):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.config = getGitConfig()
+        self.dbI = getVal(getDBConn('SNMPMonitoring', self), **{'sitename': self.sitename})
+        self.switch = Switch(self.config, self.sitename)
+
     def _start(self):
         self.switch.getinfo(False)
         self.switches = self.switch.getAllSwitches()

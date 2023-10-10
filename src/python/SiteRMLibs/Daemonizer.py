@@ -63,6 +63,7 @@ class Daemon():
         self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}.pid"
         self.config = None
         self.logger = None
+        self.runThreads = {}
         if getGitConf:
             self.config = getGitConfig()
             self.logger = getLoggingObject(config=self.config,
@@ -73,7 +74,7 @@ class Daemon():
             self.logger = getLoggingObject(logFile="%s/%s-" % ('/var/log/', component),
                                            logLevel='DEBUG', logType=logType,
                                            service=self.component)
-        self.sleepTimers = {'ok': 10, 'failure': 30}
+        self.sleepTimers = {'ok': 30, 'failure': 60}
         self.totalRuntime = 0
 
     def _refreshConfig(self):
@@ -238,12 +239,11 @@ class Daemon():
             return False
         return True
 
-    def refreshThreads(self):
+    def refreshThreads(self, houreq, dayeq):
         """Refresh threads"""
         while True:
             try:
-                runThreads = self.getThreads()
-                return runThreads
+                self.getThreads(houreq, dayeq)
             except SystemExit:
                 exc = traceback.format_exc()
                 self.logger.critical("SystemExit!!! Error details:  %s", exc)
@@ -255,14 +255,14 @@ class Daemon():
 
     def run(self):
         """Run main execution"""
-        timeeq, currentHour = reCacheConfig(None)
-        runThreads = self.refreshThreads()
+        houreq, dayeq, currentHour, currentDay = reCacheConfig(None, None)
+        self.refreshThreads(houreq, dayeq)
         while self.runLoop():
             self.runCount += 1
             hadFailure = False
             stwork = int(getUTCnow())
             try:
-                for sitename, rthread in list(runThreads.items()):
+                for sitename, rthread in list(self.runThreads.items()):
                     stwork = int(getUTCnow())
                     self.logger.info('Start worker for %s site', sitename)
                     try:
@@ -288,11 +288,11 @@ class Daemon():
             if self.totalRuntime != 0 and self.totalRuntime <= int(getUTCnow()):
                 self.logger.info('Total Runtime expired. Stopping Service')
                 sys.exit(0)
-            timeeq, currentHour = reCacheConfig(currentHour)
-            if not timeeq:
+            houreq, dayeq, currentHour, currentDay = reCacheConfig(currentHour, currentDay)
+            if not houreq:
                 self.logger.info('Re-initiating Service with new configuration from GIT')
                 self._refreshConfig()
-                runThreads = self.refreshThreads()
+                self.refreshThreads(houreq, dayeq)
 
 
     @staticmethod
