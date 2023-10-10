@@ -62,14 +62,14 @@ class HostCalls():
                "ip": "1.2.3.4"}
         """
         inputDict = read_input_data(environ)
-        host = self.dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
+        host = self.dbI.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
         if not host:
             out = {'hostname': inputDict['hostname'],
                    'ip': inputDict['ip'],
                    'insertdate': inputDict['insertTime'],
                    'updatedate': inputDict['updateTime'],
                    'hostinfo': jsondumps(inputDict)}
-            self.dbobj.insert('hosts', [out])
+            self.dbI.insert('hosts', [out])
         else:
             raise BadRequestError('This host is already in db. Why to add several times?')
         self.responseHeaders(environ, **kwargs)
@@ -86,7 +86,7 @@ class HostCalls():
         """
         inputDict = read_input_data(environ)
         # Validate that these entries are known...
-        host = self.dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
+        host = self.dbI.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
         if not host:
             raise NotFoundError(f"This IP {inputDict['ip']} is not registered at all. Call addhost")
         out = {'id': host[0]['id'],
@@ -94,7 +94,7 @@ class HostCalls():
                'ip': inputDict['ip'],
                'updatedate': getUTCnow(),
                'hostinfo': jsondumps(inputDict)}
-        self.dbobj.update('hosts', [out])
+        self.dbI.update('hosts', [out])
         self.responseHeaders(environ, **kwargs)
         return {"Status": 'UPDATED'}
 
@@ -102,10 +102,10 @@ class HostCalls():
         """Delete Host from DB."""
         inputDict = read_input_data(environ)
         # Validate that these entries are known...
-        host = self.dbobj.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
+        host = self.dbI.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
         if not host:
             raise NotFoundError(f"This IP {inputDict['ip']} is not registered at all.")
-        self.dbobj.delete('hosts', [['id', host[0]['id']]])
+        self.dbI.delete('hosts', [['id', host[0]['id']]])
         self.responseHeaders(environ, **kwargs)
         return {"Status": 'DELETED'}
 

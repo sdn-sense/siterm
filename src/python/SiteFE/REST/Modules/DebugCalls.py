@@ -171,27 +171,27 @@ class DebugCalls():
         if kwargs['debugvar'] != 'ALL':
             search = [['id', kwargs['debugvar']]]
         self.responseHeaders(environ, **kwargs)
-        return self.dbobj.get('debugrequests', orderby=['insertdate', 'DESC'],
-                              search=search, limit=1000)
+        return self.dbI.get('debugrequests', orderby=['insertdate', 'DESC'],
+                            search=search, limit=1000)
 
     def getalldebugids(self, environ, **kwargs):
         """Get All Debug IDs."""
         self.responseHeaders(environ, **kwargs)
-        return self.dbobj.get('debugrequestsids', orderby=['updatedate', 'DESC'], limit=1000)
+        return self.dbI.get('debugrequestsids', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getalldebughostname(self, environ, **kwargs):
         """Get all Debug Requests for hostname"""
         search = [['hostname', kwargs['debugvar']], ['state', 'new']]
         self.responseHeaders(environ, **kwargs)
-        return self.dbobj.get('debugrequests', orderby=['updatedate', 'DESC'],
-                              search=search, limit=1000)
+        return self.dbI.get('debugrequests', orderby=['updatedate', 'DESC'],
+                            search=search, limit=1000)
 
     def getalldebughostnameactive(self, environ, **kwargs):
         """Get all Debug Requests for hostname"""
         search = [['hostname', kwargs['debugvar']], ['state', 'active']]
         self.responseHeaders(environ, **kwargs)
-        return self.dbobj.get('debugrequests', orderby=['updatedate', 'DESC'],
-                              search=search, limit=1000)
+        return self.dbI.get('debugrequests', orderby=['updatedate', 'DESC'],
+                            search=search, limit=1000)
 
     def submitdebug(self, environ, **kwargs):
         """Submit new debug action request."""
@@ -207,7 +207,7 @@ class DebugCalls():
                'output': '',
                'insertdate': getUTCnow(),
                'updatedate': getUTCnow()}
-        insOut = self.dbobj.insert('debugrequests', [out])
+        insOut = self.dbI.insert('debugrequests', [out])
         self.responseHeaders(environ, **kwargs)
         return {'Status': insOut[0], 'ID': insOut[2]}
 
@@ -218,6 +218,6 @@ class DebugCalls():
                'state': inputDict['state'],
                'output': inputDict['output'],
                'updatedate': getUTCnow()}
-        updOut = self.dbobj.update('debugrequests', [out])
+        updOut = self.dbI.update('debugrequests', [out])
         self.responseHeaders(environ, **kwargs)
         return {'Status': updOut[0], 'ID': updOut[2]}

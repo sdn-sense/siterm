@@ -57,8 +57,8 @@ class ModelCalls():
     def getmodel(self, environ, modelID=None, content=False, **kwargs):
         """Get all models."""
         if not modelID:
-            return self.dbobj.get('models', orderby=['insertdate', 'DESC'])
-        model = self.dbobj.get('models', limit=1, search=[['uid', modelID]])
+            return self.dbI.get('models', orderby=['insertdate', 'DESC'])
+        model = self.dbI.get('models', limit=1, search=[['uid', modelID]])
         if not model:
             raise ModelNotFound(f"Model with {modelID} id was not found in the system")
         if content:
