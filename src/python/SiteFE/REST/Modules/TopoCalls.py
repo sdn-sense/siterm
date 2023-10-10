@@ -83,7 +83,7 @@ class TopoCalls:
         workdata = {}
         incr = 0
         # Get all Switch information
-        for item in self.dbobj.get('switches', orderby=['updatedate', 'DESC'], limit=1000):
+        for item in self.dbI.get('switches', orderby=['updatedate', 'DESC'], limit=1000):
             if 'output' not in item:
                 continue
             tmpdict = evaldict(item['output'])
@@ -109,7 +109,7 @@ class TopoCalls:
                     swout['topo'].setdefault(key, {'device': remSwitch['switch'],
                                                    'port': remPort})
         # Now lets get host information
-        for host in self.dbobj.get('hosts'):
+        for host in self.dbI.get('hosts'):
             parsedInfo = evaldict(host.get('hostinfo', {}))
             hostconfig = parsedInfo.get('Summary', {}).get('config', {})
             hostname = hostconfig.get('agent', {}).get('hostname', '')

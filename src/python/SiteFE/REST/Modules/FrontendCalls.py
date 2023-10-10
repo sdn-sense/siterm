@@ -56,27 +56,27 @@ class FrontendCalls():
     def gethosts(self, environ, **kwargs):
         """Return all available Hosts, where key is IP address."""
         self.responseHeaders(environ, **kwargs)
-        return self.dbobj.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
+        return self.dbI.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getdata(self, environ, **kwargs):
         """Return all available Hosts data, where key is IP address."""
         self.responseHeaders(environ, **kwargs)
-        return self.dbobj.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
+        return self.dbI.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getswitchdata(self, environ, **kwargs):
         """Return all Switches information"""
         self.responseHeaders(environ, **kwargs)
-        return self.dbobj.get('switches', orderby=['updatedate', 'DESC'], limit=1000)
+        return self.dbI.get('switches', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getactivedeltas(self, environ, **kwargs):
         """Return all Active Deltas"""
         self.responseHeaders(environ, **kwargs)
-        return self.dbobj.get('activeDeltas', orderby=['updatedate', 'DESC'], limit=1000)
+        return self.dbI.get('activeDeltas', orderby=['updatedate', 'DESC'], limit=1000)
 
     def getqosdata(self, environ, **kwargs):
         """Return QoS Stats for all IPv6 Ranges"""
         self.responseHeaders(environ, **kwargs)
-        hosts = self.dbobj.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
+        hosts = self.dbI.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
         out = {}
         for host in hosts:
             tmpH = evaldict(host.get('hostinfo', {}))

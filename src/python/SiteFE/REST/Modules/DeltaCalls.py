@@ -97,7 +97,7 @@ class DeltaCalls:
     def __addNewDeltaINT(self, uploadContent, environ, **kwargs):
         """Add new delta."""
         hashNum = uploadContent['id']
-        if self.dbobj.get('deltas', search=[['uid', hashNum]], limit=1):
+        if self.dbI.get('deltas', search=[['uid', hashNum]], limit=1):
             # This needs to be supported as it can be re-initiated again. TODO
             msg = 'Something weird has happened... Check server logs; Same ID is already in DB'
             raise ConflictEntries(msg)
@@ -126,15 +126,15 @@ class DeltaCalls:
     def __getdeltaINT(self, deltaID=None, **kwargs):
         """Get delta from database."""
         if not deltaID:
-            return self.dbobj.get('deltas')
-        out = self.dbobj.get('deltas', search=[['uid', deltaID]], orderby=['insertdate', 'ASC'])
+            return self.dbI.get('deltas')
+        out = self.dbI.get('deltas', search=[['uid', deltaID]], orderby=['insertdate', 'ASC'])
         if not out:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out[0]
 
     def __getdeltastatesINT(self, deltaID, **kwargs):
         """Get delta states from database."""
-        out = self.dbobj.get('states', search=[['deltaid', deltaID]])
+        out = self.dbI.get('states', search=[['deltaid', deltaID]])
         if not out:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out
@@ -142,17 +142,17 @@ class DeltaCalls:
     def __commitdelta(self, deltaID, environ, newState='UNKNOWN', internal=False, hostname=None, **kwargs):
         """Change delta state."""
         if internal:
-            out = self.dbobj.get('hoststates', search=[['deltaid', deltaID], ['hostname', hostname]])
+            out = self.dbI.get('hoststates', search=[['deltaid', deltaID], ['hostname', hostname]])
             if not out:
                 msg = f'This query did not returned any host states for {deltaID} {hostname}'
                 raise WrongDeltaStatusTransition(msg)
-            self.stateM.stateChangerHost(self.dbobj, out[0]['id'], **{'deltaid': deltaID,
-                                                                      'state': newState,
-                                                                      'insertdate': getUTCnow(),
-                                                                      'hostname': hostname})
+            self.stateM.stateChangerHost(self.dbI, out[0]['id'], **{'deltaid': deltaID,
+                                                                    'state': newState,
+                                                                    'insertdate': getUTCnow(),
+                                                                    'hostname': hostname})
             if newState == 'remove':
                 # Remove state comes only from modify
-                self.stateM.stateChange(self.dbobj, {'uid': deltaID, 'state': newState})
+                self.stateM.stateChange(self.dbI, {'uid': deltaID, 'state': newState})
             return {'status': 'OK', 'msg': 'Internal State change approved'}
         delta = self.__getdeltaINT(deltaID, **kwargs)
         # Now we go directly to commited in case of commit
@@ -160,12 +160,12 @@ class DeltaCalls:
             msg = (f"Delta state in the system is not in accepted state."
                    f"State on the system: {delta['state']}. Not allowed to change.")
             raise WrongDeltaStatusTransition(msg)
-        self.stateM.commit(self.dbobj, {'uid': deltaID, 'state': 'committing'})
+        self.stateM.commit(self.dbI, {'uid': deltaID, 'state': 'committing'})
         return {'status': 'OK'}
 
     def __getActiveDeltas(self, environ, **kwargs):
         """Get all Active Deltas"""
-        activeDeltas = self.dbobj.get('activeDeltas')
+        activeDeltas = self.dbI.get('activeDeltas')
         if activeDeltas:
             activeDeltas = activeDeltas[0]
             activeDeltas['output'] = evaldict(activeDeltas['output'])
@@ -275,7 +275,6 @@ class DeltaCalls:
             delta['insertdate'] = convertTSToDatetime(delta['insertdate'])
             delta['updatedate'] = convertTSToDatetime(delta['updatedate'])
             return [delta]
-        current = {}
         current = {"id": delta['uid'],
                    "lastModified": convertTSToDatetime(delta['updatedate']),
                    "state": delta['state'],
@@ -325,6 +324,6 @@ class DeltaCalls:
                  'hostname': out['hostname'],
                  'hostport': out['hostport'],
                  'uuidstate': out['uuidstate']}
-        self.dbobj.insert('deltatimestates', [dbout])
+        self.dbI.insert('deltatimestates', [dbout])
         self.responseHeaders(environ, **kwargs)
         return {'status': 'Recorded'}

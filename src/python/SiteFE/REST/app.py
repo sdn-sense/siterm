@@ -68,8 +68,8 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
         self.sites = ["MAIN"] + self.config['MAIN']['general']['sites']
         self.httpresp = HTTPResponses()
         self.siteDB = contentDB()
-        self.dbI = getDBConn('REST-Frontend', self)
-        self.dbobj = None
+        self.dbobj = getDBConn('REST-Frontend', self)
+        self.dbI = None
         self.urlParams = {}
         self.routeMap = Mapper()
         CertHandler.__init__(self)
@@ -158,5 +158,5 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
             self.httpresp.ret_404('application/json', start_response, None)
             return [bytes(jsondumps(getCustomOutMsg(errMsg=f"Sitename {sitename} is not configured. Contact Support.",
                                                     errCode=404)), 'UTF-8')]
-        self.dbobj = getVal(self.dbI, **{'sitename': sitename})
+        self.dbI = getVal(self.dbobj, **{'sitename': sitename})
         return self.internallCall(environ=environ, start_response=start_response, sitename=sitename)
