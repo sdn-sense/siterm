@@ -163,7 +163,7 @@ class PrometheusCalls:
 
         currentActive = getActiveDeltas(self)
         for item in self.activeAPI.generateReport(currentActive):
-            netstatus = item.get('networkstatus', 'unknown'):
+            netstatus = item.get('networkstatus', 'unknown')
             if not netstatus:
                 netstatus = 'unknown'
             netState.labels(**genStatusLabels(item)).state(netstatus)
