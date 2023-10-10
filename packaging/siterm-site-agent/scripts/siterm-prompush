@@ -21,9 +21,8 @@ DAEMON = None
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
-    def getThreads(self):
+    def getThreads(self, houreq, dayeq):
         """Multi threading. Allow multiple sites under single FE"""
-        outThreads = {}
         workDir = self.config.get('general', 'privatedir') + "/SiteRM/background/"
         # get run ID;
         fname = workDir + f"/background-process-{self.inargs.runnum}.json"
@@ -36,9 +35,11 @@ class MyDaemon(Daemon):
         self.sleepTimers['ok'] = int(backgConfig['requestdict']['resolution'])
         if self.config.has_option('general', 'sitename'):
             for sitename in self.config.get('general', 'sitename'):
-                promAgent = PromPush(self.config, sitename, backgConfig)
-                outThreads[sitename] = promAgent
-        return outThreads
+                if sitename not in self.runThreads:
+                    promAgent = PromPush(self.config, sitename, backgConfig)
+                    self.runThreads[sitename] = promAgent
+                self.runThreads[sitename].refreshthread(houreq, dayeq)
+
 
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)

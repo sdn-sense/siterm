@@ -22,6 +22,11 @@ class ConfigFetcher():
         self.gitObj = GitConfig()
         self.config = None
 
+    def refreshthread(self, *_args):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.gitObj = GitConfig()
+        self.config = None
+
     def _fetchFile(self, name, url):
         output = {}
         datetimeNow = datetime.datetime.now() + datetime.timedelta(minutes=10)

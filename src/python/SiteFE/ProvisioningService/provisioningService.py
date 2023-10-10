@@ -50,7 +50,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.logger = getLoggingObject(config=self.config, service='ProvisioningService')
         self.sitename = sitename
         self.switch = Switch(config, sitename)
-        self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
+        self.dbI = getVal(getDBConn('ProvisioningService', self), **{'sitename': self.sitename})
         workDir = self.config.get('general', 'privatedir') + "/ProvisioningService/"
         createDirs(workDir)
         self.yamlconf = {}
@@ -58,6 +58,15 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.yamlconfuuidActive = {}
         self.lastApplied = None
         self.connID = None
+
+    def refreshthread(self, *args):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.config = getGitConfig()
+        self.dbI = getVal(getDBConn('ProvisioningService', self), **{'sitename': self.sitename})
+        self.switch = Switch(self.config, self.sitename)
+        # If day is not equal (means new day) - lets force re-running individual apply
+        if args[1]:
+            self.yamlconfuuidActive = {}
 
     def _forceApply(self):
         curDate = datetime.datetime.now().strftime('%Y-%m-%d')

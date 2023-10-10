@@ -49,6 +49,12 @@ class Debugger():
         self.diragent = contentDB()
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
 
+    def refreshthread(self, *_args):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.config = getGitConfig()
+        self.fullURL = getFullUrl(self.config, self.sitename)
+        self.hostname = self.config.get('agent', 'hostname')
+
     def getData(self, url):
         """Get data from FE."""
         self.logger.info(f'Query: {self.fullURL}{url}')

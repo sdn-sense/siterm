@@ -258,12 +258,15 @@ def postWebContentToURL(url, **kwargs):
     response = requests.post(url, **kwargs)
     return response
 
-def reCacheConfig(prevHour=None):
+def reCacheConfig(prevHour=None, prevDay=None):
     """Return prevHour == currentHour, currentHour and used in Service Object
     re-initiation."""
     datetimeNow = datetime.datetime.now()
     currentHour = datetimeNow.strftime('%H')
-    return prevHour == currentHour, currentHour
+    currentDay = datetimeNow.strftime('%d')
+    return (prevHour == currentHour,
+            currentDay == prevDay,
+            currentHour, currentDay)
 
 class GitConfig():
     """Git based configuration class."""
