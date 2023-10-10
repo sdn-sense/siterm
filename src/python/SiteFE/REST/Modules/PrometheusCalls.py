@@ -155,10 +155,10 @@ class PrometheusCalls:
             return out
 
         netState = Enum('network_status', 'Network Status information',
-                            labelnames=labelnames,
-                            states=['activated', 'activate-error', 'deactivated',
-                                    'deactivate-error', 'unknown'],
-                            registry=registry)
+                        labelnames=labelnames,
+                        states=['activated', 'activate-error', 'deactivated',
+                                'deactivate-error', 'unknown'],
+                        registry=registry)
         qosGauge = Gauge('qos_status', 'QoS Requests Status', labelqos, registry=registry)
 
         currentActive = getActiveDeltas(self)
@@ -170,7 +170,6 @@ class PrometheusCalls:
                     labels = getQoSLabels(item)
                     labels['valuetype'] = key
                     qosGauge.labels(**labels).set(item.get(key, 0))
-
 
     def __getServiceStates(self, registry, **kwargs):
         """Get all Services states."""
@@ -213,6 +212,7 @@ class PrometheusCalls:
         """Return prometheus stats."""
         return self.__metrics(**kwargs)
 
+
 class ActiveWrapper():
     """Active State and QoS Wrapper to report in prometheus format"""
     def __init__(self):
@@ -238,7 +238,6 @@ class ActiveWrapper():
                         'priority', 'reservableCapacity', 'type', 'unit']:
                 tmpargs[key] = indict['hasService'].get(key, '')
             self.reports.append(tmpargs)
-        return
 
     def _activeLooper(self, indict, **kwargs):
         """Loop over nested dictionary of activatestates up to level 3"""
