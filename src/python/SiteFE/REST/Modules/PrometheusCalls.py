@@ -185,6 +185,9 @@ class PrometheusCalls:
         for service in services:
             state = 'UNKNOWN'
             runtime = -1
+            if service['servicename'] in ['SNMPMonitoring', 'ProvisioningService', 'LookUpService'] and \
+                service.get('hostname', 'UNSET') != 'default':
+                continue
             if int(self.timenow - service['updatedate']) < 600:
                 # If we are not getting service state for 10 mins, set state as unknown
                 state = service['servicestate']
