@@ -33,15 +33,16 @@ def debugActions(cls, dataIn, dataUpd):
     cls.assertEqual(outg[1], 200, msg=f'{str(outg)}')
     cls.assertEqual(outg[2], 'OK', msg=f'{str(outg)}')
 
+
 def deleteDebug(cls, out):
     """Test Delete Debug entries"""
     # DELETE
     for item in out:
-        import pdb; pdb.set_trace()
         urlg = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/deletedebug/{item['id']}"
         outg = makeRequest(cls, urlg, {'verb': 'DELETE', 'data': {}})
         cls.assertEqual(outg[1], 200, msg=f'{str(outg)}')
         cls.assertEqual(outg[2], 'OK', msg=f'{str(outg)}')
+
 
 class TestUtils(unittest.TestCase):
     """UnitTest"""
