@@ -36,6 +36,11 @@ def debugActions(cls, dataIn, dataUpd):
     outu = makeRequest(cls, urlu, {'verb': 'PUT', 'data': dataUpd})
     cls.assertEqual(outu[1], 200)
     cls.assertEqual(outu[2], 'OK')
+    # DELETE
+    urld = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/deletedebug/{outs[0]['ID']}"
+    outd = makeRequest(cls, urld, {'verb': 'DELETE', 'data': {}})
+    cls.assertEqual(outd[1], 200)
+    cls.assertEqual(outd[2], 'OK')
 
 
 class TestUtils(unittest.TestCase):

@@ -154,7 +154,8 @@ class DebugCalls():
                      'getalldebughostname': {'allowedMethods': ['GET']},
                      'getalldebughostnameactive': {'allowedMethods': ['GET']},
                      'submitdebug': {'allowedMethods': ['PUT', 'POST']},
-                     'updatedebug': {'allowedMethods': ['PUT', 'POST']}}
+                     'updatedebug': {'allowedMethods': ['PUT', 'POST']},
+                     'deletedebug': {'allowedMethods': ['DELETE']}}
         self.urlParams.update(urlParams)
 
     def __defineRoutes(self):
@@ -164,6 +165,7 @@ class DebugCalls():
         self.routeMap.connect("getalldebughostnameactive", "/json/frontend/getalldebughostnameactive/:debugvar", action="getalldebughostnameactive")
         self.routeMap.connect("submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug")
         self.routeMap.connect("updatedebug", "/json/frontend/updatedebug/:debugvar", action="updatedebug")
+        self.routeMap.connect("deletedebug", "/json/frontend/deletedebug/:debugvar", action="deletedebug")
 
     def getdebug(self, environ, **kwargs):
         """Get Debug action for specific ID."""
@@ -219,5 +221,11 @@ class DebugCalls():
                'output': inputDict['output'],
                'updatedate': getUTCnow()}
         updOut = self.dbI.update('debugrequests', [out])
+        self.responseHeaders(environ, **kwargs)
+        return {'Status': updOut[0], 'ID': updOut[2]}
+
+    def deletedebug(self, environ, **kwargs):
+        """Delete debug action information."""
+        updOut = self.dbI.delete('debugrequests', [['id', kwargs['debugvar']]])
         self.responseHeaders(environ, **kwargs)
         return {'Status': updOut[0], 'ID': updOut[2]}
