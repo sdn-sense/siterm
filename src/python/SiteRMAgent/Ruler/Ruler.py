@@ -30,12 +30,13 @@ class Ruler(contentDB, QOS, OverlapLib):
         self.logger = getLoggingObject(config=self.config, service='Ruler')
         self.workDir = self.config.get('general', 'privatedir') + "/SiteRM/RulerAgent/"
         createDirs(self.workDir)
-        self.fullURL = getFullUrl(self.config, sitename)
+        self.sitename = sitename
+        self.fullURL = getFullUrl(self.config, self.sitename)
         self.hostname = self.config.get('agent', 'hostname')
         self.logger.info("====== Ruler Start Work. Hostname: %s", self.hostname)
         # L2,L3 move it to Class Imports at top.
-        self.layer2 = VInterfaces(self.config, sitename)
-        self.layer3 = Routing(self.config, sitename)
+        self.layer2 = VInterfaces(self.config, self.sitename)
+        self.layer3 = Routing(self.config, self.sitename)
         self.activeIPs = {'ipv4': [], 'ipv6': []}
         self.activeDeltas = {}
         self.activeFromFE = {}

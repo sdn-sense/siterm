@@ -20,7 +20,7 @@ class MyDaemon(Daemon):
 
     def getThreads(self, houreq, dayeq):
         """Multi threading. Allow multiple sites under single FE"""
-        for sitename in self.config.get('general', 'sitename'):
+        for sitename in self.config.get('general', 'sites'):
             if sitename not in self.runThreads:
                 thr = LS.LookUpService(self.config, sitename)
                 self.runThreads[sitename] = thr
