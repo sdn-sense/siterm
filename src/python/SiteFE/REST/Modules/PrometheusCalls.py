@@ -163,7 +163,10 @@ class PrometheusCalls:
 
         currentActive = getActiveDeltas(self)
         for item in self.activeAPI.generateReport(currentActive):
-            netState.labels(**genStatusLabels(item)).state(item.get('networkstatus', 'unknown'))
+            netstatus = item.get('networkstatus', 'unknown'):
+            if not netstatus:
+                netstatus = 'unknown'
+            netState.labels(**genStatusLabels(item)).state(netstatus)
             if 'bwuri' in item and item['bwuri']:
                 for key in ['availableCapacity', 'granularity', 'maximumCapacity',
                             'priority', 'reservableCapacity']:
