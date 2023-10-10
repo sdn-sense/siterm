@@ -30,8 +30,18 @@ def debugActions(cls, dataIn, dataUpd):
     # GET
     urlg = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/getdebug/{outs[0]['ID']}"
     outg = makeRequest(cls, urlg, {'verb': 'GET', 'data': {}})
-    cls.assertEqual(outg[1], 200, msg=f'{str(outs)}')
-    cls.assertEqual(outg[2], 'OK', msg=f'{str(outs)}')
+    cls.assertEqual(outg[1], 200, msg=f'{str(outg)}')
+    cls.assertEqual(outg[2], 'OK', msg=f'{str(outg)}')
+
+
+def deleteDebug(cls, out):
+    """Test Delete Debug entries"""
+    # DELETE
+    for item in out:
+        urlg = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/deletedebug/{item['id']}"
+        outg = makeRequest(cls, urlg, {'verb': 'DELETE', 'data': {}})
+        cls.assertEqual(outg[1], 200, msg=f'{str(outg)}')
+        cls.assertEqual(outg[2], 'OK', msg=f'{str(outg)}')
 
 
 class TestUtils(unittest.TestCase):
@@ -64,10 +74,12 @@ class TestUtils(unittest.TestCase):
             dataupd = {'state': 'active', 'output': json.dumps(outsuc)}
             debugActions(self, data, dataupd)
 
-            url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getalldebughostnameactive/dummyhostname"
+            url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getdebug/ALL"
             out = makeRequest(self, url, {'verb': 'GET', 'data': {}})
             self.assertEqual(out[1], 200, msg=f'{str(out)}')
             self.assertEqual(out[2], 'OK', msg=f'{str(out)}')
+            # Delete
+            deleteDebug(self, out[0])
 
 
 if __name__ == '__main__':

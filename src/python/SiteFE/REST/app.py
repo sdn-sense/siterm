@@ -87,7 +87,7 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
             print(f'Warning. Undefined behavior. Allowed Methods not defined for {actionName}')
             return
         if environ['REQUEST_METHOD'].upper() not in self.urlParams[actionName].get('allowedMethods', []):
-            raise MethodNotSupported("Method not supported")
+            raise MethodNotSupported(f"Method {environ['REQUEST_METHOD'].upper()} not supported.")
         return
 
     def responseHeaders(self, environ, **kwargs):

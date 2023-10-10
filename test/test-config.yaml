@@ -1,6 +1,6 @@
 ---
 
-hostname: https://sense-caltech-fe.sdn-lb.ultralight.org
-sitename: T2_US_Caltech_Test
+hostname: https://sense-caltech-dev.sdn-lb.ultralight.org
+sitename: T3_US_Caltech_Dev
 cert: /etc/grid-security/hostcert.pem
 key: /etc/grid-security/hostkey.pem
