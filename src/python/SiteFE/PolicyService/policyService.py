@@ -397,7 +397,7 @@ class PolicyService(RDFHelper):
 
     def topLevelDeltaState(self):
         """Identify and set top level delta state"""
-        for key, vals in self.newActive['output']['vsw'].items():
+        for key, vals in self.newActive['output'].get('vsw', {}).items():
             for reqkey, reqdict in vals.items():
                 if reqkey == '_params':
                     continue
