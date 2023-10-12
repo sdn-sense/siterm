@@ -71,13 +71,13 @@ class DeltaInfo():
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Lifetime')))
         if 'start' in timeline:
-            self.newGraph.add((timeuri,
-                               self.genUriRef('nml', 'start'),
-                               self.genLiteral(convertTSToDatetime(timeline['start']), datatype=XSD.string)))
+            self.setToGraph(['site', f"{uri}:lifetime"],
+                            ['nml', 'start'],
+                            [convertTSToDatetime(timeline['start'])])
         if 'end' in timeline:
-            self.newGraph.add((timeuri,
-                               self.genUriRef('nml', 'end'),
-                               self.genLiteral(convertTSToDatetime(timeline['end']), datatype=XSD.string)))
+            self.setToGraph(['site', f"{uri}:lifetime"],
+                            ['nml', 'end'],
+                            [convertTSToDatetime(timeline['end'])])
         return
 
 
