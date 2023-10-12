@@ -29,6 +29,7 @@ from SiteFE.LookUpService.modules.nodeinfo import NodeInfo
 from SiteFE.LookUpService.modules.deltainfo import DeltaInfo
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper
 from SiteFE.PolicyService.policyService import PolicyService
+from SiteFE.ProvisioningService.provisioningService import ProvisioningService
 
 class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     """Lookup Service prepares MRML model about the system."""
@@ -43,17 +44,34 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         self.switch = Switch(config, sitename)
         self.prefixes = {}
         self.police = PolicyService(self.config, self.sitename)
+        self.provision = ProvisioningService(self.config, self.sitename)
         self.tmpout = {}
         self.modelVersion = ""
+        self.renewSwitchConfig = False
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
 
-    def refreshthread(self, *_args):
+    def refreshthread(self, *args):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
         self.switch = Switch(self.config, self.sitename)
-        self.police = PolicyService(self.config, self.sitename)
+        self.police.refreshthread(*args)
+        self.provision.refreshthread(*args)
+        if not args[1]:
+            self.__cleanup()
+
+    def __cleanup(self):
+        """Clean up process to remove old data"""
+        # Clean Up old models (older than 24h.)
+        for model in self.dbI.get('models', limit=100, orderby=['insertdate', 'ASC']):
+            if model['insertdate'] < int(getUTCnow() - 86400):
+                self.logger.debug('delete %s', model['fileloc'])
+                try:
+                    os.unlink(model['fileloc'])
+                except OSError as ex:
+                    self.logger.debug(f"Got OS Error removing this model {model['fileloc']}. Exc: {str(ex)}")
+                self.dbI.delete('models', [['id', model['id']]])
 
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
@@ -113,6 +131,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
             out['switchingserviceuri'] = self._addSwitchingService(**out)
             self._addLabelSwapping(**out)
 
+    def _setrenewFlag(self, newFlag):
+        if not self.renewSwitchConfig:
+            self.renewSwitchConfig = newFlag
+
     def startwork(self):
         """Main start."""
         self.logger.info('Started LookupService work')
@@ -136,7 +158,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         # ==================================================================================
         # 5. Define Switch information from Switch Lookup Plugin
         # ==================================================================================
-        self.addSwitchInfo(True)
+        self.addSwitchInfo(self.renewSwitchConfig)
+        self.renewSwitchConfig = False
         # ==================================================================================
         # 6. Add all active running config
         # ==================================================================================
@@ -144,6 +167,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         changesApplied = self.police.startwork(self.newGraph)
         if changesApplied:
             self.addDeltaInfo()
+            self._setrenewFlag(True)
 
         saveName = self.getModelSavePath()
         self.saveModel(saveName)
@@ -161,6 +185,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
                 self._updateVersion(**{'version': self.modelVersion})  # This will force to update Version to new value
                 self.saveModel(saveName)
                 self.dbI.insert('models', [lastKnownModel])
+                # Also next run get new info from switch plugin
+                self._setrenewFlag(True)
             else:
                 self.logger.info('Models are equal.')
                 lastKnownModel = modelinDB[0]
@@ -170,17 +196,13 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
             self._updateVersion(**{'version': self.modelVersion})  # This will force to update Version to new value
             self.saveModel(saveName)
             self.dbI.insert('models', [lastKnownModel])
+            self._setrenewFlag(True)
+
+        # Start Provisioning Service and apply any config changes.
+        if self.provision.startwork():
+            self._setrenewFlag(True)
 
         self.logger.debug(f"Last Known Model: {str(lastKnownModel['fileloc'])}")
-        # Clean Up old models (older than 24h.)
-        for model in self.dbI.get('models', limit=100, orderby=['insertdate', 'ASC']):
-            if model['insertdate'] < int(getUTCnow() - 86400):
-                self.logger.debug('delete %s', model['fileloc'])
-                try:
-                    os.unlink(model['fileloc'])
-                except OSError as ex:
-                    self.logger.debug(f"Got OS Error removing this model {model['fileloc']}. Exc: {str(ex)}")
-                self.dbI.delete('models', [['id', model['id']]])
 
 
 def execute(config=None):
@@ -189,7 +211,12 @@ def execute(config=None):
         config = getGitConfig()
     for siteName in config.get('general', 'sites'):
         policer = LookUpService(config, siteName)
-        policer.startwork()
+        i = 5
+        import time
+        while i > 0:
+            policer.startwork()
+            time.sleep(5)
+            i -= 1
 
 
 if __name__ == '__main__':
