@@ -57,7 +57,7 @@ class PolicyService(RDFHelper):
         self.config = config
         self.logger = getLoggingObject(config=self.config, service='PolicyService')
         self.siteDB = contentDB()
-        self.dbI = getVal(getDBConn('LookUpService', self), **{'sitename': self.sitename})
+        self.dbI = getVal(getDBConn('PolicyService', self), **{'sitename': self.sitename})
         self.stateMachine = StateMachine(self.config)
         self.hosts = {}
         for siteName in self.config.get('general', 'sites'):
@@ -72,8 +72,21 @@ class PolicyService(RDFHelper):
         self.newActive = {}
         self._refreshHosts()
 
+    def refreshthread(self, *args):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.config = getGitConfig()
+        self.dbI = getVal(getDBConn('PolicyService', self), **{'sitename': self.sitename})
+        self.stateMachine = StateMachine(self.config)
+        # If day is not equal (means new day) - lets force re-running individual apply
+        if not args[1]:
+            self.bidPorts = {}
+            self.scannedPorts = {}
+            self.scannedRoutes = []
+            self.newActive = {}
+            self._refreshHosts()
+
     def _refreshHosts(self):
-        """Refresh all hosts informations"""
+        """Refresh all hosts information"""
         self.hosts = {}
         for host, hostDict in getAllHosts(self.dbI).items():
             self.hosts.setdefault(host, hostDict)

@@ -58,6 +58,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.yamlconfuuidActive = {}
         self.lastApplied = None
         self.connID = None
+        self.activeOutput = {'output': {}}
 
     def refreshthread(self, *args):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -250,20 +251,22 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             self.applyConfig(raiseExc=True, hosts=hosts)
         return configChanged, hosts
 
+    def _getActive(self):
+        """Get Active Output"""
+        self.activeOutput = {'output': {}}
+        activeDeltas = self.dbI.get('activeDeltas')
+        if activeDeltas:
+            activeDeltas = activeDeltas[0]
+            self.activeOutput['output'] = evaldict(activeDeltas['output'])
+
     def startwork(self):
         """Start Provisioning Service main worker."""
         # Get current active config;
         self.__cleanup()
-        activeDeltas = self.dbI.get('activeDeltas')
-        if activeDeltas:
-            activeDeltas = activeDeltas[0]
-            activeDeltas['output'] = evaldict(activeDeltas['output'])
-        if not activeDeltas:
-            activeDeltas = {'output': {}}
 
         self.switch.getinfo(False)
         switches = self.switch.getAllSwitches()
-        self.prepareYamlConf(activeDeltas['output'], switches)
+        self.prepareYamlConf(self.activeOutput['output'], switches)
 
         # Write new inventory file, based on the currect active(just in case things have changed)
         # or container was restarted
@@ -278,8 +281,10 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         if self._forceApply() and not configChanged:
             self.logger.info('Force Config Apply. Because of Service restart or new day start.')
             self.applyConfig(raiseExc=True, hosts=hosts)
+            configChanged = True
         # Save individual uuid conf inside memory;
         self.yamlconfuuidActive = copy.deepcopy(self.yamlconfuuid)
+        return configChanged
 
 
 def execute(config=None, args=None):
