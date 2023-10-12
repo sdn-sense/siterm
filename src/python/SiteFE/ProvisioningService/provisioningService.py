@@ -65,7 +65,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         self.dbI = getVal(getDBConn('ProvisioningService', self), **{'sitename': self.sitename})
         self.switch = Switch(self.config, self.sitename)
         # If day is not equal (means new day) - lets force re-running individual apply
-        if args[1]:
+        if not args[1]:
             self.yamlconfuuidActive = {}
 
     def _forceApply(self):

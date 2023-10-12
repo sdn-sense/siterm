@@ -102,29 +102,18 @@ class PolicyService(RDFHelper):
         if 'isAlias' in self.bidPorts.get(URIRef(bidPort), []) or 'isAlias' in self.scannedPorts.get(bidPort, []):
             returnout['isAlias'] = str(bidPort)
 
-    def queryGraph(self, graphIn, sub=None, pre=None, obj=None, search=None, allowMultiple=True):
+    @staticmethod
+    def queryGraph(graphIn, sub=None, pre=None, obj=None, search=None, allowMultiple=True):
         """Search inside the graph based on provided parameters."""
         foundItems = []
-        self.logger.debug(f'Searching for subject: {sub} predica: {pre} object: {obj} searchLine: {search}')
-        for sIn, pIn, oIn in graphIn.triples((sub, pre, obj)):
+        for _sIn, pIn, oIn in graphIn.triples((sub, pre, obj)):
             if search:
                 if search == pIn:
-                    self.logger.debug('Found item with search parameter')
-                    self.logger.debug(f"s(subject) {sIn}")
-                    self.logger.debug(f"p(predica) {pIn}")
-                    self.logger.debug(f"o(object ) {oIn}")
-                    self.logger.debug("-" * 50)
                     foundItems.append(oIn)
             else:
-                self.logger.debug('Found item without search parameter')
-                self.logger.debug(f"s(subject) {sIn}")
-                self.logger.debug(f"p(predica) {pIn}")
-                self.logger.debug(f"o(object ) {oIn}")
-                self.logger.debug("-" * 50)
                 foundItems.append(oIn)
         if not allowMultiple:
             if len(foundItems) > 1:
-                #return foundItems
                 raise Exception(f'Search returned multiple entries. Not Supported. Out: {foundItems}')
         return foundItems
 
@@ -480,18 +469,17 @@ class PolicyService(RDFHelper):
         if self.recordDeltaStates():
             changesApplied = True
 
-        if self.newActive['output'] != self.currentActive['output']:
-            writeActiveDeltas(self, self.newActive['output'])
-            self.currentActive['output'] = copy.deepcopy(self.newActive['output'])
-        # 3. Check if any delta expired, remove it from dictionary
+        # Write New Active to Database
+        self.currentActive['output'] = copy.deepcopy(self.newActive['output'])
+        writeActiveDeltas(self, self.currentActive['output'])
+
         self.logger.info('Conflict Check of expired entities')
         newconf, cleaned = self.conflictChecker.checkActiveConfig(self.currentActive['output'])
         if cleaned:
             self.logger.info('IMPORTANT: State changed. Writing new config to DB.')
-            self.currentActive['output'] = newconf
+            self.currentActive['output'] = copy.deepcopy(newconf)
             writeActiveDeltas(self, self.currentActive['output'])
             changesApplied = True
-        self.conflictChecker.checkConflicts(self, self.newActive['output'], self.currentActive['output'])
         return changesApplied
 
 

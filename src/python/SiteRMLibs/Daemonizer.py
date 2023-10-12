@@ -74,7 +74,7 @@ class Daemon():
             self.logger = getLoggingObject(logFile="%s/%s-" % ('/var/log/', component),
                                            logLevel='DEBUG', logType=logType,
                                            service=self.component)
-        self.sleepTimers = {'ok': 30, 'failure': 60}
+        self.sleepTimers = {'ok': 10, 'failure': 30}
         self.totalRuntime = 0
 
     def _refreshConfig(self):
