@@ -31,7 +31,7 @@ class ConflictChecker():
     @staticmethod
     def _ipOverlap(ip1, ip2, iptype):
         """Check if IP Overlap. Return True/False"""
-        inipOverlap(ip1, ip2, iptype)
+        return inipOverlap(ip1, ip2, iptype)
 
     @staticmethod
     def _checkVlanInRange(polcls, vlan, hostname):
@@ -235,7 +235,6 @@ class ConflictChecker():
             if connID in oldConfig.get(rst, {}):
                 if oldConfig[rst][connID] != connItems:
                     print('MODIFY!!!')
-                    continue
                 if oldConfig[rst][connID] == connItems:
                     # No Changes - connID is same, ignoring it
                     continue

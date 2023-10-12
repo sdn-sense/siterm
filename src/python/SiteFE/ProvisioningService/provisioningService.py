@@ -275,6 +275,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
 
         # Compare individual requests and report it's states
         self.compareIndv(switches)
+        # Save individual uuid conf inside memory;
+        self.yamlconfuuidActive = copy.deepcopy(self.yamlconfuuid)
         # Compare All configuration and apply
         configChanged, hosts = self.compareAll(switches)
 
@@ -282,8 +284,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             self.logger.info('Force Config Apply. Because of Service restart or new day start.')
             self.applyConfig(raiseExc=True, hosts=hosts)
             configChanged = True
-        # Save individual uuid conf inside memory;
-        self.yamlconfuuidActive = copy.deepcopy(self.yamlconfuuid)
         return configChanged
 
 
