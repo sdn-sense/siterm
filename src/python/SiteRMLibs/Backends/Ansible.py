@@ -35,6 +35,8 @@ class Switch:
 
     def __getAnsErrors(self, ansOut):
         """Get Ansible errors"""
+        if not ansOut or not ansOut.stats:
+            return
         for fkey in ['dark', 'failures']:
             for host, _ in ansOut.stats.get(fkey, {}).items():
                 for hostEvents in ansOut.host_events(host):

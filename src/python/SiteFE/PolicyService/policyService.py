@@ -97,6 +97,7 @@ class PolicyService(RDFHelper):
         self.bidPorts = {}
         self.scannedPorts = {}
         self.scannedRoutes = []
+        self.newActive = {}
 
     def intOut(self, inport, out):
         """

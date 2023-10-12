@@ -14,7 +14,7 @@ from setupUtilities import list_packages, get_py_modules, get_web_files, VERSION
 # Currently it is allowed to specify only minutes and up to 30 minutes.
 # This is how CRONJOBS are handled and division is done only for the current hour.
 SCRIPTS = ["packaging/general/Config-Fetcher", "packaging/siterm-site-fe/scripts/siterm-prompush"]
-for sectionName in ['LookUpService', 'ProvisioningService', 'SNMPMonitoring']:
+for sectionName in ['LookUpService', 'SNMPMonitoring']:
     SCRIPTS.append('packaging/siterm-site-fe/scripts/%s-update' % sectionName)
 
 setup(

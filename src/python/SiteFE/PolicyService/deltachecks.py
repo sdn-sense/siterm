@@ -31,7 +31,7 @@ class ConflictChecker():
     @staticmethod
     def _ipOverlap(ip1, ip2, iptype):
         """Check if IP Overlap. Return True/False"""
-        inipOverlap(ip1, ip2, iptype)
+        return inipOverlap(ip1, ip2, iptype)
 
     @staticmethod
     def _checkVlanInRange(polcls, vlan, hostname):
