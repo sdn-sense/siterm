@@ -263,7 +263,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
         """Start Provisioning Service main worker."""
         # Get current active config;
         self.__cleanup()
-
+        self._getActive()
         self.switch.getinfo(False)
         switches = self.switch.getAllSwitches()
         self.prepareYamlConf(self.activeOutput['output'], switches)
