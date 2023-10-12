@@ -11,7 +11,6 @@ Authors:
 
 Date: 2021/12/01
 """
-from rdflib.namespace import XSD
 from SiteRMLibs.MainUtilities import getActiveDeltas
 from SiteRMLibs.MainUtilities import convertTSToDatetime
 from SiteRMLibs.ipaddr import validMRMLName

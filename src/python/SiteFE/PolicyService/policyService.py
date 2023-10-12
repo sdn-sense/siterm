@@ -102,10 +102,11 @@ class PolicyService(RDFHelper):
         if 'isAlias' in self.bidPorts.get(URIRef(bidPort), []) or 'isAlias' in self.scannedPorts.get(bidPort, []):
             returnout['isAlias'] = str(bidPort)
 
-    def queryGraph(self, graphIn, sub=None, pre=None, obj=None, search=None, allowMultiple=True):
+    @staticmethod
+    def queryGraph(graphIn, sub=None, pre=None, obj=None, search=None, allowMultiple=True):
         """Search inside the graph based on provided parameters."""
         foundItems = []
-        for sIn, pIn, oIn in graphIn.triples((sub, pre, obj)):
+        for _sIn, pIn, oIn in graphIn.triples((sub, pre, obj)):
             if search:
                 if search == pIn:
                     foundItems.append(oIn)
