@@ -235,7 +235,6 @@ class ConflictChecker():
             if connID in oldConfig.get(rst, {}):
                 if oldConfig[rst][connID] != connItems:
                     print('MODIFY!!!')
-                    continue
                 if oldConfig[rst][connID] == connItems:
                     # No Changes - connID is same, ignoring it
                     continue
