@@ -138,6 +138,8 @@ class RoutingService():
                 if host not in switches:
                     continue
                 for _, rFullDict in hostDict.items():
+                    if not self.checkIfStarted(rFullDict):
+                        continue
                     for rtag, rDict in rFullDict.get('hasRoute', {}).items():
                         ruid = generateMD5(rtag)
                         self._getDefaultBGP(host)
@@ -150,8 +152,6 @@ class RoutingService():
         if 'rst' in activeConfig:
             for connID, connDict in activeConfig['rst'].items():
                 self.connID = connID
-                if not self.checkIfStarted(connDict):
-                    continue
                 self._addparamsrst(connDict, switches)
 
         for reqid in [0, 1]:

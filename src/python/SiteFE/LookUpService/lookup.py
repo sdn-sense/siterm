@@ -10,6 +10,7 @@ Date: 2021/12/01
 from __future__ import division
 import os
 import datetime
+import time
 from rdflib import Graph
 from rdflib import URIRef
 from rdflib.compare import isomorphic
@@ -210,11 +211,10 @@ def execute(config=None):
     if not config:
         config = getGitConfig()
     for siteName in config.get('general', 'sites'):
-        policer = LookUpService(config, siteName)
+        lserv = LookUpService(config, siteName)
         i = 5
-        import time
         while i > 0:
-            policer.startwork()
+            lserv.startwork()
             time.sleep(5)
             i -= 1
 

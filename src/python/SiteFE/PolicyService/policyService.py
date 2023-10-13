@@ -231,6 +231,7 @@ class PolicyService(RDFHelper):
                     returnout.setdefault('rst', {})
                     connOut = returnout['rst'].setdefault(str(connectionID), {}).setdefault(switchName, {}).setdefault(iptype, {})
                     self._hasService(gIn, connectionID, connOut)
+                    self.getTimeScheduling(gIn, connectionID, connOut)
                     connOut[rsttype['key']] = str(connectionID)
                     rettmp = rsttype['call'](gIn, connectionID, connOut)
                     if rettmp and rsttype['key'] == 'providesRoutingTable':
