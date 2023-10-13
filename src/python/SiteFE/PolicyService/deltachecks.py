@@ -317,12 +317,25 @@ class ConflictChecker():
         """Check all Active Config"""
         newconf = copy.deepcopy(activeConfig)
         cleaned = []
+        # VSW Cleanup
         for host, pSubnets in activeConfig.get('SubnetMapping', {}).items():
             for subnet, _ in pSubnets.get('providesSubnet', {}).items():
                 if 'existsDuring' in activeConfig.get('vsw', {}).get(subnet, {}).get('_params', {}):
                     clean = self.serviceEnded(activeConfig['vsw'][subnet]['_params']['existsDuring'])
                     if clean:
                         cleaned.append(subnet)
-                        newconf['SubnetMapping'][host]['providesSubnet'].pop(subnet)
-                        newconf['vsw'].pop(subnet)
+                        newconf['SubnetMapping'][host]['providesSubnet'].pop(subnet, None)
+                        newconf['vsw'].pop(subnet, None)
+        # RST Cleanup
+        for rkey, rval in {'providesRoute': 'RoutingMapping',
+                           'providesRoutingTable': 'RoutingMapping'}.items():
+            for host, pRoutes in activeConfig.get(rval, {}).items():
+                for route, rdict in pRoutes.get(rkey, {}).items():
+                    for iptype in rdict.keys():
+                        if 'existsDuring' in activeConfig.get('rst', {}).get(route, {}).get(host, {}).get(iptype, {}).get('_params', {}):
+                            clean = self.serviceEnded(activeConfig['rst'][route][host][iptype]['_params']['existsDuring'])
+                            if clean:
+                                cleaned.append(route)
+                                newconf[rval][host][rkey].pop(route, None)
+                                newconf['rst'].pop(route, None)
         return newconf, cleaned
