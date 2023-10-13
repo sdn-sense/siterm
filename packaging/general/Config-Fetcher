@@ -10,8 +10,6 @@ Changes applied to this code:
 import sys
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
 from SiteRMLibs.ConfigFetcher import ConfigFetcher
-from SiteRMLibs.MainUtilities import getLoggingObject
-
 
 COMPONENT = 'ConfigFetcher'
 DESCRIPTION = "Config fetcher from Github"
