@@ -58,6 +58,10 @@ class PromPush():
         self.arpLabels.update(self.__getMetadataParams())
         self.logger.info("====== PromPush Start Work. Config: %s", self.backgConfig)
 
+    def refreshthread(self, *_args):
+        """Call to refresh thread for this specific class and reset parameters"""
+        return
+
     def __getMetadataParams(self):
         """Get metadata parameters"""
         if 'metadata' in self.backgConfig['requestdict']:
