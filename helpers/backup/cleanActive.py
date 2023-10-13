@@ -24,7 +24,7 @@ def cleanup(sitename):
                     'insertdate': int(getUTCnow()),
                     'updatedate': int(getUTCnow()),
                     'output': '{}'}
-    if action ==  'insert':
+    if action == 'insert':
         dbI.insert('activeDeltas', [activeDeltas])
     elif action == 'update':
         dbI.update('activeDeltas', [activeDeltas])

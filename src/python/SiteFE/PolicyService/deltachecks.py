@@ -332,7 +332,6 @@ class ConflictChecker():
             for host, pRoutes in activeConfig.get(rval, {}).items():
                 for route, rdict in pRoutes.get(rkey, {}).items():
                     for iptype in rdict.keys():
-                        import pdb; pdb.set_trace()
                         if 'existsDuring' in activeConfig.get('rst', {}).get(route, {}).get(host, {}).get(iptype, {}).get('_params', {}):
                             clean = self.serviceEnded(activeConfig['rst'][route][host][iptype]['_params']['existsDuring'])
                             if clean:

@@ -2,7 +2,7 @@
 """Helper Script to interact with SiteRM."""
 import copy
 import pprint
-from SiteRMLibs.MainUtilities import getVal, evaldict
+from SiteRMLibs.MainUtilities import getVal
 from SiteRMLibs.MainUtilities import getDBConn
 from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getUTCnow
@@ -119,9 +119,6 @@ class Helper:
         confirm = self._getInput('Proceed with cancel: ', ["yes", "no"])
         if confirm == 'yes':
             self._cancelConfirmed(activeDeltas, action, availcmds[deltaid])
-            # Need to set existsDuring to a resource and all subResources;
-            # Write new Active
-        import pdb; pdb.set_trace()
 
     def printhelp(self):
         """Print Help and all available commands, descriptions"""
