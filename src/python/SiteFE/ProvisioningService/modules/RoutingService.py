@@ -111,10 +111,12 @@ class RoutingService():
             rFrom = rDict.get('routeTo', {}).get(f'{iptype}-prefix-list', {}).get('value', None)
             prefList = bgpdict.setdefault('prefix_list', {}).setdefault(iptype, {})
             if rTo:
-                prefList[rTo] = {f'sense-{ruid}-to': 'present'}
+                newRoute = prefList.setdefault(rTo, {})
+                newRoute[f'sense-{ruid}-to'] = 'present'
                 self._addRouteMap(host, f'sense-{ruid}-to', f'sense-{ruid}-mapout', iptype)
             if rFrom:
-                prefList[rFrom] = {f'sense-{ruid}-from': 'present'}
+                newRoute = prefList.setdefault(rFrom, {})
+                newRoute[f'sense-{ruid}-from'] = 'present'
                 self._addRouteMap(host, f'sense-{ruid}-from', f'sense-{ruid}-mapin', iptype)
 
     def _addRouteMap(self, host, match, name, iptype):
@@ -162,7 +164,7 @@ class RoutingService():
         if uuid:
             tmpD = self.yamlconfuuid.setdefault('rst', {}).setdefault(uuid, {}).setdefault(switch, {})
         else:
-            tmpD = self.yamlconf.setdefault(switch)
+            tmpD = self.yamlconf.setdefault(switch, {})
         tmpD = tmpD.setdefault('sense_bgp', {})
         if tmpD == runningConf:
             return False  # equal config

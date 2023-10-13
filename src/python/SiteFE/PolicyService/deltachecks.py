@@ -151,6 +151,10 @@ class ConflictChecker():
                 if routeFrom:
                     out.setdefault(key, {})
                     out[key]['routeFrom'] = routeFrom
+                routeTo = routeItems.get('routeTo', {}).get(f'{key}-prefix-list', {}).get('value', None)
+                if routeTo:
+                    out.setdefault(key, {})
+                    out[key]['routeTo'] = routeTo
         return out
 
     @staticmethod
@@ -227,6 +231,27 @@ class ConflictChecker():
                                                    oStats.get('ipv4-address', ''),
                                                    'ipv4')
 
+    def _checkRSTIPOverlap(self, nIPs, oIPs, iptype):
+        """Check if routes overlap on diff requests"""
+        def _rstoverlapwrapper(key, iptype):
+            """Check if IP Ranges overlap and catch Exception.
+               True if fail. False if not."""
+            try:
+                self._checkIfIPOverlap(nIPs.get(key, None),
+                                       oIPs.get(key, None),
+                                       iptype)
+            except OverlapException:
+                return True
+            return False
+        overlaps = []
+        overlaps.append(_rstoverlapwrapper('routeFrom',
+                                           iptype))
+        overlaps.append(_rstoverlapwrapper('routeTo',
+                                           iptype))
+        if all(overlaps):
+            raise OverlapException(f'New Request {iptype} overlap on same controlled resources. \
+                                   Overlap resources: {self.newid} and {self.oldid}')
+
     def checkrst(self, cls, rst, rstitems, oldConfig):
         """Check rst Service"""
         for connID, connItems in rstitems.items():
@@ -261,12 +286,13 @@ class ConflictChecker():
                         # Check that vlans and IPs are not overlapping
                         if oldItems.get(hostname, {}):
                             oStats = self._getRSTIPs(oldItems[hostname])
-                            self._checkIfIPOverlap(nStats.get('ipv6', {}).get('nextHop', ''),
-                                                   oStats.get('ipv6', {}).get('nextHop', ''),
-                                                   'ipv6')
-                            self._checkIfIPOverlap(nStats.get('ipv4', {}).get('nextHop', ''),
-                                                   oStats.get('ipv4', {}).get('nextHop', ''),
-                                                   'ipv4')
+                            for key in ['ipv4', 'ipv6']:
+                                self._checkIfIPOverlap(nStats.get(key, {}).get('nextHop', ''),
+                                                       oStats.get(key, {}).get('nextHop', ''),
+                                                       key)
+                                self._checkRSTIPOverlap(nStats.get(key, {}),
+                                                        oStats.get(key, {}),
+                                                        key)
 
     def checkConflicts(self, cls, newConfig, oldConfig):
         """Check conflicting resources and not allow them"""
