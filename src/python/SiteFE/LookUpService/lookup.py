@@ -52,6 +52,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
 
+
     def refreshthread(self, *args):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
