@@ -31,6 +31,7 @@ from SiteRMLibs.MainUtilities import createDirs
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import getVal
 from SiteRMLibs.MainUtilities import getDBConn
+from SiteRMLibs.timing import Timing
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.CustomExceptions import NoSectionError
@@ -39,7 +40,7 @@ from SiteFE.ProvisioningService.modules.RoutingService import RoutingService
 from SiteFE.ProvisioningService.modules.VirtualSwitchingService import VirtualSwitchingService
 
 
-class ProvisioningService(RoutingService, VirtualSwitchingService):
+class ProvisioningService(RoutingService, VirtualSwitchingService, Timing):
     """
     Provisioning service communicates with Local controllers and applies
     network changes.
@@ -96,22 +97,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService):
             if raiseError:
                 raise ex
         return ''
-
-    def checkIfStarted(self, connDict):
-        """Check if service started."""
-        serviceStart = True
-        stTime = connDict.get('_params', {}).get('existsDuring', {}).get('start', 0)
-        enTime = connDict.get('_params', {}).get('existsDuring', {}).get('end', 0)
-        tag = connDict.get('_params', {}).get('tag', 'Unknown-tag')
-        if stTime == 0 and enTime == 0:
-            return serviceStart
-        if stTime > getUTCnow():
-            self.logger.debug(f'Start Time in future. Not starting {tag}')
-            serviceStart = False
-        if enTime < getUTCnow():
-            self.logger.debug(f'End Time passed. Not adding to config {tag}')
-            serviceStart = False
-        return serviceStart
 
     def prepareYamlConf(self, activeConfig, switches):
         """Prepare yaml config"""

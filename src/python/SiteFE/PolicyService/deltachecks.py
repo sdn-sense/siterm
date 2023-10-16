@@ -168,23 +168,10 @@ class ConflictChecker():
             overlap = 0
         return overlap
 
-    @staticmethod
-    def _getTimings(params):
-        """Get Runtime params"""
-        dates = [0, 2147483647]
-        if params and 'existsDuring' in params:
-            if 'start' in params['existsDuring']:
-                dates[0] = int(params['existsDuring']['start'])
-            if 'end' in params['existsDuring']:
-                dates[1] = int(params['existsDuring']['end'])
-        Range = namedtuple('Range', ['start', 'end'])
-        timeRange = Range(start=datetime.fromtimestamp(dates[0]), end=datetime.fromtimestamp(dates[1]))
-        return timeRange
-
     def _checkIfOverlap(self, newitem, oldItem):
         """Check if 2 deltas overlap for timing"""
-        dates1 = self._getTimings(newitem)
-        dates2 = self._getTimings(oldItem)
+        dates1 = self.getTimeRanges(newitem)
+        dates2 = self.getTimeRanges(oldItem)
         if self._overlap_count(dates1, dates2):
             return True
         return False
@@ -305,14 +292,6 @@ class ConflictChecker():
                 self.checkrst(cls, dkey, ditems, oldConfig)
         return False
 
-    @staticmethod
-    def serviceEnded(indict):
-        """Check if Service Ended"""
-        if 'end' in indict:
-            if getUTCnow() > indict['end']:
-                return True
-        return False
-
     def checkActiveConfig(self, activeConfig):
         """Check all Active Config"""
         newconf = copy.deepcopy(activeConfig)
@@ -320,22 +299,18 @@ class ConflictChecker():
         # VSW Cleanup
         for host, pSubnets in activeConfig.get('SubnetMapping', {}).items():
             for subnet, _ in pSubnets.get('providesSubnet', {}).items():
-                if 'existsDuring' in activeConfig.get('vsw', {}).get(subnet, {}).get('_params', {}):
-                    clean = self.serviceEnded(activeConfig['vsw'][subnet]['_params']['existsDuring'])
-                    if clean:
-                        cleaned.append(subnet)
-                        newconf['SubnetMapping'][host]['providesSubnet'].pop(subnet, None)
-                        newconf['vsw'].pop(subnet, None)
+                if self._ended(activeConfig.get('vsw', {}).get(subnet, {})):
+                    cleaned.append(subnet)
+                    newconf['SubnetMapping'][host]['providesSubnet'].pop(subnet, None)
+                    newconf['vsw'].pop(subnet, None)
         # RST Cleanup
         for rkey, rval in {'providesRoute': 'RoutingMapping',
                            'providesRoutingTable': 'RoutingMapping'}.items():
             for host, pRoutes in activeConfig.get(rval, {}).items():
                 for route, rdict in pRoutes.get(rkey, {}).items():
                     for iptype in rdict.keys():
-                        if 'existsDuring' in activeConfig.get('rst', {}).get(route, {}).get(host, {}).get(iptype, {}).get('_params', {}):
-                            clean = self.serviceEnded(activeConfig['rst'][route][host][iptype]['_params']['existsDuring'])
-                            if clean:
-                                cleaned.append(route)
-                                newconf[rval][host][rkey].pop(route, None)
-                                newconf['rst'].pop(route, None)
+                        if self._ended(activeConfig.get('rst', {}).get(route, {}).get(host, {}).get(iptype, {})):
+                            cleaned.append(route)
+                            newconf[rval][host][rkey].pop(route, None)
+                            newconf['rst'].pop(route, None)
         return newconf, cleaned

@@ -17,13 +17,14 @@ from SiteRMLibs.MainUtilities import createDirs, getFullUrl, contentDB, getFileC
 from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.timing import Timing
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 from SiteRMLibs.ipaddr import checkOverlap
 
 COMPONENT = 'Ruler'
 
 
-class Ruler(contentDB, QOS, OverlapLib):
+class Ruler(contentDB, QOS, OverlapLib, Timing):
     """Ruler class to create interfaces on the system."""
     def __init__(self, config, sitename):
         self.config = config if config else getGitConfig()
@@ -69,26 +70,6 @@ class Ruler(contentDB, QOS, OverlapLib):
     def getActiveDeltas(self):
         """Get Delta information."""
         return self.getData("/sitefe/v1/activedeltas/")
-
-    @staticmethod
-    def _started(inConf):
-        """Check if service started"""
-        timings = inConf.get('_params', {}).get('existsDuring', {})
-        if not timings:
-            return True
-        if 'start' in timings and getUTCnow() < timings['start']:
-            return False
-        return True
-
-    @staticmethod
-    def _ended(inConf):
-        """Check if service ended"""
-        timings = inConf.get('_params', {}).get('existsDuring', {})
-        if not timings:
-            return False
-        if 'end' in timings and getUTCnow() > timings['end']:
-            return True
-        return False
 
     def logIPs(self, tmpvlans):
         """Log all Active IPs"""
@@ -172,7 +153,7 @@ class Ruler(contentDB, QOS, OverlapLib):
         if actKey == 'vsw':
             for key, vals in self.activeFromFE.get('output', {}).get(actKey, {}).items():
                 if self.hostname in vals:
-                    if self._started(vals) and not self._ended(vals):
+                    if self.checkIfStarted(vals):
                         # Means resource is active at given time.
                         tmpret = actCall.activate(vals[self.hostname], key)
                         self.logIPs(tmpret)

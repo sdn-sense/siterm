@@ -79,16 +79,6 @@ class QOS():
         """Get Delta information."""
         self.qosTotals = self.getData("/sitefe/json/frontend/getqosdata/")
 
-    @staticmethod
-    def _started(inConf):
-        """Check if service started"""
-        timings = inConf.get('_params', {}).get('existsDuring', {})
-        if not timings:
-            return True
-        if 'start' in timings and getUTCnow() < timings['start']:
-            return False
-        return True
-
     def _getvlanlistqos(self):
         """Get vlan qos dict"""
         self.activeL2 = []

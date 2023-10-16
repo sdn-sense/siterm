@@ -30,6 +30,7 @@ from SiteRMLibs.MainUtilities import getAllHosts
 from SiteRMLibs.MainUtilities import getDBConn
 from SiteRMLibs.MainUtilities import getVal
 from SiteRMLibs.MainUtilities import dictSearch
+from SiteRMLibs.timing import Timing
 from SiteRMLibs.CustomExceptions import OverlapException
 from SiteRMLibs.CustomExceptions import WrongIPAddress
 from SiteFE.PolicyService.deltachecks import ConflictChecker
@@ -50,7 +51,7 @@ def getError(ex):
         out['errMsg'] = str(ex)
     return out
 
-class PolicyService(RDFHelper):
+class PolicyService(RDFHelper, Timing):
     """Policy Service to accept deltas."""
     def __init__(self, config, sitename):
         self.sitename = sitename
