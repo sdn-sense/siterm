@@ -12,9 +12,9 @@ import copy
 from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress
 from SiteRMLibs.ipaddr import checkOverlap as incheckOverlap
 from SiteRMLibs.ipaddr import ipOverlap as inipOverlap
+from SiteRMLibs.timing import Timing
 
-
-class ConflictChecker:
+class ConflictChecker(Timing):
     """Conflict Checker"""
 
     def __init__(self):
