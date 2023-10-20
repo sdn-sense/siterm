@@ -19,7 +19,7 @@ for sectionName in ['LookUpService', 'SNMPMonitoring']:
 
 setup(
     name='SiteRMSiteFE',
-    version="%s" % VERSION,
+    version=str(VERSION),
     long_description="End Site-RM Site installation",
     author="Justas Balcas",
     author_email="juztas@gmail.com",
