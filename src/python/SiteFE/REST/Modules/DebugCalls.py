@@ -100,8 +100,8 @@ class CallValidator():
         if inputDict['hosttype'] not in ['host', 'switch']:
             raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
         totalRuntime = int(int(inputDict['runtime']) - getUTCnow())
-        if totalRuntime < 600 or totalRuntime > 3600:
-            raise BadRequestError("Total Runtime must be within range of 600 > x > 3600 seconds since epoch.")
+        if totalRuntime < 600 or totalRuntime > 86400:
+            raise BadRequestError(f"Total Runtime must be within range of 600 < x < 86400 seconds since epoch. You requested {totalRuntime}")
         # Check all metadata label parameters
         self.__validateMetadata(inputDict)
         # Check all filter parameters
@@ -126,8 +126,8 @@ class CallValidator():
         if inputDict['hosttype'] != 'host':
             raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
         totalRuntime = int(inputDict['runtime']) - getUTCnow()
-        if totalRuntime < 600 or totalRuntime > 3600:
-            raise BadRequestError("Total Runtime must be within range of 600 > x > 3600 seconds since epoch.")
+        if totalRuntime < 600 or totalRuntime > 86400:
+            raise BadRequestError(f"Total Runtime must be within range of 600 < x < 86400 seconds since epoch. You requested {totlRuntime}")
         # Check all metadata label parameters
         self.__validateMetadata(inputDict)
 
