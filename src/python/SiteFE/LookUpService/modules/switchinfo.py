@@ -168,7 +168,7 @@ class SwitchInfo():
             if key in ['capacity', 'availableCapacity', 'granularity', 'reservableCapacity']:
                 # TODO: Allow specify availableCapacity and granularity from config
                 # reservableCapacity calculated automatically based on available - allAllocated.
-                self._mrsLiteral(newuri, key, int(portSwitch.get(key))*1000)
+                self._mrsLiteral(newuri, key, int(portSwitch.get(key)))
             if key in ['realportname']:
                 # Add real Port Name for Monitoring mapping
                 self._addVals('sense-rtmon', key, val, newuri)
