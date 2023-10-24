@@ -260,7 +260,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, Timing):
                 self.switch.plugin._writeHostConfig(host, self.yamlconf[host])
         if configChanged:
             self.logger.info("Configuration changed. Applying New Configuration")
-            self.applyConfig(raiseExc=True, hosts=hosts)
+            self.applyConfig(raiseExc=False, hosts=hosts)
         return configChanged, hosts
 
     def _getActive(self):
