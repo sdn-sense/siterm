@@ -418,12 +418,14 @@ class GitConfig():
                                           'inventory_host_vars_dir': '/opt/siterm/config/ansible/sense/inventory/host_vars/',
                                           'rotate_artifacts': 100,
                                           'ignore_logging': False,
+                                          'verbosity': 0,
                                           'debug': False,
                                           'private_data_dir_singleapply': '/opt/siterm/config/ansible/sense/',
                                           'inventory_singleapply': '/opt/siterm/config/ansible/sense/inventory_singleapply/inventory.yaml',
                                           'inventory_host_vars_dir_singleapply': '/opt/siterm/config/ansible/sense/inventory_singleapply/host_vars/',
                                           'rotate_artifacts_singleapply': 100,
                                           'ignore_logging_singleapply': False,
+                                          'verbosity_singleapply': 0,
                                           'debug_singleapply': False},
                               'prefixes': {'mrs': "http://schemas.ogf.org/mrs/2013/12/topology#",
                                            'nml': "http://schemas.ogf.org/nml/2013/03/base#",
@@ -488,6 +490,10 @@ class GitConfig():
         if isinstance(val, bool):
             return val
         return str(val).lower() in ('yes', 'true', '1')
+
+    def getint(self, key, subkey):
+        """Return int from config"""
+        return int(self.get(key, subkey))
 
     def has_section(self, key):
         """Check if section available"""

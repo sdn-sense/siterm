@@ -68,10 +68,11 @@ class Switch:
     def _executeAnsible(self, playbook, hosts=None, subitem=''):
         """Execute Ansible playbook"""
         return ansible_runner.run(private_data_dir=self.config.get('ansible', 'private_data_dir' + subitem),
-                                  inventory=self._getInventoryInfo(hosts, subitem),
+                                  inventory=self.config.get('ansible', 'inventory' + subitem),
                                   playbook=playbook,
                                   rotate_artifacts=self.config.get('ansible', 'rotate_artifacts' + subitem),
                                   debug=self.config.getboolean('ansible', 'debug' + subitem),
+                                  verbosity=self.config.getint('ansible', 'verbosity' + subitem),
                                   ignore_logging=self.config.getboolean('ansible', 'ignore_logging' + subitem))
 
     def getAnsNetworkOS(self, host, subitem=''):
