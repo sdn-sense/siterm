@@ -133,7 +133,7 @@ class Switch:
                 action = host_events["event_data"]["task_action"]
                 if action not in self.parsers.keys():
                     self.logger.warning(
-                        f"Unsupported NOS. There might be issues. Contact dev team"
+                        "Unsupported NOS. There might be issues. Contact dev team"
                     )
                 out[host] = host_events
                 ansNetIntf = (
