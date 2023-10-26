@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# pylint: disable=line-too-long
 """Virtual Switching module to prepare/compare with ansible config.
 
 Copyright 2021 California Institute of Technology
@@ -24,8 +22,8 @@ from SiteRMLibs.ipaddr import normalizedip
 
 def dictCompare(inDict, oldDict, key1):
     """Compare dict and set any remaining items
-       from current ansible yaml as absent in new one if
-       it's status is present"""
+    from current ansible yaml as absent in new one if
+    it's status is present"""
     # If equal - return
     if inDict == oldDict:
         return
@@ -37,18 +35,20 @@ def dictCompare(inDict, oldDict, key1):
                 del inDict[key]
             continue
         tmpKey = key
-        if key1 in ['ipv4_address', 'ipv6_address']:
+        if key1 in ["ipv4_address", "ipv6_address"]:
             tmpKey = normalizedip(key)
-        if val == 'present' and tmpKey not in inDict.keys():
+        if val == "present" and tmpKey not in inDict.keys():
             # Means current state is present, but model does not know anything
-            inDict[tmpKey] = 'absent'
-        elif val not in ['present', 'absent']:
+            inDict[tmpKey] = "absent"
+        elif val not in ["present", "absent"]:
             # Ensure we pre-keep all other keys
             inDict[tmpKey] = val
     return
 
-class VirtualSwitchingService():
+
+class VirtualSwitchingService:
     """Virtual Switching - add interfaces inside ansible yaml"""
+
     # pylint: disable=E1101,W0201,W0235
     def __init__(self):
         super().__init__()
@@ -57,63 +57,79 @@ class VirtualSwitchingService():
         if self.reqid == 0:
             tmpD = self.yamlconf.setdefault(host, {})
         elif self.reqid == 1:
-            tmpD = self.yamlconfuuid.setdefault('vsw', {}).setdefault(self.connID, {})
+            tmpD = self.yamlconfuuid.setdefault("vsw", {}).setdefault(self.connID, {})
             tmpD = tmpD.setdefault(host, {})
         else:
-            raise Exception('Wrong code. Should not reach this part. VirtualSwitchingService')
-        tmpD = tmpD.setdefault('interface', {})
+            raise Exception(
+                "Wrong code. Should not reach this part. VirtualSwitchingService"
+            )
+        tmpD = tmpD.setdefault("interface", {})
         return tmpD
 
     def __getdefaultVlan(self, host, port, portDict):
         """Default yaml dict setup"""
         tmpD = self.__getdefaultIntf(host)
-        if 'hasLabel' not in portDict or 'value' not in portDict['hasLabel']:
-            raise Exception(f'Bad running config. Missing vlan entry: {host} {port} {portDict}')
-        vlan = portDict['hasLabel']['value']
-        vlanName = self.switch.getSwitchPortName(host, f'Vlan{vlan}', {'vlanid': vlan})
+        if "hasLabel" not in portDict or "value" not in portDict["hasLabel"]:
+            raise Exception(
+                f"Bad running config. Missing vlan entry: {host} {port} {portDict}"
+            )
+        vlan = portDict["hasLabel"]["value"]
+        vlanName = f"Vlan{vlan}"
         vlanDict = tmpD.setdefault(vlanName, {})
-        vlanDict.setdefault('name', vlanName)
-        vlanDict.setdefault('vlanid', vlan)
-        tmpVrf = self.getConfigValue(host, 'vrf')
+        vlanDict.setdefault("name", vlanName)
+        vlanDict.setdefault("vlanid", vlan)
+        tmpVrf = self.getConfigValue(host, "vrf")
         if tmpVrf:
-            vlanDict.setdefault('vrf', tmpVrf)
-        tmpVlanMTU = self.getConfigValue(host, 'vlan_mtu')
+            vlanDict.setdefault("vrf", tmpVrf)
+        tmpVlanMTU = self.getConfigValue(host, "vlan_mtu")
         if tmpVlanMTU:
-            vlanDict.setdefault('mtu', tmpVlanMTU)
+            vlanDict.setdefault("mtu", tmpVlanMTU)
         return vlanDict
 
     def _addTaggedInterfaces(self, host, port, portDict):
         """Add Tagged Interfaces to expected yaml conf"""
-        vlanDict = self.__getdefaultVlan(host,  port, portDict)
+        vlanDict = self.__getdefaultVlan(host, port, portDict)
         portName = self.switch.getSwitchPortName(host, port)
         # Replace virtual port name to real portname if defined
-        if self.config.has_option(host, f'port_{portName}_realport'):
-            portName = self.config.config['MAIN'][host][f'port_{portName}_realport']
-        vlanDict.setdefault('tagged_members', {})
-        vlanDict['tagged_members'][portName] = 'present'
+        if self.config.has_option(host, f"port_{portName}_realport"):
+            portName = self.config.config["MAIN"][host][f"port_{portName}_realport"]
+        vlanDict.setdefault("tagged_members", {})
+        vlanDict["tagged_members"][portName] = "present"
 
     def _addIPv4Address(self, host, port, portDict):
         """Add IPv4 to expected yaml conf"""
         # For IPv4 - only single IP is supported. No secondary ones
-        vlanDict = self.__getdefaultVlan(host,  port, portDict)
-        if portDict.get('hasNetworkAddress', {}).get('ipv4-address', {}).get('value', ""):
-            vlanDict.setdefault('ipv4_address', {})
-            ip = normalizedip(portDict['hasNetworkAddress']['ipv4-address']['value'])
-            vlanDict['ipv4_address'][ip] = 'present'
+        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        if (
+            portDict.get("hasNetworkAddress", {})
+            .get("ipv4-address", {})
+            .get("value", "")
+        ):
+            vlanDict.setdefault("ipv4_address", {})
+            ip = normalizedip(portDict["hasNetworkAddress"]["ipv4-address"]["value"])
+            vlanDict["ipv4_address"][ip] = "present"
 
     def _addIPv6Address(self, host, port, portDict):
         """Add IPv6 to expected yaml conf"""
-        vlanDict = self.__getdefaultVlan(host,  port, portDict)
-        if portDict.get('hasNetworkAddress', {}).get('ipv6-address', {}).get('value', ""):
-            vlanDict.setdefault('ipv6_address', {})
-            ip = normalizedip(portDict['hasNetworkAddress']['ipv6-address']['value'])
-            vlanDict['ipv6_address'][ip] = 'present'
+        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        if (
+            portDict.get("hasNetworkAddress", {})
+            .get("ipv6-address", {})
+            .get("value", "")
+        ):
+            vlanDict.setdefault("ipv6_address", {})
+            ip = normalizedip(portDict["hasNetworkAddress"]["ipv6-address"]["value"])
+            vlanDict["ipv6_address"][ip] = "present"
 
     def _presetDefaultParams(self, host, port, portDict):
-        vlanDict = self.__getdefaultVlan(host,  port, portDict)
-        vlanDict['description'] = portDict.get('_params', {}).get('tag', "SENSE-VLAN-Without-Tag")
-        vlanDict['belongsTo'] = portDict.get('_params', {}).get('belongsTo', "SENSE-VLAN-Without-belongsTo")
-        vlanDict['state'] = 'present'
+        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        vlanDict["description"] = portDict.get("_params", {}).get(
+            "tag", "SENSE-VLAN-Without-Tag"
+        )
+        vlanDict["belongsTo"] = portDict.get("_params", {}).get(
+            "belongsTo", "SENSE-VLAN-Without-belongsTo"
+        )
+        vlanDict["state"] = "present"
 
     def _addparamsVsw(self, connDict, switches):
         """Wrapper for add params, to put individual request info too inside dictionary"""
@@ -124,7 +140,7 @@ class VirtualSwitchingService():
             for host, hostDict in connDict.items():
                 if host in switches:
                     for port, portDict in hostDict.items():
-                        if port == '_params':
+                        if port == "_params":
                             continue
                         self._presetDefaultParams(host, port, portDict)
                         self._addTaggedInterfaces(host, port, portDict)
@@ -133,8 +149,8 @@ class VirtualSwitchingService():
 
     def addvsw(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for vsw)"""
-        if 'vsw' in activeConfig:
-            for connID, connDict in activeConfig['vsw'].items():
+        if "vsw" in activeConfig:
+            for connID, connDict in activeConfig["vsw"].items():
                 self.connID = connID
                 if not self.checkIfStarted(connDict):
                     continue
@@ -144,27 +160,35 @@ class VirtualSwitchingService():
             for host in switches:
                 self.__getdefaultIntf(host)
 
-    def compareVsw(self, switch, runningConf, uuid=''):
+    def compareVsw(self, switch, runningConf, uuid=""):
         """Compare expected and running conf"""
         if uuid:
-            tmpD = self.yamlconfuuid.setdefault('vsw', {}).setdefault(uuid, {}).setdefault(switch, {})
+            tmpD = (
+                self.yamlconfuuid.setdefault("vsw", {})
+                .setdefault(uuid, {})
+                .setdefault(switch, {})
+            )
         else:
             tmpD = self.yamlconf.setdefault(switch)
-        tmpD = tmpD.setdefault('interface', {})
+        tmpD = tmpD.setdefault("interface", {})
         if tmpD == runningConf:
             return False  # equal config
         for key, val in runningConf.items():
-            if key not in tmpD.keys() and val['state'] != 'absent':
+            if key not in tmpD.keys() and val["state"] != "absent":
                 # Vlan is present in ansible config, but not in new config
                 # set vlan to state: 'absent'. In case it is absent already
                 # we dont need to set it again. Switch is unhappy to apply
                 # same command if service is not present.
-                tmpD.setdefault(key, {'state': 'absent', 'vlanid': val['vlanid']})
-            if val['state'] != 'absent':
+                tmpD.setdefault(key, {"state": "absent", "vlanid": val["vlanid"]})
+            if val["state"] != "absent":
                 for key1, val1 in val.items():
-                    if isinstance(val1, (dict, list)) and key1 in ['tagged_members', 'ipv4_address', 'ipv6_address']:
+                    if isinstance(val1, (dict, list)) and key1 in [
+                        "tagged_members",
+                        "ipv4_address",
+                        "ipv6_address",
+                    ]:
                         yamlOut = tmpD.setdefault(key, {}).setdefault(key1, {})
                         dictCompare(yamlOut, val1, key1)
-                    if isinstance(val1, str) and key1 == 'vlanid':
+                    if isinstance(val1, str) and key1 == "vlanid":
                         tmpD.setdefault(key, {}).setdefault(key1, val1)
         return True
