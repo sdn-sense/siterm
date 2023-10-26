@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# pylint: disable=line-too-long
 """Virtual Switching module to prepare/compare with ansible config.
 
 Copyright 2021 California Institute of Technology
@@ -70,7 +68,7 @@ class VirtualSwitchingService():
         if 'hasLabel' not in portDict or 'value' not in portDict['hasLabel']:
             raise Exception(f'Bad running config. Missing vlan entry: {host} {port} {portDict}')
         vlan = portDict['hasLabel']['value']
-        vlanName = self.switch.getSwitchPortName(host, f'Vlan{vlan}', {'vlanid': vlan})
+        vlanName = f'Vlan{vlan}'
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault('name', vlanName)
         vlanDict.setdefault('vlanid', vlan)
