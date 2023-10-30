@@ -201,8 +201,8 @@ class QOS:
           true - means yes (return totalRate)
           false - means no (return reqRate)
         """
-        if self.config.has_option(intf, 'allowOvercommit'):
-            if self.config.getboolean(intf, 'allowOvercommit'):
+        if self.config.has_option(intf, "allowOvercommit"):
+            if self.config.getboolean(intf, "allowOvercommit"):
                 return totalRate
             return reqRate
         return totalRate
@@ -222,7 +222,9 @@ class QOS:
                     tmpFD.write(
                         f"  # priority{added[intf][qosType]} belongs to {item['bwuri']} service\n"
                     )
-                    totalRate = self._overcommitCheck(items['master_intf'], item['reqRate'], items['total'])
+                    totalRate = self._overcommitCheck(
+                        items["master_intf"], item["reqRate"], items["total"]
+                    )
                     tmpFD.write(
                         f"  class priority{added[intf][qosType]} commit {item['reqRate']}mbit max {totalRate}mbit\n"
                     )
