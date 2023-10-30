@@ -195,6 +195,18 @@ class QOS:
             return max(total, totalAll)
         return item["reqRate"] + item["reserved"]
 
+    def _overcommitCheck(self, intf, reqRate, totalRate):
+        """Allow QoS Overcommit. Default, yes (return totalRate)
+        If allowOvercommit flag defined, then:
+          true - means yes (return totalRate)
+          false - means no (return reqRate)
+        """
+        if self.config.has_option(intf, 'allowOvercommit'):
+            if self.config.getboolean(intf, 'allowOvercommit'):
+                return totalRate
+            return reqRate
+        return totalRate
+
     def prepareQoSFileL3(self, tmpFD, allQoS):
         """Add L3 QoS TC Rules"""
         added = {}
@@ -210,8 +222,9 @@ class QOS:
                     tmpFD.write(
                         f"  # priority{added[intf][qosType]} belongs to {item['bwuri']} service\n"
                     )
+                    totalRate = self._overcommitCheck(items['master_intf'], item['reqRate'], items['total'])
                     tmpFD.write(
-                        f"  class priority{added[intf][qosType]} commit {item['reqRate']}mbit max {items['total']}mbit\n"
+                        f"  class priority{added[intf][qosType]} commit {item['reqRate']}mbit max {totalRate}mbit\n"
                     )
                     added[intf][qosType] += 1
                     for key, match in {
