@@ -590,7 +590,7 @@ class GitConfig:
         """Check if option available"""
         if not self.config["MAIN"].get(key, {}):
             raise NoSectionError(f"{key} section is not available in configuration.")
-        if self.config["MAIN"].get(key, {}).get(subkey, {}):
+        if subkey in self.config["MAIN"][key]:
             return True
         return False
 
