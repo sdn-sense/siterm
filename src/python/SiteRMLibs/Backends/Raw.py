@@ -29,7 +29,7 @@ class Switch():
         """Activating state actions."""
         return True
 
-    def getHostConfig(self, host):
+    def getHostConfig(self, host, subitem=""):
         """Get config of RAW local file."""
         out = {}
         confFName = f"{self.workDir}/{host}.yaml"
@@ -38,7 +38,7 @@ class Switch():
                 out = yaml.safe_load(fd.read())
         return out
 
-    def _writeHostConfig(self, host, out):
+    def _writeHostConfig(self, host, out, subitem=""):
         """It saves locally all configuration.
         RAW plugin does not apply anything on switches."""
         confFName = f"{self.workDir}/{host}.yaml"
@@ -46,7 +46,7 @@ class Switch():
             fd.write(yaml.dump(out))
 
     @staticmethod
-    def _applyNewConfig(hosts=None):
+    def _applyNewConfig(hosts=None, subitem=""):
         """RAW Plugin does not apply anything."""
         return {}, {}
 
@@ -54,7 +54,7 @@ class Switch():
         """Get Ansible network os from hosts file"""
         return self.getHostConfig(host).get('ansible_network_os', '')
 
-    def _getFacts(self, hosts=None):
+    def _getFacts(self, hosts=None, subitem=""):
         """Get Facts for RAW plugin"""
         self.config = getGitConfig()
         out = {}
