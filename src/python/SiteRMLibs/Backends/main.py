@@ -97,7 +97,7 @@ class Switch(Node):
                     realportname = switchDict.get(portKey, {}).get('realportname', None)
                     if not realportname:
                         continue
-                    if portKey.startswith('Vlan'):
+                    if portKey.startswith('Vlan') and switchDict.get(portKey, {}).get('value', {}):
                         # This is mainly a hack to list all possible options
                         # For vlan to interface mapping. Why? Ansible switches
                         # Return very differently vlans, like Vlan XXXX, VlanXXXX or vlanXXXX
@@ -188,7 +188,7 @@ class Switch(Node):
         if switch not in self.switches['output']:
             return
         vlans = self.plugin.getvlans(self.switches['output'][switch])
-        for port in list(ports + vlans):
+        for port in list(list(ports) + list(vlans)):
             if port in portsIgn:
                 self._delPortFromOut(switch, port)
                 continue
