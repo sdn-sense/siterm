@@ -136,13 +136,7 @@ class Switch:
                         "Unsupported NOS. There might be issues. Contact dev team"
                     )
                 out[host] = host_events
-                ansNetIntf = (
-                    host_events.setdefault("event_data", {})
-                    .setdefault("res", {})
-                    .setdefault("ansible_facts", {})
-                )
-                print(ansNetIntf.keys())
-                print(out[host].keys())
+                host_events.setdefault("event_data", {}).setdefault("res", {}).setdefault("ansible_facts", {})
         self.__getAnsErrors(ansOut)
         return out, self.ansibleErrs
 

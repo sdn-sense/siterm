@@ -9,12 +9,8 @@ snmp_monitoring:
     hostname: 172.16.1.1
     version: 2
   mac_parser:
-    key_mapping:
-      oid: '1.3.6.1.2.1.17.4.3.1.1'
-      mib: 'mib-2.17.4.3.1.1.'
-    mac_mapping:
-      oid: '1.3.6.1.2.1.17.7.1.2.2'
-      mib: 'mib-2.17.7.1.2.2.1.2.'
+    mib: "mib-2.17.7.1.2.2.1.3."
+    oid: "1.3.6.1.2.1.17.7.1.2.2.1.3"
 
 Authors:
   Justas Balcas jbalcas (at) caltech.edu
@@ -115,27 +111,18 @@ class SNMPMonitoring():
     def _getMacAddrSession(self, host, macs):
         if not self.session:
             return
-        macs.setdefault(host, {'mapping': {}, 'vlans': {}})
+        macs.setdefault(host, {'vlans': {}})
         if 'mac_parser' in self.hostconf[host]['snmp_monitoring']:
-            if 'mac_mapping' in self.hostconf[host]['snmp_monitoring']['mac_parser']:
-                oid = self.hostconf[host]['snmp_monitoring']['mac_parser']['mac_mapping']['oid']
-                mib = self.hostconf[host]['snmp_monitoring']['mac_parser']['mac_mapping']['mib']
-                allvals = self._getSNMPVals(oid)
-                for item in allvals:
-                    splVal = item.oid[len(mib):].split('.', 1)
-                    macs[host]['mapping'][splVal[1]] = splVal[0]
-            if 'key_mapping' in self.hostconf[host]['snmp_monitoring']['mac_parser']:
-                oid = self.hostconf[host]['snmp_monitoring']['mac_parser']['key_mapping']['oid']
-                mib = self.hostconf[host]['snmp_monitoring']['mac_parser']['key_mapping']['mib']
-                allvals = self._getSNMPVals(oid)
-                for item in allvals:
-                    mac = ':'.join('{:02x}'.format(ord(x)) for x in item.value)
-                    mapkey = item.oid[len(mib):]
-                    if mapkey in macs[host]['mapping']:
-                        vlankey = macs[host]['mapping'][mapkey]
-                        if self._isVlanAllowed(host, vlankey):
-                            macs[host]['vlans'].setdefault(vlankey, [])
-                            macs[host]['vlans'][vlankey].append(mac)
+            oid = self.hostconf[host]['snmp_monitoring']['mac_parser']['oid']
+            mib = self.hostconf[host]['snmp_monitoring']['mac_parser']['mib']
+            allvals = self._getSNMPVals(oid)
+            for item in allvals:
+                splt = item.oid[(len(mib)):].split('.')
+                vlan = splt.pop(0)
+                mac = [format(int(x), '02x') for x in splt]
+                if self._isVlanAllowed(host, vlan):
+                    macs[host]['vlans'].setdefault(vlan, [])
+                    macs[host]['vlans'][vlan].append(":".join(mac))
 
     def startwork(self):
         """Scan all switches and get snmp data"""
@@ -212,7 +199,7 @@ def execute(config=None, args=None):
     """Main Execute."""
     if not config:
         config = getGitConfig()
-    if args:
+    if args and len(args) > 1:
         snmpmon = SNMPMonitoring(config, args[1])
         snmpmon.startwork()
     else:
