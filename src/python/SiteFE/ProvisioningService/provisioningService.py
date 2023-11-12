@@ -207,7 +207,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, Timing):
     def compareIndv(self, switches):
         """Compare individual entries and report it's status"""
         for acttype in ["vsw", "rst"]:
-            for uuid, uuidDict in self.yamlconfuuid.get(acttype, {}).items():
+            allUUIDs = set(list(self.yamlconfuuid.get(acttype, {}).keys()) + list(self.yamlconfuuidActive.get(acttype, {}).keys()))
+            for uuid in allUUIDs:
+                uuidDict = self.yamlconfuuid.get(acttype, {}).get(uuid, {})
                 if uuidDict == self.yamlconfuuidActive.get(acttype, {}).get(uuid, {}):
                     # Equal as old one. No need to apply.
                     continue
