@@ -289,14 +289,18 @@ class SwitchInfo():
                 except (NoOptionError, NoSectionError) as ex:
                     self.logger.debug('ERROR: private_asn parameter is not defined (MISCONFIG. Contact Support) for %s. Err: %s', switchName, ex)
                     continue
+            for key in ['ipv4-subnet-pool-list', 'ipv6-subnet-pool-list']:
+                tmp = self.__getValFromConfig(key)
+                if tmp:
+                    out[key[:-5]] = ",".join(map(str, tmp))
+            for iptype in ["ipv4", "ipv6"]:
+                out['iptype'] = iptype
+                out['rstname'] = f'rst-{iptype}'
+                self._addRoutingTable(**out)
+            # Add all routes from network device
             for ipX, routeList in rstEntries.items():
                 out['rstname'] = f'rst-{ipX}'
                 for route in routeList:
-                    # get ipv6/ipv4 floating ranges
-                    for key in ['ipv4-subnet-pool-list', 'ipv6-subnet-pool-list']:
-                        tmp = self.__getValFromConfig(key)
-                        if tmp:
-                            out[key[:-5]] = ",".join(map(str, tmp))
                     out['iptype'] = ipX
                     out['rt-table'] = 'main' if 'vrf' not in route else f"vrf-{route['vrf']}"
                     if 'from' in route:
