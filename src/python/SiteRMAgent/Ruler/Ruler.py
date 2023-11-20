@@ -161,11 +161,12 @@ class Ruler(contentDB, QOS, OverlapLib, Timing):
                         actCall.terminate(vals[self.hostname], key)
         if actKey == "rst" and self.qosPolicy == "hostlevel":
             for key, val in self.activeNow.items():
-                if key not in self.activeNew:
-                    actCall.terminate(val, key)
-                    continue
-                if val != self.activeNew[key]:
-                    actCall.terminate(val, key)
+                for uuid, rvals in val.items():
+                    if not self.activeNew.get(key, {}).get(uuid, {}):
+                        actCall.terminate(rvals, uuid)
+                        continue
+                    if rvals != self.activeNew.get(key, {}).get(uuid, {}):
+                        actCall.terminate(rvals, uuid)
             return
 
     def activeEnsure(self, actKey, actCall):
@@ -189,7 +190,8 @@ class Ruler(contentDB, QOS, OverlapLib, Timing):
                         continue
         if actKey == "rst" and self.qosPolicy == "hostlevel":
             for key, val in self.activeNew.items():
-                actCall.activate(val, key)
+                for uuid, rvals in val.items():
+                    actCall.activate(rvals, uuid)
             return
 
     def startwork(self):
