@@ -178,8 +178,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, Timing):
         curActiveConf = self.switch.plugin.getHostConfig(swname)
         # Delete 2 items as we will need everything else
         # For applying into devices
-        del curActiveConf["interface"]
-        del curActiveConf["sense_bgp"]
+        curActiveConf.pop("interface", None)
+        curActiveConf.pop("sense_bgp", None)
         curActiveConf[key] = (
             self.yamlconfuuid.get(acttype, {})
             .get(uuid, {})
