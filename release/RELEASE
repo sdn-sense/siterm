@@ -1,3 +1,64 @@
+1.3.12
+This release includes (highlight main items):
+
+IMPORTANT:
+There are changes required to run a new version. Please make sure you do the following:
+Ask SENSE team to cancel all provisioned services to your Site;
+Make sure you update your deployment scripts to use new way to define network devices: https://sdn-sense.github.io/NetControlAnsible.html
+Depending on your installation - use to update docker image or restart kubernetes with new configuration.
+
+SiteRM Improvements:
+Support VirtualPorts (Fake Ports and is Alias)
+Improved SNMP Monitoring and Mac information parsing
+Support QoS allowOvercommit flag. Allow site’s
+to control overcommit or not for L3 QoS.
+Delta Timing and Overlap check imporvements;
+Report Network Status of any configuration (L2,L3,Server Vlan, IP, MTU, QoS). Reporting done inside the model and in Prometheus output.
+Report QoS Requests in a Prometheus output.
+Allow sites to control allvlans flag - either report all vlans from network/host devices or only controlled ones.
+WebUI improvements (delta show, topology map)
+Separation of Ansible-templates and simplification for sites to specific controlled devices. Please look documentation here https://sdn-sense.github.io/NetControlAnsible.html - for a new way to configure control of network devices.
+Before start docker container (either FE or Agent) check all Certificates, configuration files and make sure they are valid.
+FE and Agent use docker volume.
+Upgrade osg-ca-certs (Needed to support Incommon V3)
+
+Network Device improvements:
+New NOS Support: Cisco Nexus 9 (Support Vlan creation/deletion, IPv4/6 assignment, BGP Configuration)
+SONiC: Use `set ipv6 next-hop prefer-global` and not add link-local address in the routing table. This issue is visible only between Cisco and SONiC BGP Peering.
+AristaEOS: Catch errors and report back to SiteRM.
+
+Code improvement:
+Any new code or modified code - requires to run linter.sh This includes for Python: black, isort, pylint. For yaml - yamllint, For bash - bashlint.
+
+Supported systems: x86_64 and ppc64le
+Installation details: https://sdn-sense.github.io/Installation.html
+
+Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
+Docker version for this release:
+x86_64:
+  Agent: sdnsense/site-agent-sense:latest-20231207 (Or use latest)
+  Frontend: sdnsense/site-rm-sense:latest-20231207 (Or use latest)
+
+1.3.0
+ This release includes (highlight main items):
+-  Conflict Check for rst, exclude vlans from modelling #169
+-  Debugger check improvements; # 205
+-  Allow configure  mtu and txqueuelen via config #206
+-  Dell OS 10 Vlan and BGP Control #173
+-  Log and report ansible errors #216 #194
+-  Report cert validity to FE and in prometheus #226
+-  Rewrite Ansible SoNIC plugin #292
+-  Minimal support for Cisco NX 9 #291
+-Full list of issues solved are here: https://github.com/sdn-sense/siterm/issues?q=is%3Aissue+milestone%3A%221.3.0+Release%22+is%3Aclosed
+ Supported systems: x86_64 and ppc64le
+ Installation details: https://sdn-sense.github.io/Installation.html
+
+ Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
+ Docker version for this release:
+ x86_64:
+  Agent: sdnsense/site-agent-sense:latest-20230929 (Or use latest)
+  Frontend: sdnsense/site-rm-sense:latest-20230929 (Or use latest)
+
 1.1.0
 This release includes:
   All:
