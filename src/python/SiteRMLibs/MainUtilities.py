@@ -4,7 +4,6 @@
 
 Authors:
   Justas Balcas jbalcas (at) caltech.edu
-
 Date: 2021/01/20
 """
 import ast
