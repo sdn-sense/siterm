@@ -1,7 +1,8 @@
 name: Linter
 
-on: [pull_request_target]
-
+on: 
+  pull_request_target:
+    branches: [master]
 jobs:
   linter:
     runs-on: ubuntu-latest
