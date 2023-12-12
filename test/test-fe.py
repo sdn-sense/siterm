@@ -196,7 +196,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(out[2], 'OK')
         # Delete Host
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/deletehost"
-        out = makeRequest(self, url, {'verb': 'PUT', 'data': dic})
+        out = makeRequest(self, url, {'verb': 'POST', 'data': dic})
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
 
@@ -223,7 +223,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(out[2], 'OK')
         # Delete Host
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/deletehost"
-        out = makeRequest(self, url, {'verb': 'PUT', 'data': dic})
+        out = makeRequest(self, url, {'verb': 'POST', 'data': dic})
         self.assertEqual(out[1], 200)
         self.assertEqual(out[2], 'OK')
 

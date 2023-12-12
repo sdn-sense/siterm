@@ -1,5 +1,4 @@
 ---
-
 hostname: https://sense-caltech-dev.sdn-lb.ultralight.org
 sitename: T3_US_Caltech_Dev
 cert: /etc/grid-security/hostcert.pem

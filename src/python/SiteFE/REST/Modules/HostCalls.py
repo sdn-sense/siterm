@@ -24,6 +24,7 @@ from SiteRMLibs.MainUtilities import reportServiceStatus
 from SiteRMLibs.MainUtilities import jsondumps
 from SiteRMLibs.CustomExceptions import NotFoundError
 from SiteRMLibs.CustomExceptions import BadRequestError
+from SiteRMLibs.CustomExceptions import OverlapException
 from SiteRMLibs.MainUtilities import read_input_data
 
 
@@ -38,7 +39,7 @@ class HostCalls():
         """Define URL Params for this class"""
         urlParams = {'addhosts': {'allowedMethods': ['PUT']},
                      'updatehost': {'allowedMethods': ['PUT']},
-                     'deletehost': {'allowedMethods': ['PUT']},
+                     'deletehost': {'allowedMethods': ['POST']},
                      'servicestate': {'allowedMethods': ['PUT']}}
         self.urlParams.update(urlParams)
 
@@ -105,7 +106,19 @@ class HostCalls():
         host = self.dbI.get('hosts', limit=1, search=[['ip', inputDict['ip']]])
         if not host:
             raise NotFoundError(f"This IP {inputDict['ip']} is not registered at all.")
+        # If it is in activeDeltas (means something is provisioned) - we should not delete until
+        # resources are freed up.
+        active = self.getActiveDeltas(environ, **kwargs)
+        stillactive = []
+        for key, vals in active.get('output', {}).get('vsw', {}).items():
+            if inputDict['hostname'] in vals:
+                stillactive.append(key)
+        if stillactive:
+            raise OverlapException(f"Unable to delete host. The following resources are active: {stillactive}")
+        # Delete from hosts
         self.dbI.delete('hosts', [['id', host[0]['id']]])
+        # Delete from service states
+        self.dbI.delete('servicestates', [['hostname', host[0]['hostname']]])
         self.responseHeaders(environ, **kwargs)
         return {"Status": 'DELETED'}
 

@@ -163,7 +163,7 @@ class DeltaCalls:
         self.stateM.commit(self.dbI, {'uid': deltaID, 'state': 'committing'})
         return {'status': 'OK'}
 
-    def __getActiveDeltas(self, environ, **kwargs):
+    def getActiveDeltas(self, environ, **kwargs):
         """Get all Active Deltas"""
         activeDeltas = self.dbI.get('activeDeltas')
         if activeDeltas:
@@ -307,7 +307,7 @@ class DeltaCalls:
         Examples: https://server-host/sitefe/v1/activedeltas
         """
         self.responseHeaders(environ, **kwargs)
-        return self.__getActiveDeltas(environ, **kwargs)
+        return self.getActiveDeltas(environ, **kwargs)
 
     def deltatimestates(self, environ, **kwargs):
         """

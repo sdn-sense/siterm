@@ -45,7 +45,8 @@ from SiteRMLibs.CustomExceptions import DeltaNotFound
 from SiteRMLibs.CustomExceptions import ModelNotFound
 from SiteRMLibs.CustomExceptions import MethodNotSupported
 from SiteRMLibs.CustomExceptions import NotAcceptedHeader
-
+from SiteRMLibs.CustomExceptions import OverlapException
+from SiteRMLibs.CustomExceptions import NotFoundError
 
 def isiterable(inVal):
     """Check if inVal is not str"""
@@ -87,7 +88,7 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
             print(f'Warning. Undefined behavior. Allowed Methods not defined for {actionName}')
             return
         if environ['REQUEST_METHOD'].upper() not in self.urlParams[actionName].get('allowedMethods', []):
-            raise MethodNotSupported(f"Method {environ['REQUEST_METHOD'].upper()} not supported.")
+            raise MethodNotSupported(f"Method {environ['REQUEST_METHOD'].upper()} not supported. Allowed methods {self.urlParams[actionName].get('allowedMethods', [])}")
         return
 
     def responseHeaders(self, environ, **kwargs):
@@ -115,7 +116,7 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
             exception = f'Received Exception: {ex}'
             self.httpresp.ret_404('application/json', kwargs['start_response'], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=404)
-        except (ValueError, IOError) as ex:
+        except (ValueError, IOError, NotFoundError) as ex:
             exception = f'Received Exception: {ex}. Full traceback {traceback.print_exc()}'
             self.httpresp.ret_500('application/json', kwargs['start_response'], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=500)
@@ -123,7 +124,7 @@ class Frontend(CertHandler, FrontendCalls, PrometheusCalls, HostCalls, DebugCall
             exception = f'Received BadRequestError: {ex}'
             self.httpresp.ret_400('application/json', kwargs['start_response'], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=400)
-        except (NotSupportedArgument, TooManyArgumentalValues) as ex:
+        except (NotSupportedArgument, TooManyArgumentalValues, OverlapException) as ex:
             exception = f'Send 400 error. More details: {jsondumps(getCustomOutMsg(errMsg=str(ex), errCode=400))}'
             self.httpresp.ret_400('application/json', kwargs['start_response'], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=400)

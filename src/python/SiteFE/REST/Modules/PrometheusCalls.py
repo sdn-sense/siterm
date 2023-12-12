@@ -76,10 +76,18 @@ class PrometheusCalls:
 
     def __memStats(self, registry, **kwargs):
         """Refresh all Memory Statistics in FE"""
+        def procWrapper(proc, services, lookupid):
+            """Process Wrapper to catch exited process or zombie process"""
+            try:
+                self.__processStats(proc, services, lookupid)
+            except psutil.NoSuchProcess:
+                pass
+            except psutil.ZombieProcess:
+                pass
         self.memMonitor = {}
         for proc in psutil.process_iter(attrs=None, ad_value=None):
-            self.__processStats(proc, ['mariadbd', 'httpd'], 0)
-            self.__processStats(proc, ['Config-Fetcher', 'SNMPMonitoring-update', 'ProvisioningService-update', 'LookUpService-update'], 1)
+            procWrapper(proc, ['mariadbd', 'httpd'], 0)
+            procWrapper(proc, ['Config-Fetcher', 'SNMPMonitoring-update', 'ProvisioningService-update', 'LookUpService-update'], 1)
         memInfo = Gauge('memory_usage', 'Memory Usage for Service', ['servicename', 'key'], registry=registry)
         for serviceName, vals in self.memMonitor.items():
             for key, val in vals.items():
