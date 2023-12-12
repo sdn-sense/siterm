@@ -16,6 +16,19 @@
             load_data();
         });
 
+        function deletehost(hostname) {
+          docObj =  document.getElementById("del-"+hostname);
+          var params = {};
+          for(var i=0; i < docObj.elements.length; i++){
+            var fieldName = docObj.elements[i].name;
+            var fieldValue = docObj.elements[i].value;
+            if (fieldName){params[fieldName] = fieldValue;}
+          }
+          $.post("/"+params['sitename']+"/sitefe/json/frontend/deletehost", params, function(result){
+            console.log(result);
+          });
+        }
+
         function load_data() {
             $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
               data['hostinfo'] = {};
@@ -85,7 +98,7 @@
       </nav>
       <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-          <h1 class="h2">Dashboard</h1>
+          <h1 class="h2">Frontend and Host Configuration</h1>
         </div>
         <div class="row" id="maindiv"></div>
         <div id="sites_tab"></div>

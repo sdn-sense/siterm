@@ -73,13 +73,15 @@ function escapeHtml (string) {
           for (var key in data['hostinfo']){
              if (key == 'Summary') {continue;}
              if ($.isPlainObject(data['hostinfo'][key])){
-               menCol.append('<a class="nav-link" id="v-pills-'+key+'-tab" data-toggle="pill" href="#v-pills-'+key+'" role="tab" aria-controls="v-pills-'+ key +'" aria-selected="true">'+ key +'</a>');
-               cntDiv.append('<div class="tab-pane fade" id="v-pills-'+key+'" role="tabpanel" aria-labelledby="v-pills-'+key+'-tab"></div>');
+               menCol.append('<a class="nav-link" id="v-pills-'+ htmlhostname + '_' + key + '-tab" data-toggle="pill" href="#v-pills-'+ htmlhostname + '_' +key+'" role="tab" aria-controls="v-pills-'+ htmlhostname + '_' + key +'" aria-selected="true">'+ key +'</a>');
+               cntDiv.append('<div class="tab-pane fade" id="v-pills-'+ htmlhostname + '_' +key+'" role="tabpanel" aria-labelledby="v-pills-'+ htmlhostname + '_' +key+'-tab"></div>');
              }
           }
+          // Add Remove button
+          menCol.append('<div><form onsubmit="deletehost(\''+ htmlhostname +'\');" id="del-'+ htmlhostname +'" name="del-'+ htmlhostname +'"><input id="host-'+htmlhostname+'" name="hostname" type="hidden" value="'+hostname+'"><input id="ip-'+htmlhostname+'" name="ip" type="hidden" value="'+data['ip']+'"><input id="sitename-'+htmlhostname+'" name="sitename" type="hidden" value="'+sitename+'"><input value="Delete Host" type="submit" class="btn btn-danger"></form></div>');
           nRow = $('<div class="row">');
           menCol = $('<div class="col-3">').append(menCol);
-          cntDiv = $('<div class="col-6">').append(cntDiv);
+          cntDiv = $('<div class="col-9">').append(cntDiv);
           nRow.append(menCol).append(cntDiv);
           $('#view_'+sitename+'_'+ htmlhostname ).append(nRow);
 
@@ -94,7 +96,7 @@ function escapeHtml (string) {
                 line.append(configLine);
                 sitesConfig.append(line);
             }
-            $('#v-pills-' + key).append(sitesConfig);
+            $('#v-pills-' + htmlhostname + '_' +key).append(sitesConfig);
           };
         }
 
