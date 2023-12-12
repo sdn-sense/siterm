@@ -20,25 +20,22 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2023/01/03
 """
 from tempfile import NamedTemporaryFile
-from SiteRMLibs.MainUtilities import httpdate
-from SiteRMLibs.MainUtilities import getModTime
-from SiteRMLibs.MainUtilities import encodebase64
-from SiteRMLibs.MainUtilities import decodebase64
-from SiteRMLibs.MainUtilities import convertTSToDatetime
-from SiteRMLibs.MainUtilities import getUTCnow
-from SiteRMLibs.MainUtilities import evaldict
-from SiteRMLibs.MainUtilities import jsondumps
-from SiteRMLibs.RESTInteractions import get_post_form
-from SiteRMLibs.RESTInteractions import get_json_post_form
-from SiteRMLibs.RESTInteractions import is_post_request
-from SiteRMLibs.RESTInteractions import is_application_json
-from SiteRMLibs.CustomExceptions import ConflictEntries, BadRequestError, DeltaNotFound, WrongDeltaStatusTransition
+
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
+from SiteRMLibs.CustomExceptions import (BadRequestError, ConflictEntries,
+                                         DeltaNotFound,
+                                         WrongDeltaStatusTransition)
+from SiteRMLibs.MainUtilities import (convertTSToDatetime, decodebase64,
+                                      encodebase64, evaldict, getModTime,
+                                      getUTCnow, httpdate, jsondumps)
+from SiteRMLibs.RESTInteractions import (get_json_post_form, get_post_form,
+                                         is_application_json, is_post_request)
 
 
 class DeltaCalls:
     """Delta Calls API Module"""
+
     # pylint: disable=E1101
     def __init__(self):
         self.stateM = stateM.StateMachine(self.config)
@@ -46,163 +43,235 @@ class DeltaCalls:
         self.__urlParams()
         self.policer = {}
         for sitename in self.sites:
-            if sitename != 'MAIN':
+            if sitename != "MAIN":
                 self.policer[sitename] = polS.PolicyService(self.config, sitename)
 
     def __urlParams(self):
         """Define URL Params for this class"""
-        urlParams = {'deltas': {'allowedMethods': ['GET', 'POST'],
-                                'urlParams': [{"key": "summary", "default": True, "type": bool},
-                                              {"key": "oldview", "default": False, "type": bool},
-                                              {"key": "encode", "default": True, "type": bool},
-                                              {"key": "model", "default": "turtle", "type": str,
-                                               "options": ['turtle']}]},
-                     'deltasid': {'allowedMethods': ['GET'],
-                                  'urlParams': [{"key": "model", "default": "turtle", "type": str,
-                                                 "options": ['turtle']},
-                                                {"key": "encode", "default": True, "type": bool},
-                                                {"key": "oldview", "default": False, "type": bool},
-                                                {"key": "summary", "default": False, "type": bool}]},
-                     'deltasaction': {'allowedMethods': ['GET', 'PUT']},
-                     'activedeltas': {'allowedMethods': ['GET']},
-                     'deltastates': {'allowedMethods': ['GET']},
-                     'deltatimestates': {'allowedMethods': ['POST']}}
+        urlParams = {
+            "deltas": {
+                "allowedMethods": ["GET", "POST"],
+                "urlParams": [
+                    {"key": "summary", "default": True, "type": bool},
+                    {"key": "oldview", "default": False, "type": bool},
+                    {"key": "encode", "default": True, "type": bool},
+                    {
+                        "key": "model",
+                        "default": "turtle",
+                        "type": str,
+                        "options": ["turtle"],
+                    },
+                ],
+            },
+            "deltasid": {
+                "allowedMethods": ["GET"],
+                "urlParams": [
+                    {
+                        "key": "model",
+                        "default": "turtle",
+                        "type": str,
+                        "options": ["turtle"],
+                    },
+                    {"key": "encode", "default": True, "type": bool},
+                    {"key": "oldview", "default": False, "type": bool},
+                    {"key": "summary", "default": False, "type": bool},
+                ],
+            },
+            "deltasaction": {"allowedMethods": ["GET", "PUT"]},
+            "activedeltas": {"allowedMethods": ["GET"]},
+            "deltastates": {"allowedMethods": ["GET"]},
+            "deltatimestates": {"allowedMethods": ["POST"]},
+        }
         self.urlParams.update(urlParams)
 
     def __defineRoutes(self):
         """Define Routes for this class"""
         self.routeMap.connect("deltas", "/v1/deltas", action="deltas")
         self.routeMap.connect("deltasid", "/v1/deltas/:deltaid", action="deltasid")
-        self.routeMap.connect("deltasaction", "/v1/deltas/:deltaid/actions/commit", action="deltasaction")
+        self.routeMap.connect(
+            "deltasaction", "/v1/deltas/:deltaid/actions/commit", action="deltasaction"
+        )
         self.routeMap.connect("activedeltas", "/v1/activedeltas", action="activedeltas")
-        self.routeMap.connect("deltastates", "/v1/deltastates/:deltaid", action="deltastates")
-        self.routeMap.connect("deltatimestates", "/v1/deltatimestates", action="deltatimestates")
+        self.routeMap.connect(
+            "deltastates", "/v1/deltastates/:deltaid", action="deltastates"
+        )
+        self.routeMap.connect(
+            "deltatimestates", "/v1/deltatimestates", action="deltatimestates"
+        )
 
     @staticmethod
     def __intGetPostData(environ, **kwargs):
         """Parse POST Data"""
         out = {}
         postRequest = False
-        if environ['REQUEST_METHOD'].upper() == 'POST':
+        if environ["REQUEST_METHOD"].upper() == "POST":
             postRequest = is_post_request(environ)
         if not postRequest:
             if is_application_json(environ):
                 out = get_json_post_form(environ)
             else:
-                raise BadRequestError('You did POST method, but provided CONTENT_TYPE is not correct')
+                raise BadRequestError(
+                    "You did POST method, but provided CONTENT_TYPE is not correct"
+                )
         if not out:
             out = get_post_form(environ)
         return out
 
     def __addNewDeltaINT(self, uploadContent, environ, **kwargs):
         """Add new delta."""
-        hashNum = uploadContent['id']
-        if self.dbI.get('deltas', search=[['uid', hashNum]], limit=1):
+        hashNum = uploadContent["id"]
+        if self.dbI.get("deltas", search=[["uid", hashNum]], limit=1):
             # This needs to be supported as it can be re-initiated again. TODO
-            msg = 'Something weird has happened... Check server logs; Same ID is already in DB'
+            msg = "Something weird has happened... Check server logs; Same ID is already in DB"
             raise ConflictEntries(msg)
         tmpfd = NamedTemporaryFile(delete=False, mode="w+")
         tmpfd.close()
-        self.getmodel(environ, uploadContent['modelId'], None, **kwargs)
-        outContent = {"ID": hashNum,
-                      "InsertTime": getUTCnow(),
-                      "UpdateTime": getUTCnow(),
-                      "Content": uploadContent,
-                      "State": "accepting",
-                      "modelId": uploadContent['modelId']}
+        self.getmodel(environ, uploadContent["modelId"], None, **kwargs)
+        outContent = {
+            "ID": hashNum,
+            "InsertTime": getUTCnow(),
+            "UpdateTime": getUTCnow(),
+            "Content": uploadContent,
+            "State": "accepting",
+            "modelId": uploadContent["modelId"],
+        }
         self.siteDB.saveContent(tmpfd.name, outContent)
-        out = self.policer[kwargs['sitename']].acceptDelta(tmpfd.name)
-        outContent['State'] = out['State']
-        outContent['id'] = hashNum
-        outContent['lastModified'] = convertTSToDatetime(outContent['UpdateTime'])
-        outContent['href'] = f"{environ['SCRIPT_URI']}/{hashNum}"
-        if outContent['State'] not in ['accepted']:
-            if 'Error' not in out:
-                outContent['Error'] = f"Unknown Error. Dump all out content {jsondumps(out)}"
+        out = self.policer[kwargs["sitename"]].acceptDelta(tmpfd.name)
+        outContent["State"] = out["State"]
+        outContent["id"] = hashNum
+        outContent["lastModified"] = convertTSToDatetime(outContent["UpdateTime"])
+        outContent["href"] = f"{environ['SCRIPT_URI']}/{hashNum}"
+        if outContent["State"] not in ["accepted"]:
+            if "Error" not in out:
+                outContent[
+                    "Error"
+                ] = f"Unknown Error. Dump all out content {jsondumps(out)}"
             else:
-                outContent['Error'] = out['Error']
+                outContent["Error"] = out["Error"]
         return outContent
 
     def __getdeltaINT(self, deltaID=None, **kwargs):
         """Get delta from database."""
         if not deltaID:
-            return self.dbI.get('deltas')
-        out = self.dbI.get('deltas', search=[['uid', deltaID]], orderby=['insertdate', 'ASC'])
+            return self.dbI.get("deltas")
+        out = self.dbI.get(
+            "deltas", search=[["uid", deltaID]], orderby=["insertdate", "ASC"]
+        )
         if not out:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out[0]
 
     def __getdeltastatesINT(self, deltaID, **kwargs):
         """Get delta states from database."""
-        out = self.dbI.get('states', search=[['deltaid', deltaID]])
+        out = self.dbI.get("states", search=[["deltaid", deltaID]])
         if not out:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out
 
-    def __commitdelta(self, deltaID, environ, newState='UNKNOWN', internal=False, hostname=None, **kwargs):
+    def __commitdelta(
+        self,
+        deltaID,
+        environ,
+        newState="UNKNOWN",
+        internal=False,
+        hostname=None,
+        **kwargs,
+    ):
         """Change delta state."""
         if internal:
-            out = self.dbI.get('hoststates', search=[['deltaid', deltaID], ['hostname', hostname]])
+            out = self.dbI.get(
+                "hoststates", search=[["deltaid", deltaID], ["hostname", hostname]]
+            )
             if not out:
-                msg = f'This query did not returned any host states for {deltaID} {hostname}'
+                msg = f"This query did not returned any host states for {deltaID} {hostname}"
                 raise WrongDeltaStatusTransition(msg)
-            self.stateM.stateChangerHost(self.dbI, out[0]['id'], **{'deltaid': deltaID,
-                                                                    'state': newState,
-                                                                    'insertdate': getUTCnow(),
-                                                                    'hostname': hostname})
-            if newState == 'remove':
+            self.stateM.stateChangerHost(
+                self.dbI,
+                out[0]["id"],
+                **{
+                    "deltaid": deltaID,
+                    "state": newState,
+                    "insertdate": getUTCnow(),
+                    "hostname": hostname,
+                },
+            )
+            if newState == "remove":
                 # Remove state comes only from modify
-                self.stateM.stateChange(self.dbI, {'uid': deltaID, 'state': newState})
-            return {'status': 'OK', 'msg': 'Internal State change approved'}
+                self.stateM.stateChange(self.dbI, {"uid": deltaID, "state": newState})
+            return {"status": "OK", "msg": "Internal State change approved"}
         delta = self.__getdeltaINT(deltaID, **kwargs)
         # Now we go directly to commited in case of commit
-        if delta['state'] != 'accepted':
-            msg = (f"Delta state in the system is not in accepted state."
-                   f"State on the system: {delta['state']}. Not allowed to change.")
+        if delta["state"] != "accepted":
+            msg = (
+                f"Delta state in the system is not in accepted state."
+                f"State on the system: {delta['state']}. Not allowed to change."
+            )
             raise WrongDeltaStatusTransition(msg)
-        self.stateM.commit(self.dbI, {'uid': deltaID, 'state': 'committing'})
-        return {'status': 'OK'}
+        self.stateM.commit(self.dbI, {"uid": deltaID, "state": "committing"})
+        return {"status": "OK"}
 
     def getActiveDeltas(self, environ, **kwargs):
         """Get all Active Deltas"""
-        activeDeltas = self.dbI.get('activeDeltas')
+        activeDeltas = self.dbI.get("activeDeltas")
         if activeDeltas:
             activeDeltas = activeDeltas[0]
-            activeDeltas['output'] = evaldict(activeDeltas['output'])
+            activeDeltas["output"] = evaldict(activeDeltas["output"])
         if not activeDeltas:
-            activeDeltas = {'output': {}}
+            activeDeltas = {"output": {}}
         return activeDeltas
 
     def __deltas_get(self, environ, **kwargs):
         """Private Function for Delta GET API"""
-        modTime = getModTime(kwargs['headers'])
+        modTime = getModTime(kwargs["headers"])
         outdeltas = self.__getdeltaINT(None, **kwargs)
-        if kwargs['urlParams']['oldview']:
-            self.httpresp.ret_200('application/json', kwargs["start_response"], None)
+        if kwargs["urlParams"]["oldview"]:
+            self.httpresp.ret_200("application/json", kwargs["start_response"], None)
             return outdeltas
         outM = {"deltas": []}
         if not outdeltas:
-            self.httpresp.ret_200('application/json', kwargs["start_response"], [('Last-Modified', httpdate(getUTCnow()))])
+            self.httpresp.ret_200(
+                "application/json",
+                kwargs["start_response"],
+                [("Last-Modified", httpdate(getUTCnow()))],
+            )
             return []
         updateTimestamp = 0
         for delta in outdeltas:
-            if modTime > delta['updatedate']:
+            if modTime > delta["updatedate"]:
                 continue
-            updateTimestamp = updateTimestamp if updateTimestamp > delta['updatedate'] else delta['updatedate']
-            current = {"id": delta['uid'],
-                       "lastModified": convertTSToDatetime(delta['updatedate']),
-                       "state": delta['state'],
-                       "href": f"{environ['SCRIPT_URI']}/{delta['uid']}",
-                       "modelId": delta['modelid']}
-            if not kwargs['urlParams']['summary']:
+            updateTimestamp = (
+                updateTimestamp
+                if updateTimestamp > delta["updatedate"]
+                else delta["updatedate"]
+            )
+            current = {
+                "id": delta["uid"],
+                "lastModified": convertTSToDatetime(delta["updatedate"]),
+                "state": delta["state"],
+                "href": f"{environ['SCRIPT_URI']}/{delta['uid']}",
+                "modelId": delta["modelid"],
+            }
+            if not kwargs["urlParams"]["summary"]:
                 # Doing here not encode, because we are decoding. So it is opposite.
-                current["addition"] = decodebase64(delta['addition'], not kwargs['urlParams']['encode'])
-                current["reduction"] = decodebase64(delta['reduction'], not kwargs['urlParams']['encode'])
+                current["addition"] = decodebase64(
+                    delta["addition"], not kwargs["urlParams"]["encode"]
+                )
+                current["reduction"] = decodebase64(
+                    delta["reduction"], not kwargs["urlParams"]["encode"]
+                )
             outM["deltas"].append(current)
         if not outM["deltas"]:
-            self.httpresp.ret_304('application/json', kwargs["start_response"], [('Last-Modified', httpdate(modTime))])
+            self.httpresp.ret_304(
+                "application/json",
+                kwargs["start_response"],
+                [("Last-Modified", httpdate(modTime))],
+            )
             return []
-        self.httpresp.ret_200('application/json', kwargs["start_response"], [('Last-Modified', httpdate(updateTimestamp))])
+        self.httpresp.ret_200(
+            "application/json",
+            kwargs["start_response"],
+            [("Last-Modified", httpdate(updateTimestamp))],
+        )
         return outM["deltas"]
 
     def __deltas_post(self, environ, **kwargs):
@@ -211,17 +280,27 @@ class DeltaCalls:
         newDelta = {}
         for key in list(out.keys()):
             newDelta[key] = out.get(key, "")
-        for key in ['modelId', 'id']:
+        for key in ["modelId", "id"]:
             if not newDelta[key]:
-                raise BadRequestError(f'You did POST method, {key} is not specified')
-        if not newDelta['reduction'] and not newDelta['addition']:
-            raise BadRequestError('You did POST method, but nor reduction, nor addition is present')
+                raise BadRequestError(f"You did POST method, {key} is not specified")
+        if not newDelta["reduction"] and not newDelta["addition"]:
+            raise BadRequestError(
+                "You did POST method, but nor reduction, nor addition is present"
+            )
         out = self.__addNewDeltaINT(newDelta, environ, **kwargs)
-        if out['State'] in ['accepted']:
-            self.httpresp.ret_201('application/json', kwargs["start_response"],
-                                  [('Last-Modified', httpdate(out['UpdateTime'])), ('Location', out['href'])])
+        if out["State"] in ["accepted"]:
+            self.httpresp.ret_201(
+                "application/json",
+                kwargs["start_response"],
+                [
+                    ("Last-Modified", httpdate(out["UpdateTime"])),
+                    ("Location", out["href"]),
+                ],
+            )
             return out
-        raise BadRequestError(f"Failed add new delta. Error Message: {out.get('Error', '')}.")
+        raise BadRequestError(
+            f"Failed add new delta. Error Message: {out.get('Error', '')}."
+        )
 
     def deltas(self, environ, **kwargs):
         """
@@ -235,13 +314,13 @@ class DeltaCalls:
         """
         # ======================================================
         # GET
-        if environ['REQUEST_METHOD'].upper() == 'GET':
+        if environ["REQUEST_METHOD"].upper() == "GET":
             return self.__deltas_get(environ, **kwargs)
         # ======================================================
         # POST
-        if environ['REQUEST_METHOD'].upper() == 'POST':
+        if environ["REQUEST_METHOD"].upper() == "POST":
             return self.__deltas_post(environ, **kwargs)
-        raise BadRequestError('Request not in GET/POST METHOD.')
+        raise BadRequestError("Request not in GET/POST METHOD.")
 
     def deltastates(self, environ, **kwargs):
         """
@@ -250,7 +329,7 @@ class DeltaCalls:
         Output: application/json
         Examples: https://server-host/sitefe/v1/deltastates/([-_A-Za-z0-9]+)/
         """
-        outstates = self.__getdeltastatesINT(kwargs['deltaid'], **kwargs)
+        outstates = self.__getdeltastatesINT(kwargs["deltaid"], **kwargs)
         self.responseHeaders(environ, **kwargs)
         return outstates
 
@@ -261,29 +340,50 @@ class DeltaCalls:
         Output: application/json
         Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+) # Will return info about specific delta
         """
-        modTime = getModTime(kwargs['headers'])
-        delta = self.__getdeltaINT(kwargs['deltaid'], **kwargs)
+        modTime = getModTime(kwargs["headers"])
+        delta = self.__getdeltaINT(kwargs["deltaid"], **kwargs)
         if not delta:
-            self.httpresp.ret_204('application/json', kwargs["start_response"],
-                                  [('Last-Modified', httpdate(getUTCnow()))])
+            self.httpresp.ret_204(
+                "application/json",
+                kwargs["start_response"],
+                [("Last-Modified", httpdate(getUTCnow()))],
+            )
             return []
-        if modTime > delta['updatedate']:
-            self.httpresp.ret_304('application/json', kwargs["start_response"], [('Last-Modified', httpdate(delta['updatedate']))])
+        if modTime > delta["updatedate"]:
+            self.httpresp.ret_304(
+                "application/json",
+                kwargs["start_response"],
+                [("Last-Modified", httpdate(delta["updatedate"]))],
+            )
             return []
-        if kwargs['urlParams']['oldview']:
-            self.httpresp.ret_200('application/json', kwargs["start_response"], [('Last-Modified', httpdate(delta['updatedate']))])
-            delta['insertdate'] = convertTSToDatetime(delta['insertdate'])
-            delta['updatedate'] = convertTSToDatetime(delta['updatedate'])
+        if kwargs["urlParams"]["oldview"]:
+            self.httpresp.ret_200(
+                "application/json",
+                kwargs["start_response"],
+                [("Last-Modified", httpdate(delta["updatedate"]))],
+            )
+            delta["insertdate"] = convertTSToDatetime(delta["insertdate"])
+            delta["updatedate"] = convertTSToDatetime(delta["updatedate"])
             return [delta]
-        current = {"id": delta['uid'],
-                   "lastModified": convertTSToDatetime(delta['updatedate']),
-                   "state": delta['state'],
-                   "href": f"{environ['SCRIPT_URI']}",
-                   "modelId": delta['modelid']}
-        if not kwargs['urlParams']['summary']:
-            current['addition'] = encodebase64(delta['addition'], kwargs['urlParams']['encode'])
-            current['reduction'] = encodebase64(delta['reduction'], kwargs['urlParams']['encode'])
-        self.httpresp.ret_200('application/json', kwargs["start_response"], [('Last-Modified', httpdate(delta['updatedate']))])
+        current = {
+            "id": delta["uid"],
+            "lastModified": convertTSToDatetime(delta["updatedate"]),
+            "state": delta["state"],
+            "href": f"{environ['SCRIPT_URI']}",
+            "modelId": delta["modelid"],
+        }
+        if not kwargs["urlParams"]["summary"]:
+            current["addition"] = encodebase64(
+                delta["addition"], kwargs["urlParams"]["encode"]
+            )
+            current["reduction"] = encodebase64(
+                delta["reduction"], kwargs["urlParams"]["encode"]
+            )
+        self.httpresp.ret_200(
+            "application/json",
+            kwargs["start_response"],
+            [("Last-Modified", httpdate(delta["updatedate"]))],
+        )
         return [current]
 
     def deltasaction(self, environ, **kwargs):
@@ -295,8 +395,8 @@ class DeltaCalls:
                   # Will commit or remove specific delta. remove is allowed only from same host or
                     siterm-site-frontend
         """
-        msgOut = self.__commitdelta(kwargs['deltaid'], environ, **kwargs)
-        self.httpresp.ret_204('application/json', kwargs["start_response"], None)
+        msgOut = self.__commitdelta(kwargs["deltaid"], environ, **kwargs)
+        self.httpresp.ret_204("application/json", kwargs["start_response"], None)
         return msgOut
 
     def activedeltas(self, environ, **kwargs):
@@ -318,12 +418,14 @@ class DeltaCalls:
         """
         # POST
         out = self.__intGetPostData(environ, **kwargs)
-        dbout = {'insertdate': getUTCnow(),
-                 'uuid': out['uuid'],
-                 'uuidtype': out['uuidtype'],
-                 'hostname': out['hostname'],
-                 'hostport': out['hostport'],
-                 'uuidstate': out['uuidstate']}
-        self.dbI.insert('deltatimestates', [dbout])
+        dbout = {
+            "insertdate": getUTCnow(),
+            "uuid": out["uuid"],
+            "uuidtype": out["uuidtype"],
+            "hostname": out["hostname"],
+            "hostport": out["hostport"],
+            "uuidstate": out["uuidstate"],
+        }
+        self.dbI.insert("deltatimestates", [dbout])
         self.responseHeaders(environ, **kwargs)
-        return {'status': 'Recorded'}
+        return {"status": "Recorded"}
