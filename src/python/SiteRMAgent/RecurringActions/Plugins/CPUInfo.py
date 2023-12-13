@@ -13,29 +13,33 @@ Authors:
 Date: 2022/01/29
 """
 import pprint
+
 from SiteRMAgent.RecurringActions.Utilities import tryConvertToNumeric
 from SiteRMLibs.MainUtilities import externalCommand, getLoggingObject
 
-NAME = 'CPUInfo'
+NAME = "CPUInfo"
 
 
 def get(**_):
     """Get lscpu information"""
     cpuInfo = {}
-    tmpOut = externalCommand('lscpu')
+    tmpOut = externalCommand("lscpu")
     for item in tmpOut:
-        for desc in item.decode('UTF-8').split('\n'):
-            vals = desc.split(':')
+        for desc in item.decode("UTF-8").split("\n"):
+            vals = desc.split(":")
             if len(vals) == 2:
                 cpuInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
     try:
-        cpuInfo['num_cores'] = int(cpuInfo['Socket(s)']) * int(cpuInfo['Core(s) per socket'])
+        cpuInfo["num_cores"] = int(cpuInfo["Socket(s)"]) * int(
+            cpuInfo["Core(s) per socket"]
+        )
     except (ValueError, KeyError):
-        print(f'Failed to calculate num_cores from {cpuInfo}. will set to 1')
-        cpuInfo['num_cores'] = 1
+        print(f"Failed to calculate num_cores from {cpuInfo}. will set to 1")
+        cpuInfo["num_cores"] = 1
     return cpuInfo
 
+
 if __name__ == "__main__":
-    getLoggingObject(logType='StreamLogger', service='Agent')
+    getLoggingObject(logType="StreamLogger", service="Agent")
     PRETTY = pprint.PrettyPrinter(indent=4)
     PRETTY.pprint(get())

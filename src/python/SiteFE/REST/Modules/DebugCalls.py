@@ -82,12 +82,18 @@ class CallValidator:
                 raise BadRequestError(f"Key {key} not specified in debug request.")
         # time not allow more than 5 minutes:
         if int(inputDict["time"]) > 300:
-            raise BadRequestError("Requested Runtime for rapidping request is more than 5mins.")
+            raise BadRequestError(
+                "Requested Runtime for rapidping request is more than 5mins."
+            )
         # interval is optional - not allow lower than 0.2
         if "interval" in inputDict and float(inputDict["interval"]) < 0.2:
-            raise BadRequestError("Requested Interval is lower than 0.2. That would be considered DDOS and is not allowed.")
+            raise BadRequestError(
+                "Requested Interval is lower than 0.2. That would be considered DDOS and is not allowed."
+            )
         if "packetsize" in inputDict and int(inputDict["packetsize"]) > 1500:
-            raise BadRequestError("Requested Packet Size is bigger than 1500. That would be considered DDOS and is not allowed.")
+            raise BadRequestError(
+                "Requested Packet Size is bigger than 1500. That would be considered DDOS and is not allowed."
+            )
 
     @staticmethod
     def __validateTcpdump(inputDict):
