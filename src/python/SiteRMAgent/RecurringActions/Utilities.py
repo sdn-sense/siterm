@@ -18,16 +18,7 @@ Email 			: justas.balcas (at) cern.ch
 @Copyright		: Copyright (C) 2016 California Institute of Technology
 Date			: 2017/09/26
 """
-import subprocess
-import shlex
 import psutil
-
-
-def externalCommand(command):
-    """Execute External Commands and return stdout and stderr."""
-    command = shlex.split(command)
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return proc.communicate()
 
 
 def tryConvertToNumeric(value):

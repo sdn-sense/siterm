@@ -27,7 +27,7 @@ def iperf(inputDict):
     if ipVersion(inputDict['ip']) == -1:
         return [], f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6", 4
 
-    command = f"iperf3 -c {inputDict['ip']} -B {inputDict['interface']} -t {inputDict['time']}"
+    command = f"iperf3 -c {inputDict['ip']} -P {inputDict['port']} -B {inputDict['interface']} -t {inputDict['time']}"
     cmdOut = externalCommand(command, False)
     out, err = cmdOut.communicate()
     return out.decode("utf-8"), err.decode("utf-8"), cmdOut.returncode
@@ -35,5 +35,5 @@ def iperf(inputDict):
 if __name__ == "__main__":
     testData = {'type': 'iperf', 'sitename': 'T2_US_Caltech_Test1',
                 'hostname': 'sdn-sc-nodea.ultralight.org', 'ip': '1.2.3.4',
-                'interface': 'vlan.3604', 'time': '120'}
+                'interface': 'vlan.3604', 'time': '120', 'port': 5000}
     print(iperf(testData))

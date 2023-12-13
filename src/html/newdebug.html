@@ -33,9 +33,7 @@
                 params[fieldName] = fieldValue;
             }
         }
-        console.log(params);
         $.post("/"+params['sitename']+"/sitefe/json/frontend/submitdebug/NEW", params, function(result){
-            console.log(result);
             newAlert("New debug action submit state:" + JSON.stringify(result), params);
         });
     }
@@ -60,16 +58,17 @@
             dataType: 'json', data: {}, async: false,
             success: function(json){
                 for (j=0; j < json.length; j++){
-                    if (strDTN == json[j]['hostname']) {
+                    if (strDTN === json[j]['hostname']) {
                         var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
                         for (const [key, value] of Object.entries(myObject['NetInfo']['interfaces'])) {
                             if (! $.isEmptyObject(value['vlans'])) {
                               for (const [key1, value1] of Object.entries(value['vlans'])) {
                                 if (value1['provisioned']) {
                                     addDropDown(key1, $("#" + ids + "interface"));
-                                if ('2' in value1 && 'address' in value1['2'] && ids === "f5_"){
-                                    addDropDown(value1['2']['address'], $("#" + ids + "ip"));}
-        }}}}}}}});
+                                    for (const [key2, value2] of Object.entries(value1)){
+                                      if (typeof value2 === 'object' && value2 !== null && key2 == 2 && ids === "f5_") {
+                                          addDropDown(value2[0]['address'], $("#" + ids + "ip"));
+                                        }}}}}}}}}});
       }
 
         function addDropDown(dropdownVal, saveObj){
@@ -91,7 +90,7 @@
   //]]>
   </script>
   <script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/loader.js"></script>
-  <title>Site-RM: Frontend Configuration</title>
+  <title>Site-RM: Request New Debug Action</title>
 </head>
 <body>
   <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
@@ -141,7 +140,21 @@
             </div>
             <div class="col-md-12" id="alertsrapidping"></div>
             <div class="col">
-              DOCUMENTATION 
+              Rapid ping - very similar to Flood ping implemented in FreeBSD. where a minimum of 100 packets are sent in one second or as soon as a reply to the request has come. <br/>
+              It will execute the following command on selected hostname: <b>ping -i &lt;interval&gt; -w &lt;runtime&gt; &lt;ip&gt; -s &lt;packetsize&gt; -I &lt;Interface&gt;</b><br/><br/>
+              Descriptions:<br/>
+              <b>-i interval</b><br/>
+                Wait interval seconds between sending each packet. The default is to wait for one second between each packet normally, or not to wait in flood mode. Only super-user may set interval to values less 0.2 seconds.<br/>
+<br/>
+              <b>-I interface address</b><br/>
+                Set source address to specified interface address. Argument may be numeric IP address or name of device. When pinging IPv6 link-local address this option is required.<br/>
+<br/>
+              <b>-w deadline</b><br/>
+                Specify a timeout, in seconds, before ping exits regardless of how many packets have been sent or received. In this case ping does not stop after count packet are sent, it waits either for deadline expire or until count probes are answered or for some error notification from network.<br/>
+<br/>
+              <b>-s packetsize</b><br/>
+                Specifies the number of data bytes to be sent. The default is 56, which translates into 64 ICMP data bytes when combined with the 8 bytes of ICMP header data.<br/>
+<br/>
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f1'); return false" id="f1" name="f1">
@@ -171,6 +184,9 @@
                   </select>
                 </div>
                 <div class="form-group">
+                  <label for="exampleFormControlSelect1">Packet Size</label> <input class="form-control" type="text" placeholder="Packet Size" id="f1_packetsize" name="packetsize" required="">
+                </div>
+                <div class="form-group">
                   <label for="exampleFormControlSelect1">Ping time</label> <select class="form-control" id="f1_time" name="time" required="">
                     <option value="">
                       Choose Ping time
@@ -195,7 +211,7 @@
             </div>
             <div class="col-md-12" id="alertstcpdump"></div>
             <div class="col">
-             DOCUMENTATION 
+              This call will use PyShark, Python wrapper for tshark, allowing python packet parsing using wireshark dissectors. It will capture all packets going via interface for max 30seconds or first 100 packets (whichever comes first).
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f2'); return false" id="f2" name="f2">
@@ -230,7 +246,8 @@
             </div>
             <div class="col-md-12" id="alertsarptable"></div>
             <div class="col">
-             DOCUMENTATION 
+       The ip neigh command manipulates neighbour objects that establish bindings between protocol addresses and link layer addresses for hosts sharing the same link.  Neighbour entries are organized into tables. The IPv4 neighbour table is also known by another name - the ARP table.<br/>
+       The corresponding commands display neighbour bindings and their properties.
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f3'); return false" id="f3" name="f3">
@@ -265,7 +282,15 @@
             </div>
             <div class="col-md-12" id="alertsiperf"></div>
             <div class="col">
-              <span class="border" style="width:100%">DOCUMENTATION</span>
+              <span class="border" style="width:100%">
+                iPerf3 is a tool for active measurements of the maximum achievable bandwidth on IP networks. It supports tuning of various parameters related to timing, buffers and protocols (TCP, UDP, SCTP with IPv4 and IPv6). For each test it reports the bandwidth, loss, and other parameters.<br/>
+It will execute the following command:<br/>
+                iperf3 -c &lt;ip&gt; -p &lt;port&gt; -B &lt;interface&gt; -t &lt;time&gt;<br/>
+                <b>-c IP</b>    run in client mode, connecting to &lt;host&gt;<br/>
+                <b>-p PORT</b>         server port to listen on/connect to<br/>
+                <b>-B INTERFACE</b>    bind to the interface associated with the address &lt;host&gt;<br/>
+                <b>-t TIME</b>         time in seconds to transmit for.<br/>
+              </span>
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f4'); return false" id="f4" name="f4">
@@ -322,7 +347,14 @@
             </div>
             <div class="col-md-12" id="alertsiperfserver"></div>
             <div class="col">
-              <span class="border" style="width:100%">DOCUMENTATION</span>
+              <span class="border" style="width:100%">
+                iPerf3 is a tool for active measurements of the maximum achievable bandwidth on IP networks. It supports tuning of various parameters related to timing, buffers and protocols (TCP, UDP, SCTP with IPv4 and IPv6). For each test it reports the bandwidth, loss, and other parameters.<br/>
+It will execute the following command:<br/>
+                timeout &lt;seconds&gt; iperf3 --server -p &lt;port&gt; -B &lt;ip&gt; &lt;one-off&gt;<br/>
+                <b>-p PORT</b>         server port to listen on/connect to<br/>
+                <b>-B INTERFACE</b>    bind to the interface associated with the address &lt;host&gt;<br/>
+                <b>-1</b>              handle one client connection then exit (only added if checkbox selected)<br/>
+              </span>
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f5'); return false" id="f5" name="f5">
@@ -364,9 +396,6 @@
                     </option>
                     <option value="300">
                       5 minutes
-                    </option>
-                    <option value="600">
-                      10 minutes
                     </option>
                   </select>
                 </div>

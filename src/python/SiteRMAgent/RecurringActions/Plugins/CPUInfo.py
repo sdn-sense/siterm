@@ -13,8 +13,8 @@ Authors:
 Date: 2022/01/29
 """
 import pprint
-from SiteRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
-from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMAgent.RecurringActions.Utilities import tryConvertToNumeric
+from SiteRMLibs.MainUtilities import externalCommand, getLoggingObject
 
 NAME = 'CPUInfo'
 
@@ -28,8 +28,6 @@ def get(**_):
             vals = desc.split(':')
             if len(vals) == 2:
                 cpuInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
-            else:
-                print('CpuInfo: Skipped this item: ', vals)
     try:
         cpuInfo['num_cores'] = int(cpuInfo['Socket(s)']) * int(cpuInfo['Core(s) per socket'])
     except (ValueError, KeyError):

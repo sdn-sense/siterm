@@ -8,8 +8,8 @@ Date: 2022/01/29
 """
 import re
 import pprint
-from SiteRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
-from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMAgent.RecurringActions.Utilities import tryConvertToNumeric
+from SiteRMLibs.MainUtilities import externalCommand, getLoggingObject
 
 NAME = 'StorageInfo'
 

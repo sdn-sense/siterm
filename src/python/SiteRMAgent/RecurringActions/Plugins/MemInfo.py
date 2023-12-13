@@ -7,8 +7,8 @@ Authors:
 Date: 2022/01/29
 """
 import pprint
-from SiteRMAgent.RecurringActions.Utilities import externalCommand, tryConvertToNumeric
-from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMAgent.RecurringActions.Utilities import tryConvertToNumeric
+from SiteRMLibs.MainUtilities import externalCommand, getLoggingObject
 
 NAME = 'MemInfo'
 
@@ -27,8 +27,6 @@ def get(**_):
                 if len(value) == 2:
                     name += f"_{value[1]}"
                 memInfo[name] = tryConvertToNumeric(value[0])
-            else:
-                print('MemInfo: Skipped this item: ', vals)
     memInfo['memory_mb'] = int(memInfo['MemTotal_kB'] // 1000)
     return memInfo
 

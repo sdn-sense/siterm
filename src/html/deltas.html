@@ -28,11 +28,9 @@
           for (rowid in dataIn){
               trow = $('<tr><\/tr>');
               for (key in dictkeys){
-                  console.log(dictkeys[key]);
 		  if (dictkeys[key] === "insertdate"){
 	              var date = new Date(dataIn[rowid][dictkeys[key]] * 1000);
                       trow.append("<td>"+date.getDate()+"/"+(date.getMonth()+1)+"/"+date.getFullYear()+" "+date.getHours()+":"+date.getMinutes()+":"+date.getSeconds()+"<\/td>");
-                     console.log(date);
 		  }
                   else {
                       trow.append('<td>'+dataIn[rowid][dictkeys[key]]+'<\/td>');

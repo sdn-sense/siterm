@@ -58,13 +58,13 @@ class CallValidator:
     @staticmethod
     def __validateIperf(inputDict):
         """Validate iperfclient debug request."""
-        for key in ["interface", "ip", "time"]:
+        for key in ["interface", "ip", "time", "port"]:
             if key not in inputDict:
                 raise BadRequestError(f"Key {key} not specified in debug request.")
-            # Do not allow time to be more than 10mins
-            if int(inputDict["time"]) > 600:
+            # Do not allow time to be more than 5mins
+            if int(inputDict["time"]) > 300:
                 raise BadRequestError(
-                    "Requested Runtime for debug request is more than 10mins."
+                    "Requested Runtime for debug request is more than 5mins."
                 )
 
     @staticmethod
@@ -80,11 +80,14 @@ class CallValidator:
         for key in ["ip", "time", "packetsize", "interface"]:
             if key not in inputDict:
                 raise BadRequestError(f"Key {key} not specified in debug request.")
-        # interval is optional - not allow more than 1 minute
-        if "interval" in inputDict and int(inputDict["interval"]) > 60:
-            raise BadRequestError(
-                "Requested Runtime for debug request is more than 1mins."
-            )
+        # time not allow more than 5 minutes:
+        if int(inputDict["time"]) > 300:
+            raise BadRequestError("Requested Runtime for rapidping request is more than 5mins.")
+        # interval is optional - not allow lower than 0.2
+        if "interval" in inputDict and float(inputDict["interval"]) < 0.2:
+            raise BadRequestError("Requested Interval is lower than 0.2. That would be considered DDOS and is not allowed.")
+        if "packetsize" in inputDict and int(inputDict["packetsize"]) > 1500:
+            raise BadRequestError("Requested Packet Size is bigger than 1500. That would be considered DDOS and is not allowed.")
 
     @staticmethod
     def __validateTcpdump(inputDict):
