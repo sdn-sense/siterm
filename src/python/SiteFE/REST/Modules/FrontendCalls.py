@@ -22,8 +22,9 @@ Date                    : 2023/01/03
 from SiteRMLibs.MainUtilities import evaldict
 
 
-class FrontendCalls():
+class FrontendCalls:
     """Frontend Calls API Module"""
+
     # pylint: disable=E1101
     def __init__(self):
         self.__defineRoutes()
@@ -31,65 +32,91 @@ class FrontendCalls():
 
     def __urlParams(self):
         """Define URL Params for this class"""
-        urlParams = {'feconfig': {'allowedMethods': ['GET']},
-                     'getdata': {'allowedMethods': ['GET']},
-                     'gethosts': {'allowedMethods': ['GET']},
-                     'getswitchdata': {'allowedMethods': ['GET']},
-                     'getactivedeltas': {'allowedMethods': ['GET']},
-                     'getqosdata': {'allowedMethods': ['GET']},
-                     'getservicestates': {'allowedMethods': ['GET']}}
+        urlParams = {
+            "feconfig": {"allowedMethods": ["GET"]},
+            "getdata": {"allowedMethods": ["GET"]},
+            "gethosts": {"allowedMethods": ["GET"]},
+            "getswitchdata": {"allowedMethods": ["GET"]},
+            "getactivedeltas": {"allowedMethods": ["GET"]},
+            "getqosdata": {"allowedMethods": ["GET"]},
+            "getservicestates": {"allowedMethods": ["GET"]},
+        }
         self.urlParams.update(urlParams)
 
     def __defineRoutes(self):
         """Define Routes for this class"""
-        self.routeMap.connect("feconfig", "/json/frontend/configuration", action="feconfig")
+        self.routeMap.connect(
+            "feconfig", "/json/frontend/configuration", action="feconfig"
+        )
         self.routeMap.connect("getdata", "/json/frontend/getdata", action="getdata")
         self.routeMap.connect("gethosts", "/json/frontend/gethosts", action="gethosts")
-        self.routeMap.connect("getswitchdata", "/json/frontend/getswitchdata", action="getswitchdata")
-        self.routeMap.connect("getactivedeltas", "/json/frontend/getactivedeltas", action="getactivedeltas")
-        self.routeMap.connect("getqosdata", "/json/frontend/getqosdata", action="getqosdata")
-        self.routeMap.connect("getservicestates", "/json/frontend/getservicestates", action="getservicestates")
+        self.routeMap.connect(
+            "getswitchdata", "/json/frontend/getswitchdata", action="getswitchdata"
+        )
+        self.routeMap.connect(
+            "getactivedeltas",
+            "/json/frontend/getactivedeltas",
+            action="getactivedeltas",
+        )
+        self.routeMap.connect(
+            "getqosdata", "/json/frontend/getqosdata", action="getqosdata"
+        )
+        self.routeMap.connect(
+            "getservicestates",
+            "/json/frontend/getservicestates",
+            action="getservicestates",
+        )
 
     def feconfig(self, environ, **kwargs):
         """Returns Frontend configuration"""
         self.responseHeaders(environ, **kwargs)
-        return self.config['MAIN']
+        return self.config["MAIN"]
 
     def gethosts(self, environ, **kwargs):
         """Return all available Hosts, where key is IP address."""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
+        return self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
 
     def getdata(self, environ, **kwargs):
         """Return all available Hosts data, where key is IP address."""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
+        return self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
 
     def getswitchdata(self, environ, **kwargs):
         """Return all Switches information"""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get('switches', orderby=['updatedate', 'DESC'], limit=1000)
+        return self.dbI.get("switches", orderby=["updatedate", "DESC"], limit=1000)
 
     def getactivedeltas(self, environ, **kwargs):
         """Return all Active Deltas"""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get('activeDeltas', orderby=['updatedate', 'DESC'], limit=1000)
+        return self.dbI.get("activeDeltas", orderby=["updatedate", "DESC"], limit=1000)
 
     def getqosdata(self, environ, **kwargs):
         """Return QoS Stats for all IPv6 Ranges"""
         self.responseHeaders(environ, **kwargs)
-        hosts = self.dbI.get('hosts', orderby=['updatedate', 'DESC'], limit=1000)
+        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
         out = {}
         for host in hosts:
-            tmpH = evaldict(host.get('hostinfo', {}))
-            tmpInf = tmpH.get('Summary', {}).get('config', {}).get('qos', {}).get('interfaces', {})
+            tmpH = evaldict(host.get("hostinfo", {}))
+            tmpInf = (
+                tmpH.get("Summary", {})
+                .get("config", {})
+                .get("qos", {})
+                .get("interfaces", {})
+            )
             if not tmpInf:
                 continue
             for _intf, intfDict in tmpInf.items():
-                maxThrg = tmpH.get('Summary', {}).get('config', {}).get(intfDict['master_intf'], {}).get('intf_max', None)
+                maxThrg = (
+                    tmpH.get("Summary", {})
+                    .get("config", {})
+                    .get(intfDict["master_intf"], {})
+                    .get("intf_max", None)
+                )
                 if maxThrg:
-                    for ipkey in ['ipv4', 'ipv6']:
-                        tmpIP = intfDict.get(f'{ipkey}_range', None)
+                    for ipkey in ["ipv4", "ipv6"]:
+                        tmpIP = intfDict.get(f"{ipkey}_range", None)
                         if isinstance(tmpIP, list):
                             for ipaddr in tmpIP:
                                 out.setdefault(ipaddr, 0)
@@ -98,10 +125,12 @@ class FrontendCalls():
                             out.setdefault(tmpIP, 0)
                             out[tmpIP] += maxThrg
                 else:
-                  print(f"QoS Configure for {intfDict['master_intf']}, but it is not defined in agent config. Misconfig.")
+                    print(
+                        f"QoS Configure for {intfDict['master_intf']}, but it is not defined in agent config. Misconfig."
+                    )
         return [out]
 
     def getservicestates(self, environ, **kwargs):
         """Return Service states"""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get('servicestates', orderby=['updatedate', 'DESC'], limit=1000)
+        return self.dbI.get("servicestates", orderby=["updatedate", "DESC"], limit=1000)
