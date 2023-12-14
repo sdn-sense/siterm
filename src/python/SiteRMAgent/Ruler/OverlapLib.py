@@ -6,7 +6,7 @@ Authors:
 
 Date: 2022/08/29
 """
-from SiteRMLibs.ipaddr import getInterfaces
++from SiteRMLibs.ipaddr import getMasterSlaveInterfaces
 from SiteRMLibs.ipaddr import getInterfaceIP
 from SiteRMLibs.ipaddr import getsubnet
 from SiteRMLibs.ipaddr import checkoverlap
@@ -58,18 +58,18 @@ class OverlapLib():
 
     def __getAllIPsHost(self):
         """Get All IPs on the system"""
-        for intf in getInterfaces():
+        for intf, masterIntf in getMasterSlaveInterfaces().items():
             for intType, intDict in getInterfaceIP(intf).items():
                 if int(intType) == 2:
                     for ipv4 in intDict:
                         address = f"{ipv4.get('addr')}/{ipv4.get('netmask')}"
                         self.allIPs['ipv4'].setdefault(address, [])
-                        self.allIPs['ipv4'][address].append({'intf': intf, 'master': intf})
+                        self.allIPs['ipv4'][address].append({'intf': intf, 'master': masterIntf if masterIntf else intf})
                 elif int(intType) == 10:
                     for ipv6 in intDict:
                         address = f"{ipv6.get('addr')}/{ipv6.get('netmask').split('/')[1]}"
                         self.allIPs['ipv6'].setdefault(address, [])
-                        self.allIPs['ipv6'][address].append({'intf': intf, 'master': intf})
+                        self.allIPs['ipv6'][address].append({'intf': intf, 'master': masterIntf if masterIntf else intf})
 
     def __getAllIPsNetNS(self):
         """Mapping for Private NS comes from Agent configuration"""
@@ -80,7 +80,12 @@ class OverlapLib():
         for intf, params in self.config.get('qos', 'interfaces').items():
             for key in ['ipv6', 'ipv4']:
                 iprange = params.get(f'{key}_range')
-                if iprange:
+                if isinstance(iprange, list):
+                    for ipval in iprange:
+                        self.allIPs[key].setdefault(ipval, [])
+                        self.allIPs[key][ipval].append({'master': params['master_intf'],
+                                                          'intf': intf})
+                elif iprange:
                     self.allIPs[key].setdefault(iprange, [])
                     self.allIPs[key][iprange].append({'master': params['master_intf'],
                                                       'intf': intf})

@@ -36,7 +36,8 @@ class FrontendCalls():
                      'gethosts': {'allowedMethods': ['GET']},
                      'getswitchdata': {'allowedMethods': ['GET']},
                      'getactivedeltas': {'allowedMethods': ['GET']},
-                     'getqosdata': {'allowedMethods': ['GET']}}
+                     'getqosdata': {'allowedMethods': ['GET']},
+                     'getservicestates': {'allowedMethods': ['GET']}}
         self.urlParams.update(urlParams)
 
     def __defineRoutes(self):
@@ -47,6 +48,7 @@ class FrontendCalls():
         self.routeMap.connect("getswitchdata", "/json/frontend/getswitchdata", action="getswitchdata")
         self.routeMap.connect("getactivedeltas", "/json/frontend/getactivedeltas", action="getactivedeltas")
         self.routeMap.connect("getqosdata", "/json/frontend/getqosdata", action="getqosdata")
+        self.routeMap.connect("getservicestates", "/json/frontend/getservicestates", action="getservicestates")
 
     def feconfig(self, environ, **kwargs):
         """Returns Frontend configuration"""
@@ -88,9 +90,18 @@ class FrontendCalls():
                 if maxThrg:
                     for ipkey in ['ipv4', 'ipv6']:
                         tmpIP = intfDict.get(f'{ipkey}_range', None)
-                        if tmpIP:
+                        if isinstance(tmpIP, list):
+                            for ipaddr in tmpIP:
+                                out.setdefault(ipaddr, 0)
+                                out[ipaddr] += maxThrg
+                        elif tmpIP:
                             out.setdefault(tmpIP, 0)
                             out[tmpIP] += maxThrg
                 else:
                   print(f"QoS Configure for {intfDict['master_intf']}, but it is not defined in agent config. Misconfig.")
         return [out]
+
+    def getservicestates(self, environ, **kwargs):
+        """Return Service states"""
+        self.responseHeaders(environ, **kwargs)
+        return self.dbI.get('servicestates', orderby=['updatedate', 'DESC'], limit=1000)

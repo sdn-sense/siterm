@@ -10,7 +10,21 @@ Date: 2022/04/08
 import netifaces
 from ipaddress import ip_address, ip_network
 from ipaddress import IPv4Network, IPv6Network, AddressValueError
+from SiteRMLibs.MainUtilities import externalCommand
 
+def getMasterSlaveInterfaces():
+    """Get dictionary of slaveIntfName: MasterIntfName interfaces"""
+    out = {}
+    nics = externalCommand("ip -br a")
+    for nicline in nics[0].decode("UTF-8").split("\n"):
+        if not nicline:
+            continue
+        nictmp = nicline.split()[0].split("@")
+        if len(nictmp) == 1:
+            out.setdefault(nictmp[0], "")
+        elif len(nictmp) == 2:
+            out.setdefault(nictmp[0], nictmp[1])
+    return out
 
 def getInterfaces():
     """Get all interface names"""

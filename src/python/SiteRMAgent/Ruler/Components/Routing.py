@@ -156,14 +156,19 @@ class Routing:
         self._refreshRuleList()
         initialized = False
         try:
-            if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', '') and not self.rules.lookup_to(route['dst_ipv6']):
-                initialized = True
-                self.apply_rule(f"ip -6 rule add to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
+            if route.get('src_ipv6_intf', '') and route.get('dst_ipv6', ''):
+                rules = self.rules.lookup_to_lookup(route['dst_ipv6'], route['src_ipv6_intf'])
+                if not rules:
+                    initialized = True
+                    self.apply_rule(f"ip -6 rule add to {route['dst_ipv6']} table {route['src_ipv6_intf']}")
+
             if route.get('src_ipv6', '') and route.get('src_ipv6_intf', ''):
-                if not self.rules.lookup_from_lookup(route['src_ipv6'], route['src_ipv6_intf']):
+                rules = self.rules.lookup_from_lookup(route['src_ipv6'], route['src_ipv6_intf'])
+                if not rules:
                     initialized = True
                     self.apply_rule(f"ip -6 rule add from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
-                if not self.rules.lookup_to_lookup(route['src_ipv6'], route['src_ipv6_intf']):
+                rules = self.rules.lookup_to_lookup(route['src_ipv6'], route['src_ipv6_intf'])
+                if not rules:
                     initialized = True
                     self.apply_rule(f"ip -6 rule add to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}")
             if initialized:
