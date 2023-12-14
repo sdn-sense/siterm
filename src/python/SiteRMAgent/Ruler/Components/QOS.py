@@ -279,7 +279,7 @@ class QOS:
         if self.qosPolicy == "privatens":
             self._calculateQoS(tmpFD)
         elif self.qosPolicy == "hostlevel":
-            self._calculateQoS(tmpFD, True)
+            self._calculateQoS(tmpFD)
         elif self.qosPolicy == "default-not-set":
             self.logger.info(
                 "QoS Policy not set in configuration. set one of privatens or hostlevel."

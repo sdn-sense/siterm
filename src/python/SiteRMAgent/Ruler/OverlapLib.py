@@ -6,18 +6,17 @@ Authors:
 
 Date: 2022/08/29
 """
-from SiteRMLibs.ipaddr import getInterfaces
-from SiteRMLibs.ipaddr import getInterfaceIP
-from SiteRMLibs.ipaddr import getsubnet
-from SiteRMLibs.ipaddr import checkoverlap
-from SiteRMLibs.ipaddr import getNetmaskBits
+from SiteRMLibs.ipaddr import (checkoverlap, getInterfaceIP,
+                               getMasterSlaveInterfaces, getNetmaskBits,
+                               getsubnet)
 
 
-class OverlapLib():
+class OverlapLib:
     """OverLap Lib - checks and prepares configs for overlap calculations"""
+
     # pylint: disable=E1101
     def __init__(self):
-        self.allIPs = {'ipv4': {}, 'ipv6': {}}
+        self.allIPs = {"ipv4": {}, "ipv6": {}}
         self.totalrequests = {}
         self.getAllIPs()
 
@@ -33,57 +32,74 @@ class OverlapLib():
     # Solution is to convert to next lower value...
     def convertToRate(self, params):
         """Convert input to rate understandable to fireqos."""
-        self.logger.info(f'Converting rate for QoS. Input {params}')
-        inputVal, inputRate = params.get('reservableCapacity', 0), params.get('unit', 'undef')
-        if inputVal == 0 and inputRate == 'undef':
-            return 0, 'mbit'
+        self.logger.info(f"Converting rate for QoS. Input {params}")
+        inputVal, inputRate = params.get("reservableCapacity", 0), params.get(
+            "unit", "undef"
+        )
+        if inputVal == 0 and inputRate == "undef":
+            return 0, "mbit"
         outRate = -1
-        outType = ''
-        if inputRate == 'bps':
+        outType = ""
+        if inputRate == "bps":
             outRate = int(inputVal // 1000000)
-            outType = 'mbit'
+            outType = "mbit"
             if outRate == 0:
                 outRate = int(inputVal // 1000)
-                outType = 'bit'
-        elif inputRate == 'mbps':
+                outType = "bit"
+        elif inputRate == "mbps":
             outRate = int(inputVal)
-            outType = 'mbit'
-        elif inputRate == 'gbps':
+            outType = "mbit"
+        elif inputRate == "gbps":
             outRate = int(inputVal * 1000)
-            outType = 'mbit'
+            outType = "mbit"
         if outRate != -1:
-            self.logger.info(f'Converted rate for QoS from {inputRate} {inputVal} to {outRate}')
+            self.logger.info(
+                f"Converted rate for QoS from {inputRate} {inputVal} to {outRate}"
+            )
             return outRate, outType
-        raise Exception(f'Unknown input rate parameter {inputRate} and {inputVal}')
+        raise Exception(f"Unknown input rate parameter {inputRate} and {inputVal}")
 
     def __getAllIPsHost(self):
         """Get All IPs on the system"""
-        for intf in getInterfaces():
+        for intf, masterIntf in getMasterSlaveInterfaces().items():
             for intType, intDict in getInterfaceIP(intf).items():
                 if int(intType) == 2:
                     for ipv4 in intDict:
                         address = f"{ipv4.get('addr')}/{ipv4.get('netmask')}"
-                        self.allIPs['ipv4'].setdefault(address, [])
-                        self.allIPs['ipv4'][address].append({'intf': intf, 'master': intf})
+                        self.allIPs["ipv4"].setdefault(address, [])
+                        self.allIPs["ipv4"][address].append(
+                            {"intf": intf, "master": masterIntf if masterIntf else intf}
+                        )
                 elif int(intType) == 10:
                     for ipv6 in intDict:
-                        address = f"{ipv6.get('addr')}/{ipv6.get('netmask').split('/')[1]}"
-                        self.allIPs['ipv6'].setdefault(address, [])
-                        self.allIPs['ipv6'][address].append({'intf': intf, 'master': intf})
+                        address = (
+                            f"{ipv6.get('addr')}/{ipv6.get('netmask').split('/')[1]}"
+                        )
+                        self.allIPs["ipv6"].setdefault(address, [])
+                        self.allIPs["ipv6"][address].append(
+                            {"intf": intf, "master": masterIntf if masterIntf else intf}
+                        )
 
     def __getAllIPsNetNS(self):
         """Mapping for Private NS comes from Agent configuration"""
-        if not self.config.has_section('qos'):
+        if not self.config.has_section("qos"):
             return
-        if not self.config.has_option('qos', 'interfaces'):
+        if not self.config.has_option("qos", "interfaces"):
             return
-        for intf, params in self.config.get('qos', 'interfaces').items():
-            for key in ['ipv6', 'ipv4']:
-                iprange = params.get(f'{key}_range')
-                if iprange:
+        for intf, params in self.config.get("qos", "interfaces").items():
+            for key in ["ipv6", "ipv4"]:
+                iprange = params.get(f"{key}_range")
+                if isinstance(iprange, list):
+                    for ipval in iprange:
+                        self.allIPs[key].setdefault(ipval, [])
+                        self.allIPs[key][ipval].append(
+                            {"master": params["master_intf"], "intf": intf}
+                        )
+                elif iprange:
                     self.allIPs[key].setdefault(iprange, [])
-                    self.allIPs[key][iprange].append({'master': params['master_intf'],
-                                                      'intf': intf})
+                    self.allIPs[key][iprange].append(
+                        {"master": params["master_intf"], "intf": intf}
+                    )
 
     @staticmethod
     def _getNetmaskBit(ipinput):
@@ -92,7 +108,7 @@ class OverlapLib():
 
     def getAllIPs(self):
         """Get all IPs"""
-        self.allIPs = {'ipv4': {}, 'ipv6': {}}
+        self.allIPs = {"ipv4": {}, "ipv6": {}}
         self.__getAllIPsHost()
         self.__getAllIPsNetNS()
 
@@ -112,7 +128,7 @@ class OverlapLib():
         """Find all networks which overlap and add it to service list"""
         for ipPresent in self.allIPs.get(iptype, []):
             if self.networkOverlap(iprange, ipPresent):
-                return ipPresent.split('/')[0], self.allIPs[iptype][ipPresent]
+                return ipPresent.split("/")[0], self.allIPs[iptype][ipPresent]
         return None, None
 
     def getAllOverlaps(self, activeDeltas):
@@ -120,34 +136,49 @@ class OverlapLib():
         self.getAllIPs()
         self.totalrequests = {}
         overlapServices = {}
-        for _key, vals in activeDeltas.get('output', {}).get('rst', {}).items():
+        for _key, vals in activeDeltas.get("output", {}).get("rst", {}).items():
             for _, ipDict in vals.items():
                 for iptype, routes in ipDict.items():
-                    if 'hasService' not in routes:
+                    if "hasService" not in routes:
                         continue
-                    bwuri = routes['hasService']['bwuri']
-                    for _, routeInfo in routes.get('hasRoute').items():
-                        iprange = routeInfo.get('routeFrom', {}).get(f'{iptype}-prefix-list', {}).get('value', None)
+                    bwuri = routes["hasService"]["bwuri"]
+                    for _, routeInfo in routes.get("hasRoute").items():
+                        iprange = (
+                            routeInfo.get("routeFrom", {})
+                            .get(f"{iptype}-prefix-list", {})
+                            .get("value", None)
+                        )
                         ipVal, intfArray = self.findOverlaps(iprange, iptype)
                         if ipVal and intfArray:
                             for intfName in intfArray:
-                                service = overlapServices.setdefault(intfName['intf'], {})
-                                intServ = service.setdefault(bwuri, {'src_ipv4': '',
-                                                                     'src_ipv4_intf': '',
-                                                                     'src_ipv6': '',
-                                                                     'src_ipv6_intf': '',
-                                                                     'dst_ipv4': '',
-                                                                     'dst_ipv6': '',
-                                                                     'master_intf': '',
-                                                                     'rules': ''})
+                                service = overlapServices.setdefault(
+                                    intfName["intf"], {}
+                                )
+                                intServ = service.setdefault(
+                                    bwuri,
+                                    {
+                                        "src_ipv4": "",
+                                        "src_ipv4_intf": "",
+                                        "src_ipv6": "",
+                                        "src_ipv6_intf": "",
+                                        "dst_ipv4": "",
+                                        "dst_ipv6": "",
+                                        "master_intf": "",
+                                        "rules": "",
+                                    },
+                                )
                                 intServ[f"src_{iptype}"] = ipVal
-                                intServ[f"src_{iptype}_intf"] = intfName['intf']
-                                intServ["master_intf"] = intfName['master']
-                                resvRate, _ = self.convertToRate(routes['hasService'])
-                                self.totalrequests.setdefault(intfName['master'], 0)
-                                self.totalrequests[intfName['master']] += resvRate
+                                intServ[f"src_{iptype}_intf"] = intfName["intf"]
+                                intServ["master_intf"] = intfName["master"]
+                                resvRate, _ = self.convertToRate(routes["hasService"])
+                                self.totalrequests.setdefault(intfName["master"], 0)
+                                self.totalrequests[intfName["master"]] += resvRate
                                 # Add dest IPs to overlap info
-                                iprange = routeInfo.get('routeTo', {}).get(f'{iptype}-prefix-list', {}).get('value', None)
+                                iprange = (
+                                    routeInfo.get("routeTo", {})
+                                    .get(f"{iptype}-prefix-list", {})
+                                    .get("value", None)
+                                )
                                 intServ[f"dst_{iptype}"] = iprange
-                                intServ['rules'] = routes['hasService']
+                                intServ["rules"] = routes["hasService"]
         return overlapServices
