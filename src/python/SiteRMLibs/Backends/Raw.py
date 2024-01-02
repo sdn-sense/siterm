@@ -25,9 +25,21 @@ class Switch():
         createDirs(self.workDir)
 
     @staticmethod
-    def activate(inputDict, actionState):
+    def activate(_inputDict, _actionState):
         """Activating state actions."""
         return True
+
+    def __getAnsErrors(self, ansOut):
+        """Get Ansible errors. Dummy Call for RAW"""
+        return
+
+    def _writeInventoryInfo(self, out, subitem=""):
+        """Write Ansible Inventory file (used only in a single apply)"""
+        return
+
+    def _getInventoryInfo(self, hosts=None, subitem=""):
+        """Get Inventory Info. If hosts specified, only return for specific hosts"""
+        return
 
     def getHostConfig(self, host, subitem=""):
         """Get config of RAW local file."""
@@ -45,12 +57,15 @@ class Switch():
         with open(confFName, 'w', encoding='utf-8') as fd:
             fd.write(yaml.dump(out))
 
-    @staticmethod
-    def _applyNewConfig(hosts=None, subitem=""):
+    def _applyNewConfig(self, hosts=None, subitem=""):
         """RAW Plugin does not apply anything."""
         return {}, {}
 
-    def getAnsNetworkOS(self, host):
+    def _executeAnsible(self, playbook, hosts=None, subitem=""):
+        """Execute Ansible playbook. RAW Does nothing"""
+        return None
+
+    def getAnsNetworkOS(self, host, subitem=""):
         """Get Ansible network os from hosts file"""
         return self.getHostConfig(host).get('ansible_network_os', '')
 
@@ -76,16 +91,9 @@ class Switch():
         # In RAW plugin - there is no data on port details
         return {}
 
-    @staticmethod
-    def getvlans(inData):
+    def getvlans(self, inData):
         """Get vlans from output"""
         # In RAW plugin - there is no vlans
-        return []
-
-    @staticmethod
-    def _getMacLLDPRoute(hosts=None):
-        """Get mac lldp routes"""
-        # In RAW plugin - there is no macvlan mappings
         return []
 
     @staticmethod
@@ -109,7 +117,6 @@ class Switch():
             return int(port[4:])
         return port
 
-    @staticmethod
-    def nametomac(inData, key):
+    def nametomac(self, inData, key):
         """Return all mac's associated to that host. Not in use for RAW plugin"""
         return []
