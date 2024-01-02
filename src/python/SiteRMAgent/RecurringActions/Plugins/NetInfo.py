@@ -6,6 +6,7 @@ Authors:
 
 Date: 2022/01/29
 """
+import os
 import ipaddress
 import pprint
 
@@ -25,10 +26,39 @@ def str2bool(val):
 
 NAME = "NetInfo"
 
+def getvlans():
+    out = {}
+    if os.path.isfile('/proc/net/vlan/config'):
+        vlanconf = externalCommand("cat /proc/net/vlan/config")
+        for vlanline in vlanconf[0].decode("UTF-8").split("\n"):
+            if not vlanline:
+                continue
+            splvlans = vlanline.split('|')
+            if len(splvlans) == 3:
+                intname = splvlans[0].strip()
+                try:
+                    tmpOut = {'vlanid': int(splvlans[1].strip()),
+                              'master': splvlans[2].strip()}
+                    out.setdefault(intname, tmpOut)
+                except ValueError:
+                    continue
+    return out
+
+def getVlanID(nicname, privVlans):
+    try:
+        if nicname in privVlans:
+            return privVlans[nicname].get('vlanid', None)
+        splName = nicname.split(".")
+        if len(splName) == 2:
+            return int(splName[1])
+    except ValueError:
+        pass
+    return None
 
 def get(config):
     """Get all network information"""
     netInfo = {}
+    privVlans = getvlans()
     logger = getLoggingObject(logType="StreamLogger")
     interfaces = config.get("agent", "interfaces")
     for intf in interfaces:
@@ -74,9 +104,8 @@ def get(config):
         elif len(nictmp) == 2 and nictmp[1] in netInfo:
             masternic = netInfo.setdefault(nictmp[1], {})
             nicInfo = masternic.setdefault("vlans", {}).setdefault(nic, {})
-            splName = nic.split(".")
-            if len(splName) == 2:
-                vlanid = int(splName[1])
+            vlanid = getVlanID(nic, privVlans)
+            if vlanid:
                 nicInfo["vlanid"] = vlanid
                 if vlanid in masternic["vlan_range_list"]:
                     nicInfo["provisioned"] = True

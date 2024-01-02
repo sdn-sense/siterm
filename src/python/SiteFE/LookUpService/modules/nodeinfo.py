@@ -300,27 +300,26 @@ class NodeInfo():
                         continue
                     if not isinstance(vlanDict, dict):
                         continue
-                    # '2' is for ipv4 information
-                    vlanNameSpl = vlanName.split('.')
+                    if 'vlanid' not in vlanDict:
+                        continue
                     vlanuri = self._addVlanPort(hostname=nodeDict['hostname'], portName=intfKey,
-                                                vtype='vlanport', vlan=vlanNameSpl[1])
+                                                vtype='vlanport', vlan=vlanDict['vlanid'])
                     self._addRstPort(hostname=nodeDict['hostname'], portName=intfKey, vtype='vlanport',
-                                     vlan=vlanNameSpl[1], nodetype='server', rsts_enabled=rstsEnabled)
+                                     vlan=vlanDict['vlanid'], nodetype='server', rsts_enabled=rstsEnabled)
                     self._mrsLiteral(vlanuri, 'type', self.shared)
 
-                    if 'vlanid' in list(vlanDict.keys()):
-                        self.newGraph.add((self.genUriRef('site', vlanuri),
-                                           self.genUriRef('nml', 'hasLabel'),
-                                           self.genUriRef('site', f"{vlanuri}:vlan")))
-                        self.newGraph.add((self.genUriRef('site', f"{vlanuri}:vlan"),
-                                           self.genUriRef('rdf', 'type'),
-                                           self.genUriRef('nml', 'Label')))
-                        self.newGraph.add((self.genUriRef('site', f"{vlanuri}:vlan"),
-                                           self.genUriRef('nml', 'labeltype'),
-                                           self.genUriRef('schema', '#vlan')))
-                        self.newGraph.set((self.genUriRef('site', f"{vlanuri}:vlan"),
-                                           self.genUriRef('nml', 'value'),
-                                           self.genLiteral(str(vlanDict['vlanid']))))
+                    self.newGraph.add((self.genUriRef('site', vlanuri),
+                                       self.genUriRef('nml', 'hasLabel'),
+                                       self.genUriRef('site', f"{vlanuri}:vlan")))
+                    self.newGraph.add((self.genUriRef('site', f"{vlanuri}:vlan"),
+                                       self.genUriRef('rdf', 'type'),
+                                       self.genUriRef('nml', 'Label')))
+                    self.newGraph.add((self.genUriRef('site', f"{vlanuri}:vlan"),
+                                       self.genUriRef('nml', 'labeltype'),
+                                       self.genUriRef('schema', '#vlan')))
+                    self.newGraph.set((self.genUriRef('site', f"{vlanuri}:vlan"),
+                                       self.genUriRef('nml', 'value'),
+                                       self.genLiteral(str(vlanDict['vlanid']))))
                     # Add hasNetworkAddress for vlan
                     # Now the mapping of the interface information:
                     self.addIntfInfo(vlanDict, vlanuri, False)
