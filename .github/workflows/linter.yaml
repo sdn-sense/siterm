@@ -12,20 +12,6 @@ on:
 jobs:
   linter:
     runs-on: ubuntu-latest
-    permissions:
-      actions: write
-      checks: write
-      contents: write
-      deployments: write
-      id-token: write
-      issues: write
-      discussions: write
-      packages: write
-      pages: write
-      pull-requests: write
-      repository-projects: write
-      security-events: write
-      statuses: write
     steps:
     - name: Checkout
       id: checkout
@@ -37,61 +23,6 @@ jobs:
       env:
         VALIDATE_ALL_CODEBASE: false
         DEFAULT_BRANCH: master
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Remove OK Label if failure
-      id: remove-ok-label
-      uses: actions/github-script@v6
-      if: always() && steps.mainRun.outcome == 'failure'
-      continue-on-error: true
-      with:
-        script: |
-          github.rest.issues.removeLabel({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            name: ["[ACTION] Linter OK"]
-          })
-
-    - name: Add Failure Label if failure
-      id: add-fail-label
-      uses: actions/github-script@v6
-      if: always() && steps.mainRun.outcome == 'failure'
-      with:
-        script: |
-          github.rest.issues.addLabels({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            labels: ["[ACTION] Linter Failed"]
-          })
-
-    - name: Remove Failed Label if (success or skipped)
-      id: remove-fail-label
-      uses: actions/github-script@v6
-      if: always() && (steps.mainRun.outcome == 'success' || steps.mainRun.outcome == 'skipped')
-      continue-on-error: true
-      with:
-        script: |
-          github.rest.issues.removeLabel({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            name: ["[ACTION] Linter Failed"]
-          })
-
-    - name: Add OK Label if (success or skipped)
-      id: add-ok-label
-      uses: actions/github-script@v6
-      if: always() && (steps.mainRun.outcome == 'success' || steps.mainRun.outcome == 'skipped')
-      with:
-        script: |
-          github.rest.issues.addLabels({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            labels: ["[ACTION] Linter OK"]
-          })
 
     - name: Dump steps context
       id: dump-env
