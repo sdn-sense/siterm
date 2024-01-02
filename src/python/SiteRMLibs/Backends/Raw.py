@@ -9,19 +9,22 @@ Authors:
 Date: 2021/12/01
 """
 import os
+
 import yaml
-from SiteRMLibs.MainUtilities import getGitConfig
-from SiteRMLibs.MainUtilities import createDirs
+from SiteRMLibs.MainUtilities import createDirs, getGitConfig
 
 
-class Switch():
+class Switch:
     """RAW Switch plugin. All info comes from yaml files."""
+
     def __init__(self, config, sitename):
         self.config = config
         self.sitename = sitename
         self.defVlans = []
-        self.name = 'RAW'
-        self.workDir = os.path.join(self.config.get(sitename, 'privatedir'), "RAW-Switch-Config/")
+        self.name = "RAW"
+        self.workDir = os.path.join(
+            self.config.get(sitename, "privatedir"), "RAW-Switch-Config/"
+        )
         createDirs(self.workDir)
 
     @staticmethod
@@ -46,7 +49,7 @@ class Switch():
         out = {}
         confFName = f"{self.workDir}/{host}.yaml"
         if os.path.isfile(confFName):
-            with open(confFName, 'r', encoding='utf-8') as fd:
+            with open(confFName, "r", encoding="utf-8") as fd:
                 out = yaml.safe_load(fd.read())
         return out
 
@@ -54,7 +57,7 @@ class Switch():
         """It saves locally all configuration.
         RAW plugin does not apply anything on switches."""
         confFName = f"{self.workDir}/{host}.yaml"
-        with open(confFName, 'w', encoding='utf-8') as fd:
+        with open(confFName, "w", encoding="utf-8") as fd:
             fd.write(yaml.dump(out))
 
     def _applyNewConfig(self, hosts=None, subitem=""):
@@ -67,23 +70,30 @@ class Switch():
 
     def getAnsNetworkOS(self, host, subitem=""):
         """Get Ansible network os from hosts file"""
-        return self.getHostConfig(host).get('ansible_network_os', '')
+        return self.getHostConfig(host).get("ansible_network_os", "")
 
     def _getFacts(self, hosts=None, subitem=""):
         """Get Facts for RAW plugin"""
         self.config = getGitConfig()
         out = {}
-        for switchn in self.config.get(self.sitename, 'switch'):
+        for switchn in self.config.get(self.sitename, "switch"):
             hOut = out.setdefault(switchn, {})
-            for port in self.config.get(switchn, 'ports'):
-                portOut = hOut.setdefault('event_data', {}).setdefault('res', {}).setdefault('ansible_facts', {}).setdefault('ansible_net_interfaces', {})
+            for port in self.config.get(switchn, "ports"):
+                portOut = (
+                    hOut.setdefault("event_data", {})
+                    .setdefault("res", {})
+                    .setdefault("ansible_facts", {})
+                    .setdefault("ansible_net_interfaces", {})
+                )
                 portOut[port] = {}
         return out, {}
 
     @staticmethod
     def getports(inData):
         """Get ports from ansible output"""
-        return inData['event_data']['res']['ansible_facts']['ansible_net_interfaces'].keys()
+        return inData["event_data"]["res"]["ansible_facts"][
+            "ansible_net_interfaces"
+        ].keys()
 
     @staticmethod
     def getportdata(inData, port):
@@ -100,7 +110,7 @@ class Switch():
     def getfactvalues(inData, key):
         """Get custom command output from ansible output, like routing, lldp, mac"""
         # In RAW plugin - this does not exists and returns empty
-        return inData['event_data']['res']['ansible_facts'].get(key, {})
+        return inData["event_data"]["res"]["ansible_facts"].get(key, {})
 
     def getvlandata(self, inData, vlan):
         """Get vlan data from ansible output"""
@@ -109,11 +119,11 @@ class Switch():
     @staticmethod
     def getVlanKey(port):
         """Get Vlan Key. Normalize betwen diff switches"""
-        if port.startswith('Vlan_'):
+        if port.startswith("Vlan_"):
             return int(port[5:])
-        if port.startswith('Vlan '):
+        if port.startswith("Vlan "):
             return int(port[5:])
-        if port.startswith('Vlan'):
+        if port.startswith("Vlan"):
             return int(port[4:])
         return port
 
