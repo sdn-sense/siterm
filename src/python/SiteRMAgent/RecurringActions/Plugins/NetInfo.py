@@ -6,8 +6,8 @@ Authors:
 
 Date: 2022/01/29
 """
-import os
 import ipaddress
+import os
 import pprint
 
 import psutil
@@ -26,34 +26,41 @@ def str2bool(val):
 
 NAME = "NetInfo"
 
+
 def getvlans():
+    """Get interface name and vlan id belonging to it"""
     out = {}
-    if os.path.isfile('/proc/net/vlan/config'):
+    if os.path.isfile("/proc/net/vlan/config"):
         vlanconf = externalCommand("cat /proc/net/vlan/config")
         for vlanline in vlanconf[0].decode("UTF-8").split("\n"):
             if not vlanline:
                 continue
-            splvlans = vlanline.split('|')
+            splvlans = vlanline.split("|")
             if len(splvlans) == 3:
                 intname = splvlans[0].strip()
                 try:
-                    tmpOut = {'vlanid': int(splvlans[1].strip()),
-                              'master': splvlans[2].strip()}
+                    tmpOut = {
+                        "vlanid": int(splvlans[1].strip()),
+                        "master": splvlans[2].strip(),
+                    }
                     out.setdefault(intname, tmpOut)
                 except ValueError:
                     continue
     return out
 
+
 def getVlanID(nicname, privVlans):
+    """Get Vlan id from privVlans, or from nicname"""
     try:
         if nicname in privVlans:
-            return privVlans[nicname].get('vlanid', None)
+            return privVlans[nicname].get("vlanid", None)
         splName = nicname.split(".")
         if len(splName) == 2:
             return int(splName[1])
     except ValueError:
         pass
     return None
+
 
 def get(config):
     """Get all network information"""
