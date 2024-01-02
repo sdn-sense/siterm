@@ -43,9 +43,9 @@ function escapeHtml (string) {
                       nName = sitename + "_" + htmlhostname;
                       sitesTab.append('<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="'+ nName +'" aria-selected="false" id="tab_'+ nName +'"  href="#view_'+ nName +'">' + dtns['hostname'] + '</a></li>');
                       allSites.append('<div class="tab-pane fade row" role="tabpanel" aria-labelledby="tab_' + nName + '" id="view_'+ nName +'"></div>');
-                  };
+                  }
                 }
-            };
+            }
             $("#sites_tab").append(sitesTab);
             $("#main_tab").append(allSites);
         }
@@ -66,19 +66,25 @@ function escapeHtml (string) {
             }
         }
 
+        function defineHostButtons(data, sitename, hostname){
+          htmlhostname = hostname.replace(/\./g,'_');
+          controlRow = $('<div class="row">');
+          // Add Remove button
+          controlRow.append('<div><form onsubmit="deletehost(\''+ htmlhostname +'\');" id="del-'+ htmlhostname +'" name="del-'+ htmlhostname +'"><input id="host-'+htmlhostname+'" name="hostname" type="hidden" value="'+hostname+'"><input id="ip-'+htmlhostname+'" name="ip" type="hidden" value="'+data['ip']+'"><input id="sitename-'+htmlhostname+'" name="sitename" type="hidden" value="'+sitename+'"><input value="Delete Host" type="submit" class="btn btn-danger"></form></div>');
+          return controlRow;
+        }
+
         function defineDTNConfig(data, sitename, hostname) {
           htmlhostname = hostname.replace(/\./g,'_');
           menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"></div>');
           cntDiv = $('<div class="tab-content" id="v-pills-tabContent"></div>');
           for (var key in data['hostinfo']){
-             if (key == 'Summary') {continue;}
+             if (key === 'Summary') {continue;}
              if ($.isPlainObject(data['hostinfo'][key])){
                menCol.append('<a class="nav-link" id="v-pills-'+ htmlhostname + '_' + key + '-tab" data-toggle="pill" href="#v-pills-'+ htmlhostname + '_' +key+'" role="tab" aria-controls="v-pills-'+ htmlhostname + '_' + key +'" aria-selected="true">'+ key +'</a>');
                cntDiv.append('<div class="tab-pane fade" id="v-pills-'+ htmlhostname + '_' +key+'" role="tabpanel" aria-labelledby="v-pills-'+ htmlhostname + '_' +key+'-tab"></div>');
              }
           }
-          // Add Remove button
-          menCol.append('<div><form onsubmit="deletehost(\''+ htmlhostname +'\');" id="del-'+ htmlhostname +'" name="del-'+ htmlhostname +'"><input id="host-'+htmlhostname+'" name="hostname" type="hidden" value="'+hostname+'"><input id="ip-'+htmlhostname+'" name="ip" type="hidden" value="'+data['ip']+'"><input id="sitename-'+htmlhostname+'" name="sitename" type="hidden" value="'+sitename+'"><input value="Delete Host" type="submit" class="btn btn-danger"></form></div>');
           nRow = $('<div class="row">');
           menCol = $('<div class="col-3">').append(menCol);
           cntDiv = $('<div class="col-9">').append(cntDiv);
