@@ -181,7 +181,6 @@ def evaldict(inputDict):
         return {}
     if isinstance(inputDict, (list, dict)):
         return inputDict
-    out = {}
     try:
         out = ast.literal_eval(inputDict)
     except ValueError:
@@ -256,9 +255,9 @@ def publishToSiteFE(inputDict, host, url, verb="PUT"):
     try:
         out = req.makeRequest(url, verb=verb, data=json.dumps(inputDict))
     except http.client.HTTPException as ex:
-        return (ex.reason, ex.status, "FAILED", True)
+        return ex.reason, ex.status, "FAILED", True
     except pycurl.error as ex:
-        return (ex.args[1], ex.args[0], "FAILED", False)
+        return ex.args[1], ex.args[0], "FAILED", False
     return out
 
 
@@ -268,9 +267,9 @@ def getDataFromSiteFE(inputDict, host, url):
     try:
         out = req.makeRequest(url, verb="GET", data=inputDict)
     except http.client.HTTPException as ex:
-        return (ex.reason, ex.status, "FAILED", True)
+        return ex.reason, ex.status, "FAILED", True
     except pycurl.error as ex:
-        return (ex.args[1], ex.args[0], "FAILED", False)
+        return ex.args[1], ex.args[0], "FAILED", False
     return out
 
 
@@ -292,7 +291,7 @@ def reCacheConfig(prevHour=None, prevDay=None):
     datetimeNow = datetime.datetime.now()
     currentHour = datetimeNow.strftime("%H")
     currentDay = datetimeNow.strftime("%d")
-    return (prevHour == currentHour, currentDay == prevDay, currentHour, currentDay)
+    return prevHour == currentHour, currentDay == prevDay, currentHour, currentDay
 
 
 class GitConfig:
@@ -314,7 +313,6 @@ class GitConfig:
     @staticmethod
     def gitConfigCache(name):
         """Get Config file from tmp dir"""
-        output = None
         filename = f"/tmp/siterm-link-{name}.yaml"
         if os.path.isfile(filename):
             with open(filename, "r", encoding="utf-8") as fd:
@@ -434,20 +432,23 @@ class GitConfig:
 
     def generateVlanList(self, key1, key2, vals):
         """Generate Vlan List. which can be separated by comma, dash"""
-        runparser = False
+        def _addToAll(vlanlist):
+            """Add to all vlan list"""
+            self.config["MAIN"][key1].setdefault("all_vlan_range_list", [])
+            for vlanid in vlanlist:
+                if vlanid not in self.config["MAIN"][key1].get("all_vlan_range_list", []):
+                    self.config["MAIN"][key1].setdefault("all_vlan_range_list", []).append(vlanid)
+
         if key2 == "vlan_range":
-            runparser = True
-        if key2.startswith("port_") and key2.endswith("vlan_range"):
-            runparser = True
-        if not runparser:
-            return
-        newvlanlist = self.__genVlansRange(vals)
-        self.config["MAIN"][key1][f"{key2}_list"] = newvlanlist
-        # Add any vlan to all vlans range list.
-        allvlans = self.config["MAIN"][key1].setdefault("all_vlan_range_list", [])
-        for vlanid in newvlanlist:
-            if vlanid not in allvlans:
-                allvlans.append(vlanid)
+            newvlanlist = self.__genVlansRange(vals)
+            self.config["MAIN"][key1][f"{key2}_list"] = newvlanlist
+            _addToAll(newvlanlist)
+        elif key2 == "ports":
+            for portname, portvals in self.config["MAIN"][key1][key2].items():
+                if "vlan_range" in portvals:
+                    newvlanlist = self.__genVlansRange(portvals["vlan_range"])
+                    self.config["MAIN"][key1][key2][portname][f"{key2}_list"] = newvlanlist
+                    _addToAll(newvlanlist)
 
     def generateIPList(self, key1, key2, vals):
         """Split by command and return list"""

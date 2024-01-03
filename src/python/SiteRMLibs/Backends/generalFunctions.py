@@ -33,9 +33,9 @@ def cleanupEmpty(output):
                 continue
     return tmpOut
 
-def getValFromConfig(config, switch, port, key, portKey="port_%s_%s"):
-    """Get val from config."""
-    tmpVal = config.get(switch, portKey % (port, key))
+def getValFromConfig(config, switch, port, key):
+    """Get value from config."""
+    tmpVal = config['MAIN'].get(switch, {}).get('ports', {}).get(port, {}).get(key, "")
     try:
         tmpVal = int(tmpVal)
     except (ValueError, TypeError):

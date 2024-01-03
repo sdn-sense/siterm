@@ -170,13 +170,6 @@ class SwitchInfo():
                 # reservableCapacity calculated automatically based on available - allAllocated.
                 self._mrsLiteral(newuri, key, int(portSwitch.get(key)))
             if key in ['realportname']:
-                # TODO Remove below check once config parser modified:
-                # https://github.com/sdn-sense/siterm/issues/346
-                tmpport = self.switch.getSystemValidPortName(val)
-                # TODO Remove above replacement, once fix added.
-                if self.config.has_option(switchName, f"port_{tmpport}_realport"):
-                    val = self.config.config["MAIN"][switchName][f"port_{tmpport}_realport"]
-                # Add real Port Name for Monitoring mapping
                 self._addVals('sense-rtmon', key, val, newuri)
 
     def _addSwitchPortInfo(self, key, switchInfo):
