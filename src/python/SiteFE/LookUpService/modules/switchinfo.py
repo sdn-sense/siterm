@@ -165,9 +165,9 @@ class SwitchInfo():
                         self._addVals(item['key'], item['subkey'], item['val'], newuri)
                 else:
                     self._addVals(key, subkey, val, newuri)
+                if key == 'bandwidth' and 'capacity' not in portSwitch:
+                    self._mrsLiteral(newuri, 'capacity', int(val))
             if key in ['capacity', 'availableCapacity', 'granularity', 'reservableCapacity']:
-                # TODO: Allow specify availableCapacity and granularity from config
-                # reservableCapacity calculated automatically based on available - allAllocated.
                 self._mrsLiteral(newuri, key, int(portSwitch.get(key)))
             if key in ['realportname']:
                 self._addVals('sense-rtmon', key, val, newuri)

@@ -439,16 +439,25 @@ class GitConfig:
                 if vlanid not in self.config["MAIN"][key1].get("all_vlan_range_list", []):
                     self.config["MAIN"][key1].setdefault("all_vlan_range_list", []).append(vlanid)
 
-        if key2 == "vlan_range":
-            newvlanlist = self.__genVlansRange(vals)
+        if 'vsw' not in self.config["MAIN"][key1]:
+            return
+        # Default list is a must!
+        if 'vlan_range' not in self.config["MAIN"][key1]:
+            raise Exception(f'Device {key1} does not have vlan_range parameter defined.')
+        if 'vlan_range_list' not in self.config["MAIN"][key1]:
+            newvlanlist = self.__genVlansRange(self.config["MAIN"][key1]['vlan_range'])
             self.config["MAIN"][key1][f"{key2}_list"] = newvlanlist
             _addToAll(newvlanlist)
-        elif key2 == "ports":
+        if key2 == "ports":
             for portname, portvals in self.config["MAIN"][key1][key2].items():
                 if "vlan_range" in portvals:
                     newvlanlist = self.__genVlansRange(portvals["vlan_range"])
-                    self.config["MAIN"][key1][key2][portname][f"{key2}_list"] = newvlanlist
+                    self.config["MAIN"][key1][key2][portname]["vlan_range_list"] = newvlanlist
                     _addToAll(newvlanlist)
+                # Else we set default
+                else:
+                    self.config["MAIN"][key1][key2][portname]["vlan_range"] = self.config["MAIN"][key1]['vlan_range']
+                    self.config["MAIN"][key1][key2][portname]["vlan_range_list"] = self.config["MAIN"][key1]['vlan_range_list']
 
     def generateIPList(self, key1, key2, vals):
         """Split by command and return list"""
