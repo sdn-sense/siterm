@@ -116,15 +116,14 @@ class PolicyService(RDFHelper, Timing):
         SetDefault for out hostname, port, server, interface and use
         in output dictionary.
         """
-        tmp = [_f for _f in str(inport)[len(self.prefixes["site"]) :].split(":") if _f]
+        tmp = [_f for _f in str(inport)[len(self.prefixes["site"]):].split(":") if _f]
         for item in tmp:
             if not len(item.split("+")) > 1:
                 out = out.setdefault(item, {})
         return out
 
-    def addIsAlias(self, gIn, bidPort, returnout):
+    def addIsAlias(self, _gIn, bidPort, returnout):
         """Add is Alias to activeDeltas output"""
-        del gIn
         if "isAlias" in self.bidPorts.get(
             URIRef(bidPort), []
         ) or "isAlias" in self.scannedPorts.get(bidPort, []):
@@ -183,7 +182,6 @@ class PolicyService(RDFHelper, Timing):
                 tout = self.queryGraph(
                     gIn, timeline, search=URIRef(f"{self.prefixes['nml']}{timev}")
                 )
-                temptime = None
                 try:
                     temptime = int(time.mktime(parser.parse(str(tout[0])).timetuple()))
                 except Exception:
@@ -260,7 +258,6 @@ class PolicyService(RDFHelper, Timing):
         self.logger.info(
             f"Lets try to get connection ID subject for {self.prefixes['main']}"
         )
-        connectionID = None
         for iptype in ["ipv4", "ipv6"]:
             uri = f"{self.prefixes['main']}-{iptype}"
             for rsttype in [
@@ -327,25 +324,23 @@ class PolicyService(RDFHelper, Timing):
         out = self.queryGraph(
             gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}{'hasLabel'}")
         )
-        if not out and str(bidPort).rsplit(":", maxsplit=1)[-1].startswith("vlanport+"):
-            # This is a hack, because Orchestrator does not provide full info
-            # In future - we should merge delta with model, and parse only delta info
-            # from full model.
-            scanVals = returnout.setdefault("hasLabel", {})
-            scanVals["labeltype"] = "ethernet#vlan"
-            scanVals["value"] = int(str(bidPort).rsplit(":", maxsplit=1)[-1][9:])
+        # TODO: Remove this hack
+        #  if not out and str(bidPort).rsplit(":", maxsplit=1)[-1].startswith("vlanport+"):
+        #    This is a hack, because Orchestrator does not provide full info
+        #    In future - we should merge delta with model, and parse only delta info
+        #    from full model.
+        #    scanVals = returnout.setdefault("hasLabel", {})
+        #    scanVals["labeltype"] = "ethernet#vlan"
+        #    scanVals["value"] = int(str(bidPort).rsplit(":", maxsplit=1)[-1][9:])
         for item in out:
             scanVals = returnout.setdefault("hasLabel", {})
-            out = self.queryGraph(
-                gIn, item, search=URIRef(f"{self.prefixes['nml']}{'labeltype'}")
-            )
+            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}{'labeltype'}"))
             if out:
                 scanVals["labeltype"] = "ethernet#vlan"
-            out = self.queryGraph(
-                gIn, item, search=URIRef(f"{self.prefixes['nml']}{'value'}")
-            )
+            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}{'value'}"))
             if out:
                 scanVals["value"] = int(out[0])
+            scanVals['uri'] = str(item)
 
     def _hasService(self, gIn, bidPort, returnout):
         """Query Graph and get Services"""
@@ -355,7 +350,7 @@ class PolicyService(RDFHelper, Timing):
         )
         for item in out:
             scanVals = returnout.setdefault("hasService", {})
-            scanVals["bwuri"] = str(item)
+            scanVals["uri"] = str(item)
             self.getTimeScheduling(gIn, item, returnout)
             self._hasTags(gIn, item, scanVals)
             for key in [
@@ -384,23 +379,29 @@ class PolicyService(RDFHelper, Timing):
         )
         for item in out:
             scanVals = returnout.setdefault("hasNetworkAddress", {})
-            # We only add params we care, which are: ipv4-address, ipv6-address
-            name = str(item).rsplit(":", maxsplit=1)[-1].split("+")[0]
-            if name in ["ipv4-address", "ipv6-address"]:
-                vals = scanVals.setdefault(name, {})
-                out = self.queryGraph(
-                    gIn,
-                    item,
-                    search=URIRef(f"{self.prefixes['mrs']}{'type'}"),
-                    allowMultiple=True,
-                )
-                if out:
-                    vals["type"] = "|".join([str(item) for item in out])
-                out = self.queryGraph(
-                    gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'value'}")
-                )
-                if out:
-                    vals["value"] = str(out[0])
+            out = self.queryGraph(
+                gIn,
+                item,
+                search=URIRef(f"{self.prefixes['mrs']}{'type'}"),
+                allowMultiple=True,
+            )
+            name = None
+            if out:
+                if 'ipv4-address' in out:
+                    name = 'ipv4-address'
+                if 'ipv6-address' in out:
+                    name = 'ipv6-address'
+            if not name:
+                continue
+            vals = scanVals.setdefault(name, {})
+            vals["uri"] = str(item)
+            vals["type"] = "|".join([str(item) for item in out])
+            out = self.queryGraph(
+                gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'value'}")
+            )
+            if out:
+                vals["value"] = str(out[0])
+            self._hasTags(gIn, item, vals)
 
     def _recordMapping(self, subnet, returnout, mappingKey, subKey, val=""):
         """Query Graph and add all mappings"""
@@ -434,13 +435,11 @@ class PolicyService(RDFHelper, Timing):
         if bidPort in self.bidPorts:
             del self.bidPorts[bidPort]
 
-    def parsel2Request(self, gIn, returnout, switchName):
+    def parsel2Request(self, gIn, returnout, _switchName):
         """Parse L2 request."""
-        del switchName
         self.logger.info(
             f"Lets try to get connection ID subject for {self.prefixes['main']}"
         )
-        connectionID = None
         out = self.queryGraph(
             gIn,
             URIRef(self.prefixes["main"]),
@@ -573,7 +572,6 @@ class PolicyService(RDFHelper, Timing):
             delta["content"] = evaldict(delta["content"])
             for key in ["reduction", "addition"]:
                 if delta.get("content", {}).get(key, {}):
-                    tmpFile = ""
                     with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
                         tmpFile = fd.name
                         try:
@@ -691,7 +689,6 @@ class PolicyService(RDFHelper, Timing):
                     self.logger.debug(
                         f"Got Content {toDict['Content'][key]} for key {key}"
                     )
-                    tmpFile = ""
                     with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
                         tmpFile = fd.name
                         try:
