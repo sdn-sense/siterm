@@ -66,7 +66,7 @@ class TopoCalls:
                     continue
                 if not isinstance(self.config['MAIN'].get(sw, {}).get('ports', None), dict):
                     continue
-                for key, val in self.config['MAIN'].get(sw, {}).get('ports', {}).items():
+                for _, val in self.config['MAIN'].get(sw, {}).get('ports', {}).items():
                     if 'wanlink' in val and val['wanlink'] and val.get('isAlias', None):
                         wan_links.setdefault(f"wan{incr}", {"_id": incr,
                                                             "topo": {},

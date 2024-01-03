@@ -232,12 +232,12 @@ class SwitchInfo():
                         del portSwitch['vlan_range_list']
                     self.addSwitchIntfInfo(switchName, portName, portSwitch, vlanuri)
 
-
     def _addSwitchLldpInfo(self, switchInfo):
         """ADD LLDP Info to MRML"""
         def getSwitchSiteRMName(allMacs, macLookUp):
             """SiteRM uses uniques names for switches.
-               Need to map it back via mac address"""
+               Need to map it back via mac address
+            """
             for hName, hMacs in allMacs.items():
                 if macLookUp in hMacs:
                     return hName
@@ -310,7 +310,7 @@ class SwitchInfo():
                         # We dont have from or intf it goes to. Not parsed correctly?
                         continue
                     if 'to' in route:
-                        out['routetype'] ='routeTo'
+                        out['routetype'] = 'routeTo'
                         out['type'] = f'{ipX}-prefix'
                         out['value'] = route['to']
                         self._addRouteEntry(**out)
