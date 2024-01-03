@@ -18,6 +18,7 @@ from SiteRMLibs.MainUtilities import getGitConfig, getLoggingObject, getUTCnow
 from SiteRMLibs.MainUtilities import getDBConn, evaldict, jsondumps
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
 
+
 class Switch(Node):
     """Main Switch Class. It will load module based on config"""
     def __init__(self, config, site):
@@ -41,13 +42,11 @@ class Switch(Node):
 
     def mainCall(self, stateCall, inputDict, actionState):
         """Main caller function which calls specific state."""
-        out = {}
         if stateCall == 'activate':
             out = self.activate(inputDict, actionState)
         else:
             raise Exception(f'Unknown State {stateCall}')
         return out
-
 
     def _setDefaults(self, switchName):
         """Set Default vals inside output"""
@@ -130,7 +129,6 @@ class Switch(Node):
             return [switchName] if switchName in self.output['switches'] else []
         return self.output['switches'].keys()
 
-
     def _insertToDB(self, data):
         """Insert to database new switches data"""
         self._getDBOut()
@@ -164,18 +162,18 @@ class Switch(Node):
         # Once updated, inserted. Update var from db
         self._getDBOut()
 
-    def _addyamlInfoToPort(self, switch, nportName, defVlans, out):
+    def _addyamlInfoToPort(self, switch, portName, defVlans, out):
         """Add Yaml info to specific port"""
-        portKey = "port_%s_%s"
         for key in ['hostname', 'isAlias', 'vlan_range_list', 'desttype', 'destport',
                     'capacity', 'granularity', 'availableCapacity']:
-            if not self.config.has_option(switch, portKey % (nportName, key)):
+            tmpval = getValFromConfig(self.config, switch, portName, key)
+            if not tmpval:
                 if key == 'vlan_range_list':
                     out[key] = defVlans
                 continue
-            out[key] = getValFromConfig(self.config, switch, nportName, key, portKey)
+            out[key] = tmpval
             if key == 'isAlias':
-                spltAlias = out[key].split(':')
+                spltAlias = tmpval.split(':')
                 out['isAlias'] = out[key]
                 out['desttype'] = 'switch'
                 out['destport'] = spltAlias[-1]
@@ -192,25 +190,20 @@ class Switch(Node):
             if port in portsIgn:
                 self._delPortFromOut(switch, port)
                 continue
-            # Spaces from port name are replaced with _
-            # Backslashes are replaced with dash
-            # Also - mrml does not expect to get string in nml. so need to replace all
-            # Inside the output of dictionary
-            nportName = replaceSpecialSymbols(port)
             tmpData = self.plugin.getportdata(self.switches['output'][switch], port)
             if port in vlans:
                 tmpData = self.plugin.getvlandata(self.switches['output'][switch], port)
-                vlansDict = self.output['vlans'][switch].setdefault(nportName, tmpData)
+                vlansDict = self.output['vlans'][switch].setdefault(port, tmpData)
                 vlansDict['realportname'] = port
                 vlansDict['value'] = self.plugin.getVlanKey(port)
-                self._addyamlInfoToPort(switch, nportName, defVlans, vlansDict)
+                self._addyamlInfoToPort(switch, port, defVlans, vlansDict)
             else:
-                portDict = self.output['ports'][switch].setdefault(nportName, tmpData)
+                portDict = self.output['ports'][switch].setdefault(port, tmpData)
                 portDict['realportname'] = port
-                self._addyamlInfoToPort(switch, nportName, defVlans, portDict)
-                switchesDict = self.output['switches'][switch].setdefault(nportName, tmpData)
+                self._addyamlInfoToPort(switch, port, defVlans, portDict)
+                switchesDict = self.output['switches'][switch].setdefault(port, tmpData)
                 switchesDict['realportname'] = port
-                self._addyamlInfoToPort(switch, nportName, defVlans, switchesDict)
+                self._addyamlInfoToPort(switch, port, defVlans, switchesDict)
                 # if destType not defined, check if switchport available in switch config.
                 # Then set it to switch
                 if 'switchport' in portDict.keys() and portDict['switchport']:
@@ -222,7 +215,6 @@ class Switch(Node):
         self.output['routes'][switch]['ipv6'] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_net_ipv6')
         self.output['lldp'][switch] = self.plugin.getfactvalues(self.switches['output'][switch], 'ansible_net_lldp')
         self.output['nametomac'][switch] = self.plugin.nametomac(self.switches['output'][switch], switch)
-
 
     def getinfo(self, renew=False, hosts=None):
         """Get info about Network Devices using plugin defined in configuration."""
@@ -257,6 +249,7 @@ def execute(config=None):
         switchM = Switch(config, siteName)
         out = switchM.getinfo()
         print(out)
+
 
 if __name__ == '__main__':
     getLoggingObject(logType='StreamLogger', service='SwitchBackends')

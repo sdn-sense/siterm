@@ -62,20 +62,20 @@ class TopoCalls:
         wan_links = {}
         for site in self.config['MAIN'].get('general', {}).get('sites', []):
             for sw in self.config['MAIN'].get(site, {}).get('switch', []):
-                for key, val in self.config['MAIN'].get(sw, {}).items():
-                    if key.endswith('wanlink') and val:
-                        aliasKey = key.replace('wanlink', 'isAlias')
-                        remotename = self.config['MAIN'][sw].get(aliasKey, '')
-                        if remotename:
-                            splport = remotename.split(":")
-                            wan_links.setdefault(f"wan{incr}", {"_id": incr,
-                                                                "topo": {},
-                                                                "DeviceInfo": {"type": "cloud",
-                                                                               "name": remotename}})
-                            wan_links[f"wan{incr}"]["topo"].setdefault(splport[-1], {"device": sw, "port": val})
-                            incr += 1
+                if not self.config['MAIN'].get(sw, {}):
+                    continue
+                if not isinstance(self.config['MAIN'].get(sw, {}).get('ports', None), dict):
+                    continue
+                for _, val in self.config['MAIN'].get(sw, {}).get('ports', {}).items():
+                    if 'wanlink' in val and val['wanlink'] and val.get('isAlias', None):
+                        wan_links.setdefault(f"wan{incr}", {"_id": incr,
+                                                            "topo": {},
+                                                            "DeviceInfo": {"type": "cloud",
+                                                                           "name": val['isAlias']}})
+                        wan_links[f"wan{incr}"]["topo"].setdefault(val['isAlias'].split(':')[-1],
+                                                                   {"device": sw, "port": val})
+                        incr += 1
         return wan_links
-
 
     def gettopology(self, environ, **kwargs):
         """Return all Switches information"""
@@ -101,7 +101,7 @@ class TopoCalls:
                                             'DeviceInfo': {'type': 'switch', 'name': switch},
                                             '_id': switchdata['id']})
             # TODO Debug Call
-            #swout['PortInfo'] = switchdata['intstats']
+            #  swout['PortInfo'] = switchdata['intstats']
             for key, vals in switchdata['lldp'].items():
                 remSwitch = self._findConnection(workdata, vals.get('remote_chassis_id', ""))
                 remPort = vals.get('remote_port_id', "")
@@ -132,8 +132,8 @@ class TopoCalls:
                     if switch and swintf:
                         hout['topo'].setdefault(intf, {'device': switch, 'port': swintf})
                 # TODO: Debug call!
-                #intfStats = parsedInfo.get('NetInfo', {}).get('interfaces', {}).get(intf, {})
-                #if intfStats:
+                #  intfStats = parsedInfo.get('NetInfo', {}).get('interfaces', {}).get(intf, {})
+                #  if intfStats:
                 #    hout['PortInfo'][intf] = intfStats
         out.update(self._getWANLinks(incr))
         return out

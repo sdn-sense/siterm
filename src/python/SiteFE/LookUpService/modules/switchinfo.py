@@ -165,18 +165,11 @@ class SwitchInfo():
                         self._addVals(item['key'], item['subkey'], item['val'], newuri)
                 else:
                     self._addVals(key, subkey, val, newuri)
+                if key == 'bandwidth' and 'capacity' not in portSwitch:
+                    self._mrsLiteral(newuri, 'capacity', int(val))
             if key in ['capacity', 'availableCapacity', 'granularity', 'reservableCapacity']:
-                # TODO: Allow specify availableCapacity and granularity from config
-                # reservableCapacity calculated automatically based on available - allAllocated.
                 self._mrsLiteral(newuri, key, int(portSwitch.get(key)))
             if key in ['realportname']:
-                # TODO Remove below check once config parser modified:
-                # https://github.com/sdn-sense/siterm/issues/346
-                tmpport = self.switch.getSystemValidPortName(val)
-                # TODO Remove above replacement, once fix added.
-                if self.config.has_option(switchName, f"port_{tmpport}_realport"):
-                    val = self.config.config["MAIN"][switchName][f"port_{tmpport}_realport"]
-                # Add real Port Name for Monitoring mapping
                 self._addVals('sense-rtmon', key, val, newuri)
 
     def _addSwitchPortInfo(self, key, switchInfo):
@@ -239,12 +232,12 @@ class SwitchInfo():
                         del portSwitch['vlan_range_list']
                     self.addSwitchIntfInfo(switchName, portName, portSwitch, vlanuri)
 
-
     def _addSwitchLldpInfo(self, switchInfo):
         """ADD LLDP Info to MRML"""
         def getSwitchSiteRMName(allMacs, macLookUp):
             """SiteRM uses uniques names for switches.
-               Need to map it back via mac address"""
+               Need to map it back via mac address
+            """
             for hName, hMacs in allMacs.items():
                 if macLookUp in hMacs:
                     return hName
@@ -317,7 +310,7 @@ class SwitchInfo():
                         # We dont have from or intf it goes to. Not parsed correctly?
                         continue
                     if 'to' in route:
-                        out['routetype'] ='routeTo'
+                        out['routetype'] = 'routeTo'
                         out['type'] = f'{ipX}-prefix'
                         out['value'] = route['to']
                         self._addRouteEntry(**out)

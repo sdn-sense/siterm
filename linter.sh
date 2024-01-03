@@ -5,7 +5,7 @@ for fname in $(git diff --name-only HEAD HEAD~1); do
         echo "Checking $fname with python linters"
         black "$fname"
         isort "$fname"
-        pylint-3 "$fname" --rcfile standarts/pylintrc
+        pylint "$fname" --rcfile standarts/pylintrc
     fi
     if [[ $fname == *.yaml || $fname == *.yml ]]
     then
