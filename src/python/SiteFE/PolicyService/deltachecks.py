@@ -40,7 +40,7 @@ class ConflictChecker(Timing):
         rawConf = polcls.config.getraw("MAIN")
         vlanRange = rawConf.get(hostname, {}).get("vlan_range_list", [])
         if hostname in rawConf:
-            vlanRange = rawConf.get(hostname, {}).get({vlan['interface']} , {}).get(
+            vlanRange = rawConf.get(hostname, {}).get(vlan['interface'] , {}).get(
                 "vlan_range_list", vlanRange
             )
             if vlanRange and vlan["vlan"] not in vlanRange:
