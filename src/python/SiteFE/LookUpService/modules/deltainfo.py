@@ -11,7 +11,6 @@ Authors:
 
 Date: 2021/12/01
 """
-from SiteRMLibs.MainUtilities import getActiveDeltas
 from SiteRMLibs.MainUtilities import convertTSToDatetime
 from SiteRMLibs.ipaddr import validMRMLName
 from SiteRMLibs.ipaddr import normalizedip
@@ -104,10 +103,10 @@ class DeltaInfo():
         if not portDict.get('hasService', {}):
             return
         portDict['hasService']['uri'] = uri
-        bwuri = self._addBandwidthService(**portDict['hasService'])
-        self.addTimeline(portDict, bwuri)
+        uri = self._addBandwidthService(**portDict['hasService'])
+        self.addTimeline(portDict, uri)
         self._addBandwidthServiceParams(**portDict['hasService'])
-        self.addNetworkStatus(portDict['hasService'], bwuri)
+        self.addNetworkStatus(portDict['hasService'], uri)
 
     def _addNetworkAddr(self, portDict, uri):
         """Add Network delta info"""
@@ -144,30 +143,30 @@ class DeltaInfo():
                 else:
                     self.logger.debug(f'port {port} and portDict {portDict} ignored. No vlan label')
 
-    def addRouteTables(self, activeDeltas):
+    def addRouteTables(self):
         """Add Route tables"""
-        for host, vals in activeDeltas.get('output', {}).get('RoutingMapping', {}).items():
+        for host, vals in self.activeDeltas.get('output', {}).get('RoutingMapping', {}).items():
             for routeTable, iptypes in vals.get('providesRoutingTable', {}).items():
                 for iptype in iptypes.keys():
                     self._addRoutingTable(hostname=host, rstname=f"rst-{iptype}", rtableuri=routeTable)
-                    routedict = activeDeltas.get('output', {}).get('rst', {}).get(routeTable, {}).get(host, {}).get(iptype, {})
+                    routedict = self.activeDeltas.get('output', {}).get('rst', {}).get(routeTable, {}).get(host, {}).get(iptype, {})
                     self._addParams(routedict, routeTable)
                     for route in list(routedict.get('hasRoute', {})):
                         self._addRoute(hostname=host, rstname=f"rst-{iptype}", rtableuri=routeTable, routeuri=route)
 
-    def addRoutes(self, activeDeltas):
+    def addRoutes(self):
         """Add individual routes"""
-        for host, vals in activeDeltas.get('output', {}).get('RoutingMapping', {}).items():
+        for host, vals in self.activeDeltas.get('output', {}).get('RoutingMapping', {}).items():
             for routeTable, iptypes in vals.get('providesRoute', {}).items():
                 for iptype in iptypes.keys():
-                    routedict = activeDeltas.get('output', {}).get('rst', {}).get(routeTable, {}).get(host, {}).get(iptype, {})
+                    routedict = self.activeDeltas.get('output', {}).get('rst', {}).get(routeTable, {}).get(host, {}).get(iptype, {})
                     self._addParams(routedict, routeTable)
                     rtableuri = routedict.get("belongsToRoutingTable", "")
                     self._addParams(routedict, rtableuri)
                     for route, routeInfo in routedict.get('hasRoute', {}).items():
                         self._addProvidesRoute(hostname=host, rstname=f"rst-{iptype}", routeuri=route)
-                        self._addBandwidthServiceRoute(**{'routeuri': route, 'uri': routedict.get('hasService', {}).get('bwuri', '')})
-                        self.addNetworkStatus(routedict.get('hasService', {}), routedict.get('hasService', {}).get('bwuri', ''))
+                        self._addBandwidthServiceRoute(**{'routeuri': route, 'uri': routedict.get('hasService', {}).get('uri', '')})
+                        self.addNetworkStatus(routedict.get('hasService', {}), routedict.get('hasService', {}).get('uri', ''))
                         for key, val in routeInfo.items():
                             for _, entrVal in val.items():
                                 netadd = {'hostname': host,
@@ -182,14 +181,13 @@ class DeltaInfo():
 
     def addDeltaInfo(self):
         """Append all deltas to Model."""
-        activeDeltas = getActiveDeltas(self)
         # Virtual Switching Info
-        for host, vals in activeDeltas.get('output', {}).get('SubnetMapping', {}).items():
+        for host, vals in self.activeDeltas.get('output', {}).get('SubnetMapping', {}).items():
             for subnet in vals.get('providesSubnet', {}).keys():
                 svcService = self._addSwitchingService(hostname=host, vsw=host)
                 subnetUri = subnet.split(svcService)[1]
                 uri = self._addSwitchingSubnet(hostname=host, vsw=host, subnet=subnetUri)
-                self.addvswInfo(activeDeltas.get('output', {}).get('vsw', {}).get(subnet, {}), uri)
+                self.addvswInfo(self.activeDeltas.get('output', {}).get('vsw', {}).get(subnet, {}), uri)
         # Routing Service Info
-        self.addRouteTables(activeDeltas)
-        self.addRoutes(activeDeltas)
+        self.addRouteTables()
+        self.addRoutes()

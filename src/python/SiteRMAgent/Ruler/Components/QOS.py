@@ -220,7 +220,7 @@ class QOS:
                             f"interface46 {intf} {intf}-{qosType} {qosType} rate {items['total']}mbit {self.qosparams}\n"
                         )
                     tmpFD.write(
-                        f"  # priority{added[intf][qosType]} belongs to {item['bwuri']} service\n"
+                        f"  # priority{added[intf][qosType]} belongs to {item['uri']} service\n"
                     )
                     totalRate = self._overcommitCheck(
                         items["master_intf"], item["reqRate"], items["total"]
@@ -253,11 +253,11 @@ class QOS:
         allQoS = {}
         for intf, intfDict in self.activeNow.items():
             newThrg = {}
-            for bwuri, bwDict in intfDict.items():
+            for uri, bwDict in intfDict.items():
                 newThrg = self.calculateRSTFairshare(bwDict)
                 if not newThrg:
                     continue
-                newThrg["bwuri"] = bwuri
+                newThrg["uri"] = uri
                 newThrg["bwDict"] = bwDict
                 intfKey = bwDict["master_intf"] if useMasterIntf else intf
                 allQoS.setdefault(intf, {"items": [], "total": 0, "reserved": 0})

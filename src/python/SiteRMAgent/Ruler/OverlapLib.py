@@ -141,7 +141,7 @@ class OverlapLib:
                 for iptype, routes in ipDict.items():
                     if "hasService" not in routes:
                         continue
-                    bwuri = routes["hasService"]["bwuri"]
+                    uri = routes["hasService"]["uri"]
                     for _, routeInfo in routes.get("hasRoute").items():
                         iprange = (
                             routeInfo.get("routeFrom", {})
@@ -155,7 +155,7 @@ class OverlapLib:
                                     intfName["intf"], {}
                                 )
                                 intServ = service.setdefault(
-                                    bwuri,
+                                    uri,
                                     {
                                         "src_ipv4": "",
                                         "src_ipv4_intf": "",

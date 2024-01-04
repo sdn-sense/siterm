@@ -22,6 +22,7 @@ from SiteRMLibs.MainUtilities import getCurrentModel
 from SiteRMLibs.MainUtilities import getDBConn
 from SiteRMLibs.MainUtilities import getVal
 from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.MainUtilities import getActiveDeltas
 from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.CustomExceptions import NoSectionError
 from SiteRMLibs.Backends.main import Switch
@@ -49,6 +50,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
         self.tmpout = {}
         self.modelVersion = ""
         self.renewSwitchConfig = False
+        self.activeDeltas = {}
         workDir = self.config.get(self.sitename, 'privatedir') + "/LookUpService/"
         createDirs(workDir)
 
@@ -139,6 +141,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
     def startwork(self):
         """Main start."""
         self.logger.info('Started LookupService work')
+        self.activeDeltas = getActiveDeltas(self)
         self.newGraph = Graph()
         # ==================================================================================
         # 1. Define Basic MRML Prefixes

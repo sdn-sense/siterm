@@ -205,7 +205,7 @@ class PrometheusCalls:
 
     def __getActiveQoSStates(self, registry, **kwargs):
         """Report in prometheus NetworkStatus and QoS Params"""
-        labelnames = ["action", "tag", "key0", "key1", "key2", "vlan", "bwuri"]
+        labelnames = ["action", "tag", "key0", "key1", "key2", "vlan", "uri"]
         labelqos = [
             "action",
             "tag",
@@ -213,7 +213,7 @@ class PrometheusCalls:
             "key1",
             "key2",
             "vlan",
-            "bwuri",
+            "uri",
             "unit",
             "type",
             "valuetype",
@@ -256,7 +256,7 @@ class PrometheusCalls:
             if not netstatus:
                 netstatus = "unknown"
             netState.labels(**genStatusLabels(item)).state(netstatus)
-            if "bwuri" in item and item["bwuri"]:
+            if "uri" in item and item["uri"]:
                 for key in [
                     "availableCapacity",
                     "granularity",
@@ -348,9 +348,9 @@ class ActiveWrapper:
             kwargs["vlan"] = f"Vlan {indict['hasLabel']['value']}"
         self.reports.append(kwargs)
 
-        if "hasService" in indict and indict["hasService"].get("bwuri", ""):
+        if "hasService" in indict and indict["hasService"].get("uri", ""):
             tmpargs = copy.deepcopy(kwargs)
-            tmpargs["bwuri"] = indict["hasService"]["bwuri"]
+            tmpargs["uri"] = indict["hasService"]["uri"]
             tmpargs["networkstatus"] = (
                 indict["hasService"].get("_params", {}).get("networkstatus", "")
             )

@@ -70,7 +70,7 @@ class RDFHelper():
         """Add isAlias to model"""
         if 'isAlias' in kwargs and kwargs['isAlias'] and \
            'uri' in kwargs and kwargs['uri']:
-            self.newGraph.add((self.genUriRef('site', kwargs['uri']),
+            self.newGraph.set((self.genUriRef('site', kwargs['uri']),
                                self.genUriRef('nml', 'isAlias'),
                                self.genUriRef('', custom=kwargs['isAlias'])))
             if 'hostname' in kwargs and kwargs['hostname'] and \
