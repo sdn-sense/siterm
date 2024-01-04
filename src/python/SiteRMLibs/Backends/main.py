@@ -107,7 +107,7 @@ class Switch(Node):
                         self.output['portMapping'][switch][f'vlan{vlankey}'] = realportname
                     else:
                         self.output['portMapping'][switch][portKey] = realportname
-                        self.output['portMapping'][switch][portKey] = self.getSystemValidPortName(realportname)
+                        self.output['portMapping'][switch][self.getSystemValidPortName(realportname)] = realportname
 
     def getSwitchPortName(self, switchName, portName, vlanid=None):
         """Get Switch Port Name"""
