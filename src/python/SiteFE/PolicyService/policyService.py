@@ -324,14 +324,6 @@ class PolicyService(RDFHelper, Timing):
         out = self.queryGraph(
             gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}{'hasLabel'}")
         )
-        # TODO: Remove this hack
-        #  if not out and str(bidPort).rsplit(":", maxsplit=1)[-1].startswith("vlanport+"):
-        #    This is a hack, because Orchestrator does not provide full info
-        #    In future - we should merge delta with model, and parse only delta info
-        #    from full model.
-        #    scanVals = returnout.setdefault("hasLabel", {})
-        #    scanVals["labeltype"] = "ethernet#vlan"
-        #    scanVals["value"] = int(str(bidPort).rsplit(":", maxsplit=1)[-1][9:])
         for item in out:
             scanVals = returnout.setdefault("hasLabel", {})
             out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}{'labeltype'}"))
