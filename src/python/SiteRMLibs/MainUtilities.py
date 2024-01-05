@@ -439,11 +439,9 @@ class GitConfig:
                 if vlanid not in self.config["MAIN"][key1].get("all_vlan_range_list", []):
                     self.config["MAIN"][key1].setdefault("all_vlan_range_list", []).append(vlanid)
 
-        if 'vsw' not in self.config["MAIN"][key1]:
-            return
-        # Default list is a must!
+        # Default list is a must! Will be done checked at config preparation/validation
         if 'vlan_range' not in self.config["MAIN"][key1]:
-            raise Exception(f'Device {key1} does not have vlan_range parameter defined.')
+            return
         if 'vlan_range_list' not in self.config["MAIN"][key1]:
             newvlanlist = self.__genVlansRange(self.config["MAIN"][key1]['vlan_range'])
             self.config["MAIN"][key1][f"{key2}_list"] = newvlanlist
