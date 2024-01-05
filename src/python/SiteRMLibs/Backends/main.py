@@ -66,6 +66,15 @@ class Switch(Node):
             if switch in self.output[key] and portname in self.output[key][switch]:
                 del self.output[key][switch][portname]
 
+    @staticmethod
+    def _notSwitchport(tmpData):
+        """Check if port is not switchport"""
+        if 'switchport' not in tmpData:
+            return True
+        if tmpData['switchport'] != 'yes':
+            return True
+        return False
+
     def _getDBOut(self):
         """Get Database output of all switches configs for site"""
         tmp = self.dbI.get('switches', limit=1, search=[['sitename', self.site]])
@@ -189,9 +198,14 @@ class Switch(Node):
         vlans = self.plugin.getvlans(self.switches['output'][switch])
         for port in list(list(ports) + list(vlans)):
             if port in portsIgn:
+                self.logger.debug(f'Port {switch}{port} ignored. It is under site configuration to ignore this port')
                 self._delPortFromOut(switch, port)
                 continue
             tmpData = self.plugin.getportdata(self.switches['output'][switch], port)
+            if self._notSwitchport(tmpData):
+                self.logger.debug(f'Warning. Port {switch}{port} not added into model. Its status not switchport.')
+                self._delPortFromOut(switch, port)
+                continue
             if port in vlans:
                 tmpData = self.plugin.getvlandata(self.switches['output'][switch], port)
                 vlansDict = self.output['vlans'][switch].setdefault(port, tmpData)
@@ -226,7 +240,7 @@ class Switch(Node):
             out, err = self.plugin._getFacts(hosts)
             if err:
                 self._insertErrToDB(err)
-                raise Exception('Failed ANSIBLE Runtime. See Error %s' % str(err))
+                raise Exception(f'Failed ANSIBLE Runtime. See Error {str(err)}')
             self._insertToDB(out)
         self._getDBOut()
         # Clean and prepare output which is returned to caller
