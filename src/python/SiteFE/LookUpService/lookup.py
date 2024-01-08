@@ -215,7 +215,7 @@ def execute(config=None):
         config = getGitConfig()
     for siteName in config.get('general', 'sites'):
         lserv = LookUpService(config, siteName)
-        i = 5
+        i = 1
         while i > 0:
             lserv.startwork()
             time.sleep(5)

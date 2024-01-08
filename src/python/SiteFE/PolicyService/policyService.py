@@ -156,7 +156,7 @@ class PolicyService(RDFHelper, Timing):
         out = self.queryGraph(
             gIn,
             connectionID,
-            search=URIRef(f"{self.prefixes['mrs']}{'hasNetworkStatus'}"),
+            search=URIRef(f"{self.prefixes['mrs']}hasNetworkStatus"),
         )
         for statusuri in out:
             tout = self.queryGraph(
@@ -172,7 +172,7 @@ class PolicyService(RDFHelper, Timing):
         provisioned right away.
         """
         out = self.queryGraph(
-            gIn, connectionID, search=URIRef(f"{self.prefixes['nml']}{'existsDuring'}")
+            gIn, connectionID, search=URIRef(f"{self.prefixes['nml']}existsDuring")
         )
         for timeline in out:
             times = connOut.setdefault("_params", {}).setdefault(
@@ -222,10 +222,10 @@ class PolicyService(RDFHelper, Timing):
             )
             for item in out:
                 mrstypes = self.queryGraph(
-                    gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'type'}")
+                    gIn, item, search=URIRef(f"{self.prefixes['mrs']}type")
                 )
                 mrsvals = self.queryGraph(
-                    gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'value'}")
+                    gIn, item, search=URIRef(f"{self.prefixes['mrs']}value")
                 )
                 if mrstypes and mrsvals and len(mrstypes) == len(mrsvals):
                     for index, mrtype in enumerate(mrstypes):
@@ -246,7 +246,7 @@ class PolicyService(RDFHelper, Timing):
     def getRouteTable(self, gIn, connID, returnout):
         """Get all route tables from model for specific connID and call getRoute"""
         out = self.queryGraph(
-            gIn, connID, search=URIRef(f"{self.prefixes['mrs']}{'hasRoute'}")
+            gIn, connID, search=URIRef(f"{self.prefixes['mrs']}hasRoute")
         )
         tmpRet = []
         for item in out:
@@ -322,14 +322,14 @@ class PolicyService(RDFHelper, Timing):
         """Query Graph and get Labels"""
         self._hasTags(gIn, bidPort, returnout)
         out = self.queryGraph(
-            gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}{'hasLabel'}")
+            gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}hasLabel")
         )
         for item in out:
             scanVals = returnout.setdefault("hasLabel", {})
-            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}{'labeltype'}"))
+            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}labeltype"))
             if out:
                 scanVals["labeltype"] = "ethernet#vlan"
-            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}{'value'}"))
+            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}value"))
             if out:
                 scanVals["value"] = int(out[0])
             scanVals['uri'] = str(item)
@@ -338,7 +338,7 @@ class PolicyService(RDFHelper, Timing):
         """Query Graph and get Services"""
         self._hasTags(gIn, bidPort, returnout)
         out = self.queryGraph(
-            gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}{'hasService'}")
+            gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}hasService")
         )
         for item in out:
             scanVals = returnout.setdefault("hasService", {})
@@ -367,21 +367,21 @@ class PolicyService(RDFHelper, Timing):
         """Query Graph and get hasNetworkAddress"""
         self._hasTags(gIn, bidPort, returnout)
         out = self.queryGraph(
-            gIn, bidPort, search=URIRef(f"{self.prefixes['mrs']}{'hasNetworkAddress'}")
+            gIn, bidPort, search=URIRef(f"{self.prefixes['mrs']}hasNetworkAddress")
         )
         for item in out:
             scanVals = returnout.setdefault("hasNetworkAddress", {})
             out = self.queryGraph(
                 gIn,
                 item,
-                search=URIRef(f"{self.prefixes['mrs']}{'type'}"),
+                search=URIRef(f"{self.prefixes['mrs']}type"),
                 allowMultiple=True,
             )
             name = None
             if out:
-                if 'ipv4-address' in out:
+                if self.genLiteral('ipv4-address') in out:
                     name = 'ipv4-address'
-                if 'ipv6-address' in out:
+                if self.genLiteral('ipv6-address') in out:
                     name = 'ipv6-address'
             if not name:
                 continue
@@ -389,7 +389,7 @@ class PolicyService(RDFHelper, Timing):
             vals["uri"] = str(item)
             vals["type"] = "|".join([str(item) for item in out])
             out = self.queryGraph(
-                gIn, item, search=URIRef(f"{self.prefixes['mrs']}{'value'}")
+                gIn, item, search=URIRef(f"{self.prefixes['mrs']}value")
             )
             if out:
                 vals["value"] = str(out[0])
@@ -448,7 +448,7 @@ class PolicyService(RDFHelper, Timing):
             out = self.queryGraph(
                 gIn,
                 connectionID,
-                search=URIRef(f"{self.prefixes['nml']}{'labelSwapping'}"),
+                search=URIRef(f"{self.prefixes['nml']}labelSwapping"),
             )
             if out:
                 connOut.setdefault("_params", {}).setdefault(
@@ -723,6 +723,17 @@ def execute(config=None, args=None):
             if args.action == "accept":
                 out = policer.acceptDelta(args.delta)
                 pprint.pprint(out)
+            elif args.action == "acceptid" and args.deltaid:
+                delta = policer.dbI.get("deltas", search=[["uid", args.deltaid]], limit=1)
+                if not delta:
+                    raise Exception(f"Delta {args.deltaid} not found in database")
+                delta = delta[0]
+                delta['Content'] = evaldict(delta['content'])
+                tmpfd = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+                tmpfd.close()
+                policer.siteDB.saveContent(tmpfd.name, delta)
+                out = policer.acceptDelta(tmpfd.name)
+                pprint.pprint(out)
             elif args.action in ["addition", "reduction"]:
                 newModel = policer.deltaToModel(None, args.delta, args.action)
                 out = policer.parseModel(newModel)
@@ -747,7 +758,7 @@ def get_parser():
         "--action",
         dest="action",
         default="",
-        help="Actions to execute. Options: [accept, addition, reduction, fullRun]",
+        help="Actions to execute. Options: [accept,acceptid, addition, reduction, fullRun]",
     )
     oparser.add_argument(
         "--sitename",
@@ -761,6 +772,14 @@ def get_parser():
         default="",
         help="Delta path. In case of accept action - need to be json format from DB. Otherwise - delta from Orchestrator",
     )
+    oparser.add_argument(
+        "--deltaid",
+        dest="deltaid",
+        required = False,
+        default="",
+        help="Delta id from db. In case of accept action - will load from database",
+    )
+
     return oparser
 
 
