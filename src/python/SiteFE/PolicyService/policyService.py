@@ -116,7 +116,7 @@ class PolicyService(RDFHelper, Timing):
         SetDefault for out hostname, port, server, interface and use
         in output dictionary.
         """
-        tmp = [f for f in str(inport)[len(self.prefixes["site"]):].split(":") if f]
+        tmp = [f for f in str(inport)[len(self.prefixes["site"]) :].split(":") if f]
         for item in tmp:
             if not len(item.split("+")) > 1:
                 out = out.setdefault(item, {})
@@ -326,13 +326,17 @@ class PolicyService(RDFHelper, Timing):
         )
         for item in out:
             scanVals = returnout.setdefault("hasLabel", {})
-            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}labeltype"))
+            out = self.queryGraph(
+                gIn, item, search=URIRef(f"{self.prefixes['nml']}labeltype")
+            )
             if out:
                 scanVals["labeltype"] = "ethernet#vlan"
-            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}value"))
+            out = self.queryGraph(
+                gIn, item, search=URIRef(f"{self.prefixes['nml']}value")
+            )
             if out:
                 scanVals["value"] = int(out[0])
-            scanVals['uri'] = str(item)
+            scanVals["uri"] = str(item)
 
     def _hasService(self, gIn, bidPort, returnout):
         """Query Graph and get Services"""
@@ -379,10 +383,10 @@ class PolicyService(RDFHelper, Timing):
             )
             name = None
             if out:
-                if self.genLiteral('ipv4-address') in out:
-                    name = 'ipv4-address'
-                if self.genLiteral('ipv6-address') in out:
-                    name = 'ipv6-address'
+                if self.genLiteral("ipv4-address") in out:
+                    name = "ipv4-address"
+                if self.genLiteral("ipv6-address") in out:
+                    name = "ipv6-address"
             if not name:
                 continue
             vals = scanVals.setdefault(name, {})
@@ -724,11 +728,13 @@ def execute(config=None, args=None):
                 out = policer.acceptDelta(args.delta)
                 pprint.pprint(out)
             elif args.action == "acceptid" and args.deltaid:
-                delta = policer.dbI.get("deltas", search=[["uid", args.deltaid]], limit=1)
+                delta = policer.dbI.get(
+                    "deltas", search=[["uid", args.deltaid]], limit=1
+                )
                 if not delta:
                     raise Exception(f"Delta {args.deltaid} not found in database")
                 delta = delta[0]
-                delta['Content'] = evaldict(delta['content'])
+                delta["Content"] = evaldict(delta["content"])
                 tmpfd = tempfile.NamedTemporaryFile(delete=False, mode="w+")
                 tmpfd.close()
                 policer.siteDB.saveContent(tmpfd.name, delta)
@@ -775,7 +781,7 @@ def get_parser():
     oparser.add_argument(
         "--deltaid",
         dest="deltaid",
-        required = False,
+        required=False,
         default="",
         help="Delta id from db. In case of accept action - will load from database",
     )
