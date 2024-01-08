@@ -444,7 +444,7 @@ class GitConfig:
             return
         if 'vlan_range_list' not in self.config["MAIN"][key1]:
             newvlanlist = self.__genVlansRange(self.config["MAIN"][key1]['vlan_range'])
-            self.config["MAIN"][key1][f"{key2}_list"] = newvlanlist
+            self.config["MAIN"][key1]["vlan_range_list"] = newvlanlist
             _addToAll(newvlanlist)
         if key2 == "ports":
             for portname, portvals in self.config["MAIN"][key1][key2].items():
