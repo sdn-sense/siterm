@@ -116,7 +116,7 @@ class PolicyService(RDFHelper, Timing):
         SetDefault for out hostname, port, server, interface and use
         in output dictionary.
         """
-        tmp = [_f for _f in str(inport)[len(self.prefixes["site"]):].split(":") if _f]
+        tmp = [f for f in str(inport)[len(self.prefixes["site"]):].split(":") if f]
         for item in tmp:
             if not len(item.split("+")) > 1:
                 out = out.setdefault(item, {})
@@ -469,6 +469,8 @@ class PolicyService(RDFHelper, Timing):
                         self._portScanFinish(bidPort)
                         continue
                     portOut = self.intOut(bidPort, connOut)
+                    # Record port URI
+                    portOut["uri"] = str(bidPort)
                     # Parse all ports in port definition
                     self.parsePorts(gIn, bidPort, portOut)
                     # Get time scheduling information from delta
