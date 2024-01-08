@@ -7,6 +7,10 @@ on:
         description: "Build Tag"
         default: "dev"
         type: "string"
+      branch:
+        description: "Branch to use of siterm code?"
+        default: "master"
+        type: "string"
 
 jobs:
   build:
@@ -28,7 +32,7 @@ jobs:
     - name: Build the BASE Docker image
       run: | 
         cd siterm-startup/helpers/base_images/agent/
-        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --tag sdnsense/siteagent-base:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker build . --file Dockerfile --tag sdnsense/siteagent-base:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push BASE Image with tag and date
       run: docker push sdnsense/siteagent-base:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
@@ -41,7 +45,7 @@ jobs:
     - name: Build the AGENT Docker image
       run: | 
         cd siterm-startup/agent/container-build-files/
-        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push AGENT Image with tag and date
       run: docker push sdnsense/site-agent-sense:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
