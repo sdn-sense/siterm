@@ -203,7 +203,7 @@ class HostCalls(HostSubCalls):
         if kwargs["urlParams"]["servicename"]:
             search.append(["servicename", kwargs["urlParams"]["servicename"]])
 
-        actions = self.dbI.get("serviceaction", search=[["uid", modelID]])
+        actions = self.dbI.get("serviceaction", search=search)
         self.responseHeaders(environ, **kwargs)
         return actions
 

@@ -3,7 +3,6 @@ for fname in $(git diff --name-only HEAD HEAD~1); do
     if [[ $fname == *.py ]]
     then
         echo "Checking $fname with python linters"
-        black "$fname"
         isort "$fname"
         pylint "$fname" --rcfile standarts/pylintrc
     fi

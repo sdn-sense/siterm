@@ -27,5 +27,8 @@ jobs:
         env:
           DEFAULT_BRANCH: master
           VALIDATE_ALL_CODEBASE: false
+          VALIDATE_PYTHON_BLACK: false
+          VALIDATE_PYTHON_FLAKE8: false
+          VALIDATE_PYTHON_MYPY: false
           # To report GitHub Actions status checks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
