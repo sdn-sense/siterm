@@ -145,7 +145,7 @@ class HostCalls(HostSubCalls):
         # Delete from service states
         self.dbI.delete("servicestates", [["hostname", host[0]["hostname"]]])
         self.responseHeaders(environ, **kwargs)
-        return {"Status": "DELETED"}
+        return {"Status": f"DELETED {host[0]['hostname']}"}
 
     def servicestate(self, environ, **kwargs):
         """Set Service State in DB."""
@@ -190,9 +190,9 @@ class HostCalls(HostSubCalls):
             raise NotFoundError(
                 f"This Service {inputDict['servicename']} is not supported by Frontend"
             )
-        self._host_recordServiceAction(**inputDict)
+        dbOut = self._host_recordServiceAction(**inputDict)
         self.responseHeaders(environ, **kwargs)
-        return {"Status": "Recorded"}
+        return {"Status": "Recorded", "DB": dbOut}
 
     def __serviceaction_get(self, environ, **kwargs):
         """Get Service Action in DB for GET method."""

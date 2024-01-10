@@ -72,6 +72,7 @@ class HostSubCalls:
         else:
             services = self._host_services
         runningServices = self.dbI.get("servicestates")
+        dbOuts = []
         for service in runningServices:
             add = False
             if service["servicename"] in services:
@@ -100,6 +101,10 @@ class HostSubCalls:
                     "insertdate": getUTCnow(),
                 }
                 self.dbI.insert("serviceaction", [dbOut])
+                dbOuts.append(dbOut)
+        if not dbOuts:
+            raise Exception(f"No Services identified for params: {kwargs}")
+        return dbOuts
 
     def _host_deleteServiceAction(self, **kwargs):
         """Delete service action from DB."""

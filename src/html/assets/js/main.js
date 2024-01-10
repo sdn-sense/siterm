@@ -9,6 +9,13 @@ var entityMap = {
   '=': '&#x3D;',
 };
 
+function newAlert(alertMessage, params){
+    alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert"><\/div>');
+    alert.append(alertMessage);
+    alert.append('<button type="button" class="close" data-dismiss="alert" aria-label="Close">');
+    $('#alerts' + params['type']).append(alert);
+}
+
 function escapeHtml (string) {
   return String(string).replace(/[&<>"'`=\/]/g, function (s) {
     return entityMap[s];
@@ -68,13 +75,13 @@ function escapeHtml (string) {
 
         function defineHostButtons(data, sitename, hostname){
             htmlhostname = hostname.replace(/\./g,'_');
-            controlRow = $('<div class="col-12">');
+            controlRow = $('<div class="row">');
           // Add Remove button for all, except default
             if (hostname != "default") {
-                controlRow.append('<div><form onsubmit="deletehost(\'' + htmlhostname + '\');" id="del-' + htmlhostname + '" name="del-' + htmlhostname + '"><input id="host-' + htmlhostname + '" name="hostname" type="hidden" value="' + hostname + '"><input id="ip-' + htmlhostname + '" name="ip" type="hidden" value="' + data['ip'] + '"><input id="sitename-' + htmlhostname + '" name="sitename" type="hidden" value="' + sitename + '"><input value="Delete Host" type="submit" class="btn btn-danger"></form></div>');
+                controlRow.append('<div class="px-1 py-1"><form onsubmit="deletehost(\'' + htmlhostname + '\');return false" id="del-' + htmlhostname + '" name="del-' + htmlhostname + '"><input id="host-' + htmlhostname + '" name="hostname" type="hidden" value="' + hostname + '"><input id="ip-' + htmlhostname + '" name="ip" type="hidden" value="' + data['ip'] + '"><input id="sitename-' + htmlhostname + '" name="sitename" type="hidden" value="' + sitename + '"><input value="Delete Host" type="submit" class="btn btn-danger"></form></div>');
             }
           // Add Reload Config button
-            controlRow.append('<div><form onsubmit="reloadconfig(\''+ htmlhostname +'\');" id="rel-'+ htmlhostname +'" name="rel-'+ htmlhostname +'"><input id="host-'+htmlhostname+'" name="hostname" type="hidden" value="'+hostname+'"><input id="servicename-'+htmlhostname+'" name="servicename" type="hidden" value="ALL"><input id="action-'+htmlhostname+'" name="action" type="hidden" value="reload"><input value="Reload Config" type="submit" class="btn btn-info"></form></div>');
+            controlRow.append('<div class="px-1 py-1"><form onsubmit="reloadconfig(\''+ htmlhostname +'\');return false" id="rel-'+ htmlhostname +'" name="rel-'+ htmlhostname +'"><input id="host-'+htmlhostname+'" name="hostname" type="hidden" value="'+hostname+'"><input id="servicename-'+htmlhostname+'" name="servicename" type="hidden" value="ALL"><input id="action-'+htmlhostname+'" name="action" type="hidden" value="reload"><input id="sitename-' + htmlhostname + '" name="sitename" type="hidden" value="' + sitename + '"><input value="Reload Config" type="submit" class="btn btn-info"></form></div>');
             return controlRow;
         }
 
@@ -93,8 +100,8 @@ function escapeHtml (string) {
           nRow = $('<div class="row">');
           menCol = $('<div class="col-3">').append(menCol);
           cntDiv = $('<div class="col-9">').append(cntDiv);
-          nRow.append(buttons).append(menCol).append(cntDiv);
-          $('#view_'+sitename+'_'+ htmlhostname ).append(nRow);
+          nRow.append(menCol).append(cntDiv);
+          $('#view_'+sitename+'_'+ htmlhostname ).append('<div class="col-md-12" id="alerts'+htmlhostname+'"></div>').append(buttons).append(nRow);
 
           for (var key in data['hostinfo']){
             sitesConfig = $('<table id="agent_'+ htmlhostname +'_'+ key +'" class="table"></table>');
