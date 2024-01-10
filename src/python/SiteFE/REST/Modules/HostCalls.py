@@ -19,10 +19,10 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
+from SiteFE.REST.Modules.Functions.Host import HostSubCalls
 from SiteRMLibs.CustomExceptions import (BadRequestError, NotFoundError,
                                          OverlapException)
-from SiteRMLibs.MainUtilities import (getUTCnow, jsondumps, read_input_data)
-from SiteFE.REST.Modules.Functions.Host import HostSubCalls
+from SiteRMLibs.MainUtilities import getUTCnow, jsondumps, read_input_data
 
 
 class HostCalls(HostSubCalls):
@@ -40,11 +40,14 @@ class HostCalls(HostSubCalls):
             "updatehost": {"allowedMethods": ["PUT"]},
             "deletehost": {"allowedMethods": ["POST"]},
             "servicestate": {"allowedMethods": ["PUT"]},
-            "serviceaction": {"allowedMethods": ["GET", "POST", "DELETE"],
-                              'urlParams': [{"key": "hostname", "default": "", "type": str},
-                                            {"key": "servicename", "default": "", "type": str}]
-                            }
-            }
+            "serviceaction": {
+                "allowedMethods": ["GET", "POST", "DELETE"],
+                "urlParams": [
+                    {"key": "hostname", "default": "", "type": str},
+                    {"key": "servicename", "default": "", "type": str},
+                ],
+            },
+        }
         self.urlParams.update(urlParams)
 
     def __defineRoutes(self):
@@ -177,7 +180,7 @@ class HostCalls(HostSubCalls):
             return self.__serviceaction_post(environ, **kwargs)
         # ======================================================
         # DELETE
-        if environ['REQUEST_METHOD'].upper() == 'DELETE':
+        if environ["REQUEST_METHOD"].upper() == "DELETE":
             return self.__serviceaction_delete(environ, **kwargs)
         raise BadRequestError("Request not in GET/POST/DELETE METHOD.")
 
@@ -195,12 +198,12 @@ class HostCalls(HostSubCalls):
     def __serviceaction_get(self, environ, **kwargs):
         """Get Service Action in DB for GET method."""
         search = []
-        if kwargs['urlParams']['hostname']:
-            search.append(['hostname', kwargs['urlParams']['hostname']])
-        if kwargs['urlParams']['servicename']:
-            search.append(['servicename', kwargs['urlParams']['servicename']])
+        if kwargs["urlParams"]["hostname"]:
+            search.append(["hostname", kwargs["urlParams"]["hostname"]])
+        if kwargs["urlParams"]["servicename"]:
+            search.append(["servicename", kwargs["urlParams"]["servicename"]])
 
-        actions = self.dbI.get('serviceaction', search=[['uid', modelID]])
+        actions = self.dbI.get("serviceaction", search=[["uid", modelID]])
         self.responseHeaders(environ, **kwargs)
         return actions
 

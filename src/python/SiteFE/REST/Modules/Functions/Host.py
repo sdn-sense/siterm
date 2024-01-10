@@ -12,16 +12,24 @@ from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.MainUtilities import getUTCnow
 
 
-class HostSubCalls():
+class HostSubCalls:
     """Host Info/Add/Update Calls API Sub Module"""
+
     # pylint: disable=E1101
-    _host_services = ["Agent", "Ruler", "Debugger", "LookUpService",
-                      "ProvisioningService", "SNMPMonitoring",
-                      "Prometheus-Push", "Arp-Push"]
+    _host_services = [
+        "Agent",
+        "Ruler",
+        "Debugger",
+        "LookUpService",
+        "ProvisioningService",
+        "SNMPMonitoring",
+        "Prometheus-Push",
+        "Arp-Push",
+    ]
 
     def _host_supportedService(self, servicename):
         """Check if service is supported."""
-        if servicename == 'ALL':
+        if servicename == "ALL":
             return True
         if servicename in self._host_services:
             return True
@@ -37,14 +45,15 @@ class HostSubCalls():
                 "servicename": kwargs.get("servicename", "UNSET"),
                 "runtime": kwargs.get("runtime", -1),
                 "version": kwargs.get("version", runningVersion),
-                "updatedate": getUTCnow()
+                "updatedate": getUTCnow(),
             }
             services = self.dbI.get(
                 "servicestates",
                 search=[
                     ["hostname", dbOut["hostname"]],
                     ["servicename", dbOut["servicename"]],
-                ])
+                ],
+            )
             if services:
                 self.dbI.update("servicestates", [dbOut])
             else:
@@ -66,8 +75,9 @@ class HostSubCalls():
         for service in runningServices:
             add = False
             if service["servicename"] in services:
-                if kwargs.get("hostname", "") != "ALL" and \
-                   service["hostname"] == kwargs.get("hostname", ""):
+                if kwargs.get("hostname", "") != "ALL" and service[
+                    "hostname"
+                ] == kwargs.get("hostname", ""):
                     add = True
                 elif kwargs.get("hostname", "") == "ALL":
                     add = True
@@ -77,22 +87,25 @@ class HostSubCalls():
                         search=[
                             ["hostname", service["hostname"]],
                             ["servicename", service["servicename"]],
-                            ["serviceaction", kwargs["action"]]
-                        ])
+                            ["serviceaction", kwargs["action"]],
+                        ],
+                    )
                     if statein:
                         add = True
             if add:
                 dbOut = {
-                        "hostname": service["hostname"],
-                        "servicename": service["servicename"],
-                        "serviceaction": kwargs["action"],
-                        "insertdate": getUTCnow()
-                    }
+                    "hostname": service["hostname"],
+                    "servicename": service["servicename"],
+                    "serviceaction": kwargs["action"],
+                    "insertdate": getUTCnow(),
+                }
                 self.dbI.insert("serviceaction", [dbOut])
 
     def _host_deleteServiceAction(self, **kwargs):
         """Delete service action from DB."""
-        dbOut = [["hostname", kwargs.get("hostname", "None")],
-                 ["servicename", kwargs.get("servicename", "None")],
-                 ["serviceaction", kwargs.get("action", "None")]]
+        dbOut = [
+            ["hostname", kwargs.get("hostname", "None")],
+            ["servicename", kwargs.get("servicename", "None")],
+            ["serviceaction", kwargs.get("action", "None")],
+        ]
         self.dbI.delete("serviceaction", dbOut)

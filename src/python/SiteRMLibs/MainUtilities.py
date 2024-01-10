@@ -432,30 +432,41 @@ class GitConfig:
 
     def generateVlanList(self, key1, key2, vals):
         """Generate Vlan List. which can be separated by comma, dash"""
+
         def _addToAll(vlanlist):
             """Add to all vlan list"""
             self.config["MAIN"][key1].setdefault("all_vlan_range_list", [])
             for vlanid in vlanlist:
-                if vlanid not in self.config["MAIN"][key1].get("all_vlan_range_list", []):
-                    self.config["MAIN"][key1].setdefault("all_vlan_range_list", []).append(vlanid)
+                if vlanid not in self.config["MAIN"][key1].get(
+                    "all_vlan_range_list", []
+                ):
+                    self.config["MAIN"][key1].setdefault(
+                        "all_vlan_range_list", []
+                    ).append(vlanid)
 
         # Default list is a must! Will be done checked at config preparation/validation
-        if 'vlan_range' not in self.config["MAIN"][key1]:
+        if "vlan_range" not in self.config["MAIN"][key1]:
             return
-        if 'vlan_range_list' not in self.config["MAIN"][key1]:
-            newvlanlist = self.__genVlansRange(self.config["MAIN"][key1]['vlan_range'])
+        if "vlan_range_list" not in self.config["MAIN"][key1]:
+            newvlanlist = self.__genVlansRange(self.config["MAIN"][key1]["vlan_range"])
             self.config["MAIN"][key1]["vlan_range_list"] = newvlanlist
             _addToAll(newvlanlist)
         if key2 == "ports":
             for portname, portvals in self.config["MAIN"][key1][key2].items():
                 if "vlan_range" in portvals:
                     newvlanlist = self.__genVlansRange(portvals["vlan_range"])
-                    self.config["MAIN"][key1][key2][portname]["vlan_range_list"] = newvlanlist
+                    self.config["MAIN"][key1][key2][portname][
+                        "vlan_range_list"
+                    ] = newvlanlist
                     _addToAll(newvlanlist)
                 # Else we set default
                 else:
-                    self.config["MAIN"][key1][key2][portname]["vlan_range"] = self.config["MAIN"][key1]['vlan_range']
-                    self.config["MAIN"][key1][key2][portname]["vlan_range_list"] = self.config["MAIN"][key1]['vlan_range_list']
+                    self.config["MAIN"][key1][key2][portname][
+                        "vlan_range"
+                    ] = self.config["MAIN"][key1]["vlan_range"]
+                    self.config["MAIN"][key1][key2][portname][
+                        "vlan_range_list"
+                    ] = self.config["MAIN"][key1]["vlan_range_list"]
 
     def generateIPList(self, key1, key2, vals):
         """Split by command and return list"""
@@ -920,6 +931,48 @@ def getDBConn(serviceName="", cls=None):
                 continue
         dbConn[sitename] = dbinterface(serviceName, config, sitename)
     return dbConn
+
+
+def reportServiceStatus(**kwargs):
+    """Report service state to DB."""
+    reported = True
+    try:
+        dbI = None
+        dbOut = {
+            "hostname": kwargs.get("hostname", "default"),
+            "servicestate": kwargs.get("servicestate", "UNSET"),
+            "servicename": kwargs.get("servicename", "UNSET"),
+            "runtime": kwargs.get("runtime", -1),
+            "version": kwargs.get("version", runningVersion),
+            "updatedate": getUTCnow(),
+        }
+        try:
+            dbI = getDBConn(dbOut["servicename"], kwargs.get("cls", None))
+        except KeyError:
+            return False
+        dbobj = getVal(dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
+        services = dbobj.get(
+            "servicestates",
+            search=[
+                ["hostname", dbOut["hostname"]],
+                ["servicename", dbOut["servicename"]],
+            ],
+        )
+        if not services:
+            dbobj.insert("servicestates", [dbOut])
+        else:
+            dbobj.update("servicestates", [dbOut])
+    except NoOptionError:
+        reported = False
+    except Exception:
+        excType, excValue = sys.exc_info()[:2]
+        print(
+            "Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
+            str(excType.__name__),
+            excValue,
+        )
+        reported = False
+    return reported
 
 
 def pubStateRemote(**kwargs):

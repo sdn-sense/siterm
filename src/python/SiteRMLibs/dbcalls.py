@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """DB Backend SQL Calls to databses.
 
 Copyright 2019 California Institute of Technology
