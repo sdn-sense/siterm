@@ -20,8 +20,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2023/01/03
 """
 from SiteFE.REST.Modules.Functions.Host import HostSubCalls
-from SiteRMLibs.CustomExceptions import (BadRequestError, NotFoundError,
-                                         OverlapException)
+from SiteRMLibs.CustomExceptions import BadRequestError, NotFoundError, OverlapException
 from SiteRMLibs.MainUtilities import getUTCnow, jsondumps, read_input_data
 
 
