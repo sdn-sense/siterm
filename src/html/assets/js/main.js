@@ -19,7 +19,7 @@ function escapeHtml (string) {
           modCod = $('<code></code>');
           preCod = $('<pre></pre>');
           splData = dataIn.split("\n");
-          for (line in splData){
+          for (var line in splData){
               preCod.append('<div class="row model-row">' + escapeHtml(splData[line]) + '</div>');
           }
           modCod.append(preCod);
@@ -67,11 +67,15 @@ function escapeHtml (string) {
         }
 
         function defineHostButtons(data, sitename, hostname){
-          htmlhostname = hostname.replace(/\./g,'_');
-          controlRow = $('<div class="row">');
-          // Add Remove button
-          controlRow.append('<div><form onsubmit="deletehost(\''+ htmlhostname +'\');" id="del-'+ htmlhostname +'" name="del-'+ htmlhostname +'"><input id="host-'+htmlhostname+'" name="hostname" type="hidden" value="'+hostname+'"><input id="ip-'+htmlhostname+'" name="ip" type="hidden" value="'+data['ip']+'"><input id="sitename-'+htmlhostname+'" name="sitename" type="hidden" value="'+sitename+'"><input value="Delete Host" type="submit" class="btn btn-danger"></form></div>');
-          return controlRow;
+            htmlhostname = hostname.replace(/\./g,'_');
+            controlRow = $('<div class="col-12">');
+          // Add Remove button for all, except default
+            if (hostname != "default") {
+                controlRow.append('<div><form onsubmit="deletehost(\'' + htmlhostname + '\');" id="del-' + htmlhostname + '" name="del-' + htmlhostname + '"><input id="host-' + htmlhostname + '" name="hostname" type="hidden" value="' + hostname + '"><input id="ip-' + htmlhostname + '" name="ip" type="hidden" value="' + data['ip'] + '"><input id="sitename-' + htmlhostname + '" name="sitename" type="hidden" value="' + sitename + '"><input value="Delete Host" type="submit" class="btn btn-danger"></form></div>');
+            }
+          // Add Reload Config button
+            controlRow.append('<div><form onsubmit="reloadconfig(\''+ htmlhostname +'\');" id="rel-'+ htmlhostname +'" name="rel-'+ htmlhostname +'"><input id="host-'+htmlhostname+'" name="hostname" type="hidden" value="'+hostname+'"><input id="servicename-'+htmlhostname+'" name="servicename" type="hidden" value="ALL"><input id="action-'+htmlhostname+'" name="action" type="hidden" value="reload"><input value="Reload Config" type="submit" class="btn btn-info"></form></div>');
+            return controlRow;
         }
 
         function defineDTNConfig(data, sitename, hostname) {
@@ -85,10 +89,11 @@ function escapeHtml (string) {
                cntDiv.append('<div class="tab-pane fade" id="v-pills-'+ htmlhostname + '_' +key+'" role="tabpanel" aria-labelledby="v-pills-'+ htmlhostname + '_' +key+'-tab"></div>');
              }
           }
+          buttons = defineHostButtons(data, sitename, hostname);
           nRow = $('<div class="row">');
           menCol = $('<div class="col-3">').append(menCol);
           cntDiv = $('<div class="col-9">').append(cntDiv);
-          nRow.append(menCol).append(cntDiv);
+          nRow.append(buttons).append(menCol).append(cntDiv);
           $('#view_'+sitename+'_'+ htmlhostname ).append(nRow);
 
           for (var key in data['hostinfo']){
@@ -103,7 +108,7 @@ function escapeHtml (string) {
                 sitesConfig.append(line);
             }
             $('#v-pills-' + htmlhostname + '_' +key).append(sitesConfig);
-          };
+          }
         }
 
         function defineSitesConfig(data, sitename) {
@@ -118,7 +123,8 @@ function escapeHtml (string) {
             line.append(configLine);
             sitesConfig.append(line);
          }
-        $('#view_fe_'+ sitename).append(sitesConfig);
+          buttons = defineHostButtons(data, sitename, "default");
+          $('#view_fe_'+ sitename).append(buttons).append(sitesConfig);
         }
 
         function doSiteUpdate(ids) {

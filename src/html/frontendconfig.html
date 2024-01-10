@@ -25,6 +25,21 @@
             if (fieldName){params[fieldName] = fieldValue;}
           }
           $.post("/"+params['sitename']+"/sitefe/json/frontend/deletehost", params, function(result){
+            // TODO use alter section to show result
+            console.log(result);
+          });
+        }
+
+          function reloadconfig(hostname) {
+          docObj =  document.getElementById("rel-"+hostname);
+          var params = {};
+          for(var i=0; i < docObj.elements.length; i++){
+            var fieldName = docObj.elements[i].name;
+            var fieldValue = docObj.elements[i].value;
+            if (fieldName){params[fieldName] = fieldValue;}
+          }
+          $.post("/"+params['sitename']+"/sitefe/json/frontend/serviceaction", params, function(result){
+            // TODO use alter section to show result
             console.log(result);
           });
         }

@@ -922,48 +922,6 @@ def getDBConn(serviceName="", cls=None):
     return dbConn
 
 
-def reportServiceStatus(**kwargs):
-    """Report service state to DB."""
-    reported = True
-    try:
-        dbI = None
-        dbOut = {
-            "hostname": kwargs.get("hostname", "default"),
-            "servicestate": kwargs.get("servicestate", "UNSET"),
-            "servicename": kwargs.get("servicename", "UNSET"),
-            "runtime": kwargs.get("runtime", -1),
-            "version": kwargs.get("version", runningVersion),
-            "updatedate": getUTCnow(),
-        }
-        try:
-            dbI = getDBConn(dbOut["servicename"], kwargs.get("cls", None))
-        except KeyError:
-            return False
-        dbobj = getVal(dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
-        services = dbobj.get(
-            "servicestates",
-            search=[
-                ["hostname", dbOut["hostname"]],
-                ["servicename", dbOut["servicename"]],
-            ],
-        )
-        if not services:
-            dbobj.insert("servicestates", [dbOut])
-        else:
-            dbobj.update("servicestates", [dbOut])
-    except NoOptionError:
-        reported = False
-    except Exception:
-        excType, excValue = sys.exc_info()[:2]
-        print(
-            "Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
-            str(excType.__name__),
-            excValue,
-        )
-        reported = False
-    return reported
-
-
 def pubStateRemote(**kwargs):
     """Publish state from remote services."""
     if reportServiceStatus(**kwargs):
