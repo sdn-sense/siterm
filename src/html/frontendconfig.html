@@ -25,19 +25,34 @@
             if (fieldName){params[fieldName] = fieldValue;}
           }
           $.post("/"+params['sitename']+"/sitefe/json/frontend/deletehost", params, function(result){
-            console.log(result);
+            params['type'] = hostname.replace(/\./g,'_');
+            newAlert("Host delete sent:" + JSON.stringify(result), params);
           });
         }
+
+          function reloadconfig(hostname) {
+            docObj =  document.getElementById("rel-"+hostname);
+            var params = {};
+            for(var i=0; i < docObj.elements.length; i++){
+              var fieldName = docObj.elements[i].name;
+              var fieldValue = docObj.elements[i].value;
+              if (fieldName){params[fieldName] = fieldValue;}
+            }
+            $.post("/"+params['sitename']+"/sitefe/json/frontend/serviceaction", params, function(result){
+              params['type'] = hostname.replace(/\./g,'_');
+              newAlert("Service action submitted:" + JSON.stringify(result), params);
+            });
+          }
 
         function load_data() {
             $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
               data['hostinfo'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
                 sitename = data['general']['sites'][i];
-                $.ajax({url: data['general']['sites'][i] + '/sitefe/json/frontend/getdata', 
+                $.ajax({url: data['general']['sites'][i] + '/sitefe/json/frontend/getdata',
                   dataType: 'json',
                   data: {},
-                  async: false, 
+                  async: false,
                   success: function(json){
                       for (j=0; j < json.length; j++){
                       var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');

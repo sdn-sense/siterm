@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """DB Backend SQL Calls to databses.
 
 Copyright 2019 California Institute of Technology
@@ -128,6 +129,13 @@ create_deltatimestates = """CREATE TABLE IF NOT EXISTS deltatimestates(
                              hostport text NOT NULL,
                              uuidstate text NOT NULL,
                              primary key(id))"""
+create_serviceaction = """CREATE TABLE IF NOT EXISTS serviceaction(
+                                id int auto_increment,
+                                servicename text NOT NULL,
+                                hostname text NOT NULL,
+                                serviceaction text NOT NULL,
+                                insertdate int NOT NULL,
+                                primary key(id))"""
 
 insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s, %(content)s)"
 insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, reduction, addition, reductionid, modadd, connectionid)
@@ -144,6 +152,7 @@ insert_servicestates = "INSERT INTO servicestates(hostname, servicename, service
 insert_debugrequests = "INSERT INTO debugrequests(hostname, state, requestdict, output, insertdate, updatedate) VALUES(%(hostname)s, %(state)s, %(requestdict)s, %(output)s, %(insertdate)s, %(updatedate)s)"
 insert_snmpmon = "INSERT INTO snmpmon(hostname, insertdate, updatedate, output) VALUES(%(hostname)s, %(insertdate)s, %(updatedate)s, %(output)s)"
 insert_deltatimestates = "INSERT INTO deltatimestates(insertdate, uuid, uuidtype, hostname, hostport, uuidstate) VALUES(%(insertdate)s, %(uuid)s, %(uuidtype)s, %(hostname)s, %(hostport)s, %(uuidstate)s)"
+insert_serviceaction = "INSERT INTO serviceaction(servicename, hostname, serviceaction, insertdate) VALUES(%(servicename)s, %(hostname)s, %(serviceaction)s, %(insertdate)s)"
 
 get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
 get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, reduction, addition, reductionid, modadd, connectionid FROM deltas"
@@ -160,6 +169,7 @@ get_debugrequests = "SELECT id, hostname, state, requestdict, output, insertdate
 get_debugrequestsids = "SELECT id FROM debugrequests"
 get_snmpmon = "SELECT id, hostname, insertdate, updatedate, output FROM snmpmon"
 get_deltatimestates = "SELECT id, insertdate, uuid, uuidtype, hostname, hostport, uuidstate FROM deltatimestates"
+get_serviceaction = "SELECT id, servicename, hostname, serviceaction, insertdate FROM serviceaction"
 
 update_deltas = "UPDATE deltas SET updatedate = %(updatedate)s, state = %(state)s WHERE uid = %(uid)s"
 update_delta_connections = "UPDATE delta_connections SET state = %(state)s WHERE connectionid = %(connectionid)s AND deltaid = %(deltaid)s"
@@ -173,6 +183,7 @@ update_servicestates = "UPDATE servicestates SET servicestate = %(servicestate)s
 update_debugrequests = "UPDATE debugrequests SET state = %(state)s, output = %(output)s, updatedate = %(updatedate)s WHERE id = %(id)s"
 update_snmpmon = "UPDATE snmpmon SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s AND hostname = %(hostname)s"
 # update_deltatimestates - Update call is not needed for update delta timestates. It always write a new entrya and update not needed.
+update_serviceaction = "UPDATE serviceaction SET serviceaction = %(serviceaction)s WHERE id = %(id)s"
 
 delete_models = "DELETE FROM models"
 delete_deltas = "DELETE FROM deltas"
@@ -188,4 +199,4 @@ delete_debugrequests = "DELETE FROM debugrequests"
 delete_activeDeltas = "DELETE FROM activeDeltas"
 delete_snmpmon = "DELETE FROM snmpmon"
 delete_deltatimestates = "DELETE FROM deltatimestates"
-
+delete_serviceaction = "DELETE FROM serviceaction"

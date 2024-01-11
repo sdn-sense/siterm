@@ -36,11 +36,15 @@ import simplejson as json
 from past.builtins import basestring
 from rdflib import Graph
 from SiteRMLibs import __version__ as runningVersion
-from SiteRMLibs.CustomExceptions import (FailedInterfaceCommand, NoOptionError,
-                                         NoSectionError, NotFoundError,
-                                         NotSupportedArgument,
-                                         TooManyArgumentalValues,
-                                         WrongInputError)
+from SiteRMLibs.CustomExceptions import (
+    FailedInterfaceCommand,
+    NoOptionError,
+    NoSectionError,
+    NotFoundError,
+    NotSupportedArgument,
+    TooManyArgumentalValues,
+    WrongInputError,
+)
 from SiteRMLibs.DBBackend import dbinterface
 from SiteRMLibs.HTTPLibrary import Requests
 from yaml import safe_load as yload
@@ -432,30 +436,41 @@ class GitConfig:
 
     def generateVlanList(self, key1, key2, vals):
         """Generate Vlan List. which can be separated by comma, dash"""
+
         def _addToAll(vlanlist):
             """Add to all vlan list"""
             self.config["MAIN"][key1].setdefault("all_vlan_range_list", [])
             for vlanid in vlanlist:
-                if vlanid not in self.config["MAIN"][key1].get("all_vlan_range_list", []):
-                    self.config["MAIN"][key1].setdefault("all_vlan_range_list", []).append(vlanid)
+                if vlanid not in self.config["MAIN"][key1].get(
+                    "all_vlan_range_list", []
+                ):
+                    self.config["MAIN"][key1].setdefault(
+                        "all_vlan_range_list", []
+                    ).append(vlanid)
 
         # Default list is a must! Will be done checked at config preparation/validation
-        if 'vlan_range' not in self.config["MAIN"][key1]:
+        if "vlan_range" not in self.config["MAIN"][key1]:
             return
-        if 'vlan_range_list' not in self.config["MAIN"][key1]:
-            newvlanlist = self.__genVlansRange(self.config["MAIN"][key1]['vlan_range'])
+        if "vlan_range_list" not in self.config["MAIN"][key1]:
+            newvlanlist = self.__genVlansRange(self.config["MAIN"][key1]["vlan_range"])
             self.config["MAIN"][key1]["vlan_range_list"] = newvlanlist
             _addToAll(newvlanlist)
         if key2 == "ports":
             for portname, portvals in self.config["MAIN"][key1][key2].items():
                 if "vlan_range" in portvals:
                     newvlanlist = self.__genVlansRange(portvals["vlan_range"])
-                    self.config["MAIN"][key1][key2][portname]["vlan_range_list"] = newvlanlist
+                    self.config["MAIN"][key1][key2][portname][
+                        "vlan_range_list"
+                    ] = newvlanlist
                     _addToAll(newvlanlist)
                 # Else we set default
                 else:
-                    self.config["MAIN"][key1][key2][portname]["vlan_range"] = self.config["MAIN"][key1]['vlan_range']
-                    self.config["MAIN"][key1][key2][portname]["vlan_range_list"] = self.config["MAIN"][key1]['vlan_range_list']
+                    self.config["MAIN"][key1][key2][portname][
+                        "vlan_range"
+                    ] = self.config["MAIN"][key1]["vlan_range"]
+                    self.config["MAIN"][key1][key2][portname][
+                        "vlan_range_list"
+                    ] = self.config["MAIN"][key1]["vlan_range_list"]
 
     def generateIPList(self, key1, key2, vals):
         """Split by command and return list"""
@@ -800,8 +815,8 @@ def getUrlParams(environ, paramsList):
     """Get URL parameters and return them in dictionary."""
     if not paramsList:
         return {}
-    if environ["REQUEST_METHOD"].upper() in ["POST"]:
-        # POST will handle by himself
+    if environ["REQUEST_METHOD"].upper() in ["POST", "DELETE"]:
+        # POST, DELETE will handle by himself
         return {}
     form = cgi.FieldStorage(fp=environ["wsgi.input"], environ=environ)
     outParams = {}
@@ -821,10 +836,12 @@ def getUrlParams(environ, paramsList):
                     raise NotSupportedArgument(
                         f"Parameter {param['key']} value not acceptable. Allowed options: [tT]rue,[fF]alse"
                     )
-            elif param["type"] == str and outVals[0] not in param["options"]:
-                raise NotSupportedArgument(
-                    f"Server does not support parameter {param['key']}={outVals[0]}. Supported: param['options']"
-                )
+            elif param["type"] == str and 'options' in param:
+                if  outVals[0] not in param["options"]:
+                    raise NotSupportedArgument(
+                        f"Server does not support parameter {param['key']}={outVals[0]}. Supported: param['options']"
+                    )
+            outParams[param["key"]] = outVals[0]
         elif not outVals:
             outParams[param["key"]] = param["default"]
     print(outParams)
@@ -921,70 +938,6 @@ def getDBConn(serviceName="", cls=None):
         dbConn[sitename] = dbinterface(serviceName, config, sitename)
     return dbConn
 
-
-def reportServiceStatus(**kwargs):
-    """Report service state to DB."""
-    reported = True
-    try:
-        dbI = None
-        dbOut = {
-            "hostname": kwargs.get("hostname", "default"),
-            "servicestate": kwargs.get("servicestate", "UNSET"),
-            "servicename": kwargs.get("servicename", "UNSET"),
-            "runtime": kwargs.get("runtime", -1),
-            "version": kwargs.get("version", runningVersion),
-            "updatedate": getUTCnow(),
-        }
-        try:
-            dbI = getDBConn(dbOut["servicename"], kwargs.get("cls", None))
-        except KeyError:
-            return False
-        dbobj = getVal(dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
-        services = dbobj.get(
-            "servicestates",
-            search=[
-                ["hostname", dbOut["hostname"]],
-                ["servicename", dbOut["servicename"]],
-            ],
-        )
-        if not services:
-            dbobj.insert("servicestates", [dbOut])
-        else:
-            dbobj.update("servicestates", [dbOut])
-    except NoOptionError:
-        reported = False
-    except Exception:
-        excType, excValue = sys.exc_info()[:2]
-        print(
-            "Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
-            str(excType.__name__),
-            excValue,
-        )
-        reported = False
-    return reported
-
-
-def pubStateRemote(**kwargs):
-    """Publish state from remote services."""
-    if reportServiceStatus(**kwargs):
-        return
-    try:
-        fullUrl = getFullUrl(kwargs["cls"].config, kwargs["sitename"])
-        fullUrl += "/sitefe"
-        dic = {
-            "servicename": kwargs["servicename"],
-            "servicestate": kwargs["servicestate"],
-            "sitename": kwargs["sitename"],
-            "runtime": kwargs["runtime"],
-            "hostname": getHostname(),
-            "version": runningVersion,
-        }
-        publishToSiteFE(dic, fullUrl, "/json/frontend/servicestate")
-    except Exception:
-        excType, excValue = sys.exc_info()[:2]
-        print(
-            f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
-        )
 
 
 def getCurrentModel(cls, raiseException=False):

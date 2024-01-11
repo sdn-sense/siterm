@@ -8,6 +8,7 @@ Changes applied to this code:
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
 import sys
+import time
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
 from SiteRMLibs.ConfigFetcher import ConfigFetcher
 
@@ -24,6 +25,16 @@ class MyDaemon(Daemon):
             if callType not in self.runThreads:
                 self.runThreads[callType] = ConfigFetcher(self.logger)
             self.runThreads[callType].refreshthread(houreq, dayeq)
+
+    def cleaner(self):
+        """Clean files from /tmp/ directory"""
+        # Override of Daemonizer cleaner
+        for _, rthread in list(self.runThreads.items()):
+            try:
+                rthread.cleaner()
+            except:
+                continue
+        time.sleep(60)
 
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)

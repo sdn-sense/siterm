@@ -19,17 +19,19 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
-from SiteRMLibs.CustomExceptions import (BadRequestError, NotFoundError,
-                                         OverlapException)
-from SiteRMLibs.MainUtilities import (getUTCnow, jsondumps, read_input_data,
-                                      reportServiceStatus)
+from SiteFE.REST.Modules.Functions.Host import HostSubCalls
+from SiteRMLibs.CustomExceptions import BadRequestError, NotFoundError, OverlapException
+from SiteRMLibs.MainUtilities import getUTCnow, jsondumps, read_input_data
 
 
-class HostCalls:
+class HostCalls(HostSubCalls):
     """Host Info/Add/Update Calls API Module"""
 
     # pylint: disable=E1101
     def __init__(self):
+        self.host_services = ["Agent", "Ruler", "Debugger", "LookUpService",
+                              "ProvisioningService", "SNMPMonitoring",
+                              "Prometheus-Push", "Arp-Push"]
         self.__defineRoutes()
         self.__urlParams()
 
@@ -40,6 +42,13 @@ class HostCalls:
             "updatehost": {"allowedMethods": ["PUT"]},
             "deletehost": {"allowedMethods": ["POST"]},
             "servicestate": {"allowedMethods": ["PUT"]},
+            "serviceaction": {
+                "allowedMethods": ["GET", "POST", "DELETE"],
+                "urlParams": [
+                    {"key": "hostname", "default": "", "type": str},
+                    {"key": "servicename", "default": "", "type": str, "options": self.host_services + ["ALL"]},
+                ],
+            },
         }
         self.urlParams.update(urlParams)
 
@@ -54,6 +63,9 @@ class HostCalls:
         )
         self.routeMap.connect(
             "servicestate", "/json/frontend/servicestate", action="servicestate"
+        )
+        self.routeMap.connect(
+            "serviceaction", "/json/frontend/serviceaction", action="serviceaction"
         )
 
     def addhost(self, environ, **kwargs):
@@ -136,27 +148,16 @@ class HostCalls:
         # Delete from service states
         self.dbI.delete("servicestates", [["hostname", host[0]["hostname"]]])
         self.responseHeaders(environ, **kwargs)
-        return {"Status": "DELETED"}
+        return {"Status": f"DELETED {host[0]['hostname']}"}
 
     def servicestate(self, environ, **kwargs):
         """Set Service State in DB."""
         inputDict = read_input_data(environ)
-        # Only 3 Services are supported to report via URL
-        # SiteRM-Agent | SiteRM-Ruler | SiteRM-Debugger
-        if inputDict["servicename"] not in [
-            "Agent",
-            "Ruler",
-            "Debugger",
-            "LookUpService",
-            "ProvisioningService",
-            "SNMPMonitoring",
-            "Prometheus-Push",
-            "Arp-Push",
-        ]:
+        if not self._host_supportedService(inputDict.get("servicename", "")):
             raise NotFoundError(
                 f"This Service {inputDict['servicename']} is not supported by Frontend"
             )
-        reportServiceStatus(
+        self._host_reportServiceStatus(
             **{
                 "servicename": inputDict["servicename"],
                 "servicestate": inputDict["servicestate"],
@@ -164,8 +165,56 @@ class HostCalls:
                 "hostname": inputDict["hostname"],
                 "version": inputDict["version"],
                 "runtime": inputDict["runtime"],
-                "cls": self,
             }
         )
         self.responseHeaders(environ, **kwargs)
         return {"Status": "REPORTED"}
+
+    def serviceaction(self, environ, **kwargs):
+        """Set Service Action in DB."""
+        # ======================================================
+        # GET
+        if environ["REQUEST_METHOD"].upper() == "GET":
+            return self.__serviceaction_get(environ, **kwargs)
+        # ======================================================
+        # POST
+        if environ["REQUEST_METHOD"].upper() == "POST":
+            return self.__serviceaction_post(environ, **kwargs)
+        # ======================================================
+        # DELETE
+        if environ["REQUEST_METHOD"].upper() == "DELETE":
+            return self.__serviceaction_delete(environ, **kwargs)
+        raise BadRequestError("Request not in GET/POST/DELETE METHOD.")
+
+    def __serviceaction_post(self, environ, **kwargs):
+        """Set Service Action in DB for POST method."""
+        inputDict = read_input_data(environ)
+        if not self._host_supportedService(inputDict.get("servicename", "")):
+            raise NotFoundError(
+                f"This Service {inputDict['servicename']} is not supported by Frontend"
+            )
+        dbOut = self._host_recordServiceAction(**inputDict)
+        self.responseHeaders(environ, **kwargs)
+        return {"Status": "Recorded", "DB": dbOut}
+
+    def __serviceaction_get(self, environ, **kwargs):
+        """Get Service Action in DB for GET method."""
+        search = []
+        if kwargs["urlParams"].get("hostname", None):
+            search.append(["hostname", kwargs["urlParams"]["hostname"]])
+        if kwargs["urlParams"].get("servicename", None):
+            search.append(["servicename", kwargs["urlParams"]["servicename"]])
+        actions = self.dbI.get("serviceaction", search=search)
+        self.responseHeaders(environ, **kwargs)
+        return actions
+
+    def __serviceaction_delete(self, environ, **kwargs):
+        """Delete Service Action in DB for DELETE method."""
+        inputDict = read_input_data(environ)
+        if not self._host_supportedService(inputDict.get("servicename", "")):
+            raise NotFoundError(
+                f"This Service {inputDict['servicename']} is not supported by Frontend"
+            )
+        self._host_deleteServiceAction(**inputDict)
+        self.responseHeaders(environ, **kwargs)
+        return {"Status": "Deleted"}
