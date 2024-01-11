@@ -29,6 +29,9 @@ class HostCalls(HostSubCalls):
 
     # pylint: disable=E1101
     def __init__(self):
+        self.host_services = ["Agent", "Ruler", "Debugger", "LookUpService",
+                              "ProvisioningService", "SNMPMonitoring",
+                              "Prometheus-Push", "Arp-Push"]
         self.__defineRoutes()
         self.__urlParams()
 
@@ -43,7 +46,7 @@ class HostCalls(HostSubCalls):
                 "allowedMethods": ["GET", "POST", "DELETE"],
                 "urlParams": [
                     {"key": "hostname", "default": "", "type": str},
-                    {"key": "servicename", "default": "", "type": str},
+                    {"key": "servicename", "default": "", "type": str, "options": self.host_services + ["ALL"]},
                 ],
             },
         }
@@ -197,11 +200,10 @@ class HostCalls(HostSubCalls):
     def __serviceaction_get(self, environ, **kwargs):
         """Get Service Action in DB for GET method."""
         search = []
-        if kwargs["urlParams"]["hostname"]:
+        if kwargs["urlParams"].get("hostname", None):
             search.append(["hostname", kwargs["urlParams"]["hostname"]])
-        if kwargs["urlParams"]["servicename"]:
+        if kwargs["urlParams"].get("servicename", None):
             search.append(["servicename", kwargs["urlParams"]["servicename"]])
-
         actions = self.dbI.get("serviceaction", search=search)
         self.responseHeaders(environ, **kwargs)
         return actions

@@ -8,6 +8,7 @@ Changes applied to this code:
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
 import sys
+import time
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
 from SiteRMLibs.ConfigFetcher import ConfigFetcher
 
@@ -33,6 +34,7 @@ class MyDaemon(Daemon):
                 rthread.cleaner()
             except:
                 continue
+        time.sleep(60)
 
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)

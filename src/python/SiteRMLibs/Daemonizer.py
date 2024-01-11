@@ -99,7 +99,7 @@ class DBBackend():
         if self._reportServiceStatus(**kwargs):
             return
         try:
-            fullUrl = getFullUrl(kwargs["cls"].config, kwargs["sitename"])
+            fullUrl = getFullUrl(self.config, kwargs["sitename"])
             fullUrl += "/sitefe"
             dic = {
                 "servicename": kwargs["servicename"],
@@ -126,27 +126,33 @@ class DBBackend():
         if actions:
             # Config Fetcher is not allowed to delete other services refresh.
             if self.component == "ConfigFetcher":
-                return False
+                return True
             for action in actions:
-                print(f"delete {action}")
                 dbOut = [["id", action['id']]]
                 dbobj.delete("serviceaction", dbOut)
-            return False
+            return True
         return False
 
     def _autoRefreshAPI(self, **kwargs):
+        refresh = False
         try:
             hostname = getFullUrl(self.config, kwargs["sitename"])
-            url = f"/sitefe/json/frontend/serviceaction?servicename={self.component}&hostname={hostname}"
+            url = f"/sitefe/json/frontend/serviceaction"
+            kwargs['servicename'] = self.component
+            kwargs['hostname'] = getHostname()
             actions = getDataFromSiteFE(kwargs, hostname, url)
-            print(actions)
-            # publishToSiteFE(inputDict, host, url, verb="DELETE"):
+            # Config Fetcher is not allowed to delete other services refresh.
+            if actions[0] and self.component == "ConfigFetcher":
+                return True
+            for action in actions[0]:
+                publishToSiteFE({'id': action['id'], 'servicename': self.component}, hostname, url, verb="DELETE")
+                refresh = True
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(
                 f"Error details in _autoRefreshAPI. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
             )
-        return False
+        return refresh
 
 
 
@@ -342,16 +348,16 @@ class Daemon(DBBackend):
         refresh = False
         try:
             if self.dbI:
-                refresh = self._autoRefreshDB(self, **kwargs)
+                refresh = self._autoRefreshDB(**kwargs)
             else:
-                refresh = self._autoRefreshAPI(self, **kwargs)
+                refresh = self._autoRefreshAPI(**kwargs)
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(
                 f"Error details in _autoRefreshAPI. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
             )
             return False
-        return False
+        return refresh
 
     def runLoop(self):
         """Return True if it is not onetime run."""

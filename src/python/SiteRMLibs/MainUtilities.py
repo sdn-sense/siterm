@@ -811,8 +811,8 @@ def getUrlParams(environ, paramsList):
     """Get URL parameters and return them in dictionary."""
     if not paramsList:
         return {}
-    if environ["REQUEST_METHOD"].upper() in ["POST"]:
-        # POST will handle by himself
+    if environ["REQUEST_METHOD"].upper() in ["POST", "DELETE"]:
+        # POST, DELETE will handle by himself
         return {}
     form = cgi.FieldStorage(fp=environ["wsgi.input"], environ=environ)
     outParams = {}
@@ -832,10 +832,12 @@ def getUrlParams(environ, paramsList):
                     raise NotSupportedArgument(
                         f"Parameter {param['key']} value not acceptable. Allowed options: [tT]rue,[fF]alse"
                     )
-            elif param["type"] == str and outVals[0] not in param["options"]:
-                raise NotSupportedArgument(
-                    f"Server does not support parameter {param['key']}={outVals[0]}. Supported: param['options']"
-                )
+            elif param["type"] == str and 'options' in param:
+                if  outVals[0] not in param["options"]:
+                    raise NotSupportedArgument(
+                        f"Server does not support parameter {param['key']}={outVals[0]}. Supported: param['options']"
+                    )
+            outParams[param["key"]] = outVals[0]
         elif not outVals:
             outParams[param["key"]] = param["default"]
     print(outParams)

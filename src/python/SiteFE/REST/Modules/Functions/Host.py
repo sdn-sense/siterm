@@ -15,23 +15,11 @@ from SiteRMLibs.MainUtilities import getUTCnow
 class HostSubCalls:
     """Host Info/Add/Update Calls API Sub Module"""
 
-    # pylint: disable=E1101
-    _host_services = [
-        "Agent",
-        "Ruler",
-        "Debugger",
-        "LookUpService",
-        "ProvisioningService",
-        "SNMPMonitoring",
-        "Prometheus-Push",
-        "Arp-Push",
-    ]
-
     def _host_supportedService(self, servicename):
         """Check if service is supported."""
         if servicename == "ALL":
             return True
-        if servicename in self._host_services:
+        if servicename in self.host_services:
             return True
         return False
 
@@ -70,7 +58,7 @@ class HostSubCalls:
         if kwargs["servicename"] != "ALL":
             services.append(kwargs["servicename"])
         else:
-            services = self._host_services
+            services = self.host_services
         runningServices = self.dbI.get("servicestates")
         dbOuts = []
         for service in runningServices:
@@ -108,9 +96,8 @@ class HostSubCalls:
 
     def _host_deleteServiceAction(self, **kwargs):
         """Delete service action from DB."""
-        dbOut = [
-            ["hostname", kwargs.get("hostname", "None")],
-            ["servicename", kwargs.get("servicename", "None")],
-            ["serviceaction", kwargs.get("action", "None")],
-        ]
+        dbOut = []
+        for key in ['id', 'hostname', 'servicename']:
+            if key in kwargs:
+                dbOut.append([key, kwargs[key]])
         self.dbI.delete("serviceaction", dbOut)
