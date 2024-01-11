@@ -7,18 +7,28 @@ Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
+import argparse
+import atexit
 import os
 import sys
 import time
-import argparse
 import traceback
-import atexit
+
 import psutil
 from SiteRMLibs import __version__ as runningVersion
-from SiteRMLibs.MainUtilities import getGitConfig, getLoggingObject
-from SiteRMLibs.MainUtilities import reCacheConfig
-from SiteRMLibs.MainUtilities import getUTCnow, publishToSiteFE, getDataFromSiteFE
-from SiteRMLibs.MainUtilities import getDBConn, getVal, getFullUrl, getHostname
+from SiteRMLibs.MainUtilities import (
+    getDataFromSiteFE,
+    getDBConn,
+    getFullUrl,
+    getGitConfig,
+    getHostname,
+    getLoggingObject,
+    getUTCnow,
+    getVal,
+    publishToSiteFE,
+    reCacheConfig,
+)
+
 
 def getParser(description):
     """Returns the argparse parser."""

@@ -36,11 +36,15 @@ import simplejson as json
 from past.builtins import basestring
 from rdflib import Graph
 from SiteRMLibs import __version__ as runningVersion
-from SiteRMLibs.CustomExceptions import (FailedInterfaceCommand, NoOptionError,
-                                         NoSectionError, NotFoundError,
-                                         NotSupportedArgument,
-                                         TooManyArgumentalValues,
-                                         WrongInputError)
+from SiteRMLibs.CustomExceptions import (
+    FailedInterfaceCommand,
+    NoOptionError,
+    NoSectionError,
+    NotFoundError,
+    NotSupportedArgument,
+    TooManyArgumentalValues,
+    WrongInputError,
+)
 from SiteRMLibs.DBBackend import dbinterface
 from SiteRMLibs.HTTPLibrary import Requests
 from yaml import safe_load as yload
