@@ -25,6 +25,15 @@ class MyDaemon(Daemon):
                 self.runThreads[callType] = ConfigFetcher(self.logger)
             self.runThreads[callType].refreshthread(houreq, dayeq)
 
+    def cleaner(self):
+        """Clean files from /tmp/ directory"""
+        # Override of Daemonizer cleaner
+        for _, rthread in list(self.runThreads.items()):
+            try:
+                rthread.cleaner()
+            except:
+                continue
+
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)
     if len(sys.argv) == 1:

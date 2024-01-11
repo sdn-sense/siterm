@@ -17,6 +17,7 @@ from SiteRMLibs.MainUtilities import getWebContentFromURL
 from SiteRMLibs.MainUtilities import getLoggingObject
 
 class ConfigFetcher():
+    """Config Fetcher from Github."""
     def __init__(self, logger):
         self.logger = logger
         self.gitObj = GitConfig()
@@ -54,20 +55,34 @@ class ConfigFetcher():
         return output
 
     def fetchMapping(self):
+        """Fetch mapping file from Github"""
         url = f"{self.gitObj.getFullGitUrl()}/mapping.yaml"
         return self._fetchFile('mapping', url)
 
     def fetchAgent(self):
+        """Fetch Agent config file from Github"""
         if self.gitObj.config['MAPPING']['type'] == 'Agent':
             url = self.gitObj.getFullGitUrl([self.gitObj.config['MAPPING']['config'], 'main.yaml'])
             self._fetchFile('Agent-main', url)
 
     def fetchFE(self):
+        """Fetch FE config file from Github"""
         if self.gitObj.config['MAPPING']['type'] == 'FE':
             url = self.gitObj.getFullGitUrl([self.gitObj.config['MAPPING']['config'], 'main.yaml'])
             self._fetchFile('FE-main', url)
             url = self.gitObj.getFullGitUrl([self.gitObj.config['MAPPING']['config'], 'auth.yaml'])
             self._fetchFile('FE-auth', url)
+
+    def cleaner(self):
+        """Clean files from /tmp/ directory"""
+        datetimeNow = datetime.datetime.now() + datetime.timedelta(minutes=10)
+        for name in ["mapping", "Agent-main", "FE-main", "FE-auth"]:
+            filename = f"/tmp/{datetimeNow.strftime('%Y-%m-%d-%H')}-{name}.yaml"
+            if os.path.isfile(filename):
+                os.remove(filename)
+            filename = f'/tmp/siterm-link-{name}.yaml'
+            if os.path.isfile(filename):
+                os.remove(filename)
 
     def startwork(self):
         """Start Config Fetcher Service."""

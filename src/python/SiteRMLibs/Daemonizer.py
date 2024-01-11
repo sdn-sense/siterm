@@ -17,9 +17,8 @@ import psutil
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.MainUtilities import getGitConfig, getLoggingObject
 from SiteRMLibs.MainUtilities import reCacheConfig
-from SiteRMLibs.MainUtilities import pubStateRemote
-from SiteRMLibs.MainUtilities import getUTCnow
-
+from SiteRMLibs.MainUtilities import getUTCnow, publishToSiteFE, getDataFromSiteFE
+from SiteRMLibs.MainUtilities import getDBConn, getVal, getFullUrl, getHostname
 
 def getParser(description):
     """Returns the argparse parser."""
@@ -47,7 +46,112 @@ def validateArgs(inargs):
     if inargs.action not in ['start', 'stop', 'status', 'restart']:
         raise Exception(f"Action '{inargs.action}' not supported. Supported actions: start, stop, status, restart")
 
-class Daemon():
+
+class DBBackend():
+    """DB Backend class."""
+
+    def _loadDB(self, component):
+        """Load DB connection."""
+        try:
+            self.dbI = getDBConn(component, self)
+        except KeyError:
+            self.dbI = None
+
+
+    def _reportServiceStatus(self, **kwargs):
+        """Report service state to DB."""
+        if not self.dbI:
+            return False
+        reported = True
+        try:
+            dbOut = {
+                "hostname": kwargs.get("hostname", "default"),
+                "servicestate": kwargs.get("servicestate", "UNSET"),
+                "servicename": kwargs.get("servicename", "UNSET"),
+                "runtime": kwargs.get("runtime", -1),
+                "version": kwargs.get("version", runningVersion),
+                "updatedate": getUTCnow(),
+            }
+            dbobj = getVal(self.dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
+            services = dbobj.get(
+                "servicestates",
+                search=[
+                    ["hostname", dbOut["hostname"]],
+                    ["servicename", dbOut["servicename"]],
+                ],
+            )
+            if not services:
+                dbobj.insert("servicestates", [dbOut])
+            else:
+                dbobj.update("servicestates", [dbOut])
+        except Exception:
+            excType, excValue = sys.exc_info()[:2]
+            print(
+                "Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
+                str(excType.__name__),
+                excValue,
+            )
+            reported = False
+        return reported
+
+    def _pubStateRemote(self, **kwargs):
+        """Publish state from remote services."""
+        if self._reportServiceStatus(**kwargs):
+            return
+        try:
+            fullUrl = getFullUrl(kwargs["cls"].config, kwargs["sitename"])
+            fullUrl += "/sitefe"
+            dic = {
+                "servicename": kwargs["servicename"],
+                "servicestate": kwargs["servicestate"],
+                "sitename": kwargs["sitename"],
+                "runtime": kwargs["runtime"],
+                "hostname": getHostname(),
+                "version": runningVersion,
+            }
+            publishToSiteFE(dic, fullUrl, "/json/frontend/servicestate")
+        except Exception:
+            excType, excValue = sys.exc_info()[:2]
+            print(
+                f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
+            )
+
+    def _autoRefreshDB(self, **kwargs):
+        """Auto Refresh if there is a DB request to do so."""
+        search = [["hostname", "default"], ["servicename", self.component]]
+        if self.component == "ConfigFetcher":
+            search = [["hostname", "default"]]
+        dbobj = getVal(self.dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
+        actions = dbobj.get("serviceaction", search=search)
+        if actions:
+            # Config Fetcher is not allowed to delete other services refresh.
+            if self.component == "ConfigFetcher":
+                return False
+            for action in actions:
+                print(f"delete {action}")
+                dbOut = [["id", action['id']]]
+                dbobj.delete("serviceaction", dbOut)
+            return False
+        return False
+
+    def _autoRefreshAPI(self, **kwargs):
+        try:
+            hostname = getFullUrl(self.config, kwargs["sitename"])
+            url = f"/sitefe/json/frontend/serviceaction?servicename={self.component}&hostname={hostname}"
+            actions = getDataFromSiteFE(kwargs, hostname, url)
+            print(actions)
+            # publishToSiteFE(inputDict, host, url, verb="DELETE"):
+        except Exception:
+            excType, excValue = sys.exc_info()[:2]
+            print(
+                f"Error details in _autoRefreshAPI. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
+            )
+        return False
+
+
+
+
+class Daemon(DBBackend):
     """A generic daemon class.
 
     Usage: subclass the Daemon class and override the run() method.
@@ -59,6 +163,7 @@ class Daemon():
             logType = 'StreamLogger'
         self.component = component
         self.inargs = inargs
+        self.dbI = None
         self.runCount = 0
         self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}.pid"
         self.config = None
@@ -71,11 +176,12 @@ class Daemon():
                                            logLevel=self.config.get('general', 'logLevel'), logType=logType,
                                            service=self.component)
         else:
-            self.logger = getLoggingObject(logFile="%s/%s-" % ('/var/log/', component),
+            self.logger = getLoggingObject(logFile=f"/var/log/{component}-",
                                            logLevel='DEBUG', logType=logType,
                                            service=self.component)
         self.sleepTimers = {'ok': 10, 'failure': 30}
         self.totalRuntime = 0
+        self._loadDB(component)
 
     def _refreshConfig(self):
         """Config refresh call"""
@@ -91,7 +197,7 @@ class Daemon():
                 # exit first parent
                 sys.exit(0)
         except OSError as e:
-            sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+            sys.stderr.write(f"fork #1 failed: {e.errno} ({e.strerror})\n")
             sys.exit(1)
 
         # decouple from parent environment
@@ -106,7 +212,7 @@ class Daemon():
                 # exit from second parent
                 sys.exit(0)
         except OSError as e:
-            sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+            sys.stderr.write(f"fork #2 failed: {e.errno} ({e.strerror})\n")
             sys.exit(1)
 
         # redirect standard file descriptors
@@ -225,11 +331,27 @@ class Daemon():
 
     def reporter(self, state, sitename, stwork):
         """Report Service State to FE"""
-        runtime = int(getUTCnow()) - stwork
         if not self.inargs.noreporting:
-            pubStateRemote(cls=self, servicename=self.component,
-                           servicestate=state, sitename=sitename,
-                           version=runningVersion, runtime=runtime)
+            runtime = int(getUTCnow()) - stwork
+            self._pubStateRemote(servicename=self.component,
+                                 servicestate=state, sitename=sitename,
+                                 version=runningVersion, runtime=runtime)
+
+    def autoRefreshDB(self, **kwargs):
+        """Auto Refresh if there is a DB request to do so."""
+        refresh = False
+        try:
+            if self.dbI:
+                refresh = self._autoRefreshDB(self, **kwargs)
+            else:
+                refresh = self._autoRefreshAPI(self, **kwargs)
+        except Exception:
+            excType, excValue = sys.exc_info()[:2]
+            print(
+                f"Error details in _autoRefreshAPI. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
+            )
+            return False
+        return False
 
     def runLoop(self):
         """Return True if it is not onetime run."""
@@ -261,10 +383,12 @@ class Daemon():
         while self.runLoop():
             self.runCount += 1
             hadFailure = False
+            refresh = False
             stwork = int(getUTCnow())
             try:
                 for sitename, rthread in list(self.runThreads.items()):
                     stwork = int(getUTCnow())
+                    refresh = self.autoRefreshDB(**{"sitename": sitename})
                     self.logger.info('Start worker for %s site', sitename)
                     try:
                         rthread.startwork()
@@ -294,9 +418,20 @@ class Daemon():
                 self.logger.info('Re-initiating Service with new configuration from GIT')
                 self._refreshConfig()
                 self.refreshThreads(houreq, dayeq)
+            elif refresh:
+                self.logger.info('Re-initiating Service with new configuration from GIT. Forced by DB')
+                self.cleaner()
+                self._refreshConfig()
+                self.refreshThreads(houreq, dayeq)
 
 
-    @staticmethod
-    def getThreads():
+    def getThreads(self, _houreq, _dayeq):
         """Overwrite this then Daemonized in your own class"""
         return {}
+
+    def cleaner(self):
+        """Clean files from /tmp/ directory"""
+        # Only one service overrides it, and it is ConfigFetcher
+        # So if anyone else calls it - we sleep for 30 seconds
+        print("Due to DB Refresh - sleep for 30 seconds until ConfigFetcher is done")
+        time.sleep(30)
