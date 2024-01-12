@@ -62,10 +62,13 @@ class DBBackend():
 
     def _loadDB(self, component):
         """Load DB connection."""
-        try:
-            self.dbI = getDBConn(component, self)
-        except KeyError:
-            self.dbI = None
+        if self.dbI or not self.config:
+            return
+        if self.config.get('MAPPING', {}).get('type', None) == 'FE':
+            try:
+                self.dbI = getDBConn(component, self)
+            except KeyError:
+                self.dbI = None
 
 
     def _reportServiceStatus(self, **kwargs):
@@ -364,7 +367,7 @@ class Daemon(DBBackend):
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(
-                f"Error details in _autoRefreshAPI. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
+                f"Error details in autoRefreshDB. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
             )
             return False
         return refresh
@@ -407,7 +410,9 @@ class Daemon(DBBackend):
                     refresh = self.autoRefreshDB(**{"sitename": sitename})
                     self.logger.info('Start worker for %s site', sitename)
                     try:
+                        self.preRunThread(sitename, rthread)
                         rthread.startwork()
+                        self.postRunThread(sitename, rthread)
                         self.reporter('OK', sitename, stwork)
                     except:
                         hadFailure = True
@@ -451,3 +456,13 @@ class Daemon(DBBackend):
         # So if anyone else calls it - we sleep for 30 seconds
         print("Due to DB Refresh - sleep for 30 seconds until ConfigFetcher is done")
         time.sleep(30)
+
+
+    def preRunThread(self, sitename, rthread):
+        """Call before thread runtime in case something needed to be done by Daemon"""
+        pass
+
+    def postRunThread(self, sitename, rthread):
+        """Call after thread runtime in case something needed to be done by Daemon"""
+        pass
+

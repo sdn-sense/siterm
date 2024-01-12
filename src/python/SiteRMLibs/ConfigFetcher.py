@@ -83,6 +83,8 @@ class ConfigFetcher():
             filename = f'/tmp/siterm-link-{name}.yaml'
             if os.path.isfile(filename):
                 os.remove(filename)
+        # Once removed - reget configs
+        self.startwork()
 
     def startwork(self):
         """Start Config Fetcher Service."""

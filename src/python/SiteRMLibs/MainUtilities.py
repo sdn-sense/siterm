@@ -930,7 +930,10 @@ def getDBConn(serviceName="", cls=None):
         config = cls.config
     else:
         config = getGitConfig()
-    for sitename in config["MAIN"]["general"]["sites"] + ["MAIN"]:
+    sites = ["MAIN"]
+    if config:
+        sites += config.get("MAIN", {}).get("general", {}).get("sites", [])
+    for sitename in sites:
         if hasattr(cls, "dbI"):
             if hasattr(cls.dbI, sitename):
                 # DB Object is already in place!
