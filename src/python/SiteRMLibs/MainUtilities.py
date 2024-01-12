@@ -434,7 +434,7 @@ class GitConfig:
                 retVals.append(int(lval))
         return list(set(retVals))
 
-    def generateVlanList(self, key1, key2, vals):
+    def generateVlanList(self, key1, key2, _vals):
         """Generate Vlan List. which can be separated by comma, dash"""
 
         def _addToAll(vlanlist):

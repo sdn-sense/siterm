@@ -7,14 +7,14 @@ Authors:
 
 Date: 2022/05/19
 """
-import os
 import copy
-import shutil
 import datetime
+import os
+import shutil
+
+from SiteRMLibs.MainUtilities import GitConfig, getLoggingObject, getWebContentFromURL
 from yaml import safe_load as yload
-from SiteRMLibs.MainUtilities import GitConfig
-from SiteRMLibs.MainUtilities import getWebContentFromURL
-from SiteRMLibs.MainUtilities import getLoggingObject
+
 
 class ConfigFetcher():
     """Config Fetcher from Github."""
