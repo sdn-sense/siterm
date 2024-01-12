@@ -149,7 +149,6 @@ class DBBackend():
         return False
 
     def _autoRefreshAPI(self, **kwargs):
-        pass
         """Auto Refresh via API check"""
         # pylint: disable=W0703
         refresh = False
@@ -466,7 +465,6 @@ class Daemon(DBBackend):
         # So if anyone else calls it - we sleep for 30 seconds
         print("Due to DB Refresh - sleep for 30 seconds until ConfigFetcher is done")
         time.sleep(30)
-
 
     @staticmethod
     def preRunThread(_sitename, _rthread):
