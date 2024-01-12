@@ -59,17 +59,21 @@ def validateArgs(inargs):
 
 class DBBackend():
     """DB Backend class."""
-
+    # pylint: disable=E1101,E0203,W0201
     def _loadDB(self, component):
         """Load DB connection."""
-        try:
-            self.dbI = getDBConn(component, self)
-        except KeyError:
-            self.dbI = None
+        if self.dbI or not self.config:
+            return
+        if self.config.get('MAPPING', {}).get('type', None) == 'FE':
+            try:
+                self.dbI = getDBConn(component, self)
+            except KeyError:
+                self.dbI = None
 
 
     def _reportServiceStatus(self, **kwargs):
         """Report service state to DB."""
+        # pylint: disable=W0703
         if not self.dbI:
             return False
         reported = True
@@ -106,6 +110,7 @@ class DBBackend():
 
     def _pubStateRemote(self, **kwargs):
         """Publish state from remote services."""
+        # pylint: disable=W0703
         if self._reportServiceStatus(**kwargs):
             return
         try:
@@ -144,10 +149,12 @@ class DBBackend():
         return False
 
     def _autoRefreshAPI(self, **kwargs):
+        """Auto Refresh via API check"""
+        # pylint: disable=W0703
         refresh = False
         try:
             hostname = getFullUrl(self.config, kwargs["sitename"])
-            url = f"/sitefe/json/frontend/serviceaction"
+            url = "/sitefe/json/frontend/serviceaction"
             kwargs['servicename'] = self.component
             kwargs['hostname'] = getHostname()
             actions = getDataFromSiteFE(kwargs, hostname, url)
@@ -172,6 +179,7 @@ class Daemon(DBBackend):
 
     Usage: subclass the Daemon class and override the run() method.
     """
+    # pylint: disable=R0902
 
     def __init__(self, component, inargs, getGitConf=True):
         logType = 'TimedRotatingFileHandler'
@@ -355,16 +363,17 @@ class Daemon(DBBackend):
 
     def autoRefreshDB(self, **kwargs):
         """Auto Refresh if there is a DB request to do so."""
+        # pylint: disable=W0703
         refresh = False
         try:
             if self.dbI:
                 refresh = self._autoRefreshDB(**kwargs)
-            else:
+            elif self.config:
                 refresh = self._autoRefreshAPI(**kwargs)
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(
-                f"Error details in _autoRefreshAPI. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
+                f"Error details in autoRefreshDB. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
             )
             return False
         return refresh
@@ -379,6 +388,7 @@ class Daemon(DBBackend):
 
     def refreshThreads(self, houreq, dayeq):
         """Refresh threads"""
+        # pylint: disable=W0702
         while True:
             try:
                 self.getThreads(houreq, dayeq)
@@ -394,6 +404,7 @@ class Daemon(DBBackend):
 
     def run(self):
         """Run main execution"""
+        # pylint: disable=W0702
         houreq, dayeq, currentHour, currentDay = reCacheConfig(None, None)
         self.refreshThreads(houreq, dayeq)
         while self.runLoop():
@@ -407,7 +418,9 @@ class Daemon(DBBackend):
                     refresh = self.autoRefreshDB(**{"sitename": sitename})
                     self.logger.info('Start worker for %s site', sitename)
                     try:
+                        self.preRunThread(sitename, rthread)
                         rthread.startwork()
+                        self.postRunThread(sitename, rthread)
                         self.reporter('OK', sitename, stwork)
                     except:
                         hadFailure = True
@@ -440,14 +453,23 @@ class Daemon(DBBackend):
                 self._refreshConfig()
                 self.refreshThreads(houreq, dayeq)
 
-
-    def getThreads(self, _houreq, _dayeq):
+    @staticmethod
+    def getThreads(_houreq, _dayeq):
         """Overwrite this then Daemonized in your own class"""
         return {}
 
-    def cleaner(self):
+    @staticmethod
+    def cleaner():
         """Clean files from /tmp/ directory"""
         # Only one service overrides it, and it is ConfigFetcher
         # So if anyone else calls it - we sleep for 30 seconds
         print("Due to DB Refresh - sleep for 30 seconds until ConfigFetcher is done")
         time.sleep(30)
+
+    @staticmethod
+    def preRunThread(_sitename, _rthread):
+        """Call before thread runtime in case something needed to be done by Daemon"""
+
+    @staticmethod
+    def postRunThread(_sitename, _rthread):
+        """Call after thread runtime in case something needed to be done by Daemon"""

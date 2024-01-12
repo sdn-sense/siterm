@@ -21,7 +21,7 @@ class MyDaemon(Daemon):
 
     def getThreads(self, houreq, dayeq):
         """Multi threading. Allow multiple sites under single FE"""
-        for callType in ['DEFAULT']:
+        for callType in ['MAIN']:
             if callType not in self.runThreads:
                 self.runThreads[callType] = ConfigFetcher(self.logger)
             self.runThreads[callType].refreshthread(houreq, dayeq)
@@ -35,6 +35,15 @@ class MyDaemon(Daemon):
             except:
                 continue
         time.sleep(60)
+
+    def postRunThread(self, sitename, rthread):
+        """Call after thread runtime in case something needed to be done by Daemon"""
+        if not self.config or not self.dbI:
+            rthread.gitObj.getGitConfig()
+            self.config = rthread.gitObj.config
+            self._loadDB(self.component)
+
+
 
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)
