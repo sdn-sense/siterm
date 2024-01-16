@@ -64,7 +64,7 @@ class DBBackend():
         """Load DB connection."""
         if self.dbI or not self.config:
             return
-        if self.config.get('MAPPING', {}).get('type', None) == 'FE':
+        if self.config.getraw('MAPPING').get('type', None) == 'FE':
             try:
                 self.dbI = getDBConn(component, self)
             except KeyError:
