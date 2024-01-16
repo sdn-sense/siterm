@@ -932,7 +932,7 @@ def getDBConn(serviceName="", cls=None):
         config = getGitConfig()
     sites = ["MAIN"]
     if config:
-        sites += config.get("MAIN", {}).get("general", {}).get("sites", [])
+        sites += config["MAIN"].get("general", {}).get("sites", [])
     for sitename in sites:
         if hasattr(cls, "dbI"):
             if hasattr(cls.dbI, sitename):
