@@ -40,7 +40,7 @@ class MyDaemon(Daemon):
         """Call after thread runtime in case something needed to be done by Daemon"""
         if not self.config or not self.dbI:
             rthread.gitObj.getGitConfig()
-            self.config = rthread.gitObj.config
+            self.config = rthread.gitObj
             self._loadDB(self.component)
 
 
