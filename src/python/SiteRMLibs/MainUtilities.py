@@ -841,7 +841,9 @@ def getUrlParams(environ, paramsList):
                     raise NotSupportedArgument(
                         f"Server does not support parameter {param['key']}={outVals[0]}. Supported: param['options']"
                     )
-            outParams[param["key"]] = outVals[0]
+                outParams[param["key"]] = outVals[0]
+            else:
+                outParams[param["key"]] = outVals[0]
         elif not outVals:
             outParams[param["key"]] = param["default"]
     print(outParams)
