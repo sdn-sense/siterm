@@ -121,7 +121,15 @@ class ConflictChecker(Timing):
 
     def _checkIfVlanOverlap(self, vlan1, vlan2):
         """Check if Vlan equal. Raise error if True"""
-        if vlan1 == vlan2:
+        v1, v2 = vlan1.get('vlan', None), vlan2.get('vlan', None)
+        int1, int2 = vlan1.get('interface', None), vlan2.get('interface', None)
+        if not v1 or not v2:
+            return
+        if not int1 or not int2:
+            return
+        if int1 != int2:
+            return
+        if v1 == v2:
             raise OverlapException(
                 f"New Request VLANs Overlap on same controlled resources. \
                                    Overlap resources: {self.newid} and {self.oldid}"
@@ -245,13 +253,17 @@ class ConflictChecker(Timing):
     def checkvsw(self, cls, svc, svcitems, oldConfig):
         """Check vsw Service"""
         for connID, connItems in svcitems.items():
+            if connID == "_params":
+                continue
             self.newid = connID
             # If Connection ID in oldConfig - it is either == or it is a modify call.
             if connID in oldConfig.get(svc, {}):
                 if oldConfig[svc][connID] != connItems:
-                    print("MODIFY!!!")
-                    print(oldConfig[svc][connID])
-                    print(connItems)
+                    self.logger.debug("="*50)
+                    self.logger.debug("MODIFY!!!")
+                    self.logger.debug(oldConfig[svc][connID])
+                    self.logger.debug(connItems)
+                    self.logger.debug("="*50)
                 if oldConfig[svc][connID] == connItems:
                     # No Changes - connID is same, ignoring it
                     continue
@@ -274,11 +286,11 @@ class ConflictChecker(Timing):
                     if overlap:
                         # If 2 items overlap, and have same host for config
                         # Check that vlans and IPs are not overlapping
-                        if oldItems.get(hostname, {}):
-                            oStats = self._getVlanIPs(oldItems[hostname])
-                            self._checkIfVlanOverlap(
-                                nStats.get("vlan", ""), oStats.get("vlan", "")
-                            )
+                        for oldHost, oldHostItems in oldItems.items():
+                            if hostname != oldHost:
+                                continue
+                            oStats = self._getVlanIPs(oldHostItems)
+                            self._checkIfVlanOverlap(nStats, oStats)
                             self._checkIfIPOverlap(
                                 nStats.get("ipv6-address", ""),
                                 oStats.get("ipv6-address", ""),
@@ -314,6 +326,8 @@ class ConflictChecker(Timing):
     def checkrst(self, cls, rst, rstitems, oldConfig):
         """Check rst Service"""
         for connID, connItems in rstitems.items():
+            if connID == "_params":
+                continue
             self.newid = connID
             # If Connection ID in oldConfig - it is either == or it is a modify call.
             if connID in oldConfig.get(rst, {}):
