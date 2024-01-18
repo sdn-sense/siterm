@@ -31,7 +31,7 @@ class HostCalls(HostSubCalls):
     def __init__(self):
         self.host_services = ["Agent", "Ruler", "Debugger", "LookUpService",
                               "ProvisioningService", "SNMPMonitoring",
-                              "Prometheus-Push", "Arp-Push"]
+                              "Prometheus-Push", "Arp-Push", "ConfigFetcher"]
         self.__defineRoutes()
         self.__urlParams()
 

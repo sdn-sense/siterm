@@ -839,7 +839,7 @@ def getUrlParams(environ, paramsList):
             elif param["type"] == str and 'options' in param:
                 if  outVals[0] not in param["options"]:
                     raise NotSupportedArgument(
-                        f"Server does not support parameter {param['key']}={outVals[0]}. Supported: param['options']"
+                        f"Server does not support parameter {param['key']}={outVals[0]}. Supported: {param['options']}"
                     )
                 outParams[param["key"]] = outVals[0]
             else:
