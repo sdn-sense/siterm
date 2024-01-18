@@ -99,7 +99,9 @@ class Switch:
     def getportdata(inData, port):
         """Get port data from output"""
         # In RAW plugin - there is no data on port details
-        return {}
+        # But siterm adds only switchports. So for any fake port
+        # we explicitly tell it is switchport
+        return {'switchport': 'yes'}
 
     def getvlans(self, inData):
         """Get vlans from output"""
