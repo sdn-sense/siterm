@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=W0613,R0201
+# pylint: disable=W0613
 """
     Switch class of RAW Plugin.
 
@@ -99,7 +99,7 @@ class Switch:
     def getportdata(inData, port):
         """Get port data from output"""
         # In RAW plugin - there is no data on port details
-        return {}
+        return {'switchport': 'yes'}
 
     def getvlans(self, inData):
         """Get vlans from output"""

@@ -69,7 +69,7 @@ class ConflictChecker(Timing):
                 )
         else:
             raise OverlapException(
-                "Hostname {hostname} not available in this Frontend."
+                f"(1) Hostname {hostname} not available in this Frontend."
             )
 
     def _checkifIPInRange(self, polcls, ipval, iptype, hostname):
@@ -116,7 +116,7 @@ class ConflictChecker(Timing):
                 )
         else:
             raise OverlapException(
-                f"Hostname {hostname} not available in this Frontend."
+                f"(2) Hostname {hostname} not available in this Frontend."
             )
 
     def _checkIfVlanOverlap(self, vlan1, vlan2):
@@ -144,7 +144,7 @@ class ConflictChecker(Timing):
         rawConf = polcls.config.getraw("MAIN")
         if hostname not in rawConf:
             raise OverlapException(
-                "Hostname {hostname} not available in this Frontend."
+                f"(3) Hostname {hostname} not available in this Frontend."
             )
         if ipval and ipval.get(iptype, {}).get("nextHop", ""):
             iptoCheck = ipval[iptype]["nextHop"]
