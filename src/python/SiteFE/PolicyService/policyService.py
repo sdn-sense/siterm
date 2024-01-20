@@ -77,7 +77,7 @@ class PolicyService(RDFHelper, Timing):
         self.bidPorts = {}
         self.scannedPorts = {}
         self.scannedRoutes = []
-        self.conflictChecker = ConflictChecker()
+        self.conflictChecker = ConflictChecker(config, sitename)
         self.currentActive = getActiveDeltas(self)
         self.newActive = {}
         self._refreshHosts()

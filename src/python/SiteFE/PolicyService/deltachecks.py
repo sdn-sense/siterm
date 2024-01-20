@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# pylint: disable=no-member
 """Check for conflicting deltas
 
 Authors:
@@ -10,6 +9,7 @@ Date: 2021/01/20
 import copy
 
 from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress
+from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.ipaddr import checkOverlap as incheckOverlap
 from SiteRMLibs.ipaddr import ipOverlap as inipOverlap
 from SiteRMLibs.timing import Timing
@@ -18,9 +18,13 @@ from SiteRMLibs.timing import Timing
 class ConflictChecker(Timing):
     """Conflict Checker"""
 
-    def __init__(self):
+    def __init__(self, config, sitename):
+        self.sitename = sitename
+        self.config = config
+        self.logger = getLoggingObject(config=self.config, service="PolicyService")
         self.newid = ""
         self.oldid = ""
+        self.logger.info("Conflict Checker initialized")
 
     @staticmethod
     def checkOverlap(inrange, ipval, iptype):
@@ -333,7 +337,11 @@ class ConflictChecker(Timing):
             # If Connection ID in oldConfig - it is either == or it is a modify call.
             if connID in oldConfig.get(rst, {}):
                 if oldConfig[rst][connID] != connItems:
-                    print("MODIFY!!!")
+                    self.logger.debug("="*50)
+                    self.logger.debug("MODIFY!!!")
+                    self.logger.debug(oldConfig[rst][connID])
+                    self.logger.debug(connItems)
+                    self.logger.debug("="*50)
                 if oldConfig[rst][connID] == connItems:
                     # No Changes - connID is same, ignoring it
                     continue
