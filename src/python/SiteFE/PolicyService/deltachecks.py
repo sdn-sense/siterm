@@ -9,9 +9,9 @@ Date: 2021/01/20
 import copy
 
 from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.ipaddr import checkOverlap as incheckOverlap
 from SiteRMLibs.ipaddr import ipOverlap as inipOverlap
+from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.timing import Timing
 
 
