@@ -19,16 +19,25 @@ import time
 from dateutil import parser
 from rdflib import Graph, URIRef
 from rdflib.plugins.parsers.notation3 import BadSyntax
-from SiteFE.LookUpService.modules.rdfhelper import \
-    RDFHelper  # TODO: Move to general
+from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to general
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress
-from SiteRMLibs.MainUtilities import (contentDB, createDirs, decodebase64,
-                                      dictSearch, evaldict, getActiveDeltas,
-                                      getAllHosts, getCurrentModel, getDBConn,
-                                      getGitConfig, getLoggingObject, getVal,
-                                      writeActiveDeltas)
+from SiteRMLibs.MainUtilities import (
+    contentDB,
+    createDirs,
+    decodebase64,
+    dictSearch,
+    evaldict,
+    getActiveDeltas,
+    getAllHosts,
+    getCurrentModel,
+    getDBConn,
+    getGitConfig,
+    getLoggingObject,
+    getVal,
+    writeActiveDeltas,
+)
 from SiteRMLibs.timing import Timing
 
 
@@ -77,7 +86,7 @@ class PolicyService(RDFHelper, Timing):
         self.bidPorts = {}
         self.scannedPorts = {}
         self.scannedRoutes = []
-        self.conflictChecker = ConflictChecker()
+        self.conflictChecker = ConflictChecker(config, sitename)
         self.currentActive = getActiveDeltas(self)
         self.newActive = {}
         self._refreshHosts()
