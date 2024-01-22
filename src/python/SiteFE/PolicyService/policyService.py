@@ -108,10 +108,14 @@ class PolicyService(RDFHelper, Timing):
 
     def _refreshHosts(self):
         """Refresh all hosts information"""
-        self.hosts = {}
-        for host, hostDict in getAllHosts(self.dbI).items():
+        allHosts = getAllHosts(self.dbI)
+        for host, hostDict in allHosts.items():
             self.hosts.setdefault(host, hostDict)
             self.hosts[host]["hostinfo"] = evaldict(hostDict["hostinfo"])
+        # Clean up hosts which are not in DB anymore
+        for host in list(self.hosts.keys()):
+            if host not in allHosts:
+                del self.hosts[host]
 
     def __clean(self):
         """Clean params of PolicyService"""
