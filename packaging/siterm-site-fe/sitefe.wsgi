@@ -1,4 +1,5 @@
 """ Main WSGI application """
+import os
 import traceback
 from SiteFE.REST.app import Frontend
 
@@ -10,8 +11,8 @@ class Application():
     def __getwrapper(self, environ):
         """ Get the wrapper for the current thread """
         thread_id = environ.get('mod_wsgi.thread_id', 0)
-        thread_requests = environ.get('mod_wsgi.thread_requests', 0)
-        req_id = f"{thread_id}-{thread_requests}"
+        os_pid = os.getpid()
+        req_id = f"{thread_id}-{os_pid}"
         if req_id not in self.threadcalls:
             self.threadcalls[req_id] = Frontend()
         return self.threadcalls[req_id]
