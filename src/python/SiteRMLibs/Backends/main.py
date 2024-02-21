@@ -143,6 +143,10 @@ class Switch(Node):
                             self.getSystemValidPortName(realportname)
                         ] = realportname
 
+    def getSwitchPort(self, switchName, portName):
+        """Get Switch Port data"""
+        return self.output.get("ports", {}).get(switchName, {}).get(portName, {})
+
     def getSwitchPortName(self, switchName, portName, vlanid=None):
         """Get Switch Port Name"""
         # Get the portName which is uses in Switch
@@ -203,20 +207,19 @@ class Switch(Node):
 
     def _addyamlInfoToPort(self, switch, portName, defVlans, out):
         """Add Yaml info to specific port"""
-        for key in [
-            "hostname",
-            "isAlias",
-            "vlan_range_list",
-            "desttype",
-            "destport",
-            "capacity",
-            "granularity",
-            "availableCapacity",
-        ]:
+        for key, defval in {"hostname": "",
+                            "isAlias": "",
+                            "vlan_range_list": defVlans,
+                            "desttype": "",
+                            "destport": "",
+                            "capacity": "",
+                            "granularity": "",
+                            "availableCapacity": "",
+                            "rate_limit": False}.items():
             tmpval = getValFromConfig(self.config, switch, portName, key)
             if not tmpval:
-                if key == "vlan_range_list":
-                    out[key] = defVlans
+                if defval:
+                    out[key] = defval
                 continue
             out[key] = tmpval
             if key == "isAlias":
