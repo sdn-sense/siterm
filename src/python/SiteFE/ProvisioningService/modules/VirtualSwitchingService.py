@@ -90,19 +90,25 @@ class VirtualSwitchingService:
             vlanDict.setdefault("mtu", tmpVlanMTU)
         return vlanDict
 
-    def _addQos(self, host, port, portDict):
+    def _addQoS(self, host, port, portDict):
         """Add QoS to expected yaml conf"""
-        vlan = self.__getVlanID(host, port, portDict)
-        tmpD = self.__getdefaultIntf(host, "qos", "qos")
         resvRate, resvUnit = self.convertToRate(portDict.get("hasService", {}))
         if resvRate == 0:
             return
-        vlanD = tmpD.setdefault(f"{port}-{vlan}", {})
-        vlanD.setdefault("port", port)
-        vlanD.setdefault("vlan", vlan)
-        vlanD.setdefault("rate", resvRate)
-        vlanD.setdefault("unit", resvUnit)
-        vlanD.setdefault("state", "present")
+        portName = self.switch.getSwitchPortName(host, port)
+        portData = self.switch.getSwitchPort(host, portName)
+        if not portData.get('rate_limit', False):
+            self.logger.debug(f"Port on {host} {portName} has no rate_limit flag true, but there is qos requested.")
+            self.logger.debug(f"Will not add QoS on Switch. Qos Request: {resvRate}{resvUnit}")
+        else:
+            vlan = self.__getVlanID(host, port, portDict)
+            tmpD = self.__getdefaultIntf(host, "qos", "qos")
+            vlanD = tmpD.setdefault(f"{port}-{vlan}", {})
+            vlanD.setdefault("port", portName)
+            vlanD.setdefault("vlan", vlan)
+            vlanD.setdefault("rate", resvRate)
+            vlanD.setdefault("unit", resvUnit)
+            vlanD.setdefault("state", "present")
 
     def _addTaggedInterfaces(self, host, port, portDict):
         """Add Tagged Interfaces to expected yaml conf"""
@@ -161,7 +167,7 @@ class VirtualSwitchingService:
                         self._addTaggedInterfaces(host, port, portDict)
                         self._addIPv4Address(host, port, portDict)
                         self._addIPv6Address(host, port, portDict)
-                        self._addQos(host, port, portDict)
+                        self._addQoS(host, port, portDict)
 
     def addvsw(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for vsw)"""
