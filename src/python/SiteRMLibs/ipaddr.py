@@ -36,7 +36,12 @@ def getInterfaces():
 
 def getInterfaceIP(interface):
     """Get Interface IP"""
-    return netifaces.ifaddresses(interface)
+    out = {}
+    try:
+        out = netifaces.ifaddresses(interface)
+    except ValueError:
+        pass
+    return out
 
 
 def getNetmaskBits(netmask):
