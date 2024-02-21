@@ -122,8 +122,7 @@ class VInterfaces():
         """Stop specific vlan."""
         out = []
         self.logger.info(f'Called VInterface L2 stop for {str(vlan)}')
-        for command in [f"ip link set dev vlan.{vlan['vlan']} down",
-                        f"ip link set dev vlan.{vlan['vlan']}-ifb down"]:
+        for command in [f"ip link set dev vlan.{vlan['vlan']} down"]:
             out.append(execute(command, self.logger, raiseError))
         return out
 
@@ -131,8 +130,7 @@ class VInterfaces():
         """Remove specific vlan."""
         out = []
         self.logger.info(f'Called VInterface remove for {str(vlan)}')
-        for command in [f"ip link delete dev vlan.{vlan['vlan']}",
-                        f"ip link delete dev vlan.{vlan['vlan']}-ifb"]:
+        for command in [f"ip link delete dev vlan.{vlan['vlan']}"]:
             out.append(execute(command, self.logger, raiseError))
         return out
 
@@ -207,9 +205,9 @@ class VInterfaces():
         vlans = self._getvlanlist(inParams)
         for vlan in vlans:
             try:
-                if self._statusvlan(vlan, True):
-                    self._stop(vlan, True)
-                    self._remove(vlan, True)
+                if self._statusvlan(vlan, False):
+                    self._stop(vlan, False)
+                    self._remove(vlan, False)
                 publishState(vlan, inParams, uuid, self.hostname, 'deactivated', self.fullURL)
             except FailedInterfaceCommand:
                 publishState(vlan, inParams, uuid, self.hostname, 'deactivate-error', self.fullURL)
