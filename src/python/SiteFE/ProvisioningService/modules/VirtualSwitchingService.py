@@ -53,27 +53,31 @@ class VirtualSwitchingService:
     def __init__(self):
         super().__init__()
 
-    def __getdefaultIntf(self, host):
+    def __getdefaultIntf(self, host, key='vsw', subkey="interface"):
         if self.reqid == 0:
             tmpD = self.yamlconf.setdefault(host, {})
         elif self.reqid == 1:
-            tmpD = self.yamlconfuuid.setdefault("vsw", {}).setdefault(self.connID, {})
+            tmpD = self.yamlconfuuid.setdefault(key, {}).setdefault(self.connID, {})
             tmpD = tmpD.setdefault(host, {})
         else:
             raise Exception(
                 "Wrong code. Should not reach this part. VirtualSwitchingService"
             )
-        tmpD = tmpD.setdefault("interface", {})
+        tmpD = tmpD.setdefault(subkey, {})
         return tmpD
 
-    def __getdefaultVlan(self, host, port, portDict):
-        """Default yaml dict setup"""
-        tmpD = self.__getdefaultIntf(host)
+    def __getVlanID(self, host, port, portDict):
+        """Get vlan id from portDict"""
         if "hasLabel" not in portDict or "value" not in portDict["hasLabel"]:
             raise Exception(
                 f"Bad running config. Missing vlan entry: {host} {port} {portDict}"
             )
-        vlan = portDict["hasLabel"]["value"]
+        return portDict["hasLabel"]["value"]
+
+    def __getdefaultVlan(self, host, port, portDict):
+        """Default yaml dict setup"""
+        tmpD = self.__getdefaultIntf(host)
+        vlan = self.__getVlanID(host, port, portDict)
         vlanName = f"Vlan{vlan}"
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault("name", vlanName)
@@ -85,6 +89,20 @@ class VirtualSwitchingService:
         if tmpVlanMTU:
             vlanDict.setdefault("mtu", tmpVlanMTU)
         return vlanDict
+
+    def _addQos(self, host, port, portDict):
+        """Add QoS to expected yaml conf"""
+        vlan = self.__getVlanID(host, port, portDict)
+        tmpD = self.__getdefaultIntf(host, "qos", "qos")
+        resvRate, resvUnit = self.convertToRate(portDict.get("hasService", {}))
+        if resvRate == 0:
+            return
+        vlanD = tmpD.setdefault(f"{port}-{vlan}", {})
+        vlanD.setdefault("port", port)
+        vlanD.setdefault("vlan", vlan)
+        vlanD.setdefault("rate", resvRate)
+        vlanD.setdefault("unit", resvUnit)
+        vlanD.setdefault("state", "present")
 
     def _addTaggedInterfaces(self, host, port, portDict):
         """Add Tagged Interfaces to expected yaml conf"""
@@ -143,6 +161,7 @@ class VirtualSwitchingService:
                         self._addTaggedInterfaces(host, port, portDict)
                         self._addIPv4Address(host, port, portDict)
                         self._addIPv6Address(host, port, portDict)
+                        self._addQos(host, port, portDict)
 
     def addvsw(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for vsw)"""
@@ -156,6 +175,36 @@ class VirtualSwitchingService:
             self.reqid = reqid
             for host in switches:
                 self.__getdefaultIntf(host)
+
+    def compareQoS(self, switch, runningConf, uuid=""):
+        """Compare expected and running conf"""
+        if uuid:
+            tmpD = (
+                self.yamlconfuuid.setdefault("qos", {})
+                .setdefault(uuid, {})
+                .setdefault(switch, {})
+            )
+        else:
+            tmpD = self.yamlconf.setdefault(switch)
+        tmpD = tmpD.setdefault("qos", {})
+        if tmpD == runningConf:
+            return False
+        for key, val in runningConf.items():
+            if key not in tmpD.keys() and val["state"] != "absent":
+                # QoS is present in ansible config, but not in new config
+                # set qos to state: 'absent'. In case it is absent already
+                # we dont need to set it again. Switch is unhappy to apply
+                # same command if service is not present.
+                tmpD.setdefault(key, {"state": "absent",
+                                      "rate": val["rate"],
+                                      "unit": val["unit"],
+                                      "port": val["port"],
+                                      "vlan": val["vlan"]})
+            if val["state"] != "absent":
+                for key1, val1 in val.items():
+                    if key1 in ["rate", "unit"]:
+                        tmpD.setdefault(key, {}).setdefault(key1, val1)
+        return True
 
     def compareVsw(self, switch, runningConf, uuid=""):
         """Compare expected and running conf"""

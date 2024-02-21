@@ -33,10 +33,11 @@ from SiteRMLibs.CustomExceptions import (NoOptionError, NoSectionError,
 from SiteRMLibs.MainUtilities import (createDirs, evaldict, getDBConn,
                                       getGitConfig, getLoggingObject,
                                       getUTCnow, getVal, jsondumps)
+from SiteRMLibs.BWConverter import BWConverter
 from SiteRMLibs.timing import Timing
 
 
-class ProvisioningService(RoutingService, VirtualSwitchingService, Timing):
+class ProvisioningService(RoutingService, VirtualSwitchingService, BWConverter, Timing):
     """
     Provisioning service communicates with Local controllers and applies
     network changes.
@@ -218,6 +219,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, Timing):
                         continue
                     for key, call in {
                         "interface": self.compareVsw,
+                        "qos": self.compareQoS,
                         "sense_bgp": self.compareBGP,
                     }.items():
                         if key in swdict:
@@ -251,6 +253,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, Timing):
                 elif key == "sense_bgp":
                     self.logger.info("Comparing bgp config with ansible config")
                     self.compareBGP(host, curActiveConf["sense_bgp"])
+                elif key == "qos":
+                    self.logger.info("Comparing qos config with ansible config")
+                    self.compareQoS(host, curActiveConf["qos"])
                 else:
                     self.yamlconf[host][key] = val
             # Into the host itself append all except interfaces key

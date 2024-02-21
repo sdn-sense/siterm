@@ -20,45 +20,6 @@ class OverlapLib:
         self.totalrequests = {}
         self.getAllIPs()
 
-    # bps, bytes per second
-    # kbps, Kbps, kilobytes per second
-    # mbps, Mbps, megabytes per second
-    # gbps, Gbps, gigabytes per second
-    # bit, bits per second
-    # kbit, Kbit, kilobit per second
-    # mbit, Mbit, megabit per second
-    # gbit, Gbit, gigabit per second
-    # Seems there are issues with QoS when we use really big bites and it complains about this.
-    # Solution is to convert to next lower value...
-    def convertToRate(self, params):
-        """Convert input to rate understandable to fireqos."""
-        self.logger.info(f"Converting rate for QoS. Input {params}")
-        inputVal, inputRate = params.get("reservableCapacity", 0), params.get(
-            "unit", "undef"
-        )
-        if inputVal == 0 and inputRate == "undef":
-            return 0, "mbit"
-        outRate = -1
-        outType = ""
-        if inputRate == "bps":
-            outRate = int(inputVal // 1000000)
-            outType = "mbit"
-            if outRate == 0:
-                outRate = int(inputVal // 1000)
-                outType = "bit"
-        elif inputRate == "mbps":
-            outRate = int(inputVal)
-            outType = "mbit"
-        elif inputRate == "gbps":
-            outRate = int(inputVal * 1000)
-            outType = "mbit"
-        if outRate != -1:
-            self.logger.info(
-                f"Converted rate for QoS from {inputRate} {inputVal} to {outRate}"
-            )
-            return outRate, outType
-        raise Exception(f"Unknown input rate parameter {inputRate} and {inputVal}")
-
     def __getAllIPsHost(self):
         """Get All IPs on the system"""
         for intf, masterIntf in getMasterSlaveInterfaces().items():
