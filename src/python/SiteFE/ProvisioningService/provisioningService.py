@@ -114,6 +114,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWConverter, 
             return
         if not hasattr(ansOut, "stats"):
             return
+        if not ansOut.stats:
+            return
         for host, _ in ansOut.stats.get("failures", {}).items():
             for host_events in ansOut.host_events(host):
                 self.logger.info(f"Ansible runtime log of {host_events['event']} event")

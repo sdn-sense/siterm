@@ -286,7 +286,6 @@ class SwitchInfo():
                 try:
                     out['private_asn'] = self.config.get(switchName, 'private_asn')
                 except (NoOptionError, NoSectionError) as ex:
-                    self.logger.debug('ERROR: private_asn parameter is not defined (MISCONFIG. Contact Support) for %s. Err: %s', switchName, ex)
                     continue
             for key in ['ipv4-subnet-pool-list', 'ipv6-subnet-pool-list']:
                 tmp = self.__getValFromConfig(key)
