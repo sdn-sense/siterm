@@ -13,9 +13,10 @@ import pprint
 import psutil
 from pyroute2 import IPRoute
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
-from SiteRMLibs.MainUtilities import (evaldict, externalCommand, getGitConfig,
-                                      getLoggingObject)
-
+from SiteRMLibs.MainUtilities import (evaldict, externalCommand, getFileContentAsJson)
+from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMAgent.Ruler.OverlapLib import OverlapLib
 
 def str2bool(val):
     """Check if str is true boolean."""
@@ -23,221 +24,225 @@ def str2bool(val):
         return val
     return val.lower() in ("yes", "true", "t", "1")
 
+class NetInfo(OverlapLib):
+    """Net Info"""
+    def __init__(self, config=None, logger=None):
+        self.config = config if config else getGitConfig()
+        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
+        self.activeDeltasFile = f'{self.config.get("general", "privatedir")}/SiteRM/RulerAgent/activedeltas.json'
 
-NAME = "NetInfo"
 
-
-def getvlans():
-    """Get interface name and vlan id belonging to it"""
-    out = {}
-    if os.path.isfile("/proc/net/vlan/config"):
-        vlanconf = externalCommand("cat /proc/net/vlan/config")
-        for vlanline in vlanconf[0].decode("UTF-8").split("\n"):
+    def getvlans(self):
+        """Get interface name and vlan id belonging to it"""
+        out = {}
+        if not os.path.isfile("/proc/net/vlan/config"):
+            self.logger.warning("No /proc/net/vlan/config file found. Will not get vlan information")
+            return out
+        with open("/proc/net/vlan/config", "r", encoding="utf-8") as fd:
+            vlanconf = fd.read()
+        for vlanline in vlanconf.split("\n"):
             if not vlanline:
                 continue
             splvlans = vlanline.split("|")
             if len(splvlans) == 3:
                 intname = splvlans[0].strip()
                 try:
-                    tmpOut = {
-                        "vlanid": int(splvlans[1].strip()),
-                        "master": splvlans[2].strip(),
-                    }
+                    tmpOut = {"vlanid": int(splvlans[1].strip()),
+                              "master": splvlans[2].strip()}
                     out.setdefault(intname, tmpOut)
                 except ValueError:
                     continue
-    return out
-
-
-def getVlanID(nicname, privVlans):
-    """Get Vlan id from privVlans, or from nicname"""
-    try:
-        if nicname in privVlans:
-            return privVlans[nicname].get("vlanid", None)
-        splName = nicname.split(".")
-        if len(splName) == 2:
-            return int(splName[1])
-    except ValueError:
-        pass
-    return None
-
-
-def get(config):
-    """Get all network information"""
-    netInfo = {}
-    privVlans = getvlans()
-    logger = getLoggingObject(logType="StreamLogger")
-    interfaces = config.get("agent", "interfaces")
-    for intf in interfaces:
-        nicInfo = netInfo.setdefault(intf, {})
-        if config.has_option(intf, "isAlias"):
-            nicInfo["isAlias"] = config.get(intf, "isAlias")
-        for key in [
-            "ipv4-address-pool",
-            "ipv4-subnet-pool",
-            "ipv6-address-pool",
-            "ipv6-subnet-pool",
-        ]:
-            if config.has_option(intf, key):
-                nicInfo[key] = config.get(intf, key)
-            if config.has_option(intf, f"{key}-list"):
-                nicInfo[f"{key}-list"] = config.get(intf, f"{key}-list")
-        nicInfo["vlan_range"] = config.get(intf, "vlan_range")
-        nicInfo["vlan_range_list"] = config.get(intf, "vlan_range_list")
-        nicInfo["min_bandwidth"] = int(config.get(intf, "min_bandwidth"))
-        nicInfo["max_bandwidth"] = int(config.get(intf, "max_bandwidth"))
-        nicInfo["switch_port"] = replaceSpecialSymbols(str(config.get(intf, "port")))
-        nicInfo["switch"] = str(config.get(intf, "switch"))
-        nicInfo["shared"] = str2bool(config.get(intf, "shared"))
-        nicInfo["vlans"] = {}
-        # TODO. It should calculate available capacity, depending on installed vlans.
-        # Currently we set it same as max_bandwidth.
-        nicInfo["available_bandwidth"] = int(config.get(intf, "max_bandwidth"))  # TODO
-        # TODO. It should also calculate reservable capacity depending on installed vlans;
-        # Currently we set it to max available;
-        nicInfo["reservable_bandwidth"] = int(config.get(intf, "max_bandwidth"))  # TODO
-    tmpifAddr = psutil.net_if_addrs()
-    tmpifStats = psutil.net_if_stats()
-    tmpIOCount = psutil.net_io_counters(pernic=True)
-
-    nics = externalCommand("ip -br a")
-    for nicline in nics[0].decode("UTF-8").split("\n"):
-        if not nicline:
-            continue
-        nictmp = nicline.split()[0].split("@")
-        nic = nictmp[0]
-        if len(nictmp) == 1 and nictmp[0] in netInfo:
-            nicInfo = netInfo.setdefault(nic, {})
-        elif len(nictmp) == 2 and nictmp[1] in netInfo:
-            masternic = netInfo.setdefault(nictmp[1], {})
-            nicInfo = masternic.setdefault("vlans", {}).setdefault(nic, {})
-            vlanid = getVlanID(nic, privVlans)
-            if vlanid:
-                nicInfo["vlanid"] = vlanid
-                if vlanid in masternic["vlan_range_list"]:
-                    nicInfo["provisioned"] = True
-                else:
-                    nicInfo["provisioned"] = False
-        else:
-            continue
-        if nic not in tmpifAddr:
-            continue
-        for vals in tmpifAddr[nic]:
-            nicInfo.setdefault(str(vals.family.value), [])
-            familyInfo = {
-                "family": vals.family.value,
-                "address": vals.address,
-                "netmask": vals.netmask,
-            }
-            if int(vals.family.value) in [2, 10] and vals.address and vals.netmask:
-                try:
-                    ipwithnetmask = ipaddress.ip_interface(
-                        f"{vals.address}/{vals.netmask}"
-                    )
-                    if isinstance(ipwithnetmask, ipaddress.IPv4Interface):
-                        familyInfo["ipv4-address"] = str(ipwithnetmask)
-                    elif isinstance(ipwithnetmask, ipaddress.IPv6Interface):
-                        familyInfo["ipv6-address"] = str(ipwithnetmask)
-                    else:
-                        logger.debug(
-                            f"This type was not understood by the system. Type: {type(ipwithnetmask)} and value: {str(ipwithnetmask)}"
-                        )
-                except ValueError:
-                    continue
-            elif int(vals.family.value) in [17]:
-                familyInfo["mac-address"] = vals.address
-            familyInfo["broadcast"] = vals.broadcast
-            familyInfo["ptp"] = vals.ptp
-            if vals.family.value == 2:
-                familyInfo["UP"] = tmpifStats[nic].isup
-                familyInfo["duplex"] = tmpifStats[nic].duplex.value
-                familyInfo["speed"] = tmpifStats[nic].speed
-                familyInfo["MTU"] = tmpifStats[nic].mtu
-                # tmpIOCount - (bytes_sent=13839798, bytes_recv=690754706, packets_sent=151186,
-                #               packets_recv=630590, errin=0, errout=0, dropin=0, dropout=0)
-                familyInfo["bytes_sent"] = tmpIOCount[nic].bytes_sent
-                familyInfo["bytes_received"] = tmpIOCount[nic].bytes_recv
-                familyInfo["packets_sent"] = tmpIOCount[nic].packets_sent
-                familyInfo["packets_recv"] = tmpIOCount[nic].packets_recv
-                familyInfo["errin"] = tmpIOCount[nic].errin
-                familyInfo["errout"] = tmpIOCount[nic].errout
-                familyInfo["dropin"] = tmpIOCount[nic].dropin
-                familyInfo["dropout"] = tmpIOCount[nic].dropout
-                # Additional info which is not provided by psutil so far...
-                # More detail information about all types here:
-                # http://lxr.free-electrons.qcom/source/include/uapi/linux/if_arp.h
-                nicType = externalCommand("cat /sys/class/net/" + nic + "/type")
-                familyInfo["Type"] = nicType[0].decode("UTF-8").strip()
-                txQueueLen = externalCommand(
-                    "cat /sys/class/net/" + nic + "/tx_queue_len"
-                )
-                familyInfo["txqueuelen"] = txQueueLen[0].strip()
-            nicInfo[str(vals.family.value)].append(familyInfo)
-    # Check in the end which interfaces where defined in config but not available...
-    outputForFE = {"interfaces": {}, "routes": [], "lldp": {}}
-    for intfName, intfDict in netInfo.items():
-        if intfName.split(".")[0] not in interfaces:
-            logger.debug(
-                f"This interface {intfName} was defined in configuration, but not available. Will not add it to final output"
-            )
-        else:
-            outputForFE["interfaces"][intfName] = intfDict
-    # Get Routing Information
-    outputForFE["routes"] = getRoutes(logger)
-    outputForFE["lldp"] = getLLDP(logger)
-    return outputForFE
-
-
-def getLLDP(logger):
-    """Get LLDP Info, if socket is available and lldpcli command does not raise exception"""
-    try:
-        lldpOut = externalCommand("lldpcli show neighbors -f json")
-        lldpObj = evaldict(lldpOut[0].decode("utf-8"))
-        out = {}
-        for item in lldpObj.get("lldp", {}).get("interface", []):
-            for intf, vals in item.items():
-                mac = ""
-                remintf = ""
-                for _switch, swvals in vals.get("chassis", {}).items():
-                    if swvals.get("id", {}).get("type", "") == "mac":
-                        mac = swvals["id"]["value"]
-                # lets get remote port info
-                if vals.get("port", {}).get("id", {}).get("type", "") == "ifname":
-                    remintf = vals["port"]["id"]["value"]
-                if mac and remintf:
-                    out[intf] = {
-                        "remote_chassis_id": mac,
-                        "remote_port_id": remintf,
-                        "local_port_id": intf,
-                    }
         return out
-    except:
-        logger.debug(
-            "Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?"
-        )
-    return {}
+
+    def getVlanID(self, nicname, privVlans):
+        """Get Vlan id from privVlans, or from nicname"""
+        try:
+            if nicname in privVlans:
+                return privVlans[nicname].get("vlanid", None)
+            splName = nicname.split(".")
+            if len(splName) == 2:
+                return int(splName[1])
+        except ValueError:
+            pass
+        return None
+
+    def _getOverlaps(self):
+        """Load active deltas"""
+        if os.path.isfile(self.activeDeltasFile):
+            active = getFileContentAsJson(self.activeDeltasFile)
+            return self.getAllOverlaps(active)
+        return {}
+
+    def get(self, **_kwargs):
+        """Get all network information"""
+        netInfo = {}
+        privVlans = self.getvlans()
+        overlaps = self.getAllOverlaps(self._getOverlaps())
+        for intf in self.config.get("agent", "interfaces"):
+            nicInfo = netInfo.setdefault(intf, {})
+            if self.config.has_option(intf, "isAlias"):
+                nicInfo["isAlias"] = self.config.get(intf, "isAlias")
+            for key in [
+                "ipv4-address-pool",
+                "ipv4-subnet-pool",
+                "ipv6-address-pool",
+                "ipv6-subnet-pool",
+            ]:
+                if self.config.has_option(intf, key):
+                    nicInfo[key] = self.config.get(intf, key)
+                if self.config.has_option(intf, f"{key}-list"):
+                    nicInfo[f"{key}-list"] = self.config.get(intf, f"{key}-list")
+            nicInfo["vlan_range"] = self.config.get(intf, "vlan_range")
+            nicInfo["vlan_range_list"] = self.config.get(intf, "vlan_range_list")
+            nicInfo["switch_port"] = replaceSpecialSymbols(str(self.config.get(intf, "port")))
+            nicInfo["switch"] = str(self.config.get(intf, "switch"))
+            nicInfo["shared"] = str2bool(self.config.get(intf, "shared"))
+            nicInfo["vlans"] = {}
+            # Bandwidth parameters
+            nicInfo.setdefault("bwParams", {})
+            nicInfo["bwParams"]["unit"] = self.config.get(intf, "bwParams").get("unit", "mbps")
+            nicInfo["bwParams"]["type"] = self.config.get(intf, "bwParams").get("type", "guaranteedCapped")
+            nicInfo["bwParams"]["priority"] = self.config.get(intf, "bwParams").get("priority", 0)
+            nicInfo["bwParams"]["minReservableCapacity"] = int(self.config.get(intf, "bwParams").get("minReservableCapacity", 0))
+            nicInfo["bwParams"]["maximumCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", 0))
+            nicInfo["bwParams"]["granularity"] = int(self.config.get(intf, "bwParams").get("granularity", 0))
+            # TODO. It should calculate available capacity, depending on installed vlans.
+            # Currently we set it same as max_bandwidth.
+            nicInfo["bwParams"]["availableCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", 0))  # TODO
+            # TODO. It should also calculate reservable capacity depending on installed vlans;
+            # Currently we set it to max available;
+            nicInfo["bwParams"]["reservableCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", 0))  # TODO
+        tmpifAddr = psutil.net_if_addrs()
+        tmpifStats = psutil.net_if_stats()
+
+        nics = externalCommand("ip -br a")
+        for nicline in nics[0].decode("UTF-8").split("\n"):
+            if not nicline:
+                continue
+            nictmp = nicline.split()[0].split("@")
+            nic = nictmp[0]
+            if len(nictmp) == 1 and nictmp[0] in netInfo:
+                nicInfo = netInfo.setdefault(nic, {})
+            elif len(nictmp) == 2 and nictmp[1] in netInfo:
+                masternic = netInfo.setdefault(nictmp[1], {})
+                nicInfo = masternic.setdefault("vlans", {}).setdefault(nic, {})
+                vlanid = self.getVlanID(nic, privVlans)
+                if vlanid:
+                    nicInfo["vlanid"] = vlanid
+                    if vlanid in masternic["vlan_range_list"]:
+                        nicInfo["provisioned"] = True
+                    else:
+                        nicInfo["provisioned"] = False
+            else:
+                continue
+            if nic not in tmpifAddr:
+                continue
+            for vals in tmpifAddr[nic]:
+                nicInfo.setdefault(str(vals.family.value), [])
+                familyInfo = {
+                    "family": vals.family.value,
+                    "address": vals.address,
+                    "netmask": vals.netmask,
+                }
+                if int(vals.family.value) in [2, 10] and vals.address and vals.netmask:
+                    try:
+                        ipwithnetmask = ipaddress.ip_interface(
+                            f"{vals.address}/{vals.netmask}"
+                        )
+                        if isinstance(ipwithnetmask, ipaddress.IPv4Interface):
+                            familyInfo["ipv4-address"] = str(ipwithnetmask)
+                        elif isinstance(ipwithnetmask, ipaddress.IPv6Interface):
+                            familyInfo["ipv6-address"] = str(ipwithnetmask)
+                        else:
+                            self.logger.debug(
+                                f"This type was not understood by the system. Type: {type(ipwithnetmask)} and value: {str(ipwithnetmask)}"
+                            )
+                    except ValueError:
+                        continue
+                elif int(vals.family.value) in [17]:
+                    familyInfo["mac-address"] = vals.address
+                familyInfo["broadcast"] = vals.broadcast
+                familyInfo["ptp"] = vals.ptp
+                if vals.family.value == 2:
+                    familyInfo["UP"] = tmpifStats[nic].isup
+                    familyInfo["duplex"] = tmpifStats[nic].duplex.value
+                    familyInfo["speed"] = tmpifStats[nic].speed
+                    familyInfo["MTU"] = tmpifStats[nic].mtu
+                    # Additional info which is not provided by psutil so far...
+                    # More detail information about all types here:
+                    # http://lxr.free-electrons.qcom/source/include/uapi/linux/if_arp.h
+                    nicType = externalCommand("cat /sys/class/net/" + nic + "/type")
+                    familyInfo["Type"] = nicType[0].decode("UTF-8").strip()
+                    txQueueLen = externalCommand(
+                        "cat /sys/class/net/" + nic + "/tx_queue_len"
+                    )
+                    familyInfo["txqueuelen"] = txQueueLen[0].strip()
+                nicInfo[str(vals.family.value)].append(familyInfo)
+        # Check in the end which interfaces where defined in config but not available...
+        outputForFE = {"interfaces": {}, "routes": [], "lldp": {}}
+        for intfName, intfDict in netInfo.items():
+            if intfName.split(".")[0] not in self.config.get("agent", "interfaces"):
+                self.logger.debug(
+                    f"This interface {intfName} was defined in configuration, but not available. Will not add it to final output"
+                )
+            else:
+                outputForFE["interfaces"][intfName] = intfDict
+        # Get Routing Information
+        outputForFE["routes"] = self.getRoutes()
+        outputForFE["lldp"] = self.getLLDP()
+        return outputForFE
 
 
-def getRoutes(logger):
-    """Get Routing information from host"""
-    routes = []
-    with IPRoute() as ipr:
-        for route in ipr.get_routes(table=254, family=2):
-            newroute = {"dst_len": route["dst_len"], "iptype": "ipv4"}
-            for item in route["attrs"]:
-                if item[0] in ["RTA_GATEWAY", "RTA_DST", "RTA_PREFSRC"]:
-                    newroute[item[0]] = item[1]
-            routes.append(newroute)
-        for route in ipr.get_routes(table=254, family=10):
-            newroute = {"dst_len": route["dst_len"], "iptype": "ipv6"}
-            for item in route["attrs"]:
-                if item[0] in ["RTA_GATEWAY", "RTA_DST", "RTA_PREFSRC"]:
-                    newroute[item[0]] = item[1]
-            routes.append(newroute)
-    return routes
+    def getLLDP(self):
+        """Get LLDP Info, if socket is available and lldpcli command does not raise exception"""
+        try:
+            lldpOut = externalCommand("lldpcli show neighbors -f json")
+            lldpObj = evaldict(lldpOut[0].decode("utf-8"))
+            out = {}
+            for item in lldpObj.get("lldp", {}).get("interface", []):
+                for intf, vals in item.items():
+                    mac = ""
+                    remintf = ""
+                    for _switch, swvals in vals.get("chassis", {}).items():
+                        if swvals.get("id", {}).get("type", "") == "mac":
+                            mac = swvals["id"]["value"]
+                    # lets get remote port info
+                    if vals.get("port", {}).get("id", {}).get("type", "") == "ifname":
+                        remintf = vals["port"]["id"]["value"]
+                    if mac and remintf:
+                        out[intf] = {
+                            "remote_chassis_id": mac,
+                            "remote_port_id": remintf,
+                            "local_port_id": intf,
+                        }
+            return out
+        except:
+            self.logger.debug(
+                "Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?"
+            )
+        return {}
+
+
+    def getRoutes(self):
+        """Get Routing information from host"""
+        routes = []
+        with IPRoute() as ipr:
+            for route in ipr.get_routes(table=254, family=2):
+                newroute = {"dst_len": route["dst_len"], "iptype": "ipv4"}
+                for item in route["attrs"]:
+                    if item[0] in ["RTA_GATEWAY", "RTA_DST", "RTA_PREFSRC"]:
+                        newroute[item[0]] = item[1]
+                routes.append(newroute)
+            for route in ipr.get_routes(table=254, family=10):
+                newroute = {"dst_len": route["dst_len"], "iptype": "ipv6"}
+                for item in route["attrs"]:
+                    if item[0] in ["RTA_GATEWAY", "RTA_DST", "RTA_PREFSRC"]:
+                        newroute[item[0]] = item[1]
+                routes.append(newroute)
+        return routes
 
 
 if __name__ == "__main__":
-    getLoggingObject(logType="StreamLogger", service="Agent")
+    obj = NetInfo()
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get(getGitConfig()))
+    PRETTY.pprint(obj.get())
