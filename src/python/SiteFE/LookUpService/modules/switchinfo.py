@@ -192,7 +192,7 @@ class SwitchInfo():
             try:
                 vsw = self.config.get(switchName, 'vsw')
             except (NoOptionError, NoSectionError) as ex:
-                self.logger.debug('ERROR: vsw parameter is not defined for %s. Err: %s', switchName, ex)
+                self.logger.debug('Warning: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
             try:
                 rst = self.config.get(switchName, 'rst')

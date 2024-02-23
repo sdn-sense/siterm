@@ -37,7 +37,7 @@ class RDFHelper():
                     prefixes.setdefault(key, {})
                     prefixes[key][switchName] = f"{prefixes['site']}:{tKey}:service+{key}"
                 except NoOptionError:
-                    self.logger.debug('ERROR: %s parameter is not defined for %s.', key, switchName)
+                    self.logger.debug('Warning: %s parameter is not defined for %s.', key, switchName)
                     continue
         self.prefixes = prefixes
 
