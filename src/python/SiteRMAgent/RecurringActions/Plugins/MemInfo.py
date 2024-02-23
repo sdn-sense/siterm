@@ -9,30 +9,37 @@ Date: 2022/01/29
 import pprint
 
 from SiteRMAgent.RecurringActions.Utilities import tryConvertToNumeric
-from SiteRMLibs.MainUtilities import externalCommand, getLoggingObject
+from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.MainUtilities import getLoggingObject
 
-NAME = "MemInfo"
+class MemInfo:
+    """MemInfo Plugin"""
+    def __init__(self, config=None, logger=None):
+        self.config = config if config else getGitConfig()
+        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
 
-
-def get(**_):
-    """Get memory info from /proc/meminfo"""
-    memInfo = {}
-    tmpOut = externalCommand("cat /proc/meminfo")
-    for item in tmpOut:
-        for desc in item.decode("UTF-8").split("\n"):
-            vals = desc.split(":")
-            if len(vals) == 2:
-                value = vals[1].strip().split(" ")
-                # We strip it to remove white spaces and split to remove kb in the end
-                name = vals[0].strip()
-                if len(value) == 2:
-                    name += f"_{value[1]}"
-                memInfo[name] = tryConvertToNumeric(value[0])
-    memInfo["memory_mb"] = int(memInfo["MemTotal_kB"] // 1000)
-    return memInfo
+    def get(self, **_kwargs):
+        """Get memory info from /proc/meminfo"""
+        memInfo = {}
+        with open("/proc/meminfo", "r", encoding="utf-8") as memFile:
+            for desc in memFile:
+                vals = desc.split(":")
+                if len(vals) == 2:
+                    value = vals[1].strip().split(" ")
+                    # We strip it to remove white spaces and split to remove kb in the end
+                    name = vals[0].strip()
+                    if len(value) == 2:
+                        name += f"_{value[1]}"
+                    memInfo[name] = tryConvertToNumeric(value[0])
+        if "MemTotal_kB" in memInfo:
+            memInfo["memory_mb"] = int(memInfo["MemTotal_kB"] // 1000)
+        else:
+            memInfo["memory_mb"] = 0
+            self.logger.warning("Failed to get MemTotal_kB from /proc/meminfo")
+        return memInfo
 
 
 if __name__ == "__main__":
-    getLoggingObject(logType="StreamLogger", service="Agent")
+    obj = MemInfo()
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get())
+    PRETTY.pprint(obj.get())

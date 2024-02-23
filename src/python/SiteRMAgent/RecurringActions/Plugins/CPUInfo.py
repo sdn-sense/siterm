@@ -15,31 +15,39 @@ Date: 2022/01/29
 import pprint
 
 from SiteRMAgent.RecurringActions.Utilities import tryConvertToNumeric
-from SiteRMLibs.MainUtilities import externalCommand, getLoggingObject
+from SiteRMLibs.MainUtilities import externalCommand
+from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.MainUtilities import getLoggingObject
 
-NAME = "CPUInfo"
+
+class CPUInfo:
+    """CPUInfo Plugin"""
+
+    def __init__(self, config=None, logger=None):
+        self.config = config if config else getGitConfig()
+        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
 
 
-def get(**_):
-    """Get lscpu information"""
-    cpuInfo = {}
-    tmpOut = externalCommand("lscpu")
-    for item in tmpOut:
-        for desc in item.decode("UTF-8").split("\n"):
-            vals = desc.split(":")
-            if len(vals) == 2:
-                cpuInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
-    try:
-        cpuInfo["num_cores"] = int(cpuInfo["Socket(s)"]) * int(
-            cpuInfo["Core(s) per socket"]
-        )
-    except (ValueError, KeyError):
-        print(f"Failed to calculate num_cores from {cpuInfo}. will set to 1")
-        cpuInfo["num_cores"] = 1
-    return cpuInfo
+    def get(self, **_kwargs):
+        """Get lscpu information"""
+        cpuInfo = {}
+        tmpOut = externalCommand("lscpu")
+        for item in tmpOut:
+            for desc in item.decode("UTF-8").split("\n"):
+                vals = desc.split(":")
+                if len(vals) == 2:
+                    cpuInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
+        try:
+            cpuInfo["num_cores"] = int(cpuInfo["Socket(s)"]) * int(
+                cpuInfo["Core(s) per socket"]
+            )
+        except (ValueError, KeyError):
+            self.logger.warning(f"Failed to calculate num_cores from {cpuInfo}. will set to 1")
+            cpuInfo["num_cores"] = 1
+        return cpuInfo
 
 
 if __name__ == "__main__":
-    getLoggingObject(logType="StreamLogger", service="Agent")
+    obj = CPUInfo()
     PRETTY = pprint.PrettyPrinter(indent=4)
-    PRETTY.pprint(get())
+    PRETTY.pprint(obj.get())

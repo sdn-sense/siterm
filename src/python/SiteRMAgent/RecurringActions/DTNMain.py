@@ -6,10 +6,7 @@ Authors:
 
 Date: 2022/01/29
 """
-from __future__ import absolute_import
 import sys
-import importlib
-from SiteRMAgent.RecurringActions import Plugins
 from SiteRMLibs.MainUtilities import publishToSiteFE, createDirs
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import contentDB
@@ -17,6 +14,11 @@ from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.CustomExceptions import PluginException
+from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
+from SiteRMAgent.RecurringActions.Plugins.CPUInfo import CPUInfo
+from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
+from SiteRMAgent.RecurringActions.Plugins.NetInfo import NetInfo
+from SiteRMAgent.RecurringActions.Plugins.StorageInfo import StorageInfo
 
 COMPONENT = 'RecurringAction'
 
@@ -27,53 +29,46 @@ class RecurringAction():
         self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service='Agent')
         self.sitename = sitename
+        self.classes = {}
+        self._loadClasses()
+
+    def _loadClasses(self):
+        """Load all classes"""
+        for name, plugin in {'CertInfo': CertInfo, 'CPUInfo': CPUInfo, 'MemInfo': MemInfo,
+                             'NetInfo': NetInfo, 'StorageInfo': StorageInfo}.items():
+            self.classes[name] = plugin(self.config, self.logger)
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
+        self._loadClasses()
 
     def prepareJsonOut(self):
         """Executes all plugins and prepares json output to FE."""
         excMsg = ""
         outputDict = {'Summary': {}}
         tmpName = None
-        if '__all__' in dir(Plugins):
-            for callableF in Plugins.__all__:
-                try:
-                    method = importlib.import_module(f"SiteRMAgent.RecurringActions.Plugins.{callableF}")
-                    if hasattr(method, 'NAME'):
-                        tmpName = method.NAME
-                    else:
-                        tmpName = callableF
-                    if method.NAME in outputDict:
-                        msg = f'{method.NAME} name is already defined in output dictionary'
-                        self.logger.error(msg)
-                        raise KeyError(msg)
-                    tmp = method.get(config=self.config)
-                    if not isinstance(tmp, dict):
-                        msg = f'Returned output from {method.Name} method is not a dictionary. Type: {type(tmp)}'
-                        self.logger.error(msg)
-                        raise ValueError(msg)
-                    if tmp:  # Do not add empty stuff inside....
-                        outputDict[method.NAME] = tmp
-                    else:
-                        continue
-                    # Here wer check if there is any CUSTOM_FUNCTIONS
-                    if hasattr(method, 'CUSTOM_FUNCTIONS'):
-                        for funcOutName, funcCallable in list(method.CUSTOM_FUNCTIONS.items()):
-                            outputDict['Summary'][method.NAME] = {}
-                            tmpOut = funcCallable(self.config)
-                            outputDict['Summary'][method.NAME][funcOutName] = tmpOut
-                except Exception as ex:
-                    excType, excValue = sys.exc_info()[:2]
-                    outputDict[tmpName] = {"errorType": str(excType.__name__),
-                                           "errorNo": -100,  # TODO Use exception definition from utilities
-                                           "errMsg": str(excValue),
-                                           "exception": str(ex)}
-                    excMsg += f" {str(excType.__name__)}: {str(excValue)}"
-                if 'errorType' in list(outputDict[tmpName].keys()):
-                    self.logger.critical("%s received %s. Exception details: %s", tmpName,
-                                    outputDict[tmpName]['errorType'], outputDict[tmpName])
+        for tmpName, method in self.classes.items():
+            try:
+                tmp = method.get()
+                if not isinstance(tmp, dict):
+                    msg = f'Returned output from {method.Name} method is not a dictionary. Type: {type(tmp)}'
+                    self.logger.error(msg)
+                    raise ValueError(msg)
+                if tmp:
+                    outputDict[tmpName] = tmp
+                else:
+                    self.logger.warning('Plugin %s returned empty output', method.NAME)
+                    raise ValueError(f'Plugin {method.NAME} returned empty output')
+            except Exception as ex:
+                excType, excValue = sys.exc_info()[:2]
+                outputDict[tmpName] = {"errorType": str(excType.__name__),
+                                        "errorNo": -6,
+                                        "errMsg": str(excValue),
+                                        "exception": str(ex)}
+                excMsg += f" {str(excType.__name__)}: {str(excValue)}"
+                self.logger.critical("%s received %s. Exception details: %s", tmpName,
+                                     outputDict[tmpName]['errorType'], outputDict[tmpName])
         return outputDict, excMsg
 
     def appendConfig(self, dic):
