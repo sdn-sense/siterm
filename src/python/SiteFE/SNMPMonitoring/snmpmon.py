@@ -28,9 +28,9 @@ from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import createDirs
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.Backends.main import Switch
-from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import jsondumps
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.PromPush import PromPushService
 
 

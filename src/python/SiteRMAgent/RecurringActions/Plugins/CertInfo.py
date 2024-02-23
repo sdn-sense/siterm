@@ -11,7 +11,7 @@ import time
 import pprint
 from datetime import datetime
 from OpenSSL import crypto
-from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
 
 

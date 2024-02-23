@@ -11,8 +11,8 @@ import re
 
 from SiteRMAgent.RecurringActions.Utilities import tryConvertToNumeric
 from SiteRMLibs.MainUtilities import externalCommand
-from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.GitConfig import getGitConfig
 
 class StorageInfo:
     """Storage Info parser"""

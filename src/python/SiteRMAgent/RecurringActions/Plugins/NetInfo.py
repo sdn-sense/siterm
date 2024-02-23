@@ -14,8 +14,8 @@ import psutil
 from pyroute2 import IPRoute
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.MainUtilities import (evaldict, externalCommand, getFileContentAsJson)
-from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMAgent.Ruler.OverlapLib import OverlapLib
 
 def str2bool(val):

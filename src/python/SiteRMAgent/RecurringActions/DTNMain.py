@@ -11,7 +11,6 @@ from SiteRMLibs.MainUtilities import publishToSiteFE, createDirs
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getUTCnow
-from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.CustomExceptions import PluginException
 from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
@@ -19,6 +18,7 @@ from SiteRMAgent.RecurringActions.Plugins.CPUInfo import CPUInfo
 from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
 from SiteRMAgent.RecurringActions.Plugins.NetInfo import NetInfo
 from SiteRMAgent.RecurringActions.Plugins.StorageInfo import StorageInfo
+from SiteRMLibs.GitConfig import getGitConfig
 
 COMPONENT = 'RecurringAction'
 

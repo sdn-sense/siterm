@@ -19,7 +19,7 @@ Date                    : 2019/10/01
 """
 import time
 from datetime import datetime
-from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.GitConfig import getGitConfig
 
 
 class CertHandler():

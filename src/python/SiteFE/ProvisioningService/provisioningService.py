@@ -31,8 +31,8 @@ from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import (NoOptionError, NoSectionError,
                                          SwitchException)
 from SiteRMLibs.MainUtilities import (createDirs, evaldict, getDBConn,
-                                      getGitConfig, getLoggingObject,
-                                      getUTCnow, getVal, jsondumps)
+                                      getLoggingObject, getUTCnow, getVal, jsondumps)
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWConverter import BWConverter
 from SiteRMLibs.timing import Timing
 

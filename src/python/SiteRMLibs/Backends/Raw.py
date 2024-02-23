@@ -11,7 +11,7 @@ Date: 2021/12/01
 import os
 
 import yaml
-from SiteRMLibs.MainUtilities import createDirs, getGitConfig
+from SiteRMLibs.GitConfig import getGitConfig
 
 
 class Switch:

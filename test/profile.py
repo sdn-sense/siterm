@@ -5,8 +5,7 @@ import os
 import psutil
 import inspect
 from SiteFE.LookUpService import lookup as LS
-from SiteRMLibs.MainUtilities import getGitConfig
-
+from SiteRMLibs.GitConfig import getGitConfig
 
 def elapsedSince(start):
     """Find elapsed time"""

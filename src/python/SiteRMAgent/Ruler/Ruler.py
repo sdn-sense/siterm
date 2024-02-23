@@ -17,8 +17,8 @@ from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 from SiteRMLibs.ipaddr import checkOverlap
 from SiteRMLibs.MainUtilities import (contentDB, createDirs, evaldict,
                                       getDataFromSiteFE, getFileContentAsJson,
-                                      getFullUrl, getGitConfig,
-                                      getLoggingObject)
+                                      getFullUrl, getLoggingObject)
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWConverter import BWConverter
 from SiteRMLibs.timing import Timing
 

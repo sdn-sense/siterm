@@ -30,9 +30,9 @@ from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getDataFromSiteFE, evaldict
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import publishToSiteFE
-from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import jsondumps
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 
 COMPONENT = 'Debugger'

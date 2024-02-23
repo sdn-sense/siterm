@@ -24,20 +24,11 @@ from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress
 from SiteRMLibs.MainUtilities import (
-    contentDB,
-    createDirs,
-    decodebase64,
-    dictSearch,
-    evaldict,
-    getActiveDeltas,
-    getAllHosts,
-    getCurrentModel,
-    getDBConn,
-    getGitConfig,
-    getLoggingObject,
-    getVal,
-    writeActiveDeltas,
+    contentDB, createDirs, decodebase64, dictSearch,
+    evaldict, getActiveDeltas, getAllHosts, getCurrentModel,
+    getDBConn, getLoggingObject, getVal, writeActiveDeltas,
 )
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.timing import Timing
 
 
