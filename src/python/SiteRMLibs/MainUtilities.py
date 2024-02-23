@@ -25,7 +25,6 @@ import shlex
 import shutil
 import socket
 import subprocess
-import sys
 import time
 import uuid
 
@@ -36,15 +35,9 @@ import simplejson as json
 from past.builtins import basestring
 from rdflib import Graph
 from SiteRMLibs import __version__ as runningVersion
-from SiteRMLibs.CustomExceptions import (
-    FailedInterfaceCommand,
-    NoOptionError,
-    NoSectionError,
-    NotFoundError,
-    NotSupportedArgument,
-    TooManyArgumentalValues,
-    WrongInputError,
-)
+from SiteRMLibs.CustomExceptions import FailedInterfaceCommand, NoOptionError, NoSectionError
+from SiteRMLibs.CustomExceptions import NotFoundError, NotSupportedArgument, TooManyArgumentalValues
+from SiteRMLibs.CustomExceptions import WrongInputError
 from SiteRMLibs.DBBackend import dbinterface
 from SiteRMLibs.HTTPLibrary import Requests
 from yaml import safe_load as yload
@@ -279,13 +272,13 @@ def getDataFromSiteFE(inputDict, host, url):
 
 def getWebContentFromURL(url):
     """GET from URL"""
-    out = requests.get(url)
+    out = requests.get(url, timeout=60)
     return out
 
 
 def postWebContentToURL(url, **kwargs):
     """POST to URL"""
-    response = requests.post(url, **kwargs)
+    response = requests.post(url, timeout=60, **kwargs)
     return response
 
 
@@ -738,10 +731,7 @@ def read_input_data(environ):
     length = int(environ.get("CONTENT_LENGTH", 0))
     if length == 0:
         raise WrongInputError("Content input length is 0.")
-    if sys.version.startswith("3."):
-        body = io.BytesIO(environ["wsgi.input"].read(length))
-    else:
-        body = io.StringIO(environ["wsgi.input"].read(length))
+    body = io.BytesIO(environ["wsgi.input"].read(length))
     outjson = {}
     try:
         outjson = evaldict(body.getvalue())

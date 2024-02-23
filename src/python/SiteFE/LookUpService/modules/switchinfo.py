@@ -130,6 +130,23 @@ class SwitchInfo():
                         ['mrs', 'value'],
                         [val])
 
+    def _addSwitchBWParams(self, switchName, portName, portSwitch):
+        """Add Switch Bandwidth Params"""
+        bw = 0
+        if 'capacity' in portSwitch:
+            bw = int(portSwitch['capacity'])
+        elif 'bandwidth' in portSwitch:
+            bw = int(portSwitch['bandwidth'])
+        bwuri = self._addBandwidthService(hostname=switchName, portName=portName)
+        params = {'bwuri': bwuri,
+                  'unit': 'mbps',
+                  'maximumCapacity': bw,
+                  'availableCapacity': bw,  # TODO - It should calculate available capacity from
+                  'reservableCapacity': bw,  # TODO - Reservable from config, if not - maximumCapacity
+                  'minReservableCapacity': 1000}
+        self._addBandwidthServiceParams(**params)
+
+
     def addSwitchIntfInfo(self, switchName, portName, portSwitch, newuri):
         """Add switch info to mrml"""
         for key, val in portSwitch.items():
@@ -150,27 +167,23 @@ class SwitchInfo():
                                 [",".join(map(str, portSwitch['vlan_range_list']))])
                 # Generate host alias or adds' isAlias
                 self._addIsAlias(uri=newuri, isAlias=portSwitch.get('isAlias'), hostname=switchName, portName=portName, nodetype='switch')
-                continue
-            if key == 'channel-member':
+            elif key == 'channel-member':
                 for value in val:
                     switchuri = ":".join(newuri.split(':')[:-1])
                     self.addToGraph(['site', newuri],
                                     ['nml', 'hasBidirectionalPort'],
                                     ['site', f'{switchuri}:{self.switch.getSystemValidPortName(value)}'])
-                continue
-            if key in ['ipv4', 'ipv6', 'mac', 'macaddress', 'lineprotocol', 'operstatus', 'mtu', 'bandwidth']:
+            elif key in ['ipv4', 'ipv6', 'mac', 'macaddress', 'lineprotocol', 'operstatus', 'mtu']:
                 subkey = generateKey(self, val, key)
                 if isinstance(subkey, list):
                     for item in subkey:
                         self._addVals(item['key'], item['subkey'], item['val'], newuri)
                 else:
                     self._addVals(key, subkey, val, newuri)
-                if key == 'bandwidth' and 'capacity' not in portSwitch:
-                    self._mrsLiteral(newuri, 'capacity', int(val))
-            if key in ['capacity', 'availableCapacity', 'granularity', 'reservableCapacity']:
-                self._mrsLiteral(newuri, key, int(portSwitch.get(key)))
-            if key in ['realportname']:
+            elif key == 'realportname':
                 self._addVals('sense-rtmon', key, val, newuri)
+        # Add BW Params
+        self._addSwitchBWParams(switchName, portName, portSwitch)
 
     def _addSwitchPortInfo(self, key, switchInfo):
         """Add Switch Port Info for ports, vlans"""
@@ -280,18 +293,15 @@ class SwitchInfo():
             out = {'hostname': switchName}
             try:
                 out['rst'] = self.config.get(switchName, 'rst')
+                out['private_asn'] = self.config.get(switchName, 'private_asn')
             except (NoOptionError, NoSectionError):
                 continue
-            if 'rst' in out and out['rst']:
-                try:
-                    out['private_asn'] = self.config.get(switchName, 'private_asn')
-                except (NoOptionError, NoSectionError) as ex:
-                    continue
-            for key in ['ipv4-subnet-pool-list', 'ipv6-subnet-pool-list']:
-                tmp = self.__getValFromConfig(key)
-                if tmp:
-                    out[key[:-5]] = ",".join(map(str, tmp))
+            if not out['rst'] or not out['private_asn']:
+                continue
             for iptype in ["ipv4", "ipv6"]:
+                tmp = self.__getValFromConfig(f"{iptype}-subnet-pool-list",)
+                if tmp:
+                    out[f"{iptype}-subnet-pool-list"[:-5]] = tmp
                 out['iptype'] = iptype
                 out['rstname'] = f'rst-{iptype}'
                 self._addRoutingTable(**out)
