@@ -29,7 +29,15 @@ class NetInfo(BWService):
     def __init__(self, config=None, logger=None):
         self.config = config if config else getGitConfig()
         self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
+        self.activeDeltas = {}
 
+    def _getActive(self):
+        """Get active deltas."""
+        self.activeDeltas = {}
+        workDir = self.config.get("general", "privatedir") + "/SiteRM/RulerAgent/"
+        activeDeltasFile = f"{workDir}/activedeltas.json"
+        if os.path.isfile(activeDeltasFile):
+            self.activeDeltas = getFileContentAsJson(activeDeltasFile)
 
     def getvlans(self):
         """Get interface name and vlan id belonging to it"""
@@ -67,6 +75,7 @@ class NetInfo(BWService):
 
     def get(self, **_kwargs):
         """Get all network information"""
+        self._getActive()
         netInfo = {}
         privVlans = self.getvlans()
 

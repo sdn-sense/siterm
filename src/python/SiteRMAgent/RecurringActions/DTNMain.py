@@ -6,21 +6,19 @@ Authors:
 
 Date: 2022/01/29
 """
-import os
 import sys
 from SiteRMLibs.MainUtilities import publishToSiteFE, createDirs
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import getFileContentAsJson
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import PluginException
 from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
 from SiteRMAgent.RecurringActions.Plugins.CPUInfo import CPUInfo
 from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
 from SiteRMAgent.RecurringActions.Plugins.NetInfo import NetInfo
 from SiteRMAgent.RecurringActions.Plugins.StorageInfo import StorageInfo
-from SiteRMLibs.GitConfig import getGitConfig
 
 COMPONENT = 'RecurringAction'
 
@@ -31,7 +29,6 @@ class RecurringAction():
         self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service='Agent')
         self.sitename = sitename
-        self.activeDeltas = {}
         self.classes = {}
         self._loadClasses()
 
@@ -40,14 +37,6 @@ class RecurringAction():
         for name, plugin in {'CertInfo': CertInfo, 'CPUInfo': CPUInfo, 'MemInfo': MemInfo,
                              'NetInfo': NetInfo, 'StorageInfo': StorageInfo}.items():
             self.classes[name] = plugin(self.config, self.logger)
-
-    def _getActive(self):
-        """Get active deltas."""
-        self.activeDeltas = {}
-        workDir = self.config.get("general", "privatedir") + "/SiteRM/RulerAgent/"
-        activeDeltasFile = f"{workDir}/activedeltas.json"
-        if os.path.isfile(activeDeltasFile):
-            self.activeDeltas = getFileContentAsJson(activeDeltasFile)
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -94,7 +83,6 @@ class RecurringAction():
 
     def startwork(self):
         """Execute main script for SiteRM Agent output preparation."""
-        self._getActive()
         workDir = self.config.get('general', 'privatedir') + "/SiteRM/"
         createDirs(workDir)
         dic, excMsg = self.prepareJsonOut()

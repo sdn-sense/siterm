@@ -12,6 +12,7 @@ import os
 
 import yaml
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import createDirs
 
 
 class Switch:
