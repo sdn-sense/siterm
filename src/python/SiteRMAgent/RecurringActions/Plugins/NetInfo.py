@@ -108,7 +108,7 @@ class NetInfo(BWService):
             nicInfo["bwParams"]["maximumCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", 0))
             nicInfo["bwParams"]["granularity"] = int(self.config.get(intf, "bwParams").get("granularity", 0))
 
-            reservedCap = self.bwCalculatereservableServer(self, self.config.config["MAIN"],
+            reservedCap = self.bwCalculatereservableServer(self.config.config["MAIN"],
                                                            self.config.get('agent', 'hostname'), intf,
                                                            nicInfo["bwParams"]["maximumCapacity"])
             nicInfo["bwParams"]["availableCapacity"] = reservedCap
