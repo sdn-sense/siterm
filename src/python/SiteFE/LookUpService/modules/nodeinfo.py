@@ -280,51 +280,31 @@ class NodeInfo:
 
         # BANDWIDTH Service for INTERFACE
         # ==========================================================================================
-        bws = self._addBandwidthService(hostname=hostname, portName=intf)
-
-        for item in [
-            ["unit", "unit", "mbps"],
-            ["max_bandwidth", "maximumCapacity", 10000000000],
-            ["available_bandwidth", "availableCapacity", 10000000000],
-            ["granularity", "granularity", 1000000],
-            ["reservable_bandwidth", "reservableCapacity", 10000000000],
-            ["min_bandwidth", "minReservableCapacity", 10000000000],
-        ]:
-            value = item[2]
-            if item[0] in list(intfDict.keys()):
-                value = intfDict[item[0]]
-            try:
-                value = int((int(value) // 1000000))
-            except ValueError:
-                value = str(value)
-            self._mrsLiteral(bws, item[1], value)
+        if 'bwParams' in intfDict and intfDict['bwParams']:
+            bws = self._addBandwidthService(hostname=hostname, portName=intf)
+            intfDict['bwParams']['bwuri'] = bws
+            self._addBandwidthServiceParams(**intfDict['bwParams'])
             # ==========================================================================================
         if "capacity" in list(intfDict.keys()):
             self._mrsLiteral(bws, "capacity", intfDict["capacity"])
         if "vlan_range_list" in list(intfDict.keys()):
             self.newGraph.add(
-                (
-                    self.genUriRef("site", newuri),
-                    self.genUriRef("nml", "hasLabelGroup"),
-                    self.genUriRef("site", f"{newuri}:vlan-range"),
-                )
-            )
+                (self.genUriRef("site", newuri),
+                 self.genUriRef("nml", "hasLabelGroup"),
+                self.genUriRef("site", f"{newuri}:vlan-range"),
+                ))
 
             self.newGraph.add(
-                (
-                    self.genUriRef("site", f"{newuri}:vlan-range"),
-                    self.genUriRef("rdf", "type"),
-                    self.genUriRef("nml", "LabelGroup"),
-                )
-            )
+                (self.genUriRef("site", f"{newuri}:vlan-range"),
+                 self.genUriRef("rdf", "type"),
+                 self.genUriRef("nml", "LabelGroup"),
+                ))
 
             self.newGraph.add(
-                (
-                    self.genUriRef("site", f"{newuri}:vlan-range"),
-                    self.genUriRef("nml", "labeltype"),
-                    self.genUriRef("schema", "#vlan"),
-                )
-            )
+                (self.genUriRef("site", f"{newuri}:vlan-range"),
+                 self.genUriRef("nml", "labeltype"),
+                 self.genUriRef("schema", "#vlan"),
+                ))
             self._nmlLiteral(
                 f"{newuri}:vlan-range",
                 "values",
@@ -332,10 +312,9 @@ class NodeInfo:
             )
 
         self.shared = "notshared"
-        if "shared" in intfDict:
-            if intfDict["shared"]:
-                self.shared = "shared"
-            self._mrsLiteral(newuri, "type", self.shared)
+        if "shared" in intfDict and intfDict["shared"]:
+            self.shared = "shared"
+        self._mrsLiteral(newuri, "type", self.shared)
 
     def defineHostInfo(self, nodeDict, hostinfo):
         """Define Host information inside MRML.

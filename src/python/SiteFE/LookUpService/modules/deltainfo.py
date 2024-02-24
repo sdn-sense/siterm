@@ -103,10 +103,11 @@ class DeltaInfo():
         if not portDict.get('hasService', {}):
             return
         portDict['hasService']['uri'] = uri
-        uri = self._addBandwidthService(**portDict['hasService'])
-        self.addTimeline(portDict, uri)
+        bwuri = self._addBandwidthService(**portDict['hasService'])
+        portDict['hasService']['bwuri'] = bwuri
+        self.addTimeline(portDict, bwuri)
         self._addBandwidthServiceParams(**portDict['hasService'])
-        self.addNetworkStatus(portDict['hasService'], uri)
+        self.addNetworkStatus(portDict['hasService'], bwuri)
 
     def _addNetworkAddr(self, portDict, uri):
         """Add Network delta info"""

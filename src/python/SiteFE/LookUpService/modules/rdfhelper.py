@@ -37,7 +37,7 @@ class RDFHelper():
                     prefixes.setdefault(key, {})
                     prefixes[key][switchName] = f"{prefixes['site']}:{tKey}:service+{key}"
                 except NoOptionError:
-                    self.logger.debug('ERROR: %s parameter is not defined for %s.', key, switchName)
+                    self.logger.debug('Warning: %s parameter is not defined for %s.', key, switchName)
                     continue
         self.prefixes = prefixes
 
@@ -241,6 +241,8 @@ class RDFHelper():
     # Also _addSwitchingService
     def _addBandwidthService(self, **kwargs):
         """Add Bandwidth Service to Model"""
+        if kwargs.get('bwuri', ''):
+            return kwargs['bwuri']
         if not kwargs.get('uri', ''):
             kwargs['uri'] = self._addPort(**kwargs)
         if not kwargs['uri']:
@@ -271,12 +273,12 @@ class RDFHelper():
     def _addBandwidthServiceParams(self, **kwargs):
         """Add Bandwitdh Service Parameters to Model"""
         bws = self._addBandwidthService(**kwargs)
-        for item in [['unit', 'unit', "bps"],
-                     ['maximumCapacity', 'maximumCapacity', 10000000000, XSD.long],
-                     ['availableCapacity', 'availableCapacity', 10000000000, XSD.long],
-                     ['granularity', 'granularity', 1000000, XSD.long],
-                     ['reservableCapacity', 'reservableCapacity', 10000000000, XSD.long],
-                     ['minReservableCapacity', 'minReservableCapacity', 10000000000, XSD.long],
+        for item in [['unit', 'unit', "mbps"],
+                     ['maximumCapacity', 'maximumCapacity', 100000, XSD.long],
+                     ['availableCapacity', 'availableCapacity', 100000, XSD.long],
+                     ['granularity', 'granularity', 1000, XSD.long],
+                     ['reservableCapacity', 'reservableCapacity', 100000, XSD.long],
+                     ['minReservableCapacity', 'minReservableCapacity', 1000, XSD.long],
                      ['type', 'type', 'guaranteedCapped'],
                      ['priority', 'priority', 0]]:
             if item[0] not in kwargs:

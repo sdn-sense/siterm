@@ -17,17 +17,10 @@ import traceback
 import psutil
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.MainUtilities import (
-    getDataFromSiteFE,
-    getDBConn,
-    getFullUrl,
-    getGitConfig,
-    getHostname,
-    getLoggingObject,
-    getUTCnow,
-    getVal,
-    publishToSiteFE,
-    reCacheConfig,
+    getDataFromSiteFE, getDBConn, getFullUrl, getHostname,
+    getLoggingObject, getUTCnow, getVal, publishToSiteFE, reCacheConfig
 )
+from SiteRMLibs.GitConfig import getGitConfig
 
 
 def getParser(description):

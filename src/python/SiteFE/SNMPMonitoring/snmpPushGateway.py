@@ -12,7 +12,7 @@ from SiteRMLibs.MainUtilities import isValFloat
 from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getVal
 from SiteRMLibs.MainUtilities import getDBConn
-from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.GitConfig import getGitConfig
 from prometheus_client import CollectorRegistry, push_to_gateway
 from prometheus_client import Info, Gauge
 

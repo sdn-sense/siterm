@@ -10,7 +10,8 @@ Date: 2021/12/01
 from os.path import dirname, basename, isfile, join
 import glob
 import importlib
-from SiteRMLibs.MainUtilities import getGitConfig
+# TODO: Review this of defVlanNaming load - so not loading class where it is not needed;
+from SiteRMLibs.GitConfig import getGitConfig
 
 modules = glob.glob(join(dirname(__file__), "*.py"))
 __all__ = [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]

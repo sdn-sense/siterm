@@ -31,13 +31,13 @@ from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import (NoOptionError, NoSectionError,
                                          SwitchException)
 from SiteRMLibs.MainUtilities import (createDirs, evaldict, getDBConn,
-                                      getGitConfig, getLoggingObject,
-                                      getUTCnow, getVal, jsondumps)
-from SiteRMLibs.BWConverter import BWConverter
+                                      getLoggingObject, getUTCnow, getVal, jsondumps)
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.BWService import BWService
 from SiteRMLibs.timing import Timing
 
 
-class ProvisioningService(RoutingService, VirtualSwitchingService, BWConverter, Timing):
+class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Timing):
     """
     Provisioning service communicates with Local controllers and applies
     network changes.

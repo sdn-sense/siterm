@@ -12,7 +12,8 @@ import datetime
 import os
 import shutil
 
-from SiteRMLibs.MainUtilities import GitConfig, getLoggingObject, getWebContentFromURL
+from SiteRMLibs.MainUtilities import getLoggingObject, getWebContentFromURL
+from SiteRMLibs.GitConfig import GitConfig
 from yaml import safe_load as yload
 
 

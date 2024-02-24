@@ -15,8 +15,8 @@ from SiteRMLibs.Backends.generalFunctions import (checkConfig, cleanupEmpty,
 from SiteRMLibs.Backends.NodeInfo import Node
 from SiteRMLibs.Backends.Raw import Switch as Raw
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
-from SiteRMLibs.MainUtilities import (evaldict, getDBConn, getGitConfig,
-                                      getLoggingObject, getUTCnow, jsondumps)
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import (evaldict, getDBConn, getLoggingObject, getUTCnow, jsondumps)
 
 
 class Switch(Node):

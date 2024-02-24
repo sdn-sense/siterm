@@ -25,11 +25,11 @@ from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
 from SiteRMLibs.MainUtilities import (createDirs, generateHash,
                                       getActiveDeltas, getCurrentModel,
-                                      getDBConn, getGitConfig,
-                                      getLoggingObject, getUTCnow, getVal)
+                                      getDBConn, getLoggingObject, getUTCnow, getVal)
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.BWService import BWService
 
-
-class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper):
+class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
     """Lookup Service prepares MRML model about the system."""
 
     def __init__(self, config, sitename):

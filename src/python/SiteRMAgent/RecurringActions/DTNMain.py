@@ -11,8 +11,8 @@ from SiteRMLibs.MainUtilities import publishToSiteFE, createDirs
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getUTCnow
-from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import PluginException
 from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
 from SiteRMAgent.RecurringActions.Plugins.CPUInfo import CPUInfo
@@ -83,7 +83,6 @@ class RecurringAction():
 
     def startwork(self):
         """Execute main script for SiteRM Agent output preparation."""
-
         workDir = self.config.get('general', 'privatedir') + "/SiteRM/"
         createDirs(workDir)
         dic, excMsg = self.prepareJsonOut()

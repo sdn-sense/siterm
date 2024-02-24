@@ -36,8 +36,9 @@ from SiteRMLibs.CustomExceptions import (BadRequestError, DeltaNotFound,
                                          OverlapException,
                                          TooManyArgumentalValues)
 from SiteRMLibs.MainUtilities import (contentDB, getCustomOutMsg, getDBConn,
-                                      getGitConfig, getHeaders, getUrlParams,
+                                      getHeaders, getUrlParams,
                                       getVal, jsondumps)
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.x509 import CertHandler
 
 

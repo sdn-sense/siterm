@@ -10,10 +10,10 @@ Date: 2022/01/20
 # TODO. Configure also MTU and txqueuelen
 from pyroute2 import IPRoute
 from SiteRMLibs.MainUtilities import execute
-from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import publishToSiteFE
 from SiteRMLibs.MainUtilities import getFullUrl
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import FailedInterfaceCommand
 from SiteRMLibs.ipaddr import getBroadCast
 from SiteRMLibs.ipaddr import normalizedip

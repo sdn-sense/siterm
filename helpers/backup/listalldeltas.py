@@ -5,8 +5,8 @@ import sys
 from SiteRMLibs.MainUtilities import getVal
 from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getDBConn
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteFE.PolicyService.stateMachine import StateMachine
 
 

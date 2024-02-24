@@ -13,7 +13,7 @@ import simplejson as json
 import yaml
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService.deltachecks import ConflictChecker
-from SiteRMLibs.MainUtilities import getGitConfig
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import OverlapException
 from SiteRMLibs.CustomExceptions import WrongIPAddress
 

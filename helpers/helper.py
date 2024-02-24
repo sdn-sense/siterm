@@ -4,10 +4,10 @@ import copy
 import pprint
 from SiteRMLibs.MainUtilities import getVal
 from SiteRMLibs.MainUtilities import getDBConn
-from SiteRMLibs.MainUtilities import getGitConfig
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import writeActiveDeltas
 from SiteRMLibs.MainUtilities import getActiveDeltas
+from SiteRMLibs.GitConfig import getGitConfig
 
 class Helper:
     """Helper class"""
