@@ -19,13 +19,13 @@ from SiteRMLibs.MainUtilities import (contentDB, createDirs, evaldict,
                                       getDataFromSiteFE, getFileContentAsJson,
                                       getFullUrl, getLoggingObject)
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.BWConverter import BWConverter
+from SiteRMLibs.BWService import BWService
 from SiteRMLibs.timing import Timing
 
 COMPONENT = "Ruler"
 
 
-class Ruler(contentDB, QOS, OverlapLib, BWConverter, Timing):
+class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
     """Ruler class to create interfaces on the system."""
 
     def __init__(self, config, sitename):

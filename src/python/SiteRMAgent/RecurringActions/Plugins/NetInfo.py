@@ -15,8 +15,8 @@ from pyroute2 import IPRoute
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.MainUtilities import (evaldict, externalCommand, getFileContentAsJson)
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.BWService import BWService
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMAgent.Ruler.OverlapLib import OverlapLib
 
 def str2bool(val):
     """Check if str is true boolean."""
@@ -24,12 +24,11 @@ def str2bool(val):
         return val
     return val.lower() in ("yes", "true", "t", "1")
 
-class NetInfo(OverlapLib):
+class NetInfo(BWService):
     """Net Info"""
     def __init__(self, config=None, logger=None):
         self.config = config if config else getGitConfig()
         self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
-        self.activeDeltasFile = f'{self.config.get("general", "privatedir")}/SiteRM/RulerAgent/activedeltas.json'
 
 
     def getvlans(self):
@@ -66,18 +65,11 @@ class NetInfo(OverlapLib):
             pass
         return None
 
-    def _getOverlaps(self):
-        """Load active deltas"""
-        if os.path.isfile(self.activeDeltasFile):
-            active = getFileContentAsJson(self.activeDeltasFile)
-            return self.getAllOverlaps(active)
-        return {}
-
     def get(self, **_kwargs):
         """Get all network information"""
         netInfo = {}
         privVlans = self.getvlans()
-        overlaps = self.getAllOverlaps(self._getOverlaps())
+
         for intf in self.config.get("agent", "interfaces"):
             nicInfo = netInfo.setdefault(intf, {})
             if self.config.has_option(intf, "isAlias"):
@@ -100,18 +92,18 @@ class NetInfo(OverlapLib):
             nicInfo["vlans"] = {}
             # Bandwidth parameters
             nicInfo.setdefault("bwParams", {})
-            nicInfo["bwParams"]["unit"] = self.config.get(intf, "bwParams").get("unit", "mbps")
+            nicInfo["bwParams"]["unit"] = "mbit"
             nicInfo["bwParams"]["type"] = self.config.get(intf, "bwParams").get("type", "guaranteedCapped")
             nicInfo["bwParams"]["priority"] = self.config.get(intf, "bwParams").get("priority", 0)
             nicInfo["bwParams"]["minReservableCapacity"] = int(self.config.get(intf, "bwParams").get("minReservableCapacity", 0))
             nicInfo["bwParams"]["maximumCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", 0))
             nicInfo["bwParams"]["granularity"] = int(self.config.get(intf, "bwParams").get("granularity", 0))
-            # TODO. It should calculate available capacity, depending on installed vlans.
-            # Currently we set it same as max_bandwidth.
-            nicInfo["bwParams"]["availableCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", 0))  # TODO
-            # TODO. It should also calculate reservable capacity depending on installed vlans;
-            # Currently we set it to max available;
-            nicInfo["bwParams"]["reservableCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", 0))  # TODO
+
+            reservedCap = self.bwCalculatereservableServer(self, self.config.config["MAIN"],
+                                                           self.config.get('agent', 'hostname'), intf,
+                                                           nicInfo["bwParams"]["maximumCapacity"])
+            nicInfo["bwParams"]["availableCapacity"] = reservedCap
+            nicInfo["bwParams"]["reservableCapacity"] = reservedCap
         tmpifAddr = psutil.net_if_addrs()
         tmpifStats = psutil.net_if_stats()
 
