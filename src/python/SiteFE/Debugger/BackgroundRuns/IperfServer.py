@@ -8,6 +8,7 @@ Date                    : 2024/02/26
 """
 from SiteRMLibs.MainUtilities import getLoggingObject
 
+
 class IperfServer():
     """IperfServer class"""
     def __init__(self, config, sitename, backgConfig):
@@ -19,8 +20,9 @@ class IperfServer():
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
-        return
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def startwork(self):
-        """"""
+        """Main IperfServer work. Run IperfServer on switches."""
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to run iperf server on switches")
         raise Exception("NOT IMPLEMENTED! -1")

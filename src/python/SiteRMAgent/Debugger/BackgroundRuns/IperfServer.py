@@ -10,6 +10,7 @@ from SiteRMLibs.ipaddr import ipVersion
 from SiteRMLibs.MainUtilities import externalCommand
 from SiteRMLibs.MainUtilities import getLoggingObject
 
+
 class IperfServer():
     """Iperf Server class. Run Iperf server."""
     def __init__(self, config, sitename, backgConfig):
@@ -21,7 +22,7 @@ class IperfServer():
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
-        return
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def startwork(self):
         """Run IPerf Server"""

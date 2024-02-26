@@ -35,11 +35,11 @@ class Debugger(DebugService):
     def __init__(self, config, sitename):
         super().__init__()
         self.config = config if config else getGitConfig()
+        self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service='Debugger')
         self.fullURL = getFullUrl(self.config, sitename)
-        self.switch = Switch(config, sitename)
+        self.switch = Switch(self.config, self.sitename)
         self.switches = {}
-        self.sitename = sitename
         self.diragent = contentDB()
         self.logger.info("====== Debugger Start Work. Sitename: %s", self.sitename)
 
@@ -47,7 +47,7 @@ class Debugger(DebugService):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self.fullURL = getFullUrl(self.config, self.sitename)
-        self.switch = Switch(config, sitename)
+        self.switch = Switch(self.config, self.sitename)
 
     def getData(self, url):
         """Get data from FE."""
@@ -69,6 +69,7 @@ class Debugger(DebugService):
                 data = self.getData(f"/sitefe/json/frontend/getalldebughostname/{host}/{wtype}")
                 for item in data:
                     self.checkBackgroundProcess(item)
+
 
 def execute(config=None):
     """Execute main script for Debugger execution."""

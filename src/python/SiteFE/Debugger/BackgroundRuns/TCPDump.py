@@ -8,8 +8,9 @@ Date                    : 2024/02/26
 """
 from SiteRMLibs.MainUtilities import getLoggingObject
 
+
 class TCPDump():
-    """ArpTable class"""
+    """TCPDump class"""
     def __init__(self, config, sitename, backgConfig):
         self.config = config
         self.sitename = sitename
@@ -19,8 +20,9 @@ class TCPDump():
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
-        return
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def startwork(self):
-        """"""
+        """Main TCPDump work. Run TCPDump on switches."""
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to run TCPDump on switches")
         raise Exception("NOT IMPLEMENTED! -1")

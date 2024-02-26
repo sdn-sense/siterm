@@ -8,6 +8,7 @@ Date                    : 2024/02/26
 """
 from SiteRMLibs.MainUtilities import getLoggingObject
 
+''
 class ArpTable():
     """ArpTable class"""
     def __init__(self, config, sitename, backgConfig):
@@ -19,8 +20,9 @@ class ArpTable():
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
-        return
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def startwork(self):
-        """"""
+        """Main ArpTable work. Get all arp table from switches."""
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to get arp table")
         raise Exception("NOT IMPLEMENTED! -1")

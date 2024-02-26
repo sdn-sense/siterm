@@ -65,6 +65,7 @@ class Debugger(DebugService):
             for item in data:
                 self.checkBackgroundProcess(item)
 
+
 def execute(config=None):
     """Execute main script for Debugger execution."""
     debugger = Debugger(config, 'T2_US_Caltech_Test')

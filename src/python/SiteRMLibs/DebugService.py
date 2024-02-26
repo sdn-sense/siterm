@@ -31,10 +31,10 @@ class DebugService:
         self.workDir = self.config.get('general', 'privatedir') + "/SiteRM/background/"
         createDirs(self.workDir)
 
-
     def publishToFE(self, inDic):
         """Publish debug runtime to FE"""
         publishToSiteFE(inDic, self.fullURL, f"/sitefe/json/frontend/updatedebug/{inDic['id']}")
+
     def checkBackgroundProcess(self, item):
         """Start Background work on specific item"""
         fname = self.workDir + f"/background-process-{item['id']}.json"
@@ -70,6 +70,7 @@ class DebugService:
                'updatedate': getUTCnow()}
         self.publishToFE(item)
 
+    @staticmethod
     def _runCmd(self, inputDict, action):
         """Start execution of new requests"""
         command = f"siterm-bgprocess --action {action} --runnum {inputDict['id']}"
@@ -84,6 +85,7 @@ class DebugService:
             with open(fname, 'r', encoding='utf-8') as fd:
                 out += fd.readlines()
         return out
+
     def run(self, inputDict):
         """Run a specific debug service in a separate thread"""
         inputDict['requestdict'] = evaldict(inputDict['requestdict'])

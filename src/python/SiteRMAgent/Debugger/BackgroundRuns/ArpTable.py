@@ -10,6 +10,7 @@ from SiteRMLibs.MainUtilities import externalCommand
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.ipaddr import getInterfaces
 
+
 class ArpTable():
     """Arp Table class. Return arp table for specific vlan."""
     def __init__(self, config, sitename, backgConfig):
@@ -21,7 +22,7 @@ class ArpTable():
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
-        return
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def startwork(self):
         """"""

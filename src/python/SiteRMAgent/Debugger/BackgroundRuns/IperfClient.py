@@ -10,6 +10,7 @@ from SiteRMLibs.ipaddr import getInterfaces, ipVersion
 from SiteRMLibs.MainUtilities import externalCommand
 from SiteRMLibs.MainUtilities import getLoggingObject
 
+
 class IperfClient():
     """Iperf Client class. Run Iperf client"""
     def __init__(self, config, sitename, backgConfig):
@@ -21,7 +22,7 @@ class IperfClient():
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
-        return
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def startwork(self):
         """Run TCP IPerf"""

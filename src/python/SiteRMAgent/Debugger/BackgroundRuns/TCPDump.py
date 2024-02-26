@@ -11,6 +11,7 @@ import pyshark
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.ipaddr import getInterfaces
 
+
 class ParsePackets():
     """Packet Parser"""
     def __init__(self):
@@ -37,6 +38,7 @@ class ParsePackets():
         capture.close()
         return self.out
 
+
 class TCPDump():
     """TCP Dump class. Run TCP Dump."""
     def __init__(self, config, sitename, backgConfig):
@@ -48,7 +50,7 @@ class TCPDump():
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
-        return
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def startwork(self):
         """Do TCP Dump"""
