@@ -23,7 +23,14 @@ class MyDaemon(Daemon):
 
     def getThreads(self, houreq, dayeq):
         """Multi threading. Allow multiple sites under single FE"""
-        for sitename in self.config.get('general', 'sitename'):
+        sites = []
+        if self.config.has_option('general', "sites"):
+            sites = self.config.get('general', 'sites')
+        elif self.config.has_option('general', "sitename"):
+            sites = self.config.get('general', 'sitename')
+        else:
+            raise ValueError("No sites defined in config file. Fatal Failure")
+        for sitename in sites:
             if sitename not in self.runThreads:
                 debAgent = Debugger.Debugger(self.config, sitename)
                 self.runThreads[sitename] = debAgent
