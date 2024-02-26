@@ -33,7 +33,7 @@ COMPONENT = 'Debugger'
 class Debugger(DebugService):
     """Debugger main process"""
     def __init__(self, config, sitename):
-        super().__init__()
+        super(Debugger, self).__init__(config, sitename)
         self.config = config if config else getGitConfig()
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service='Debugger')
