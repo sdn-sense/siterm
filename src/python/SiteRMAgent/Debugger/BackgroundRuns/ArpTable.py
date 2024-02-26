@@ -25,7 +25,7 @@ class ArpTable():
         self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def startwork(self):
-        """"""
+        """Main ArpTable work. Get all arp table from host."""
         if self.backgConfig['interface'] not in getInterfaces():
             return [], "Interface is not available on the node", 3
         command = "ip neigh"

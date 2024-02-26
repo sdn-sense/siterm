@@ -71,7 +71,7 @@ class DebugService:
         self.publishToFE(item)
 
     @staticmethod
-    def _runCmd(self, inputDict, action):
+    def _runCmd(inputDict, action):
         """Start execution of new requests"""
         command = f"siterm-bgprocess --action {action} --runnum {inputDict['id']}"
         cmdOut = externalCommand(command, False)
@@ -79,6 +79,7 @@ class DebugService:
         return out, err, cmdOut
 
     def _getOut(self, pid, logtype):
+        """Get output from background process log file."""
         fname = self.workDir + f"/background-process-{pid}.{logtype}"
         out = ["Output for {logtype} for {pid}", "="*80, ""]
         if os.path.isfile(fname):

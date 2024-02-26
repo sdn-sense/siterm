@@ -8,7 +8,7 @@ Date                    : 2024/02/26
 """
 from SiteRMLibs.MainUtilities import getLoggingObject
 
-''
+
 class ArpTable():
     """ArpTable class"""
     def __init__(self, config, sitename, backgConfig):

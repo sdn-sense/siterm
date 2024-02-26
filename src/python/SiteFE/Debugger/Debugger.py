@@ -76,6 +76,7 @@ def execute(config=None):
     debugger = Debugger(config, 'T2_US_Caltech_Test')
     debugger.startwork()
 
+
 if __name__ == '__main__':
     getLoggingObject(logType='StreamLogger', service='Debugger')
     execute()
