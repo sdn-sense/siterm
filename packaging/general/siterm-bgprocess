@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""
+This part of code is taken from:
+   https://web.archive.org/web/20160305151936/http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+Please respect developer (Sander Marechal) and always keep a reference to URL and also as kudos to him
+Changes applied to this code:
+    Dedention (Justas Balcas 07/12/2017)
+    pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
+"""
+import os
+import sys
+from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
+from SiteRMLibs.MainUtilities import getFileContentAsJson
+from SiteRMLibs.MainUtilities import evaldict
+
+WORKERTYPE='UNKNOWN'
+try:
+    from SiteRMAgent.Debugger.BackgroundRuns.ArpTable import ArpTable
+    from SiteRMAgent.Debugger.BackgroundRuns.IperfClient import IperfClient
+    from SiteRMAgent.Debugger.BackgroundRuns.IperfServer import IperfServer
+    from SiteRMAgent.Debugger.BackgroundRuns.PromPush import PromPush
+    from SiteRMAgent.Debugger.BackgroundRuns.RapidPing import RapidPing
+    from SiteRMAgent.Debugger.BackgroundRuns.TCPDump import TCPDump
+    from SiteRMAgent.Debugger.BackgroundRuns.Traceroute import Traceroute
+    WORKERTYPE='Agent'
+except (ImportError, ModuleNotFoundError):
+    from SiteFE.Debugger.BackgroundRuns.ArpTable import ArpTable
+    from SiteFE.Debugger.BackgroundRuns.IperfClient import IperfClient
+    from SiteFE.Debugger.BackgroundRuns.IperfServer import IperfServer
+    from SiteFE.Debugger.BackgroundRuns.PromPush import PromPush
+    from SiteFE.Debugger.BackgroundRuns.RapidPing import RapidPing
+    from SiteFE.Debugger.BackgroundRuns.TCPDump import TCPDump
+    from SiteFE.Debugger.BackgroundRuns.Traceroute import Traceroute
+    WORKERTYPE='FE'
+
+COMPONENT = 'SiteRM-Background-Process-Runner'
+DESCRIPTION = "SiteRM Background Process Runner"
+DAEMON = None
+
+class MyDaemon(Daemon):
+    """ My own Deamon override """
+
+    WORKERS = {'AGENT': {
+                   'prometheus-push': PromPush,
+                   'arp-push': PromPush,
+                   'iperf-server': IperfServer,
+                   'iperf-client': IperfClient,
+                   'rapid-ping': RapidPing,
+                   'arp-table': ArpTable,
+                   'tcpdump': TCPDump,
+                   'traceroute': Traceroute},
+               'FE': {
+                    'prometheus-push': PromPush,
+                    'papid-ping': RapidPing,
+                    'traceroute': Traceroute,
+                    'arp-table': ArpTable}}
+
+
+    def getThreads(self, houreq, dayeq):
+        """Check worker type"""
+        workDir = self.config.get('general', 'privatedir') + "/SiteRM/background/"
+        # get run ID;
+        fname = workDir + f"/background-process-{self.inargs.runnum}.json"
+        if not os.path.isfile(fname):
+            self.logger.warning(f'Filename {fname} not available for background process. Exiting')
+            sys.exit(1)
+        backgConfig = getFileContentAsJson(fname)
+        backgConfig['requestdict'] = evaldict(backgConfig['requestdict'])
+        self.totalRuntime = int(backgConfig['requestdict']['runtime'])
+        self.sleepTimers['ok'] = int(backgConfig['requestdict']['resolution'])
+        if WORKERTYPE == 'Agent':
+            sites = self.config.get('general', 'sitename')
+        elif WORKERTYPE == 'FE':
+            sites = self.config.get('general', 'sites')
+        else:
+            raise Exception(f'Unknown worker type: {WORKERTYPE}. Exiting.')
+        for sitename in sites:
+            if sitename not in self.runThreads:
+                # Here need to check what type of worker we are running
+                # And is it available for a specific type of worker
+                worker = self.WORKERS[WORKERTYPE].get(backgConfig['requestdict']['type'])
+                workerDm = worker(self.config, sitename, backgConfig)
+                self.runThreads[sitename] = workerDm
+            self.runThreads[sitename].refreshthread(houreq, dayeq)
+        if not self.runThreads:
+            raise Exception('There are no threads configured. Fatal failure')
+
+if __name__ == "__main__":
+    parser = getParser(DESCRIPTION)
+    if len(sys.argv) == 1:
+        parser.print_help()
+    inargs = parser.parse_args(sys.argv[1:])
+    validateArgs(inargs)
+    DAEMON = MyDaemon(COMPONENT, inargs)
+    DAEMON.command()

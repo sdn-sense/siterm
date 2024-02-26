@@ -26,7 +26,7 @@ setup(
     py_modules=get_py_modules(['src/python/SiteRMAgent', 'src/python/SiteRMLibs']),
     scripts=["packaging/siterm-site-agent/scripts/sitermagent-update",
              "packaging/siterm-site-agent/scripts/siterm-ruler",
-             "packaging/siterm-site-agent/scripts/siterm-debugger",
-             "packaging/siterm-site-agent/scripts/siterm-prompush",
-             "packaging/general/Config-Fetcher"]
+             "packaging/general/Config-Fetcher",
+             "packaging/general/siterm-debugger",
+             "packaging/general/siterm-bgprocess"]
 )

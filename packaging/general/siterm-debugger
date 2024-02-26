@@ -9,7 +9,10 @@ Changes applied to this code:
 """
 import sys
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
-from SiteRMAgent.Debugger import Debugger
+try:
+    from SiteRMAgent.Debugger import Debugger
+except (ImportError, ModuleNotFoundError):
+    from SiteFE.Debugger import Debugger
 
 COMPONENT = 'Debugger'
 DESCRIPTION = "Debugger start's debug process, like ping, iperf, tcpdump, arp on the agent node"

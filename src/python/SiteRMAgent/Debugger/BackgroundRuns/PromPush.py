@@ -60,7 +60,7 @@ class PromPush():
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
-        return
+        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def __getMetadataParams(self):
         """Get metadata parameters"""
