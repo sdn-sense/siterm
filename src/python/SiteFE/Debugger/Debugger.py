@@ -24,6 +24,7 @@ from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 
 COMPONENT = 'Debugger'
@@ -36,16 +37,17 @@ class Debugger(DebugService):
         self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service='Debugger')
         self.fullURL = getFullUrl(self.config, sitename)
+        self.switch = Switch(config, sitename)
+        self.switches = {}
         self.sitename = sitename
-        self.hostname = self.config.get('agent', 'hostname')
         self.diragent = contentDB()
-        self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
+        self.logger.info("====== Debugger Start Work. Sitename: %s", self.sitename)
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self.fullURL = getFullUrl(self.config, self.sitename)
-        self.hostname = self.config.get('agent', 'hostname')
+        self.switch = Switch(config, sitename)
 
     def getData(self, url):
         """Get data from FE."""
@@ -59,11 +61,14 @@ class Debugger(DebugService):
 
     def startwork(self):
         """Start execution and get new requests from FE"""
-        for wtype in ["new", "active"]:
-            self.logger.info(f"Get all {wtype} requests")
-            data = self.getData(f"/sitefe/json/frontend/getalldebughostname/{self.hostname}/{wtype}")
-            for item in data:
-                self.checkBackgroundProcess(item)
+        self.switch.getinfo(False)
+        self.switches = self.switch.getAllSwitches()
+        for host in self.switches:
+            for wtype in ["new", "active"]:
+                self.logger.info(f"Get all {wtype} requests")
+                data = self.getData(f"/sitefe/json/frontend/getalldebughostname/{host}/{wtype}")
+                for item in data:
+                    self.checkBackgroundProcess(item)
 
 def execute(config=None):
     """Execute main script for Debugger execution."""

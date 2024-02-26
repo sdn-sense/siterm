@@ -29,25 +29,41 @@ class CallValidator:
     """Validator class for Debug Actions"""
 
     def __init__(self, config):
-        self.supportedActions = [
-            "arp-push",
-            "prometheus-push",
-            "rapidping",
-            "tcpdump",
-            "arptable",
-            "iperf",
-            "iperfserver",
-        ]
         self.functions = {
-            "arptable": self.__validateArp,
-            "iperf": self.__validateIperf,
-            "iperfserver": self.__validateIperfserver,
-            "rapidping": self.__validateRapidping,
-            "tcpdump": self.__validateTcpdump,
             "prometheus-push": self.__validatePrompush,
             "arp-push": self.__validateArppush,
+            "iperf-server": self.__validateIperfserver,
+            "iperf-client": self.__validateIperf,
+            "rapid-ping": self.__validateRapidping,
+            "arp-table": self.__validateArp,
+            "tcpdump": self.__validateTcpdump,
+            "traceroute": self.__validateTraceRoute,
         }
         self.config = config
+
+    def validate(self, inputDict):
+        """Validate wrapper for debug action."""
+        if "hostname" not in inputDict:
+            raise BadRequestError("Hostname not specified in debug request.")
+        if "type" in inputDict and inputDict["type"] not in self.functions:
+            raise BadRequestError(
+                f"Action {inputDict['type']} not supported. Supported actions: {self.functions.keys()}"
+            )
+        self.functions[inputDict["type"]](inputDict)
+
+    @staticmethod
+    def __validateTraceRoute(inputDict):
+        """Validate traceroute debug request."""
+        for key in ["ip"]:
+            if key not in inputDict:
+                raise BadRequestError(f"Key {key} not specified in debug request.")
+        # One of these must be present:
+        optional = False
+        for key in ["from_interface", "from_ip"]:
+            if key in inputDict:
+                optional = True
+        if not optional:
+            raise BadRequestError("One of these keys must be present: from_interface, from_ip")
 
     @staticmethod
     def __validateArp(inputDict):
@@ -167,16 +183,6 @@ class CallValidator:
         # Check all metadata label parameters
         self.__validateMetadata(inputDict)
 
-    def validate(self, inputDict):
-        """Validate wrapper for debug action."""
-        if "hostname" not in inputDict:
-            raise BadRequestError("Hostname not specified in debug request.")
-        if "type" in inputDict and inputDict["type"] not in self.supportedActions:
-            raise BadRequestError(
-                f"Action {inputDict['type']} not supported. Supported actions: {self.supportedActions}"
-            )
-        self.functions[inputDict["type"]](inputDict)
-
 
 class DebugCalls:
     """Site Frontend calls."""
@@ -192,7 +198,6 @@ class DebugCalls:
         urlParams = {
             "getdebug": {"allowedMethods": ["GET"]},
             "getalldebughostname": {"allowedMethods": ["GET"]},
-            "getalldebughostnameactive": {"allowedMethods": ["GET"]},
             "submitdebug": {"allowedMethods": ["PUT", "POST"]},
             "updatedebug": {"allowedMethods": ["PUT", "POST"]},
             "deletedebug": {"allowedMethods": ["DELETE"]},
@@ -206,13 +211,8 @@ class DebugCalls:
         )
         self.routeMap.connect(
             "getalldebughostname",
-            "/json/frontend/getalldebughostname/:debugvar",
+            "/json/frontend/getalldebughostname/:hostname/:state",
             action="getalldebughostname",
-        )
-        self.routeMap.connect(
-            "getalldebughostnameactive",
-            "/json/frontend/getalldebughostnameactive/:debugvar",
-            action="getalldebughostnameactive",
         )
         self.routeMap.connect(
             "submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug"
@@ -243,15 +243,7 @@ class DebugCalls:
 
     def getalldebughostname(self, environ, **kwargs):
         """Get all Debug Requests for hostname"""
-        search = [["hostname", kwargs["debugvar"]], ["state", "new"]]
-        self.responseHeaders(environ, **kwargs)
-        return self.dbI.get(
-            "debugrequests", orderby=["updatedate", "DESC"], search=search, limit=1000
-        )
-
-    def getalldebughostnameactive(self, environ, **kwargs):
-        """Get all Debug Requests for hostname"""
-        search = [["hostname", kwargs["debugvar"]], ["state", "active"]]
+        search = [["hostname", kwargs["hostname"]], ["state", kwargs["hostname"]]]
         self.responseHeaders(environ, **kwargs)
         return self.dbI.get(
             "debugrequests", orderby=["updatedate", "DESC"], search=search, limit=1000
