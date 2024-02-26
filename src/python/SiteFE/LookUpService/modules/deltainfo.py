@@ -133,7 +133,8 @@ class DeltaInfo():
             for port, portDict in val.items():
                 if portDict.get('hasLabel', {}).get('labeltype', None) == 'ethernet#vlan':
                     vlan = str(portDict['hasLabel']['value'])
-                    portDict['uri'] = self._addVlanPort(hostname=key, portName=port, vlan=vlan, vtype='vlanport', labeltype='ethernet#vlan')
+                    portDict['uri'] = self._addVlanPort(hostname=key, portName=port, vlan=vlan,
+                                                        vtype='vlanport', labeltype='ethernet#vlan')
                     self._addVlanLabel(hostname=key, portName=port, vlan=vlan, vtype='vlanport', labeltype='ethernet#vlan')
                     self._addIsAlias(uri=portDict['uri'], isAlias=portDict.get('isAlias'))
                     if key in self.switch.switches['output'].keys():

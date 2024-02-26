@@ -50,6 +50,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.modelVersion = ""
         self.renewSwitchConfig = False
         self.activeDeltas = {}
+        self.vlanURIs = {}
         workDir = self.config.get(self.sitename, "privatedir") + "/LookUpService/"
         createDirs(workDir)
 
@@ -78,6 +79,18 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
                         f"Got OS Error removing this model {model['fileloc']}. Exc: {str(ex)}"
                     )
                 self.dbI.delete("models", [["id", model["id"]]])
+
+    def _getUniqueVlanURIs(self):
+        """Get Unique URI for VLANs"""
+        for _subnet, hostDict in self.activeDeltas.get('output', {}).get('vsw', {}).items():
+            for host, portDict in hostDict.items():
+                for port, reqDict in portDict.items():
+                    if 'uri' in reqDict and reqDict['uri'] and 'hasLabel' in reqDict and reqDict['hasLabel']:
+                        vlan = reqDict['hasLabel'].get('value', 0)
+                        if vlan:
+                            self.vlanURIs.setdefault(host, {})
+                            self.vlanURIs[host].setdefault(port, {})
+                            self.vlanURIs[host][port][vlan] = reqDict['uri']
 
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
@@ -158,6 +171,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
     def startwork(self):
         """Main start."""
         self.logger.info("Started LookupService work")
+        self.vlanURIs = {}
         self.activeDeltas = getActiveDeltas(self)
         self.newGraph = Graph()
         # ==================================================================================
