@@ -17,13 +17,12 @@ from SiteRMLibs.MainUtilities import publishToSiteFE
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import contentDB
-
+from SiteRMLibs.GitConfig import getGitConfig
 
 class DebugService:
     """Debug Service Class"""
     def __init__(self, config, sitename):
-        super().__init__()
-        self.config = config
+        self.config = config if config else getGitConfig()
         self.fullURL = getFullUrl(self.config, sitename)
         self.sitename = sitename
         self.diragent = contentDB()
