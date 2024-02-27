@@ -12,7 +12,6 @@ Authors:
 Date: 2021/12/01
 """
 from SiteRMLibs.MainUtilities import convertTSToDatetime
-from SiteRMLibs.ipaddr import validMRMLName
 from SiteRMLibs.ipaddr import normalizedip
 
 
@@ -120,9 +119,10 @@ class DeltaInfo():
             if not ipdict:
                 continue
             for key in ipdict.get('type', 'undefined').split('|'):
-                val = normalizedip(ipdict.get('value', 'undefined'))
-                out = [f"{ipkey}-address+{validMRMLName(val)}", key]
-                self._addNetworkAddress(portDict['uri'], out, val)
+                val = normalizedip(ipdict.get('value', ''))
+                uri = ipdict.get('uri', '')
+                if val and uri:
+                    self._addNetworkAddress(portDict['uri'], [uri, key], val)
 
     def addvswInfo(self, vswDict, uri):
         """Add vsw Info from params"""
@@ -133,7 +133,7 @@ class DeltaInfo():
             for port, portDict in val.items():
                 if portDict.get('hasLabel', {}).get('labeltype', None) == 'ethernet#vlan':
                     vlan = str(portDict['hasLabel']['value'])
-                    self.vlanURIs.setdefault(key, {}).setdefault(port, {}).setdefault(int(vlan), portDict['uri'])
+                    self.URIs['vlans'].setdefault(key, {}).setdefault(port, {}).setdefault(int(vlan), portDict['uri'])
                     portDict['uri'] = self._addVlanPort(hostname=key, portName=port, vlan=vlan,
                                                         vtype='vlanport', labeltype='ethernet#vlan')
                     self._addVlanLabel(hostname=key, portName=port, vlan=vlan, vtype='vlanport', labeltype='ethernet#vlan')

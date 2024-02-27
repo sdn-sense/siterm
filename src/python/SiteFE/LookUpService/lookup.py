@@ -28,6 +28,7 @@ from SiteRMLibs.MainUtilities import (createDirs, generateHash,
                                       getDBConn, getLoggingObject, getUTCnow, getVal)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWService import BWService
+from SiteRMLibs.ipaddr import normalizedip
 
 class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
     """Lookup Service prepares MRML model about the system."""
@@ -50,7 +51,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.modelVersion = ""
         self.renewSwitchConfig = False
         self.activeDeltas = {}
-        self.vlanURIs = {}
+        self.URIs = {}
         workDir = self.config.get(self.sitename, "privatedir") + "/LookUpService/"
         createDirs(workDir)
 
@@ -80,18 +81,29 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
                     )
                 self.dbI.delete("models", [["id", model["id"]]])
 
+    def _getIPURIs(self, indict, iptype):
+        """Get All IP URIs if any"""
+        if 'hasNetworkAddress' in indict and f'{iptype}-address' in indict['hasNetworkAddress']:
+            uri = indict['hasNetworkAddress'][f'{iptype}-address'].get('uri', '')
+            ip = indict['hasNetworkAddress'][f'{iptype}-address'].get('value', '')
+            if uri and ip:
+                self.URIs['ips'].setdefault(normalizedip(ip), indict['hasNetworkAddress'][f'{iptype}-address'])
+
     def _getUniqueVlanURIs(self):
         """Get Unique URI for VLANs"""
-        self.vlanURIs = {}
+        self.URIs = {'vlans': {}, 'ips': {}}
         for _subnet, hostDict in self.activeDeltas.get('output', {}).get('vsw', {}).items():
             for host, portDict in hostDict.items():
                 for port, reqDict in portDict.items():
                     if 'uri' in reqDict and reqDict['uri'] and 'hasLabel' in reqDict and reqDict['hasLabel']:
                         vlan = reqDict['hasLabel'].get('value', 0)
                         if vlan:
-                            self.vlanURIs.setdefault(host, {})
-                            self.vlanURIs[host].setdefault(port, {})
-                            self.vlanURIs[host][port][int(vlan)] = reqDict['uri']
+                            self.URIs['vlans'].setdefault(host, {})
+                            self.URIs['vlans'][host].setdefault(port, {})
+                            self.URIs['vlans'][host][port][int(vlan)] = reqDict['uri']
+                    self._getIPURIs(reqDict, 'ipv4')
+                    self._getIPURIs(reqDict, 'ipv6')
+
 
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
@@ -255,7 +267,7 @@ def execute(config=None):
         config = getGitConfig()
     for siteName in config.get("general", "sites"):
         lserv = LookUpService(config, siteName)
-        i = 1
+        i = 20
         while i > 0:
             lserv.startwork()
             time.sleep(5)
