@@ -11,6 +11,7 @@ Date: 2021/12/01
 """
 from SiteRMLibs.ipaddr import validMRMLName
 from SiteRMLibs.ipaddr import normalizeipdict
+from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.CustomExceptions import NoSectionError
@@ -109,14 +110,16 @@ class SwitchInfo():
     def _addVals(self, key, subkey, val, newuri):
         if not subkey:
             return
-        val = generateVal(self, val, key, False)
-        labeluri = f"{newuri}:{key}+{subkey}"
-        reptype = key
         if key in ['ipv4', 'ipv6']:
-            reptype = f'{key}-address'
-            labeluri = f"{newuri}:{key}-address+{subkey}"
+            labeluri = self.URIs.get('ips', {}).get(normalizedip(val), {}).get('uri', f"{newuri}:{key}-address+{subkey}")
+            reptype = self.URIs.get('ips', {}).get(normalizedip(val), {}).get('type', f'{key}-address')
         elif key == 'sense-rtmon':
+            labeluri = f"{newuri}:{key}+{subkey}"
             reptype = f'{key}:name'
+        else:
+            labeluri = f"{newuri}:{key}+{subkey}"
+            reptype = key
+        val = generateVal(self, val, key, False)
         self.addToGraph(['site', newuri],
                         ['mrs', 'hasNetworkAddress'],
                         ['site', labeluri])

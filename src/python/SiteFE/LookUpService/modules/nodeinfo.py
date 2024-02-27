@@ -125,6 +125,7 @@ class NodeInfo:
         self.addToGraph(["site", f"{uri}:{name}"], ["mrs", "type"], [sname])
         self.setToGraph(["site", f"{uri}:{name}"], ["mrs", "value"], [value])
 
+
     def addIntfInfo(self, inputDict, prefixuri, main=True):
         """This will add all information about specific interface."""
         # '2' is for ipv4 information
@@ -230,11 +231,6 @@ class NodeInfo:
                 out["type"] = f"{route['iptype']}-address"
                 out["value"] = route["RTA_GATEWAY"]
                 self._addRouteEntry(**out)
-                # Do we really need this?
-                # for vals in [['to', 'ipv4-prefix-list', '0.0.0.0/0'],
-                #             ['black-hole', 'routing-policy', 'drop'],
-                #             ['local', 'routing-policy', 'local']]:
-                #    self._addNetworkAddress('%s:%s' % (routename, vals[0]), [vals[0], vals[1]], vals[2])
             elif "RTA_PREFSRC" in route.keys() and "dst_len" in route.keys():
                 out["routename"] = validMRMLName(
                     f"{route['RTA_PREFSRC']}/{route['dst_len']}"
