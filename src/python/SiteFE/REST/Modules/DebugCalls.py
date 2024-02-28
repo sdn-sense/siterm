@@ -173,7 +173,7 @@ class CallValidator:
         for key in ["hosttype", "gateway", "runtime", "resolution"]:
             if key not in inputDict:
                 raise BadRequestError(f"Key {key} not specified in debug request.")
-        if inputDict["hosttype"] != "host":
+        if inputDict["hosttype"] not in ["host", "switch"]:
             raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
         totalRuntime = int(inputDict["runtime"]) - getUTCnow()
         if totalRuntime < 600 or totalRuntime > 86400:
