@@ -151,7 +151,7 @@
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f1'); return false" id="f1" name="f1">
-                <input id="f1_type" name="type" type="hidden" value="rapidping">
+                <input id="f1_type" name="type" type="hidden" value="rapid-ping">
                 <div class="form-group">
                   <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f1_sitename" name="sitename" onchange="doSiteUpdate('f1_');" required="">
                     <option value="">
@@ -244,7 +244,7 @@
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f3'); return false" id="f3" name="f3">
-                <input id="f3_type" name="type" type="hidden" value="arptable">
+                <input id="f3_type" name="type" type="hidden" value="arp-table">
                 <div class="form-group">
                   <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f3_sitename" name="sitename" onchange="doSiteUpdate('f3_');" required="">
                     <option value="">
@@ -287,7 +287,7 @@ It will execute the following command:<br/>
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f4'); return false" id="f4" name="f4">
-                <input id="f4_type" name="type" type="hidden" value="iperf">
+                <input id="f4_type" name="type" type="hidden" value="iperf-server">
                 <div class="form-group">
                   <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f4_sitename" name="sitename" onchange="doSiteUpdate('f4_');" required="">
                     <option value="">
@@ -351,7 +351,7 @@ It will execute the following command:<br/>
             </div>
             <div class="col">
               <form onsubmit="collectInputs('f5'); return false" id="f5" name="f5">
-                <input id="f5_type" name="type" type="hidden" value="iperfserver">
+                <input id="f5_type" name="type" type="hidden" value="iperf-client">
                 <div class="form-group">
                    <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f5_sitename" name="sitename" onchange="doSiteUpdate('f5_');" required="">
                     <option value="">
@@ -398,6 +398,58 @@ It will execute the following command:<br/>
               </form>
             </div>
           </div>
+
+          <div class="row col-md-12 border border-danger">
+            <div class="row col-md-12">
+              <h3 class="h3">Traceroute</h3>
+            </div>
+            <div class="col-md-12" id="alertstraceroute"></div>
+            <div class="col">
+              <span class="border" style="width:100%">
+                Traceroute provides a map of how data travels from its source to its destination<br/>
+                On host, it will execute the following command:<br/>
+                traceroute [-4|-6] -i [from_interface] -s [from_ip] [ip]<br/>
+                <b>-4|-6</b>    It will identify it based on [ip] value<br/>
+                <b>from_interface</b>    Instructs which interface to use (optional if from_ip specified)<br/>
+                <b>from_ip</b>    Instructs which IP to use to send traceroute (optional if from_interface specified)<br/>
+                <b>ip</b>         Destination of Traceroute IP<br/>
+              </span>
+            </div>
+            <div class="col">
+              <form onsubmit="collectInputs('f6'); return false" id="f6" name="f6">
+                <input id="f6_type" name="type" type="hidden" value="traceroute">
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f6_sitename" name="sitename" onchange="doSiteUpdate('f6_');" required="">
+                    <option value="">
+                      Choose Site
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f6_hostname" name="hostname" onchange="doDTNUpdate('f6_');" required="">
+                    <option value="">
+                      Choose Hostname
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">From Interface:</label> <input class="form-control" type="text" placeholder="IP to ping" id="f6_from_interface" name="from_interface">
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">From IP:</label> <input class="form-control" type="text" placeholder="Port" id="f6_from_ip" name="from_ip">
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">To IP:</label> <select class="form-control" id="f6_ip" name="ip" required="">
+                    <option value="">
+                      Choose Interface
+                    </option>
+                  </select>
+                </div>
+                <input type="submit">
+              </form>
+            </div>
+          </div>
+
         </div>
       </main>
     </div>
