@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101
 """
     Base Debug Action class for stdout, stderr, jsonout
 
