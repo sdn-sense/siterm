@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101
 """
     Push Daemon for Prometheus stats.
 
@@ -7,46 +8,15 @@ Authors:
 
 Date: 2023/03/17
 """
-import csv
 from prometheus_client import Gauge
 from prometheus_client import CollectorRegistry, push_to_gateway
 from SiteRMLibs.MainUtilities import getWebContentFromURL
 from SiteRMLibs.MainUtilities import postWebContentToURL
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import getArpVals
+from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
-# From https://github.com/torvalds/linux/blob/master/include/uapi/linux/if_arp.h
-HW_FLAGS = {'0x1': 'ETHER', '0x32': 'INFINIBAND'}
-ARP_FLAGS = {'0x0': 'I',
-             '0x2': 'C',
-             '0x4': 'M',
-             '0x6': 'CM',
-             '0x8': 'PUB',
-             '0x10': 'PROXY',
-             '0x20': 'NETMASK',
-             '0x40': 'DONTPUB'}
-
-def _getArpVals():
-    with open('/proc/net/arp', encoding='utf-8') as arpfd:
-        arpKeys = ['IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device']
-        reader = csv.DictReader(arpfd,
-                                fieldnames=arpKeys,
-                                skipinitialspace=True,
-                                delimiter=' ')
-        skippedHeader = False
-        for block in reader:
-            if not skippedHeader:
-                skippedHeader = True
-                continue
-            if block['HW type'] in HW_FLAGS:
-                block['HW type'] = HW_FLAGS[block['HW type']]
-            if block['Flags'] in ARP_FLAGS:
-                block['Flags'] = ARP_FLAGS[block['Flags']]
-            print(block)
-            yblock = {x.replace(' ', ''): v for x, v in block.items()}
-            yield yblock
-
-
-class PromPush():
+class PromPush(BaseDebugAction):
     """Prom Push class loops over"""
     def __init__(self, config, sitename, backgConfig):
         self.config = config
@@ -57,10 +27,7 @@ class PromPush():
                           'HWtype': '', 'IPaddress': '', 'Mask': ''}
         self.arpLabels.update(self.__getMetadataParams())
         self.logger.info("====== PromPush Start Work. Config: %s", self.backgConfig)
-
-    def refreshthread(self, *_args):
-        """Call to refresh thread for this specific class and reset parameters"""
-        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
+        super().__init__()
 
     def __getMetadataParams(self):
         """Get metadata parameters"""
@@ -89,10 +56,17 @@ class PromPush():
             nodeExporterUrl = f'http://{nodeExporterUrl}'
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
         nodeOut = getWebContentFromURL(f'{nodeExporterUrl}/metrics')
+        if 'status_code' in nodeOut and nodeOut['status_code'] == -1:
+            self.stderr.append(f"Failed to get node_exporter data. Error: {nodeOut.get('error', 'Unknown')}")
+            return
         response = postWebContentToURL(self.__generatePromPushUrl(),
                                        data=nodeOut.content,
                                        headers=headers)
+        if 'status_code' in response and response['status_code'] == -1:
+            self.stderr.append(f"Failed to push node_exporter data. Error: {response.get('error', 'Unknown')}")
+            return
         self.logger.info(f"Pushed Node Exporter data. Return code: {response.status_code}")
+        self.stdout.append(f"Pushed Node Exporter data. Return code: {response.status_code}")
 
     def __cleanRegistry(self):
         """Get new/clean prometheus registry."""
@@ -112,16 +86,19 @@ class PromPush():
         arpState = Gauge('arp_state', 'ARP Address Table',
                          labelnames=self.arpLabels.keys(),
                          registry=registry)
-        for arpEntry in _getArpVals():
+        for arpEntry in getArpVals():
             self.arpLabels.update(arpEntry)
             arpState.labels(**self.arpLabels).set(1)
         self.__pushToGateway(registry)
 
-    def startwork(self):
+    def main(self):
         """Start Prometheus Push Daemon thread work"""
         if self.backgConfig['requestdict']['type'] == 'prometheus-push':
+            self.jsonout.setdefault('prometheus-push', [])
             self.nodeExporterPush()
         elif self.backgConfig['requestdict']['type'] == 'arp-push':
+            self.jsonout.setdefault('arp-push', [])
             self.arpPush()
         else:
+            self.stderr.append(f"Unsupported push method. Submitted request: {self.backgConfig}")
             raise Exception(f"Unsupported push method. Submitted request: {self.backgConfig}")

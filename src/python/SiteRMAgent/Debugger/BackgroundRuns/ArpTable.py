@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101
 """
 Title                   : siterm
 Author                  : Justas Balcas
@@ -6,12 +7,13 @@ Email                   : juztas (at) gmail (dot) com
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
-from SiteRMLibs.MainUtilities import externalCommand
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import getArpVals
 from SiteRMLibs.ipaddr import getInterfaces
+from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
 
-class ArpTable():
+class ArpTable(BaseDebugAction):
     """Arp Table class. Return arp table for specific vlan."""
     def __init__(self, config, sitename, backgConfig):
         self.config = config
@@ -19,21 +21,16 @@ class ArpTable():
         self.backgConfig = backgConfig
         self.logger = getLoggingObject(config=self.config, service="ArpTable")
         self.logger.info("====== ArpTable Start Work. Config: %s", self.backgConfig)
+        super().__init__()
 
-    def refreshthread(self, *_args):
-        """Call to refresh thread for this specific class and reset parameters"""
-        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
-
-    def startwork(self):
+    def main(self):
         """Main ArpTable work. Get all arp table from host."""
-        if self.backgConfig['interface'] not in getInterfaces():
-            return [], "Interface is not available on the node", 3
-        command = "ip neigh"
-        cmdOut = externalCommand(command, False)
-        out, err = cmdOut.communicate()
-        retOut = []
-        for line in out.decode("utf-8").split('\n'):
-            splLine = line.split(' ')
-            if len(splLine) > 4 and splLine[2] == self.backgConfig['interface']:
-                retOut.append(line)
-        return retOut, err.decode("utf-8"), cmdOut.returncode
+        self.jsonout.setdefault('arp-table', [])
+        interface = self.backgConfig.get('interface', None)
+        if interface and interface not in getInterfaces():
+            self.stderr.append("Interface is not available on the node")
+            return
+        for arpval in getArpVals():
+            self.jsonout['arp-table'].append(arpval)
+            resline = list(map(lambda x: x[0] + str(x[1]), arpval.items()))
+            self.stdout.append(" ".join(resline))

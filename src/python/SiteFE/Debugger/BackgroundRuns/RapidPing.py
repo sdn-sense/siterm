@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101
 """
 Title                   : siterm
 Author                  : Justas Balcas
@@ -7,9 +8,9 @@ Email                   : juztas (at) gmail (dot) com
 Date                    : 2024/02/26
 """
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
-
-class RapidPing():
+class RapidPing(BaseDebugAction):
     """RapidPing class"""
     def __init__(self, config, sitename, backgConfig):
         self.config = config
@@ -17,12 +18,11 @@ class RapidPing():
         self.backgConfig = backgConfig
         self.logger = getLoggingObject(config=self.config, service="RapidPing")
         self.logger.info("====== RapidPing Start Work. Config: %s", self.backgConfig)
+        super().__init__()
 
-    def refreshthread(self, *_args):
-        """Call to refresh thread for this specific class and reset parameters"""
-        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
-
-    def startwork(self):
+    def main(self):
         """Main RapidPing work. Run RapidPing on switches."""
-        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to run rapid ping on switches")
+        self.jsonout.setdefault('rapid-ping', [])
+        self.stderr.append(f"NOT IMPLEMENTED call {self.backgConfig} to run rapid ping on switches")
+        self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to run rapid ping on switches")
         raise Exception("NOT IMPLEMENTED! -1")

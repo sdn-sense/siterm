@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101
 """
     SNMPMonitoring gets all information from switches using SNMP and pushes to gateway.
 
@@ -13,11 +14,12 @@ from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getVal
 from SiteRMLibs.MainUtilities import getDBConn
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from prometheus_client import CollectorRegistry, push_to_gateway
 from prometheus_client import Info, Gauge
 
 
-class PromPush():
+class PromPush(BaseDebugAction):
     """SNMP PushGateway Class"""
     def __init__(self, config, sitename, backgConfig):
         self.config = config
@@ -31,6 +33,7 @@ class PromPush():
         self.promLabels.update(self.__getMetadataParams())
         self.snmpLabels = {'numb': '', 'vlan': '', 'hostname': ''}
         self.snmpLabels.update(self.__getMetadataParams())
+        super().__init__()
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -51,6 +54,7 @@ class PromPush():
 
     def __pushToGateway(self, registry):
         """Push registry to remote gateway"""
+        # TODO. Catch any exceptions and log them.
         push_to_gateway(self.backgConfig['requestdict']['gateway'],
                         job=f"job-{self.backgConfig['id']}",
                         registry=registry,
@@ -82,8 +86,9 @@ class PromPush():
             return True
         return False
 
-    def startwork(self):
+    def main(self):
         """Start PushGateway Work"""
+        self.jsonout.setdefault('prometheus-push', [])
         hostname = self.backgConfig['requestdict']['hostname']
         mibs = self.config['MAIN']['snmp']['mibs']
         registry = self.__cleanRegistry()
@@ -117,3 +122,5 @@ class PromPush():
                         if self.__filterOutput(self.backgConfig['requestdict'].get('filter', {}).get('snmp', {}), self.promLabels):
                             snmpGauge.labels(**self.promLabels).set(val[key1])
         self.__pushToGateway(registry)
+        self.stdout.append(f"Pushed SNMP data for {hostname}")
+        self.logger.info(f"Pushed SNMP data for {hostname}")

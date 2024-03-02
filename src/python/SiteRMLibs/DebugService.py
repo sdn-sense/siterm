@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-    Push local prometheus stats to a remote gateway.
+    Debug Service
 
 Authors:
   Justas Balcas jbalcas (at) caltech.edu
@@ -42,7 +42,7 @@ class DebugService:
         try:
             out, exitCode, newstate = self.run(item)
         except (ValueError, KeyError, OSError) as ex:
-            out = {'processOut': [], 'stdout': [], 'stderr': [], 'exitCode': 501}
+            out = {'processOut': [], 'stdout': [], 'stderr': [], 'jsonout': {}, 'exitCode': 501}
             out['stderr'].append(str(ex))
             exitCode = 501
             newstate = "failed"
@@ -55,7 +55,6 @@ class DebugService:
         elif exitCode == 0:
             newstate = 'active'
         elif exitCode == 3:
-            self.diragent.removeFile(fname)
             newstate = 'finished'
         else:
             newstate = 'unknown'
@@ -69,78 +68,82 @@ class DebugService:
                'updatedate': getUTCnow()}
         self.publishToFE(item)
 
-    @staticmethod
-    def _runCmd(inputDict, action):
-        """Start execution of new requests"""
-        command = f"siterm-bgprocess --action {action} --runnum {inputDict['id']}"
-        cmdOut = externalCommand(command, False)
-        out, err = cmdOut.communicate()
-        return out, err, cmdOut
-
     def _getOut(self, pid, logtype):
         """Get output from background process log file."""
         fname = self.workDir + f"/background-process-{pid}.{logtype}"
-        out = ["Output for {logtype} for {pid}", "="*80, ""]
-        if os.path.isfile(fname):
-            with open(fname, 'r', encoding='utf-8') as fd:
-                out += fd.readlines()
+        tmpOut = self.diragent.getFileContentAsList(fname)
+        out = [f"Output for {logtype} for {pid} does not exist", "="*80, ""]
+        if tmpOut:
+            out = [f"Output for {logtype} for {pid}", "="*80, ""]
+        out += tmpOut
         return out
+
+    def _getOutjson(self, pid, logtype):
+        """Get output from background process log file."""
+        fname = self.workDir + f"/background-process-{pid}.{logtype}"
+        return self.diragent.getFileContentAsJson(fname, {})
+
+    def _runCmd(self, inputDict, action, foreground):
+        """Start execution of new requests"""
+        retOut = {'processOut': [], 'stdout': [], 'stderr': [], 'jsonout': {}, 'exitCode': -1}
+        command = f"siterm-bgprocess --action {action} --runnum {inputDict['id']}"
+        if foreground:
+            command += " --foreground"
+        cmdOut = externalCommand(command, False)
+        out, err = cmdOut.communicate()
+        retOut['stdout'] += out.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stdout')
+        retOut['stderr'] += err.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stderr')
+        retOut['jsonout'] = self._getOutjson(inputDict['id'], 'jsonout')
+        retOut['exitCode'] = cmdOut.returncode
+        return retOut
+
+    def _clean(self, inputDict):
+        """Clean up after process is finished"""
+        self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.json")
+        self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.stdout")
+        self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.stderr")
+        self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.jsonout")
 
     def run(self, inputDict):
         """Run a specific debug service in a separate thread"""
         inputDict['requestdict'] = evaldict(inputDict['requestdict'])
         self.logger.debug(f"Check background process: {inputDict}")
-        retOut = {'processOut': [], 'stdout': [], 'stderr': [], 'exitCode': -1}
         utcNow = int(getUTCnow())
         # Check Status first
-        out, err, cmdOut = self._runCmd(inputDict, 'status')
+        retOut = self._runCmd(inputDict, 'status', False)
 
         # If this first start, then start it.
-        if cmdOut.returncode != 0 and inputDict['state'] == 'new':
+        if retOut['exitCode'] != 0 and inputDict['state'] == 'new':
             self.logger.info(f"Starting background process: {inputDict['id']}")
-            out, err, cmdOut = self._runCmd(inputDict, 'start')
+            retOut = self._runCmd(inputDict, 'start', True)
             retOut['processOut'].append(f"Starting background process: {inputDict['id']}")
-            retOut['stdout'] += out.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stdout')
-            retOut['stderr'] += err.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stderr')
-            retOut['exitCode'] = cmdOut.returncode
-            return retOut, cmdOut.returncode, "active"
-
-        # If it is active, but process exited, then restart it (if time still allows that).
-        if cmdOut.returncode != 0 and inputDict['state'] == 'active' and int(inputDict['requestdict']['runtime']) > utcNow:
-            self.logger.info(f"Restarting background process: {inputDict['id']}")
-            out, err, cmdOut = self._runCmd(inputDict, 'restart')
-            retOut['processOut'].append(f"Restarting background process: {inputDict['id']}")
-            retOut['stdout'] += out.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stdout')
-            retOut['stderr'] += err.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stderr')
-            retOut['exitCode'] = cmdOut.returncode
-            return retOut, cmdOut.returncode, "active"
+            return retOut, retOut['exitCode'], "active"
 
         # If it is active, and process is active, then get output from it.
-        if cmdOut.returncode == 0 and inputDict['state'] == 'active' and int(inputDict['requestdict']['runtime']) > utcNow:
+        if retOut['exitCode'] == 0 and inputDict['state'] == 'active' and int(inputDict['requestdict'].get('runtime', 600)) > utcNow:
             self.logger.info(f"Checking background process: {inputDict['id']}")
             retOut['processOut'].append(f"Checking background process: {inputDict['id']}")
-            retOut['stdout'] += out.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stdout')
-            retOut['stderr'] += err.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stderr')
-            retOut['exitCode'] = cmdOut.returncode
-            return retOut, cmdOut.returncode, "active"
+            return retOut, retOut['exitCode'], "active"
+
+        # If it is active, but process exited, then restart it (if time still allows that).
+        if retOut['exitCode'] != 0 and inputDict['state'] == 'active' and int(inputDict['requestdict'].get('runtime', 600)) > utcNow:
+            self.logger.info(f"Restarting background process: {inputDict['id']}")
+            retOut = self._runCmd(inputDict, 'restart', True)
+            retOut['processOut'].append(f"Restarting background process: {inputDict['id']}")
+            return retOut, retOut['exitCode'], "active"
 
         # if it is active, process is active, and time ran out, then stop it.
-        if cmdOut.returncode == 0 and inputDict['state'] == 'active' and int(inputDict['requestdict']['runtime']) <= utcNow:
+        if retOut['exitCode'] == 0 and inputDict['state'] == 'active' and int(inputDict['requestdict'].get('runtime', 600)) <= utcNow:
             self.logger.info(f"Stopping background process: {inputDict['id']}")
-            out, err, cmdOut = self._runCmd(inputDict, 'stop')
-            retOut['processOut'].append(f"Stopping background process: {inputDict['id']}")
-            retOut['stdout'] += out.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stdout')
-            retOut['stderr'] += err.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stderr')
-            retOut['exitCode'] = cmdOut.returncode
+            retOut = self._runCmd(inputDict, 'stop', False)
+            self._clean(inputDict)
             return retOut, 3, "finished"
 
         # If any other unknown state - we stop process and set it to failed
-        if cmdOut.returncode != 0 and (inputDict['state'] != 'new' or inputDict['state'] != 'active'):
+        if retOut['exitCode'] != 0 and (inputDict['state'] != 'new' or inputDict['state'] != 'active'):
             self.logger.info(f"Stopping background process (unknown): {inputDict['id']}")
-            out, err, cmdOut = self._runCmd(inputDict, 'stop')
+            retOut = self._runCmd(inputDict, 'stop', False)
             retOut['processOut'].append(f"Stopping background process: {inputDict['id']}")
-            retOut['stdout'] += out.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stdout')
-            retOut['stderr'] += err.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stderr')
-            retOut['exitCode'] = cmdOut.returncode
-            return retOut, cmdOut.returncode, "failed"
+            self._clean(inputDict)
+            return retOut, retOut['exitCode'], "failed"
         return retOut, 501, "unknown"
