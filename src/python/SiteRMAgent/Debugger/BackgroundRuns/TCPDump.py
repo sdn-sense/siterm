@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101
 """
 Title                   : siterm
 Author                  : Justas Balcas
@@ -9,6 +10,7 @@ Date                    : 2024/02/26
 import asyncio.exceptions
 import pyshark
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.ipaddr import getInterfaces
 
 
@@ -39,7 +41,7 @@ class ParsePackets():
         return self.out
 
 
-class TCPDump():
+class TCPDump(BaseDebugAction):
     """TCP Dump class. Run TCP Dump."""
     def __init__(self, config, sitename, backgConfig):
         self.config = config
@@ -47,19 +49,16 @@ class TCPDump():
         self.backgConfig = backgConfig
         self.logger = getLoggingObject(config=self.config, service="TCPDump")
         self.logger.info("====== TCPDump Start Work. Config: %s", self.backgConfig)
+        super().__init__()
 
-    def refreshthread(self, *_args):
-        """Call to refresh thread for this specific class and reset parameters"""
-        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
-
-    def startwork(self):
+    def main(self):
         """Do TCP Dump"""
+        self.jsonout.setdefault('tcpdump', [])
         if self.backgConfig['interface'] not in getInterfaces():
-            return [], "Interface is not available on the node", 3
+            self.stderr.append("Interface is not available on the node")
+            return
         parser = ParsePackets()
         allPackets = parser.sniff(self.backgConfig)
-        err, exitCode = "", 0
         if not allPackets:
-            err = "No packets were captured during 60 second capture time"
-            exitCode = 502
-        return allPackets, err, exitCode
+            self.stderr.append("No packets captured")
+        self.jsonout['tcpdump'] = allPackets

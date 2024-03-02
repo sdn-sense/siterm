@@ -16,6 +16,7 @@ import email.utils as eut
 import hashlib
 import http.client
 import io
+import csv
 import logging
 import logging.handlers
 import os
@@ -268,15 +269,30 @@ def getDataFromSiteFE(inputDict, host, url):
     return out
 
 
-def getWebContentFromURL(url):
+def getWebContentFromURL(url, raiseEx=True):
     """GET from URL"""
-    out = requests.get(url, timeout=60)
+    try:
+        out = requests.get(url, timeout=60)
+    except requests.exceptions.RequestException as ex:
+        if raiseEx:
+            raise
+        out = {}
+        out['error'] = str(ex)
+        out['status_code'] = -1
     return out
 
 
 def postWebContentToURL(url, **kwargs):
     """POST to URL"""
-    response = requests.post(url, timeout=60, **kwargs)
+    raiseEx = bool(kwargs.get('raiseEx', True))
+    try:
+        response = requests.post(url, timeout=60, **kwargs)
+    except requests.exceptions.RequestException as ex:
+        if raiseEx:
+            raise
+        response = {}
+        response['error'] = str(ex)
+        response['status_code'] = -1
     return response
 
 
@@ -322,6 +338,11 @@ class contentDB:
     def getFileContentAsJson(inputFile):
         """Get file content as json."""
         return getFileContentAsJson(inputFile)
+
+    @staticmethod
+    def getFileContentAsList(inputFile):
+        """Get file content as list."""
+        return readFile(inputFile)
 
     @staticmethod
     def getHash(inputText):
@@ -659,3 +680,35 @@ def strtolist(intext, splitter):
         return intext
     out = intext.split(splitter)
     return list(filter(None, out))
+
+
+# From https://github.com/torvalds/linux/blob/master/include/uapi/linux/if_arp.h
+HW_FLAGS = {'0x1': 'ETHER', '0x32': 'INFINIBAND'}
+ARP_FLAGS = {'0x0': 'I',
+             '0x2': 'C',
+             '0x4': 'M',
+             '0x6': 'CM',
+             '0x8': 'PUB',
+             '0x10': 'PROXY',
+             '0x20': 'NETMASK',
+             '0x40': 'DONTPUB'}
+
+def getArpVals():
+    with open('/proc/net/arp', encoding='utf-8') as arpfd:
+        arpKeys = ['IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device']
+        reader = csv.DictReader(arpfd,
+                                fieldnames=arpKeys,
+                                skipinitialspace=True,
+                                delimiter=' ')
+        skippedHeader = False
+        for block in reader:
+            if not skippedHeader:
+                skippedHeader = True
+                continue
+            if block['HW type'] in HW_FLAGS:
+                block['HW type'] = HW_FLAGS[block['HW type']]
+            if block['Flags'] in ARP_FLAGS:
+                block['Flags'] = ARP_FLAGS[block['Flags']]
+            print(block)
+            yblock = {x.replace(' ', ''): v for x, v in block.items()}
+            yield yblock

@@ -40,24 +40,12 @@ DAEMON = None
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
-    WORKERS = {'AGENT': {
-                   'prometheus-push': PromPush,
-                   'arp-push': PromPush,
-                   'iperf-server': IperfServer,
-                   'iperf-client': IperfClient,
-                   'rapid-ping': RapidPing,
-                   'arp-table': ArpTable,
-                   'tcpdump': TCPDump,
-                   'traceroute': Traceroute},
-               'FE': {
-                    'prometheus-push': PromPush,
-                    'papid-ping': RapidPing,
-                    'traceroute': Traceroute,
-                    'arp-table': ArpTable}}
-
-
     def getThreads(self, houreq, dayeq):
         """Check worker type"""
+        WORKERS = {'prometheus-push': PromPush, 'arp-push': PromPush,
+                   'iperf-server': IperfServer, 'iperf-client': IperfClient,
+                   'rapid-ping': RapidPing, 'arp-table': ArpTable,
+                   'tcpdump': TCPDump, 'traceroute': Traceroute}
         workDir = self.config.get('general', 'privatedir') + "/SiteRM/background/"
         # get run ID;
         fname = workDir + f"/background-process-{self.inargs.runnum}.json"
@@ -66,8 +54,8 @@ class MyDaemon(Daemon):
             sys.exit(1)
         backgConfig = getFileContentAsJson(fname)
         backgConfig['requestdict'] = evaldict(backgConfig['requestdict'])
-        self.totalRuntime = int(backgConfig['requestdict']['runtime'])
-        self.sleepTimers['ok'] = int(backgConfig['requestdict']['resolution'])
+        self.totalRuntime = int(backgConfig['requestdict'].get('runtime', 600))
+        self.sleepTimers['ok'] = int(backgConfig['requestdict'].get('resolution', 30))
         if WORKERTYPE == 'Agent':
             sites = self.config.get('general', 'sitename')
         elif WORKERTYPE == 'FE':
@@ -78,7 +66,9 @@ class MyDaemon(Daemon):
             if sitename not in self.runThreads:
                 # Here need to check what type of worker we are running
                 # And is it available for a specific type of worker
-                worker = self.WORKERS[WORKERTYPE].get(backgConfig['requestdict']['type'])
+                if backgConfig['requestdict'].get('type', {}) not in WORKERS:
+                    raise Exception(f'Worker type {backgConfig["requestdict"]["type"]} is not available for {WORKERTYPE}. Exiting.')
+                worker = WORKERS[backgConfig['requestdict']['type']]
                 workerDm = worker(self.config, sitename, backgConfig)
                 self.runThreads[sitename] = workerDm
             self.runThreads[sitename].refreshthread(houreq, dayeq)

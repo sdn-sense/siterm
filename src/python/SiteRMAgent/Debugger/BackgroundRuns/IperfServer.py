@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101
 """
 Title                   : siterm
 Author                  : Justas Balcas
@@ -9,9 +10,10 @@ Date                    : 2024/02/26
 from SiteRMLibs.ipaddr import ipVersion
 from SiteRMLibs.MainUtilities import externalCommand
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
 
-class IperfServer():
+class IperfServer(BaseDebugAction):
     """Iperf Server class. Run Iperf server."""
     def __init__(self, config, sitename, backgConfig):
         self.config = config
@@ -19,20 +21,21 @@ class IperfServer():
         self.backgConfig = backgConfig
         self.logger = getLoggingObject(config=self.config, service="IperfServer")
         self.logger.info("====== IperfServer Start Work. Config: %s", self.backgConfig)
+        super().__init__()
 
-    def refreshthread(self, *_args):
-        """Call to refresh thread for this specific class and reset parameters"""
-        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
-
-    def startwork(self):
+    def main(self):
         """Run IPerf Server"""
-        # TODO: Use python library (iperf3 pip)
+        # TODO: Use python library (iperf3)
+        self.jsonout.setdefault('iperf-server', [])
         if ipVersion(self.backgConfig['ip']) == -1:
-            return [], f"IP {self.backgConfig['ip']} does not appear to be an IPv4 or IPv6", 4
+            self.stderr.append(f"IP {self.backgConfig['ip']} does not appear to be an IPv4 or IPv6")
+            return
         command = "timeout %s iperf3 --server -p %s --bind %s %s" % (self.backgConfig['time'],
                                                                      self.backgConfig['port'],
                                                                      self.backgConfig['ip'],
                                                                      '-1' if self.backgConfig['onetime'] == 'True' else '')
-        cmdOut = externalCommand(command, False)
-        out, err = cmdOut.communicate()
-        return out.decode("utf-8"), err.decode("utf-8"), cmdOut.returncode
+        self.stdout.append(f"Running command: {command}")
+        cmdEx = externalCommand(command, False)
+        cmdOut, cmdErr = cmdEx.communicate()
+        self.stdout += cmdOut.decode("utf-8").split('\n')
+        self.stderr += cmdErr.decode("utf-8").split('\n')
