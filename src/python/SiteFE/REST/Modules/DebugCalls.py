@@ -243,7 +243,7 @@ class DebugCalls:
 
     def getalldebughostname(self, environ, **kwargs):
         """Get all Debug Requests for hostname"""
-        search = [["hostname", kwargs["hostname"]], ["state", kwargs["hostname"]]]
+        search = [["hostname", kwargs["hostname"]], ["state", kwargs["state"]]]
         self.responseHeaders(environ, **kwargs)
         return self.dbI.get(
             "debugrequests", orderby=["updatedate", "DESC"], search=search, limit=1000

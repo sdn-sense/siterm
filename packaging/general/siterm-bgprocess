@@ -40,6 +40,7 @@ DAEMON = None
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
+
     def __getdebugconf(self):
         """Get debug configuration"""
         workDir = self.config.get('general', 'privatedir') + "/SiteRM/background/"
