@@ -12,7 +12,6 @@ from prometheus_client import Gauge
 from prometheus_client import CollectorRegistry, push_to_gateway
 from SiteRMLibs.MainUtilities import getWebContentFromURL
 from SiteRMLibs.MainUtilities import postWebContentToURL
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import getArpVals
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
@@ -22,11 +21,10 @@ class PromPush(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.logger = getLoggingObject(config=self.config, service="PromPush")
+        self.service = "PromPush"
         self.arpLabels = {'Device': '', 'Flags': '', 'HWaddress': '',
                           'HWtype': '', 'IPaddress': '', 'Mask': ''}
         self.arpLabels.update(self.__getMetadataParams())
-        self.logger.info("====== PromPush Start Work. Config: %s", self.backgConfig)
         super().__init__()
 
     def __getMetadataParams(self):
@@ -57,16 +55,16 @@ class PromPush(BaseDebugAction):
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
         nodeOut = getWebContentFromURL(f'{nodeExporterUrl}/metrics')
         if 'status_code' in nodeOut and nodeOut['status_code'] == -1:
-            self.stderr.append(f"Failed to get node_exporter data. Error: {nodeOut.get('error', 'Unknown')}")
+            self.processout.wn(f"Failed to get node_exporter data. Error: {nodeOut.get('error', 'Unknown')}")
             return
         response = postWebContentToURL(self.__generatePromPushUrl(),
                                        data=nodeOut.content,
                                        headers=headers)
         if 'status_code' in response and response['status_code'] == -1:
-            self.stderr.append(f"Failed to push node_exporter data. Error: {response.get('error', 'Unknown')}")
+            self.processout.wn(f"Failed to push node_exporter data. Error: {response.get('error', 'Unknown')}")
             return
         self.logger.info(f"Pushed Node Exporter data. Return code: {response.status_code}")
-        self.stdout.append(f"Pushed Node Exporter data. Return code: {response.status_code}")
+        self.processout.wn(f"Pushed Node Exporter data. Return code: {response.status_code}")
 
     def __cleanRegistry(self):
         """Get new/clean prometheus registry."""
@@ -75,6 +73,7 @@ class PromPush(BaseDebugAction):
 
     def __pushToGateway(self, registry):
         """Push registry to remote gateway"""
+        # TODO: Catch if fails; and log it.
         push_to_gateway(self.backgConfig['requestdict']['gateway'],
                         job=f"job-{self.backgConfig['id']}",
                         registry=registry,
@@ -94,11 +93,13 @@ class PromPush(BaseDebugAction):
     def main(self):
         """Start Prometheus Push Daemon thread work"""
         if self.backgConfig['requestdict']['type'] == 'prometheus-push':
-            self.jsonout.setdefault('prometheus-push', [])
+            self.jsonout.setdefault('prometheus-push', {'exitCode': -1, 'output': []})
             self.nodeExporterPush()
+            self.jsonout['prometheus-push']['exitCode'] = 0
         elif self.backgConfig['requestdict']['type'] == 'arp-push':
-            self.jsonout.setdefault('arp-push', [])
+            self.jsonout.setdefault('arp-push', {'exitCode': -1, 'output': []})
             self.arpPush()
+            self.jsonout['arp-push']['exitCode'] = 0
         else:
-            self.stderr.append(f"Unsupported push method. Submitted request: {self.backgConfig}")
+            self.processout.append(f"Unsupported push method. Submitted request: {self.backgConfig}")
             raise Exception(f"Unsupported push method. Submitted request: {self.backgConfig}")

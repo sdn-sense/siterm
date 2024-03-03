@@ -8,7 +8,6 @@ Authors:
 
 Date: 2023/03/17
 """
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import isValFloat
 from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getVal
@@ -26,8 +25,7 @@ class PromPush(BaseDebugAction):
         self.sitename = sitename
         backgConfig['requestdict'] = evaldict(backgConfig['requestdict'])
         self.backgConfig = backgConfig
-        self.logger = getLoggingObject(config=self.config, service="PromPush")
-        self.logger.info("====== PromPush Start Work. Config: %s", self.backgConfig)
+        self.service = "PromPush"
         self.dbI = getVal(getDBConn('PrometheusPush', self), **{'sitename': self.sitename})
         self.promLabels = {'Key': '', 'ifDescr': '', 'ifType': '', 'ifAlias': '', 'hostname': ''}
         self.promLabels.update(self.__getMetadataParams())
@@ -122,5 +120,5 @@ class PromPush(BaseDebugAction):
                         if self.__filterOutput(self.backgConfig['requestdict'].get('filter', {}).get('snmp', {}), self.promLabels):
                             snmpGauge.labels(**self.promLabels).set(val[key1])
         self.__pushToGateway(registry)
-        self.stdout.append(f"Pushed SNMP data for {hostname}")
+        self.processout.wn(f"Pushed SNMP data for {hostname}")
         self.logger.info(f"Pushed SNMP data for {hostname}")

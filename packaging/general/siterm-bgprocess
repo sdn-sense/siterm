@@ -40,22 +40,31 @@ DAEMON = None
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
-    def getThreads(self, houreq, dayeq):
-        """Check worker type"""
-        WORKERS = {'prometheus-push': PromPush, 'arp-push': PromPush,
-                   'iperf-server': IperfServer, 'iperf-client': IperfClient,
-                   'rapid-ping': RapidPing, 'arp-table': ArpTable,
-                   'tcpdump': TCPDump, 'traceroute': Traceroute}
+    def __getdebugconf(self):
+        """Get debug configuration"""
         workDir = self.config.get('general', 'privatedir') + "/SiteRM/background/"
-        # get run ID;
         fname = workDir + f"/background-process-{self.inargs.runnum}.json"
         if not os.path.isfile(fname):
             self.logger.warning(f'Filename {fname} not available for background process. Exiting')
             sys.exit(1)
         backgConfig = getFileContentAsJson(fname)
         backgConfig['requestdict'] = evaldict(backgConfig['requestdict'])
-        self.totalRuntime = int(backgConfig['requestdict'].get('runtime', 600))
-        self.sleepTimers['ok'] = int(backgConfig['requestdict'].get('resolution', 30))
+        return backgConfig
+
+    def postRunThread(self, _sitename, _rthread):
+        """Identify if we should continue to run subprocess"""
+        backgConfig = self.__getdebugconf()
+        self.totalRuntime = 1
+        if 'runtime' in backgConfig['requestdict']:
+            self.totalRuntime = int(backgConfig['requestdict']['runtime'])
+
+    def getThreads(self, houreq, dayeq):
+        """Check worker type"""
+        WORKERS = {'prometheus-push': PromPush, 'arp-push': PromPush,
+                   'iperf-server': IperfServer, 'iperf-client': IperfClient,
+                   'rapid-ping': RapidPing, 'arp-table': ArpTable,
+                   'tcpdump': TCPDump, 'traceroute': Traceroute}
+        backgConfig = self.__getdebugconf()
         if WORKERTYPE == 'Agent':
             sites = self.config.get('general', 'sitename')
         elif WORKERTYPE == 'FE':

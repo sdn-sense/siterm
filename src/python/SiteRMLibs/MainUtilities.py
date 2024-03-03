@@ -213,6 +213,12 @@ def externalCommand(command, communicate=True):
         return proc.communicate()
     return proc
 
+def externalCommandStdOutErr(command, stdout, stderr):
+    """Execute External Commands and return stdout and stderr."""
+    command = shlex.split(str(command))
+    with open(stdout, "w", encoding='utf-8') as outFD, open(stderr, "w", encoding='utf-8') as errFD:
+        with subprocess.Popen(command, stdout=outFD, stderr=errFD) as proc:
+            return proc.communicate()
 
 def execute(command, logger, raiseError=True):
     """Execute interfaces commands."""

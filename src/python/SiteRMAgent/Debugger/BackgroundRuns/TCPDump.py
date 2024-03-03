@@ -9,7 +9,6 @@ Date                    : 2024/02/26
 """
 import asyncio.exceptions
 import pyshark
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.ipaddr import getInterfaces
 
@@ -47,18 +46,18 @@ class TCPDump(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.logger = getLoggingObject(config=self.config, service="TCPDump")
-        self.logger.info("====== TCPDump Start Work. Config: %s", self.backgConfig)
+        self.service = "TCPDump"
         super().__init__()
 
     def main(self):
         """Do TCP Dump"""
-        self.jsonout.setdefault('tcpdump', [])
+        self.jsonout.setdefault('tcpdump', {'exitCode': -1, 'output': []})
         if self.backgConfig['interface'] not in getInterfaces():
-            self.stderr.append("Interface is not available on the node")
+            self.processout.wn("Interface is not available on the node")
             return
         parser = ParsePackets()
         allPackets = parser.sniff(self.backgConfig)
         if not allPackets:
-            self.stderr.append("No packets captured")
-        self.jsonout['tcpdump'] = allPackets
+            self.processout.wn("No packets captured")
+        self.jsonout['tcpdump']['output'] = allPackets
+        self.jsonout['tcpdump']['exitCode'] = 0
