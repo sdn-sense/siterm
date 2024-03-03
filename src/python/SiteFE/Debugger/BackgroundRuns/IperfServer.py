@@ -7,7 +7,6 @@ Email                   : juztas (at) gmail (dot) com
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
 class IperfServer(BaseDebugAction):
@@ -21,7 +20,7 @@ class IperfServer(BaseDebugAction):
 
     def startwork(self):
         """Main IperfServer work. Run IperfServer on switches."""
-        self.jsonout.setdefault('iperf-server', [])
+        self.jsonout.setdefault('iperf-server', {'exitCode': -1, 'output': []})
         self.processout.wn(f"NOT IMPLEMENTED call {self.backgConfig} to run iperf server on switches")
         self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to run iperf server on switches")
         raise Exception("NOT IMPLEMENTED! -1")

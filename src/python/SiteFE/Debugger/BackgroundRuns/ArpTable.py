@@ -7,7 +7,6 @@ Email                   : juztas (at) gmail (dot) com
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
 class ArpTable(BaseDebugAction):
@@ -21,7 +20,7 @@ class ArpTable(BaseDebugAction):
 
     def main(self):
         """Main ArpTable work. Get all arp table from switches."""
-        self.jsonout.setdefault('arp-table', [])
+        self.jsonout.setdefault('arp-table', {'exitCode': -1, 'output': []})
         self.processout.wn(f"NOT IMPLEMENTED call {self.backgConfig} to get arp table")
         self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to get arp table")
         raise Exception("NOT IMPLEMENTED! -1")

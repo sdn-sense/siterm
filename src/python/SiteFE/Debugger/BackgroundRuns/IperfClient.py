@@ -7,7 +7,6 @@ Email                   : juztas (at) gmail (dot) com
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
 class IperfClient(BaseDebugAction):
@@ -21,7 +20,7 @@ class IperfClient(BaseDebugAction):
 
     def main(self):
         """Main IperfClient work. Run IperfClient on switches."""
-        self.jsonout.setdefault('iperf-client', [])
+        self.jsonout.setdefault('iperf-client', {'exitCode': -1, 'output': []})
         self.processout.wn(f"NOT IMPLEMENTED call {self.backgConfig} to run iperf client on switches")
         self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to run iperf client on switches")
         raise Exception("NOT IMPLEMENTED! -1")

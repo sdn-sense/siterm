@@ -136,6 +136,7 @@ class DebugService:
             if retOut['jsonout'].get('exitCode', -1) == 0:
                 self._clean(inputDict)
                 return retOut, 2, "finished"
+            # In case failed, we keep logs remaining. Not best practice, but we keep it for now.
             return retOut, retOut['exitCode'], "failed"
 
         self.logger.warning(f"Unknown state for background process: {inputDict['id']}")
