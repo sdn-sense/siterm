@@ -16,13 +16,12 @@ class IperfServer(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.logger = getLoggingObject(config=self.config, service="IperfServer")
-        self.logger.info("====== IperfServer Start Work. Config: %s", self.backgConfig)
+        self.service = "IperfServer"
         super().__init__()
 
     def startwork(self):
         """Main IperfServer work. Run IperfServer on switches."""
         self.jsonout.setdefault('iperf-server', [])
-        self.stderr.append(f"NOT IMPLEMENTED call {self.backgConfig} to run iperf server on switches")
+        self.processout.wn(f"NOT IMPLEMENTED call {self.backgConfig} to run iperf server on switches")
         self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to run iperf server on switches")
         raise Exception("NOT IMPLEMENTED! -1")

@@ -16,13 +16,12 @@ class ArpTable(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.logger = getLoggingObject(config=self.config, service="ArpTable")
-        self.logger.info("====== ArpTable Start Work. Config: %s", self.backgConfig)
+        self.service = "ArpTable"
         super().__init__()
 
     def main(self):
         """Main ArpTable work. Get all arp table from switches."""
         self.jsonout.setdefault('arp-table', [])
-        self.stderr.append(f"NOT IMPLEMENTED call {self.backgConfig} to get arp table")
+        self.processout.wn(f"NOT IMPLEMENTED call {self.backgConfig} to get arp table")
         self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to get arp table")
         raise Exception("NOT IMPLEMENTED! -1")

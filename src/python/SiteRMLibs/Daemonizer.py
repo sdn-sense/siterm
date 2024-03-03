@@ -379,6 +379,12 @@ class Daemon(DBBackend):
             return False
         return True
 
+    def timeToExit(self):
+        """Return True if it is time to exit."""
+        if self.totalRuntime > 0 and self.totalRuntime <= int(getUTCnow()):
+            return True
+        return False
+
     def refreshThreads(self, houreq, dayeq):
         """Refresh threads"""
         # pylint: disable=W0702
@@ -413,13 +419,14 @@ class Daemon(DBBackend):
                     try:
                         self.preRunThread(sitename, rthread)
                         rthread.startwork()
-                        self.postRunThread(sitename, rthread)
                         self.reporter('OK', sitename, stwork)
                     except:
                         hadFailure = True
                         self.reporter('FAILED', sitename, stwork)
                         exc = traceback.format_exc()
                         self.logger.critical("Exception!!! Error details:  %s", exc)
+                    finally:
+                        self.postRunThread(sitename, rthread)
                 if self.runLoop():
                     time.sleep(self.sleepTimers['ok'])
             except KeyboardInterrupt as ex:
@@ -432,7 +439,7 @@ class Daemon(DBBackend):
                     time.sleep(self.sleepTimers['failure'])
                 else:
                     sys.exit(4)
-            if self.totalRuntime != 0 and self.totalRuntime <= int(getUTCnow()):
+            if self.timeToExit():
                 self.logger.info('Total Runtime expired. Stopping Service')
                 sys.exit(0)
             houreq, dayeq, currentHour, currentDay = reCacheConfig(currentHour, currentDay)

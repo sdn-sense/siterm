@@ -8,8 +8,7 @@ Email                   : juztas (at) gmail (dot) com
 Date                    : 2024/02/26
 """
 from SiteRMLibs.ipaddr import ipVersion
-from SiteRMLibs.MainUtilities import externalCommand
-from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
 
@@ -19,23 +18,19 @@ class IperfServer(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.logger = getLoggingObject(config=self.config, service="IperfServer")
-        self.logger.info("====== IperfServer Start Work. Config: %s", self.backgConfig)
+        self.service = "IperfServer"
         super().__init__()
 
     def main(self):
         """Run IPerf Server"""
-        # TODO: Use python library (iperf3)
-        self.jsonout.setdefault('iperf-server', [])
+        self.jsonout.setdefault('iperf-server', {'exitCode': -1, 'output': []})
         if ipVersion(self.backgConfig['ip']) == -1:
-            self.stderr.append(f"IP {self.backgConfig['ip']} does not appear to be an IPv4 or IPv6")
+            self.processout.wn(f"IP {self.backgConfig['ip']} does not appear to be an IPv4 or IPv6")
             return
         command = "timeout %s iperf3 --server -p %s --bind %s %s" % (self.backgConfig['time'],
                                                                      self.backgConfig['port'],
                                                                      self.backgConfig['ip'],
                                                                      '-1' if self.backgConfig['onetime'] == 'True' else '')
-        self.stdout.append(f"Running command: {command}")
-        cmdEx = externalCommand(command, False)
-        cmdOut, cmdErr = cmdEx.communicate()
-        self.stdout += cmdOut.decode("utf-8").split('\n')
-        self.stderr += cmdErr.decode("utf-8").split('\n')
+        self.processout.wn(f"Running command: {command}")
+        externalCommandStdOutErr(command, self.outfiles['stdout'], self.outfiles['stderr'])
+        self.jsonout['iperf-server']['exitCode'] = 0

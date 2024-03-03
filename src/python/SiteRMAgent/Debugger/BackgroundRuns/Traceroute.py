@@ -15,13 +15,13 @@ class Traceroute(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.logger = getLoggingObject(config=self.config, service="TraceRoute")
-        self.logger.info("====== Traceroute Start Work. Config: %s", self.backgConfig)
+        self.service = "Traceroute"
         super().__init__()
 
     def main(self):
         """Main TraceRoute work. Run TraceRoute on host."""
-        self.jsonout.setdefault('traceroute', [])
-        self.stderr.append(f"NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
+        self.jsonout.setdefault('traceroute', {'exitCode': -1, 'output': []})
+        self.processout.wn(f"NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
         self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
+        self.jsonout['traceroute']['exitCode'] = -1 # Once implemented do 0
         raise Exception("NOT IMPLEMENTED! -1")

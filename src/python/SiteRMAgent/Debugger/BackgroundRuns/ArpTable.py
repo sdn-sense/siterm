@@ -7,7 +7,6 @@ Email                   : juztas (at) gmail (dot) com
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import getArpVals
 from SiteRMLibs.ipaddr import getInterfaces
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
@@ -19,18 +18,18 @@ class ArpTable(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.logger = getLoggingObject(config=self.config, service="ArpTable")
-        self.logger.info("====== ArpTable Start Work. Config: %s", self.backgConfig)
+        self.service = "ArpTable"
         super().__init__()
 
     def main(self):
         """Main ArpTable work. Get all arp table from host."""
-        self.jsonout.setdefault('arp-table', [])
+        self.jsonout.setdefault('arp-table', {'exitCode': -1, 'output': []})
         interface = self.backgConfig.get('interface', None)
         if interface and interface not in getInterfaces():
-            self.stderr.append("Interface is not available on the node")
+            self.processout.wn("Interface is not available on the node")
             return
         for arpval in getArpVals():
-            self.jsonout['arp-table'].append(arpval)
+            self.jsonout['arp-table']['output'].append(arpval)
             resline = list(map(lambda x: x[0] + str(x[1]), arpval.items()))
-            self.stdout.append(" ".join(resline))
+            self.processout.wn(" ".join(resline))
+        self.jsonout['arp-table']['exitCode'] = 0

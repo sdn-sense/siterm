@@ -46,18 +46,20 @@ class DebugService:
             out['stderr'].append(str(ex))
             exitCode = 501
             newstate = "failed"
-        self.logger.debug(f"Finish work on debug: {out}")
+        self.logger.debug(f"Finish check of process on debug action {item['id']}. ExitCode: {exitCode} NewState: {newstate}")
         # 501, 1 - error - set to failed
         # 2 - active
-        # 3 - finished
         if exitCode in [501, 1]:
             newstate = 'failed'
         elif exitCode == 0:
             newstate = 'active'
-        elif exitCode == 3:
+        elif exitCode == 2:
             newstate = 'finished'
         else:
             newstate = 'unknown'
+        if exitCode == -1 and newstate == 'unknown':
+            # We skip this as it is up to the process to decide what to do.
+            return
         if item['state'] != newstate:
             item['state'] = newstate
             self.logger.info(f"Updating state of debug: {item['id']} to {newstate}")
@@ -66,7 +68,7 @@ class DebugService:
                'state': item['state'],
                'output': jsondumps(out),
                'updatedate': getUTCnow()}
-        self.publishToFE(item)
+        self.publishToFE(out)
 
     def _getOut(self, pid, logtype):
         """Get output from background process log file."""
@@ -81,7 +83,7 @@ class DebugService:
     def _getOutjson(self, pid, logtype):
         """Get output from background process log file."""
         fname = self.workDir + f"/background-process-{pid}.{logtype}"
-        return self.diragent.getFileContentAsJson(fname, {})
+        return self.diragent.getFileContentAsJson(fname)
 
     def _runCmd(self, inputDict, action, foreground):
         """Start execution of new requests"""
@@ -93,6 +95,7 @@ class DebugService:
         out, err = cmdOut.communicate()
         retOut['stdout'] += out.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stdout')
         retOut['stderr'] += err.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stderr')
+        retOut['processOut'] += self._getOut(inputDict['id'], 'process')
         retOut['jsonout'] = self._getOutjson(inputDict['id'], 'jsonout')
         retOut['exitCode'] = cmdOut.returncode
         return retOut
@@ -102,13 +105,13 @@ class DebugService:
         self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.json")
         self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.stdout")
         self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.stderr")
+        self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.process")
         self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.jsonout")
 
     def run(self, inputDict):
         """Run a specific debug service in a separate thread"""
         inputDict['requestdict'] = evaldict(inputDict['requestdict'])
         self.logger.debug(f"Check background process: {inputDict}")
-        utcNow = int(getUTCnow())
         # Check Status first
         retOut = self._runCmd(inputDict, 'status', False)
 
@@ -120,30 +123,21 @@ class DebugService:
             return retOut, retOut['exitCode'], "active"
 
         # If it is active, and process is active, then get output from it.
-        if retOut['exitCode'] == 0 and inputDict['state'] == 'active' and int(inputDict['requestdict'].get('runtime', 600)) > utcNow:
+        if retOut['exitCode'] == 0 and inputDict['state'] == 'active':
             self.logger.info(f"Checking background process: {inputDict['id']}")
             retOut['processOut'].append(f"Checking background process: {inputDict['id']}")
             return retOut, retOut['exitCode'], "active"
 
-        # If it is active, but process exited, then restart it (if time still allows that).
-        if retOut['exitCode'] != 0 and inputDict['state'] == 'active' and int(inputDict['requestdict'].get('runtime', 600)) > utcNow:
-            self.logger.info(f"Restarting background process: {inputDict['id']}")
-            retOut = self._runCmd(inputDict, 'restart', True)
-            retOut['processOut'].append(f"Restarting background process: {inputDict['id']}")
-            return retOut, retOut['exitCode'], "active"
-
-        # if it is active, process is active, and time ran out, then stop it.
-        if retOut['exitCode'] == 0 and inputDict['state'] == 'active' and int(inputDict['requestdict'].get('runtime', 600)) <= utcNow:
-            self.logger.info(f"Stopping background process: {inputDict['id']}")
-            retOut = self._runCmd(inputDict, 'stop', False)
-            self._clean(inputDict)
-            return retOut, 3, "finished"
-
-        # If any other unknown state - we stop process and set it to failed
-        if retOut['exitCode'] != 0 and (inputDict['state'] != 'new' or inputDict['state'] != 'active'):
-            self.logger.info(f"Stopping background process (unknown): {inputDict['id']}")
-            retOut = self._runCmd(inputDict, 'stop', False)
-            retOut['processOut'].append(f"Stopping background process: {inputDict['id']}")
-            self._clean(inputDict)
+        # If it is active, but process exited, then it failed.
+        if retOut['exitCode'] != 0 and inputDict['state'] == 'active':
+            self.logger.info(f"Force stoping background process: {inputDict['id']}")
+            retOut = self._runCmd(inputDict, 'stop', True)
+            retOut['processOut'].append(f"Force stoping background process: {inputDict['id']}")
+            if retOut['jsonout'].get('exitCode', -1) == 0:
+                self._clean(inputDict)
+                return retOut, 2, "finished"
             return retOut, retOut['exitCode'], "failed"
-        return retOut, 501, "unknown"
+
+        self.logger.warning(f"Unknown state for background process: {inputDict['id']}")
+        self.logger.warning(f"Return Out of Process: {retOut}")
+        return retOut, -1, "unknown"

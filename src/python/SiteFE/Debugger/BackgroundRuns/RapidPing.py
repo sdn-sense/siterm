@@ -7,7 +7,6 @@ Email                   : juztas (at) gmail (dot) com
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
 class RapidPing(BaseDebugAction):
@@ -16,13 +15,12 @@ class RapidPing(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.logger = getLoggingObject(config=self.config, service="RapidPing")
-        self.logger.info("====== RapidPing Start Work. Config: %s", self.backgConfig)
+        self.service = "RapidPing"
         super().__init__()
 
     def main(self):
         """Main RapidPing work. Run RapidPing on switches."""
         self.jsonout.setdefault('rapid-ping', [])
-        self.stderr.append(f"NOT IMPLEMENTED call {self.backgConfig} to run rapid ping on switches")
+        self.processout.wn(f"NOT IMPLEMENTED call {self.backgConfig} to run rapid ping on switches")
         self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to run rapid ping on switches")
         raise Exception("NOT IMPLEMENTED! -1")
