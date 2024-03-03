@@ -86,7 +86,7 @@ class PromPush(BaseDebugAction):
 
     def main(self):
         """Start PushGateway Work"""
-        self.jsonout.setdefault('prometheus-push', [])
+        self.jsonout.setdefault('prometheus-push', {'exitCode': -1, 'output': []})
         hostname = self.backgConfig['requestdict']['hostname']
         mibs = self.config['MAIN']['snmp']['mibs']
         registry = self.__cleanRegistry()
@@ -122,3 +122,4 @@ class PromPush(BaseDebugAction):
         self.__pushToGateway(registry)
         self.processout.wn(f"Pushed SNMP data for {hostname}")
         self.logger.info(f"Pushed SNMP data for {hostname}")
+        self.jsonout['prometheus-push']['exitCode'] = 0
