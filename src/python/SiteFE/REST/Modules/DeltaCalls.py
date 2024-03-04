@@ -153,9 +153,9 @@ class DeltaCalls:
     def __getdeltaINT(self, deltaID=None, **kwargs):
         """Get delta from database."""
         if not deltaID:
-            return self.dbI.get("deltas")
+            return self.dbI.get("deltas", orderby=['insertdate', 'DESC'])
         out = self.dbI.get(
-            "deltas", search=[["uid", deltaID]], orderby=["insertdate", "ASC"]
+            "deltas", search=[["uid", deltaID]], orderby=["insertdate", "DESC"]
         )
         if not out:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
@@ -163,7 +163,7 @@ class DeltaCalls:
 
     def __getdeltastatesINT(self, deltaID, **kwargs):
         """Get delta states from database."""
-        out = self.dbI.get("states", search=[["deltaid", deltaID]])
+        out = self.dbI.get("states", search=[["deltaid", deltaID]], orderby=['insertdate', 'DESC'])
         if not out:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out
@@ -180,7 +180,7 @@ class DeltaCalls:
         """Change delta state."""
         if internal:
             out = self.dbI.get(
-                "hoststates", search=[["deltaid", deltaID], ["hostname", hostname]]
+                "hoststates", search=[["deltaid", deltaID], ["hostname", hostname]], orderby=['insertdate', 'DESC']
             )
             if not out:
                 msg = f"This query did not returned any host states for {deltaID} {hostname}"
@@ -212,7 +212,7 @@ class DeltaCalls:
 
     def getActiveDeltas(self, environ, **kwargs):
         """Get all Active Deltas"""
-        activeDeltas = self.dbI.get("activeDeltas")
+        activeDeltas = self.dbI.get("activeDeltas", orderby=['insertdate', 'DESC'])
         if activeDeltas:
             activeDeltas = activeDeltas[0]
             activeDeltas["output"] = evaldict(activeDeltas["output"])
