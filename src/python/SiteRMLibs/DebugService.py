@@ -47,27 +47,16 @@ class DebugService:
             exitCode = 501
             newstate = "failed"
         self.logger.debug(f"Finish check of process on debug action {item['id']}. ExitCode: {exitCode} NewState: {newstate}")
-        # 501, 1 - error - set to failed
-        # 2 - active
-        if exitCode in [501, 1]:
-            newstate = 'failed'
-        elif exitCode == 0:
-            newstate = 'active'
-        elif exitCode == 2:
-            newstate = 'finished'
-        else:
-            newstate = 'unknown'
         if exitCode == -1 and newstate == 'unknown':
             # We skip this as it is up to the process to decide what to do.
             return
-        if item['state'] != newstate:
-            item['state'] = newstate
-            self.logger.info(f"Updating state of debug: {item['id']} to {newstate}")
 
         out = {'id': item['id'],
-               'state': item['state'],
+               'state': newstate,
                'output': jsondumps(out),
                'updatedate': getUTCnow()}
+        self.logger.debug(f"Updating state of debug: {out['id']} to {newstate}")
+        self.logger.debug(f"Output of process: {out}")
         self.publishToFE(out)
 
     def _getOut(self, pid, logtype):
@@ -88,7 +77,7 @@ class DebugService:
     def _runCmd(self, inputDict, action, foreground):
         """Start execution of new requests"""
         retOut = {'processOut': [], 'stdout': [], 'stderr': [], 'jsonout': {}, 'exitCode': -1}
-        command = f"siterm-bgprocess --action {action} --runnum {inputDict['id']}"
+        command = f"siterm-bgprocess --action {action} --noreporting --runnum {inputDict['id']}"
         if foreground:
             command += " --foreground"
         cmdOut = externalCommand(command, False)
@@ -120,13 +109,13 @@ class DebugService:
             self.logger.info(f"Starting background process: {inputDict['id']}")
             retOut = self._runCmd(inputDict, 'start', True)
             retOut['processOut'].append(f"Starting background process: {inputDict['id']}")
-            return retOut, retOut['exitCode'], "active"
+            return retOut, 0, "active"
 
         # If it is active, and process is active, then get output from it.
         if retOut['exitCode'] == 0 and inputDict['state'] == 'active':
             self.logger.info(f"Checking background process: {inputDict['id']}")
             retOut['processOut'].append(f"Checking background process: {inputDict['id']}")
-            return retOut, retOut['exitCode'], "active"
+            return retOut, 0, "active"
 
         # If it is active, but process exited, then it failed.
         if retOut['exitCode'] != 0 and inputDict['state'] == 'active':
@@ -137,7 +126,7 @@ class DebugService:
                 self._clean(inputDict)
                 return retOut, 2, "finished"
             # In case failed, we keep logs remaining. Not best practice, but we keep it for now.
-            return retOut, retOut['exitCode'], "failed"
+            return retOut, 1, "failed"
 
         self.logger.warning(f"Unknown state for background process: {inputDict['id']}")
         self.logger.warning(f"Return Out of Process: {retOut}")

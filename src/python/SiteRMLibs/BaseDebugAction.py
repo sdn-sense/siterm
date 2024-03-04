@@ -44,13 +44,13 @@ class BaseDebugAction:
                          'stderr': self.workDir + f"/background-process-{self.backgConfig['id']}.stderr",
                          'processout': self.workDir + f"/background-process-{self.backgConfig['id']}.process",
                          'jsonout': self.workDir + f"/background-process-{self.backgConfig['id']}.jsonout"}
-        self.processout = CustomWriter(self.outfiles['process'], 'w', encoding='utf-8')
+        self.processout = CustomWriter(self.outfiles['processout'], 'w', encoding='utf-8')
         self.jsonout = {}
         self.diragent = contentDB()
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
-        self.logger.warning("NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
+        self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def startwork(self):
         """Main work function"""

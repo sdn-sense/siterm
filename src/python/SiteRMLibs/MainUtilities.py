@@ -28,6 +28,7 @@ import socket
 import subprocess
 import time
 import uuid
+import urllib.parse
 
 # Custom exceptions imports
 import pycurl
@@ -420,7 +421,7 @@ def parse_gui_form_post(inputVal):
     out = {}
     for item in inputVal.split(b"&"):
         tmpItem = item.split(b"=")
-        out[tmpItem[0].decode("utf-8")] = tmpItem[1].decode("utf-8")
+        out[tmpItem[0].decode("utf-8")] = urllib.parse.unquote(tmpItem[1].decode("utf-8"))
     return out
 
 
@@ -700,6 +701,7 @@ ARP_FLAGS = {'0x0': 'I',
              '0x40': 'DONTPUB'}
 
 def getArpVals():
+    """Get Arp Values from /proc/net/arp. Return generator."""
     with open('/proc/net/arp', encoding='utf-8') as arpfd:
         arpKeys = ['IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device']
         reader = csv.DictReader(arpfd,
