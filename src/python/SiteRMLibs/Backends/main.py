@@ -244,7 +244,12 @@ class Switch(Node):
                 self._delPortFromOut(switch, port)
                 continue
             tmpData = self.plugin.getportdata(self.switches["output"][switch], port)
-            if self._notSwitchport(tmpData):
+            confPort = self.config.config["MAIN"].get(switch, {}).get("ports", {}).get(port, {})
+            if self._notSwitchport(tmpData) and confPort:
+                # This port only defined in RM Config (fake switch port)
+                portDict = self.output["ports"][switch].setdefault(port, confPort)
+                continue
+            elif self._notSwitchport(tmpData) and port not in vlans:
                 self.logger.debug(
                     f"Warning. Port {switch}{port} not added into model. Its status not switchport."
                 )
