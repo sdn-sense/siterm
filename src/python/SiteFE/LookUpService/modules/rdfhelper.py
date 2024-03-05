@@ -11,12 +11,103 @@ Date: 2021/12/01
 """
 from rdflib import URIRef, Literal
 from rdflib.namespace import XSD
+from SiteRMLibs.ipaddr import normalizedip
+from SiteRMLibs.ipaddr import normalizeipdict
+from SiteRMLibs.ipaddr import replaceSpecialSymbols
+from SiteRMLibs.ipaddr import validMRMLName
 from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.MainUtilities import strtolist
+
+
+def generateVal(cls, inval, inkey, esc=False):
+    """Generate mrml valid val/key for ipv4/ipv6"""
+    if isinstance(inval, dict) and inkey == 'ipv4':
+        return _genIPv4(cls, inval, inkey, esc)
+    if isinstance(inval, dict) and inkey == 'ipv6':
+        return _genIPv6(cls, inval, inkey, esc)
+    if isinstance(inval, (dict, list)):
+        cls.logger.info(f'Out is dictionary/list, but vals unknown. Return as str {inval}')
+        return str(inval)
+    if isinstance(inval, (int, float)):
+        return inval
+    if isinstance(inval, str):
+        for call in [int, float]:
+            try:
+                return call(inval)
+            except ValueError:
+                continue
+    return str(inval)
+
+def _genIPv4(cls, inval, inkey, esc=True):
+    """
+    Generate Interface IPv4 details
+    Ansible returns list if multiple IPs set on Interface.
+    But for some switches, it will return dict if a single entry
+    """
+    if isinstance(inval, dict):
+        subnet = 32
+        if 'masklen' in inval:
+            subnet = inval['masklen']
+        if 'address' in inval:
+            if esc:
+                return validMRMLName(f"{inval['address']}/{subnet}")
+            return f"{inval['address']}/{subnet}"
+        cls.logger.debug('One of params in Dict not available. Upredictable output')
+    if isinstance(inval, list):
+        tmpKeys = [{'key': inkey, 'subkey': _genIPv4(cls, val, inkey), 'val': val} for val in inval]
+        return tmpKeys
+    cls.logger.debug(f'No IPv4 value. Return empty String. This might break things. Input: {inval} {inkey}')
+    return ''
+
+def _genIPv6(cls, inval, inkey, esc=True):
+    """
+    Generate Interface IPv6 details
+    Ansible returns list if multiple IPs set on Interface.
+    But for some switches, it will return dict if a single entry
+    """
+    if isinstance(inval, dict):
+        subnet = 64 # Default we will use /64 just to secure code from diff ansible-switch outputs
+        if 'subnet' in inval:
+            subnet = inval['subnet'].split('/')[-1]
+        if 'masklen' in inval:
+            subnet = inval['masklen']
+        if 'address' in inval:
+            if esc:
+                return validMRMLName(f"{inval['address']}/{subnet}")
+            return f"{inval['address']}/{subnet}"
+        cls.logger.debug('One of params in Dict not available. Upredictable output')
+    if isinstance(inval, list):
+        tmpKeys = [{'key': inkey, 'subkey': _genIPv6(cls, val, inkey), 'val': normalizeipdict(val)} for val in inval]
+        return tmpKeys
+    cls.logger.debug(f'No IPv6 value. Return empty String. This might break things. Input: {inval} {inkey}')
+    return ''
 
 class RDFHelper():
     """RDF Helper preparation class."""
     # pylint: disable=E1101,W0201,W0613
+
+    def generateKey(self, inval, inkey):
+        """Generate keys for mrml and escape special charts"""
+        if isinstance(inval, str):
+            return replaceSpecialSymbols(inval)
+        if isinstance(inval, int):
+            return str(inval)
+        if inkey == 'ipv4':
+            if not isinstance(inval, list):
+                # Diff switches return differently. Make it always list in case dict
+                # e.g. Dell OS 9 returns dict if 1 IP set, List if 2
+                # Arista EOS always returns list.
+                inval = [inval]
+            return _genIPv4(self, inval, inkey)
+        if inkey == 'ipv6':
+            if not isinstance(inval, list):
+                # Diff switches return differently. Make it always list in case dict
+                # e.g. Dell OS 9 returns dict if 1 IP set, List if 2
+                # Arista EOS always returns list.
+                inval = [inval]
+            return _genIPv6(self, inval, inkey)
+        self.logger.debug(f'Generate Keys return empty. Unexpected. Input: {inval} {inkey}')
+        return ""
 
     def getSavedPrefixes(self, additionalhosts=None):
         """Get Saved prefixes from a configuration file."""
@@ -76,6 +167,38 @@ class RDFHelper():
             if 'hostname' in kwargs and kwargs['hostname'] and \
                'portName' in kwargs and kwargs['portName']:
                 self._addRstPort(**kwargs)
+
+    def _addVals(self, key, subkey, val, newuri):
+        if not subkey:
+            return
+        if key in ['ipv4', 'ipv6']:
+            # TODO: Move this check inside normalizedip function
+            if isinstance(val, dict):
+                val = f"{val.get('address', '')}/{val.get('masklen', '')}"
+                if val == "/":
+                    return
+            labeluri = self.URIs.get('ips', {}).get(normalizedip(val), {}).get('uri', f"{newuri}:{key}-address+{validMRMLName(val)}")
+            reptype = self.URIs.get('ips', {}).get(normalizedip(val), {}).get('type', f'{key}-address')
+
+        elif key == 'sense-rtmon':
+            labeluri = f"{newuri}:{key}+{subkey}"
+            reptype = f'{key}:name'
+        else:
+            labeluri = f"{newuri}:{key}+{subkey}"
+            reptype = key
+        val = generateVal(self, val, key, False)
+        self.addToGraph(['site', newuri],
+                        ['mrs', 'hasNetworkAddress'],
+                        ['site', labeluri])
+        self.addToGraph(['site', labeluri],
+                        ['rdf', 'type'],
+                        ['mrs', 'NetworkAddress'])
+        self.addToGraph(['site', labeluri],
+                        ['mrs', 'type'],
+                        [reptype])
+        self.setToGraph(['site', labeluri],
+                        ['mrs', 'value'],
+                        [val])
 
     def setToGraph(self, sub, pred, obj):
         """Set (Means remove old and then add new) to the graph
