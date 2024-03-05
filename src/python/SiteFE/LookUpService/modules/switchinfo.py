@@ -183,13 +183,19 @@ class SwitchInfo():
                                     ['nml', 'hasBidirectionalPort'],
                                     ['site', f'{switchuri}:{self.switch.getSystemValidPortName(value)}'])
             # TODO: Remove capacity here once DMM moves to use BandwidthService
-            elif key in ['ipv4', 'ipv6', 'mac', 'macaddress', 'lineprotocol', 'operstatus', 'mtu', 'capacity']:
+            elif key in ['ipv4', 'ipv6', 'mac', 'macaddress', 'lineprotocol', 'operstatus', 'mtu', 'capacity', 'bandwidth']:
                 subkey = generateKey(self, val, key)
                 if isinstance(subkey, list):
                     for item in subkey:
                         self._addVals(item['key'], item['subkey'], item['val'], newuri)
                 else:
                     self._addVals(key, subkey, val, newuri)
+                # TODO: Remove bandwidth and capacity from here once DMM moves to use BandwidthService
+                if key == 'bandwidth' and 'capacity' not in portSwitch:
+                    self._mrsLiteral(newuri, 'capacity', int(val))
+                elif key == 'capacity' and 'capacity' not in portSwitch:
+                    self._mrsLiteral(newuri, 'capacity', int(val))
+
             # TODO: Remove bandwidth and capacity from here once DMM moves to use BandwidthService
             elif key == 'bandwidth' and 'bandwidth' in portSwitch and 'capacity' not in portSwitch:
                 self._mrsLiteral(newuri, 'capacity', int(portSwitch.get(key)))
