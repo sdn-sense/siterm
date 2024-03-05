@@ -111,6 +111,11 @@ class SwitchInfo():
         if not subkey:
             return
         if key in ['ipv4', 'ipv6']:
+            # TODO: Move this check inside normalizedip function
+            if isinstance(val, dict):
+                val = f"{val.get('address', "")}/{val.get('masklen', "")}"
+                if val == "/":
+                    return
             labeluri = self.URIs.get('ips', {}).get(normalizedip(val), {}).get('uri', f"{newuri}:{key}-address+{subkey}")
             reptype = self.URIs.get('ips', {}).get(normalizedip(val), {}).get('type', f'{key}-address')
         elif key == 'sense-rtmon':
