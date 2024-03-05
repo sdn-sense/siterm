@@ -182,13 +182,17 @@ class SwitchInfo():
                     self.addToGraph(['site', newuri],
                                     ['nml', 'hasBidirectionalPort'],
                                     ['site', f'{switchuri}:{self.switch.getSystemValidPortName(value)}'])
-            elif key in ['ipv4', 'ipv6', 'mac', 'macaddress', 'lineprotocol', 'operstatus', 'mtu']:
+            # TODO: Remove capacity here once DMM moves to use BandwidthService
+            elif key in ['ipv4', 'ipv6', 'mac', 'macaddress', 'lineprotocol', 'operstatus', 'mtu', 'capacity']:
                 subkey = generateKey(self, val, key)
                 if isinstance(subkey, list):
                     for item in subkey:
                         self._addVals(item['key'], item['subkey'], item['val'], newuri)
                 else:
                     self._addVals(key, subkey, val, newuri)
+            # TODO: Remove bandwidth and capacity from here once DMM moves to use BandwidthService
+            elif key == 'bandwidth' and 'bandwidth' in portSwitch and 'capacity' not in portSwitch:
+                self._mrsLiteral(newuri, 'capacity', int(portSwitch.get(key)))
             elif key == 'realportname':
                 self._addVals('sense-rtmon', key, val, newuri)
         # Add BW Params
