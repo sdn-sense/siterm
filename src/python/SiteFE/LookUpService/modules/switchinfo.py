@@ -193,7 +193,7 @@ class SwitchInfo():
                 # TODO: Remove bandwidth and capacity from here once DMM moves to use BandwidthService
                 if key == 'bandwidth' and 'capacity' not in portSwitch:
                     self._mrsLiteral(newuri, 'capacity', int(val))
-                elif key == 'capacity' and 'capacity' not in portSwitch:
+                elif key == 'capacity' and 'capacity' in portSwitch:
                     self._mrsLiteral(newuri, 'capacity', int(val))
 
             # TODO: Remove bandwidth and capacity from here once DMM moves to use BandwidthService
