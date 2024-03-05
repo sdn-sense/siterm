@@ -22,7 +22,7 @@ class Helper:
                                   "call": self.exithelper}}
         self.config = getGitConfig()
         self.sitename = self._getSitename()
-        self.dbI = getVal(getDBConn('List'), **{'sitename': self.sitename})
+        self.dbI = getVal(getDBConn('List', self), **{'sitename': self.sitename})
 
     @staticmethod
     def _getInput(question, validOptions):

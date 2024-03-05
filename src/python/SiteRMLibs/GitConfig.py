@@ -199,6 +199,7 @@ class GitConfig:
         ]:
             if isinstance(vals, list) and vals:
                 self.config["MAIN"][key1][f"{key2}-list"] = vals
+                self.config["MAIN"][key1][key2] = ",".join(vals)
             else:
                 vals = list(set(list(filter(None, vals.split(",")))))
                 self.config["MAIN"][key1][f"{key2}-list"] = vals
