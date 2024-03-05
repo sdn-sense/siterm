@@ -303,9 +303,9 @@ class SwitchInfo():
             if not out['rst'] or not out['private_asn']:
                 continue
             for iptype in ["ipv4", "ipv6"]:
-                tmp = self.__getValFromConfig(f"{iptype}-subnet-pool-list",)
+                tmp = self.__getValFromConfig(f"{iptype}-subnet-pool")
                 if tmp:
-                    out[f"{iptype}-subnet-pool-list"[:-5]] = tmp
+                    out[f"{iptype}-subnet-pool"] = tmp
                 out['iptype'] = iptype
                 out['rstname'] = f'rst-{iptype}'
                 self._addRoutingTable(**out)
