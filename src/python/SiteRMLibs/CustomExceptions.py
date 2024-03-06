@@ -27,6 +27,8 @@ class ExceptionTemplate(Exception):
 class NotFoundError(ExceptionTemplate):
     """Not Found error."""
 
+class BackgroundException(ExceptionTemplate):
+    """Background Exception."""
 
 class ConfigException(ExceptionTemplate):
     """Config Exception."""

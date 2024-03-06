@@ -10,6 +10,7 @@ Date: 2023/03/22
 """
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.CustomExceptions import BackgroundException
 
 class CustomWriter:
     """Custom Writer class for writing to file"""
@@ -51,6 +52,13 @@ class BaseDebugAction:
         self.processout = CustomWriter(self.outfiles['processout'], 'w', encoding='utf-8')
         self.jsonout = {}
         self.diragent = contentDB()
+        self.flightcheck()
+
+    def flightcheck(self):
+        """Check if all required parameters are present"""
+        if not self.requestdict:
+            self.processout.wn(f"No request dictionary found in request {self.backgConfig}")
+            raise BackgroundException(f"No requestdict found in request {self.backgConfig}")
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -61,7 +69,7 @@ class BaseDebugAction:
         try:
             self.main()
             self.diragent.dumpFileContentAsJson(self.outfiles['jsonout'], self.jsonout)
-        except (ValueError, KeyError, OSError) as ex:
+        except (ValueError, KeyError, OSError, BackgroundException) as ex:
             self.processout.wn(str(ex))
             self.diragent.dumpFileContentAsJson(self.outfiles['jsonout'], self.jsonout)
         finally:

@@ -12,7 +12,6 @@ import pyshark
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.ipaddr import getInterfaces
 
-
 class ParsePackets():
     """Packet Parser"""
     def __init__(self):
@@ -46,17 +45,18 @@ class TCPDump(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
+        self.requestdict = backgConfig.get('requestdict', {})
         self.service = "TCPDump"
         super().__init__()
 
     def main(self):
         """Do TCP Dump"""
         self.jsonout.setdefault('tcpdump', {'exitCode': -1, 'output': []})
-        if self.backgConfig['interface'] not in getInterfaces():
+        if self.requestdict['interface'] not in getInterfaces():
             self.processout.wn("Interface is not available on the node")
             return
         parser = ParsePackets()
-        allPackets = parser.sniff(self.backgConfig)
+        allPackets = parser.sniff(self.requestdict)
         if not allPackets:
             self.processout.wn("No packets captured")
         self.jsonout['tcpdump']['output'] = allPackets

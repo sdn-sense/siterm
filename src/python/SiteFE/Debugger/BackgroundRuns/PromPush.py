@@ -17,7 +17,6 @@ from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from prometheus_client import CollectorRegistry, push_to_gateway
 from prometheus_client import Info, Gauge
 
-
 class PromPush(BaseDebugAction):
     """SNMP PushGateway Class"""
     def __init__(self, config, sitename, backgConfig):
@@ -25,6 +24,7 @@ class PromPush(BaseDebugAction):
         self.sitename = sitename
         backgConfig['requestdict'] = evaldict(backgConfig['requestdict'])
         self.backgConfig = backgConfig
+        self.requestdict = backgConfig.get('requestdict', {})
         self.service = "PromPush"
         self.dbI = getVal(getDBConn('PrometheusPush', self), **{'sitename': self.sitename})
         self.promLabels = {'Key': '', 'ifDescr': '', 'ifType': '', 'ifAlias': '', 'hostname': ''}
@@ -40,8 +40,8 @@ class PromPush(BaseDebugAction):
 
     def __getMetadataParams(self):
         """Get metadata parameters"""
-        if 'metadata' in self.backgConfig['requestdict']:
-            return self.backgConfig['requestdict']['metadata']
+        if 'metadata' in self.requestdict:
+            return self.requestdict['metadata']
         return {}
 
     @staticmethod
@@ -53,7 +53,7 @@ class PromPush(BaseDebugAction):
     def __pushToGateway(self, registry):
         """Push registry to remote gateway"""
         # TODO. Catch any exceptions and log them.
-        push_to_gateway(self.backgConfig['requestdict']['gateway'],
+        push_to_gateway(self.requestdict['gateway'],
                         job=f"job-{self.backgConfig['id']}",
                         registry=registry,
                         grouping_key=self.__getMetadataParams())
@@ -87,7 +87,7 @@ class PromPush(BaseDebugAction):
     def main(self):
         """Start PushGateway Work"""
         self.jsonout.setdefault('prometheus-push', {'exitCode': -1, 'output': []})
-        hostname = self.backgConfig['requestdict']['hostname']
+        hostname = self.requestdict['hostname']
         mibs = self.config['MAIN']['snmp']['mibs']
         registry = self.__cleanRegistry()
         # Get info from DB
@@ -108,7 +108,7 @@ class PromPush(BaseDebugAction):
                         for index, macaddr in enumerate(val1):
                             self.snmpLabels['numb'] = index
                             self.snmpLabels['vlan'] = key1
-                            if self.__filterOutput(self.backgConfig['requestdict'].get('filter', {}).get('mac', {}), self.snmpLabels):
+                            if self.__filterOutput(self.requestdict.get('filter', {}).get('mac', {}), self.snmpLabels):
                                 macState.labels(**self.snmpLabels).info({'macaddress': macaddr})
                     continue
                 self.promLabels['ifDescr'] = val.get('ifDescr', '')
@@ -117,7 +117,7 @@ class PromPush(BaseDebugAction):
                 for key1 in mibs:
                     if key1 in val and isValFloat(val[key1]):
                         self.promLabels['Key'] = key1
-                        if self.__filterOutput(self.backgConfig['requestdict'].get('filter', {}).get('snmp', {}), self.promLabels):
+                        if self.__filterOutput(self.requestdict.get('filter', {}).get('snmp', {}), self.promLabels):
                             snmpGauge.labels(**self.promLabels).set(val[key1])
         self.__pushToGateway(registry)
         self.processout.wn(f"Pushed SNMP data for {hostname}")
