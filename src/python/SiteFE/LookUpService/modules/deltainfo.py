@@ -122,6 +122,7 @@ class DeltaInfo():
             uri = ipdict.get('uri', '')
             if val and uri:
                 self._addVals(ipkey, ipkey, val, portDict['uri'][len(self.prefixes['site']):])
+                self._addParams(ipdict, uri)
 
     def addvswInfo(self, vswDict, uri):
         """Add vsw Info from params"""
