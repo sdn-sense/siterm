@@ -17,7 +17,7 @@ SCRIPTS = ["packaging/general/Config-Fetcher",
            "packaging/general/siterm-debugger",
            "packaging/general/siterm-bgprocess"]
 for sectionName in ['LookUpService', 'SNMPMonitoring']:
-    SCRIPTS.append(f'packaging/siterm-site-fe/scripts{sectionName}-update')
+    SCRIPTS.append(f'packaging/siterm-site-fe/scripts/{sectionName}-update')
 
 setup(
     name='SiteRMSiteFE',

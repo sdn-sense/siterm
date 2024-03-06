@@ -22,6 +22,10 @@ class CustomWriter:
         if not inline.endswith('\n'):
             self.fd.write('\n')
 
+    def close(self):
+        """Close the file"""
+        self.fd.close()
+
     def __enter__(self):
         return self
 
