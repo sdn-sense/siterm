@@ -89,7 +89,7 @@ class NodeInfo:
                 "Either one or both (latitude,longitude) are not defined. Continuing as normal"
             )
 
-    def addMonName(self, nodeDict, intfKey, uri, main=True):
+    def addMonName(self, intfKey, uri):
         """Add Mon name to model for SENSE RT Monitoring mapping"""
         self.addToGraph(
             ["site", uri],
@@ -109,83 +109,6 @@ class NodeInfo:
         self.setToGraph(
             ["site", f"{uri}:sense-rtmon+realportname"], ["mrs", "value"], [intfKey]
         )
-
-    def _addNetworkAddress(self, uri, name, value):
-        """Add NetworkAddress to Model"""
-        sname = name
-        if isinstance(name, list):
-            sname = name[1]
-            name = name[0]
-        self.addToGraph(
-            ["site", uri], ["mrs", "hasNetworkAddress"], ["site", f"{uri}:{name}"]
-        )
-        self.addToGraph(
-            ["site", f"{uri}:{name}"], ["rdf", "type"], ["mrs", "NetworkAddress"]
-        )
-        self.addToGraph(["site", f"{uri}:{name}"], ["mrs", "type"], [sname])
-        self.setToGraph(["site", f"{uri}:{name}"], ["mrs", "value"], [value])
-
-
-    def addIntfInfo(self, inputDict, prefixuri, main=True):
-        """This will add all information about specific interface."""
-        # '2' is for ipv4 information
-        # Also can be added bytes_received, bytes_sent, dropin, dropout
-        # errin, errout, packets_recv, packets_sent
-        # But adding such values means we will always get a new model once
-        # a single packet get's transferred
-        mappings = {}
-        if main:
-            mappings = {
-                "2": [
-                    "address",
-                    "MTU",
-                    "UP",
-                    "broadcast",
-                    "txqueuelen",
-                    "duplex",
-                    "netmask",
-                    "speed",
-                    "ipv4-address",
-                    "ipv6-address",
-                ],
-                "10": ["address", "broadcast", "netmask"],
-                "17": ["address", "broadcast", "netmask", "mac-address"],
-            }
-        else:
-            mappings = {
-                "2": [
-                    "address",
-                    "MTU",
-                    "UP",
-                    "broadcast",
-                    "duplex",
-                    "netmask",
-                    "speed",
-                    "txqueuelen",
-                    "ipv4-address",
-                    "ipv6-address",
-                ],
-                "10": ["address", "broadcast", "netmask"],
-                "17": ["address", "broadcast", "netmask"],
-            }
-        for dKey, dMappings in list(mappings.items()):
-            for mapping in dMappings:
-                if dKey not in list(inputDict.keys()):
-                    continue
-                for entry in inputDict[dKey]:
-                    if mapping in list(entry.keys()) and entry[mapping]:
-                        mName = mapping
-                        value = entry[mapping]
-                        if dKey == "10":
-                            mName = f"ipv6-{mapping}"
-                        if dKey == "17" and mapping == "address":
-                            mName = f"mac-{mapping}"
-                        elif dKey == "17":
-                            mName = f"t17-{mapping}"
-                        if dKey == "2" and mapping == "address":
-                            mName = "ipv4-address-system"
-                            value = entry[mapping].split("/")[0]
-                        self._addNetworkAddress(prefixuri, mName, value)
 
     def _defL3IPv6(self, hostname, route):
         """Define L3 IPv6 Routing information inside the model for host"""
@@ -345,8 +268,7 @@ class NodeInfo:
             # =====================================================================
             self.addAgentConfigtoMRML(intfDict, newuri, nodeDict["hostname"], intfKey)
             # Now lets also list all interface information to MRML
-            self.addIntfInfo(intfDict, newuri, True)
-            self.addMonName(nodeDict, intfKey, newuri, True)
+            self.addMonName(intfKey, newuri)
             # List each VLAN:
             if "vlans" in list(intfDict.keys()):
                 for vlanName, vlanDict in list(intfDict["vlans"].items()):
@@ -404,5 +326,4 @@ class NodeInfo:
                     )
                     # Add hasNetworkAddress for vlan
                     # Now the mapping of the interface information:
-                    self.addIntfInfo(vlanDict, vlanuri, False)
-                    self.addMonName(nodeDict, vlanName, vlanuri, False)
+                    self.addMonName(vlanName, vlanuri)

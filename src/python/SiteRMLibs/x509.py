@@ -37,7 +37,6 @@ class CertHandler():
             self.loadTime = dateNow
             self.config = getGitConfig()
             self.allowedCerts = {}
-            print(self.config)
             for user, userinfo in list(self.config['AUTH'].items()):
                 self.allowedCerts.setdefault(userinfo['full_dn'], {})
                 self.allowedCerts[userinfo['full_dn']]['username'] = user
