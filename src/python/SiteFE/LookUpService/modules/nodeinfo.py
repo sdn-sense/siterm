@@ -89,7 +89,7 @@ class NodeInfo:
                 "Either one or both (latitude,longitude) are not defined. Continuing as normal"
             )
 
-    def addMonName(self, nodeDict, intfKey, uri, main=True):
+    def addMonName(self, intfKey, uri):
         """Add Mon name to model for SENSE RT Monitoring mapping"""
         self.addToGraph(
             ["site", uri],
@@ -268,7 +268,7 @@ class NodeInfo:
             # =====================================================================
             self.addAgentConfigtoMRML(intfDict, newuri, nodeDict["hostname"], intfKey)
             # Now lets also list all interface information to MRML
-            self.addMonName(nodeDict, intfKey, newuri, True)
+            self.addMonName(intfKey, newuri)
             # List each VLAN:
             if "vlans" in list(intfDict.keys()):
                 for vlanName, vlanDict in list(intfDict["vlans"].items()):
@@ -326,4 +326,4 @@ class NodeInfo:
                     )
                     # Add hasNetworkAddress for vlan
                     # Now the mapping of the interface information:
-                    self.addMonName(nodeDict, vlanName, vlanuri, False)
+                    self.addMonName(vlanName, vlanuri)

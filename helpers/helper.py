@@ -43,12 +43,12 @@ class Helper:
             sitename = self.config.get('general', 'sites')[0]
         else:
             print('Which sitename you want to modify?')
-            id = -1
+            nid = -1
             availcmds = []
             for stname in self.config.get('general', 'sites'):
-                id += 1
-                availcmds.append(str(id))
-                print(f'{id} : {stname}')
+                nid += 1
+                availcmds.append(str(nid))
+                print(f'{nid} : {stname}')
             siteID = self._getInput("Enter sitename ID: ", availcmds)
             sitename = self.config.get('general', 'sites')[int(siteID)]
         return sitename
@@ -86,11 +86,11 @@ class Helper:
         print('IMPORTANT: Start lookup_service to take effect.')
 
     def printhosts(self):
-       """Print all hosts"""
-       hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
-       for host in hosts:
-           tmpH = evaldict(host.get("hostinfo", {}))
-           pprint.pprint(tmpH)
+        """Print all hosts"""
+        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
+        for host in hosts:
+            tmpH = evaldict(host.get("hostinfo", {}))
+            pprint.pprint(tmpH)
 
     def cancelresource(self):
         """Cancel specific resource"""
@@ -113,11 +113,11 @@ class Helper:
         print('-'*50)
         print("List of all available {action} items:")
         availcmds = {}
-        id = -1
+        nid = -1
         for key in activeDeltas['output'][action].keys():
-            id += 1
-            print(f"{id}: {key}")
-            availcmds[str(id)] = key
+            nid += 1
+            print(f"{nid}: {key}")
+            availcmds[str(nid)] = key
         print("Which resource you want to cancel? Enter ID:")
         deltaid = self._getInput('Enter id: ', availcmds.keys())
         print(f"You entered: {deltaid}")
@@ -157,4 +157,3 @@ class Helper:
 if __name__ == "__main__":
     helper = Helper()
     helper.startup()
-

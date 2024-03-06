@@ -118,11 +118,10 @@ class DeltaInfo():
             ipdict = netDict.get(f'{ipkey}-address', {})
             if not ipdict:
                 continue
-            for key in ipdict.get('type', 'undefined').split('|'):
-                val = normalizedip(ipdict.get('value', ''))
-                uri = ipdict.get('uri', '')
-                if val and uri:
-                    self._addVals(ipkey, ipkey, val, portDict['uri'][len(self.prefixes['site']):])
+            val = normalizedip(ipdict.get('value', ''))
+            uri = ipdict.get('uri', '')
+            if val and uri:
+                self._addVals(ipkey, ipkey, val, portDict['uri'][len(self.prefixes['site']):])
 
     def addvswInfo(self, vswDict, uri):
         """Add vsw Info from params"""
