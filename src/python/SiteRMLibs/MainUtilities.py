@@ -535,7 +535,6 @@ def getUrlParams(environ, paramsList):
                 outParams[param["key"]] = outVals[0]
         elif not outVals:
             outParams[param["key"]] = param["default"]
-    print(outParams)
     return outParams
 
 
@@ -673,6 +672,10 @@ def writeActiveDeltas(cls, newConfig):
         activeDeltas = {"insertdate": int(getUTCnow())}
     else:
         activeDeltas = activeDeltas[0]
+    cls.logger.debug('Write New activeDeltas')
+    cls.logger.debug(newConfig)
+    cls.logger.debug('OldConfig')
+    cls.logger.debug(activeDeltas)
     activeDeltas["updatedate"] = int(getUTCnow())
     activeDeltas["output"] = str(newConfig)
     if action == "insert":

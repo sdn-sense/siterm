@@ -7,6 +7,7 @@ from SiteRMLibs.MainUtilities import getDBConn
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import writeActiveDeltas
 from SiteRMLibs.MainUtilities import getActiveDeltas
+from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.GitConfig import getGitConfig
 
 class Helper:
@@ -18,6 +19,8 @@ class Helper:
                                           "call": self.printactive},
                          "cancel-resource": {"desc": "Cancel resource in SiteRM.",
                                              "call": self.cancelresource},
+                         "print-hosts": {"desc": "Print all hosts information in Frontend",
+                                         "call": self.printhosts},
                          "exit": {"desc": "Exit helper script.",
                                   "call": self.exithelper}}
         self.config = getGitConfig()
@@ -81,6 +84,13 @@ class Helper:
         writeActiveDeltas(self, newActive['output'])
         print('New active Deltas written to database.')
         print('IMPORTANT: Start lookup_service to take effect.')
+
+    def printhosts(self):
+       """Print all hosts"""
+       hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
+       for host in hosts:
+           tmpH = evaldict(host.get("hostinfo", {}))
+           pprint.pprint(tmpH)
 
     def cancelresource(self):
         """Cancel specific resource"""

@@ -372,35 +372,27 @@ class PolicyService(RDFHelper, Timing):
                         scanVals[key] = str(out[0])
 
     def _hasNetwork(self, gIn, bidPort, returnout):
-        """Query Graph and get hasNetworkAddress"""
+        """Query Graph and get ip address, type and uri"""
         self._hasTags(gIn, bidPort, returnout)
-        out = self.queryGraph(
-            gIn, bidPort, search=URIRef(f"{self.prefixes['mrs']}hasNetworkAddress")
-        )
+        # Get all hasNetworkAddress items
+        out = self.queryGraph(gIn, bidPort, search=URIRef(f"{self.prefixes['mrs']}hasNetworkAddress"))
         for item in out:
             scanVals = returnout.setdefault("hasNetworkAddress", {})
-            out = self.queryGraph(
-                gIn,
-                item,
-                search=URIRef(f"{self.prefixes['mrs']}type"),
-                allowMultiple=True,
-            )
+            # Get item type
+            out1 = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}type"), allowMultiple=True)
             name = None
-            if out:
-                if self.genLiteral("ipv4-address") in out:
-                    name = "ipv4-address"
-                if self.genLiteral("ipv6-address") in out:
-                    name = "ipv6-address"
-            if not name:
+            if out1 and "ipv4-address" in str(out1):
+                name = "ipv4-address"
+            elif out1 and "ipv6-address" in str(out1):
+                name = "ipv6-address"
+            else:
                 continue
             vals = scanVals.setdefault(name, {})
             vals["uri"] = str(item)
-            vals["type"] = "|".join([str(item) for item in out])
-            out = self.queryGraph(
-                gIn, item, search=URIRef(f"{self.prefixes['mrs']}value")
-            )
-            if out:
-                vals["value"] = str(out[0])
+            vals["type"] = "|".join([str(item) for item in out1])
+            out2 = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}value"))
+            if out2:
+                vals["value"] = str(out2[0])
             self._hasTags(gIn, item, vals)
 
     def _recordMapping(self, subnet, returnout, mappingKey, subKey, val=""):
