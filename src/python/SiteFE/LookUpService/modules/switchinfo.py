@@ -81,7 +81,8 @@ class SwitchInfo():
             elif key == 'realportname':
                 self._addVals('sense-rtmon', key, val, newuri)
         # Add BW Params
-        self._addSwitchBWParams(switchName, portName, portSwitch)
+        if not portName.startswith('Vlan'):
+            self._addSwitchBWParams(switchName, portName, portSwitch)
 
     def _addSwitchPortInfo(self, key, switchInfo):
         """Add Switch Port Info for ports, vlans"""
