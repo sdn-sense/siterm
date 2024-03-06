@@ -8,6 +8,7 @@ Email                   : juztas (at) gmail (dot) com
 Date                    : 2024/02/26
 """
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
+from SiteRMLibs.CustomExceptions import BackgroundException
 
 class IperfClient(BaseDebugAction):
     """IperfClient class"""
@@ -15,6 +16,7 @@ class IperfClient(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
+        self.requestdict = backgConfig.get('requestdict', {})
         self.service = "IperfClient"
         super().__init__()
 
@@ -23,4 +25,4 @@ class IperfClient(BaseDebugAction):
         self.jsonout.setdefault('iperf-client', {'exitCode': -1, 'output': []})
         self.processout.wn(f"NOT IMPLEMENTED call {self.backgConfig} to run iperf client on switches")
         self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to run iperf client on switches")
-        raise Exception("NOT IMPLEMENTED! -1")
+        raise BackgroundException("NOT IMPLEMENTED! -1")

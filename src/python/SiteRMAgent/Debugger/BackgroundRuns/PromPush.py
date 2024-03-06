@@ -21,6 +21,7 @@ class PromPush(BaseDebugAction):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
+        self.requestdict = backgConfig.get('requestdict', {})
         self.service = "PromPush"
         self.arpLabels = {'Device': '', 'Flags': '', 'HWaddress': '',
                           'HWtype': '', 'IPaddress': '', 'Mask': ''}
@@ -29,13 +30,13 @@ class PromPush(BaseDebugAction):
 
     def __getMetadataParams(self):
         """Get metadata parameters"""
-        if 'metadata' in self.backgConfig['requestdict']:
-            return self.backgConfig['requestdict']['metadata']
+        if 'metadata' in self.requestdict:
+            return self.requestdict['metadata']
         return {}
 
     def __generatePromPushUrl(self):
         """For posting node_exporter data, we need to generate full URL."""
-        postUrl = self.backgConfig['requestdict']['gateway']
+        postUrl = self.requestdict['gateway']
         if not postUrl.startswith('http'):
             postUrl = f"http://{postUrl}"
         postUrl += f"/metrics/job/job-{self.backgConfig['id']}"
@@ -74,7 +75,7 @@ class PromPush(BaseDebugAction):
     def __pushToGateway(self, registry):
         """Push registry to remote gateway"""
         # TODO: Catch if fails; and log it.
-        push_to_gateway(self.backgConfig['requestdict']['gateway'],
+        push_to_gateway(self.requestdict['gateway'],
                         job=f"job-{self.backgConfig['id']}",
                         registry=registry,
                         grouping_key=self.__getMetadataParams())
@@ -92,11 +93,11 @@ class PromPush(BaseDebugAction):
 
     def main(self):
         """Start Prometheus Push Daemon thread work"""
-        if self.backgConfig['requestdict']['type'] == 'prometheus-push':
+        if self.requestdict['type'] == 'prometheus-push':
             self.jsonout.setdefault('prometheus-push', {'exitCode': -1, 'output': []})
             self.nodeExporterPush()
             self.jsonout['prometheus-push']['exitCode'] = 0
-        elif self.backgConfig['requestdict']['type'] == 'arp-push':
+        elif self.requestdict['type'] == 'arp-push':
             self.jsonout.setdefault('arp-push', {'exitCode': -1, 'output': []})
             self.arpPush()
             self.jsonout['arp-push']['exitCode'] = 0
