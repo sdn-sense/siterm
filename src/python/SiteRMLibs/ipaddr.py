@@ -71,12 +71,14 @@ def normalizedip(ipInput):
     Normalize IPv6 address. It can have leading 0 or not and both are valid.
     This function will ensure same format is used.
     """
-    tmp = ipInput.split("/")
     ipaddr = None
     try:
+        tmp = ipInput.split("/")
         ipaddr = ip_address(tmp[0]).exploded
     except ValueError:
         ipaddr = tmp[0]
+    except AttributeError:
+        return
     ipaddr = _ipv6InJavaFormat(ipaddr)
     if len(tmp) == 2:
         return f"{ipaddr}/{tmp[1]}"

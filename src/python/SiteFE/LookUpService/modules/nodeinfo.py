@@ -112,6 +112,8 @@ class NodeInfo:
 
     def _defL3IPv6(self, hostname, route):
         """Define L3 IPv6 Routing information inside the model for host"""
+        # TODO: REVIEW and do only SENSE VLAN ROUTES!
+        return
         out = {
             "hostname": hostname,
             "rstname": f"rst-{route['iptype']}",
@@ -136,6 +138,8 @@ class NodeInfo:
 
     def _defL3IPv4(self, hostname, route):
         """Define L3 IPv4 Routing information inside the model for host"""
+        # TODO: REVIEW and do only SENSE VLAN ROUTES!
+        return
         if "RTA_DST" in route.keys() and route["RTA_DST"] == "169.254.0.0":
             # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.
             # We do not need this information inside the routed template

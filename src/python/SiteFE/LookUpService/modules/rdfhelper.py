@@ -172,13 +172,18 @@ class RDFHelper():
         if not subkey:
             return
         if key in ['ipv4', 'ipv6']:
-            # TODO: Move this check inside normalizedip function
+            tmpVal = None
             if isinstance(val, dict):
-                val = f"{val.get('address', '')}/{val.get('masklen', '')}"
-                if val == "/":
+                tmpVal = f"{val.get('address', '')}/{val.get('masklen', '')}"
+                if tmpVal == "/":
                     return
-            labeluri = self.URIs.get('ips', {}).get(normalizedip(val), {}).get('uri', f"{newuri}:{key}-address+{validMRMLName(val)}")
-            reptype = self.URIs.get('ips', {}).get(normalizedip(val), {}).get('type', f'{key}-address')
+                tmpVal = normalizedip(tmpVal)
+            else:
+                self.logger.info('Unexpected value for IP. Skipping entry. Input data: {key}, {subkey}, {val}, {newuri}')
+            if not tmpVal:
+                return
+            labeluri = self.URIs.get('ips', {}).get(tmpVal, {}).get('uri', f"{newuri}:{key}-address+{validMRMLName(val)}")
+            reptype = self.URIs.get('ips', {}).get(tmpVal, {}).get('type', f'{key}-address')
 
         elif key == 'sense-rtmon':
             labeluri = f"{newuri}:{key}+{subkey}"
