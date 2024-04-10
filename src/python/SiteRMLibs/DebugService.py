@@ -74,6 +74,7 @@ class DebugService:
         fname = self.workDir + f"/background-process-{pid}.{logtype}"
         out = self.diragent.getFileContentAsJson(fname)
         out['output'] = evaldict(out['output'])
+        return out
 
     def _runCmd(self, inputDict, action, foreground):
         """Start execution of new requests"""
