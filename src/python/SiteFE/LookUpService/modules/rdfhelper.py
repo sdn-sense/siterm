@@ -179,10 +179,10 @@ class RDFHelper():
                     return
                 tmpVal = normalizedip(tmpVal)
             else:
-                self.logger.info('Unexpected value for IP. Skipping entry. Input data: {key}, {subkey}, {val}, {newuri}')
+                self.logger.info(f'Unexpected value for IP. Skipping entry. Input data: {key}, {subkey}, {val}, {newuri}')
             if not tmpVal:
                 return
-            labeluri = self.URIs.get('ips', {}).get(tmpVal, {}).get('uri', f"{newuri}:{key}-address+{validMRMLName(val)}")
+            labeluri = self.URIs.get('ips', {}).get(tmpVal, {}).get('uri', f"{newuri}:{key}-address+{validMRMLName(tmpVal)}")
             reptype = self.URIs.get('ips', {}).get(tmpVal, {}).get('type', f'{key}-address')
 
         elif key == 'sense-rtmon':

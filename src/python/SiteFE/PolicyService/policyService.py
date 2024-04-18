@@ -186,10 +186,16 @@ class PolicyService(RDFHelper, Timing):
                 tout = self.queryGraph(
                     gIn, timeline, search=URIRef(f"{self.prefixes['nml']}{timev}")
                 )
+                if not tout:
+                    continue
                 try:
                     temptime = int(time.mktime(parser.parse(str(tout[0])).timetuple()))
                 except Exception:
-                    temptime = int(tout[0])
+                    temptime = tout[0]
+                try:
+                    temptime = int(temptime)
+                except ValueError:
+                    continue
                 if time.daylight:
                     temptime -= 3600
                 times[timev] = temptime
