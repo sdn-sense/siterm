@@ -178,6 +178,8 @@ class RDFHelper():
                 if tmpVal == "/":
                     return
                 tmpVal = normalizedip(tmpVal)
+            elif isinstance(val, str):
+                tmpVal = normalizedip(val)
             else:
                 self.logger.info(f'Unexpected value for IP. Skipping entry. Input data: {key}, {subkey}, {val}, {newuri}')
             if not tmpVal:

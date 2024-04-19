@@ -9,6 +9,7 @@ from SiteRMLibs.MainUtilities import writeActiveDeltas
 from SiteRMLibs.MainUtilities import getActiveDeltas
 from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteFE.PolicyService.stateMachine import StateMachine
 
 class Helper:
     """Helper class"""
@@ -21,18 +22,21 @@ class Helper:
                                              "call": self.cancelresource},
                          "print-hosts": {"desc": "Print all hosts information in Frontend",
                                          "call": self.printhosts},
+                         "change-delta": {"desc": "Change Delta State",
+                                          "call": self.changedeltastate},
                          "exit": {"desc": "Exit helper script.",
                                   "call": self.exithelper}}
         self.config = getGitConfig()
         self.sitename = self._getSitename()
         self.dbI = getVal(getDBConn('List', self), **{'sitename': self.sitename})
+        self.statemachine = StateMachine(self.config)
 
     @staticmethod
-    def _getInput(question, validOptions):
+    def _getInput(question, validOptions=[]):
         """Wrapper for correct input to question"""
         while True:
             inpVal = input(question)
-            if inpVal not in validOptions:
+            if validOptions and inpVal not in validOptions:
                 print(f'Input {inpVal} not in allowed list: {validOptions}')
             else:
                 return inpVal
@@ -52,6 +56,16 @@ class Helper:
             siteID = self._getInput("Enter sitename ID: ", availcmds)
             sitename = self.config.get('general', 'sites')[int(siteID)]
         return sitename
+
+    def changedeltastate(self):
+        """Change delta state to committed and readd to model"""
+        print("Which delta state you want to change")
+        deltaid = self._getInput('Enter id: ')
+        print(f"You entered: {deltaid}")
+        for delta in self.dbI.get("deltas", search=[["uid", deltaid]]):
+            print(delta)
+            self.statemachine.stateChangerDelta(self.dbI, 'committed', **delta)
+            self.statemachine.modelstatechanger(self.dbI, 'add', **delta)
 
     def printactive(self):
         """List Active"""

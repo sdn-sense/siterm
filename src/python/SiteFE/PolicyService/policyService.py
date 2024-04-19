@@ -15,7 +15,7 @@ import pprint
 import sys
 import tempfile
 import time
-
+import dictdiffer
 from dateutil import parser
 from rdflib import Graph, URIRef
 from rdflib.plugins.parsers.notation3 import BadSyntax
@@ -612,6 +612,8 @@ class PolicyService(RDFHelper, Timing):
             changesApplied = True
 
         # Write New Active to Database
+        for diff in list(dictdiffer.diff(self.currentActive["output"], self.newActive["output"])):
+            self.logger.debug(f"New diff: {diff}")
         self.currentActive["output"] = copy.deepcopy(self.newActive["output"])
         writeActiveDeltas(self, self.currentActive["output"])
 

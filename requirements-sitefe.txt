@@ -26,4 +26,5 @@ easysnmp
 routes
 netaddr
 ansible-pylibssh
+dictdiffer
 ansible-core>=2.13.13rc1 # not directly required, pinned by Snyk to avoid a vulnerability
