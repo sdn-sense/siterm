@@ -200,9 +200,10 @@ class RDFHelper():
         self.addToGraph(['site', labeluri],
                         ['rdf', 'type'],
                         ['mrs', 'NetworkAddress'])
-        self.addToGraph(['site', labeluri],
-                        ['mrs', 'type'],
-                        [reptype])
+        for typeval in reptype.split('|'):
+            self.addToGraph(['site', labeluri],
+                            ['mrs', 'type'],
+                            [typeval])
         self.setToGraph(['site', labeluri],
                         ['mrs', 'value'],
                         [val])
