@@ -52,7 +52,6 @@ class PromPush(BaseDebugAction):
 
     def __pushToGateway(self, registry):
         """Push registry to remote gateway"""
-        # TODO. Catch any exceptions and log them.
         push_to_gateway(self.requestdict['gateway'],
                         job=f"job-{self.backgConfig['id']}",
                         registry=registry,

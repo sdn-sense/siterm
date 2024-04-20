@@ -72,6 +72,10 @@ class BaseDebugAction:
         except (ValueError, KeyError, OSError, BackgroundException) as ex:
             self.processout.wn(str(ex))
             self.diragent.dumpFileContentAsJson(self.outfiles['jsonout'], self.jsonout)
+        except Exception as ex:
+            self.processout.wn("Received Unexpected Error:")
+            self.processout.wn(str(ex))
+            self.diragent.dumpFileContentAsJson(self.outfiles['jsonout'], self.jsonout)
         finally:
             self.processout.wn(f"====== {self.service} Finish Work. Config: {self.backgConfig}")
             self.processout.close()
