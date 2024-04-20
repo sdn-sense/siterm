@@ -9,7 +9,7 @@ Date: 2022/04/08
 """
 from ipaddress import (AddressValueError, IPv4Network, IPv6Network, ip_address,
                        ip_network)
-
+import psutil
 import netifaces
 from SiteRMLibs.MainUtilities import externalCommand
 
@@ -33,6 +33,16 @@ def getInterfaces():
     """Get all interface names"""
     return netifaces.interfaces()
 
+def getInterfaceTxQueueLen(interface):
+    """Get Interface Tx Queue Length"""
+    txQueueLen = externalCommand(f"cat /sys/class/net/{interface}/tx_queue_len")
+    return int(txQueueLen[0].strip())
+
+def getIfAddrStats():
+    """Get Interface Address Stats"""
+    tmpifAddr = psutil.net_if_addrs()
+    tmpifStats = psutil.net_if_stats()
+    return tmpifAddr, tmpifStats
 
 def getInterfaceIP(interface):
     """Get Interface IP"""
@@ -78,7 +88,7 @@ def normalizedip(ipInput):
     except ValueError:
         ipaddr = tmp[0]
     except AttributeError:
-        return
+        return None
     ipaddr = _ipv6InJavaFormat(ipaddr)
     if len(tmp) == 2:
         return f"{ipaddr}/{tmp[1]}"
@@ -94,6 +104,7 @@ def getsubnet(ipInput, strict=False):
 
 
 def checkoverlap(net1, net2):
+    """Check if two networks overlap. Return True/False."""
     try:
         return ip_network(net1).overlaps(ip_network(net2))
     except ValueError:
