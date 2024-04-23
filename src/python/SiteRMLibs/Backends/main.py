@@ -210,7 +210,6 @@ class Switch(Node):
         for key, defval in {"hostname": "",
                             "isAlias": "",
                             "vlan_range_list": defVlans,
-                            "desttype": "",
                             "destport": "",
                             "capacity": "",
                             "granularity": "",
@@ -225,7 +224,6 @@ class Switch(Node):
             if key == "isAlias":
                 spltAlias = tmpval.split(":")
                 out["isAlias"] = out[key]
-                out["desttype"] = "switch"
                 out["destport"] = spltAlias[-1]
                 out["hostname"] = spltAlias[-2]
 
@@ -268,10 +266,6 @@ class Switch(Node):
                 switchesDict = self.output["switches"][switch].setdefault(port, tmpData)
                 switchesDict["realportname"] = port
                 self._addyamlInfoToPort(switch, port, defVlans, switchesDict)
-                # if destType not defined, check if switchport available in switch config.
-                # Then set it to switch
-                if "switchport" in portDict.keys() and portDict["switchport"]:
-                    portDict["desttype"] = "switch"
         # Add route information and lldp information to output dictionary
 
         self.output["info"][switch] = self.plugin.getfactvalues(
