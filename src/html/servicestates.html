@@ -14,63 +14,69 @@
         google.load('visualization', '1', {packages:['table', 'controls']});
         $(document).ready(function() {
             load_data();
+            //setInterval(load_data, 300000);
         });
 
-        function deletehost(hostname) {
-          docObj =  document.getElementById("del-"+hostname);
-          var params = {};
-          for(var i=0; i < docObj.elements.length; i++){
-            var fieldName = docObj.elements[i].name;
-            var fieldValue = docObj.elements[i].value;
-            if (fieldName){params[fieldName] = fieldValue;}
-          }
-          $.post("/"+params['sitename']+"/sitefe/json/frontend/deletehost", params, function(result){
-            params['type'] = hostname.replace(/\./g,'_');
-            newAlert("Host delete sent:" + JSON.stringify(result), params);
-          });
-        }
+       function loadModel(modelID, sitename)
+       {
+          $.ajax({url: sitename + '/sitefe/v1/models/'+ modelID,
+            dataType: 'json',
+            data: {},
+            async: false,
+            success: function(json){
+              model = $('<div><\/div>');
+              model.append('<div class="row"><b>Creation Time: <\/b>' + json['creationTime'] + '<\/div>');
+              model.append('<div class="row"><b>Href: <\/b>' + json['href'] + '<\/div>');
+              model.append('<div class="row"><b>ID: <\/b>' + json['id'] + '<\/div>');
+              model.append('<div class="row"><b>Full Model:<\/b><\/div>');
+              mrmlSaver(json['model'], model);
+              $('#v-pills-' + modelID).empty();
+              $('#v-pills-' + modelID).append(model);
+          }});
+       }
 
-          function reloadconfig(hostname) {
-            docObj =  document.getElementById("rel-"+hostname);
-            var params = {};
-            for(var i=0; i < docObj.elements.length; i++){
-              var fieldName = docObj.elements[i].name;
-              var fieldValue = docObj.elements[i].value;
-              if (fieldName){params[fieldName] = fieldValue;}
-            }
-            $.post("/"+params['sitename']+"/sitefe/json/frontend/serviceaction", params, function(result){
-              params['type'] = hostname.replace(/\./g,'_');
-              newAlert("Service action submitted:" + JSON.stringify(result), params);
-            });
+        function defineAllStates(data, sitename) {
+          cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
+          cntDiv.append('<table class="table table-striped table-bordered table-hover" id="data-table-states"><thead class="thead-light"><tr><th>ID</th><th>Hostname</th><th>Service Name</th><th>Service State</th><th>Runtime</th><th>Version</th></tr></thead><tbody></tbody></table>');
+          nRow = $('<div class="row">');
+          nRow.append(cntDiv);
+          $('#view_fe_'+sitename).append(nRow);
+          for (var key in data['states'][sitename]){
+             if ($.isPlainObject(data['states'][sitename][key])){
+                 var row = '<tr';
+                 if (data['states'][sitename][key]['servicestate'] === "OK"){
+                     row += ' class="table-success">';
+                 }
+                 else {row += ' class="table-danger">'}
+                 row += '<td>' + data['states'][sitename][key]['id'] + '</td>';
+                 row += '<td>' + data['states'][sitename][key]['hostname'] + '</td>';
+                 row += '<td>' + data['states'][sitename][key]['servicename'] + '</td>';
+                 row += '<td>' + data['states'][sitename][key]['servicestate'] + '</td>';
+                 row += '<td>' + data['states'][sitename][key]['runtime'] + '</td>';
+                 row += '<td>' + data['states'][sitename][key]['version'] + '</td>';
+                 row += '</tr>';
+                 console.log(row);
+                 $('#data-table-states tbody').append(row);
+             }
           }
+        }
 
         function load_data() {
             $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
-              data['hostinfo'] = {};
+              defineSites(data, false);
+              data['states'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
-                sitename = data['general']['sites'][i];
-                $.ajax({url: data['general']['sites'][i] + '/sitefe/json/frontend/getdata',
-                  dataType: 'json',
-                  data: {},
-                  async: false,
-                  success: function(json){
-                      for (j=0; j < json.length; j++){
-                      var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
-                      json[j]['hostinfo'] = myObject;
-                    }
-                    data['hostinfo'][sitename] = json;
-                  }
-                });
-            defineSites(data);
-            for (i=0; i < data['general']['sites'].length; i++){
-                sitename = data['general']['sites'][i];
-                defineSitesConfig(data, sitename);
-                for (j=0; j < data['hostinfo'][sitename].length; j++){
-                  defineDTNConfig(data['hostinfo'][sitename][j], sitename, data['hostinfo'][sitename][j]['hostname']);
-                }
-            };
-            }}
-       )};
+                 sitename = data['general']['sites'][i];
+                 $.ajax({url: sitename + '/sitefe/json/frontend/getservicestates',
+                   dataType: 'json',
+                   data: {},
+                   async: false,
+                   success: function(json){
+                     data['states'][sitename] = json;
+                  }});
+              defineAllStates(data, sitename);
+              }
+            })};
   //]]>
   </script>
   <title>Site-RM: Frontend Configuration</title>
@@ -88,10 +94,10 @@
               <a class="nav-link" href="/index.html">Topology</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="/frontendconfig.html">Frontend Configuration</a>
+              <a class="nav-link" href="/frontendconfig.html">Frontend Configuration</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="/models.html">Models</a>
+              <a class="nav-link active" aria-current="page" href="/models.html">Models</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="/servicestates.html">ServiceStates</a>
@@ -116,7 +122,7 @@
       </nav>
       <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-          <h1 class="h2">Frontend and Host Configuration</h1>
+          <h1 class="h2">Service States</h1>
         </div>
         <div class="row" id="maindiv"></div>
         <div id="sites_tab"></div>
@@ -127,10 +133,11 @@
   <script src="assets/js/bootstrap.bundle.js"></script>
   <script src="assets/js/bootstrap.js"></script>
   <script>
+
       $('#myTab a').click(function (e) {
         e.preventDefault();
         $(this).tab('show');
       })
-</script>
+  </script>
 </body>
 </html>
