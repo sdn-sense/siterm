@@ -10,9 +10,9 @@ import ipaddress
 import os
 import pprint
 
-import psutil
 from pyroute2 import IPRoute
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
+from SiteRMLibs.ipaddr import getIfAddrStats
 from SiteRMLibs.MainUtilities import (evaldict, externalCommand, getFileContentAsJson)
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BWService import BWService
@@ -113,8 +113,7 @@ class NetInfo(BWService):
                                                            nicInfo["bwParams"]["maximumCapacity"])
             nicInfo["bwParams"]["availableCapacity"] = reservedCap
             nicInfo["bwParams"]["reservableCapacity"] = reservedCap
-        tmpifAddr = psutil.net_if_addrs()
-        tmpifStats = psutil.net_if_stats()
+        tmpifAddr, tmpifStats = getIfAddrStats()
 
         nics = externalCommand("ip -br a")
         for nicline in nics[0].decode("UTF-8").split("\n"):

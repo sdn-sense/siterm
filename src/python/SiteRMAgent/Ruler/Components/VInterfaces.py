@@ -7,7 +7,6 @@ Authors:
 
 Date: 2022/01/20
 """
-# TODO. Configure also MTU and txqueuelen
 from pyroute2 import IPRoute
 from SiteRMLibs.MainUtilities import execute
 from SiteRMLibs.MainUtilities import getLoggingObject
@@ -20,6 +19,8 @@ from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.ipaddr import getInterfaces
 from SiteRMLibs.ipaddr import getInterfaceIP
 from SiteRMLibs.ipaddr import normalizedipwithnet
+from SiteRMLibs.ipaddr import getInterfaceTxQueueLen
+from SiteRMLibs.ipaddr import getIfAddrStats
 
 
 def publishState(vlan, inParams, uuid, hostname, state, fullURL):
@@ -42,7 +43,13 @@ def getDefaultMTU(config, intfKey):
     elif config.has_section('agent'):
         if config.has_option('agent', 'defaultMTU'):
             return int(config.get('agent', 'defaultMTU'))
-    return 1500
+    defaultMTU = 1500
+    _, ifstats = getIfAddrStats()
+    try:
+        defaultMTU = ifstats[intfKey].mtu
+    except Exception as ex:
+        print(f"Failed to get mtu for {intfKey}. Error: {ex}. Use default 1500.")
+    return defaultMTU
 
 
 def getDefaultTXQ(config, intfKey):
@@ -53,7 +60,15 @@ def getDefaultTXQ(config, intfKey):
     elif config.has_section('agent'):
         if config.has_option('agent', 'defaultTXQueuelen'):
             return int(config.get('agent', 'defaultTXQueuelen'))
-    return 1000
+    # If we reach here, means not set in config.
+    # We try to get it from system and use same as master intf;
+    # if unable, use 1000 by default
+    defaultTXQ = 1000
+    try:
+        defaultTXQ = getInterfaceTxQueueLen(intfKey)
+    except Exception as ex:
+        print(f"Failed to get txqueuelen for {intfKey}. Error: {ex}. Use default 1000.")
+    return defaultTXQ
 
 
 def intfUp(intf):
@@ -75,28 +90,29 @@ class VInterfaces():
     def _add(self, vlan, raiseError=False):
         """Add specific vlan."""
         self.logger.info(f'Called VInterface add L2 for {str(vlan)}')
-        command = "ip link add link %s name vlan.%s type vlan id %s" % (vlan['destport'],
-                                                                        vlan['vlan'],
-                                                                        vlan['vlan'])
+        command = f"ip link add link {vlan['destport']} name vlan.{vlan['vlan']} type vlan id {vlan['vlan']}"
         return execute(command, self.logger, raiseError)
 
     def _setup(self, vlan, raiseError=False):
         """Setup vlan."""
         if 'ip' in vlan.keys() and vlan['ip']:
             self.logger.info(f'Called VInterface IPv4 setup L2 for {str(vlan)}')
-            command = "ip addr add %s broadcast %s dev vlan.%s" % (vlan['ip'],
-                                                                   getBroadCast(vlan['ip']),
-                                                                   vlan['vlan'])
+            command = f"ip addr add {vlan['ip']} broadcast {getBroadCast(vlan['ip'])} dev vlan.{vlan['vlan']}"
             execute(command, self.logger, raiseError)
         elif 'ipv6' in vlan.keys() and vlan['ipv6']:
             self.logger.info(f'Called VInterface IPv6 setup L2 for {str(vlan)}')
-            command = "ip addr add %s broadcast %s dev vlan.%s" % (vlan['ipv6'],
-                                                                   getBroadCast(vlan['ipv6']),
-                                                                   vlan['vlan'])
+            command = f"ip addr add {vlan['ipv6']} broadcast {getBroadCast(vlan['ipv6'])} dev vlan.{vlan['vlan']}"
             execute(command, self.logger, raiseError)
         else:
             self.logger.info(f'Called VInterface setup for {str(vlan)}, but ip/ipv6 keys are not present.')
             self.logger.info('Continue as nothing happened')
+        # Set MTU and Txqueuelen
+        if 'mtu' in vlan.keys() and vlan['mtu']:
+            command = f"ip link set dev vlan.{vlan['vlan']} mtu {vlan['mtu']}"
+            execute(command, self.logger, raiseError)
+        if 'txqueuelen' in vlan.keys() and vlan['txqueuelen']:
+            command = f"ip link set dev vlan.{vlan['vlan']} txqueuelen {vlan['txqueuelen']}"
+            execute(command, self.logger, raiseError)
 
     def _removeIP(self, vlan, raiseError=False):
         """Remove IP from vlan"""
