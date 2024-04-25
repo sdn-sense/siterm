@@ -58,12 +58,6 @@ class SNMPMonitoring():
 
     def _getSNMPSession(self, host):
         self.session = None
-        snmpEnabled = False
-        if self.config.has_option(host, 'snmp_monitoring'):
-            snmpEnabled = self.config.get(host, 'snmp_monitoring')
-        if not snmpEnabled:
-            self.logger.info(f'SNMP config for {host}:snmp_monitoring not enabled')
-            return
         self.hostconf.setdefault(host, {})
         self.hostconf[host] = self.switch.plugin.getHostConfig(host)
         if 'snmp_monitoring' not in self.hostconf[host]:

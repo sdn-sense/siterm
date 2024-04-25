@@ -41,7 +41,6 @@ class Node():
                     switchDict = self.output['ports'][switch].setdefault(switchp, {})
                     switchDict['destport'] = intfKey
                     switchDict['hostname'] = nodeDict['hostname']
-                    switchDict['desttype'] = 'server'
                     switchDict['vlan_range_list'] = intfDict['vlan_range_list']
                     switchDict['capacity'] = intfDict['available_bandwidth']
                     if 'isAlias' in list(intfDict.keys()):
