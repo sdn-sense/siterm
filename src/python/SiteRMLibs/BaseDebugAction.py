@@ -15,10 +15,24 @@ from SiteRMLibs.CustomExceptions import BackgroundException
 class CustomWriter:
     """Custom Writer class for writing to file"""
     def __init__(self, filename, mode='w', buffering=-1, encoding=None, errors=None, newline='\n', closefd=True, opener=None):
-        self.fd = open(filename, mode, buffering, encoding, errors, newline, closefd, opener)
+        self.filename = filename
+        self.mode = mode
+        self.buffering = buffering
+        self.encoding = encoding
+        self.errors = errors
+        self.newline = newline
+        self.closefd = closefd
+        self.opener = opener
+        self.fd = open(self.filename, self.mode, self.buffering, self.encoding, self.errors, self.newline, self.closefd, self.opener)
+
+    def open(self):
+        """Open the file if it is closed"""
+        if self.fd.closed:
+            self.fd = open(self.filename, self.mode, self.buffering, self.encoding, self.errors, self.newline, self.closefd, self.opener)
 
     def wn(self, inline):
         """Write to file with new line at end"""
+        self.open()
         self.fd.write(inline)
         if not inline.endswith('\n'):
             self.fd.write('\n')
