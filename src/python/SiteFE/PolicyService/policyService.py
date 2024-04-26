@@ -126,6 +126,14 @@ class PolicyService(RDFHelper, Timing):
                 out = out.setdefault(item, {})
         return out
 
+    def hostsOnly(self, inport):
+        """Scan only host isAliases"""
+        tmp = [f for f in str(inport)[len(self.prefixes["site"]):].split(":") if f]
+        for item in tmp:
+            if item in self.hosts.keys():
+                return True
+        return False
+
     def addIsAlias(self, _gIn, bidPort, returnout):
         """Add is Alias to activeDeltas output"""
         if "isAlias" in self.bidPorts.get(
@@ -408,7 +416,7 @@ class PolicyService(RDFHelper, Timing):
         returnout[subKey].setdefault(str(subnet), {})
         returnout[subKey][str(subnet)][val] = ""
 
-    def parsePorts(self, gIn, connectionID, connOut):
+    def parsePorts(self, gIn, connectionID, connOut, hostsOnly=False):
         """Get all ports for any connection and scan all of them"""
         for key in ["hasBidirectionalPort", "isAlias"]:
             tmpPorts = self.queryGraph(
@@ -418,6 +426,12 @@ class PolicyService(RDFHelper, Timing):
                 allowMultiple=True,
             )
             for port in tmpPorts:
+                if hostsOnly:
+                    # If hostsOnly is set - this already parses a subInterface of port;
+                    # which usually is a isAlias. It should be parsed on it's own in another
+                    # scan - as it needs to be in correct layout. (IsAlias defined by modeling, no force add)
+                    if not self.hostsOnly(port):
+                        continue
                 if port not in self.bidPorts and port not in self.scannedPorts:
                     self.bidPorts.setdefault(port, [])
                     self.bidPorts[port].append(key)
@@ -478,7 +492,7 @@ class PolicyService(RDFHelper, Timing):
                     # Record port URI
                     portOut["uri"] = str(bidPort)
                     # Parse all ports in port definition
-                    self.parsePorts(gIn, bidPort, portOut)
+                    self.parsePorts(gIn, bidPort, portOut, True)
                     # Get time scheduling information from delta
                     self.getTimeScheduling(gIn, bidPort, portOut)
                     # Get all tags for Port
