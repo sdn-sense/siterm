@@ -1,3 +1,98 @@
+1.4.3
+This release includes (highlight main items):
+
+IMPORTANT:
+There are changes required to run a new version. Please make sure you do the following:
+Ask the SENSE team to cancel all provisioned services to your Site.
+Modify Configuration Files for a new release. See the 'Changes needed' section.
+Depending on your installation - update the docker image or restart Kubernetes with a new release.
+
+Changes needed:
+1. (Frontend) Port naming changed. Ports in the configuration are now listed without special character changes. Old way:
+```
+  ports:
+    - "Ethernet1/49"
+    - "Ethernet1/51"
+    - "Ethernet1/52"
+  port_Ethernet1-49_capacity: 100000
+  port_Ethernet1-49_desttype: switch
+  port_Ethernet1-49_isAlias: "isAliasLink"
+  port_Ethernet1-49_wanlink: "Ethernet1/49"
+```
+New way:
+```
+  ports:
+    "Ethernet1/49":
+        "capacity": 100000
+        "desttype": switch
+        "isAlias": "isAlias"
+        "wanlink": true
+    "Ethernet1/51": {}
+    "Ethernet1/52": {}
+```
+2. (Agent) Agents will use Bandwidth Parameters from the configuration. Old way:
+```
+  intf_max: 40000
+  max_bandwidth: 40000
+  min_bandwidth: 1000
+```
+New way:
+```
+  bwParams:
+    unit: mbps # Unit type
+    type: guaranteedCapped | bestEffort # Indicates type for Bandwidth Service
+    priority: 0 # Indicates priority compared to other interfaces
+    reservableCapacity: <0%-100%> # (Optional) Reservable capacity for siterm on that interface (Default 100%)
+    minReservableCapacity: <VAL_IN_UNIT> # Indicates minimum Reservable Capacity (1G suggested, no default)
+    maximumCapacity: <VAL_IN_UNIT> # Indicates maximum Capacity of interface
+    granularity: <VAL_IN_UNIT> # Indicates granularity
+    reservableCapacity: <0%-100%> # (Optional) Reservable capacity for all siterm interfaces (Default 100%)
+```
+3. (Frontend) Allows to control reservable Capacity under port/device. This can be set with the parameter `reservableCapacity` either under the device or port. It must be a percentage: <0%-100%> (Default 100%).
+
+
+SiteRM Improvements:
+SiteRM Agent Moved to HELM deployment. See here for details: https://sdn-sense.github.io/Installation.html
+Web UI allows us to see the state of all SiteRM services. Can be seen under https://<url>/servicestates.html
+Web UI allows to refresh configuration, and or delete hosts from SiteRM's database.
+Report NetworkStatus with data plane type status inside the model. This allows Orchestrator/Admins/Users to identify and know dataplane activation status.
+Report NetworkStatus with data-plane type status inside Prometheus output. New dashboards (under each site) deployed here: https://autogole-grafana.nrp-nautilus.io, which allows you to see the status of the data plane over time.
+Report BandwidthService requests inside Prometheus output. New dashboards (under each site) are available here: https://autogole-grafana.nrp-nautilus.io
+Support multiple lifetime scheduling requests for non-overlapping times, but the same VLANs or IP ranges.
+New APIs, which allow to deletion of old Debug calls, hosts, network devices.
+Routing information (received from Network devices) was removed from the model.
+A New Service, DBCleaner added to cleanup database of old entries.
+Any request is checked for conflicts. Checks are done: vlan overlap, ip overlap, bandwidth exceeding availability.
+The Debugger Service was rewritten to use threading (non-blocking execution). This allows to run multiple Debug services at the same time.
+Frontend introduced a new Debug service (still beta) with an idea to allow issue ping/traceroute from network devices for debugging purposes. (Expected in next release)
+Default txqueulen/mtu same as the master interface, if not specified in the agent configuration.
+If the port is not switchport type - it will be ignored by SiteRM and will not be added to the model.
+Allow to control site which VLANs to put inside model. Parameter `allvlans: True|False` indicates if the device should model all VLANs or only SENSE VLANs inside the model; (Default False)
+Docker/Podman startup script updates: check certificates and configuration files for validity.
+Documentation for all SiteRM Frontend and Agent parameters. See https://sdn-sense.github.io/Configuration.html
+
+
+Network Device improvements:
+(ALL) Implement functionwrapper/classwrapper with verbose logging (log timings, function parameters, output).
+(ALL) Separate VLAN and BGP apply in separate calls. Change order for VLAN/BGP Configuration. Order is now: VLAN, PREFIX-LIST, ROUTE-MAP, BGP.
+(SONiC,DellOS9) Enabled soft-reconfiguration for peering.
+(SONiC) Fix byte/str/int - diff versions of SONiC Release Python output returns either bytes/str/int for ASN Number.
+(SONiC) VRF Support.
+(SONiC) Retry any SONiC command in case of failure (up to 3 times). Visible if 2 modifications happen at the same time.
+(Arista EOS) Older Arista EOS Bandwidth reporting fixed.
+(Dell OS 10) VRF Support, BGP Fix, split prefix-list creation.
+(Dell OS9)(Beta feature) Support traffic police, based on service request if `rate_limit: True|False` is set under device port. (Default False)
+
+Supported systems: x86_64 and ppc64le(beta)
+Installation details: https://sdn-sense.github.io/Installation.html
+
+Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
+Docker version for this release:
+x86_64:
+  Agent: sdnsense/site-agent-sense:latest-20240429 (Or use latest)
+  Frontend: sdnsense/site-rm-sense:latest-20240429 (Or use latest)
+
+
 1.3.12
 This release includes (highlight main items):
 

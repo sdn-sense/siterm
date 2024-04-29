@@ -31,18 +31,22 @@ NEW_VERSION=$1
 # Check if this version is not already released on github.
 # If it is - fail
 git_tag_conflict=`git tag | grep $NEW_VERSION`
-if [ $git_tag_conflict -ne 0 ];
+if [[ $git_tag_conflict -ne 0 ]];
   then
     echo "This $NEW_VERSION already exists in git repo. Please make sure you create unique version";
     exit 1;
   fi;
 
-
-sed -i "s/.*VERSION = .*/VERSION = '$NEW_VERSION'/" $FDIR/../setupUtilities.py
-sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/__init__.py
-sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/SiteFE/__init__.py
-sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/SiteRMLibs/__init__.py
-sed -i "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/SiteRMAgent/__init__.py
+sed -i .bak "s/.*VERSION = .*/VERSION = '$NEW_VERSION'/" $FDIR/../setupUtilities.py
+rm -f $FDIR/../setupUtilities.py.bak
+sed -i .bak "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/__init__.py
+rm -f $FDIR/../src/python/__init__.py.bak
+sed -i .bak "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/SiteFE/__init__.py
+rm -f $FDIR/../src/python/SiteFE/__init__.py.bak
+sed -i .bak "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/SiteRMLibs/__init__.py
+rm -f $FDIR/../src/python/SiteRMLibs/__init__.py.bak
+sed -i .bak "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/SiteRMAgent/__init__.py
+rm -f $FDIR/../src/python/SiteRMAgent/__init__.py.bak
 
 echo "IMPORTANT: Please update release_notes file with changes from previous version"
 echo "Issue `git add` command and add all new version files"
