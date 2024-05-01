@@ -32,13 +32,14 @@ class GitConfig:
         }
 
     @staticmethod
-    def gitConfigCache(name):
+    def gitConfigCache(name, raiseEx=False):
         """Get Config file from tmp dir"""
         filename = f"/tmp/siterm-link-{name}.yaml"
+        output = {}
         if os.path.isfile(filename):
             with open(filename, "r", encoding="utf-8") as fd:
                 output = yload(fd.read())
-        else:
+        elif raiseEx:
             raise Exception(f"Config file {filename} does not exist.")
         return output
 
@@ -275,6 +276,7 @@ class GitConfig:
         if self.config["MAPPING"]["type"] == "FE":
             self.config["MAIN"] = self.gitConfigCache("FE-main")
             self.config["AUTH"] = self.gitConfigCache("FE-auth")
+            self.config["AUTH_RE"] = self.gitConfigCache("FE-auth-re", False)
             self.presetFEDefaultConfigs()
 
     def getGitConfig(self):
