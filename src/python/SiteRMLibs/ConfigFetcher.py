@@ -73,6 +73,8 @@ class ConfigFetcher():
             self._fetchFile('FE-main', url)
             url = self.gitObj.getFullGitUrl([self.gitObj.config['MAPPING']['config'], 'auth.yaml'])
             self._fetchFile('FE-auth', url)
+            url = self.gitObj.getFullGitUrl([self.gitObj.config['MAPPING']['config'], 'auth-re.yaml'])
+            self._fetchFile('FE-auth-re', url)
 
     def cleaner(self):
         """Clean files from /tmp/ directory"""

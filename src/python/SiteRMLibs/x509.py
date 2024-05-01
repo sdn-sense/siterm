@@ -17,6 +17,7 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2019/10/01
 """
+import re
 import time
 from datetime import datetime
 from SiteRMLibs.GitConfig import getGitConfig
@@ -26,6 +27,7 @@ class CertHandler():
     """Cert handler."""
     def __init__(self):
         self.allowedCerts = {}
+        self.allowedWCerts = {}
         self.loadTime = None
         self.loadAuthorized()
         self.config = getGitConfig()
@@ -41,6 +43,10 @@ class CertHandler():
                 self.allowedCerts.setdefault(userinfo['full_dn'], {})
                 self.allowedCerts[userinfo['full_dn']]['username'] = user
                 self.allowedCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
+            for user, userinfo in list(self.config['AUTH_RE'].items()):
+                self.allowedWCerts.setdefault(userinfo['full_dn'], {})
+                self.allowedWCerts[userinfo['full_dn']]['username'] = user
+                self.allowedWCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
 
     @staticmethod
     def getCertInfo(environ):
@@ -56,6 +62,16 @@ class CertHandler():
         out['issuer'] = environ['SSL_CLIENT_I_DN']
         out['fullDN'] = f"{out['issuer']}{out['subject']}"
         return out
+
+    def checkAuthorized(self, environ):
+        """Check if user is authorized."""
+        if environ['CERTINFO']['fullDN'] in self.allowedCerts:
+            return self.allowedCerts[environ['CERTINFO']['fullDN']]
+        for wildcarddn, userinfo in self.allowedWCerts.items():
+            if re.match(wildcarddn, environ['CERTINFO']['fullDN']):
+                return userinfo
+        print(f"User DN {environ['CERTINFO']['fullDN']} is not in authorized list. Full info: {environ['CERTINFO']}")
+        raise Exception(f"User DN {environ['CERTINFO']['fullDN']} is not in authorized list. Full info: {environ['CERTINFO']}")
 
     def validateCertificate(self, environ):
         """Validate certification validity."""
@@ -78,7 +94,4 @@ class CertHandler():
         # Check if reload of auth list is needed.
         self.loadAuthorized()
         # Check DN in authorized list
-        if environ['CERTINFO']['fullDN'] not in self.allowedCerts:
-            print(f"User DN {environ['CERTINFO']['fullDN']} is not in authorized list. Full info: {environ['CERTINFO']}")
-            raise Exception('Unauthorized access')
-        return self.allowedCerts[environ['CERTINFO']['fullDN']]
+        return self.checkAuthorized(environ)
