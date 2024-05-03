@@ -55,6 +55,7 @@ import tempfile
 
 from SiteRMLibs.CustomExceptions import ConfigException, OverSubscribeException
 from SiteRMLibs.MainUtilities import execute as executeCmd
+from SiteRMLibs.ipaddr import getInterfaceSpeed
 
 COMPONENT = "QOS"
 
@@ -106,15 +107,8 @@ class QOS:
         self.params = {}
         for interface in self.config.get("agent", "interfaces"):
             params = self.params.setdefault(interface, {})
-            for item in [
-                ["intf_reserve", 1000],
-                ["intf_max", 10000],
-                ["l3enabled", True],
-            ]:
-                if self.config.has_option(interface, item[0]):
-                    params[item[0]] = self.config.get(interface, item[0])
-                else:
-                    params[item[0]] = item[1]
+            params["intf_max"] = int(self.config.get(interface, "bwParams").get("maximumCapacity", getInterfaceSpeed(interface)))
+            params["intf_reserve"] = int(self.config.get(interface, "bwParams").get("reservedCapacity", 1000))
             # Take out reserved from intf_max
             self.params[interface]["intf_max"] -= self.params[interface]["intf_reserve"]
 

@@ -38,6 +38,15 @@ def getInterfaceTxQueueLen(interface):
     txQueueLen = externalCommand(f"cat /sys/class/net/{interface}/tx_queue_len")
     return int(txQueueLen[0].strip())
 
+def getInterfaceSpeed(interface):
+    """Get Interface Speed"""
+    try:
+        speed = externalCommand(f"cat /sys/class/net/{interface}/speed")
+        return int(speed[0].strip())
+    except Exception as ex:
+        print(f"Received an error trying to get interface speed. Error: {ex}. Return default 10gbps")
+        return 10000
+
 def getIfAddrStats():
     """Get Interface Address Stats"""
     tmpifAddr = psutil.net_if_addrs()
