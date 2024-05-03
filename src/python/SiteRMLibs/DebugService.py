@@ -8,6 +8,7 @@ Authors:
 Date: 2023/03/22
 """
 import os
+import traceback
 from SiteRMLibs.MainUtilities import jsondumps
 from SiteRMLibs.MainUtilities import createDirs
 from SiteRMLibs.MainUtilities import externalCommand
@@ -44,6 +45,7 @@ class DebugService:
         except (ValueError, KeyError, OSError) as ex:
             out = {'processOut': [], 'stdout': [], 'stderr': [], 'jsonout': {}, 'exitCode': 501}
             out['stderr'].append(str(ex))
+            out['stderr'].append(traceback.format_exc())
             exitCode = 501
             newstate = "failed"
         self.logger.debug(f"Finish check of process on debug action {item['id']}. ExitCode: {exitCode} NewState: {newstate}")
@@ -73,7 +75,7 @@ class DebugService:
         """Get output from background process log file."""
         fname = self.workDir + f"/background-process-{pid}.{logtype}"
         out = self.diragent.getFileContentAsJson(fname)
-        out['output'] = evaldict(out['output'])
+        out['output'] = evaldict(out.get('output', {}))
         return out
 
     def _runCmd(self, inputDict, action, foreground):
