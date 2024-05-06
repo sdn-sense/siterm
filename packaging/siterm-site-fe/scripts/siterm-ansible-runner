@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""
+SENSE Ansible test runner
+"""
+import pprint
+import yaml
+from yaml import safe_dump as ydump
+import ansible_runner
+
+
+def getInventory(inventoryFile):
+    """Read inventory file"""
+    with open(inventoryFile, 'r', encoding='utf-8') as fd:
+        out = yaml.safe_load(fd.read())
+    return out
+
+def runAnsible(playbookFile):
+    """Run Ansible Playbook"""
+    ansRunner = ansible_runner.run(private_data_dir='/opt/siterm/config/ansible/sense',
+                                   inventory=getInventory('/opt/siterm/config/ansible/sense/inventory/inventory.yaml'),
+                                   playbook=playbookFile) # verbosity=1000)
+    return ansRunner
+
+def printports(host, dataIn):
+    """Print port data as an example config for rm-configs"""
+    out = {host: {'vsw': host, 'allPorts': False, 'allVlans': False, 'ports': {}}}
+    for port, portData in dataIn.get('ansible_net_interfaces', {}).items():
+        if 'switchport' in portData and portData['switchport'] == 'yes':
+            out[host]['ports'][port] = {}
+            if 'bandwidth' in portData and portData['bandwidth']:
+                out[host]['ports'][port]['capacity'] = int(portData['bandwidth'])
+    print('='*100)
+    print('This is only a simple example output of interface names.')
+    print('Please remove not needed ports and leave only those to be exposed in the model')
+    print('IMPORTANT: This still require additional parameters, like:')
+    print('     isAlias - to point to remote endpoint')
+    print('     wanlink - True/False which points that port connects to WAN')
+    print('     vlan_range - to list vlan range allowed for control - either at switch level, or port level')
+    print('     vlan_mtu - predefined what MTU to use on configured new vlan interfaces (at switch level)')
+    print('     rst/rsts_enabled - rst - same as switch name; rsts_enabled - ipv4,ipv6 - if Routing service is enabled')
+    print('     vrf - vrf name if needed to put vlans under VRF (optional)')
+    print('For more details about config parameters, see here: https://sdn-sense.github.io/Configuration.html')
+    print('-'*100)
+    print(ydump(out))
+    print('-'*100)
+
+def run():
+    """Run the playbook to get facts"""
+    playbooks = ['getfacts.yaml']
+    for playbook in playbooks:
+        print(f"RUNNING PLAYBOOK: {playbook}")
+        r = runAnsible(playbook)
+        for host, _ in r.stats['failures'].items():
+            for host_events in r.host_events(host):
+                if host_events['event'] != 'runner_on_failed':
+                    continue
+                pprint.pprint(host_events)
+        for host, _ in r.stats['ok'].items():
+            print(f"HOSTNAME: {host}")
+            print('-'*100)
+            for host_events in r.host_events(host):
+                if host_events['event'] != 'runner_on_ok':
+                    continue
+                if 'ansible_facts' in host_events['event_data']['res'] and  \
+                     'ansible_net_interfaces' in host_events['event_data']['res']['ansible_facts']:
+                    printports(host, host_events['event_data']['res']['ansible_facts'])
+            print('-'*100)
+
+if __name__ == '__main__':
+    run()
