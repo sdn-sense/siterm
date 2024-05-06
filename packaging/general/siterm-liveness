@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""
+Kubernetes liveness checker for the service;
+"""
+import sys
+import subprocess
+
+def checkServices():
+    """Check if all services are running in supervisorctl"""
+    ret = True
+    try:
+        # Run supervisorctl status command
+        result = subprocess.run(["supervisorctl", "status"], capture_output=True, text=True, check=False)
+        output = result.stdout
+
+        # Parse output to check if all services are running
+        services = output.strip().split('\n')
+        for service in services:
+            service_status = service.split()[1]
+            if service_status != 'RUNNING':
+                print(f'Service not running state. Details: {service}')
+                ret = False
+    except subprocess.CalledProcessError as e:
+        print("Error running supervisorctl:", e)
+        print("Will ignore error and return all is good.")
+    return ret
+
+if __name__ == "__main__":
+    if checkServices():
+        sys.exit(0)
+    else:
+        sys.exit(1)

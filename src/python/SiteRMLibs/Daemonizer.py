@@ -18,7 +18,8 @@ import psutil
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.MainUtilities import (
     getDataFromSiteFE, getDBConn, getFullUrl, getHostname,
-    getLoggingObject, getUTCnow, getVal, publishToSiteFE, reCacheConfig
+    getLoggingObject, getUTCnow, getVal, publishToSiteFE,
+    reCacheConfig, contentDB, createDirs
 )
 from SiteRMLibs.GitConfig import getGitConfig
 
@@ -186,6 +187,7 @@ class Daemon(DBBackend):
         self.config = None
         self.logger = None
         self.runThreads = {}
+        self.contentDB = contentDB()
         if getGitConf:
             self.config = getGitConfig()
             self.logger = getLoggingObject(config=self.config,
@@ -353,6 +355,12 @@ class Daemon(DBBackend):
             self._pubStateRemote(servicename=self.component,
                                  servicestate=state, sitename=sitename,
                                  version=runningVersion, runtime=runtime)
+            # Log state also to local file
+            createDirs("/tmp/siterm-states/")
+            self.contentDB.dumpFileContentAsJson(
+                f"/tmp/siterm-states/{self.component}.json",
+                {"state": state, "sitename": sitename,
+                 "runtime": runtime, "version": runningVersion})
 
     def autoRefreshDB(self, **kwargs):
         """Auto Refresh if there is a DB request to do so."""
