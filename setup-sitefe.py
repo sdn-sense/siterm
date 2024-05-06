@@ -15,7 +15,9 @@ from setupUtilities import list_packages, get_py_modules, get_web_files, VERSION
 # This is how CRONJOBS are handled and division is done only for the current hour.
 SCRIPTS = ["packaging/general/Config-Fetcher",
            "packaging/general/siterm-debugger",
-           "packaging/general/siterm-bgprocess"]
+           "packaging/general/siterm-bgprocess",
+           "packaging/general/siterm-liveness",
+           "packaging/general/siterm-readiness"]
 for sectionName in ['LookUpService', 'SNMPMonitoring']:
     SCRIPTS.append(f'packaging/siterm-site-fe/scripts/{sectionName}-update')
 
