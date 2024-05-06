@@ -7,6 +7,7 @@ Authors:
 
 Date: 2021/01/20
 """
+import time
 import copy
 import os
 import os.path
@@ -36,11 +37,16 @@ class GitConfig:
         """Get Config file from tmp dir"""
         filename = f"/tmp/siterm-link-{name}.yaml"
         output = {}
-        if os.path.isfile(filename):
-            with open(filename, "r", encoding="utf-8") as fd:
-                output = yload(fd.read())
-        elif raiseEx:
-            raise Exception(f"Config file {filename} does not exist.")
+        retries = 3
+        while retries > 0:
+            if os.path.isfile(filename):
+                with open(filename, "r", encoding="utf-8") as fd:
+                    output = yload(fd.read())
+                break
+            if retries < 0 and raiseEx:
+                raise Exception(f"Config file {filename} does not exist.")
+            retries -= 1
+            time.sleep(5)
         return output
 
     def getFullGitUrl(self, customAdds=None):

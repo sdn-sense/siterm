@@ -32,6 +32,20 @@ class ConfigFetcher():
         self.config = None
 
     def _fetchFile(self, name, url):
+        def retryPolicy(outObj, retries=3):
+            if 'status_code' in outObj and outObj['status_code'] == -1:
+                self.logger.debug(f'Got -1 (Timeout usually error. Will retry up to 3 times (5sec sleep): {outObj}')
+                retries -= 1
+            elif outObj.status_code != 200:
+                self.logger.debug(f'Got status code {outObj.status_code} for {url}')
+                retries -= 1
+            else:
+                return -1
+            if retries == 0:
+                self.logger.debug(f'Got too many retries. Will stop retrying to get config file: {outObj}')
+            else:
+                time.sleep(5)
+            return retries
         output = {}
         datetimeNow = datetime.datetime.now() + datetime.timedelta(minutes=10)
         filename = f"/tmp/{datetimeNow.strftime('%Y-%m-%d-%H')}-{name}.yaml"
@@ -47,18 +61,13 @@ class ConfigFetcher():
             retries = 3
             while retries > 0:
                 outObj = getWebContentFromURL(url)
-                if 'status_code' in outObj and outObj['status_code'] == -1:
-                    self.logger.info(f'Got -1 (Timeout usually error. Will retry up to 3 times (5sec sleep): {outObj}')
-                    retries -= 1
-                    time.sleep(5)
+                retries = retryPolicy(outObj, retries)
+                if retries == 0:
+                    output = {}
+                elif retries == -1:
+                    output = yload(outObj.text)
+                else:
                     continue
-                if outObj.status_code != 200:
-                    self.logger.debug(f'Got status code {outObj.status_code} for {url}')
-                    retries -= 1
-                    time.sleep(5)
-                    continue
-                retries = -1
-                output = yload(outObj.text)
                 with open(filename, 'w', encoding='utf-8') as fd:
                     fd.write(ydump(output))
                 try:
