@@ -57,6 +57,7 @@ class ConfigFetcher():
                     retries -= 1
                     time.sleep(5)
                     continue
+                retries = -1
                 output = yload(outObj.text)
                 with open(filename, 'w', encoding='utf-8') as fd:
                     fd.write(ydump(output))
