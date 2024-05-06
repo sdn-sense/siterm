@@ -254,53 +254,85 @@ def createDirs(fullDirPath):
 
 def publishToSiteFE(inputDict, host, url, verb="PUT"):
     """Put JSON to the Site FE."""
-    req = Requests(host, {})
-    try:
-        out = req.makeRequest(url, verb=verb, data=json.dumps(inputDict))
-    except http.client.HTTPException as ex:
-        return ex.reason, ex.status, "FAILED", True
-    except pycurl.error as ex:
-        return ex.args[1], ex.args[0], "FAILED", False
-    return out
+    retries = 3
+    while retries > 0:
+        retries -= 1
+        req = Requests(host, {})
+        try:
+            out = req.makeRequest(url, verb=verb, data=json.dumps(inputDict))
+            return out
+        except http.client.HTTPException as ex:
+            print(f"Got HTTPException: {ex}. Will retry {retries} more times.")
+            if retries == 0:
+                return ex.reason, ex.status, "FAILED", True
+            time.sleep(1)
+        except pycurl.error as ex:
+            print(f"Got PyCurl HTTPException: {ex}. Will retry {retries} more times.")
+            if retries == 0:
+                return ex.args[1], ex.args[0], "FAILED", False
+            time.sleep(1)
 
 
 def getDataFromSiteFE(inputDict, host, url):
-    """Get data from Site FE."""
-    req = Requests(host, {})
-    try:
-        out = req.makeRequest(url, verb="GET", data=inputDict)
-    except http.client.HTTPException as ex:
-        return ex.reason, ex.status, "FAILED", True
-    except pycurl.error as ex:
-        return ex.args[1], ex.args[0], "FAILED", False
-    return out
+    """Get data from Site FE. (Retries 3 times with 1 sec delay)"""
+    retries = 3
+    while retries > 0:
+        retries -= 1
+        req = Requests(host, {})
+        try:
+            out = req.makeRequest(url, verb="GET", data=inputDict)
+            return out
+        except http.client.HTTPException as ex:
+            print(f"Got HTTPException: {ex}. Will retry {retries} more times.")
+            if retries == 0:
+                return ex.reason, ex.status, "FAILED", True
+            time.sleep(1)
+        except pycurl.error as ex:
+            print(f"Got PyCurl HTTPException: {ex}. Will retry {retries} more times.")
+            if retries == 0:
+                return ex.args[1], ex.args[0], "FAILED", False
+            time.sleep(1)
 
 
 def getWebContentFromURL(url, raiseEx=True):
     """GET from URL"""
-    try:
-        out = requests.get(url, timeout=60)
-    except requests.exceptions.RequestException as ex:
-        if raiseEx:
-            raise
-        out = {}
-        out['error'] = str(ex)
-        out['status_code'] = -1
+    retries = 3
+    out = {}
+    while retries > 0:
+        retries -= 1
+        try:
+            out = requests.get(url, timeout=60)
+            return out
+        except requests.exceptions.RequestException as ex:
+            print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
+            if raiseEx and retries == 0:
+                raise
+            out = {}
+            out['error'] = str(ex)
+            out['status_code'] = -1
+            time.sleep(1)
     return out
 
 
 def postWebContentToURL(url, **kwargs):
     """POST to URL"""
     raiseEx = bool(kwargs.get('raiseEx', True))
-    try:
-        response = requests.post(url, timeout=60, **kwargs)
-    except requests.exceptions.RequestException as ex:
-        if raiseEx:
-            raise
-        response = {}
-        response['error'] = str(ex)
-        response['status_code'] = -1
-    return response
+    retries = 3
+    out = {}
+    while retries > 0:
+        retries -= 1
+        try:
+            out = requests.post(url, timeout=60, **kwargs)
+            return out
+        except requests.exceptions.RequestException as ex:
+            print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
+            if raiseEx and retries == 0:
+                raise
+            out = {}
+            out['error'] = str(ex)
+            out['status_code'] = -1
+            time.sleep(1)
+    return out
 
 
 def reCacheConfig(prevHour=None, prevDay=None):
