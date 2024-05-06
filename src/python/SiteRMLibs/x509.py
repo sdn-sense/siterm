@@ -30,20 +30,20 @@ class CertHandler():
         self.allowedWCerts = {}
         self.loadTime = None
         self.loadAuthorized()
-        self.config = getGitConfig()
+        self.gitConf = getGitConfig()
 
     def loadAuthorized(self):
         """Load all authorized users for FE from git."""
         dateNow = datetime.now().strftime('%Y-%m-%d-%H')
         if dateNow != self.loadTime:
             self.loadTime = dateNow
-            self.config = getGitConfig()
+            self.gitConf = getGitConfig()
             self.allowedCerts = {}
-            for user, userinfo in list(self.config.get('AUTH', {}).items()):
+            for user, userinfo in list(self.gitConf.config.get('AUTH', {}).items()):
                 self.allowedCerts.setdefault(userinfo['full_dn'], {})
                 self.allowedCerts[userinfo['full_dn']]['username'] = user
                 self.allowedCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
-            for user, userinfo in list(self.config.get('AUTH_RE', {}).items()):
+            for user, userinfo in list(self.gitConf.config.get('AUTH_RE', {}).items()):
                 self.allowedWCerts.setdefault(userinfo['full_dn'], {})
                 self.allowedWCerts[userinfo['full_dn']]['username'] = user
                 self.allowedWCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']

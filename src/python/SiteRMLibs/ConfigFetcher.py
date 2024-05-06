@@ -7,6 +7,7 @@ Authors:
 
 Date: 2022/05/19
 """
+import time
 import copy
 import datetime
 import os
@@ -15,6 +16,7 @@ import shutil
 from SiteRMLibs.MainUtilities import getLoggingObject, getWebContentFromURL
 from SiteRMLibs.GitConfig import GitConfig
 from yaml import safe_load as yload
+from yaml import safe_dump as ydump
 
 
 class ConfigFetcher():
@@ -42,17 +44,29 @@ class ConfigFetcher():
             datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
             prevfilename = f"/tmp/{datetimelasthour.strftime('%Y-%m-%d-%H')}-{name}.yaml"
             print(f'Receiving new file from GIT for {name}')
-            outyaml = getWebContentFromURL(url).text
-            output = yload(outyaml)
-            with open(filename, 'w', encoding='utf-8') as fd:
-                fd.write(outyaml)
-            try:
-                shutil.copy(filename, f'/tmp/siterm-link-{name}.yaml')
-                if os.path.isfile(prevfilename):
-                    self.logger.info(f'Remove previous old cache file {prevfilename}')
-                    os.remove(prevfilename)
-            except IOError as ex:
-                self.logger.info(f'Got IOError: {ex}')
+            retries = 3
+            while retries > 0:
+                outObj = getWebContentFromURL(url)
+                if 'status_code' in outObj and outObj['status_code'] == -1:
+                    self.logger.info(f'Got -1 (Timeout usually error. Will retry up to 3 times (5sec sleep): {outObj}')
+                    retries -= 1
+                    time.sleep(5)
+                    continue
+                if outObj.status_code != 200:
+                    self.logger.debug(f'Got status code {outObj.status_code} for {url}')
+                    retries -= 1
+                    time.sleep(5)
+                    continue
+                output = yload(outObj.text)
+                with open(filename, 'w', encoding='utf-8') as fd:
+                    fd.write(ydump(output))
+                try:
+                    shutil.copy(filename, f'/tmp/siterm-link-{name}.yaml')
+                    if os.path.isfile(prevfilename):
+                        self.logger.info(f'Remove previous old cache file {prevfilename}')
+                        os.remove(prevfilename)
+                except IOError as ex:
+                    self.logger.info(f'Got IOError: {ex}')
         return output
 
     def fetchMapping(self):
