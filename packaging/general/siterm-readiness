@@ -4,22 +4,20 @@ Kubernetes readiness checker for the pod.
 """
 import sys
 from os import walk
-from SiteRMLibs.MainUtilities import contentDB
+from SiteRMLibs.MainUtilities import getFileContentAsJson
 
 
 def getStates():
     """Get the states of all services and return the exit code"""
-    db = contentDB()
     directory = '/tmp/siterm-states/'
     files = []
     exitCode = 0
-    for (dirpath, dirnames, filenames) in walk(directory):
-        print(dirpath, dirnames)
+    for (_, _, filenames) in walk(directory):
         files.extend(filenames)
         break
     for fname in files:
         if fname.endswith('.json'):
-            out = db.getAllFileContent(directory + fname)
+            out = getFileContentAsJson(directory + fname)
             if out.get('state', 'UNKNOWN') != 'OK':
                 exitCode = 1
                 print("State for service is not OK. Details: ", out)
