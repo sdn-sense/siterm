@@ -13,6 +13,13 @@ import psutil
 import netifaces
 from SiteRMLibs.MainUtilities import externalCommand
 
+def makeUrl(baseUrl, *addons):
+    """Format and return url"""
+    url = baseUrl.rstrip('/')
+    for uri in addons:
+        _uri = uri.strip('/')
+        url = f'{url}/{_uri}' if _uri else url
+    return url
 
 def getMasterSlaveInterfaces():
     """Get dictionary of slaveIntfName: MasterIntfName interfaces"""

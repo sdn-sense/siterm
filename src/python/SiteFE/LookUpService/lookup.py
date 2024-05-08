@@ -149,6 +149,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         if self.config.has_option("general", "webdomain"):
             out["webdomain"] = self.config.get("general", "webdomain")
         self._addSite(**out)
+        self._addMetadata(**out)
         return out
 
     def defineTopology(self):

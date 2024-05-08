@@ -15,7 +15,9 @@ from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.ipaddr import normalizeipdict
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.ipaddr import validMRMLName
+from SiteRMLibs.ipaddr import makeUrl
 from SiteRMLibs.CustomExceptions import NoOptionError
+from SiteRMLibs.CustomExceptions import NoSectionError
 from SiteRMLibs.MainUtilities import strtolist
 
 
@@ -260,7 +262,9 @@ class RDFHelper():
             self.newGraph.bind(prefix, val)
 
     def _addSite(self, **kwargs):
+
         """Add Site to Model"""
+        # TODO: Remove once everything moves to _addMetadata
         self.newGraph.add((self.genUriRef('site'),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Topology')))
@@ -280,11 +284,69 @@ class RDFHelper():
                             ['mrs', 'value'],
                             [kwargs[uri]])
 
+    def _addMetadata(self, **kwargs):
+        self.newGraph.add((self.genUriRef('site'),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('nml', 'Topology')))
+        self.newGraph.add((self.genUriRef('site'),
+                           self.genUriRef('nml', 'hasService'),
+                           self.genUriRef('site', ':service+metadata')))
+        self.newGraph.add((self.genUriRef('site', ':service+metadata'),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('mrs', 'MetadataService')))
+        self.newGraph.add((self.genUriRef('site', ':service+metadata'),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('mrs', 'sense-metadata')))
+        # Add hasNetworkAddress and hasNetworkAttribute
+        if 'version' in kwargs and kwargs['version']:
+            self._addHasNetworkAttribute(':service+metadata', 'version', 'metadata:version', kwargs['version'])
+        if 'webdomain' in kwargs and kwargs['webdomain']:
+            self._addNetworkAddress(':service+metadata', ['webdomain', 'metadata:webdomain'], makeUrl(kwargs['webdomain']))
+            if 'sitename' in kwargs and kwargs['sitename']:
+                self._addHasNetworkAttribute(':service+metadata', 'sitename', 'metadata:sitename', kwargs['sitename'])
+                nodeExporter = makeUrl(kwargs["webdomain"], f"{kwargs['sitename']}/sitefe/json/frontend/metrics")
+                self._addNetworkAddress(':service+metadata', ['nodeExporter', 'metadata:nodeExporter'], nodeExporter)
+        # Add all metadata from frontend configuration;
+        try:
+            metadata = self.config.get(kwargs.get('sitename', None), 'metadata')
+            for key, vals in metadata.items():
+                self._addHasNetworkAttribute(':service+metadata', key, f'metadata:{key}', str(vals))
+        except (NoSectionError, NoOptionError):
+            return
+
+    def _addNodeMetadata(self, **kwargs):
+        """Add Node Metadata to Model"""
+        metaService = f":{kwargs['hostname']}:service+metadata"
+        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}"),
+                           self.genUriRef('nml', 'hasService'),
+                           self.genUriRef('site', metaService)))
+        self.newGraph.add((self.genUriRef('site', metaService),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('nml', 'MetadataService')))
+        self.newGraph.add((self.genUriRef('site', metaService),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('mrs', 'sense-metadata')))
+        # if node_exporter defined, add metrics url
+        conf = kwargs.get('nodeDict', {}).get('hostinfo', {}).get('Summary', {}).get('config', {})
+        nodeExporter = conf.get('general', {}).get('node_exporter', '')
+        if nodeExporter:
+            nodeExporter = makeUrl(nodeExporter, "metrics")
+            self._addNetworkAddress(metaService, ['nodeExporter', 'metadata:nodeExporter'], nodeExporter)
+        # Allow agent also add metadata information (future use is to tell that Multus is available)
+        for key, vals in conf.get('general', {}).get('metadata', {}).items():
+            self._addHasNetworkAttribute(metaService, key, f'metadata:{key}', str(vals))
+
     def _updateVersion(self, **kwargs):
         """Update Version in model"""
+        # TODO Remove line below once everything moves to _addMetadata
         self.newGraph.set((self.genUriRef('site', ':version'),
                            self.genUriRef('mrs', 'value'),
                            self.genLiteral(kwargs['version'])))
+        # TODO: Leave line below for version updates
+        self.newGraph.set((self.genUriRef('site', ':service+metadata:version'),
+                            self.genUriRef('mrs', 'value'),
+                            self.genLiteral(kwargs['version'])))
+
 
     def _addNode(self, **kwargs):
         """Add Node to Model"""
@@ -635,6 +697,21 @@ class RDFHelper():
         self.addToGraph(['site', f"{uri}:{name}"],
                         ['mrs', 'type'],
                         [sname])
+        self.setToGraph(['site', f"{uri}:{name}"],
+                        ['mrs', 'value'],
+                        [value])
+
+    def _addHasNetworkAttribute(self, uri, name, vtype, value):
+        """Add NetworkAttribute to Model"""
+        self.addToGraph(['site', uri],
+                        ['mrs', 'hasNetworkAttribute'],
+                        ['site', f'{uri}:{name}'])
+        self.addToGraph(['site', f'{uri}:{name}'],
+                        ['rdf', 'type'],
+                        ['mrs', 'NetworkAttribute'])
+        self.addToGraph(['site', f'{uri}:{name}'],
+                        ['mrs', 'type'],
+                        [vtype])
         self.setToGraph(['site', f"{uri}:{name}"],
                         ['mrs', 'value'],
                         [value])
