@@ -9,6 +9,7 @@ Authors:
 
 Date: 2021/12/01
 """
+import json
 from rdflib import URIRef, Literal
 from rdflib.namespace import XSD
 from SiteRMLibs.ipaddr import normalizedip
@@ -262,7 +263,6 @@ class RDFHelper():
             self.newGraph.bind(prefix, val)
 
     def _addSite(self, **kwargs):
-
         """Add Site to Model"""
         # TODO: Remove once everything moves to _addMetadata
         self.newGraph.add((self.genUriRef('site'),
@@ -285,6 +285,7 @@ class RDFHelper():
                             [kwargs[uri]])
 
     def _addMetadata(self, **kwargs):
+        """Add Frontend Metadata to Model"""
         self.newGraph.add((self.genUriRef('site'),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Topology')))
@@ -295,24 +296,24 @@ class RDFHelper():
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('mrs', 'MetadataService')))
         self.newGraph.add((self.genUriRef('site', ':service+metadata'),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('mrs', 'sense-metadata')))
+                           self.genUriRef('mrs', 'type'),
+                           self.genLiteral('sense-metadata')))
         # Add hasNetworkAddress and hasNetworkAttribute
         if 'version' in kwargs and kwargs['version']:
-            self._addHasNetworkAttribute(':service+metadata', 'version', 'metadata:version', kwargs['version'])
+            self._addHasNetworkAttribute(':service+metadata', 'version', 'metadata:/version', kwargs['version'])
         if 'webdomain' in kwargs and kwargs['webdomain']:
             self._addNetworkAddress(':service+metadata', ['webdomain', 'metadata:webdomain'], makeUrl(kwargs['webdomain']))
             if 'sitename' in kwargs and kwargs['sitename']:
-                self._addHasNetworkAttribute(':service+metadata', 'sitename', 'metadata:sitename', kwargs['sitename'])
+                self._addHasNetworkAttribute(':service+metadata', 'sitename', 'metadata:/sitename', kwargs['sitename'])
                 nodeExporter = makeUrl(kwargs["webdomain"], f"{kwargs['sitename']}/sitefe/json/frontend/metrics")
                 self._addNetworkAddress(':service+metadata', ['nodeExporter', 'metadata:nodeExporter'], nodeExporter)
         # Add all metadata from frontend configuration;
         try:
             metadata = self.config.get(kwargs.get('sitename', None), 'metadata')
             for key, vals in metadata.items():
-                self._addHasNetworkAttribute(':service+metadata', key, f'metadata:{key}', str(vals))
+                self._addHasNetworkAttribute(':service+metadata', key, f'metadata:/{key}', json.dumps(vals))
         except (NoSectionError, NoOptionError):
-            return
+            pass
 
     def _addNodeMetadata(self, **kwargs):
         """Add Node Metadata to Model"""
@@ -324,8 +325,8 @@ class RDFHelper():
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'MetadataService')))
         self.newGraph.add((self.genUriRef('site', metaService),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('mrs', 'sense-metadata')))
+                           self.genUriRef('mrs', 'type'),
+                           self.genLiteral('sense-metadata')))
         # if node_exporter defined, add metrics url
         conf = kwargs.get('nodeDict', {}).get('hostinfo', {}).get('Summary', {}).get('config', {})
         nodeExporter = conf.get('general', {}).get('node_exporter', '')
@@ -334,7 +335,7 @@ class RDFHelper():
             self._addNetworkAddress(metaService, ['nodeExporter', 'metadata:nodeExporter'], nodeExporter)
         # Allow agent also add metadata information (future use is to tell that Multus is available)
         for key, vals in conf.get('general', {}).get('metadata', {}).items():
-            self._addHasNetworkAttribute(metaService, key, f'metadata:{key}', str(vals))
+            self._addHasNetworkAttribute(metaService, key, f'metadata:/{key}', json.dumps(vals))
 
     def _updateVersion(self, **kwargs):
         """Update Version in model"""
