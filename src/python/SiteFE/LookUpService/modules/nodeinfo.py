@@ -72,6 +72,9 @@ class NodeInfo:
         """Define node information."""
         self.hosts[nodeDict["hostname"]] = []
         hosturi = self._addNode(hostname=nodeDict["hostname"])
+        # Add Node metadata information
+        self._addNodeMetadata(hostname=nodeDict["hostname"], nodeDict=nodeDict)
+
         # Node General description
 
         self._nmlLiteral(hosturi, "hostname", nodeDict["hostname"])
