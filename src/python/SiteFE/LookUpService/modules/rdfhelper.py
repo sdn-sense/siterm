@@ -300,18 +300,18 @@ class RDFHelper():
                            self.genLiteral('sense-metadata')))
         # Add hasNetworkAddress and hasNetworkAttribute
         if 'version' in kwargs and kwargs['version']:
-            self._addHasNetworkAttribute(':service+metadata', 'version', 'metadata:/version', kwargs['version'])
+            self._addHasNetworkAttribute(':service+metadata', 'version', '/version', kwargs['version'])
         if 'webdomain' in kwargs and kwargs['webdomain']:
             self._addNetworkAddress(':service+metadata', ['webdomain', 'metadata:webdomain'], makeUrl(kwargs['webdomain']))
             if 'sitename' in kwargs and kwargs['sitename']:
-                self._addHasNetworkAttribute(':service+metadata', 'sitename', 'metadata:/sitename', kwargs['sitename'])
+                self._addHasNetworkAttribute(':service+metadata', 'sitename', '/sitename', kwargs['sitename'])
                 nodeExporter = makeUrl(kwargs["webdomain"], f"{kwargs['sitename']}/sitefe/json/frontend/metrics")
                 self._addNetworkAddress(':service+metadata', ['nodeExporter', 'metadata:nodeExporter'], nodeExporter)
         # Add all metadata from frontend configuration;
         try:
             metadata = self.config.get(kwargs.get('sitename', None), 'metadata')
             for key, vals in metadata.items():
-                self._addHasNetworkAttribute(':service+metadata', key, f'metadata:/{key}', json.dumps(vals))
+                self._addHasNetworkAttribute(':service+metadata', key, f'/{key}', json.dumps(vals))
         except (NoSectionError, NoOptionError):
             pass
 
@@ -335,7 +335,7 @@ class RDFHelper():
             self._addNetworkAddress(metaService, ['nodeExporter', 'metadata:nodeExporter'], nodeExporter)
         # Allow agent also add metadata information (future use is to tell that Multus is available)
         for key, vals in conf.get('general', {}).get('metadata', {}).items():
-            self._addHasNetworkAttribute(metaService, key, f'metadata:/{key}', json.dumps(vals))
+            self._addHasNetworkAttribute(metaService, key, f'/{key}', json.dumps(vals))
 
     def _updateVersion(self, **kwargs):
         """Update Version in model"""
@@ -712,6 +712,9 @@ class RDFHelper():
                         ['mrs', 'NetworkAttribute'])
         self.addToGraph(['site', f'{uri}:{name}'],
                         ['mrs', 'type'],
+                        ["metadata:directory"])
+        self.addToGraph(['site', f'{uri}:{name}'],
+                        ['mrs', 'tag'],
                         [vtype])
         self.setToGraph(['site', f"{uri}:{name}"],
                         ['mrs', 'value'],
