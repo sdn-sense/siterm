@@ -39,14 +39,16 @@ class CertHandler():
             self.loadTime = dateNow
             self.gitConf = getGitConfig()
             self.allowedCerts = {}
-            for user, userinfo in list(self.gitConf.config.get('AUTH', {}).items()):
-                self.allowedCerts.setdefault(userinfo['full_dn'], {})
-                self.allowedCerts[userinfo['full_dn']]['username'] = user
-                self.allowedCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
-            for user, userinfo in list(self.gitConf.config.get('AUTH_RE', {}).items()):
-                self.allowedWCerts.setdefault(userinfo['full_dn'], {})
-                self.allowedWCerts[userinfo['full_dn']]['username'] = user
-                self.allowedWCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
+            if self.gitConf.config.get('AUTH', {}):
+                for user, userinfo in list(self.gitConf.config.get('AUTH', {}).items()):
+                    self.allowedCerts.setdefault(userinfo['full_dn'], {})
+                    self.allowedCerts[userinfo['full_dn']]['username'] = user
+                    self.allowedCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
+            if self.gitConf.config.get('AUTH_RE', {}):
+                for user, userinfo in list(self.gitConf.config.get('AUTH_RE', {}).items()):
+                    self.allowedWCerts.setdefault(userinfo['full_dn'], {})
+                    self.allowedWCerts[userinfo['full_dn']]['username'] = user
+                    self.allowedWCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
 
     @staticmethod
     def getCertInfo(environ):
