@@ -17,6 +17,7 @@ from SiteRMLibs.CustomExceptions import PluginException
 from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
 from SiteRMAgent.RecurringActions.Plugins.CPUInfo import CPUInfo
 from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
+from SiteRMAgent.RecurringActions.Plugins.KubeInfo import KubeInfo
 from SiteRMAgent.RecurringActions.Plugins.NetInfo import NetInfo
 from SiteRMAgent.RecurringActions.Plugins.StorageInfo import StorageInfo
 
@@ -35,7 +36,7 @@ class RecurringAction():
     def _loadClasses(self):
         """Load all classes"""
         for name, plugin in {'CertInfo': CertInfo, 'CPUInfo': CPUInfo, 'MemInfo': MemInfo,
-                             'NetInfo': NetInfo, 'StorageInfo': StorageInfo}.items():
+                             'KubeInfo': KubeInfo, 'NetInfo': NetInfo, 'StorageInfo': StorageInfo}.items():
             self.classes[name] = plugin(self.config, self.logger)
 
     def refreshthread(self, *_args):
@@ -69,6 +70,11 @@ class RecurringAction():
                 excMsg += f" {str(excType.__name__)}: {str(excValue)}"
                 self.logger.critical("%s received %s. Exception details: %s", tmpName,
                                      outputDict[tmpName]['errorType'], outputDict[tmpName])
+        # Post processing of output (allows any class to modify output based on other Plugins output)
+        for tmpName, method in self.classes.items():
+            postMethod = getattr(method, 'postProcess', None)
+            if postMethod:
+                outputDict = postMethod(outputDict)
         return outputDict, excMsg
 
     def appendConfig(self, dic):
