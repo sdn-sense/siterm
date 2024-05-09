@@ -130,7 +130,7 @@ class PolicyService(RDFHelper, Timing):
         """Scan only host isAliases"""
         tmp = [f for f in str(inport)[len(self.prefixes["site"]):].split(":") if f]
         for item in tmp:
-            if item in self.hosts.keys():
+            if item in self.hosts:
                 return True
         return False
 
@@ -226,6 +226,15 @@ class PolicyService(RDFHelper, Timing):
                 elif key == "rst":
                     self.logger.info("Parsing L3 information from model")
                     self.parsel3Request(gIn, out, switchName)
+        # Parse Host information (a.k.a Kubernetes nodes connected via isAlias)
+        for host, hostDict in self.hosts.items():
+            if hostDict.get("hostinfo", {}).get("KubeInfo", {}).get("isAlias"):
+                self.logger.info("Parsing Kube requests from model")
+                for intf, _val in hostDict["hostinfo"]["KubeInfo"]["isAlias"].items():
+                    connID = f"{self.prefixes['site']}:{host}:{intf}"
+                    out.setdefault("kube", {})
+                    connOut = out["kube"].setdefault(str(connID), {})
+                    self.parseL2Ports(gIn, URIRef(connID), connOut)
         return out
 
     def getRoute(self, gIn, connID, returnout):
@@ -447,6 +456,39 @@ class PolicyService(RDFHelper, Timing):
         if bidPort in self.bidPorts:
             del self.bidPorts[bidPort]
 
+    def parseL2Ports(self, gIn, connectionID, connOut):
+        """Parse L2 Ports"""
+        # Get All Ports
+        self.parsePorts(gIn, connectionID, connOut)
+        # Get time scheduling details for connection.
+        self.getTimeScheduling(gIn, connectionID, connOut)
+        # =======================================================
+        while self.bidPorts:
+            for bidPort in list(self.bidPorts.keys()):
+                # Preset defaults in out (hostname,port)
+                if not str(bidPort).startswith(self.prefixes["site"]):
+                    # For L3 - it can include other endpoint port,
+                    # We dont need to parse that and it is isAlias in dict
+                    self._portScanFinish(bidPort)
+                    continue
+                portOut = self.intOut(bidPort, connOut)
+                # Record port URI
+                portOut["uri"] = str(bidPort)
+                # Parse all ports in port definition
+                self.parsePorts(gIn, bidPort, portOut, True)
+                # Get time scheduling information from delta
+                self.getTimeScheduling(gIn, bidPort, portOut)
+                # Get all tags for Port
+                self._hasTags(gIn, bidPort, portOut)
+                # Get All Labels
+                self._hasLabel(gIn, bidPort, portOut)
+                # Get all Services
+                self._hasService(gIn, bidPort, portOut)
+                # Get all Network address configs
+                self._hasNetwork(gIn, bidPort, portOut)
+                # Move port to finished scan ports
+                self._portScanFinish(bidPort)
+
     def parsel2Request(self, gIn, returnout, _switchName):
         """Parse L2 request."""
         self.logger.info(
@@ -474,37 +516,7 @@ class PolicyService(RDFHelper, Timing):
                 connOut.setdefault("_params", {}).setdefault(
                     "labelSwapping", str(out[0])
                 )
-
-            # Get All Ports
-            self.parsePorts(gIn, connectionID, connOut)
-            # Get time scheduling details for connection.
-            self.getTimeScheduling(gIn, connectionID, connOut)
-            # =======================================================
-            while self.bidPorts:
-                for bidPort in list(self.bidPorts.keys()):
-                    # Preset defaults in out (hostname,port)
-                    if not str(bidPort).startswith(self.prefixes["site"]):
-                        # For L3 - it can include other endpoint port,
-                        # We dont need to parse that and it is isAlias in dict
-                        self._portScanFinish(bidPort)
-                        continue
-                    portOut = self.intOut(bidPort, connOut)
-                    # Record port URI
-                    portOut["uri"] = str(bidPort)
-                    # Parse all ports in port definition
-                    self.parsePorts(gIn, bidPort, portOut, True)
-                    # Get time scheduling information from delta
-                    self.getTimeScheduling(gIn, bidPort, portOut)
-                    # Get all tags for Port
-                    self._hasTags(gIn, bidPort, portOut)
-                    # Get All Labels
-                    self._hasLabel(gIn, bidPort, portOut)
-                    # Get all Services
-                    self._hasService(gIn, bidPort, portOut)
-                    # Get all Network address configs
-                    self._hasNetwork(gIn, bidPort, portOut)
-                    # Move port to finished scan ports
-                    self._portScanFinish(bidPort)
+            self.parseL2Ports(gIn, connectionID, connOut)
         return returnout
 
     @staticmethod
