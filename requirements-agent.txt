@@ -15,3 +15,4 @@ typing-extensions==4.1.1
 mariadb==1.0.8
 setuptools>=65.5.1
 prometheus-client
+kubernetes
