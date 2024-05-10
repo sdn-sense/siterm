@@ -53,14 +53,10 @@ class RecurringAction():
             try:
                 tmp = method.get()
                 if not isinstance(tmp, dict):
-                    msg = f'Returned output from {method.Name} method is not a dictionary. Type: {type(tmp)}'
+                    msg = f'Returned output from {tmpName} method is not a dictionary. Type: {type(tmp)}'
                     self.logger.error(msg)
                     raise ValueError(msg)
-                if tmp:
-                    outputDict[tmpName] = tmp
-                else:
-                    self.logger.warning('Plugin %s returned empty output', method.NAME)
-                    raise ValueError(f'Plugin {method.NAME} returned empty output')
+                outputDict[tmpName] = tmp
             except Exception as ex:
                 excType, excValue = sys.exc_info()[:2]
                 outputDict[tmpName] = {"errorType": str(excType.__name__),
