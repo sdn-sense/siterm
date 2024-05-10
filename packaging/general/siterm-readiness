@@ -20,7 +20,7 @@ def getStates():
             out = getFileContentAsJson(directory + fname)
             if out.get('state', 'UNKNOWN') != 'OK':
                 exitCode = 1
-                print("State for service is not OK. Details: ", out)
+                print("State for service is not OK. Details: ", fname, out)
     return exitCode
 
 if __name__ == "__main__":
