@@ -306,7 +306,7 @@ class RDFHelper():
             if 'sitename' in kwargs and kwargs['sitename']:
                 self._addHasNetworkAttribute(':service+metadata', 'sitename', 'metadata:/sitename', kwargs['sitename'])
                 nodeExporter = makeUrl(kwargs["webdomain"], f"{kwargs['sitename']}/sitefe/json/frontend/metrics")
-                self._addNetworkAddress(':service+metadata', ['nodeExporter', 'metadata:nodeExporter'], nodeExporter)
+                self._addHasNetworkAttribute(':service+metadata', 'nodeExporter', 'metadata:/nodeExporter', nodeExporter)
         # Add all metadata from frontend configuration;
         try:
             metadata = self.config.get(kwargs.get('sitename', None), 'metadata')
@@ -332,7 +332,7 @@ class RDFHelper():
         nodeExporter = conf.get('general', {}).get('node_exporter', '')
         if nodeExporter:
             nodeExporter = makeUrl(nodeExporter, "metrics")
-            self._addNetworkAddress(metaService, ['nodeExporter', 'metadata:nodeExporter'], nodeExporter)
+            self._addHasNetworkAttribute(':service+metadata', 'nodeExporter', 'metadata:/nodeExporter', nodeExporter)
         # Allow agent also add metadata information (future use is to tell that Multus is available)
         for key, vals in conf.get('general', {}).get('metadata', {}).items():
             self._addHasNetworkAttribute(metaService, key, f'metadata:/{key}', json.dumps(vals))

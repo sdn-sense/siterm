@@ -92,9 +92,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
     def _getUniqueVlanURIs(self, qtype):
         """Get Unique URI for VLANs"""
         for _subnet, hostDict in self.activeDeltas.get('output', {}).get(qtype, {}).items():
-            if not isinstance(hostDict, dict):
-                continue
             for host, portDict in hostDict.items():
+                if not isinstance(portDict, dict):
+                    continue
                 for port, reqDict in portDict.items():
                     if 'uri' in reqDict and reqDict['uri'] and 'hasLabel' in reqDict and reqDict['hasLabel']:
                         vlan = reqDict['hasLabel'].get('value', 0)
