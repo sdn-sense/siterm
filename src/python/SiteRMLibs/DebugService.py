@@ -123,7 +123,15 @@ class DebugService:
 
         # If it is active, but process exited, then it failed.
         if retOut['exitCode'] != 0 and inputDict['state'] == 'active':
-            self.logger.info(f"Force stoping background process: {inputDict['id']}")
+            # Check if we should restart it based on runtime parameters.
+            utcNow = getUTCnow()
+            rununtil = inputDict['requestdict'].get('runtime', utcNow)
+            if rununtil > utcNow:
+                self.logger.info(f"Restarting background process: {inputDict['id']}")
+                retOut = self._runCmd(inputDict, 'restart', True)
+                retOut['processOut'].append(f"Restarting background process: {inputDict['id']}")
+                return retOut, 0, "active"
+            self.logger.info(f"Force stoping background process (time finished): {inputDict['id']}")
             retOut = self._runCmd(inputDict, 'stop', True)
             retOut['processOut'].append(f"Force stoping background process: {inputDict['id']}")
             if retOut['jsonout'].get('output', {}).get('exitCode', -1) == 0:
