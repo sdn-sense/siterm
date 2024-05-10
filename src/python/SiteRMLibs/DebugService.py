@@ -124,8 +124,8 @@ class DebugService:
         # If it is active, but process exited, then it failed.
         if retOut['exitCode'] != 0 and inputDict['state'] == 'active':
             # Check if we should restart it based on runtime parameters.
-            utcNow = getUTCnow()
-            rununtil = inputDict['requestdict'].get('runtime', utcNow)
+            utcNow = int(getUTCnow())
+            rununtil = int(inputDict['requestdict'].get('runtime', utcNow))
             if rununtil > utcNow:
                 self.logger.info(f"Restarting background process: {inputDict['id']}")
                 retOut = self._runCmd(inputDict, 'restart', True)
