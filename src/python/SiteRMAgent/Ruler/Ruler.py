@@ -133,10 +133,12 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
     def activeComparison(self, actKey, actCall):
         """Compare active vs file on node config"""
         self.logger.info(f"Active Comparison for {actKey}")
-        if actKey == "vsw":
+        if actKey in ["vsw", "kube"]:
             for key, vals in (
                 self.activeDeltas.get("output", {}).get(actKey, {}).items()
             ):
+                if not isinstance(vals, dict):
+                    continue
                 if self.hostname in vals:
                     if not self._started(vals):
                         # This resource has not started yet. Continue.
@@ -173,10 +175,12 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
     def activeEnsure(self, actKey, actCall):
         """Ensure all active resources are enabled, configured"""
         self.logger.info(f"Active Ensure for {actKey}")
-        if actKey == "vsw":
+        if actKey in ["vsw", "kube"]:
             for key, vals in (
                 self.activeFromFE.get("output", {}).get(actKey, {}).items()
             ):
+                if not isinstance(vals, dict):
+                    continue
                 if self.hostname in vals:
                     if self.checkIfStarted(vals):
                         # Means resource is active at given time.
@@ -214,7 +218,7 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
 
         if not self.config.getboolean("agent", "norules"):
             self.logger.info("Agent is configured to apply rules")
-            for actKey, actCall in {"vsw": self.layer2, "rst": self.layer3}.items():
+            for actKey, actCall in {"vsw": self.layer2, "rst": self.layer3, "kube": self.layer2}.items():
                 if self.activeDeltas != self.activeFromFE:
                     self.activeComparison(actKey, actCall)
                 self.activeEnsure(actKey, actCall)
