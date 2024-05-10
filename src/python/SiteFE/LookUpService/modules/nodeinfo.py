@@ -199,10 +199,17 @@ class NodeInfo:
 
         # Add is Alias - So that it has link to Switch.
         # We could use LLDP Info In future.
-        self._addIsAlias(
-            uri=newuri,
-            isAlias=f"{self.prefixes['site']}:{intfDict['switch']}:{intfDict['switch_port']}",
-        )
+        # ==========================================================================================
+        if "isAlias" in intfDict:
+            isAlias = intfDict["isAlias"].lstrip(":")
+            if not isAlias.startswith('urn:ogf:network'):
+                isAlias = f"urn:ogf:network:{isAlias}"
+            self._addIsAlias(uri=newuri, isAlias=isAlias)
+        else:
+            self._addIsAlias(
+                uri=newuri,
+                isAlias=f"{self.prefixes['site']}:{intfDict['switch']}:{intfDict['switch_port']}",
+            )
 
         # BANDWIDTH Service for INTERFACE
         # ==========================================================================================

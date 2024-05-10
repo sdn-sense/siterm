@@ -130,6 +130,8 @@ class DeltaInfo():
         for key, val in vswDict.items():
             if key == '_params':
                 continue
+            if not isinstance(val, dict):
+                continue
             for port, portDict in val.items():
                 if portDict.get('hasLabel', {}).get('labeltype', None) == 'ethernet#vlan':
                     vlan = str(portDict['hasLabel']['value'])
@@ -192,6 +194,9 @@ class DeltaInfo():
                 subnetUri = subnet.split(svcService)[1]
                 uri = self._addSwitchingSubnet(hostname=host, vsw=host, subnet=subnetUri)
                 self.addvswInfo(self.activeDeltas.get('output', {}).get('vsw', {}).get(subnet, {}), uri)
+        # Add Kube Info (for hosts without vsw)
+        for urn, vals in self.activeDeltas.get('output', {}).get('kube', {}).items():
+            self.addvswInfo(vals, urn)
         # Routing Service Info
         self.addRouteTables()
         self.addRoutes()

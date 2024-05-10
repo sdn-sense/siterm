@@ -152,10 +152,13 @@ def getBroadCast(inIP):
     return str(myNet.broadcast_address)
 
 
-def replaceSpecialSymbols(valIn):
+def replaceSpecialSymbols(valIn, reverse=False):
     """Replace all symbols [:/'" ] as they not supported in mrml tag"""
     for repl in [[" ", "_"], ["/", "-"], ['"', ""], ["'", ""], [":", "__"]]:
-        valIn = valIn.replace(repl[0], repl[1])
+        if reverse:
+            valIn = valIn.replace(repl[1], repl[0])
+        else:
+            valIn = valIn.replace(repl[0], repl[1])
     return valIn
 
 

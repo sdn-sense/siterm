@@ -95,8 +95,10 @@ class NetInfo(BWService):
                     nicInfo[f"{key}-list"] = self.config.get(intf, f"{key}-list")
             nicInfo["vlan_range"] = self.config.get(intf, "vlan_range")
             nicInfo["vlan_range_list"] = self.config.get(intf, "vlan_range_list")
-            nicInfo["switch_port"] = replaceSpecialSymbols(str(self.config.get(intf, "port")))
-            nicInfo["switch"] = str(self.config.get(intf, "switch"))
+            if self.config.has_option(intf, "port"):
+                nicInfo["switch_port"] = replaceSpecialSymbols(str(self.config.get(intf, "port")))
+            if self.config.has_option(intf, "switch"):
+                nicInfo["switch"] = str(self.config.get(intf, "switch"))
             nicInfo["shared"] = str2bool(self.config.get(intf, "shared"))
             nicInfo["vlans"] = {}
             # Bandwidth parameters
@@ -241,6 +243,14 @@ class NetInfo(BWService):
                 routes.append(newroute)
         return routes
 
+    def postProcess(self, data):
+        """Post process data"""
+        for key, intfData in data.get('NetInfo', {}).get('interfaces', {}).items():
+            if not intfData.get('switch_port'):
+                self.logger.error(f"Interface {key} has no switch port defined, nor was available from Kube (in case Kube install)!")
+            if not intfData.get('switch'):
+                self.logger.error(f"Interface {key} has no switch defined, nor was available from Kube (in case Kube install)!")
+        return data
 
 if __name__ == "__main__":
     obj = NetInfo()

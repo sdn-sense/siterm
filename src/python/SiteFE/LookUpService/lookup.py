@@ -89,11 +89,12 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
             if uri and ip:
                 self.URIs['ips'].setdefault(normalizedip(ip), indict['hasNetworkAddress'][f'{iptype}-address'])
 
-    def _getUniqueVlanURIs(self):
+    def _getUniqueVlanURIs(self, qtype):
         """Get Unique URI for VLANs"""
-        self.URIs = {'vlans': {}, 'ips': {}}
-        for _subnet, hostDict in self.activeDeltas.get('output', {}).get('vsw', {}).items():
+        for _subnet, hostDict in self.activeDeltas.get('output', {}).get(qtype, {}).items():
             for host, portDict in hostDict.items():
+                if not isinstance(portDict, dict):
+                    continue
                 for port, reqDict in portDict.items():
                     if 'uri' in reqDict and reqDict['uri'] and 'hasLabel' in reqDict and reqDict['hasLabel']:
                         vlan = reqDict['hasLabel'].get('value', 0)
@@ -186,7 +187,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         """Main start."""
         self.logger.info("Started LookupService work")
         self.activeDeltas = getActiveDeltas(self)
-        self._getUniqueVlanURIs()
+        self.URIs = {'vlans': {}, 'ips': {}} # Reset URIs
+        self._getUniqueVlanURIs('vsw')
+        self._getUniqueVlanURIs('kube')
         self.newGraph = Graph()
         # ==================================================================================
         # 1. Define Basic MRML Prefixes
