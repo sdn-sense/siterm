@@ -332,7 +332,7 @@ class RDFHelper():
         nodeExporter = conf.get('general', {}).get('node_exporter', '')
         if nodeExporter:
             nodeExporter = makeUrl(nodeExporter, "metrics")
-            self._addHasNetworkAttribute(':service+metadata', 'nodeExporter', 'metadata:/nodeExporter', nodeExporter)
+            self._addHasNetworkAttribute(metaService, 'nodeExporter', 'metadata:/nodeExporter', nodeExporter)
         # Allow agent also add metadata information (future use is to tell that Multus is available)
         for key, vals in conf.get('general', {}).get('metadata', {}).items():
             self._addHasNetworkAttribute(metaService, key, f'/{key}', json.dumps(vals))
