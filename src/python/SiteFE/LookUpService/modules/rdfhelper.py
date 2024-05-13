@@ -284,57 +284,52 @@ class RDFHelper():
                             ['mrs', 'value'],
                             [kwargs[uri]])
 
-    def _addMetadata(self, **kwargs):
-        """Add Frontend Metadata to Model"""
-        self.newGraph.add((self.genUriRef('site'),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('nml', 'Topology')))
-        self.newGraph.add((self.genUriRef('site'),
+    def _addMetadataService(self, uri=""):
+        """Add Metadat Service"""
+        metaService = f"{uri}:service+metadata"
+        self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('nml', 'hasService'),
-                           self.genUriRef('site', ':service+metadata')))
-        self.newGraph.add((self.genUriRef('site', ':service+metadata'),
+                           self.genUriRef('site', metaService)))
+        self.newGraph.add((self.genUriRef('site', metaService),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('mrs', 'MetadataService')))
-        self.newGraph.add((self.genUriRef('site', ':service+metadata'),
+        self.newGraph.add((self.genUriRef('site', metaService),
                            self.genUriRef('mrs', 'type'),
                            self.genLiteral('sense-metadata')))
+        return metaService
+
+    def _addMetadata(self, **kwargs):
+        """Add Frontend Metadata to Model"""
+        metaService = self._addMetadataService()
         # Add hasNetworkAddress and hasNetworkAttribute
         if 'version' in kwargs and kwargs['version']:
-            self._addHasNetworkAttribute(':service+metadata', 'version', '/version', kwargs['version'])
+            self._addHasNetworkAttribute(metaService, 'version', '/version', kwargs['version'])
         if 'webdomain' in kwargs and kwargs['webdomain']:
-            self._addNetworkAddress(':service+metadata', ['webdomain', 'metadata:webdomain'], makeUrl(kwargs['webdomain']))
+            self._addNetworkAddress(metaService, ['webdomain', 'metadata:webdomain'], makeUrl(kwargs['webdomain']))
             if 'sitename' in kwargs and kwargs['sitename']:
-                self._addHasNetworkAttribute(':service+metadata', 'sitename', '/sitename', kwargs['sitename'])
+                self._addHasNetworkAttribute(metaService, 'sitename', '/sitename', kwargs['sitename'])
                 nodeExporter = makeUrl(kwargs["webdomain"], f"{kwargs['sitename']}/sitefe/json/frontend/metrics")
-                self._addHasNetworkAttribute(':service+metadata', 'nodeExporter', 'metadata:/nodeExporter', nodeExporter)
+                self._addHasNetworkAttribute(metaService, 'nodeExporter', 'metadata:/nodeExporter', nodeExporter)
         # Add all metadata from frontend configuration;
         try:
             metadata = self.config.get(kwargs.get('sitename', None), 'metadata')
             for key, vals in metadata.items():
-                self._addHasNetworkAttribute(':service+metadata', key, f'/{key}', json.dumps(vals))
+                self._addHasNetworkAttribute(metaService, key, f'/{key}', json.dumps(vals))
         except (NoSectionError, NoOptionError):
             pass
 
     def _addNodeMetadata(self, **kwargs):
         """Add Node Metadata to Model"""
-        metaService = f":{kwargs['hostname']}:service+metadata"
-        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}"),
-                           self.genUriRef('nml', 'hasService'),
-                           self.genUriRef('site', metaService)))
-        self.newGraph.add((self.genUriRef('site', metaService),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('nml', 'MetadataService')))
-        self.newGraph.add((self.genUriRef('site', metaService),
-                           self.genUriRef('mrs', 'type'),
-                           self.genLiteral('sense-metadata')))
         # if node_exporter defined, add metrics url
         conf = kwargs.get('nodeDict', {}).get('hostinfo', {}).get('Summary', {}).get('config', {})
         nodeExporter = conf.get('general', {}).get('node_exporter', '')
         if nodeExporter:
+            metaService = self._addMetadataService(uri=f":{kwargs['hostname']}")
             nodeExporter = makeUrl(nodeExporter, "metrics")
             self._addHasNetworkAttribute(metaService, 'nodeExporter', 'metadata:/nodeExporter', nodeExporter)
         # Allow agent also add metadata information (future use is to tell that Multus is available)
         for key, vals in conf.get('general', {}).get('metadata', {}).items():
+            metaService = self._addMetadataService(uri=f":{kwargs['hostname']}")
             self._addHasNetworkAttribute(metaService, key, f'/{key}', json.dumps(vals))
 
     def _updateVersion(self, **kwargs):
