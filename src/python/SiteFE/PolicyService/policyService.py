@@ -197,7 +197,7 @@ class PolicyService(RDFHelper, Timing):
                 if not tout:
                     continue
                 try:
-                    temptime = int(time.mktime(parser.parse(str(tout[0])).timetuple()))
+                    temptime = int(parser.parse(str(tout[0])).timestamp())
                 except Exception:
                     temptime = tout[0]
                 try:

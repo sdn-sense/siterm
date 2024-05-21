@@ -7,7 +7,6 @@ Authors:
 Date: 2022/12/23
 """
 import os.path
-import time
 import pprint
 from datetime import datetime
 from OpenSSL import crypto
@@ -36,10 +35,10 @@ class CertInfo:
         subject = cert.get_subject()
         out['subject'] = "".join(f"/{name.decode():s}={value.decode():s}"
                                  for name, value in subject.get_components())
-        out['notAfter'] = int(time.mktime(datetime.strptime(cert.get_notAfter().decode('UTF-8'),
-                                                            '%Y%m%d%H%M%SZ').timetuple()))
-        out['notBefore'] = int(time.mktime(datetime.strptime(cert.get_notBefore().decode('UTF-8'),
-                                                             '%Y%m%d%H%M%SZ').timetuple()))
+        out['notAfter'] = int(datetime.strptime(cert.get_notAfter().decode('UTF-8'),
+                                                            '%Y%m%d%H%M%SZ').timestamp())
+        out['notBefore'] = int(datetime.strptime(cert.get_notBefore().decode('UTF-8'),
+                                                             '%Y%m%d%H%M%SZ').timestamp())
         out['issuer'] = "".join(f"/{name.decode():s}={value.decode():s}"
                                 for name, value in cert.get_issuer().get_components())
         out['fullDN'] = f"{out['issuer']}{out['subject']}"

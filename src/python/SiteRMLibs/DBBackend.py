@@ -19,17 +19,14 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2019/05/01
 """
 import os
-import time
-import datetime
+from datetime import datetime, timezone
 import mariadb
 from SiteRMLibs import dbcalls
 
 
 def getUTCnow():
     """Get UTC Time."""
-    now = datetime.datetime.utcnow()
-    timestamp = int(time.mktime(now.timetuple()))
-    return timestamp
+    return int(datetime.now(timezone.utc).timestamp())
 
 
 def loadEnv(envFile='/etc/siterm-mariadb'):

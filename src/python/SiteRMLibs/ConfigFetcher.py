@@ -47,7 +47,7 @@ class ConfigFetcher():
                 time.sleep(5)
             return retries
         output = {}
-        datetimeNow = datetime.datetime.now() + datetime.timedelta(minutes=10)
+        datetimeNow = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=10)
         filename = f"/tmp/{datetimeNow.strftime('%Y-%m-%d-%H')}-{name}.yaml"
         if os.path.isfile(filename):
             self.logger.info(f'Config files are not yet needed for update. For {name} from {url}')
@@ -102,7 +102,7 @@ class ConfigFetcher():
 
     def cleaner(self):
         """Clean files from /tmp/ directory"""
-        datetimeNow = datetime.datetime.now() + datetime.timedelta(minutes=10)
+        datetimeNow = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=10)
         for name in ["mapping", "Agent-main", "FE-main", "FE-auth"]:
             filename = f"/tmp/{datetimeNow.strftime('%Y-%m-%d-%H')}-{name}.yaml"
             if os.path.isfile(filename):

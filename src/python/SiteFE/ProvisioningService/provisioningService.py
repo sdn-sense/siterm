@@ -21,7 +21,7 @@ Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
 import copy
-import datetime
+from datetime import datetime, timezone
 import sys
 
 from SiteFE.ProvisioningService.modules.RoutingService import RoutingService
@@ -75,7 +75,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             self.yamlconfuuidActive = {}
 
     def _forceApply(self):
-        curDate = datetime.datetime.now().strftime("%Y-%m-%d")
+        curDate = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         if self.lastApplied != curDate:
             self.lastApplied = curDate
             return True
