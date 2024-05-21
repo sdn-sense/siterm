@@ -20,6 +20,7 @@ from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
 from SiteRMAgent.RecurringActions.Plugins.KubeInfo import KubeInfo
 from SiteRMAgent.RecurringActions.Plugins.NetInfo import NetInfo
 from SiteRMAgent.RecurringActions.Plugins.StorageInfo import StorageInfo
+from SiteRMAgent.RecurringActions.Plugins.ArpInfo import ArpInfo
 
 COMPONENT = 'RecurringAction'
 
@@ -36,7 +37,8 @@ class RecurringAction():
     def _loadClasses(self):
         """Load all classes"""
         for name, plugin in {'CertInfo': CertInfo, 'CPUInfo': CPUInfo, 'MemInfo': MemInfo,
-                             'KubeInfo': KubeInfo, 'NetInfo': NetInfo, 'StorageInfo': StorageInfo}.items():
+                             'KubeInfo': KubeInfo, 'NetInfo': NetInfo, 'StorageInfo': StorageInfo,
+                             'ArpInfo': ArpInfo}.items():
             self.classes[name] = plugin(self.config, self.logger)
 
     def refreshthread(self, *_args):

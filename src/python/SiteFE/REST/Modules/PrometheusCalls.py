@@ -38,6 +38,9 @@ class PrometheusCalls:
         self.__urlParams()
         self.memMonitor = {}
         self.activeAPI = ActiveWrapper()
+        self.arpLabels = {'Device': '', 'Flags': '', 'HWaddress': '',
+                          'HWtype': '', 'IPaddress': '', 'Mask': '',
+                          'Hostname': ''}
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -120,6 +123,14 @@ class PrometheusCalls:
                 labels = {"servicename": serviceName, "key": key}
                 memInfo.labels(**labels).set(val)
 
+    def _addHostArpInfo(self, arpState,  host, arpInfo):
+        """Add Host Arp Info"""
+        self.arpLabels["Hostname"] = host
+        for arpEntry in arpInfo:
+            self.arpLabels.update(arpEntry)
+            arpState.labels(**self.arpLabels).set(1)
+
+
     def __getAgentData(self, registry, **kwargs):
         """Add Agent Data (Cert validity) to prometheus output"""
         agentCertValid = Gauge(
@@ -128,6 +139,9 @@ class PrometheusCalls:
             ["hostname", "Key"],
             registry=registry,
         )
+        arpState = Gauge('arp_state', 'ARP Address Table for Host',
+                         labelnames=self.arpLabels.keys(),
+                         registry=registry)
         for host, hostDict in getAllHosts(self.dbI).items():
             hostDict["hostinfo"] = evaldict(hostDict["hostinfo"])
             if int(self.timenow - hostDict["updatedate"]) > 300:
@@ -138,6 +152,8 @@ class PrometheusCalls:
                     agentCertValid.labels(**keys).set(
                         hostDict["hostinfo"]["CertInfo"].get(key, 0)
                     )
+            if "ArpInfo" in hostDict.get("hostinfo", {}).keys() and hostDict["hostinfo"]["ArpInfo"].get('arpinfo'):
+                self._addHostArpInfo(arpState, host, hostDict["hostinfo"]["ArpInfo"]['arpinfo'])
 
     def __getSwitchErrors(self, registry, **kwargs):
         """Add Switch Errors to prometheus output"""
