@@ -18,8 +18,7 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2019/10/01
 """
 import re
-import time
-from datetime import datetime
+from datetime import datetime, timezone
 from SiteRMLibs.GitConfig import getGitConfig
 
 
@@ -34,7 +33,7 @@ class CertHandler():
 
     def loadAuthorized(self):
         """Load all authorized users for FE from git."""
-        dateNow = datetime.now().strftime('%Y-%m-%d-%H')
+        dateNow = datetime.now(timezone.utc).strftime('%Y-%m-%d-%H')
         if dateNow != self.loadTime:
             self.loadTime = dateNow
             self.gitConf = getGitConfig()
@@ -59,8 +58,8 @@ class CertHandler():
                 print('Request without certificate. Unauthorized')
                 raise Exception('Unauthorized access. Request without certificate.')
         out['subject'] = environ['SSL_CLIENT_S_DN']
-        out['notAfter'] = int(time.mktime(datetime.strptime(environ['SSL_CLIENT_V_END'], "%b %d %H:%M:%S %Y %Z").timetuple()))
-        out['notBefore'] = int(time.mktime(datetime.strptime(environ['SSL_CLIENT_V_START'], "%b %d %H:%M:%S %Y %Z").timetuple()))
+        out['notAfter'] = datetime.strptime(environ['SSL_CLIENT_V_END'], "%b %d %H:%M:%S %Y %Z").timestamp()
+        out['notBefore'] = datetime.strptime(environ['SSL_CLIENT_V_START'], "%b %d %H:%M:%S %Y %Z").timestamp()
         out['issuer'] = environ['SSL_CLIENT_I_DN']
         out['fullDN'] = f"{out['issuer']}{out['subject']}"
         return out
@@ -77,8 +76,7 @@ class CertHandler():
 
     def validateCertificate(self, environ):
         """Validate certification validity."""
-        now = datetime.utcnow()
-        timestamp = int(time.mktime(now.timetuple()))
+        timestamp = datetime.now(timezone.utc)
         if 'CERTINFO' not in environ:
             raise Exception('Certificate not found. Unauthorized')
         for key in ['subject', 'notAfter', 'notBefore', 'issuer', 'fullDN']:

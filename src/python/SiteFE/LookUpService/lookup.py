@@ -9,7 +9,7 @@ Date: 2021/12/01
 """
 from __future__ import division
 
-import datetime
+from datetime import datetime, timezone
 import os
 import time
 
@@ -115,7 +115,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
 
     def getModelSavePath(self):
         """Get Model Save Location."""
-        now = datetime.datetime.now()
+        now = datetime.now(timezone.utc)
         saveDir = f"{self.config.get(self.sitename, 'privatedir')}/{'LookUpService'}"
         createDirs(saveDir)
         self.modelVersion = (

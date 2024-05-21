@@ -71,9 +71,7 @@ def isValFloat(inVal):
 
 def getUTCnow():
     """Get UTC Time."""
-    now = datetime.datetime.utcnow()
-    timestamp = int(time.mktime(now.timetuple()))
-    return timestamp
+    return int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
 
 def getVal(conDict, **kwargs):
@@ -338,7 +336,7 @@ def postWebContentToURL(url, **kwargs):
 def reCacheConfig(prevHour=None, prevDay=None):
     """Return prevHour == currentHour, currentHour and used in Service Object
     re-initiation."""
-    datetimeNow = datetime.datetime.now()
+    datetimeNow = datetime.datetime.now(datetime.timezone.utc)
     currentHour = datetimeNow.strftime("%H")
     currentDay = datetimeNow.strftime("%d")
     return prevHour == currentHour, currentDay == prevDay, currentHour, currentDay
@@ -618,7 +616,7 @@ def httpdate(timestamp):
 def httptimestamp(inhttpdate):
     """Return timestamp from RFC1123 (HTTP/1.1)."""
     dat = datetime.datetime(*eut.parsedate(inhttpdate)[:5])
-    return int(time.mktime(dat.timetuple()))
+    return int(dat.timestamp())
 
 
 def getModTime(headers):
