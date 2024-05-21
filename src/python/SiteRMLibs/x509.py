@@ -58,8 +58,8 @@ class CertHandler():
                 print('Request without certificate. Unauthorized')
                 raise Exception('Unauthorized access. Request without certificate.')
         out['subject'] = environ['SSL_CLIENT_S_DN']
-        out['notAfter'] = datetime.strptime(environ['SSL_CLIENT_V_END'], "%b %d %H:%M:%S %Y %Z").timestamp()
-        out['notBefore'] = datetime.strptime(environ['SSL_CLIENT_V_START'], "%b %d %H:%M:%S %Y %Z").timestamp()
+        out['notAfter'] = int(datetime.strptime(environ['SSL_CLIENT_V_END'], "%b %d %H:%M:%S %Y %Z").timestamp())
+        out['notBefore'] = int(datetime.strptime(environ['SSL_CLIENT_V_START'], "%b %d %H:%M:%S %Y %Z").timestamp())
         out['issuer'] = environ['SSL_CLIENT_I_DN']
         out['fullDN'] = f"{out['issuer']}{out['subject']}"
         return out
@@ -76,7 +76,7 @@ class CertHandler():
 
     def validateCertificate(self, environ):
         """Validate certification validity."""
-        timestamp = datetime.now(timezone.utc)
+        timestamp = int(datetime.now(timezone.utc).timestamp())
         if 'CERTINFO' not in environ:
             raise Exception('Certificate not found. Unauthorized')
         for key in ['subject', 'notAfter', 'notBefore', 'issuer', 'fullDN']:
