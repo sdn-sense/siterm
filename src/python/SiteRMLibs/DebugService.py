@@ -33,6 +33,16 @@ class DebugService:
 
     def publishToFE(self, inDic):
         """Publish debug runtime to FE"""
+        # If dbI is defined, than we publish to DB directly.
+        if hasattr(self, 'dbI'):
+            out = {
+                "id": inDic["id"],
+                "state": inDic["state"],
+                "output": inDic["output"],
+                "updatedate": getUTCnow(),
+            }
+            self.dbI.update("debugrequests", [out])
+            return
         publishToSiteFE(inDic, self.fullURL, f"/sitefe/json/frontend/updatedebug/{inDic['id']}")
 
     def checkBackgroundProcess(self, item):

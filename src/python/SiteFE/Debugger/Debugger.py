@@ -19,13 +19,12 @@ Date                    : 2021/03/12
 """
 
 from SiteRMLibs.MainUtilities import contentDB
-from SiteRMLibs.MainUtilities import getDataFromSiteFE, evaldict
-from SiteRMLibs.MainUtilities import getFullUrl
+#from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import (getDBConn, getVal)
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.Backends.main import Switch
-from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 
 COMPONENT = 'Debugger'
 
@@ -37,27 +36,23 @@ class Debugger(DebugService):
         self.config = config if config else getGitConfig()
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service='Debugger')
-        self.fullURL = getFullUrl(self.config, sitename)
         self.switch = Switch(self.config, self.sitename)
         self.switches = {}
         self.diragent = contentDB()
+        self.dbI = getVal(
+            getDBConn("DebuggerService", self), **{"sitename": self.sitename}
+        )
         self.logger.info("====== Debugger Start Work. Sitename: %s", self.sitename)
 
     def refreshthread(self, *_args):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
-        self.fullURL = getFullUrl(self.config, self.sitename)
         self.switch = Switch(self.config, self.sitename)
 
-    def getData(self, url):
-        """Get data from FE."""
-        self.logger.info(f'Query: {self.fullURL}{url}')
-        out = getDataFromSiteFE({}, self.fullURL, url)
-        if out[2] != 'OK':
-            msg = f'Received a failure getting information from Site Frontend {str(out)}'
-            self.logger.critical(msg)
-            raise FailedGetDataFromFE(msg)
-        return evaldict(out[0])
+    def getData(self, hostname, state):
+        """Get data from DB."""
+        search = [["hostname", hostname], ["state", state]]
+        return self.dbI.get("debugrequests", orderby=["updatedate", "DESC"], search=search, limit=1000)
 
     def startwork(self):
         """Start execution and get new requests from FE"""
@@ -66,7 +61,7 @@ class Debugger(DebugService):
         for host in self.switches:
             for wtype in ["new", "active"]:
                 self.logger.info(f"Get all {wtype} requests")
-                data = self.getData(f"/sitefe/json/frontend/getalldebughostname/{host}/{wtype}")
+                data = self.getData(host, wtype)
                 for item in data:
                     self.checkBackgroundProcess(item)
 
