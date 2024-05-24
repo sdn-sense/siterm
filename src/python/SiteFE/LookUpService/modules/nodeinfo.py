@@ -10,7 +10,6 @@ Authors:
 Date: 2021/12/01
 """
 from SiteRMLibs.CustomExceptions import NoOptionError
-from SiteRMLibs.ipaddr import validMRMLName
 from SiteRMLibs.MainUtilities import evaldict, getAllHosts, strtolist
 
 
@@ -63,10 +62,16 @@ class NodeInfo:
             # Define Host Information and all it's interfaces.
             # ==================================================================================
             self.defineHostInfo(nodeDict, nodeDict["hostinfo"])
-            # ==================================================================================
-            # Define Routing Service information
-            # ==================================================================================
-            self.defineLayer3MRML(nodeDict, nodeDict["hostinfo"])
+
+    def addIntfInfo(self, inputDict, prefixuri):
+        """This will add all information about specific interface."""
+        # We limit what to add, and right now add only mac-address
+        # If there will be need in future to add more, we can extend it;
+        for item in inputDict.get('17', []):
+            if 'mac-address' not in item:
+                continue
+            if item['mac-address']:
+                self._addNetworkAddress(prefixuri, 'mac-address', item['mac-address'])
 
     def defineNodeInformation(self, nodeDict):
         """Define node information."""
@@ -113,74 +118,6 @@ class NodeInfo:
             ["site", f"{uri}:sense-rtmon+realportname"], ["mrs", "value"], [intfKey]
         )
 
-    def _defL3IPv6(self, hostname, route):
-        """Define L3 IPv6 Routing information inside the model for host"""
-        # TODO: REVIEW and do only SENSE VLAN ROUTES!
-        return
-        out = {
-            "hostname": hostname,
-            "rstname": f"rst-{route['iptype']}",
-            "iptype": route["iptype"],
-        }
-        for tablegress in ["table+defaultIngress", "table+defaultEgress"]:
-            out["rt-table"] = tablegress
-            if "RTA_GATEWAY" in list(route.keys()):
-                out["routename"] = "default"
-                out["routetype"] = "routeTo"
-                out["type"] = f"{route['iptype']}-address"
-                out["value"] = route["RTA_GATEWAY"]
-                self._addRouteEntry(**out)
-            elif "RTA_DST" in route.keys() and "dst_len" in route.keys():
-                out["routename"] = validMRMLName(
-                    f"{route['RTA_DST']}/{route['dst_len']}"
-                )
-                out["routetype"] = "routeTo"
-                out["type"] = f"{route['iptype']}-prefix-list"
-                out["value"] = f"{route['RTA_DST']}/{route['dst_len']}"
-                self._addRouteEntry(**out)
-
-    def _defL3IPv4(self, hostname, route):
-        """Define L3 IPv4 Routing information inside the model for host"""
-        # TODO: REVIEW and do only SENSE VLAN ROUTES!
-        return
-        if "RTA_DST" in route.keys() and route["RTA_DST"] == "169.254.0.0":
-            # The 169.254.0.0/16 network is used for Automatic Private IP Addressing, or APIPA.
-            # We do not need this information inside the routed template
-            return
-
-        out = {
-            "hostname": hostname,
-            "rstname": f"rst-{route['iptype']}",
-            "iptype": route["iptype"],
-        }
-        for tablegress in ["table+defaultIngress", "table+defaultEgress"]:
-            out["rt-table"] = tablegress
-            if "RTA_GATEWAY" in list(route.keys()):
-                out["routename"] = "default"
-                out["routetype"] = "routeTo"
-                out["type"] = f"{route['iptype']}-address"
-                out["value"] = route["RTA_GATEWAY"]
-                self._addRouteEntry(**out)
-            elif "RTA_PREFSRC" in route.keys() and "dst_len" in route.keys():
-                out["routename"] = validMRMLName(
-                    f"{route['RTA_PREFSRC']}/{route['dst_len']}"
-                )
-                out["routetype"] = "routeTo"
-                out["type"] = f"{route['iptype']}-prefix-list"
-                out["value"] = f"{route['RTA_PREFSRC']}/{route['dst_len']}"
-                self._addRouteEntry(**out)
-                # nextHop to default route? Is it needed?
-
-    def defineLayer3MRML(self, nodeDict, hostinfo):
-        """Define Layer 3 Routing Service for hostname"""
-        del nodeDict
-        rstsEnabled = self.__getRstsEnabled(hostinfo)
-        for route in hostinfo.get("NetInfo", {}).get("routes", []):
-            if route.get("iptype") in rstsEnabled:
-                if route.get("iptype") == "ipv4":
-                    self._defL3IPv4(hostinfo["hostname"], route)
-                elif route.get("iptype") == "ipv6":
-                    self._defL3IPv6(hostinfo["hostname"], route)
 
     def addAgentConfigtoMRML(self, intfDict, newuri, hostname, intf):
         """Agent Configuration params to Model."""
@@ -282,6 +219,7 @@ class NodeInfo:
             # =====================================================================
             self.addAgentConfigtoMRML(intfDict, newuri, nodeDict["hostname"], intfKey)
             # Now lets also list all interface information to MRML
+            self.addIntfInfo(intfDict, newuri)
             self.addMonName(intfKey, newuri)
             # List each VLAN:
             if "vlans" in list(intfDict.keys()):
@@ -339,5 +277,6 @@ class NodeInfo:
                         )
                     )
                     # Add hasNetworkAddress for vlan
+                    self.addIntfInfo(vlanDict, vlanuri)
                     # Now the mapping of the interface information:
                     self.addMonName(vlanName, vlanuri)
