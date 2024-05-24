@@ -193,6 +193,9 @@ class RDFHelper():
         elif key == 'sense-rtmon':
             labeluri = f"{newuri}:{key}+{subkey}"
             reptype = f'{key}:name'
+        elif key == 'macaddress':
+            labeluri = f"{newuri}:mac-address+{subkey}"
+            reptype = 'mac-address'
         else:
             labeluri = f"{newuri}:{key}+{subkey}"
             reptype = key
