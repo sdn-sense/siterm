@@ -60,6 +60,10 @@ class SNMPMonitoring():
         self.session = None
         self.hostconf.setdefault(host, {})
         self.hostconf[host] = self.switch.plugin.getHostConfig(host)
+        if self.config.config['MAIN'].get('edgecore_s0', {}).get('external_snmp', ''):
+            snmphost = self.config.config['MAIN']['edgecore_s0']['external_snmp']
+            self.logger.info(f'SNMP Scan skipped. Remote endpoint defined: {snmphost}')
+            return
         if 'snmp_monitoring' not in self.hostconf[host]:
             self.logger.info(f'Ansible host: {host} config does not have snmp_monitoring parameters')
             return
