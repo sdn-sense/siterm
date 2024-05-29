@@ -154,7 +154,10 @@ def getBroadCast(inIP):
 
 def replaceSpecialSymbols(valIn, reverse=False):
     """Replace all symbols [:/'" ] as they not supported in mrml tag"""
-    for repl in [[" ", "_"], ["/", "-"], ['"', ""], ["'", ""], [":", "__"]]:
+    replacables = [[" ", "_"], ["/", "-"], ['"', ""], ["'", ""], [":", "__"]]
+    if reverse:
+        replacables = [[":", "__"], ["/", "-"], [" ", "_"]]
+    for repl in replacables:
         if reverse:
             valIn = valIn.replace(repl[1], repl[0])
         else:
