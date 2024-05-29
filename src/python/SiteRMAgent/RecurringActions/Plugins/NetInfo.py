@@ -209,7 +209,7 @@ class NetInfo(BWService):
                         if swvals.get("id", {}).get("type", "") == "mac":
                             mac = swvals["id"]["value"]
                     # lets get remote port info
-                    if vals.get("port", {}).get("id", {}).get("type", "") == "ifname":
+                    if vals.get("port", {}).get("id", {}).get("type", "") in ["ifname", "local"]:
                         remintf = vals["port"]["id"]["value"]
                     if mac and remintf:
                         out[intf] = {
