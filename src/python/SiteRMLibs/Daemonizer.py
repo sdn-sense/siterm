@@ -41,6 +41,10 @@ def getParser(description):
                          help="Do not report service Status to FE (Only for start/restart). Default false")
     oparser.add_argument('--runnum', dest='runnum', default='1',
                          help="Run Number. Default 1. Used only for multi thread debugging purpose. No need to specify manually")
+    oparser.add_argument('--sleeptimeok', dest='sleeptimeok', default='10',
+                         help="Sleep time in seconds when everything is ok. Default 10")
+    oparser.add_argument('--sleeptimefailure', dest='sleeptimefailure', default='30',
+                         help="Sleep time in seconds when there is a failure. Default 30")
     oparser.set_defaults(logtostdout=False)
     return oparser
 
@@ -198,7 +202,8 @@ class Daemon(DBBackend):
             self.logger = getLoggingObject(logFile=f"/var/log/{component}-",
                                            logLevel='DEBUG', logType=logType,
                                            service=self.component)
-        self.sleepTimers = {'ok': 10, 'failure': 30}
+        self.sleepTimers = {'ok': int(self.inargs.sleeptimeok),
+                            'failure': int(self.inargs.sleeptimefailure)}
         self.totalRuntime = 0
         self._loadDB(component)
 
