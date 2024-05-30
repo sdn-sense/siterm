@@ -56,7 +56,7 @@ class Debugger(DebugService):
 
     def startwork(self):
         """Start execution and get new requests from FE"""
-        self.switch.getinfo(False)
+        self.switch.getinfo()
         self.switches = self.switch.getAllSwitches()
         for host in self.switches:
             for wtype in ["new", "active"]:
