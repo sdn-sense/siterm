@@ -168,9 +168,9 @@ class PrometheusCalls:
             if int(self.timenow - item["updatedate"]) > 300:
                 continue
             out = evaldict(item.get("error", {}))
-            for hostname, hostitems in out.items():
-                for errorkey, errors in hostitems.items():
-                    labels = {"errortype": errorkey, "hostname": hostname}
+            if out:
+                for errorkey, errors in out.items():
+                    labels = {"errortype": errorkey, "hostname": item['device']}
                     switchErrorsGauge.labels(**labels).set(len(errors))
 
     def __getSNMPData(self, registry, **kwargs):
