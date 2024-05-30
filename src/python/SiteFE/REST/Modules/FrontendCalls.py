@@ -85,7 +85,7 @@ class FrontendCalls:
     def getswitchdata(self, environ, **kwargs):
         """Return all Switches information"""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get("switches", orderby=["updatedate", "DESC"], limit=1000)
+        return self.dbI.get("switch", orderby=["updatedate", "DESC"], limit=1000)
 
     def getactivedeltas(self, environ, **kwargs):
         """Return all Active Deltas"""
