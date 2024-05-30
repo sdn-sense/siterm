@@ -45,6 +45,8 @@ def getParser(description):
                          help="Sleep time in seconds when everything is ok. Default 10")
     oparser.add_argument('--sleeptimefailure', dest='sleeptimefailure', default='30',
                          help="Sleep time in seconds when there is a failure. Default 30")
+    oparser.add_argument('--devicename', dest='devicename', default='',
+                         help='Device name to start the process. Only for SwitchWorker process.')
     oparser.set_defaults(logtostdout=False)
     return oparser
 
@@ -188,6 +190,8 @@ class Daemon(DBBackend):
         self.dbI = None
         self.runCount = 0
         self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}.pid"
+        if self.inargs.devicename:
+            self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}-{self.inargs.devicename}.pid"
         self.config = None
         self.logger = None
         self.runThreads = {}

@@ -285,7 +285,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         # Get current active config;
         self.__cleanup()
         self._getActive()
-        self.switch.getinfo(False)
+        self.switch.getinfo()
         switches = self.switch.getAllSwitches()
         self.prepareYamlConf(self.activeOutput["output"], switches)
 
