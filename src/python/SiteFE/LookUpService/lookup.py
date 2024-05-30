@@ -71,6 +71,9 @@ class MultiWorker():
                     self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
                     continue
         # Mark as not first run, so if service stops, it uses restart
+        if self.firstRun:
+            self.logger.info("First run is done. Marking as not first run. Also sleep 1 minute so that it get's all data from switches")
+            time.sleep(60)
         self.firstRun = False
 
 
