@@ -26,7 +26,7 @@ class Switch(Node):
         self.config = config
         self.logger = getLoggingObject(config=self.config, service="SwitchBackends")
         self.site = site
-        self.switches = {}
+        self.switches = {'output': {}}
         checkConfig(self.config, self.site)
         self.dbI = getDBConn("Switch", self)[self.site]
         self.output = {
@@ -92,10 +92,13 @@ class Switch(Node):
 
     def _getDBOut(self):
         """Get Database output of all switches configs for site"""
-        tmp = self.dbI.get("switches", limit=1, search=[["sitename", self.site]])
-        if tmp:
-            self.switches = tmp[0]
-            self.switches["output"] = evaldict(self.switches["output"])
+        tmp = self.dbI.get("switch", search=[["sitename", self.site]])
+        for item in tmp:
+            self.switches['output'][item["device"]] = evaldict(item["output"])
+            self.switches['output'][item["device"]].setdefault("dbinfo", {})
+            for key in item.keys():
+                if key != "output":
+                    self.switches['output'][item["device"]]['dbinfo'][key] = item[key]
         if not self.switches:
             self.logger.debug("No switches in database.")
 
@@ -171,37 +174,48 @@ class Switch(Node):
     def _insertToDB(self, data):
         """Insert to database new switches data"""
         self._getDBOut()
-        out = {
-            "sitename": self.site,
-            "updatedate": getUTCnow(),
-            "output": jsondumps(data),
-            "error": "{}",
-        }
-        if not self.switches:
-            out["insertdate"] = getUTCnow()
-            self.logger.debug("No switches in database. Calling add")
-            self.dbI.insert("switches", [out])
-        else:
-            out["id"] = self.switches["id"]
-            self.logger.debug("Update switches in database.")
-            self.dbI.update("switches", [out])
-        # Once updated, inserted. Update var from db
+        for switch, vals in data.items():
+            if not vals:
+                continue
+            out = {
+                "sitename": self.site,
+                "device": switch,
+                "updatedate": getUTCnow(),
+                "output": jsondumps(vals),
+                "error": "{}",
+            }
+            if switch not in self.switches["output"]:
+                out["insertdate"] = getUTCnow()
+                self.logger.debug(f"No switches {switch} in database. Calling add")
+                self.dbI.insert("switch", [out])
+            else:
+                # Get ID from DB and update
+                out["id"] = self.switches["output"][switch]["dbinfo"]["id"]
+                self.logger.debug(f"Update switch {switch} in database.")
+                self.dbI.update("switch", [out])
         self._getDBOut()
 
     def _insertErrToDB(self, err):
         """Insert Error from switch to database"""
         self._getDBOut()
-        out = {
-            "sitename": self.site,
-            "updatedate": getUTCnow(),
-            "error": jsondumps(err),
-        }
-        if self.switches:
-            out["id"] = self.switches["id"]
-            self.logger.debug("Update switches in database.")
-            self.dbI.update("switches_error", [out])
-        else:
-            self.logger.info("No switches in DB. Will not update errors in database.")
+        for switch, errmsg in err.items():
+            out = {
+                "sitename": self.site,
+                "device": switch,
+                "updatedate": getUTCnow(),
+                "error": jsondumps(errmsg),
+            }
+            if switch not in self.switches["output"]:
+                out["insertdate"] = getUTCnow()
+                self.logger.debug(f"No switches {switch} in database. Calling to add error.")
+                self.logger.debug(f"Error: {errmsg}")
+                self.dbI.insert("switch_error", [out])
+            else:
+                # Get ID from DB and update
+                out["id"] = self.switches["output"][switch]["dbinfo"]["id"]
+                self.logger.debug(f"Update switch {switch} in database with error.")
+                self.logger.debug(f"Error: {errmsg}")
+                self.dbI.update("switch_error", [out])
         # Once updated, inserted. Update var from db
         self._getDBOut()
 
@@ -247,7 +261,7 @@ class Switch(Node):
                 # This port only defined in RM Config (fake switch port)
                 portDict = self.output["ports"][switch].setdefault(port, confPort)
                 continue
-            elif self._notSwitchport(tmpData) and port not in vlans:
+            if self._notSwitchport(tmpData) and port not in vlans:
                 self.logger.debug(
                     f"Warning. Port {switch}{port} not added into model. Its status not switchport."
                 )
@@ -284,30 +298,26 @@ class Switch(Node):
             self.switches["output"][switch], switch
         )
 
-    def getinfo(self, renew=False, hosts=None):
-        """Get info about Network Devices using plugin defined in configuration."""
-        # If renew or switches var empty - get latest
-        # And update in DB
-        out, err = {}, {}
-        if renew or not self.switches:
-            out, err = self.plugin._getFacts(hosts)
-            if err:
-                self._insertErrToDB(err)
-                raise Exception(f"Failed ANSIBLE Runtime. See Error {str(err)}")
-            self._insertToDB(out)
+    def getinfo(self):
+        """Get info about Network Devices using database."""
         self._getDBOut()
         # Clean and prepare output which is returned to caller
         self._cleanOutput()
         switch = self.config.get(self.site, "switch")
         for switchn in switch:
-            if switchn in err:
-                continue
             self._setDefaults(switchn)
             self._mergeYamlAndSwitch(switchn)
         self.output = cleanupEmpty(self.nodeinfo())
         self._getPortMapping()
         return self.output
 
+    def getinfoNew(self, hosts=None):
+        """Get information from network devices."""
+        out, err = self.plugin._getFacts(hosts)
+        if err:
+            self._insertErrToDB(err)
+            raise Exception(f"Failed ANSIBLE Runtime. See Error {str(err)}")
+        self._insertToDB(out)
 
 def execute(config=None):
     """Main Execute."""

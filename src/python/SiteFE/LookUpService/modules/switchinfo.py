@@ -228,10 +228,10 @@ class SwitchInfo():
                         out['value'] = route['from']
                         self._addRouteEntry(**out)
 
-    def addSwitchInfo(self, renew):
+    def addSwitchInfo(self):
         """Add All Switch information from switch Backends plugin."""
         # Get switch information...
-        switchInfo = self.switch.getinfo(renew)
+        switchInfo = self.switch.getinfo()
         # Add Switch information to MRML
         self._addSwitchPortInfo('ports', switchInfo)
         self._addSwitchVlanInfo('vlans', switchInfo)

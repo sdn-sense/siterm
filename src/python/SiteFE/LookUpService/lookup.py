@@ -25,10 +25,54 @@ from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
 from SiteRMLibs.MainUtilities import (createDirs, generateHash,
                                       getActiveDeltas, getCurrentModel,
-                                      getDBConn, getLoggingObject, getUTCnow, getVal)
+                                      getDBConn, getLoggingObject, getUTCnow, getVal,
+                                      externalCommand)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.ipaddr import normalizedip
+
+class MultiWorker():
+    """SNMP Monitoring Class"""
+    def __init__(self, config, sitename, logger):
+        super().__init__()
+        self.config = config
+        self.sitename = sitename
+        self.logger = logger
+        self.firstRun = True
+
+    def _runCmd(self, action, device, foreground=False):
+        """Start execution of new requests"""
+        retOut = {'stdout': [], 'stderr': [], 'exitCode': -1}
+        command = f"SwitchWorker --action {action} --devicename {device}"
+        if foreground:
+            command += " --foreground"
+        cmdOut = externalCommand(command, False)
+        out, err = cmdOut.communicate()
+        retOut['stdout'] += out.decode("utf-8").split('\n')
+        retOut['stderr'] += err.decode("utf-8").split('\n')
+        retOut['exitCode'] = cmdOut.returncode
+        return retOut
+
+    def startwork(self):
+        """Multiworker main process"""
+        self.logger.info("Started MultiWorker work to check switch processes")
+        for siteName in self.config.get("general", "sites"):
+            for dev in self.config.get(siteName, "switch"):
+                # Check status
+                retOut = self._runCmd('status', dev)
+                if retOut['exitCode'] != 0 and self.firstRun:
+                    self.logger.info(f"Starting SwitchWorker for {dev}")
+                    retOut = self._runCmd('start', dev, True)
+                    self.logger.info(f"Starting SwitchWorker for {dev} - {retOut}")
+                    continue
+                if retOut['exitCode'] != 0 and not self.firstRun:
+                    self.logger.error(f"SwitchWorker for {dev} failed: {retOut}")
+                    retOut = self._runCmd('restart', dev, True)
+                    self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
+                    continue
+        # Mark as not first run, so if service stops, it uses restart
+        self.firstRun = False
+
 
 class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
     """Lookup Service prepares MRML model about the system."""
@@ -49,8 +93,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.provision = ProvisioningService(self.config, self.sitename)
         self.tmpout = {}
         self.modelVersion = ""
-        self.renewSwitchConfig = False
         self.activeDeltas = {}
+        self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {}
         workDir = self.config.get(self.sitename, "privatedir") + "/LookUpService/"
         createDirs(workDir)
@@ -179,13 +223,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
             out["switchingserviceuri"] = self._addSwitchingService(**out)
             self._addLabelSwapping(**out)
 
-    def _setrenewFlag(self, newFlag):
-        if not self.renewSwitchConfig:
-            self.renewSwitchConfig = newFlag
-
     def startwork(self):
         """Main start."""
         self.logger.info("Started LookupService work")
+        self.multiworker.startwork()
         self.activeDeltas = getActiveDeltas(self)
         self.URIs = {'vlans': {}, 'ips': {}} # Reset URIs
         self._getUniqueVlanURIs('vsw')
@@ -210,8 +251,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         # ==================================================================================
         # 5. Define Switch information from Switch Lookup Plugin
         # ==================================================================================
-        self.addSwitchInfo(self.renewSwitchConfig)
-        self.renewSwitchConfig = False
+        self.addSwitchInfo()
         # ==================================================================================
         # 6. Add all active running config
         # ==================================================================================
@@ -219,7 +259,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         changesApplied = self.police.startwork(self.newGraph)
         if changesApplied:
             self.addDeltaInfo()
-            self._setrenewFlag(True)
 
         saveName = self.getModelSavePath()
         self.saveModel(saveName)
@@ -243,8 +282,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
                 )  # This will force to update Version to new value
                 self.saveModel(saveName)
                 self.dbI.insert("models", [lastKnownModel])
-                # Also next run get new info from switch plugin
-                self._setrenewFlag(True)
             else:
                 self.logger.info("Models are equal.")
                 lastKnownModel = modelinDB[0]
@@ -256,14 +293,17 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
             )  # This will force to update Version to new value
             self.saveModel(saveName)
             self.dbI.insert("models", [lastKnownModel])
-            self._setrenewFlag(True)
 
         # Start Provisioning Service and apply any config changes.
-        if self.provision.startwork():
-            self._setrenewFlag(True)
+        self.provision.startwork()
 
         self.logger.debug(f"Last Known Model: {str(lastKnownModel['fileloc'])}")
 
+    def startworkrenew(self, hosts=None):
+        """Start work renew."""
+        self.logger.info("Started LookupService work to renew network devices")
+        self.switch.getinfoNew(hosts)
+        self.logger.info("Finished LookupService work to renew network devices")
 
 def execute(config=None):
     """Main Execute."""

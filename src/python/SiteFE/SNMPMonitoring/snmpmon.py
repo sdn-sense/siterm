@@ -53,7 +53,7 @@ class SNMPMonitoring():
         self.switch = Switch(self.config, self.sitename)
 
     def _start(self):
-        self.switch.getinfo(False)
+        self.switch.getinfo()
         self.switches = self.switch.getAllSwitches()
 
     def _getSNMPSession(self, host):
