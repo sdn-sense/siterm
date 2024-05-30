@@ -42,7 +42,7 @@ class TopoCalls:
     def _findConnection(workdata, remMac):
         """Find connections based on MAC aaddress"""
         if not remMac:
-            return
+            return None
         for switch, switchdata in workdata.items():
             if remMac in switchdata['macs']:
                 return {'switch': switch, 'id': switchdata['id']}
@@ -87,13 +87,12 @@ class TopoCalls:
             if 'output' not in item:
                 continue
             tmpdict = evaldict(item['output'])
-            for switchname, switchdict in tmpdict.items():
-                workdata[switchname] = {'id': incr, 'type': 'switch'}
-                incr += 1
-                for dkey, keys in {'macs': ['ansible_net_info', 'macs'],
-                                   'lldp': ['ansible_net_lldp'],
-                                   'intstats': ['ansible_net_interfaces']}.items():
-                    workdata[switchname][dkey] = self._getansdata(switchdict, keys)
+            workdata[item['device']] = {'id': incr, 'type': 'switch'}
+            incr += 1
+            for dkey, keys in {'macs': ['ansible_net_info', 'macs'],
+                               'lldp': ['ansible_net_lldp'],
+                               'intstats': ['ansible_net_interfaces']}.items():
+                workdata[item['device']][dkey] = self._getansdata(tmpdict, keys)
         # Now that we have specific data; lets loop over it and get nodes/links
         out = {}
         for switch, switchdata in workdata.items():
