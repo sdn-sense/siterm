@@ -83,7 +83,7 @@ class TopoCalls:
         workdata = {}
         incr = 0
         # Get all Switch information
-        for item in self.dbI.get('switches', orderby=['updatedate', 'DESC'], limit=1000):
+        for item in self.dbI.get('switch', orderby=['updatedate', 'DESC'], limit=1000):
             if 'output' not in item:
                 continue
             tmpdict = evaldict(item['output'])

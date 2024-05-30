@@ -157,7 +157,7 @@ class PrometheusCalls:
 
     def __getSwitchErrors(self, registry, **kwargs):
         """Add Switch Errors to prometheus output"""
-        dbOut = self.dbI.get("switches")
+        dbOut = self.dbI.get("switch")
         switchErrorsGauge = Gauge(
             "switch_errors",
             "Switch Errors",
