@@ -186,7 +186,7 @@ class PrometheusCalls:
         macState = Info(
             "mac_table",
             "Mac Address Table",
-            labelnames=["vlan", "hostname"],
+            labelnames=["vlan", "hostname", "incr"],
             registry=registry,
         )
         for item in snmpData:
@@ -197,9 +197,11 @@ class PrometheusCalls:
                 if key == "macs":
                     if "vlans" in val:
                         for key1, macs in val["vlans"].items():
+                            incr = 0
                             for macaddr in macs:
-                                labels = {"vlan": key1,"hostname": item["hostname"]}
+                                labels = {"vlan": key1,"hostname": item["hostname"], "incr": str(incr)}
                                 macState.labels(**labels).info({"macaddress": macaddr})
+                                incr += 1
                     continue
                 keys = {
                     "ifDescr": val.get("ifDescr", ""),
