@@ -267,9 +267,10 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                 configChanged = True
                 hosts.append(host)
                 self.switch.plugin._writeHostConfig(host, self.yamlconf[host])
-        if configChanged:
-            self.logger.info("Configuration changed. Applying New Configuration")
-            self.applyConfig(raiseExc=False, hosts=hosts)
+        # TODO: Reviewing. Do not apply twice on devices. Is it needed? It was the case for Dell BGP
+        # if configChanged:
+        #    self.logger.info("Configuration changed. Applying New Configuration")
+        #    self.applyConfig(raiseExc=False, hosts=hosts)
         return configChanged, hosts
 
     def _getActive(self):
