@@ -100,8 +100,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.renewsNeeded = 3
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {}
-        workDir = self.config.get(self.sitename, "privatedir") + "/LookUpService/"
-        createDirs(workDir)
+        for dirname in ['LookUpService', 'SwitchWorker']:
+            createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}")
 
     def refreshthread(self, *args):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -232,7 +232,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.logger.info("Forcefully update all device information")
         for siteName in self.config.get("general", "sites"):
             for dev in self.config.get(siteName, "switch"):
-                createDirs(f"{self.config.get(siteName, 'privatedir')}/SwitchWorker")
                 fname = f"{self.config.get(siteName, 'privatedir')}/SwitchWorker/{dev}.update"
                 self.logger.info(f"Set Update flag for device {dev} {siteName}, {fname}")
                 success = False
