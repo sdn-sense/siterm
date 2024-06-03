@@ -664,16 +664,6 @@ class PolicyService(RDFHelper, Timing):
         # 1. First getall in activating, modadd or remove and apply to model
         # generate new out
         changesApplied = self.generateActiveConfigDict(currentGraph)
-        for job in [
-            ["committing", self.stateMachine.committing],
-            ["committed", self.stateMachine.committed],
-            ["activating", self.stateMachine.activating],
-            ["activated", self.stateMachine.activated],
-            ["remove", self.stateMachine.remove],
-            ["removed", self.stateMachine.removed],
-        ]:
-            self.logger.info(f"Starting check on {job[0]} deltas")
-            job[1](self.dbI)
         return changesApplied
 
     def deltaToModel(self, currentGraph, deltaPath, action):

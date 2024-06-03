@@ -9,6 +9,7 @@ Date: 2021/12/01
 """
 from __future__ import division
 
+import threading
 from datetime import datetime, timezone
 import os
 import time
@@ -100,11 +101,14 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.renewsNeeded = 3
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {}
+        self.threads = None
+        self.stopThread = False
         for dirname in ['LookUpService', 'SwitchWorker']:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}")
 
     def refreshthread(self, *args):
         """Call to refresh thread for this specific class and reset parameters"""
+        self.stopThread = True
         self.config = getGitConfig()
         self.dbI = getVal(
             getDBConn("LookUpService", self), **{"sitename": self.sitename}
@@ -114,6 +118,31 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.provision.refreshthread(*args)
         if not args[1]:
             self.__cleanup()
+        # Sleep 2 sec to make sure all threads are stopped
+        time.sleep(2)
+        # And start new thread
+        self.threads = threading.Thread(target=self._dbthread)
+        self.threads.start()
+        self.stopThread = False
+
+    def _dbthread(self):
+        """Database thread worker - to change delta states"""
+        while not self.stopThread:
+            for job in [
+                ["committing", self.police.stateMachine.committing],
+                ["committed", self.police.stateMachine.committed],
+                ["activating", self.police.stateMachine.activating],
+                ["activated", self.police.stateMachine.activated],
+                ["remove", self.police.stateMachine.remove],
+                ["removed", self.police.stateMachine.removed],
+            ]:
+                self.logger.info(f"Starting check on {job[0]} deltas")
+                job[1](self.dbI)
+                # Sleep 0.1 sec between diff checks
+                time.sleep(0.1)
+            # Sleep 1 sec between diff thread runs
+            time.sleep(1)
+
 
     def __cleanup(self):
         """Clean up process to remove old data"""
