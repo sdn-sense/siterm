@@ -97,6 +97,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.tmpout = {}
         self.modelVersion = ""
         self.activeDeltas = {}
+        self.renewsNeeded = 3
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {}
         workDir = self.config.get(self.sitename, "privatedir") + "/LookUpService/"
@@ -226,6 +227,25 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
             out["switchingserviceuri"] = self._addSwitchingService(**out)
             self._addLabelSwapping(**out)
 
+    def _deviceUpdate(self):
+        """Update all devices information."""
+        self.logger.info("Forcefully update all device information")
+        for siteName in self.config.get("general", "sites"):
+            for dev in self.config.get(siteName, "switch"):
+                createDirs(f"{self.config.get(siteName, 'privatedir')}/SwitchWorker")
+                fname = f"{self.config.get(siteName, 'privatedir')}/SwitchWorker/{dev}.update"
+                self.logger.info(f"Set Update flag for device {dev} {siteName}, {fname}")
+                success = False
+                while not success:
+                    try:
+                        with open(fname, "w", encoding="utf-8") as fd:
+                            # write timetsamp
+                            fd.write(str(getUTCnow()))
+                            success = True
+                    except OSError as ex:
+                        self.logger.error(f"Got OS Error writing {fname}. {ex}")
+                        time.sleep(1)
+
     def startwork(self):
         """Main start."""
         self.logger.info("Started LookupService work")
@@ -296,6 +316,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
             )  # This will force to update Version to new value
             self.saveModel(saveName)
             self.dbI.insert("models", [lastKnownModel])
+            # If models are different, we need to update all devices information
+            self._deviceUpdate()
 
         # Start Provisioning Service and apply any config changes.
         self.provision.startwork()
@@ -305,7 +327,20 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
     def startworkrenew(self, hosts=None):
         """Start work renew."""
         self.logger.info("Started LookupService work to renew network devices")
-        self.switch.getinfoNew(hosts)
+        for host in hosts:
+            fname = f"{self.config.get(self.sitename, 'privatedir')}/SwitchWorker/{host}.update"
+            if os.path.isfile(fname):
+                self.renewsNeeded += 3
+                try:
+                    os.unlink(fname)
+                except OSError as ex:
+                    self.logger.error(f"Got OS Error removing {fname}. {ex}")
+                    continue
+        if self.renewsNeeded:
+            self.switch.getinfoNew(hosts)
+            self.renewsNeeded -= 1
+        else:
+            self.logger.info("No renew needed")
         self.logger.info("Finished LookupService work to renew network devices")
 
 def execute(config=None):
