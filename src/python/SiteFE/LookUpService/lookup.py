@@ -137,10 +137,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
                 ["remove", self.police.stateMachine.remove],
                 ["removed", self.police.stateMachine.removed],
             ]:
-                self.logger.info(f"Starting check on {job[0]} deltas")
                 job[1](self.dbI)
                 # Sleep 0.1 sec between diff checks
-                time.sleep(0.1)
+                time.sleep(0.5)
             # Sleep 1 sec between diff thread runs
             time.sleep(1)
 
