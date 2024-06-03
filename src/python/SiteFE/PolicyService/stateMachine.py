@@ -168,7 +168,7 @@ class StateMachine():
             self.connMgr.committed(dbObj, delta)
 
     def committed(self, dbObj):
-        """Committing state Check."""
+        """Committed state Check."""
         for delta in dbObj.get('deltas', search=[['state', 'committed']]):
             self.stateChangerDelta(dbObj, 'activating', **delta)
 
