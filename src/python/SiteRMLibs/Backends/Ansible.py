@@ -11,7 +11,7 @@ Authors:
 Date: 2021/12/01
 """
 import os
-
+import random
 import ansible_runner
 import yaml
 from SiteRMLibs.Backends import parsers
@@ -69,18 +69,29 @@ class Switch:
             return tmpOut
         return out
 
+    def _getRotateArtifacts(self, playbook, hosts=None, subitem=""):
+        """Get Rotate Artifacts Counter"""
+        # This is a hack to make sure we have unique artifacts count.
+        # And also that cleanup process is dony only by getfacts playbook.
+        if playbook == "getfacts.yaml":
+            return self.config.get("ansible", "rotate_artifacts" + subitem) + random.randint(1, 50)
+        # If we are not running getfacts playbook, we should not rotate artifacts.
+        # Just in case - increase it 200 times.
+        return self.config.get("ansible", "rotate_artifacts" + subitem) + 200
+
+
     def _executeAnsible(self, playbook, hosts=None, subitem=""):
         """Execute Ansible playbook"""
+        # As we might be running multiple workers, we need to make sure
+        # cleanup process is done correctly.
         return ansible_runner.run(
             private_data_dir=self.config.get("ansible", "private_data_dir" + subitem),
             inventory=self.config.get("ansible", "inventory" + subitem),
             playbook=playbook,
-            rotate_artifacts=self.config.get("ansible", "rotate_artifacts" + subitem),
+            rotate_artifacts=self._getRotateArtifacts(playbook, hosts, subitem),
             debug=self.config.getboolean("ansible", "debug" + subitem),
             verbosity=self.config.getint("ansible", "verbosity" + subitem),
-            ignore_logging=self.config.getboolean(
-                "ansible", "ignore_logging" + subitem
-            ),
+            ignore_logging=self.config.getboolean("ansible", "ignore_logging" + subitem),
         )
 
     def getAnsNetworkOS(self, host, subitem=""):
