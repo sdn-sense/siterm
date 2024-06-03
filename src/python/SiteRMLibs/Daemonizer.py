@@ -366,8 +366,11 @@ class Daemon(DBBackend):
                                  version=runningVersion, runtime=runtime)
             # Log state also to local file
             createDirs("/tmp/siterm-states/")
+            fname = f"/tmp/siterm-states/{self.component}.json"
+            if self.inargs.devicename:
+                fname = f"/tmp/siterm-states/{self.component}-{self.inargs.devicename}.json"
             self.contentDB.dumpFileContentAsJson(
-                f"/tmp/siterm-states/{self.component}.json",
+                fname,
                 {"state": state, "sitename": sitename,
                  "runtime": runtime, "version": runningVersion})
 
