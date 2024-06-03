@@ -101,8 +101,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.renewsNeeded = 3
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {}
-        self.threads = None
         self.stopThread = False
+        self.threads = threading.Thread(target=self._dbthread)
+        self.threads.start()
         for dirname in ['LookUpService', 'SwitchWorker']:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}")
 
