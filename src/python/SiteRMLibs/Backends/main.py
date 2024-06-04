@@ -261,7 +261,7 @@ class Switch(Node):
                 # This port only defined in RM Config (fake switch port)
                 portDict = self.output["ports"][switch].setdefault(port, confPort)
                 continue
-            if self._notSwitchport(tmpData) and port not in vlans:
+            if self._notSwitchport(tmpData) and port not in vlans and not port.lower().startswith('vlan'):
                 self.logger.debug(
                     f"Warning. Port {switch}{port} not added into model. Its status not switchport."
                 )

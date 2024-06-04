@@ -39,44 +39,36 @@ class ConflictChecker(Timing):
     @staticmethod
     def _checkVlanInRange(polcls, vlan, hostname):
         """Check if VLAN in Allowed range"""
-        if not vlan or not vlan.get("vlan", ""):
+        if not vlan or not vlan.get("vlan", "") or not vlan.get("interface", ""):
+            return
+        # If Agent, check in agent reported configuration
+        if hostname in polcls.hosts:
+            interfaces = (polcls.hosts[hostname]
+                          .get("hostinfo", {})
+                          .get("NetInfo", {})
+                          .get("interfaces", {}))
+            if vlan["interface"] not in interfaces:
+                raise OverlapException(f"Interface not available for dtn {hostname} in configuration. \
+                                       Available interfaces: {interfaces}")
+            vlanRange = interfaces.get(vlan["interface"], {}).get("vlan_range_list", {})
+            if vlanRange and vlan["vlan"] not in vlanRange:
+                raise OverlapException(f"Vlan {vlan} not available for dtn {hostname} in configuration. \
+                                       Either used or not configured. Allowed Vlans: {vlanRange}")
             return
         # If switch, check in Switch config
         rawConf = polcls.config.getraw("MAIN")
-        vlanRange = rawConf.get(hostname, {}).get("vlan_range_list", [])
         if hostname in rawConf:
-            vlanRange = rawConf.get(hostname, {}).get('ports', {}).get(vlan['interface'] , {}).get(
-                "vlan_range_list", vlanRange
-            )
+            # Get Global vlan range for device
+            vlanRange = rawConf.get(hostname, {}).get("vlan_range_list", [])
+            portName = polcls.switch.getSwitchPortName(hostname, vlan['interface'])
+            # If port has vlan range, use that. Means check is done at the port level.
+            vlanRange = rawConf.get(hostname, {}).get('ports', {})\
+                               .get(portName , {}).get("vlan_range_list", vlanRange)
             if vlanRange and vlan["vlan"] not in vlanRange:
-                raise OverlapException(
-                    f"Vlan {vlan} not available for switch {hostname} in configuration. \
-                                       Either used or not configured. Allowed Vlans: {vlanRange}"
-                )
-
-        # If Agent, check in agent reported configuration
-        elif hostname in polcls.hosts:
-            interfaces = (
-                polcls.hosts[hostname]
-                .get("hostinfo", {})
-                .get("NetInfo", {})
-                .get("interfaces", {})
-            )
-            if vlan["interface"] not in interfaces:
-                raise OverlapException(
-                    f"Interface not available for dtn {hostname} in configuration. \
-                                       Available interfaces: {interfaces}"
-                )
-            vlanRange = interfaces.get(vlan["interface"], {}).get("vlan_range_list", {})
-            if vlanRange and vlan["vlan"] not in vlanRange:
-                raise OverlapException(
-                    f"Vlan {vlan} not available for dtn {hostname} in configuration. \
-                                       Either used or not configured. Allowed Vlans: {vlanRange}"
-                )
+                raise OverlapException(f"Vlan {vlan} not available for switch {hostname} in configuration. \
+                                       Either used or not configured. Allowed Vlans: {vlanRange}")
         else:
-            raise OverlapException(
-                f"(1) Hostname {hostname} not available in this Frontend."
-            )
+            raise OverlapException(f"(1) Hostname {hostname} not available in this Frontend.")
 
     def _checkifIPInRange(self, polcls, ipval, iptype, hostname):
         """Check if IP in Allowed range"""
@@ -256,7 +248,16 @@ class ConflictChecker(Timing):
             return True
         return False
 
-    def checkvsw(self, cls, svc, svcitems, oldConfig):
+    def checkEnd(self, connItems):
+        """Check if end date is in past"""
+        if self.checkIfEnded(connItems):
+            self.logger.debug(f"End date is in past for {self.newid}")
+            self.logger.debug(f"Conneciton Items: {connItems}")
+            raise OverlapException(
+                f"End date is in past for {self.newid}. Cannot modify or add new resources."
+            )
+
+    def checkvsw(self, cls, svc, svcitems, oldConfig, newDelta=False):
         """Check vsw Service"""
         for connID, connItems in svcitems.items():
             if connID == "_params":
@@ -273,6 +274,8 @@ class ConflictChecker(Timing):
                 if oldConfig[svc][connID] == connItems:
                     # No Changes - connID is same, ignoring it
                     continue
+            if newDelta:
+                self.checkEnd(connItems)
             for hostname, hostitems in connItems.items():
                 if hostname == "_params":
                     continue
@@ -329,7 +332,7 @@ class ConflictChecker(Timing):
                                    Overlap resources: {self.newid} and {self.oldid}"
             )
 
-    def checkrst(self, cls, rst, rstitems, oldConfig):
+    def checkrst(self, cls, rst, rstitems, oldConfig, newDelta=False):
         """Check rst Service"""
         for connID, connItems in rstitems.items():
             if connID == "_params":
@@ -346,6 +349,8 @@ class ConflictChecker(Timing):
                 if oldConfig[rst][connID] == connItems:
                     # No Changes - connID is same, ignoring it
                     continue
+            if newDelta:
+                self.checkEnd(connItems)
             for hostname, hostitems in connItems.items():
                 if hostname == "_params":
                     continue
@@ -379,15 +384,15 @@ class ConflictChecker(Timing):
                                     nStats.get(key, {}), oStats.get(key, {}), key
                                 )
 
-    def checkConflicts(self, cls, newConfig, oldConfig):
+    def checkConflicts(self, cls, newConfig, oldConfig, newDelta=False):
         """Check conflicting resources and not allow them"""
         if newConfig == oldConfig:
             return False
         for dkey, ditems in newConfig.items():
             if dkey == "vsw":
-                self.checkvsw(cls, dkey, ditems, oldConfig)
+                self.checkvsw(cls, dkey, ditems, oldConfig, newDelta)
             elif dkey == "rst":
-                self.checkrst(cls, dkey, ditems, oldConfig)
+                self.checkrst(cls, dkey, ditems, oldConfig, newDelta)
         return False
 
     def checkActiveConfig(self, activeConfig):

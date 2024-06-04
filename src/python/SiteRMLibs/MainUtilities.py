@@ -506,8 +506,11 @@ def generateMD5(inText):
     return hashObj.hexdigest()
 
 
-def getHostname():
+def getHostname(config=None):
     """Return running server hostname"""
+    # In case of FE, we need to return hostname as default
+    if config and  config.getraw('MAPPING').get('type', None) == 'FE':
+        return "default"
     return socket.gethostname()
 
 

@@ -22,6 +22,7 @@ from rdflib.plugins.parsers.notation3 import BadSyntax
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to general
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
+from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress
 from SiteRMLibs.MainUtilities import (
     contentDB, createDirs, decodebase64, dictSearch,
@@ -67,6 +68,7 @@ class PolicyService(RDFHelper, Timing):
             getDBConn("PolicyService", self), **{"sitename": self.sitename}
         )
         self.stateMachine = StateMachine(self.config)
+        self.switch = Switch(config, sitename)
         self.hosts = {}
         for siteName in self.config.get("general", "sites"):
             workDir = os.path.join(
@@ -89,6 +91,7 @@ class PolicyService(RDFHelper, Timing):
             getDBConn("PolicyService", self), **{"sitename": self.sitename}
         )
         self.stateMachine = StateMachine(self.config)
+        self.switch = Switch(self.config, self.sitename)
         # If day is not equal (means new day) - lets force re-running individual apply
         if not args[1]:
             self.bidPorts = {}
@@ -107,6 +110,8 @@ class PolicyService(RDFHelper, Timing):
         for host in list(self.hosts.keys()):
             if host not in allHosts:
                 del self.hosts[host]
+        # Refresh switch info from DB
+        self.switch.getinfo()
 
     def __clean(self):
         """Clean params of PolicyService"""
@@ -582,6 +587,7 @@ class PolicyService(RDFHelper, Timing):
 
     def generateActiveConfigDict(self, currentGraph):
         """Generate new config from parser model."""
+        self._refreshHosts()
         changesApplied = False
         self.currentActive = getActiveDeltas(self)
         self.newActive = copy.deepcopy(self.currentActive)
@@ -619,8 +625,8 @@ class PolicyService(RDFHelper, Timing):
             # And we should get again clean model for next delta check
             try:
                 self.conflictChecker.checkConflicts(
-                    self, self.newActive["output"], self.currentActive["output"]
-                )
+                    self, self.newActive["output"],
+                    self.currentActive["output"], False)
                 self.stateMachine.modelstatechanger(self.dbI, "added", **delta)
                 changesApplied = True
             except (OverlapException, WrongIPAddress) as ex:
@@ -659,9 +665,6 @@ class PolicyService(RDFHelper, Timing):
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started")
         self.__clean()
-        # Committed to activating...
-        # committing, committed, activating, activated, remove, removing, cancel
-        # 1. First getall in activating, modadd or remove and apply to model
         # generate new out
         changesApplied = self.generateActiveConfigDict(currentGraph)
         return changesApplied
@@ -718,8 +721,8 @@ class PolicyService(RDFHelper, Timing):
             self.newActive["output"] = self.parseModel(currentGraph)
             try:
                 self.conflictChecker.checkConflicts(
-                    self, self.newActive["output"], self.currentActive["output"]
-                )
+                    self, self.newActive["output"],
+                    self.currentActive["output"], True)
             except (OverlapException, WrongIPAddress) as ex:
                 self.logger.info(f"There was failure accepting delta. Failure {ex}")
                 toDict["State"] = "failed"
