@@ -87,22 +87,3 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
 def get_py_modules(modulesDirs):
     """Get py modules for setup.py."""
     return list_packages(modulesDirs, pyFiles=True)
-
-
-def get_web_files(rootdir='/var/www/html'):
-    """Get all files to copy to html dir"""
-    maindir = os.path.abspath(os.getcwd())
-    htmldir = os.path.join(maindir, 'src/html/')
-    htmldirs = [htmldir]
-    out = []
-    for dirN in htmldirs:
-        allFiles = []
-        for fName in os.listdir(dirN):
-            newpath = os.path.join(dirN, fName)
-            if os.path.isdir(newpath):
-                htmldirs.append(newpath)
-                continue
-            fPath = newpath[len(maindir)+1:]
-            allFiles.append(fPath)
-        out.append((os.path.join(rootdir, dirN[len(htmldir):]), allFiles))
-    return out
