@@ -53,6 +53,16 @@ class Timing:
             serviceStart = False
         return serviceStart
 
+    def checkIfEnded(self, inConf):
+        """Check if service ended."""
+        serviceEnd = False
+        timings = self._getTimings(inConf)
+        if timings == self.default_timings:
+            return serviceEnd
+        if timings["end"] < getUTCnow():
+            serviceEnd = True
+        return serviceEnd
+
     def getTimeRanges(self, inConf):
         """Get Runtime params"""
         timings = self._getTimings(inConf)
