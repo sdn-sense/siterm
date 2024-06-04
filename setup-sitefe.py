@@ -7,7 +7,7 @@ Authors:
 Date: 2022/05/20
 """
 from setuptools import setup
-from setupUtilities import list_packages, get_py_modules, get_web_files, VERSION
+from setupUtilities import list_packages, get_py_modules, VERSION
 
 # Cronjobs which are running also have to be prepared with correct timing.
 # Also another cronjob, which monitors config file and modifies cronjobs if needed.
@@ -35,12 +35,6 @@ setup(
     package_dir={'': 'src/python/'},
     packages=['SiteFE', 'SiteRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/SiteRMLibs/']),
     install_requires=[],
-    data_files=[("/var/www/wsgi-scripts/", ["packaging/siterm-site-fe/sitefe.wsgi"]),
-                ("/etc/httpd/conf.d/", ["packaging/siterm-site-fe/sitefe-httpd.conf",
-                                        "packaging/siterm-site-fe/welcome.conf"]),
-                ("/etc/cron.d/", ["packaging/general/siterm-crons"]),
-                ("/usr/local/sbin/", ["packaging/siterm-site-fe/scripts/DBCleaner.py"]),
-                ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh"])] + get_web_files(),
     py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/SiteRMLibs']),
     scripts=SCRIPTS
 )

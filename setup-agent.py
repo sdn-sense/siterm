@@ -21,8 +21,6 @@ setup(
     package_dir={'': 'src/python/'},
     packages=['SiteRMAgent', 'SiteRMLibs'] + list_packages(['src/python/SiteRMAgent/', 'src/python/SiteRMLibs/']),
     install_requires=[],
-    data_files=[("/etc/cron.d/", ["packaging/general/siterm-crons"]),
-                ("/etc/cron-scripts/", ["packaging/general/siterm-ca-cron.sh"])],
     py_modules=get_py_modules(['src/python/SiteRMAgent', 'src/python/SiteRMLibs']),
     scripts=["packaging/siterm-site-agent/scripts/sitermagent-update",
              "packaging/siterm-site-agent/scripts/siterm-ruler",
