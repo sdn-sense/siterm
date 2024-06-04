@@ -105,7 +105,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.threads = threading.Thread(target=self._dbthread)
         self.threads.start()
         for dirname in ['LookUpService', 'SwitchWorker']:
-            createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}")
+            createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
 
     def refreshthread(self, *args):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -193,8 +193,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
     def getModelSavePath(self):
         """Get Model Save Location."""
         now = datetime.now(timezone.utc)
-        saveDir = f"{self.config.get(self.sitename, 'privatedir')}/{'LookUpService'}"
-        createDirs(saveDir)
+        saveDir = f"{self.config.get(self.sitename, 'privatedir')}/LookUpService/"
         self.modelVersion = (
             f"{now.year}-{now.month}-{now.day}:{now.hour}:{now.minute}:{now.second}"
         )
