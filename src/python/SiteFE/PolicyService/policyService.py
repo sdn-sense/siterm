@@ -499,12 +499,12 @@ class PolicyService(RDFHelper, Timing):
         self.logger.info(
             f"Lets try to get connection ID subject for {self.prefixes['main']}"
         )
-        out = self.queryGraph(
+        cout = self.queryGraph(
             gIn,
             URIRef(self.prefixes["main"]),
             search=URIRef(f"{self.prefixes['mrs']}providesSubnet"),
         )
-        for connectionID in out:
+        for connectionID in cout:
             self._recordMapping(
                 connectionID, returnout, "SubnetMapping", "providesSubnet"
             )
@@ -824,3 +824,7 @@ if __name__ == "__main__":
     inargs = argparser.parse_args(sys.argv[1:])
     getLoggingObject(logType="StreamLogger", service="PolicyService")
     execute(args=inargs)
+
+
+
+
