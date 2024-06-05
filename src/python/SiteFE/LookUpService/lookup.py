@@ -22,6 +22,7 @@ from SiteFE.LookUpService.modules.rdfhelper import RDFHelper
 from SiteFE.LookUpService.modules.switchinfo import SwitchInfo
 from SiteFE.PolicyService.policyService import PolicyService
 from SiteFE.ProvisioningService.provisioningService import ProvisioningService
+from SiteRMLibs.timing import Timing
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
 from SiteRMLibs.MainUtilities import (createDirs, generateHash,
@@ -78,7 +79,7 @@ class MultiWorker():
         self.firstRun = False
 
 
-class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
+class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timing):
     """Lookup Service prepares MRML model about the system."""
 
     def __init__(self, config, sitename):
@@ -100,7 +101,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         self.activeDeltas = {}
         self.renewsNeeded = 3
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
-        self.URIs = {}
+        self.URIs = {'vlans': {}, 'ips': {}}
         self.stopThread = False
         self.threads = threading.Thread(target=self._dbthread)
         self.threads.start()
@@ -169,8 +170,12 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
     def _getUniqueVlanURIs(self, qtype):
         """Get Unique URI for VLANs"""
         for _subnet, hostDict in self.activeDeltas.get('output', {}).get(qtype, {}).items():
+            if not self.checkIfStarted(hostDict):
+                continue
             for host, portDict in hostDict.items():
                 if not isinstance(portDict, dict):
+                    continue
+                if not self.checkIfStarted(portDict):
                     continue
                 for port, reqDict in portDict.items():
                     if 'uri' in reqDict and reqDict['uri'] and 'hasLabel' in reqDict and reqDict['hasLabel']:
@@ -307,8 +312,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
         # ==================================================================================
         self.addDeltaInfo()
         changesApplied = self.police.startwork(self.newGraph)
-        if changesApplied:
-            self.addDeltaInfo()
+        self.logger.info(f"Changes there recorded in db: {changesApplied}")
+        self.activeDeltas = getActiveDeltas(self)
+        self.addDeltaInfo()
 
         saveName = self.getModelSavePath()
         self.saveModel(saveName)
@@ -353,10 +359,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
 
     def startworkrenew(self, hosts=None):
         """Start work renew."""
-        self.logger.info("Started LookupService work to renew network devices")
         for host in hosts:
             fname = f"{self.config.get(self.sitename, 'privatedir')}/SwitchWorker/{host}.update"
             if os.path.isfile(fname):
+                self.logger.info(f"Renew is needed for {host}")
                 self.renewsNeeded += 3
                 try:
                     os.unlink(fname)
@@ -364,11 +370,11 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService):
                     self.logger.error(f"Got OS Error removing {fname}. {ex}")
                     continue
         if self.renewsNeeded:
+            self.logger.info(f"Renew needed for {hosts}. Renewing {self.renewsNeeded} times.")
             self.switch.getinfoNew(hosts)
             self.renewsNeeded -= 1
         else:
-            self.logger.info("No renew needed")
-        self.logger.info("Finished LookupService work to renew network devices")
+            self.logger.info(f"No renew needed for {hosts}")
 
 def execute(config=None):
     """Main Execute."""

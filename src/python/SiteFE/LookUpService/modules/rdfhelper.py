@@ -630,6 +630,8 @@ class RDFHelper():
 
     def __getVlanURI(self, porturi, **kwargs):
         """Get Vlan URI"""
+        if 'uri' in kwargs and kwargs['uri']:
+            return kwargs['uri']
         sysPort = self.switch.getSystemValidPortName(kwargs['portName'])
         vlanuri = self.URIs.get('vlans', {}).get(kwargs['hostname'], {}).get(sysPort, {}).get(int(kwargs['vlan']), '')
         if not vlanuri:
