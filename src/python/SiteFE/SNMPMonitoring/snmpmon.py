@@ -70,7 +70,16 @@ class SNMPMonitoring():
         if 'session_vars' not in self.hostconf[host]['snmp_monitoring']:
             self.logger.info(f'Ansible host: {host} config does not have session_vars parameters')
             return
-        self.session = Session(**self.hostconf[host]['snmp_monitoring']['session_vars'])
+        # easysnmp does not support ipv6 and will fail with ValueError (unable to unpack)
+        # To avoid this, we will bypass ipv6 check if error is raised.
+        try:
+            self.session = Session(**self.hostconf[host]['snmp_monitoring']['session_vars'])
+        except ValueError:
+            conf = self.hostconf[host]['snmp_monitoring']['session_vars']
+            hostname = conf.pop('hostname')
+            self.session = Session(**conf)
+            self.session.update_session(hostname=hostname)
+
 
     def _getSNMPVals(self, key):
         try:
