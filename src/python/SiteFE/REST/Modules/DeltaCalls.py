@@ -23,8 +23,7 @@ from tempfile import NamedTemporaryFile
 
 from SiteFE.PolicyService import policyService as polS
 from SiteFE.PolicyService import stateMachine as stateM
-from SiteRMLibs.CustomExceptions import (BadRequestError, ConflictEntries,
-                                         DeltaNotFound,
+from SiteRMLibs.CustomExceptions import (BadRequestError, DeltaNotFound,
                                          WrongDeltaStatusTransition)
 from SiteRMLibs.MainUtilities import (convertTSToDatetime, decodebase64,
                                       encodebase64, evaldict, getModTime,
@@ -124,7 +123,7 @@ class DeltaCalls:
         if delta:
             # If delta is not in a final state, we delete it from db, and will add new one.
             if delta[0]["state"] not in ["activated", "failed", "removed", "accepted", "accepting"]:
-                self.dbI.delete("deltas",[["uid", delta[0]["uid"]]])
+                self.dbI.delete("deltas", [["uid", delta[0]["uid"]]])
         tmpfd = NamedTemporaryFile(delete=False, mode="w+")
         tmpfd.close()
         self.getmodel(environ, uploadContent["modelId"], None, **kwargs)
