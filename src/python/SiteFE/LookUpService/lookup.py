@@ -328,6 +328,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             "fileloc": saveName,
             "content": str(self.newGraph.serialize(format="turtle")),
         }
+        updateNeeded = False
         if modelsEqual:
             if modelinDB[0]["insertdate"] < int(getUTCnow() - 3600):
                 # Force to update model every hour, Even there is no update;
@@ -343,20 +344,23 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 lastKnownModel = modelinDB[0]
                 os.unlink(saveName)
         else:
+            updateNeeded = True
             self.logger.info("Models are different. Update DB")
             self._updateVersion(
                 **{"version": self.modelVersion}
             )  # This will force to update Version to new value
             self.saveModel(saveName)
             self.dbI.insert("models", [lastKnownModel])
-            # If models are different, we need to update all devices information
-            self._deviceUpdate()
 
         self.logger.debug(f"Last Known Model: {str(lastKnownModel['fileloc'])}")
 
         # Start Provisioning Service and apply any config changes.
         self.logger.info("Start Provisioning Service")
-        self.provision.startwork()
+        stateChanged = self.provision.startwork()
+        if updateNeeded or stateChanged:
+            self.logger.info("Update is needed. Informing to renew all devices state")
+            # If models are different, we need to update all devices information
+            self._deviceUpdate()
 
     def startworkrenew(self, hosts=None):
         """Start work renew."""
