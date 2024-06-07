@@ -143,6 +143,8 @@ class Switch:
                 time.sleep(5)
                 self.verbosity = 1000
                 continue
+            else:
+              retries = -1
         return ansOut
 
     def _getFacts(self, hosts=None, subitem=""):
