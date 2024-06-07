@@ -99,7 +99,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.tmpout = {}
         self.modelVersion = ""
         self.activeDeltas = {}
-        self.renewsNeeded = 3
+        self.renewsNeeded = 1
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {'vlans': {}, 'ips': {}}
         self.stopThread = False
@@ -352,10 +352,11 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             # If models are different, we need to update all devices information
             self._deviceUpdate()
 
-        # Start Provisioning Service and apply any config changes.
-        self.provision.startwork()
-
         self.logger.debug(f"Last Known Model: {str(lastKnownModel['fileloc'])}")
+
+        # Start Provisioning Service and apply any config changes.
+        self.logger.info("Start Provisioning Service")
+        self.provision.startwork()
 
     def startworkrenew(self, hosts=None):
         """Start work renew."""
@@ -363,7 +364,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             fname = f"{self.config.get(self.sitename, 'privatedir')}/SwitchWorker/{host}.update"
             if os.path.isfile(fname):
                 self.logger.info(f"Renew is needed for {host}")
-                self.renewsNeeded += 3
+                self.renewsNeeded = 1
                 try:
                     os.unlink(fname)
                 except OSError as ex:

@@ -34,11 +34,7 @@ create_deltas = """CREATE TABLE IF NOT EXISTS deltas(
                           deltat text NOT NULL,
                           content longtext NOT NULL,
                           modelid text NOT NULL,
-                          reduction longtext NOT NULL,
-                          addition longtext NOT NULL,
-                          reductionid text,
                           modadd longtext,
-                          connectionid text NOT NULL,
                           primary key(id))"""
 create_delta_connections = """CREATE TABLE IF NOT EXISTS delta_connections(
                           id int auto_increment,
@@ -140,8 +136,8 @@ create_serviceaction = """CREATE TABLE IF NOT EXISTS serviceaction(
                                 primary key(id))"""
 
 insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s, %(content)s)"
-insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, reduction, addition, reductionid, modadd, connectionid)
-                   VALUES(%(uid)s, %(insertdate)s, %(updatedate)s, %(state)s, %(deltat)s, %(content)s, %(modelid)s, %(reduction)s, %(addition)s, %(reductionid)s, %(modadd)s, %(connectionid)s)"""
+insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, modadd)
+                   VALUES(%(uid)s, %(insertdate)s, %(updatedate)s, %(state)s, %(deltat)s, %(content)s, %(modelid)s, %(modadd)s)"""
 insert_delta_connections = """INSERT INTO delta_connections(deltaid, connectionid, state) VALUES(%(deltaid)s, %(connectionid)s, %(state)s)"""
 insert_states = "INSERT INTO states(deltaid, state, insertdate) VALUES(%(deltaid)s, %(state)s, %(insertdate)s)"
 insert_hoststates = "INSERT INTO hoststates(deltaid, state, insertdate, updatedate, hostname) VALUES(%(deltaid)s, %(state)s, %(insertdate)s, %(updatedate)s, %(hostname)s)"
@@ -157,7 +153,7 @@ insert_deltatimestates = "INSERT INTO deltatimestates(insertdate, uuid, uuidtype
 insert_serviceaction = "INSERT INTO serviceaction(servicename, hostname, serviceaction, insertdate) VALUES(%(servicename)s, %(hostname)s, %(serviceaction)s, %(insertdate)s)"
 
 get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
-get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, reduction, addition, reductionid, modadd, connectionid FROM deltas"
+get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, modadd FROM deltas"
 get_delta_connections = "SELECT id, deltaid, connectionid, state FROM delta_connections"
 get_states = "SELECT id, deltaid, state, insertdate FROM states"
 get_hoststates = "SELECT id, deltaid, state, insertdate, updatedate, hostname FROM hoststates"

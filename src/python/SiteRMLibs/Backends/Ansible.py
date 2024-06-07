@@ -11,6 +11,7 @@ Authors:
 Date: 2021/12/01
 """
 import os
+import time
 import random
 import ansible_runner
 import yaml
@@ -29,6 +30,7 @@ class Switch:
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service="SwitchBackends")
         self.ansibleErrs = {}
+        self.verbosity = 0
 
     @staticmethod
     def activate(_inputDict, _actionState):
@@ -37,6 +39,7 @@ class Switch:
 
     def __getAnsErrors(self, ansOut):
         """Get Ansible errors"""
+        failures = False
         if not ansOut or not ansOut.stats:
             return
         for fkey in ["dark", "failures"]:
@@ -46,6 +49,8 @@ class Switch:
                     self.ansibleErrs.setdefault(host, {}).setdefault(fkey, [])
                     self.ansibleErrs[host][fkey].append(err)
                     self.logger.info("Ansible Error for %s: %s", host, err)
+                    failures = True
+        return failures
 
     def _writeInventoryInfo(self, out, subitem=""):
         """Write Ansible Inventory file (used only in a single apply)"""
@@ -79,6 +84,12 @@ class Switch:
         # Just in case - increase it 200 times.
         return self.config.get("ansible", "rotate_artifacts" + subitem) + 200
 
+    def __getVerbosity(self, subitem):
+        """Get Verbosity level for Ansible Runner"""
+        if self.verbosity != 0:
+            return self.verbosity
+        return self.config.getint("ansible", "verbosity" + subitem)
+
 
     def _executeAnsible(self, playbook, hosts=None, subitem=""):
         """Execute Ansible playbook"""
@@ -90,7 +101,7 @@ class Switch:
             playbook=playbook,
             rotate_artifacts=self._getRotateArtifacts(playbook, hosts, subitem),
             debug=self.config.getboolean("ansible", "debug" + subitem),
-            verbosity=self.config.getint("ansible", "verbosity" + subitem),
+            verbosity=self.__getVerbosity(subitem),
             ignore_logging=self.config.getboolean("ansible", "ignore_logging" + subitem),
         )
 
@@ -117,13 +128,21 @@ class Switch:
 
     def _applyNewConfig(self, hosts=None, subitem=""):
         """Apply new config and run ansible playbook"""
-        try:
-            ansOut = self._executeAnsible("applyconfig.yaml", hosts, subitem)
-        except ValueError as ex:
-            raise ConfigException(
-                f"Got Value Error. Ansible configuration exception {ex}"
-            ) from ex
-        self.__getAnsErrors(ansOut)
+        self.verbosity = 0
+        retries = 3
+        while retries > 0:
+            try:
+                ansOut = self._executeAnsible("applyconfig.yaml", hosts, subitem)
+            except ValueError as ex:
+                raise ConfigException(
+                    f"Got Value Error. Ansible configuration exception {ex}") from ex
+            failures = self.__getAnsErrors(ansOut)
+            if failures:
+                retries -= 1
+                self.logger.warning("Ansible applyconfig failed. Retrying after 5sec sleep")
+                time.sleep(5)
+                self.verbosity = 1000
+                continue
         return ansOut
 
     def _getFacts(self, hosts=None, subitem=""):
