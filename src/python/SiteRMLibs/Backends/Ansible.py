@@ -46,6 +46,10 @@ class Switch:
             for host, _ in ansOut.stats.get(fkey, {}).items():
                 for hostEvents in ansOut.host_events(host):
                     err = hostEvents.get("event_data", {}).get("res", {})
+                    if hostEvents.get("event") in ["runner_on_ok", "runner_on_start"]:
+                        continue
+                    if not err:
+                        continue
                     self.ansibleErrs.setdefault(host, {}).setdefault(fkey, [])
                     self.ansibleErrs[host][fkey].append(err)
                     self.logger.info("Ansible Error for %s: %s", host, err)

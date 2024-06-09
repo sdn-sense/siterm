@@ -100,10 +100,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         if not ansOut.stats:
             self.logger.debug("Ansible output has stats empty")
             return
-        for host, _ in ansOut.stats.get("failures", {}).items():
-            for host_events in ansOut.host_events(host):
-                self.logger.info(f"Ansible runtime log of {host_events['event']} event")
-                self.logger.info(jsondumps(host_events))
         if failures and raiseExc:
             # TODO: Would be nice to save in DB and see errors from WEB UI)
             self.logger.error(f"Ansible failures: {failures}")
@@ -130,7 +126,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         activated, activate-error, deactivated, deactive-error
         """
         nstate = "unknown"
-        if items["state"] == "present" and kwargs["uuidstate"] == "ok":
+        if items.get('state', None) not in ["present", "error"] or kwargs.get('uuidstate', None) not in ["ok", "error"]:
+            nstate = "unknown"
+        elif items["state"] == "present" and kwargs["uuidstate"] == "ok":
             # This means it was activated;
             nstate = "activated"
         elif items["state"] == "present" and kwargs["uuidstate"] == "error":
@@ -146,14 +144,14 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
 
     def __reportDeltaState(self, **kwargs):
         """Report state to db (requires diff reporting based on vsw/rst)"""
-        if kwargs["acttype"] == "vsw":
+        if kwargs["acttype"] == "vsw" and kwargs.get("applied", None):
             for _key, items in kwargs["applied"].items():
                 tmpkwargs = copy.deepcopy(kwargs)
                 tmpkwargs["uuidstate"] = self.__identifyReportState(items, **kwargs)
                 for intf in items.get("tagged_members"):
                     tmpkwargs["hostport"] = self.switch.getSystemValidPortName(intf)
                     self.__insertDeltaStateDB(**tmpkwargs)
-        if kwargs["acttype"] == "rst":
+        if kwargs["acttype"] == "rst" and kwargs.get("applied", None):
             kwargs["uuidstate"] = self.__identifyReportState(
                 kwargs["applied"], **kwargs
             )
@@ -163,6 +161,11 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
 
     def applyIndvConfig(self, swname, uuid, key, acttype, raiseExc=True):
         """Apply a single delta to network devices and report to DB it's state"""
+        # Write new inventory file, based on the currect active(just in case things have changed)
+        # or container was restarted
+        inventory = self.switch.plugin._getInventoryInfo([swname])
+        self.switch.plugin._writeInventoryInfo(inventory, "_singleapply")
+        # Get host configuration;
         curActiveConf = self.switch.plugin.getHostConfig(swname)
         # Delete 2 items as we will need everything else
         # For applying into devices
@@ -195,7 +198,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
     def compareIndv(self, switches):
         """Compare individual entries and report it's status"""
         changed = False
-        for acttype in ["vsw", "rst"]:
+        for acttype, actcalls in {"vsw": {"interface": self.compareVsw, "qos": self.compareQoS},
+                                  "rst": {"sense_bgp": self.compareBGP}}.items():
             uuidDict = self.yamlconfuuidActive.get(acttype, {})
             if not self.yamlconfuuidActive:
                 uuidDict = self.yamlconfuuid.get(acttype, {})
@@ -203,10 +207,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                 for swname, swdict in ddict.items():
                     if swname not in switches:
                         continue
-                    for key, call in {"interface": self.compareVsw,
-                                      "qos": self.compareQoS,
-                                      "sense_bgp": self.compareBGP}.items():
-                        if key in swdict:
+                    for key, call in actcalls.items():
+                        if key in swdict and call:
                             self.logger.info(f"Comparing {acttype} for {uuid} config with ansible config")
                             curAct = (self.yamlconfuuidActive.get(acttype, {})
                                       .get(uuid, {}).get(swname, {}).get(key, {}))
@@ -234,15 +236,11 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         switches = self.switch.getAllSwitches()
         self.prepareYamlConf(self.activeOutput["output"], switches)
 
-        # Write new inventory file, based on the currect active(just in case things have changed)
-        # or container was restarted
-        inventory = self.switch.plugin._getInventoryInfo()
-        self.switch.plugin._writeInventoryInfo(inventory, "_singleapply")
-
         # Compare individual requests and report it's states
         configChanged = self.compareIndv(switches)
         # Save individual uuid conf inside memory;
         self.yamlconfuuidActive = copy.deepcopy(self.yamlconfuuid)
+
 
         return configChanged
 

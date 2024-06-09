@@ -525,9 +525,12 @@ class RDFHelper():
         if not uri:
             return ""
         self._addL3VPN(**kwargs)
-        routingtable = f"{uri}:rt-table+{kwargs.get('rt-table', '')}"
-        if 'rtableuri' in kwargs and kwargs['rtableuri']:
+        if kwargs.get('rt-table', None):
+            routingtable = f"{uri}:rt-table+{kwargs.get('rt-table')}"
+        elif 'rtableuri' in kwargs and kwargs['rtableuri']:
             routingtable = kwargs['rtableuri']
+        else:
+            return ""
         self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('mrs', 'providesRoutingTable'),
                            self.genUriRef('site', routingtable)))
