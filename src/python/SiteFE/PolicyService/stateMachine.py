@@ -129,11 +129,7 @@ class StateMachine():
                  'deltat': str(delta['Type']),
                  'content': str(delta['Content']),
                  'modelid': str(delta['modelId']),
-                 'reduction': '',# TODO, Remove from DB
-                 'addition': '', # TODO, Remove from DB
-                 'reductionid': '', # TODO, Remove from DB
                  'modadd': str(delta['modadd']),
-                 'connectionid': '', #TODO, Remove from DB
                  'error': '' if 'Error' not in list(delta.keys()) else str(delta['Error'])}
         dbObj.insert('deltas', [dbOut])
         self.connMgr.accepted(dbObj, dbOut)
