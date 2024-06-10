@@ -7,9 +7,6 @@ Authors:
 
 Date: 2021/12/01
 """
-from __future__ import division
-
-import threading
 from datetime import datetime, timezone
 import os
 import time
@@ -104,16 +101,12 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.activeDeltas = {}
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {'vlans': {}, 'ips': {}}
-        self.stopThread = False
-        self.threads = threading.Thread(target=self._dbthread)
-        self.threads.start()
         for dirname in ['LookUpService', 'SwitchWorker']:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
 
     def refreshthread(self, *args):
         """Call to refresh thread for this specific class and reset parameters"""
-        self.stopThread = True
         self.config = getGitConfig()
         self.dbI = getVal(
             getDBConn("LookUpService", self), **{"sitename": self.sitename}
@@ -123,29 +116,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.provision.refreshthread(*args)
         if not args[1]:
             self.__cleanup()
-        # Sleep 2 sec to make sure all threads are stopped
-        time.sleep(2)
-        # And start new thread
-        self.threads = threading.Thread(target=self._dbthread)
-        self.threads.start()
-        self.stopThread = False
-
-    def _dbthread(self):
-        """Database thread worker - to change delta states"""
-        while not self.stopThread:
-            for job in [
-                ["committing", self.police.stateMachine.committing],
-                ["committed", self.police.stateMachine.committed],
-                ["activating", self.police.stateMachine.activating],
-                ["activated", self.police.stateMachine.activated],
-                ["remove", self.police.stateMachine.remove],
-                ["removed", self.police.stateMachine.removed],
-            ]:
-                job[1](self.dbI)
-                # Sleep 0.1 sec between diff checks
-                time.sleep(0.5)
-            # Sleep 1 sec between diff thread runs
-            time.sleep(1)
 
 
     def __cleanup(self):
@@ -215,9 +185,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def getVersionFromCurrentModel(self):
         """Get Current Version from Model."""
         _, currentGraph = getCurrentModel(self, False)
-        out = self.police.queryGraph(
-            currentGraph, URIRef(f"{self.prefixes['site']}:version")
-        )
+        out = self.police.queryGraph(currentGraph, URIRef(f"{self.prefixes['site']}:service+metadata:version"))
         if out:
             self.modelVersion = str(out[2])
         else:

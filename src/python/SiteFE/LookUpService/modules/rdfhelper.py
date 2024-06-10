@@ -267,25 +267,9 @@ class RDFHelper():
 
     def _addSite(self, **kwargs):
         """Add Site to Model"""
-        # TODO: Remove once everything moves to _addMetadata
         self.newGraph.add((self.genUriRef('site'),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Topology')))
-        for uri in ['sitename', 'version', 'webdomain']:
-            if uri not in kwargs:
-                continue
-            self.addToGraph(['site'],
-                            ['mrs', 'hasNetworkAddress'],
-                            ['site', f':{uri}'])
-            self.addToGraph(['site', f':{uri}'],
-                            ['rdf', 'type'],
-                            ['mrs', 'NetworkAddress'])
-            self.addToGraph(['site', f":{uri}"],
-                            ['mrs', 'type'],
-                            [uri])
-            self.setToGraph(['site', f":{uri}"],
-                            ['mrs', 'value'],
-                            [kwargs[uri]])
 
     def _addMetadataService(self, uri=""):
         """Add Metadat Service"""
@@ -337,11 +321,6 @@ class RDFHelper():
 
     def _updateVersion(self, **kwargs):
         """Update Version in model"""
-        # TODO Remove line below once everything moves to _addMetadata
-        self.newGraph.set((self.genUriRef('site', ':version'),
-                           self.genUriRef('mrs', 'value'),
-                           self.genLiteral(kwargs['version'])))
-        # TODO: Leave line below for version updates
         self.newGraph.set((self.genUriRef('site', ':service+metadata:version'),
                             self.genUriRef('mrs', 'value'),
                             self.genLiteral(kwargs['version'])))
