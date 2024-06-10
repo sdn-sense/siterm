@@ -187,7 +187,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         _, currentGraph = getCurrentModel(self, False)
         out = self.police.queryGraph(currentGraph, URIRef(f"{self.prefixes['site']}:service+metadata:version"))
         if out:
-            self.modelVersion = str(out[2])
+            self.modelVersion = str(out[3])
         else:
             self.getModelSavePath()
 
