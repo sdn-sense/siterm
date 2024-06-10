@@ -58,6 +58,7 @@ class MultiWorker():
     def startwork(self):
         """Multiworker main process"""
         self.logger.info("Started MultiWorker work to check switch processes")
+        restarted = False
         for siteName in self.config.get("general", "sites"):
             for dev in self.config.get(siteName, "switch"):
                 # Check status
@@ -66,14 +67,16 @@ class MultiWorker():
                     self.logger.info(f"Starting SwitchWorker for {dev}")
                     retOut = self._runCmd('start', dev, True)
                     self.logger.info(f"Starting SwitchWorker for {dev} - {retOut}")
+                    restarted = True
                     continue
                 if retOut['exitCode'] != 0 and not self.firstRun:
                     self.logger.error(f"SwitchWorker for {dev} failed: {retOut}")
                     retOut = self._runCmd('restart', dev, True)
                     self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
+                    restarted = True
                     continue
         # Mark as not first run, so if service stops, it uses restart
-        if self.firstRun:
+        if self.firstRun and restarted:
             self.logger.info("First run is done. Marking as not first run. Also sleep 1 minute so that it get's all data from switches")
             time.sleep(60)
         self.firstRun = False
@@ -99,7 +102,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.tmpout = {}
         self.modelVersion = ""
         self.activeDeltas = {}
-        self.renewsNeeded = 1
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {'vlans': {}, 'ips': {}}
         self.stopThread = False
@@ -107,6 +109,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.threads.start()
         for dirname in ['LookUpService', 'SwitchWorker']:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
+        self.firstRun = True
 
     def refreshthread(self, *args):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -148,7 +151,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def __cleanup(self):
         """Clean up process to remove old data"""
         # Clean Up old models (older than 24h.)
-        for model in self.dbI.get("models", limit=100, orderby=["insertdate", "ASC"]):
+        for model in self.dbI.get("models", limit=500, orderby=["insertdate", "ASC"]):
             if model["insertdate"] < int(getUTCnow() - 86400):
                 self.logger.debug("delete %s", model["fileloc"])
                 try:
@@ -281,6 +284,11 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def startwork(self):
         """Main start."""
         self.logger.info("Started LookupService work")
+        stateChangedFirstRun = False
+        if self.firstRun:
+            self.logger.info("Because it is first run, we will start apply first to all devices individually")
+            stateChangedFirstRun = self.provision.startwork()
+            self.firstRun = False
         self.multiworker.startwork()
         self.activeDeltas = getActiveDeltas(self)
         self.URIs = {'vlans': {}, 'ips': {}} # Reset URIs
@@ -357,29 +365,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         # Start Provisioning Service and apply any config changes.
         self.logger.info("Start Provisioning Service")
         stateChanged = self.provision.startwork()
-        if updateNeeded or stateChanged:
+        if updateNeeded or stateChanged or stateChangedFirstRun:
             self.logger.info("Update is needed. Informing to renew all devices state")
             # If models are different, we need to update all devices information
             self._deviceUpdate()
-
-    def startworkrenew(self, hosts=None):
-        """Start work renew."""
-        for host in hosts:
-            fname = f"{self.config.get(self.sitename, 'privatedir')}/SwitchWorker/{host}.update"
-            if os.path.isfile(fname):
-                self.logger.info(f"Renew is needed for {host}")
-                self.renewsNeeded = 1
-                try:
-                    os.unlink(fname)
-                except OSError as ex:
-                    self.logger.error(f"Got OS Error removing {fname}. {ex}")
-                    continue
-        if self.renewsNeeded:
-            self.logger.info(f"Renew needed for {hosts}. Renewing {self.renewsNeeded} times.")
-            self.switch.getinfoNew(hosts)
-            self.renewsNeeded -= 1
-        else:
-            self.logger.info(f"No renew needed for {hosts}")
 
 def execute(config=None):
     """Main Execute."""

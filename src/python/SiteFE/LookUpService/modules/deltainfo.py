@@ -106,7 +106,8 @@ class DeltaInfo():
         portDict['hasService']['bwuri'] = bwuri
         self.addTimeline(portDict, bwuri)
         self._addBandwidthServiceParams(**portDict['hasService'])
-        self.addNetworkStatus(portDict['hasService'], bwuri)
+        # TODO: This should depend on switch config if this is configurable
+        # self.addNetworkStatus(portDict['hasService'], bwuri)
 
     def _addNetworkAddr(self, portDict, uri):
         """Add Network delta info"""

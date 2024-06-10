@@ -37,7 +37,7 @@ class Switch:
         """Activating state actions."""
         return True
 
-    def __getAnsErrors(self, ansOut):
+    def getAnsErrors(self, ansOut):
         """Get Ansible errors"""
         failures = False
         if not ansOut or not ansOut.stats:
@@ -46,6 +46,10 @@ class Switch:
             for host, _ in ansOut.stats.get(fkey, {}).items():
                 for hostEvents in ansOut.host_events(host):
                     err = hostEvents.get("event_data", {}).get("res", {})
+                    if hostEvents.get("event") in ["runner_on_ok", "runner_on_start"]:
+                        continue
+                    if not err:
+                        continue
                     self.ansibleErrs.setdefault(host, {}).setdefault(fkey, [])
                     self.ansibleErrs[host][fkey].append(err)
                     self.logger.info("Ansible Error for %s: %s", host, err)
@@ -60,9 +64,7 @@ class Switch:
 
     def _getInventoryInfo(self, hosts=None, subitem=""):
         """Get Inventory Info. If hosts specified, only return for specific hosts"""
-        with open(
-            self.config.get("ansible", "inventory" + subitem), "r", encoding="utf-8"
-        ) as fd:
+        with open(self.config.get("ansible", "inventory" + subitem), "r", encoding="utf-8") as fd:
             out = yaml.safe_load(fd.read())
         if hosts:
             tmpOut = {}
@@ -130,22 +132,22 @@ class Switch:
         """Apply new config and run ansible playbook"""
         self.verbosity = 0
         retries = 3
+        self.ansibleErrs = {}
         while retries > 0:
             try:
                 ansOut = self._executeAnsible("applyconfig.yaml", hosts, subitem)
             except ValueError as ex:
                 raise ConfigException(
                     f"Got Value Error. Ansible configuration exception {ex}") from ex
-            failures = self.__getAnsErrors(ansOut)
+            failures = self.getAnsErrors(ansOut)
             if failures:
+                self.logger.warning(f"Ansible applyconfig failed. Retrying (out of {retries}) after 5sec sleep")
                 retries -= 1
-                self.logger.warning("Ansible applyconfig failed. Retrying after 5sec sleep")
                 time.sleep(5)
                 self.verbosity = 1000
                 continue
-            else:
-              retries = -1
-        return ansOut
+            retries = 0
+        return ansOut, self.ansibleErrs
 
     def _getFacts(self, hosts=None, subitem=""):
         """Get All Facts for all Ansible Hosts"""
@@ -169,7 +171,7 @@ class Switch:
                     )
                 out[host] = host_events
                 host_events.setdefault("event_data", {}).setdefault("res", {}).setdefault("ansible_facts", {})
-        self.__getAnsErrors(ansOut)
+        self.getAnsErrors(ansOut)
         return out, self.ansibleErrs
 
     @staticmethod

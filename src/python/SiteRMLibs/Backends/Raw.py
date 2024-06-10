@@ -33,7 +33,7 @@ class Switch:
         """Activating state actions."""
         return True
 
-    def __getAnsErrors(self, ansOut):
+    def getAnsErrors(self, ansOut):
         """Get Ansible errors. Dummy Call for RAW"""
         return
 

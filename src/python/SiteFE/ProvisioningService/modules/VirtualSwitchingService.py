@@ -54,15 +54,9 @@ class VirtualSwitchingService:
         super().__init__()
 
     def __getdefaultIntf(self, host, key='vsw', subkey="interface"):
-        if self.reqid == 0:
-            tmpD = self.yamlconf.setdefault(host, {})
-        elif self.reqid == 1:
-            tmpD = self.yamlconfuuid.setdefault(key, {}).setdefault(self.connID, {})
-            tmpD = tmpD.setdefault(host, {})
-        else:
-            raise Exception(
-                "Wrong code. Should not reach this part. VirtualSwitchingService"
-            )
+        """Setup default yaml dict for interfaces"""
+        tmpD = self.yamlconfuuid.setdefault(key, {}).setdefault(self.connID, {})
+        tmpD = tmpD.setdefault(host, {})
         tmpD = tmpD.setdefault(subkey, {})
         return tmpD
 
@@ -154,20 +148,16 @@ class VirtualSwitchingService:
 
     def _addparamsVsw(self, connDict, switches):
         """Wrapper for add params, to put individual request info too inside dictionary"""
-        # 0 - Main which adds all requests into a single yaml file for ansible
-        # 1 - Adds Vlan request into a unique uuid request dictionary and used by ansible
-        for reqid in [0, 1]:
-            self.reqid = reqid
-            for host, hostDict in connDict.items():
-                if host in switches:
-                    for port, portDict in hostDict.items():
-                        if port == "_params":
-                            continue
-                        self._presetDefaultParams(host, port, portDict)
-                        self._addTaggedInterfaces(host, port, portDict)
-                        self._addIPv4Address(host, port, portDict)
-                        self._addIPv6Address(host, port, portDict)
-                        self._addQoS(host, port, portDict)
+        for host, hostDict in connDict.items():
+            if host in switches:
+                for port, portDict in hostDict.items():
+                    if port == "_params":
+                        continue
+                    self._presetDefaultParams(host, port, portDict)
+                    self._addTaggedInterfaces(host, port, portDict)
+                    self._addIPv4Address(host, port, portDict)
+                    self._addIPv6Address(host, port, portDict)
+                    self._addQoS(host, port, portDict)
 
     def addvsw(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for vsw)"""
@@ -177,21 +167,12 @@ class VirtualSwitchingService:
                 if not self.checkIfStarted(connDict):
                     continue
                 self._addparamsVsw(connDict, switches)
-        for reqid in [0, 1]:
-            self.reqid = reqid
-            for host in switches:
-                self.__getdefaultIntf(host)
+        for host in switches:
+            self.__getdefaultIntf(host)
 
     def compareQoS(self, switch, runningConf, uuid=""):
         """Compare expected and running conf"""
-        if uuid:
-            tmpD = (
-                self.yamlconfuuid.setdefault("qos", {})
-                .setdefault(uuid, {})
-                .setdefault(switch, {})
-            )
-        else:
-            tmpD = self.yamlconf.setdefault(switch)
+        tmpD = self.yamlconfuuid.setdefault("qos", {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault("qos", {})
         if tmpD == runningConf:
             return False
@@ -212,16 +193,9 @@ class VirtualSwitchingService:
                         tmpD.setdefault(key, {}).setdefault(key1, val1)
         return True
 
-    def compareVsw(self, switch, runningConf, uuid=""):
+    def compareVsw(self, switch, runningConf, uuid):
         """Compare expected and running conf"""
-        if uuid:
-            tmpD = (
-                self.yamlconfuuid.setdefault("vsw", {})
-                .setdefault(uuid, {})
-                .setdefault(switch, {})
-            )
-        else:
-            tmpD = self.yamlconf.setdefault(switch)
+        tmpD = self.yamlconfuuid.setdefault("vsw", {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault("interface", {})
         if tmpD == runningConf:
             return False  # equal config

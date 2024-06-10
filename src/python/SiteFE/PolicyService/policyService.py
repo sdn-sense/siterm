@@ -549,7 +549,9 @@ class PolicyService(RDFHelper, Timing):
             for reqkey, reqdict in vals.items():
                 if reqkey == "_params":
                     continue
-                tmpstates = dictSearch("networkstatus", reqdict, [])
+                # TODO Ignore keys hasService should depend on switch configuration
+                # if QoS is enabled or not.
+                tmpstates = dictSearch("networkstatus", reqdict, [], ['hasService'])
                 globst = self.identifyglobalstate(tmpstates)
                 if "_params" in vals:
                     self.newActive["output"]["vsw"][key]["_params"][
@@ -594,10 +596,11 @@ class PolicyService(RDFHelper, Timing):
         modelParseRan = False
         for delta in self.dbI.get(
             "deltas",
-            limit=1,
+            limit=10,
             search=[["state", "activating"], ["modadd", "add"]],
-            orderby=["updatedate", "DESC"],
+            orderby=["insertdate", "ASC"],
         ):
+            gCopy = copy.deepcopy(currentGraph)
             # Deltas keep string in DB, so we need to eval that
             # 1. Get delta content for reduction, addition
             # 2. Add into model and see if it overlaps with any
@@ -632,9 +635,9 @@ class PolicyService(RDFHelper, Timing):
             except (OverlapException, WrongIPAddress) as ex:
                 self.stateMachine.modelstatechanger(self.dbI, "failed", **delta)
                 # If delta apply failed we return right away without writing new Active config
-                self.logger.info(f"There was failure applying delta. Failure {ex}")
-                # We return True, so model is regenerated again from scratch
-                return True
+                self.logger.debug(f"There was failure applying delta. Failure {ex}")
+                # Overwrite back the model with original before failure.
+                currentGraph = copy.deepcopy(gCopy)
 
         if not modelParseRan:
             self.newActive["output"] = self.parseModel(currentGraph)
