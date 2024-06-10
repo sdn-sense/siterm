@@ -198,7 +198,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
     def compareIndv(self, switches):
         """Compare individual entries and report it's status"""
         changed = False
-        for acttype, actcalls in {"vsw": {"interface": self.compareVsw, "qos": self.compareQoS},
+        for acttype, actcalls in {"vsw": {"interface": self.compareVsw},
                                   "rst": {"sense_bgp": self.compareBGP}}.items():
             uuidDict = self.yamlconfuuidActive.get(acttype, {})
             if not self.yamlconfuuidActive:

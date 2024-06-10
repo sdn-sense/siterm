@@ -249,6 +249,7 @@ class PrometheusCalls:
             "Network Status information",
             labelnames=labelnames,
             states=[
+                "activating",
                 "activated",
                 "activate-error",
                 "deactivated",

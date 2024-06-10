@@ -43,20 +43,22 @@ from SiteRMLibs.DBBackend import dbinterface
 from SiteRMLibs.HTTPLibrary import Requests
 
 
-def dictSearch(key, var, ret):
+def dictSearch(key, var, ret, ignoreKeys=None):
     """Search item in dictionary"""
     if isinstance(var, dict):
         for k, v in var.items():
+            if ignoreKeys and k in ignoreKeys:
+                continue
             if k == key:
                 ret.append(v)
             elif isinstance(v, dict):
-                ret = dictSearch(key, v, ret)
+                ret = dictSearch(key, v, ret, ignoreKeys)
             elif isinstance(v, list):
                 for d in v:
-                    ret = dictSearch(key, d, ret)
+                    ret = dictSearch(key, d, ret, ignoreKeys)
     elif isinstance(var, list):
         for d in var:
-            ret = dictSearch(key, d, ret)
+            ret = dictSearch(key, d, ret, ignoreKeys)
     return ret
 
 

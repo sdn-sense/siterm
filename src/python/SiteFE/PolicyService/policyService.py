@@ -549,7 +549,9 @@ class PolicyService(RDFHelper, Timing):
             for reqkey, reqdict in vals.items():
                 if reqkey == "_params":
                     continue
-                tmpstates = dictSearch("networkstatus", reqdict, [])
+                # TODO Ignore keys hasService should depend on switch configuration
+                # if QoS is enabled or not.
+                tmpstates = dictSearch("networkstatus", reqdict, [], ['hasService'])
                 globst = self.identifyglobalstate(tmpstates)
                 if "_params" in vals:
                     self.newActive["output"]["vsw"][key]["_params"][
