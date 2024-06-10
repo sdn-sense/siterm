@@ -3,9 +3,6 @@
 """
     Add/Reduce deltas from MRML
 
-    TODO: Rewrite from current state and not add deltas itself;
-
-
 Authors:
   Justas Balcas jbalcas (at) caltech.edu
 
