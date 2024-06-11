@@ -19,7 +19,6 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
-from SiteFE.PolicyService import stateMachine as stateM
 from SiteRMLibs.MainUtilities import getAllFileContent
 from SiteRMLibs.MainUtilities import getModTime
 from SiteRMLibs.MainUtilities import httpdate
@@ -32,7 +31,6 @@ class ModelCalls():
     """Model Calls API Module"""
     # pylint: disable=E1101
     def __init__(self):
-        self.stateM = stateM.StateMachine(self.config)
         self.__defineRoutes()
         self.__urlParams()
 

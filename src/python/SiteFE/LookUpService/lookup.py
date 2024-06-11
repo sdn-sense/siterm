@@ -291,7 +291,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         # 6. Add all active running config
         # ==================================================================================
         self.addDeltaInfo()
-        changesApplied = self.police.startwork(self.newGraph)
+        changesApplied = self.police.startworklookup(self.newGraph)
         self.logger.info(f"Changes there recorded in db: {changesApplied}")
         self.activeDeltas = getActiveDeltas(self)
         self.addDeltaInfo()
