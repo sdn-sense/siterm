@@ -668,8 +668,8 @@ class PolicyService(RDFHelper, Timing):
         """Start Policy Service."""
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started")
-        fnewdir = os.path.join(self.config.get(self.sitename, "privatedir"), "httpnew/")
-        ffinishdir = os.path.join(self.config.get(self.sitename, "privatedir"), "httpfinished/")
+        fnewdir = os.path.join(self.config.get(self.sitename, "privatedir"), "PolicyService", "httpnew")
+        ffinishdir = os.path.join(self.config.get(self.sitename, "privatedir"), "PolicyService", "httpfinished")
         # Find all files in new directory (not ending with .tmp)
         for fname in os.listdir(fnewdir):
             if fname.endswith(".tmp"):

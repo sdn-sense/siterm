@@ -43,8 +43,8 @@ class DeltaCalls:
         for sitename in self.sites:
             if sitename != "MAIN":
                 self.policerdirs.setdefault(sitename, {'new': {}, 'finished': {}})
-                self.policerdirs[sitename]['new'] = os.path.join(self.config.get(sitename, "privatedir"), "/httpnew/")
-                self.policerdirs[sitename]['finished'] = os.path.join(self.config.get(sitename, "privatedir"), "/httpfinished/")
+                self.policerdirs[sitename]['new'] = os.path.join(self.config.get(sitename, "privatedir"), "PolicyService", "httpnew")
+                self.policerdirs[sitename]['finished'] = os.path.join(self.config.get(sitename, "privatedir"), "PolicyService", "httpfinished")
 
     def __urlParams(self):
         """Define URL Params for this class"""
