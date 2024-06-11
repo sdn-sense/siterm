@@ -655,14 +655,33 @@ class PolicyService(RDFHelper, Timing):
             changesApplied = True
         return changesApplied
 
-    def startwork(self, currentGraph):
+    def startworklookup(self, currentGraph):
         """Start Policy Service."""
         self.logger.info("=" * 80)
-        self.logger.info("Component PolicyService Started")
+        self.logger.info("Component PolicyService Started via Lookup")
         self.__clean()
         # generate new out
         changesApplied = self.generateActiveConfigDict(currentGraph)
         return changesApplied
+
+    def startwork(self):
+        """Start Policy Service."""
+        self.logger.info("=" * 80)
+        self.logger.info("Component PolicyService Started")
+        fnewdir = os.path.join(self.config.get(self.sitename, "privatedir"), "httpnew/")
+        ffinishdir = os.path.join(self.config.get(self.sitename, "privatedir"), "httpfinished/")
+        # Find all files in new directory (not ending with .tmp)
+        for fname in os.listdir(fnewdir):
+            if fname.endswith(".tmp"):
+                continue
+            fullpath = os.path.join(fnewdir, fname)
+            self.logger.info(f"Processing delta {fullpath}")
+            out = self.acceptDelta(fullpath)
+            # Write output to a new file in finished directory
+            self.siteDB.saveContent(os.path.join(ffinishdir, fname), out)
+            self.siteDB.removeFile(fullpath)
+        self.logger.info("Component PolicyService Finished")
+
 
     def deltaToModel(self, currentGraph, deltaPath, action):
         """Add delta to current Model. If no delta provided, returns current Model"""
@@ -687,14 +706,9 @@ class PolicyService(RDFHelper, Timing):
         currentGraph = self.deltaToModel(None, None, None)
         self.currentActive = getActiveDeltas(self)
         self.newActive = {"output": {}}
-        deltapath = self.siteDB.moveFile(
-            deltapath,
-            os.path.join(
-                self.config.get(self.sitename, "privatedir"), "PolicyService/"
-            ),
-        )
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
         self.logger.info(f"Called Accept Delta. Content Location: {deltapath}")
+        self.siteDB.removeFile(deltapath)
         toDict = dict(fileContent)
         toDict["State"] = "accepting"
         toDict["Type"] = "submission"

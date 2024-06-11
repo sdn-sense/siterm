@@ -19,9 +19,8 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
-from tempfile import NamedTemporaryFile
-
-from SiteFE.PolicyService import policyService as polS
+import os
+import time
 from SiteFE.PolicyService import stateMachine as stateM
 from SiteRMLibs.CustomExceptions import (BadRequestError, DeltaNotFound,
                                          WrongDeltaStatusTransition)
@@ -40,10 +39,12 @@ class DeltaCalls:
         self.stateM = stateM.StateMachine(self.config)
         self.__defineRoutes()
         self.__urlParams()
-        self.policer = {}
+        self.policerdirs = {}
         for sitename in self.sites:
             if sitename != "MAIN":
-                self.policer[sitename] = polS.PolicyService(self.config, sitename)
+                self.policerdirs.setdefault(sitename, {'new': {}, 'finished': {}})
+                self.policerdirs[sitename]['new'] = os.path.join(self.config.get(sitename, "privatedir"), "/httpnew/")
+                self.policerdirs[sitename]['finished'] = os.path.join(self.config.get(sitename, "privatedir"), "/httpfinished/")
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -124,8 +125,6 @@ class DeltaCalls:
             # If delta is not in a final state, we delete it from db, and will add new one.
             if delta[0]["state"] not in ["activated", "failed", "removed", "accepted", "accepting"]:
                 self.dbI.delete("deltas", [["uid", delta[0]["uid"]]])
-        tmpfd = NamedTemporaryFile(delete=False, mode="w+")
-        tmpfd.close()
         self.getmodel(environ, uploadContent["modelId"], None, **kwargs)
         outContent = {
             "ID": hashNum,
@@ -135,17 +134,31 @@ class DeltaCalls:
             "State": "accepting",
             "modelId": uploadContent["modelId"],
         }
-        self.siteDB.saveContent(tmpfd.name, outContent)
-        out = self.policer[kwargs["sitename"]].acceptDelta(tmpfd.name)
+        fname = os.path.join(self.policerdirs[kwargs["sitename"]]['new'], f"{hashNum}.json")
+        self.siteDB.saveContent(fname, outContent)
+        finishedName = os.path.join(self.policerdirs[kwargs["sitename"]]['finished'], f"{hashNum}.json")
+        out = {}
+        # Loop for max 110seconds and check if we have file in finished directory.
+        timer = 110
+        while timer > 0:
+            if os.path.isfile(finishedName):
+                out = self.siteDB.getFileContentAsJson(finishedName)
+                self.siteDB.removeFile(finishedName)
+                break
+            timer -= 1
+            time.sleep(1)
+        if not out:
+            print(f"Failed to accept delta. Timeout reached. {hashNum}")
+            outContent["State"] = "failed"
+            outContent["Error"] = "Failed to accept delta. Timeout reached."
+            return outContent
         outContent["State"] = out["State"]
         outContent["id"] = hashNum
         outContent["lastModified"] = convertTSToDatetime(outContent["UpdateTime"])
         outContent["href"] = f"{environ['SCRIPT_URI']}/{hashNum}"
         if outContent["State"] not in ["accepted"]:
             if "Error" not in out:
-                outContent[
-                    "Error"
-                ] = f"Unknown Error. Dump all out content {jsondumps(out)}"
+                outContent["Error"] = f"Unknown Error. Dump all out content {jsondumps(out)}"
             else:
                 outContent["Error"] = out["Error"]
         return outContent
