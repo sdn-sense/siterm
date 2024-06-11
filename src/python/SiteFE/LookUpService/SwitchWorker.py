@@ -23,7 +23,7 @@ class SwitchWorker():
         self.config = None
         self.renewsNeeded = 1
 
-    def refreshthread(self, *_args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self.switch = Switch(self.config, self.sitename)

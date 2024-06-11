@@ -64,16 +64,12 @@ class PolicyService(RDFHelper, Timing):
         self.config = config
         self.logger = getLoggingObject(config=self.config, service="PolicyService")
         self.siteDB = contentDB()
-        self.dbI = getVal(
-            getDBConn("PolicyService", self), **{"sitename": self.sitename}
-        )
+        self.dbI = getVal(getDBConn("PolicyService", self), **{"sitename": self.sitename})
         self.stateMachine = StateMachine(self.config)
         self.switch = Switch(config, sitename)
         self.hosts = {}
         for siteName in self.config.get("general", "sites"):
-            workDir = os.path.join(
-                self.config.get(siteName, "privatedir"), "PolicyService/"
-            )
+            workDir = os.path.join(self.config.get(siteName, "privatedir"), "PolicyService/")
             createDirs(workDir)
         self.getSavedPrefixes(self.hosts.keys())
         self.bidPorts = {}
@@ -84,21 +80,17 @@ class PolicyService(RDFHelper, Timing):
         self.newActive = {}
         self._refreshHosts()
 
-    def refreshthread(self, *args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
-        self.dbI = getVal(
-            getDBConn("PolicyService", self), **{"sitename": self.sitename}
-        )
         self.stateMachine = StateMachine(self.config)
         self.switch = Switch(self.config, self.sitename)
-        # If day is not equal (means new day) - lets force re-running individual apply
-        if not args[1]:
-            self.bidPorts = {}
-            self.scannedPorts = {}
-            self.scannedRoutes = []
-            self.newActive = {}
-            self._refreshHosts()
+        self.conflictChecker = ConflictChecker(self.config, self.sitename)
+        self.bidPorts = {}
+        self.scannedPorts = {}
+        self.scannedRoutes = []
+        self.newActive = {}
+        self._refreshHosts()
 
     def _refreshHosts(self):
         """Refresh all hosts information"""
@@ -827,7 +819,3 @@ if __name__ == "__main__":
     inargs = argparser.parse_args(sys.argv[1:])
     getLoggingObject(logType="StreamLogger", service="PolicyService")
     execute(args=inargs)
-
-
-
-

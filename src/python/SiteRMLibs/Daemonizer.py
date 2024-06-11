@@ -172,8 +172,6 @@ class DBBackend():
         return refresh
 
 
-
-
 class Daemon(DBBackend):
     """A generic daemon class.
 
@@ -405,12 +403,12 @@ class Daemon(DBBackend):
             return True
         return False
 
-    def refreshThreads(self, houreq, dayeq):
+    def refreshThreads(self):
         """Refresh threads"""
         # pylint: disable=W0702
         while True:
             try:
-                self.getThreads(houreq, dayeq)
+                self.getThreads()
                 return
             except SystemExit:
                 exc = traceback.format_exc()
@@ -424,8 +422,7 @@ class Daemon(DBBackend):
     def run(self):
         """Run main execution"""
         # pylint: disable=W0702
-        houreq, dayeq, currentHour, currentDay = reCacheConfig(None, None)
-        self.refreshThreads(houreq, dayeq)
+        self.refreshThreads()
         while self.runLoop():
             self.runCount += 1
             hadFailure = False
@@ -462,19 +459,14 @@ class Daemon(DBBackend):
             if self.timeToExit():
                 self.logger.info('Total Runtime expired. Stopping Service')
                 sys.exit(0)
-            houreq, dayeq, currentHour, currentDay = reCacheConfig(currentHour, currentDay)
-            if not houreq:
-                self.logger.info('Re-initiating Service with new configuration from GIT')
-                self._refreshConfig()
-                self.refreshThreads(houreq, dayeq)
-            elif refresh:
+            if refresh:
                 self.logger.info('Re-initiating Service with new configuration from GIT. Forced by DB')
                 self.cleaner()
                 self._refreshConfig()
-                self.refreshThreads(houreq, dayeq)
+                self.refreshThreads()
 
     @staticmethod
-    def getThreads(_houreq, _dayeq):
+    def getThreads():
         """Overwrite this then Daemonized in your own class"""
         return {}
 

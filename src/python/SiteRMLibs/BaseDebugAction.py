@@ -23,12 +23,14 @@ class CustomWriter:
         self.newline = newline
         self.closefd = closefd
         self.opener = opener
-        self.fd = open(self.filename, self.mode, self.buffering, self.encoding, self.errors, self.newline, self.closefd, self.opener)
+        self.fd = open(self.filename, self.mode, self.buffering, self.encoding,
+                       self.errors, self.newline, self.closefd, self.opener)
 
     def open(self):
         """Open the file if it is closed"""
         if self.fd.closed:
-            self.fd = open(self.filename, self.mode, self.buffering, self.encoding, self.errors, self.newline, self.closefd, self.opener)
+            self.fd = open(self.filename, self.mode, self.buffering, self.encoding,
+                           self.errors, self.newline, self.closefd, self.opener)
 
     def wn(self, inline):
         """Write to file with new line at end"""
@@ -74,7 +76,7 @@ class BaseDebugAction:
             self.processout.wn(f"No request dictionary found in request {self.backgConfig}")
             raise BackgroundException(f"No requestdict found in request {self.backgConfig}")
 
-    def refreshthread(self, *_args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 

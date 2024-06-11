@@ -41,7 +41,7 @@ class Debugger(DebugService):
         self.diragent = contentDB()
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
 
-    def refreshthread(self, *_args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self.fullURL = getFullUrl(self.config, self.sitename)
