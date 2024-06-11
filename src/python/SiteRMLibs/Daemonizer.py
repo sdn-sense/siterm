@@ -16,11 +16,9 @@ import traceback
 
 import psutil
 from SiteRMLibs import __version__ as runningVersion
-from SiteRMLibs.MainUtilities import (
-    getDataFromSiteFE, getDBConn, getFullUrl, getHostname,
-    getLoggingObject, getUTCnow, getVal, publishToSiteFE,
-    reCacheConfig, contentDB, createDirs
-)
+from SiteRMLibs.MainUtilities import (getDataFromSiteFE, getDBConn, getFullUrl,
+                                      getHostname, getLoggingObject, getUTCnow,
+                                      getVal, publishToSiteFE, contentDB, createDirs)
 from SiteRMLibs.GitConfig import getGitConfig
 
 
