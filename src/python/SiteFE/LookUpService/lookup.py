@@ -38,6 +38,7 @@ class MultiWorker():
         self.sitename = sitename
         self.logger = logger
         self.firstRun = True
+        self.needRestart = False
 
     def _runCmd(self, action, device, foreground=False):
         """Start execution of new requests"""
@@ -52,6 +53,11 @@ class MultiWorker():
         retOut['exitCode'] = cmdOut.returncode
         return retOut
 
+    def refreshthread(self):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.config = getGitConfig()
+        self.needRestart = True
+
     def startwork(self):
         """Multiworker main process"""
         self.logger.info("Started MultiWorker work to check switch processes")
@@ -60,14 +66,30 @@ class MultiWorker():
             for dev in self.config.get(siteName, "switch"):
                 # Check status
                 retOut = self._runCmd('status', dev)
+                # If status failed, and first run, start it
                 if retOut['exitCode'] != 0 and self.firstRun:
                     self.logger.info(f"Starting SwitchWorker for {dev}")
                     retOut = self._runCmd('start', dev, True)
                     self.logger.info(f"Starting SwitchWorker for {dev} - {retOut}")
                     restarted = True
                     continue
+                # If status failed, and not first run, restart it
                 if retOut['exitCode'] != 0 and not self.firstRun:
                     self.logger.error(f"SwitchWorker for {dev} failed: {retOut}")
+                    retOut = self._runCmd('restart', dev, True)
+                    self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
+                    restarted = True
+                    continue
+                # If status is OK, and needRestart flag set - restart it
+                if retOut['exitCode'] == 0 and self.needRestart:
+                    self.logger.info(f"Restarting SwitchWorker for {dev} as it is instructed by config change")
+                    retOut = self._runCmd('restart', dev, True)
+                    self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
+                    restarted = True
+                    continue
+                # If status is OK, and needRestart flag set - restart it
+                if retOut['exitCode'] != 0 and self.needRestart:
+                    self.logger.info(f"Restarting Failed SwitchWorker for {dev} as it is instructed by config change")
                     retOut = self._runCmd('restart', dev, True)
                     self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
                     restarted = True
@@ -77,6 +99,7 @@ class MultiWorker():
             self.logger.info("First run is done. Marking as not first run. Also sleep 1 minute so that it get's all data from switches")
             time.sleep(60)
         self.firstRun = False
+        self.needRestart = False
 
 
 class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timing):
@@ -105,32 +128,13 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
 
-    def refreshthread(self, *args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
-        self.dbI = getVal(
-            getDBConn("LookUpService", self), **{"sitename": self.sitename}
-        )
         self.switch = Switch(self.config, self.sitename)
-        self.police.refreshthread(*args)
-        self.provision.refreshthread(*args)
-        if not args[1]:
-            self.__cleanup()
-
-
-    def __cleanup(self):
-        """Clean up process to remove old data"""
-        # Clean Up old models (older than 24h.)
-        for model in self.dbI.get("models", limit=500, orderby=["insertdate", "ASC"]):
-            if model["insertdate"] < int(getUTCnow() - 86400):
-                self.logger.debug("delete %s", model["fileloc"])
-                try:
-                    os.unlink(model["fileloc"])
-                except OSError as ex:
-                    self.logger.debug(
-                        f"Got OS Error removing this model {model['fileloc']}. Exc: {str(ex)}"
-                    )
-                self.dbI.delete("models", [["id", model["id"]]])
+        self.police.refreshthread()
+        self.provision.refreshthread()
+        self.multiworker.refreshthread()
 
     def _getIPURIs(self, indict, iptype):
         """Get All IP URIs if any"""

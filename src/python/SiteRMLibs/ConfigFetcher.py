@@ -26,7 +26,7 @@ class ConfigFetcher():
         self.gitObj = GitConfig()
         self.config = None
 
-    def refreshthread(self, *_args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.gitObj = GitConfig()
         self.config = None

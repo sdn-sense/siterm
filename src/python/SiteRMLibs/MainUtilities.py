@@ -335,15 +335,6 @@ def postWebContentToURL(url, **kwargs):
     return out
 
 
-def reCacheConfig(prevHour=None, prevDay=None):
-    """Return prevHour == currentHour, currentHour and used in Service Object
-    re-initiation."""
-    datetimeNow = datetime.datetime.now(datetime.timezone.utc)
-    currentHour = datetimeNow.strftime("%H")
-    currentDay = datetimeNow.strftime("%d")
-    return prevHour == currentHour, currentDay == prevDay, currentHour, currentDay
-
-
 def getFileContentAsJson(inputFile):
     """Get file content as json."""
     out = {}

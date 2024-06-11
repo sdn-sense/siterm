@@ -41,7 +41,7 @@ class RecurringAction():
                              'ArpInfo': ArpInfo}.items():
             self.classes[name] = plugin(self.config, self.logger)
 
-    def refreshthread(self, *_args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self._loadClasses()

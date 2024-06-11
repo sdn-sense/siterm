@@ -18,13 +18,13 @@ DAEMON = None
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
-    def getThreads(self, houreq, dayeq):
+    def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
         for sitename in self.config.get('general', 'sitename'):
             if sitename not in self.runThreads:
                 recAgent = RecurringAction(self.config, sitename)
                 self.runThreads[sitename] = recAgent
-            self.runThreads[sitename].refreshthread(houreq, dayeq)
+            self.runThreads[sitename].refreshthread()
 
 
 if __name__ == "__main__":

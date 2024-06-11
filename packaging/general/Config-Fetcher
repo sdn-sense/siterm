@@ -19,12 +19,12 @@ DAEMON = None
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
-    def getThreads(self, houreq, dayeq):
+    def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
         for callType in ['MAIN']:
             if callType not in self.runThreads:
                 self.runThreads[callType] = ConfigFetcher(self.logger)
-            self.runThreads[callType].refreshthread(houreq, dayeq)
+            self.runThreads[callType].refreshthread()
 
     def cleaner(self):
         """Clean files from /tmp/ directory"""

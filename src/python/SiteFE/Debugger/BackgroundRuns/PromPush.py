@@ -33,10 +33,9 @@ class PromPush(BaseDebugAction):
         self.snmpLabels.update(self.__getMetadataParams())
         super().__init__()
 
-    def refreshthread(self, *_args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
-        self.dbI = getVal(getDBConn('PrometheusPush', self), **{'sitename': self.sitename})
 
     def __getMetadataParams(self):
         """Get metadata parameters"""

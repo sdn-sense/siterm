@@ -48,7 +48,7 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
         QOS.__init__(self)
         OverlapLib.__init__(self)
 
-    def refreshthread(self, *_args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self.fullURL = getFullUrl(self.config, self.sitename)

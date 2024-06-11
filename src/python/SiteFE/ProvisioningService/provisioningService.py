@@ -30,7 +30,7 @@ from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import (NoOptionError, NoSectionError,
                                          SwitchException)
 from SiteRMLibs.MainUtilities import (createDirs, evaldict, getDBConn,
-                                      getLoggingObject, getUTCnow, getVal, jsondumps)
+                                      getLoggingObject, getUTCnow, getVal)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.timing import Timing
@@ -45,14 +45,10 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
     def __init__(self, config, sitename):
         super().__init__()
         self.config = config
-        self.logger = getLoggingObject(
-            config=self.config, service="ProvisioningService"
-        )
+        self.logger = getLoggingObject(config=self.config, service="ProvisioningService")
         self.sitename = sitename
         self.switch = Switch(config, sitename)
-        self.dbI = getVal(
-            getDBConn("ProvisioningService", self), **{"sitename": self.sitename}
-        )
+        self.dbI = getVal(getDBConn("ProvisioningService", self), **{"sitename": self.sitename})
         workDir = self.config.get("general", "privatedir") + "/ProvisioningService/"
         createDirs(workDir)
         self.yamlconfuuid = {}
@@ -60,12 +56,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         self.connID = None
         self.activeOutput = {"output": {}}
 
-    def refreshthread(self, *args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
-        self.dbI = getVal(
-            getDBConn("ProvisioningService", self), **{"sitename": self.sitename}
-        )
         self.switch = Switch(self.config, self.sitename)
         self.yamlconfuuid = {}
         self.yamlconfuuidActive = {}

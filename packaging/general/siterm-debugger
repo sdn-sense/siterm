@@ -21,7 +21,7 @@ DAEMON = None
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
-    def getThreads(self, houreq, dayeq):
+    def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
         sites = []
         if self.config.has_option('general', "sites"):
@@ -34,7 +34,7 @@ class MyDaemon(Daemon):
             if sitename not in self.runThreads:
                 debAgent = Debugger.Debugger(self.config, sitename)
                 self.runThreads[sitename] = debAgent
-            self.runThreads[sitename].refreshthread(houreq, dayeq)
+            self.runThreads[sitename].refreshthread()
 
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)

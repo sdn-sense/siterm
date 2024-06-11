@@ -44,7 +44,7 @@ class Debugger(DebugService):
         )
         self.logger.info("====== Debugger Start Work. Sitename: %s", self.sitename)
 
-    def refreshthread(self, *_args):
+    def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self.switch = Switch(self.config, self.sitename)
