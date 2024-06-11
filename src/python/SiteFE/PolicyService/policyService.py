@@ -682,7 +682,6 @@ class PolicyService(RDFHelper, Timing):
             self.siteDB.removeFile(fullpath)
         self.logger.info("Component PolicyService Finished")
 
-
     def deltaToModel(self, currentGraph, deltaPath, action):
         """Add delta to current Model. If no delta provided, returns current Model"""
         if not currentGraph:
@@ -779,8 +778,7 @@ def execute(config=None, args=None):
         elif args.action == "fullRun":
             for sitename in config.get("general", "sites"):
                 policer = PolicyService(config, sitename)
-                currentGraph = policer.deltaToModel(None, None, None)
-                policer.startwork(currentGraph)
+                policer.startwork()
 
 
 def get_parser():
