@@ -146,13 +146,17 @@ class RoutingService():
 
     def compareBGP(self, switch, runningConf, uuid):
         """Compare L3 BGP"""
+        different = False
         tmpD = self.yamlconfuuid.setdefault('rst', {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault('sense_bgp', {})
         if tmpD == runningConf:
-            return False  # equal config
+            return different
         for key, val in runningConf.items():
             # ipv6_network, ipv4_network, neighbor, prefix_list, route_map
+            if not val:
+                continue
             if key in ['ipv6_network', 'ipv4_network', 'prefix_list', 'route_map', 'neighbor']:
                 yamlOut = tmpD.setdefault(key, {})
                 dictCompare(yamlOut, val)
-        return True
+                different = True
+        return different
