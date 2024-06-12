@@ -55,6 +55,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         self.yamlconfuuidActive = {}
         self.connID = None
         self.activeOutput = {"output": {}}
+        self.forceapply = []
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -62,6 +63,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         self.switch = Switch(self.config, self.sitename)
         self.yamlconfuuid = {}
         self.yamlconfuuidActive = {}
+        self.forceapply = []
 
     def __cleanup(self):
         """Cleanup yaml conf output"""
@@ -217,6 +219,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                             diff = call(swname, curAct, uuid)
                             self.logger.info(f"Comparing {acttype} for {uuid}. Difference: {diff}")
                             if diff:
+                                changed = True
+                                self.applyIndvConfig(swname, uuid, key, acttype)
+                            if uuid in self.forceapply:
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)
             # We also want to apply any new ones asap (timed especially, which start at any time set)
