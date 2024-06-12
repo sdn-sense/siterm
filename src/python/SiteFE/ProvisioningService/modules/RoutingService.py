@@ -143,8 +143,6 @@ class RoutingService():
             for connID, connDict in activeConfig['rst'].items():
                 self.connID = connID
                 self._addparamsrst(connDict, switches)
-        for host in switches:
-            self._getDefaultBGP(host)
 
     def compareBGP(self, switch, runningConf, uuid):
         """Compare L3 BGP"""

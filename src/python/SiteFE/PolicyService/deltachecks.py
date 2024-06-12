@@ -248,14 +248,17 @@ class ConflictChecker(Timing):
             return True
         return False
 
-    def checkEnd(self, connItems):
+    def checkEnd(self, connItems, oldItems):
         """Check if end date is in past"""
+        # Olditems is empty for new delta
+        if oldItems:
+            if self.getTimeRanges(connItems) == self.getTimeRanges(oldItems):
+                # If timings did not change, we continue as normal
+                return
         if self.checkIfEnded(connItems):
             self.logger.debug(f"End date is in past for {self.newid}")
-            self.logger.debug(f"Conneciton Items: {connItems}")
-            raise OverlapException(
-                f"End date is in past for {self.newid}. Cannot modify or add new resources."
-            )
+            self.logger.debug(f"Connection Items: {connItems}")
+            raise OverlapException(f"End date is in past for {self.newid}. Cannot modify or add new resources.")
 
     def checkvsw(self, cls, svc, svcitems, oldConfig, newDelta=False):
         """Check vsw Service"""
@@ -274,8 +277,11 @@ class ConflictChecker(Timing):
                 if oldConfig[svc][connID] == connItems:
                     # No Changes - connID is same, ignoring it
                     continue
-            if newDelta:
-                self.checkEnd(connItems)
+                if newDelta:
+                    self.checkEnd(connItems, oldConfig[svc][connID])
+            elif newDelta:
+                # This is new delta and not available in oldConfig. Check that it is not in past
+                self.checkEnd(connItems, {})
             for hostname, hostitems in connItems.items():
                 if hostname == "_params":
                     continue
@@ -349,8 +355,11 @@ class ConflictChecker(Timing):
                 if oldConfig[rst][connID] == connItems:
                     # No Changes - connID is same, ignoring it
                     continue
-            if newDelta:
-                self.checkEnd(connItems)
+                if newDelta:
+                    self.checkEnd(connItems, oldConfig[rst][connID])
+            elif newDelta:
+                # This is new delta and not available in oldConfig. Check that it is not in past
+                self.checkEnd(connItems, {})
             for hostname, hostitems in connItems.items():
                 if hostname == "_params":
                     continue

@@ -91,10 +91,7 @@ class VirtualSwitchingService:
             return
         portName = self.switch.getSwitchPortName(host, port)
         portData = self.switch.getSwitchPort(host, portName)
-        if not portData.get('rate_limit', False):
-            self.logger.debug(f"Port on {host} {portName} has no rate_limit flag true, but there is qos requested.")
-            self.logger.debug(f"Will not add QoS on Switch. Qos Request: {resvRate}{resvUnit}")
-        else:
+        if portData.get('rate_limit', False):
             vlan = self.__getVlanID(host, port, portDict)
             tmpD = self.__getdefaultIntf(host, "qos", "qos")
             vlanD = tmpD.setdefault(f"{port}-{vlan}", {})
@@ -165,10 +162,9 @@ class VirtualSwitchingService:
             for connID, connDict in activeConfig["vsw"].items():
                 self.connID = connID
                 if not self.checkIfStarted(connDict):
+                    self.logger.info(f"{connID} has not started yet. Not adding to apply list")
                     continue
                 self._addparamsVsw(connDict, switches)
-        for host in switches:
-            self.__getdefaultIntf(host)
 
     def compareQoS(self, switch, runningConf, uuid=""):
         """Compare expected and running conf"""
