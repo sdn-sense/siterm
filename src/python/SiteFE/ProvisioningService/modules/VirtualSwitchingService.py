@@ -165,6 +165,9 @@ class VirtualSwitchingService:
                     self.logger.info(f"{connID} has not started yet. Not adding to apply list")
                     continue
                 self._addparamsVsw(connDict, switches)
+                if connDict.get('_params', {}).get('networkstatus', '') == "deactivated":
+                    # This happens during modify, force apply;
+                    self.forceapply.append(connID)
 
     def compareQoS(self, switch, runningConf, uuid=""):
         """Compare expected and running conf"""
