@@ -156,6 +156,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         """Apply a single delta to network devices and report to DB it's state"""
         # Write new inventory file, based on the currect active(just in case things have changed)
         # or container was restarted
+        if not self.yamlconfuuid.get(acttype, {}).get(uuid, {}).get(swname, {}).get(key, {}):
+            return
         inventory = self.switch.plugin._getInventoryInfo([swname])
         self.switch.plugin._writeInventoryInfo(inventory, "_singleapply")
         # Get host configuration;
@@ -171,11 +173,16 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             .get(key, {})
         )
         # Write curActiveConf to single apply dir
+        self.logger.info(f"Apply configuration for {uuid}, {swname}, {key}, {acttype}")
+        self.logger.info(f"{curActiveConf[key]}")
         self.switch.plugin._writeHostConfig(swname, curActiveConf, "_singleapply")
         try:
             self.applyConfig(raiseExc, [swname], "_singleapply")
             networkstate = "ok"
-        except SwitchException:
+            self.logger.info(f"Apply was succesful for {uuid}, {swname}, {key}, {acttype}")
+        except SwitchException as ex:
+            self.logger.info(f"Received an error to apply for {uuid}, {swname}, {key}, {acttype}")
+            self.logger.info(f"Exception: {ex}")
             networkstate = "error"
         self.__reportDeltaState(
             **{
@@ -196,7 +203,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             uuidDict = self.yamlconfuuidActive.get(acttype, {})
             if not self.yamlconfuuidActive:
                 uuidDict = self.yamlconfuuid.get(acttype, {})
+            scannedUUIDs = []
             for uuid, ddict in uuidDict.items():
+                scannedUUIDs.append(uuid)
                 for swname, swdict in ddict.items():
                     if swname not in switches:
                         continue
@@ -206,11 +215,24 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                             curAct = (self.yamlconfuuidActive.get(acttype, {})
                                       .get(uuid, {}).get(swname, {}).get(key, {}))
                             diff = call(swname, curAct, uuid)
+                            self.logger.info(f"Comparing {acttype} for {uuid}. Difference: {diff}")
                             if diff:
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)
+            # We also want to apply any new ones asap (timed especially, which start at any time set)
+            for uuid, ddict in self.yamlconfuuid.get(acttype, {}).items():
+                if uuid in scannedUUIDs:
+                    continue
+                self.logger.info(f'New apply for {uuid}')
+                for swname, swdict in ddict.items():
+                    if swname not in switches:
+                        continue
+                    for key in actcalls:
+                        if key in swdict:
+                            self.logger.info(f"Apply {acttype} for {uuid}")
+                            changed = True
+                            self.applyIndvConfig(swname, uuid, key, acttype)
         return changed
-
 
     def _getActive(self):
         """Get Active Output"""
@@ -233,8 +255,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         configChanged = self.compareIndv(switches)
         # Save individual uuid conf inside memory;
         self.yamlconfuuidActive = copy.deepcopy(self.yamlconfuuid)
-
-
         return configChanged
 
 
