@@ -194,10 +194,11 @@ class VirtualSwitchingService:
 
     def compareVsw(self, switch, runningConf, uuid):
         """Compare expected and running conf"""
+        different = False
         tmpD = self.yamlconfuuid.setdefault("vsw", {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault("interface", {})
         if tmpD == runningConf:
-            return False  # equal config
+            return different  # equal config
         for key, val in runningConf.items():
             if key not in tmpD.keys() and val["state"] != "absent":
                 # Vlan is present in ansible config, but not in new config
@@ -205,8 +206,11 @@ class VirtualSwitchingService:
                 # we dont need to set it again. Switch is unhappy to apply
                 # same command if service is not present.
                 tmpD.setdefault(key, {"state": "absent", "vlanid": val["vlanid"]})
+                different = True
             if val["state"] != "absent":
                 for key1, val1 in val.items():
+                    if not val1:
+                        continue
                     if isinstance(val1, (dict, list)) and key1 in [
                         "tagged_members",
                         "ipv4_address",
@@ -214,6 +218,8 @@ class VirtualSwitchingService:
                     ]:
                         yamlOut = tmpD.setdefault(key, {}).setdefault(key1, {})
                         dictCompare(yamlOut, val1, key1)
+                        different = True
                     if isinstance(val1, str) and key1 == "vlanid":
                         tmpD.setdefault(key, {}).setdefault(key1, val1)
-        return True
+                        different = True
+        return different
