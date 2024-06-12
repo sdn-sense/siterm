@@ -280,8 +280,8 @@ class ConflictChecker(Timing):
                 if newDelta:
                     self.checkEnd(connItems, oldConfig[svc][connID])
             elif newDelta:
-                    # This is new delta and not available in oldConfig. Check that it is not in past
-                    self.checkEnd(connItems, {})
+                # This is new delta and not available in oldConfig. Check that it is not in past
+                self.checkEnd(connItems, {})
             for hostname, hostitems in connItems.items():
                 if hostname == "_params":
                     continue
