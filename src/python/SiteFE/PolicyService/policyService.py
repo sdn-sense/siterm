@@ -689,11 +689,7 @@ class PolicyService(RDFHelper, Timing):
             if action == "reduction":
                 currentGraph -= gIn
             elif action == "addition":
-                # += Will not override values and add that in addition.
-                # So we loop via all triples and add them one by one using set
-                # This way we can override values if they are already present.
-                for s, p, o in gIn:
-                    currentGraph.set((s, p, o))
+                currentGraph += gIn
             else:
                 raise Exception(f"Unknown delta action. Action submitted {action}")
         return currentGraph
