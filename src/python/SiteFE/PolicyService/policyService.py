@@ -605,12 +605,7 @@ class PolicyService(RDFHelper, Timing):
                             fd.write(delta["content"][key])
                         except ValueError:
                             fd.write(decodebase64(delta["content"][key]))
-                    gIn = Graph()
-                    gIn.parse(tmpFile, format="turtle")
-                    if key == "reduction":
-                        currentGraph -= gIn
-                    elif key == "addition":
-                        currentGraph += gIn
+                    currentGraph = self.deltaToModel(currentGraph, tmpFile, key)
                     os.unlink(tmpFile)
             # Now we parse new model and generate new currentActive config
             self.newActive["output"] = self.parseModel(currentGraph)
@@ -694,7 +689,11 @@ class PolicyService(RDFHelper, Timing):
             if action == "reduction":
                 currentGraph -= gIn
             elif action == "addition":
-                currentGraph += gIn
+                # += Will not override values and add that in addition.
+                # So we loop via all triples and add them one by one using set
+                # This way we can override values if they are already present.
+                for s, p, o in gIn:
+                    currentGraph.set((s, p, o))
             else:
                 raise Exception(f"Unknown delta action. Action submitted {action}")
         return currentGraph
