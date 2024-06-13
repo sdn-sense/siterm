@@ -147,7 +147,7 @@ class RoutingService():
     def compareBGP(self, switch, runningConf, uuid):
         """Compare L3 BGP"""
         different = False
-        tmpD = self.yamlconfuuid.setdefault('rst', {}).setdefault(uuid, {}).setdefault(switch, {})
+        tmpD = self.yamlconfuuid.get('rst', {}).get(uuid, {}).get(switch, {})
         tmpD = tmpD.setdefault('sense_bgp', {})
         if tmpD == runningConf:
             return different

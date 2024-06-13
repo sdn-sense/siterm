@@ -222,6 +222,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)
                             if uuid in self.forceapply:
+                                self.forceapply.remove(uuid)
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)
             # We also want to apply any new ones asap (timed especially, which start at any time set)
