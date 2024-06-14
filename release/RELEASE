@@ -1,3 +1,69 @@
+1.4.6
+This release includes:
+
+IMPORTANT:
+There are changes required to run a new version. Please make sure you do the following:
+Ask the SENSE team to cancel all provisioned services to your Site. (optional, if Change 1 is done)
+Modify Configuration Files for a new release. See the 'Changes needed' section.
+Depending on your installation - update the docker image or restart Kubernetes with a new release.
+
+Changes needed:
+1. (Frontend) Modify database schema to support new features. Run the following command to update the database schema:
+```
+# mysql -u root
+use sitefe;
+alter table deltas drop column reduction;
+alter table deltas drop column addition;
+alter table deltas drop column reductionid;
+alter table deltas drop column connectionid;
+commit;
+```
+1. (Frontend) supports auth_re.yaml file for wildcard certificate authentication and authorization.
+```
+# By adding the following line inside the configuration file, you can enable wildcard certificate authentication and authorization for all *.nrp-nautilus.io clients.
+agent:
+  full_dn: "/C=US/O=Let's Encrypt/CN=R3/CN=*.nrp-nautilus.io "
+  permissions: w
+```
+
+
+SiteRM Improvements:
+SiteRM Helm charts updates (0.1.46):
+  * Release for Frontend deployment Helm chart.
+  * Liveness/Readiness/Test probes added to the Helm charts. In case of issues with SiteRM Frontend/Agent - pods will be restarted.
+  * Use of predefined image tags for Frontend/Agent - based on latest stable release;
+  * Allow to control CPU/Mem Requests/Limits for Frontend/Agent pods.
+  * Allow adding nodeAffinity for Frontend/Agent pods via helm values.yaml.
+  * Minimized helm charts for Frontend/Agent (without including previous versions of the charts).
+  * Agent Helm chart requires ClusterRole/ClusterRoleBinding for the agent to work properly. Permissions needed: apiGroups: [""], resources: ["nodes"], verbs: ["get", "list"]. If using official Helm charts it will apply automatically.
+SiteRM Frontend updates:
+  * (Beta) Metadata Service to expose metadata information about the SiteRM services, e.g. Kuberenetes isAlias and Multus;
+  * Allow adding SiteRM agent without Switch control via Kubernetes label isAlias: <name>. It can connect to any other NSI domain URN.
+  * Support for ssh_common_args in ansible configuration. This allows to set the ssh options for all ansible connections.
+  * Full rewrite of LookupService. In case there are multiple devices at Site, each device for retrieving configuration or applying will use a separate thread.
+  * LookupService rewrite stability improvements and better error handling, reporting in the logs, web ui.
+  * Fix allowed vlan check at global level and or port level (depending on Site's configuration).
+  * New ServiceState page to view the state of all SiteRM services. Can be seen under https://<url>/servicestates.html
+  * Moved to pip3 installation for SiteRM Frontend and Agent. (PEP420)
+  * Docker auto restart and healthcheck for Frontend and agent. In case of issues, the container will be restarted.
+  * Support querying IPv6 SNMP Endpoints.
+  * Allow to specify external SNMP exporter url for SNMP monitoring.
+  * Fix ARP information reporting (in case of multiple entries under the switch)
+  * soft-reconfiguration added for BGP peering.
+  * API to allow re-add delta to the model. (only if the delta is in one of the final states)
+  * No restarts every hour for configuration changes. Restart of services will happen every hour only if there are changes in the configuration on git.
+  * Ansible retries in case of communication failures. (default 3 times, after which activate-error is reported).
+  * Support for Kubernetes yaml apply installation dropped. Please use HELM Charts for Frontend/Agent installation.
+
+Supported systems: x86_64 and ppc64le(beta)
+Installation details: https://sdn-sense.github.io/Installation.html
+
+Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
+Docker version for this release:
+x86_64:
+  Agent: sdnsense/site-agent-sense:latest-20240614 (Or use latest)
+  Frontend: sdnsense/site-rm-sense:latest-20240614 (Or use latest)
+
 1.4.3
 This release includes (highlight main items):
 
