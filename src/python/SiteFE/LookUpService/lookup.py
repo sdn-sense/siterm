@@ -259,7 +259,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         stateChangedFirstRun = False
         if self.firstRun:
             self.logger.info("Because it is first run, we will start apply first to all devices individually")
-            stateChangedFirstRun = self.provision.startwork()
+            stateChangedFirstRun = self.provision.startwork(self.firstRun)
             self.firstRun = False
         self.multiworker.startwork()
         self.activeDeltas = getActiveDeltas(self)
@@ -336,7 +336,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
         # Start Provisioning Service and apply any config changes.
         self.logger.info("Start Provisioning Service")
-        stateChanged = self.provision.startwork()
+        stateChanged = self.provision.startwork(self.firstRun)
         if updateNeeded or stateChanged or stateChangedFirstRun:
             self.logger.info("Update is needed. Informing to renew all devices state")
             # If models are different, we need to update all devices information

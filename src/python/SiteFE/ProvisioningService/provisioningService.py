@@ -56,6 +56,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         self.connID = None
         self.activeOutput = {"output": {}}
         self.forceapply = []
+        self.firstrun = False
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -64,6 +65,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         self.yamlconfuuid = {}
         self.yamlconfuuidActive = {}
         self.forceapply = []
+        self.firstrun = False
 
     def __cleanup(self):
         """Cleanup yaml conf output"""
@@ -248,8 +250,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             activeDeltas = activeDeltas[0]
             self.activeOutput["output"] = evaldict(activeDeltas["output"])
 
-    def startwork(self):
+    def startwork(self, firstrun=False):
         """Start Provisioning Service main worker."""
+        self.firstrun = firstrun
         # Get current active config;
         self.__cleanup()
         self._getActive()
@@ -270,11 +273,11 @@ def execute(config=None, args=None):
         config = getGitConfig()
     if args:
         provisioner = ProvisioningService(config, args[1])
-        provisioner.startwork()
+        provisioner.startwork(True)
     else:
         for sitename in config.get("general", "sites"):
             provisioner = ProvisioningService(config, sitename)
-            provisioner.startwork()
+            provisioner.startwork(True)
 
 
 if __name__ == "__main__":

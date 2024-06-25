@@ -168,6 +168,9 @@ class VirtualSwitchingService:
                 if connDict.get('_params', {}).get('networkstatus', '') == "deactivated":
                     # This happens during modify, force apply;
                     self.forceapply.append(connID)
+                # If first run, we also force apply
+                if self.firstrun and connID not in self.forceapply:
+                    self.forceapply.append(connID)
 
     def compareQoS(self, switch, runningConf, uuid=""):
         """Compare expected and running conf"""

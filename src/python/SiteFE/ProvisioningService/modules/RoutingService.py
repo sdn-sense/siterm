@@ -143,6 +143,8 @@ class RoutingService():
             for connID, connDict in activeConfig['rst'].items():
                 self.connID = connID
                 self._addparamsrst(connDict, switches)
+                if self.firstrun and connID not in self.forceapply:
+                    self.forceapply.append(connID)
 
     def compareBGP(self, switch, runningConf, uuid):
         """Compare L3 BGP"""
