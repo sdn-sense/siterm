@@ -9,4 +9,4 @@ __all__ = ["LookUpService", "ProvisioningService", "REST"]
 # src/python/SiteFE/__init__.py
 # src/python/SiteRMAgent/__init__.py
 # src/python/SiteRMLibs/__init__.py
-__version__ = '1.4.6'
+__version__ = '1.4.61'

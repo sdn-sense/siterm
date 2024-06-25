@@ -1,3 +1,20 @@
+1.4.61
+This release includes:
+
+SiteRM Frontend bugfix for 1.4.6 release:
+  * BGP Removal requires `state: present` for ansible templates to initiate removal, if not present BGP configuration remains on network devices;
+  * Force reapply during service restart, or first FE start.
+  * Do not apply empty statements, unneeded ansible apply run;
+
+Supported systems: x86_64 and ppc64le(beta)
+Installation details: https://sdn-sense.github.io/Installation.html
+
+Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
+Docker version for this release:
+x86_64:
+  Agent: sdnsense/site-agent-sense:latest-20240625 (Or use latest)
+  Frontend: sdnsense/site-rm-sense:latest-20240625 (Or use latest)
+
 1.4.6
 This release includes:
 
