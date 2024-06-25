@@ -56,6 +56,20 @@ class RoutingService():
     def __init__(self):
         super().__init__()
 
+    def __defbgp(self, host):
+        """Return def bgp dict. Skip apply if empty"""
+        tmpD = {}
+        tmpD['asn'] = self.getConfigValue(host, 'private_asn')
+        tmpD['belongsTo'] = self.connID
+        if not tmpD['asn']:
+            del tmpD['asn']
+        tmpD['vrf'] = self.getConfigValue(host, 'vrf')
+        if not tmpD['vrf']:
+            del tmpD['vrf']
+        if tmpD:
+            tmpD['state'] = 'present'
+        return tmpD
+
     def _getDefaultBGP(self, host):
         """Default yaml dict setup"""
         tmpD = self.yamlconfuuid.setdefault('rst', {}).setdefault(self.connID, {})
@@ -103,12 +117,13 @@ class RoutingService():
         for iptype in ['ipv4', 'ipv6']:
             rTo = rDict.get('routeFrom', {}).get(f'{iptype}-prefix-list', {}).get('value', None)
             rFrom = rDict.get('routeTo', {}).get(f'{iptype}-prefix-list', {}).get('value', None)
-            prefList = bgpdict.setdefault('prefix_list', {}).setdefault(iptype, {})
             if rTo:
+                prefList = bgpdict.setdefault('prefix_list', {}).setdefault(iptype, {})
                 newRoute = prefList.setdefault(rTo, {})
                 newRoute[f'sense-{ruid}-to'] = 'present'
                 self._addRouteMap(host, f'sense-{ruid}-to', f'sense-{ruid}-mapout', iptype)
             if rFrom:
+                prefList = bgpdict.setdefault('prefix_list', {}).setdefault(iptype, {})
                 newRoute = prefList.setdefault(rFrom, {})
                 newRoute[f'sense-{ruid}-from'] = 'present'
                 self._addRouteMap(host, f'sense-{ruid}-from', f'sense-{ruid}-mapin', iptype)
@@ -127,6 +142,7 @@ class RoutingService():
         for host, hostDict in connDict.items():
             if host not in switches:
                 continue
+            self._getDefaultBGP(host)
             for _, rFullDict in hostDict.items():
                 if not self.checkIfStarted(rFullDict):
                     continue
@@ -148,11 +164,16 @@ class RoutingService():
 
     def compareBGP(self, switch, runningConf, uuid):
         """Compare L3 BGP"""
-        different = False
-        tmpD = self.yamlconfuuid.get('rst', {}).get(uuid, {}).get(switch, {})
+        tmpD = self.yamlconfuuid.setdefault("rst", {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault('sense_bgp', {})
+        # If equal - return no difference
         if tmpD == runningConf:
-            return different
+            return False
+        self._getDefaultBGP(switch) # Just in case running empty, force add bgp info
+        # If runningConf is empty, then it is different
+        if not runningConf:
+            return True
+        different = False
         for key, val in runningConf.items():
             # ipv6_network, ipv4_network, neighbor, prefix_list, route_map
             if not val:
@@ -161,4 +182,9 @@ class RoutingService():
                 yamlOut = tmpD.setdefault(key, {})
                 dictCompare(yamlOut, val)
                 different = True
+            else:
+                tmpD[key] = val
+        # Compare empty dict with prepared new conf:
+        if self.__defbgp(switch) == tmpD:
+            different = False
         return different

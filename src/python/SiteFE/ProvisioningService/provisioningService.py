@@ -170,6 +170,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         # For applying into devices
         curActiveConf.pop("interface", None)
         curActiveConf.pop("sense_bgp", None)
+        curActiveConf.pop("qos", None)
         curActiveConf[key] = (
             self.yamlconfuuid.get(acttype, {})
             .get(uuid, {})
