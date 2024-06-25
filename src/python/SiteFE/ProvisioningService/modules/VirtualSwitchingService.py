@@ -198,10 +198,14 @@ class VirtualSwitchingService:
     def compareVsw(self, switch, runningConf, uuid):
         """Compare expected and running conf"""
         different = False
-        tmpD = self.yamlconfuuid.get("vsw", {}).get(uuid, {}).get(switch, {})
+        tmpD = self.yamlconfuuid.setdefault("vsw", {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault("interface", {})
+        # If equal - return no difference
         if tmpD == runningConf:
-            return different  # equal config
+            return different
+        # If runningConf is empty, then it is different
+        if not runningConf:
+            return True
         for key, val in runningConf.items():
             if key not in tmpD.keys() and val["state"] != "absent":
                 # Vlan is present in ansible config, but not in new config
