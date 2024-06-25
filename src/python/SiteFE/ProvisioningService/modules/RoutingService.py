@@ -168,7 +168,7 @@ class RoutingService():
         tmpD = tmpD.setdefault('sense_bgp', {})
         # If equal - return no difference
         if tmpD == runningConf:
-           self.logger.debug(f'Running conf and new conf are equals for {uuid}. Return False')
+            self.logger.debug(f'Running conf and new conf are equals for {uuid}. Return False')
             return False
         self._getDefaultBGP(switch) # Just in case running empty, force add bgp info
         # If runningConf is empty, then it is different
