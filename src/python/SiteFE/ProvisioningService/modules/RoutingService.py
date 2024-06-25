@@ -168,10 +168,12 @@ class RoutingService():
         tmpD = tmpD.setdefault('sense_bgp', {})
         # If equal - return no difference
         if tmpD == runningConf:
+           self.logger.debug(f'Running conf and new conf are equals for {uuid}. Return False')
             return False
         self._getDefaultBGP(switch) # Just in case running empty, force add bgp info
         # If runningConf is empty, then it is different
         if not runningConf:
+            self.logger.debug(f'Running config for {uuid} is empty. Return True')
             return True
         different = False
         for key, val in runningConf.items():
@@ -181,10 +183,16 @@ class RoutingService():
             if key in ['ipv6_network', 'ipv4_network', 'prefix_list', 'route_map', 'neighbor']:
                 yamlOut = tmpD.setdefault(key, {})
                 dictCompare(yamlOut, val)
+                self.logger.debug(f'There is {key} change for {uuid}. Will return True')
                 different = True
             else:
                 tmpD[key] = val
         # Compare empty dict with prepared new conf:
         if self.__defbgp(switch) == tmpD:
+            self.logger.debug(f'Def BGP and new BGP is empty for {uuid}. Will return False')
             different = False
+        # In case of new - keys not equal, need to write
+        if tmpD.keys() != runningConf.keys():
+            self.logger.debug(f'Keys for new BGP are not equal for {uuid}. Will return True')
+            different = True
         return different
