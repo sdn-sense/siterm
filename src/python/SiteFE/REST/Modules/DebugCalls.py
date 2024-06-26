@@ -39,20 +39,36 @@ class CallValidator:
             "tcpdump": self.__validateTcpdump,
             "traceroute": self.__validateTraceRoute,
         }
+        self.defparams = {"prometheus-push": {},
+                          "arp-push": {},
+                          "iperf-server": {"onetime": True},
+                          "iperf-client": {"onetime": True},
+                          "rapid-ping": {},
+                          "arp-table": {"onetime": True},
+                          "tcpdump": {"onetime": True},
+                          "traceroute": {"onetime": True}}
         self.config = config
+
+    def _addDefaults(self, inputDict):
+        """Add default params (not controlled by outside)"""
+        for key, val in self.defparams[inputDict["type"]].items():
+            if key not in inputDict:
+                inputDict[key] = val
+        return inputDict
+
 
     def validate(self, inputDict):
         """Validate wrapper for debug action."""
         if "hostname" not in inputDict:
             raise BadRequestError("Hostname not specified in debug request.")
         if "type" in inputDict and inputDict["type"] not in self.functions:
-            raise BadRequestError(
-                f"Action {inputDict['type']} not supported. Supported actions: {self.functions.keys()}"
-            )
+            raise BadRequestError(f"Action {inputDict['type']} not supported. Supported actions: {self.functions.keys()}")
         self.functions[inputDict["type"]](inputDict)
+        self.__validateRuntime(inputDict)
+        return self._addDefaults(inputDict)
 
-    @staticmethod
-    def __validateTraceRoute(inputDict):
+
+    def __validateTraceRoute(self, inputDict):
         """Validate traceroute debug request."""
         for key in ["ip"]:
             if key not in inputDict:
@@ -65,54 +81,44 @@ class CallValidator:
         if not optional:
             raise BadRequestError("One of these keys must be present: from_interface, from_ip")
 
-    @staticmethod
-    def __validateArp(inputDict):
+
+    def __validateArp(self, inputDict):
         """Validate aprdump debug request."""
         if "interface" not in inputDict:
             raise BadRequestError("Key interface not specified in debug request.")
 
-    @staticmethod
-    def __validateIperf(inputDict):
+
+    def __validateIperf(self, inputDict):
         """Validate iperfclient debug request."""
-        for key in ["interface", "ip", "time", "port"]:
+        for key in ["interface", "ip", "time", "port", "runtime"]:
             if key not in inputDict:
                 raise BadRequestError(f"Key {key} not specified in debug request.")
             # Do not allow time to be more than 5mins
             if int(inputDict["time"]) > 300:
-                raise BadRequestError(
-                    "Requested Runtime for debug request is more than 5mins."
-                )
+                raise BadRequestError("Requested Runtime for debug request is more than 5mins.")
 
-    @staticmethod
-    def __validateIperfserver(inputDict):
+    def __validateIperfserver(self, inputDict):
         """Validate iperf server debug request."""
-        for key in ["port", "ip", "time", "onetime"]:
+        for key in ["port", "ip", "time", "runtime"]:
             if key not in inputDict:
                 raise BadRequestError(f"Key {key} not specified in debug request.")
 
-    @staticmethod
-    def __validateRapidping(inputDict):
+
+    def __validateRapidping(self, inputDict):
         """Validate rapid ping debug request."""
-        for key in ["ip", "time", "packetsize", "interface"]:
+        for key in ["ip", "time", "packetsize", "interface", "runtime"]:
             if key not in inputDict:
                 raise BadRequestError(f"Key {key} not specified in debug request.")
-        # time not allow more than 5 minutes:
-        if int(inputDict["time"]) > 300:
-            raise BadRequestError(
-                "Requested Runtime for rapidping request is more than 5mins."
-            )
+        # time not allow more than 60 minutes:
+        if int(inputDict["time"]) > 3600:
+            raise BadRequestError("Requested Runtime for rapidping request is more than 5mins.")
         # interval is optional - not allow lower than 0.2
         if "interval" in inputDict and float(inputDict["interval"]) < 0.2:
-            raise BadRequestError(
-                "Requested Interval is lower than 0.2. That would be considered DDOS and is not allowed."
-            )
+            raise BadRequestError("Requested Interval is lower than 0.2. That would be considered DDOS and is not allowed.")
         if "packetsize" in inputDict and int(inputDict["packetsize"]) > 1500:
-            raise BadRequestError(
-                "Requested Packet Size is bigger than 1500. That would be considered DDOS and is not allowed."
-            )
+            raise BadRequestError("Requested Packet Size is bigger than 1500. That would be considered DDOS and is not allowed.")
 
-    @staticmethod
-    def __validateTcpdump(inputDict):
+    def __validateTcpdump(self, inputDict):
         """Validate tcpdump debug request."""
         if "interface" not in inputDict:
             raise BadRequestError("Key interface not specified in debug request.")
@@ -126,13 +132,17 @@ class CallValidator:
                 raise BadRequestError("Requested dictionary metadata is not dictionary")
             for key, val in inputDict["metadata"].items():
                 if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", key):
-                    raise BadRequestError(
-                        f"Metadata Key {key} does not match prometheus label format"
-                    )
+                    raise BadRequestError(f"Metadata Key {key} does not match prometheus label format")
                 if not isinstance(val, str):
-                    raise BadRequestError(
-                        f"Metadata Key {key} value is not str. Only str supported"
-                    )
+                    raise BadRequestError(f"Metadata Key {key} value is not str. Only str supported")
+
+    def __validateRuntime(self, inputDict):
+        """Validate Runtime"""
+        totalRuntime = int(int(inputDict["runtime"]) - getUTCnow())
+        if totalRuntime < 600 or totalRuntime > 86400:
+            raise BadRequestError(
+                f"Total Runtime must be within range of 600 < x < 86400 seconds since epoch. You requested {totalRuntime}"
+            )
 
     def __validatePrompush(self, inputDict):
         """Validate prometheus push debug request."""
@@ -141,11 +151,6 @@ class CallValidator:
                 raise BadRequestError(f"Key {key} not specified in debug request.")
         if inputDict["hosttype"] not in ["host", "switch"]:
             raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
-        totalRuntime = int(int(inputDict["runtime"]) - getUTCnow())
-        if totalRuntime < 600 or totalRuntime > 86400:
-            raise BadRequestError(
-                f"Total Runtime must be within range of 600 < x < 86400 seconds since epoch. You requested {totalRuntime}"
-            )
         # Check all metadata label parameters
         self.__validateMetadata(inputDict)
         # Check all filter parameters
@@ -175,11 +180,6 @@ class CallValidator:
                 raise BadRequestError(f"Key {key} not specified in debug request.")
         if inputDict["hosttype"] not in ["host", "switch"]:
             raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
-        totalRuntime = int(inputDict["runtime"]) - getUTCnow()
-        if totalRuntime < 600 or totalRuntime > 86400:
-            raise BadRequestError(
-                f"Total Runtime must be within range of 600 < x < 86400 seconds since epoch. You requested {totalRuntime}"
-            )
         # Check all metadata label parameters
         self.__validateMetadata(inputDict)
 
@@ -255,18 +255,15 @@ class DebugCalls:
         jsondump = jsondumps(inputDict)
         for symbol in [";", "&"]:
             if symbol in jsondump:
-                raise BadRequestError(
-                    "Unsupported symbol in input request. Contact Support"
-                )
-        self.validator.validate(inputDict)
-        out = {
-            "hostname": inputDict["hostname"],
-            "state": "new",
-            "requestdict": jsondump,
-            "output": "",
-            "insertdate": getUTCnow(),
-            "updatedate": getUTCnow(),
-        }
+                raise BadRequestError("Unsupported symbol in input request. Contact Support")
+        inputDict = self.validator.validate(inputDict)
+        out = {"hostname": inputDict["hostname"],
+               "state": "new",
+               "requestdict": jsondumps(inputDict),
+               "output": "",
+               "insertdate": getUTCnow(),
+               "updatedate": getUTCnow()
+               }
         insOut = self.dbI.insert("debugrequests", [out])
         self.responseHeaders(environ, **kwargs)
         return {"Status": insOut[0], "ID": insOut[2]}
@@ -274,12 +271,11 @@ class DebugCalls:
     def updatedebug(self, environ, **kwargs):
         """Update debug action information."""
         inputDict = read_input_data(environ)
-        out = {
-            "id": kwargs["debugvar"],
-            "state": inputDict["state"],
-            "output": inputDict["output"],
-            "updatedate": getUTCnow(),
-        }
+        out = {"id": kwargs["debugvar"],
+               "state": inputDict["state"],
+               "output": inputDict["output"],
+               "updatedate": getUTCnow()
+               }
         updOut = self.dbI.update("debugrequests", [out])
         self.responseHeaders(environ, **kwargs)
         return {"Status": updOut[0], "ID": updOut[2]}

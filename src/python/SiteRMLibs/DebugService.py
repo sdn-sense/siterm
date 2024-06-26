@@ -133,8 +133,18 @@ class DebugService:
 
         # If it is active, but process exited, then it failed.
         if retOut['exitCode'] != 0 and inputDict['state'] == 'active':
+            onetime = inputDict['requestdict'].get('onetime', False)
+            # Check that it should run only once.
+            if onetime:
+                self.logger.info(f"One time run and process finished: {inputDict['id']}")
+                retOut['processOut'].append(f"One time run process finished for: {inputDict['id']}")
+                if retOut['jsonout'].get('output', {}).get('exitCode', -1) == 0:
+                    self._clean(inputDict)
+                    return retOut, 2, "finished"
+                return retOut, 1, "failed"
             # Check if we should restart it based on runtime parameters.
             utcNow = int(getUTCnow())
+            # Check that it should run until specific time.
             rununtil = int(inputDict['requestdict'].get('runtime', utcNow))
             if rununtil > utcNow:
                 self.logger.info(f"Restarting background process: {inputDict['id']}")
