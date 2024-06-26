@@ -37,6 +37,7 @@ if [[ $git_tag_conflict -ne 0 ]];
     exit 1;
   fi;
 
+echo $NEW_VERSION > $FDIR/current_tag
 sed -i .bak "s/.*VERSION = .*/VERSION = '$NEW_VERSION'/" $FDIR/../setupUtilities.py
 rm -f $FDIR/../setupUtilities.py.bak
 sed -i .bak "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/python/__init__.py
