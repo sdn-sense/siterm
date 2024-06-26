@@ -31,8 +31,8 @@ class RapidPing(BaseDebugAction):
         if ipVersion(self.requestdict['ip']) == -1:
             self.processout.wn(f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6")
             return
-
-        command = f"ping -i {self.requestdict.get('interval', 1)} -w {self.requestdict['time']} {self.requestdict['ip']} -s {self.requestdict['packetsize']} -I {self.requestdict['interface']}"
+        ipaddr = self.requestdict['ip'].split('/')[0]
+        command = f"ping -i {self.requestdict.get('interval', 1)} -w {self.requestdict['time']} {ipaddr} -s {self.requestdict['packetsize']} -I {self.requestdict['interface']}"
         self.processout.wn(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles['stdout'], self.outfiles['stderr'])
         self.jsonout['rapid-ping']['exitCode'] = 0
