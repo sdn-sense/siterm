@@ -81,6 +81,7 @@ class DeltaCalls:
             "activedeltas": {"allowedMethods": ["GET"]},
             "deltastates": {"allowedMethods": ["GET"]},
             "deltatimestates": {"allowedMethods": ["POST"]},
+            "deltaforceapply": {"allowedMethods": ["POST"]},
         }
         self.urlParams.update(urlParams)
 
@@ -88,19 +89,14 @@ class DeltaCalls:
         """Define Routes for this class"""
         self.routeMap.connect("deltas", "/v1/deltas", action="deltas")
         self.routeMap.connect("deltasid", "/v1/deltas/:deltaid", action="deltasid")
-        self.routeMap.connect(
-            "deltasaction", "/v1/deltas/:deltaid/actions/commit", action="deltasaction"
-        )
+        self.routeMap.connect("deltasaction", "/v1/deltas/:deltaid/actions/commit", action="deltasaction")
         self.routeMap.connect("activedeltas", "/v1/activedeltas", action="activedeltas")
-        self.routeMap.connect(
-            "deltastates", "/v1/deltastates/:deltaid", action="deltastates"
-        )
-        self.routeMap.connect(
-            "deltatimestates", "/v1/deltatimestates", action="deltatimestates"
-        )
+        self.routeMap.connect("deltastates", "/v1/deltastates/:deltaid", action="deltastates")
+        self.routeMap.connect("deltatimestates", "/v1/deltatimestates", action="deltatimestates")
+        self.routeMap.connect("deltaforceapply", "/v1/deltaforceapply", action="deltaforceapply")
 
     @staticmethod
-    def __intGetPostData(environ, **kwargs):
+    def __intGetPostData(environ, **_kwargs):
         """Parse POST Data"""
         out = {}
         postRequest = False
@@ -163,7 +159,7 @@ class DeltaCalls:
                 outContent["Error"] = out["Error"]
         return outContent
 
-    def __getdeltaINT(self, deltaID=None, **kwargs):
+    def __getdeltaINT(self, deltaID=None, **_kwargs):
         """Get delta from database."""
         if not deltaID:
             return self.dbI.get("deltas", orderby=['insertdate', 'DESC'])
@@ -174,22 +170,14 @@ class DeltaCalls:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out[0]
 
-    def __getdeltastatesINT(self, deltaID, **kwargs):
+    def __getdeltastatesINT(self, deltaID, **_kwargs):
         """Get delta states from database."""
         out = self.dbI.get("states", search=[["deltaid", deltaID]], orderby=['insertdate', 'DESC'])
         if not out:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out
 
-    def __commitdelta(
-        self,
-        deltaID,
-        environ,
-        newState="UNKNOWN",
-        internal=False,
-        hostname=None,
-        **kwargs,
-    ):
+    def __commitdelta(self, deltaID, _environ, newState="UNKNOWN", internal=False, hostname=None, **kwargs):
         """Change delta state."""
         if internal:
             out = self.dbI.get(
@@ -223,7 +211,7 @@ class DeltaCalls:
         self.stateM.commit(self.dbI, {"uid": deltaID, "state": "committing"})
         return {"status": "OK"}
 
-    def getActiveDeltas(self, environ, **kwargs):
+    def getActiveDeltas(self, _environ, **_kwargs):
         """Get all Active Deltas"""
         activeDeltas = self.dbI.get("activeDeltas", orderby=['insertdate', 'DESC'])
         if activeDeltas:
@@ -442,3 +430,10 @@ class DeltaCalls:
         self.dbI.insert("deltatimestates", [dbout])
         self.responseHeaders(environ, **kwargs)
         return {"status": "Recorded"}
+
+    def deltaforceapply(self, environ, **kwargs):
+        """Force apply based on delta UUID"""
+        out = self.__intGetPostData(environ, **kwargs)
+        self.dbI.insert("forceapplyuuid", [{"uuid": out["uuid"]}])
+        self.responseHeaders(environ, **kwargs)
+        return {"status": "OK"}

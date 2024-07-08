@@ -251,12 +251,24 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             activeDeltas = activeDeltas[0]
             self.activeOutput["output"] = evaldict(activeDeltas["output"])
 
+    def _getAllForceApply(self):
+        """Get all force apply"""
+        forceapply = self.dbI.get("forceapplyuuid")
+        if forceapply:
+            for item in forceapply:
+                if item["uuid"] not in self.forceapply:
+                    self.forceapply.append(item["uuid"])
+                    # delete from db
+                    self.dbI.delete("forceapplyuuid", {"uuid": item["uuid"]})
+
     def startwork(self, firstrun=False):
         """Start Provisioning Service main worker."""
         self.firstrun = firstrun
         # Get current active config;
         self.__cleanup()
         self._getActive()
+        # Get all for force apply
+        self._getAllForceApply()
         self.switch.getinfo()
         switches = self.switch.getAllSwitches()
         self.prepareYamlConf(self.activeOutput["output"], switches)

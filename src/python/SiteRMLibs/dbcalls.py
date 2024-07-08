@@ -86,7 +86,6 @@ create_switch = """CREATE TABLE IF NOT EXISTS switch(
                           output longtext NOT NULL,
                           error longtext NOT NULL,
                           primary key(id))"""
-
 create_servicestates = """CREATE TABLE IF NOT EXISTS servicestates(
                           id int auto_increment,
                           hostname text NOT NULL,
@@ -134,6 +133,10 @@ create_serviceaction = """CREATE TABLE IF NOT EXISTS serviceaction(
                                 serviceaction text NOT NULL,
                                 insertdate int NOT NULL,
                                 primary key(id))"""
+create_forceapplyuuid = """CREATE TABLE IF NOT EXISTS forceapplyuuid(
+                                id int auto_increment,
+                                uuid text NOT NULL,
+                                primary key(id))"""
 
 insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s, %(content)s)"
 insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, modadd)
@@ -151,6 +154,7 @@ insert_debugrequests = "INSERT INTO debugrequests(hostname, state, requestdict, 
 insert_snmpmon = "INSERT INTO snmpmon(hostname, insertdate, updatedate, output) VALUES(%(hostname)s, %(insertdate)s, %(updatedate)s, %(output)s)"
 insert_deltatimestates = "INSERT INTO deltatimestates(insertdate, uuid, uuidtype, hostname, hostport, uuidstate) VALUES(%(insertdate)s, %(uuid)s, %(uuidtype)s, %(hostname)s, %(hostport)s, %(uuidstate)s)"
 insert_serviceaction = "INSERT INTO serviceaction(servicename, hostname, serviceaction, insertdate) VALUES(%(servicename)s, %(hostname)s, %(serviceaction)s, %(insertdate)s)"
+insert_forceapplyuuid = "INSERT INTO forceapplyuuid(uuid) VALUES(%(uuid)s)"
 
 get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
 get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, modadd FROM deltas"
@@ -168,6 +172,7 @@ get_debugrequestsids = "SELECT id FROM debugrequests"
 get_snmpmon = "SELECT id, hostname, insertdate, updatedate, output FROM snmpmon"
 get_deltatimestates = "SELECT id, insertdate, uuid, uuidtype, hostname, hostport, uuidstate FROM deltatimestates"
 get_serviceaction = "SELECT id, servicename, hostname, serviceaction, insertdate FROM serviceaction"
+get_forceapplyuuid = "SELECT id, uuid FROM forceapplyuuid"
 
 update_deltas = "UPDATE deltas SET updatedate = %(updatedate)s, state = %(state)s WHERE uid = %(uid)s"
 update_delta_connections = "UPDATE delta_connections SET state = %(state)s WHERE connectionid = %(connectionid)s AND deltaid = %(deltaid)s"
@@ -182,6 +187,7 @@ update_debugrequests = "UPDATE debugrequests SET state = %(state)s, output = %(o
 update_snmpmon = "UPDATE snmpmon SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s AND hostname = %(hostname)s"
 # update_deltatimestates - Update call is not needed for update delta timestates. It always write a new entrya and update not needed.
 update_serviceaction = "UPDATE serviceaction SET serviceaction = %(serviceaction)s WHERE id = %(id)s"
+update_forceapplyuuid = "UPDATE forceapplyuuid SET uuid = %(uuid)s WHERE id = %(id)s"
 
 delete_models = "DELETE FROM models"
 delete_deltas = "DELETE FROM deltas"
@@ -198,3 +204,4 @@ delete_activeDeltas = "DELETE FROM activeDeltas"
 delete_snmpmon = "DELETE FROM snmpmon"
 delete_deltatimestates = "DELETE FROM deltatimestates"
 delete_serviceaction = "DELETE FROM serviceaction"
+delete_forceapplyuuid = "DELETE FROM forceapplyuuid"
