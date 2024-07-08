@@ -19,7 +19,8 @@ SCRIPTS = ["packaging/general/Config-Fetcher",
            "packaging/general/siterm-liveness",
            "packaging/general/siterm-readiness",
            "packaging/siterm-site-fe/scripts/siterm-ansible-runner",
-           "packaging/siterm-site-fe/scripts/SwitchWorker"]
+           "packaging/siterm-site-fe/scripts/SwitchWorker",
+           "packaging/siterm-site-fe/scripts/DBCleaner-service"]
 for sectionName in ['LookUpService', 'SNMPMonitoring', 'DBWorker', 'PolicyService']:
     SCRIPTS.append(f'packaging/siterm-site-fe/scripts/{sectionName}-update')
 
