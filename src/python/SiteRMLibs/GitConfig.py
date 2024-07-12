@@ -235,6 +235,13 @@ class GitConfig:
                     "ignore_logging_singleapply": False,
                     "verbosity_singleapply": 0,
                     "debug_singleapply": False,
+                    "private_data_dir_debug": "/opt/siterm/config/ansible/sense/",
+                    "inventory_debug": "/opt/siterm/config/ansible/sense/inventory_debug/inventory.yaml",
+                    "inventory_host_vars_dir_debug": "/opt/siterm/config/ansible/sense/inventory_debug/host_vars/",
+                    "rotate_artifacts_debug": 100,
+                    "ignore_logging_debug": False,
+                    "verbosity_debug": 0,
+                    "debug_debug": False,
                 },
                 "prefixes": {
                     "mrs": "http://schemas.ogf.org/mrs/2013/12/topology#",

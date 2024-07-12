@@ -2,10 +2,97 @@
 """
 SENSE Ansible test runner
 """
+import os
+import sys
 import pprint
+import argparse
 import yaml
 from yaml import safe_dump as ydump
 import ansible_runner
+from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.Backends.main import Switch
+
+def getParser(description):
+    """Returns the argparse parser."""
+    oparser = argparse.ArgumentParser(description=description,
+                                      prog=os.path.basename(sys.argv[0]), add_help=True)
+    oparser.add_argument('--printports', action='store_true',
+                         help="Run ansible and print ports for rm-configs.")
+    oparser.set_defaults(printports=False)
+    oparser.add_argument('--dumpconfig', action='store_true',
+                         help="Run ansible and dump configuration received from ansible.")
+    oparser.set_defaults(dumpconfig=False)
+    oparser.add_argument('--cleanswitch', action='store_true',
+                         help="Run ansible and print commands to clean switch.")
+    oparser.set_defaults(cleanswitch=False)
+    oparser.add_argument('--fulldebug', action='store_true',
+                         help="Run ansible with full debug output.")
+    return oparser
+
+
+class SwitchCleaner():
+    """Class to clean switch data of sense vlans"""
+    def __init__(self):
+        self.config = getGitConfig()
+        self.logger = getLoggingObject(logType="StreamLogger", service="AnsibleCleaner")
+        self.switch = Switch(self.config, self.config.config["SITENAME"])
+
+
+    def _getAnsibleCleanCommands(self, swname, inputInterface):
+        """Run ansible cleancmd template to get clean commands"""
+        inventory = self.switch.plugin._getInventoryInfo([swname])
+        self.switch.plugin._writeInventoryInfo(inventory, "_debug")
+        # Get host configuration;
+        curActiveConf = self.switch.plugin.getHostConfig(swname)
+        # Clean all configuration params and add new interfaces
+        curActiveConf.pop("interface", None)
+        curActiveConf.pop("sense_bgp", None)
+        curActiveConf.pop("qos", None)
+        curActiveConf["interface"] = inputInterface
+        # Write new configuration to file
+        self.switch.plugin._writeHostConfig(swname, curActiveConf, "_debug")
+        # Run ansible to get clean commands
+        self.switch.plugin._applyNewConfig([swname], "_debug", templateName="cleancmd.yaml")
+        # Read clean commands
+        fname = f"/var/tmp/debug-{swname}.conf"
+        if not os.path.isfile(fname):
+            self.logger.info(f"There is no clean commands file for {swname}.")
+            self.logger.info("-"*100)
+            return
+        self.logger.info(f"CLEAN COMMANDS FOR {swname}")
+        self.logger.info("-"*100)
+        with open(fname, 'r', encoding='utf-8') as fd:
+            print(fd.read())
+        self.logger.info("-"*100)
+        os.remove(fname)
+
+    def _addVlan(self, hostclean, intf, vlanid, intfdict):
+        """Add vlan to hostclean"""
+        hostclean.setdefault(intf, {'description': intfdict.get('description', ''),
+                                    'mtu': int(intfdict.get('mtu', 1500)),
+                                    'name': intf,
+                                    'state': 'absent',
+                                    'vlanid': vlanid,
+                                    'tagged_members': {k: 'absent' for k in intfdict.get('tagged', []) if k}})
+
+
+    def clean(self, host, dataIn):
+        """Clean switch data of sense vlans. It will not execute on the device, just print the commands"""
+        allvlans = self.config.config.get('MAIN', {}).get(host, {}).get('all_vlan_range_list', [])
+        if not allvlans:
+            self.logger.error(f"NO VLANs configured found for {host}. Ignore host")
+            return
+        hostclean = {}
+        for intf, intfdict in dataIn.get('ansible_net_interfaces', {}).items():
+            if intf.startswith('Vlan'):
+                vlanid = int(intf.replace('Vlan', '').strip())
+                if vlanid in allvlans:
+                    print(f"CLEANING VLAN: {host} - {vlanid}")
+                    self._addVlan(hostclean, intf, vlanid, intfdict)
+        print(f"CLEANING SWITCH: {host}")
+        if hostclean:
+            self._getAnsibleCleanCommands(host, hostclean)
 
 
 def getInventory(inventoryFile):
@@ -14,11 +101,14 @@ def getInventory(inventoryFile):
         out = yaml.safe_load(fd.read())
     return out
 
-def runAnsible(playbookFile):
+def runAnsible(playbookFile, fulldebug=False):
     """Run Ansible Playbook"""
+    verbosity = 0
+    if fulldebug:
+        verbosity = 1000
     ansRunner = ansible_runner.run(private_data_dir='/opt/siterm/config/ansible/sense',
                                    inventory=getInventory('/opt/siterm/config/ansible/sense/inventory/inventory.yaml'),
-                                   playbook=playbookFile) # verbosity=1000)
+                                   playbook=playbookFile, verbosity=verbosity)
     return ansRunner
 
 def printports(host, dataIn):
@@ -33,7 +123,7 @@ def printports(host, dataIn):
     print('This is only a simple example output of interface names.')
     print('Please remove not needed ports and leave only those to be exposed in the model')
     print('IMPORTANT: This still require additional parameters, like:')
-    print('     isAlias - to point to remote endpoint')
+    print('     isAlias - to point to remote endpoint (if lldp is not enaibled)')
     print('     wanlink - True/False which points that port connects to WAN')
     print('     vlan_range - to list vlan range allowed for control - either at switch level, or port level')
     print('     vlan_mtu - predefined what MTU to use on configured new vlan interfaces (at switch level)')
@@ -44,12 +134,18 @@ def printports(host, dataIn):
     print(ydump(out))
     print('-'*100)
 
-def run():
+def cleanswitch(host, dataIn):
+    """Clean switch data of sense vlans. It will not execute on the device, just print the commands"""
+    cls = SwitchCleaner()
+    cls.clean(host, dataIn)
+
+
+def run(args):
     """Run the playbook to get facts"""
     playbooks = ['getfacts.yaml']
     for playbook in playbooks:
         print(f"RUNNING PLAYBOOK: {playbook}")
-        r = runAnsible(playbook)
+        r = runAnsible(playbook, args.fulldebug)
         for host, _ in r.stats['failures'].items():
             for host_events in r.host_events(host):
                 if host_events['event'] != 'runner_on_failed':
@@ -57,14 +153,31 @@ def run():
                 pprint.pprint(host_events)
         for host, _ in r.stats['ok'].items():
             print(f"HOSTNAME: {host}")
-            print('-'*100)
+            print('='*100)
             for host_events in r.host_events(host):
                 if host_events['event'] != 'runner_on_ok':
                     continue
                 if 'ansible_facts' in host_events['event_data']['res'] and  \
                      'ansible_net_interfaces' in host_events['event_data']['res']['ansible_facts']:
-                    printports(host, host_events['event_data']['res']['ansible_facts'])
-            print('-'*100)
+                    if args.dumpconfig:
+                        print('-'*100)
+                        print(ydump(host_events['event_data']['res']['ansible_facts']))
+                        print('-'*100)
+                    if args.printports:
+                        print('-'*100)
+                        printports(host, host_events['event_data']['res']['ansible_facts'])
+                        print('-'*100)
+                    if args.cleanswitch:
+                        print('-'*100)
+                        cleanswitch(host, host_events['event_data']['res']['ansible_facts'])
+                        print('-'*100)
+            print('='*100)
 
 if __name__ == '__main__':
-    run()
+    parser = getParser("SENSE Ansible test runner")
+    arguments = parser.parse_args()
+    if arguments.printports or arguments.dumpconfig or arguments.cleanswitch:
+        run(arguments)
+    else:
+        parser.print_help()
+        sys.exit(1)

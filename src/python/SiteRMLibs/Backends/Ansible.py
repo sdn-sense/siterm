@@ -128,14 +128,14 @@ class Switch:
         with open(fname, "w", encoding="utf-8") as fd:
             fd.write(yaml.dump(out))
 
-    def _applyNewConfig(self, hosts=None, subitem=""):
+    def _applyNewConfig(self, hosts=None, subitem="", templateName="applyconfig.yaml"):
         """Apply new config and run ansible playbook"""
         self.verbosity = 0
         retries = 3
         self.ansibleErrs = {}
         while retries > 0:
             try:
-                ansOut = self._executeAnsible("applyconfig.yaml", hosts, subitem)
+                ansOut = self._executeAnsible(templateName, hosts, subitem)
             except ValueError as ex:
                 raise ConfigException(
                     f"Got Value Error. Ansible configuration exception {ex}") from ex
