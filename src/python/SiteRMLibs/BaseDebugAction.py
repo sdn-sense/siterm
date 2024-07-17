@@ -70,7 +70,7 @@ class BaseDebugAction:
         self.diragent = contentDB()
         self.flightcheck()
 
-    def logMessage(self, message, level):
+    def logMessage(self, message, level="info"):
         """Log Message to logger process and also processout"""
         if level == "warning":
             self.logger.warning(message)
