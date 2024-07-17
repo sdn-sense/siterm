@@ -42,16 +42,16 @@ class CallValidator:
             "traceroute": self.__validateTraceRoute,
             "traceroutenet": self.__validateTraceRouteNet
         }
-        self.defparams = {"prometheus-push": {"runtime": 600},
-                          "arp-push": {"runtime": 600},
-                          "iperf-server": {"onetime": True, "runtime": 600},
-                          "iperf-client": {"onetime": True, "runtime": 600},
-                          "rapid-ping": {"runtime": 600},
-                          "rapid-pingnet": {"onetime": True, "runtime": 600},
-                          "arp-table": {"onetime": True, "runtime": 600},
-                          "tcpdump": {"onetime": True, "runtime": 600},
-                          "traceroute": {"onetime": True, "runtime": 600},
-                          "traceroutenet": {"onetime": True, "runtime": 600}}
+        self.defparams = {"prometheus-push": {},
+                          "arp-push": {},
+                          "iperf-server": {"onetime": True},
+                          "iperf-client": {"onetime": True},
+                          "rapid-ping": {},
+                          "rapid-pingnet": {"onetime": True},
+                          "arp-table": {"onetime": True},
+                          "tcpdump": {"onetime": True},
+                          "traceroute": {"onetime": True},
+                          "traceroutenet": {"onetime": True}}
         self.config = config
 
     def _addDefaults(self, inputDict):
@@ -59,6 +59,9 @@ class CallValidator:
         for key, val in self.defparams[inputDict["type"]].items():
             if key not in inputDict:
                 inputDict[key] = val
+        # If runtime not added, we add current timestamp + 10minutes
+        if "runtime" not in inputDict:
+            inputDict["runtime"] = getUTCnow() + 600
         return inputDict
 
     @staticmethod
