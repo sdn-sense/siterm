@@ -12,6 +12,7 @@ from SiteRMLibs.CustomExceptions import SwitchException
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.ipaddr import ipVersion
 
+
 class RapidPingNet(BaseDebugAction):
     """RapidPing class"""
     def __init__(self, config, sitename, backgConfig):
@@ -52,7 +53,6 @@ class RapidPingNet(BaseDebugAction):
         if vrf:
             out["vrf"] = vrf
         return out
-
 
     def main(self):
         """Main RapidPing work. Run RapidPing on switches."""

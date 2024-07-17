@@ -12,6 +12,7 @@ from SiteRMLibs.CustomExceptions import SwitchException
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.ipaddr import ipVersion
 
+
 class TracerouteNet(BaseDebugAction):
     """RapidPing class"""
     def __init__(self, config, sitename, backgConfig):
@@ -50,7 +51,6 @@ class TracerouteNet(BaseDebugAction):
         if vrf:
             out["vrf"] = vrf
         return out
-
 
     def main(self):
         """Main TracerouteNet work. Run Traceroute on switches."""
