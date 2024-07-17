@@ -25,12 +25,12 @@ class IperfServer(BaseDebugAction):
     def main(self):
         """Run IPerf Server"""
         if ipVersion(self.requestdict['ip']) == -1:
-            self.processout.wn(f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6")
+            self.logMessage(f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6")
             return
         command = "timeout %s iperf3 --server -p %s --bind %s %s" % (self.requestdict['time'],
                                                                      self.requestdict['port'],
                                                                      self.requestdict['ip'],
                                                                      '-1' if self.requestdict['onetime'] == 'True' else '')
-        self.processout.wn(f"Running command: {command}")
+        self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles['stdout'], self.outfiles['stderr'])
         self.jsonout['iperf-server']['exitCode'] = 0

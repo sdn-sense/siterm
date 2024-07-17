@@ -171,6 +171,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         curActiveConf.pop("interface", None)
         curActiveConf.pop("sense_bgp", None)
         curActiveConf.pop("qos", None)
+        curActiveConf.pop("ping", None)
+        curActiveConf.pop("traceroute", None)
         curActiveConf[key] = (
             self.yamlconfuuid.get(acttype, {})
             .get(uuid, {})

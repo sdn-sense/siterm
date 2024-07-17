@@ -26,13 +26,13 @@ class RapidPing(BaseDebugAction):
         """Return arptable for specific vlan"""
         self.jsonout.setdefault('rapid-ping', {'exitCode': -1, 'output': []})
         if self.requestdict['interface'] not in getInterfaces():
-            self.processout.wn("Interface is not available on the node")
+            self.logMessage("Interface is not available on the node")
             return
         if ipVersion(self.requestdict['ip']) == -1:
-            self.processout.wn(f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6")
+            self.logMessage(f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6")
             return
         ipaddr = self.requestdict['ip'].split('/')[0]
         command = f"ping -i {self.requestdict.get('interval', 1)} -w {self.requestdict['time']} {ipaddr} -s {self.requestdict['packetsize']} -I {self.requestdict['interface']}"
-        self.processout.wn(f"Running command: {command}")
+        self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles['stdout'], self.outfiles['stderr'])
         self.jsonout['rapid-ping']['exitCode'] = 0

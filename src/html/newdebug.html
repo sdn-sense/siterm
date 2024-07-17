@@ -44,6 +44,18 @@
         });
         }
 
+        function doSiteUpdateN(ids) {
+            strSite = document.getElementById(ids + "sitename").value;
+            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
+              for (i=0; i < data['general']['sites'].length; i++){
+                sitename = data['general']['sites'][i];
+                if (strSite === sitename) {
+                  for (const [switchname] of Object.entries(data[sitename]['switch'])) {
+                    addDropDown(switchname, $("#" + ids + "hostname"))
+        }}}})}
+
+
+
         function doDTNUpdate(ids) {
         strDTN = document.getElementById(ids + "hostname").value;
         strSite = document.getElementById(ids + "sitename").value;
@@ -56,12 +68,11 @@
                         for (const [key, value] of Object.entries(myObject['NetInfo']['interfaces'])) {
                             if (! $.isEmptyObject(value['vlans'])) {
                               for (const [key1, value1] of Object.entries(value['vlans'])) {
-                                if (value1['provisioned']) {
-                                    addDropDown(key1, $("#" + ids + "interface"));
-                                    for (const [key2, value2] of Object.entries(value1)){
-                                      if (typeof value2 === 'object' && value2 !== null && key2 == 2 && ids === "f5_") {
-                                          addDropDown(value2[0]['address'], $("#" + ids + "ip"));
-                                        }}}}}}}}}});
+                                addDropDown(key1, $("#" + ids + "interface"));
+                                for (const [key2, value2] of Object.entries(value1)){
+                                  if (typeof value2 === 'object' && value2 !== null && key2 == 2 && ids === "f5_") {
+                                      addDropDown(value2[0]['address'], $("#" + ids + "ip"));
+                                    }}}}}}}}});
       }
 
         function addDropDown(dropdownVal, saveObj){
@@ -77,6 +88,9 @@
               addDropDown(sitename, $("#f3_sitename"));
               addDropDown(sitename, $("#f4_sitename"));
               addDropDown(sitename, $("#f5_sitename"));
+              addDropDown(sitename, $("#f6_sitename"));
+              addDropDown(sitename, $("#f7_sitename"));
+              addDropDown(sitename, $("#f8_sitename"));
             }
           });
        };
@@ -132,7 +146,7 @@
           <div class="col-md-12" id="alertstop"></div>
           <div class="row col-md-12 border border-primary">
             <div class="row col-md-12">
-              <h3 class="h3">Rapid Ping</h3>
+              <h3 class="h3">Rapid Ping (from Host)</h3>
             </div>
             <div class="col-md-12" id="alertsrapidping"></div>
             <div class="col">
@@ -163,7 +177,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f1_hostname" name="hostname" onchange="doDTNUpdate('f1_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f1_switchname" name="switchname" onchange="doDTNUpdate('f1_');" required="">
                     <option value="">
                       Choose Hostname
                     </option>
@@ -203,7 +217,7 @@
           </div>
           <div class="row col-md-12 border border-secondary">
             <div class="row col-md-12">
-              <h3 class="h3">TCPDump</h3>
+              <h3 class="h3">TCPDump (from Host)</h3>
             </div>
             <div class="col-md-12" id="alertstcpdump"></div>
             <div class="col">
@@ -274,7 +288,7 @@
           </div>
           <div class="row col-md-12 border border-danger">
             <div class="row col-md-12">
-              <h3 class="h3">IPerf Client</h3>
+              <h3 class="h3">IPerf Client (from Host)</h3>
             </div>
             <div class="col-md-12" id="alertsiperf"></div>
             <div class="col">
@@ -339,7 +353,7 @@ It will execute the following command:<br/>
           </div>
           <div class="row col-md-12 border border-warning">
             <div class="row col-md-12">
-              <h3 class="h3">IPerf Server</h3>
+              <h3 class="h3">IPerf Server (from Host)</h3>
             </div>
             <div class="col-md-12" id="alertsiperfserver"></div>
             <div class="col">
@@ -404,7 +418,7 @@ It will execute the following command:<br/>
 
           <div class="row col-md-12 border border-danger">
             <div class="row col-md-12">
-              <h3 class="h3">Traceroute</h3>
+              <h3 class="h3">Traceroute (from Host)</h3>
             </div>
             <div class="col-md-12" id="alertstraceroute"></div>
             <div class="col">
@@ -452,7 +466,100 @@ It will execute the following command:<br/>
               </form>
             </div>
           </div>
-
+          <div class="row col-md-12 border border-primary">
+            <div class="row col-md-12">
+              <h3 class="h3">Ping (from Network Device)</h3>
+            </div>
+            <div class="col-md-12" id="alertsrapidpingnet"></div>
+            <div class="col">
+              It will execute the following command on selected network device: ping ipaddress -c count -i interval<br/><br/>
+              Descriptions:<br/>
+              <b>-i interval</b><br/>
+                Wait interval seconds between sending each packet.<br/><br/>
+              <b>-c count</b><br/>
+                Total number of packets to send. Stop after the last one<br/><br/>
+            </div>
+            <div class="col">
+              <form onsubmit="collectInputs('f7'); return false" id="f7" name="f7">
+                <input id="f7_type" name="type" type="hidden" value="rapid-pingnet">
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f7_sitename" name="sitename" onchange="doSiteUpdateN('f7_');" required="">
+                    <option value="">
+                      Choose Site
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Network Device</label> <select class="form-control" id="f7_hostname" name="hostname" required="">
+                    <option value="">
+                      Choose Network Device
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">IP to ping</label> <input class="form-control" type="text" placeholder="IP to ping" id="f7_ip" name="ip" required="">
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Total Count of Pings to send</label> <input class="form-control" type="text" placeholder="Ping Count" id="f7_count" name="count" required="">
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Interval between pings</label> <select class="form-control" id="f7_timeout" name="timeout" required="">
+                    <option value="">
+                      Choose Timeout in seconds between each ping
+                    </option>
+                    <option value="1">
+                      1 second
+                    </option>
+                    <option value="5">
+                      5 seconds
+                    </option>
+                    <option value="10">
+                      10 seconds
+                    </option>
+                  </select>
+                </div><input type="submit">
+              </form>
+            </div>
+          </div>
+        <div class="row col-md-12 border border-primary">
+            <div class="row col-md-12">
+              <h3 class="h3">Traceroute (from Network Device)</h3>
+            </div>
+            <div class="col-md-12" id="alertstraceroutenet"></div>
+            <div class="col">
+              <span class="border" style="width:100%">
+                Traceroute provides a map of how data travels from its source to its destination<br/>
+                On network device, it will execute the traceroute command (which might be different on each device):<br/>
+                traceroute[6] [ip] [vrf vrfname]<br/>
+                <b>4|6</b>    It will identify it based on [ip] value and used as needed<br/>
+                <b>ip</b>         Destination of Traceroute IP<br/>
+                <b>vrf</b>         vrf will be used if configured on Site configuration (no option to specify via API)<br/>
+              </span>
+            </div>
+            <div class="col">
+              <form onsubmit="collectInputs('f8'); return false" id="f8" name="f8">
+                <input id="f8_type" name="type" type="hidden" value="traceroutenet">
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f8_sitename" name="sitename" onchange="doSiteUpdateN('f8_');" required="">
+                    <option value="">
+                      Choose Site
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Network device</label> <select class="form-control" id="f8_hostname" name="hostname" required="">
+                    <option value="">
+                      Choose Network Device
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">IP to traceroute to</label> <input class="form-control" type="text" placeholder="IP to traceroute" id="f8_ip" name="ip" required="">
+                </div>
+                <input type="submit">
+              </form>
+            </div>
+          </div>
         </div>
       </main>
     </div>
@@ -460,8 +567,6 @@ It will execute the following command:<br/>
   <script src="assets/js/bootstrap.bundle.js"></script>
   <script src="assets/js/bootstrap.js"></script>
   <script>
-
-
       $('#myTab a').click(function (e) {
         e.preventDefault();
         $(this).tab('show');

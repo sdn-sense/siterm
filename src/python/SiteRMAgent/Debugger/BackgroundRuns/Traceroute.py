@@ -22,7 +22,6 @@ class Traceroute(BaseDebugAction):
     def main(self):
         """Main TraceRoute work. Run TraceRoute on host."""
         self.jsonout.setdefault('traceroute', {'exitCode': -1, 'output': []})
-        self.processout.wn(f"NOT IMPLEMENTED call {self.backgConfig} to run traceroute")
-        self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to run traceroute")
+        self.logMessage(f"NOT IMPLEMENTED call {self.backgConfig} to run traceroute", "warning")
         self.jsonout['traceroute']['exitCode'] = -1 # Once implemented do 0
         raise BackgroundException("NOT IMPLEMENTED! -1")

@@ -51,10 +51,13 @@ class PromPush(BaseDebugAction):
 
     def __pushToGateway(self, registry):
         """Push registry to remote gateway"""
-        push_to_gateway(self.requestdict['gateway'],
-                        job=f"job-{self.backgConfig['id']}",
-                        registry=registry,
-                        grouping_key=self.__getMetadataParams())
+        try:
+            push_to_gateway(self.requestdict['gateway'],
+                            job=f"job-{self.backgConfig['id']}",
+                            registry=registry,
+                            grouping_key=self.__getMetadataParams())
+        except Exception as ex:
+            self.logMessage(f"Received an exception pushing to remote gateway. Exception: {ex}")
 
     @staticmethod
     def __filterOutput(filterRules, keys):
@@ -118,6 +121,5 @@ class PromPush(BaseDebugAction):
                         if self.__filterOutput(self.requestdict.get('filter', {}).get('snmp', {}), self.promLabels):
                             snmpGauge.labels(**self.promLabels).set(val[key1])
         self.__pushToGateway(registry)
-        self.processout.wn(f"Pushed SNMP data for {hostname}")
-        self.logger.info(f"Pushed SNMP data for {hostname}")
+        self.logMessage(f"Pushed SNMP data for {hostname}")
         self.jsonout['prometheus-push']['exitCode'] = 0

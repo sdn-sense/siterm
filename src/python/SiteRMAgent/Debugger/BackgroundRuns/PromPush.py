@@ -56,16 +56,15 @@ class PromPush(BaseDebugAction):
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
         nodeOut = getWebContentFromURL(f'{nodeExporterUrl}/metrics')
         if 'status_code' in nodeOut and nodeOut['status_code'] == -1:
-            self.processout.wn(f"Failed to get node_exporter data. Error: {nodeOut.get('error', 'Unknown')}")
+            self.logMessage(f"Failed to get node_exporter data. Error: {nodeOut.get('error', 'Unknown')}")
             return
         response = postWebContentToURL(self.__generatePromPushUrl(),
                                        data=nodeOut.content,
                                        headers=headers)
         if 'status_code' in response and response['status_code'] == -1:
-            self.processout.wn(f"Failed to push node_exporter data. Error: {response.get('error', 'Unknown')}")
+            self.logMessage(f"Failed to push node_exporter data. Error: {response.get('error', 'Unknown')}")
             return
-        self.logger.info(f"Pushed Node Exporter data. Return code: {response.status_code}")
-        self.processout.wn(f"Pushed Node Exporter data. Return code: {response.status_code}")
+        self.logMessage(f"Pushed Node Exporter data. Return code: {response.status_code}")
 
     def __cleanRegistry(self):
         """Get new/clean prometheus registry."""
@@ -102,5 +101,5 @@ class PromPush(BaseDebugAction):
             self.arpPush()
             self.jsonout['arp-push']['exitCode'] = 0
         else:
-            self.processout.append(f"Unsupported push method. Submitted request: {self.backgConfig}")
+            self.logMessage(f"Unsupported push method. Submitted request: {self.backgConfig}")
             raise Exception(f"Unsupported push method. Submitted request: {self.backgConfig}")
