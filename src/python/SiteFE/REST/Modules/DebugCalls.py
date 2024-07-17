@@ -127,7 +127,7 @@ class CallValidator:
         self.__validateKeys(inputDict, ["ip", "count", "timeout"])
         if int(inputDict["count"]) > 100:
             raise BadRequestError("Count request is more than 100. Maximum allowed is 100")
-        if int(inputDict["timeout"] > 30):
+        if int(inputDict["timeout"]) > 30:
             raise BadRequestError("Timeout request is more than 30 seconds. Maximum allowed is 30")
         if ipVersion(inputDict['ip']) == -1:
             raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")

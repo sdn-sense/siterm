@@ -91,13 +91,17 @@
                   if (myObject['exitCode']){
                       model.append('<div class="row"><b>Runtime Exit Code: <\/b>' + myObject['exitCode'] + '<\/div>');
                   }
-                  if (myObject['err']){
+                  if (myObject['stderr']){
                       model.append('<div class="row"><b>Debug Err:<\/b><\/div>');
-                      tableAddKeyLine(myObject['err'], ['LineNum', 'Value'], model);
+                      tableAddKeyLine(myObject['stderr'], ['LineNum', 'Value'], model);
                   }
-                  if (myObject['out']){
+                  if (myObject['stdout']){
                       model.append('<div class="row"><b>Debug Output:<\/b><\/div>');
-                      tableAddKeyLine(myObject['out'], ['LineNum', 'Value'], model);
+                      tableAddKeyLine(myObject['stdout'], ['LineNum', 'Value'], model);
+                  }
+                  if (myObject['processOut']){
+                      model.append('<div class="row"><b>Process Output:<\/b><\/div>');
+                      tableAddKeyLine(myObject['processOut'], ['LineNum', 'Value'], model);
                   }
               }
               $('#v-pills-' + debugID).empty();

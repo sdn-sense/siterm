@@ -28,8 +28,7 @@
         }
         $.post("/"+params['sitename']+"/sitefe/json/frontend/submitdebug/NEW", params, function(result){
             newAlert("New debug action submit state:" + JSON.stringify(result), params);
-        });
-    }
+        })}
 
 
         function doSiteUpdate(ids) {
@@ -39,10 +38,7 @@
             success: function(json){
                 for (j=0; j < json.length; j++){
                     addDropDown(json[j]['hostname'], $("#" + ids + "hostname"));
-                }
-            }
-        });
-        }
+                }}})}
 
         function doSiteUpdateN(ids) {
             strSite = document.getElementById(ids + "sitename").value;
@@ -50,11 +46,10 @@
               for (i=0; i < data['general']['sites'].length; i++){
                 sitename = data['general']['sites'][i];
                 if (strSite === sitename) {
-                  for (const [switchname] of Object.entries(data[sitename]['switch'])) {
-                    addDropDown(switchname, $("#" + ids + "hostname"))
-        }}}})}
-
-
+                  const switchArray = data[sitename]['switch'];
+                  switchArray.forEach((name, index) => {
+                    addDropDown(name, $("#" + ids + "hostname"))
+                  })}}})}
 
         function doDTNUpdate(ids) {
         strDTN = document.getElementById(ids + "hostname").value;
@@ -148,7 +143,7 @@
             <div class="row col-md-12">
               <h3 class="h3">Rapid Ping (from Host)</h3>
             </div>
-            <div class="col-md-12" id="alertsrapidping"></div>
+            <div class="col-md-12" id="alertsrapid-ping"></div>
             <div class="col">
               Rapid ping - very similar to Flood ping implemented in FreeBSD. where a minimum of 100 packets are sent in one second or as soon as a reply to the request has come. <br/>
               It will execute the following command on selected hostname: <b>ping -i &lt;interval&gt; -w &lt;runtime&gt; &lt;ip&gt; -s &lt;packetsize&gt; -I &lt;Interface&gt;</b><br/><br/>
@@ -177,7 +172,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f1_switchname" name="switchname" onchange="doDTNUpdate('f1_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f1_hostname" name="hostname" onchange="doDTNUpdate('f1_');" required="">
                     <option value="">
                       Choose Hostname
                     </option>
@@ -254,7 +249,7 @@
             <div class="row col-md-12">
               <h3 class="h3">ARP Table</h3>
             </div>
-            <div class="col-md-12" id="alertsarptable"></div>
+            <div class="col-md-12" id="alertsarp-table"></div>
             <div class="col">
        The ip neigh command manipulates neighbour objects that establish bindings between protocol addresses and link layer addresses for hosts sharing the same link.  Neighbour entries are organized into tables. The IPv4 neighbour table is also known by another name - the ARP table.<br/>
        The corresponding commands display neighbour bindings and their properties.
@@ -288,9 +283,9 @@
           </div>
           <div class="row col-md-12 border border-danger">
             <div class="row col-md-12">
-              <h3 class="h3">IPerf Client (from Host)</h3>
+              <h3 class="h3">IPerf Server (from Host)</h3>
             </div>
-            <div class="col-md-12" id="alertsiperf"></div>
+            <div class="col-md-12" id="alertsiperf-server"></div>
             <div class="col">
               <span class="border" style="width:100%">
                 iPerf3 is a tool for active measurements of the maximum achievable bandwidth on IP networks. It supports tuning of various parameters related to timing, buffers and protocols (TCP, UDP, SCTP with IPv4 and IPv6). For each test it reports the bandwidth, loss, and other parameters.<br/>
@@ -320,13 +315,13 @@ It will execute the following command:<br/>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">IP to ping</label> <input class="form-control" type="text" placeholder="IP to ping" id="f4_ip" name="ip" required="">
+                  <label for="exampleFormControlSelect1">IP to listen</label> <input class="form-control" type="text" placeholder="IP to listen" id="f4_ip" name="ip" required="">
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Port</label> <input class="form-control" type="text" placeholder="Port" id="f4_port" name="port" required="">
+                  <label for="exampleFormControlSelect1">Port to listen</label> <input class="form-control" type="text" placeholder="Port to listen" id="f4_port" name="port" required="">
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Interface</label> <select class="form-control" id="f4_interface" name="interface" required="">
+                  <label for="exampleFormControlSelect1">Interface to attach</label> <select class="form-control" id="f4_interface" name="interface" required="">
                     <option value="">
                       Choose Interface
                     </option>
@@ -353,9 +348,9 @@ It will execute the following command:<br/>
           </div>
           <div class="row col-md-12 border border-warning">
             <div class="row col-md-12">
-              <h3 class="h3">IPerf Server (from Host)</h3>
+              <h3 class="h3">IPerf Client (from Host)</h3>
             </div>
-            <div class="col-md-12" id="alertsiperfserver"></div>
+            <div class="col-md-12" id="alertsiperf-client"></div>
             <div class="col">
               <span class="border" style="width:100%">
                 iPerf3 is a tool for active measurements of the maximum achievable bandwidth on IP networks. It supports tuning of various parameters related to timing, buffers and protocols (TCP, UDP, SCTP with IPv4 and IPv6). For each test it reports the bandwidth, loss, and other parameters.<br/>
@@ -390,6 +385,13 @@ It will execute the following command:<br/>
                   <label for="exampleFormControlSelect1">IP</label> <select class="form-control" id="f5_ip" name="ip" required="">
                     <option value="">
                       Choose IP Address
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="exampleFormControlSelect1">Interface to attach</label> <select class="form-control" id="f5_interface" name="interface" required="">
+                    <option value="">
+                      Choose Interface
                     </option>
                   </select>
                 </div>
@@ -450,10 +452,10 @@ It will execute the following command:<br/>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">From Interface:</label> <input class="form-control" type="text" placeholder="IP to ping" id="f6_from_interface" name="from_interface">
+                  <label for="exampleFormControlSelect1">From Interface:</label> <input class="form-control" type="text" placeholder="From interface" id="f6_from_interface" name="from_interface">
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">From IP:</label> <input class="form-control" type="text" placeholder="Port" id="f6_from_ip" name="from_ip">
+                  <label for="exampleFormControlSelect1">From IP:</label> <input class="form-control" type="text" placeholder="From IP" id="f6_from_ip" name="from_ip">
                 </div>
                 <div class="form-group">
                   <label for="exampleFormControlSelect1">To IP:</label> <select class="form-control" id="f6_ip" name="ip" required="">
@@ -470,7 +472,7 @@ It will execute the following command:<br/>
             <div class="row col-md-12">
               <h3 class="h3">Ping (from Network Device)</h3>
             </div>
-            <div class="col-md-12" id="alertsrapidpingnet"></div>
+            <div class="col-md-12" id="alertsrapid-pingnet"></div>
             <div class="col">
               It will execute the following command on selected network device: ping ipaddress -c count -i interval<br/><br/>
               Descriptions:<br/>
