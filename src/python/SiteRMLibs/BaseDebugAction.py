@@ -70,6 +70,16 @@ class BaseDebugAction:
         self.diragent = contentDB()
         self.flightcheck()
 
+    def logMessage(self, message, level):
+        """Log Message to logger process and also processout"""
+        if level == "warning":
+            self.logger.warning(message)
+        elif level == "debug":
+            self.logger.debug(message)
+        else:
+            self.logger.info(message)
+        self.processout.wn(message)
+
     def flightcheck(self):
         """Check if all required parameters are present"""
         if not self.requestdict:

@@ -53,11 +53,11 @@ class TCPDump(BaseDebugAction):
         """Do TCP Dump"""
         self.jsonout.setdefault('tcpdump', {'exitCode': -1, 'output': []})
         if self.requestdict['interface'] not in getInterfaces():
-            self.processout.wn("Interface is not available on the node")
+            self.logMessage("Interface is not available on the node")
             return
         parser = ParsePackets()
         allPackets = parser.sniff(self.requestdict)
         if not allPackets:
-            self.processout.wn("No packets captured")
+            self.logMessage("No packets captured")
         self.jsonout['tcpdump']['output'] = allPackets
         self.jsonout['tcpdump']['exitCode'] = 0

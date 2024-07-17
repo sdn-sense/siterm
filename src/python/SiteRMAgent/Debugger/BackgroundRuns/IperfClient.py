@@ -25,12 +25,12 @@ class IperfClient(BaseDebugAction):
         """Run TCP IPerf"""
         self.jsonout.setdefault('iperf-client', {'exitCode': -1, 'output': []})
         if self.requestdict["interface"] not in getInterfaces():
-            self.processout.wn("Interface is not available on the node")
+            self.logMessage("Interface is not available on the node")
             return
         if ipVersion(self.requestdict["ip"]) == -1:
-            self.processout.wn(f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6")
+            self.logMessage(f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6")
             return
         command = f"iperf3 -c {self.requestdict['ip']} -P {self.requestdict['port']} -B {self.requestdict['interface']} -t {self.requestdict['time']}"
-        self.processout.wn(f"Running command: {command}")
+        self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles['stdout'], self.outfiles['stderr'])
         self.jsonout['iperf-client']['exitCode'] = 0

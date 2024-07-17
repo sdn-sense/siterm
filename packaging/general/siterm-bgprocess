@@ -20,8 +20,10 @@ try:
     from SiteRMAgent.Debugger.BackgroundRuns.IperfServer import IperfServer
     from SiteRMAgent.Debugger.BackgroundRuns.PromPush import PromPush
     from SiteRMAgent.Debugger.BackgroundRuns.RapidPing import RapidPing
+    from SiteRMAgent.Debugger.BackgroundRuns.RapidPingNet import RapidPingNet
     from SiteRMAgent.Debugger.BackgroundRuns.TCPDump import TCPDump
     from SiteRMAgent.Debugger.BackgroundRuns.Traceroute import Traceroute
+    from SiteRMAgent.Debugger.BackgroundRuns.TracerouteNet import TracerouteNet
     WORKERTYPE='Agent'
 except (ImportError, ModuleNotFoundError):
     from SiteFE.Debugger.BackgroundRuns.ArpTable import ArpTable
@@ -29,8 +31,10 @@ except (ImportError, ModuleNotFoundError):
     from SiteFE.Debugger.BackgroundRuns.IperfServer import IperfServer
     from SiteFE.Debugger.BackgroundRuns.PromPush import PromPush
     from SiteFE.Debugger.BackgroundRuns.RapidPing import RapidPing
+    from SiteFE.Debugger.BackgroundRuns.RapidPingNet import RapidPingNet
     from SiteFE.Debugger.BackgroundRuns.TCPDump import TCPDump
     from SiteFE.Debugger.BackgroundRuns.Traceroute import Traceroute
+    from SiteFE.Debugger.BackgroundRuns.TracerouteNet import TracerouteNet
     WORKERTYPE='FE'
 
 COMPONENT = 'SiteRM-Background-Process-Runner'
@@ -63,8 +67,9 @@ class MyDaemon(Daemon):
         """Check worker type"""
         WORKERS = {'prometheus-push': PromPush, 'arp-push': PromPush,
                    'iperf-server': IperfServer, 'iperf-client': IperfClient,
-                   'rapid-ping': RapidPing, 'arp-table': ArpTable,
-                   'tcpdump': TCPDump, 'traceroute': Traceroute}
+                   'rapid-ping': RapidPing, 'rapid-pingnet': RapidPingNet,
+                   'arp-table': ArpTable, 'tcpdump': TCPDump,
+                   'traceroute': Traceroute, 'traceroutenet': TracerouteNet}
         backgConfig = self.__getdebugconf()
         if WORKERTYPE == 'Agent':
             sites = self.config.get('general', 'sitename')

@@ -19,9 +19,8 @@ Date                    : 2021/03/12
 """
 
 from SiteRMLibs.MainUtilities import contentDB
-#from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import (getDBConn, getVal)
+from SiteRMLibs.MainUtilities import getDBConn, getVal
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.Backends.main import Switch
