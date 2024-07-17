@@ -42,16 +42,16 @@ class CallValidator:
             "traceroute": self.__validateTraceRoute,
             "traceroutenet": self.__validateTraceRouteNet
         }
-        self.defparams = {"prometheus-push": {},
-                          "arp-push": {},
-                          "iperf-server": {"onetime": True},
-                          "iperf-client": {"onetime": True},
-                          "rapid-ping": {},
-                          "rapid-pingnet": {},
-                          "arp-table": {"onetime": True},
-                          "tcpdump": {"onetime": True},
-                          "traceroute": {"onetime": True},
-                          "traceroutenet": {}}
+        self.defparams = {"prometheus-push": {"runtime": 600},
+                          "arp-push": {"runtime": 600},
+                          "iperf-server": {"onetime": True, "runtime": 600},
+                          "iperf-client": {"onetime": True, "runtime": 600},
+                          "rapid-ping": {"runtime": 600},
+                          "rapid-pingnet": {"onetime": True, "runtime": 600},
+                          "arp-table": {"onetime": True, "runtime": 600},
+                          "tcpdump": {"onetime": True, "runtime": 600},
+                          "traceroute": {"onetime": True, "runtime": 600},
+                          "traceroutenet": {"onetime": True, "runtime": 600}}
         self.config = config
 
     def _addDefaults(self, inputDict):
@@ -70,12 +70,14 @@ class CallValidator:
 
     def validate(self, inputDict):
         """Validate wrapper for debug action."""
+        inputDict = self._addDefaults(inputDict)
         self.__validateKeys(inputDict, ["hostname"])
         if "type" in inputDict and inputDict["type"] not in self.functions:
             raise BadRequestError(f"Action {inputDict['type']} not supported. Supported actions: {self.functions.keys()}")
         self.functions[inputDict["type"]](inputDict)
         self.__validateRuntime(inputDict)
-        return self._addDefaults(inputDict)
+        return inputDict
+
 
     def __validateTraceRouteNet(self, inputDict):
         """Validate traceroute debug request for network device"""
