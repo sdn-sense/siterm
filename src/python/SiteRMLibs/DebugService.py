@@ -94,6 +94,10 @@ class DebugService:
         command = f"siterm-bgprocess --action {action} --noreporting --runnum {inputDict['id']}"
         if foreground:
             command += " --foreground"
+        onetime = inputDict['requestdict'].get('onetime', False)
+        if onetime:
+            command += " --onetime"
+        self.logger.debug(f"Running command: {command}")
         cmdOut = externalCommand(command, False)
         out, err = cmdOut.communicate()
         retOut['stdout'] += out.decode("utf-8").split('\n') + self._getOut(inputDict['id'], 'stdout')
