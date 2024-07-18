@@ -22,6 +22,5 @@ class IperfServer(BaseDebugAction):
 
     def startwork(self):
         """Main IperfServer work. Run IperfServer on switches."""
-        self.jsonout.setdefault('iperf-server', {'exitCode': -1, 'output': []})
         self.logMessage(f"NOT IMPLEMENTED call {self.backgConfig} to run iperf server on switches", "warning")
         raise BackgroundException("NOT IMPLEMENTED! -1")

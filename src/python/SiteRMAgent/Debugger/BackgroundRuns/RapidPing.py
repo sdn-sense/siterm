@@ -24,7 +24,6 @@ class RapidPing(BaseDebugAction):
 
     def main(self):
         """Return arptable for specific vlan"""
-        self.jsonout.setdefault('rapid-ping', {'exitCode': -1, 'output': []})
         if self.requestdict['interface'] not in getInterfaces():
             self.logMessage("Interface is not available on the node")
             return
@@ -35,4 +34,4 @@ class RapidPing(BaseDebugAction):
         command = f"ping -i {self.requestdict.get('interval', 1)} -w {self.requestdict['time']} {ipaddr} -s {self.requestdict['packetsize']} -I {self.requestdict['interface']}"
         self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles['stdout'], self.outfiles['stderr'])
-        self.jsonout['rapid-ping']['exitCode'] = 0
+        self.jsonout['exitCode'] = 0

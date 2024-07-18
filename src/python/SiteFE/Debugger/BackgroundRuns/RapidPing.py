@@ -22,6 +22,5 @@ class RapidPing(BaseDebugAction):
 
     def main(self):
         """Main RapidPing work. Run RapidPing on switches."""
-        self.jsonout.setdefault('rapid-ping', {'exitCode': -1, 'output': []})
         self.logMessage(f"NOT IMPLEMENTED call {self.backgConfig} to run rapid ping on switches", "warning")
         raise BackgroundException("NOT IMPLEMENTED! -1")

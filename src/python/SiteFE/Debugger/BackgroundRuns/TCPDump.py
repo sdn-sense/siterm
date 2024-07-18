@@ -22,6 +22,5 @@ class TCPDump(BaseDebugAction):
 
     def main(self):
         """Main TCPDump work. Run TCPDump on switches."""
-        self.jsonout.setdefault('tcpdump', {'exitCode': -1, 'output': []})
         self.logMessage(f"NOT IMPLEMENTED call {self.backgConfig} to run TCPDump on switches", "warning")
         raise BackgroundException("NOT IMPLEMENTED! -1")

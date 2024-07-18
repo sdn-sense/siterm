@@ -22,6 +22,5 @@ class Traceroute(BaseDebugAction):
 
     def main(self):
         """Main Traceroute work. Run Traceroute on switches."""
-        self.jsonout.setdefault('traceroute', {'exitCode': -1, 'output': []})
         self.logMessage(f"NOT IMPLEMENTED call {self.backgConfig} to run traceroute on switches", "warning")
         raise BackgroundException("NOT IMPLEMENTED! -1")

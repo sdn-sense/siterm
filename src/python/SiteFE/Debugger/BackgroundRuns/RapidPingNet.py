@@ -24,9 +24,20 @@ class RapidPingNet(BaseDebugAction):
         self.switch = Switch(config, sitename)
         super().__init__()
 
+    def _logStats(self, ansOut, hosts):
+        """Log stats from ansible output"""
+        for host in hosts:
+            for host_events in ansOut.host_events(host):
+                if 'stdout' in host_events and host_events['stdout']:
+                    for line in host_events['stdout'].split("\n"):
+                        self.logMessage(line)
+                    for line in host_events.get('event_data', {}).get('res', {}).get('stdout', []):
+                        for lline in line.split("\n"):
+                            self.logMessage(lline)
+
     def applyConfig(self, raiseExc=True, hosts=None, subitem=""):
         """Apply yaml config on Switch (issue Ping Request)"""
-        ansOut, failures = self.switch.plugin._applyNewConfig(hosts, subitem)
+        ansOut, failures = self.switch.plugin._applyNewConfig(hosts, subitem, templateName="ping.yaml")
         if not ansOut:
             self.logMessage("Ansible output is empty for ping request")
             return
@@ -36,6 +47,8 @@ class RapidPingNet(BaseDebugAction):
         if not ansOut.stats:
             self.logMessage("Ansible output has stats empty")
             return
+        # log all stats
+        self._logStats(ansOut, hosts)
         if failures and raiseExc:
             self.logMessage(f"Ansible failures: {failures}")
             raise SwitchException("There was configuration apply issue. Please contact support and provide this log file.")
@@ -56,7 +69,6 @@ class RapidPingNet(BaseDebugAction):
 
     def main(self):
         """Main RapidPing work. Run RapidPing on switches."""
-        self.jsonout.setdefault('rapid-pingnet', {'exitCode': -1, 'output': []})
         swname = self.requestdict['hostname']
         inventory = self.switch.plugin._getInventoryInfo([swname])
         self.switch.plugin._writeInventoryInfo(inventory, "_debug")
@@ -75,6 +87,8 @@ class RapidPingNet(BaseDebugAction):
         try:
             self.applyConfig(True, [swname], "_debug")
             self.logMessage(f"Ping Request was successful for {swname}.")
+            self.jsonout['exitCode'] = 0
         except SwitchException as ex:
             self.logMessage(f"Received an error to issue ping for {swname}")
             self.logMessage(f"Exception: {ex}")
+            self.jsonout['exitCode'] = -1

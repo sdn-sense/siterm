@@ -23,7 +23,6 @@ class IperfClient(BaseDebugAction):
 
     def main(self):
         """Run TCP IPerf"""
-        self.jsonout.setdefault('iperf-client', {'exitCode': -1, 'output': []})
         if self.requestdict["interface"] not in getInterfaces():
             self.logMessage("Interface is not available on the node")
             return
@@ -33,4 +32,4 @@ class IperfClient(BaseDebugAction):
         command = f"iperf3 -c {self.requestdict['ip']} -P {self.requestdict['port']} -B {self.requestdict['interface']} -t {self.requestdict['time']}"
         self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles['stdout'], self.outfiles['stderr'])
-        self.jsonout['iperf-client']['exitCode'] = 0
+        self.jsonout['exitCode'] = 0
