@@ -22,6 +22,5 @@ class ArpTable(BaseDebugAction):
 
     def main(self):
         """Main ArpTable work. Get all arp table from switches."""
-        self.jsonout.setdefault('arp-table', {'exitCode': -1, 'output': []})
         self.logMessage(f"NOT IMPLEMENTED call {self.backgConfig} to get arp table", "warning")
         raise BackgroundException("NOT IMPLEMENTED! -1")

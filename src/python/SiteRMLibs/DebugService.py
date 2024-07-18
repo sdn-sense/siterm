@@ -142,7 +142,7 @@ class DebugService:
             if onetime:
                 self.logger.info(f"One time run and process finished: {inputDict['id']}")
                 retOut['processOut'].append(f"One time run process finished for: {inputDict['id']}")
-                if retOut['jsonout'].get('output', {}).get('exitCode', -1) == 0:
+                if retOut['jsonout'].get('exitCode', -1) == 0:
                     self._clean(inputDict)
                     return retOut, 2, "finished"
                 return retOut, 1, "failed"

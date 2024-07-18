@@ -23,13 +23,12 @@ class ArpTable(BaseDebugAction):
 
     def main(self):
         """Main ArpTable work. Get all arp table from host."""
-        self.jsonout.setdefault('arp-table', {'exitCode': -1, 'output': []})
         interface = self.requestdict.get('interface', None)
         if interface and interface not in getInterfaces():
             self.logMessage("Interface is not available on the node")
             return
         for arpval in getArpVals():
-            self.jsonout['arp-table']['output'].append(arpval)
+            self.jsonout['output'].append(arpval)
             resline = list(map(lambda x: x[0] + str(x[1]), arpval.items()))
             self.logMessage(" ".join(resline))
-        self.jsonout['arp-table']['exitCode'] = 0
+        self.jsonout['exitCode'] = 0

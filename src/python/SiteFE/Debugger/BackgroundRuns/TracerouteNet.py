@@ -24,9 +24,20 @@ class TracerouteNet(BaseDebugAction):
         self.switch = Switch(config, sitename)
         super().__init__()
 
+    def _logStats(self, ansOut, hosts):
+        """Log stats from ansible output"""
+        for host in hosts:
+            for host_events in ansOut.host_events(host):
+                if 'stdout' in host_events and host_events['stdout']:
+                    for line in host_events['stdout'].split("\n"):
+                        self.logMessage(line)
+                    for line in host_events.get('event_data', {}).get('res', {}).get('stdout', []):
+                        for lline in line.split("\n"):
+                            self.logMessage(lline)
+
     def applyConfig(self, raiseExc=True, hosts=None, subitem=""):
         """Apply yaml config on Switch (issue Traceroute Request)"""
-        ansOut, failures = self.switch.plugin._applyNewConfig(hosts, subitem)
+        ansOut, failures = self.switch.plugin._applyNewConfig(hosts, subitem, templateName="traceroute.yaml")
         if not ansOut:
             self.logMessage("Ansible output is empty for traceroute request")
             return
@@ -36,6 +47,8 @@ class TracerouteNet(BaseDebugAction):
         if not ansOut.stats:
             self.logMessage("Ansible output has stats empty")
             return
+        # log all stats
+        self._logStats(ansOut, hosts)
         if failures and raiseExc:
             self.logMessage(f"Ansible failures: {failures}")
             raise SwitchException("There was configuration apply issue. Please contact support and provide this log file.")
@@ -54,7 +67,6 @@ class TracerouteNet(BaseDebugAction):
 
     def main(self):
         """Main TracerouteNet work. Run Traceroute on switches."""
-        self.jsonout.setdefault('traceroute-net', {'exitCode': -1, 'output': []})
         swname = self.requestdict['hostname']
         inventory = self.switch.plugin._getInventoryInfo([swname])
         self.switch.plugin._writeInventoryInfo(inventory, "_debug")
@@ -73,6 +85,8 @@ class TracerouteNet(BaseDebugAction):
         try:
             self.applyConfig(True, [swname], "_debug")
             self.logMessage(f"Traceroute Request was successful for {swname}.")
+            self.jsonout['exitCode'] = 0
         except SwitchException as ex:
             self.logMessage(f"Received an error to issue traceroute for {swname}")
             self.logMessage(f"Exception: {ex}")
+            self.jsonout['exitCode'] = -1

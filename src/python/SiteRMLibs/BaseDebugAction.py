@@ -66,7 +66,7 @@ class BaseDebugAction:
                          'processout': self.workDir + f"/background-process-{self.backgConfig['id']}.process",
                          'jsonout': self.workDir + f"/background-process-{self.backgConfig['id']}.jsonout"}
         self.processout = CustomWriter(self.outfiles['processout'], 'w', encoding='utf-8')
-        self.jsonout = {}
+        self.jsonout = {'exitCode': -1, 'output': []}
         self.diragent = contentDB()
         self.flightcheck()
 

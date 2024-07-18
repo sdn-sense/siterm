@@ -95,11 +95,11 @@ class PromPush(BaseDebugAction):
         if self.requestdict['type'] == 'prometheus-push':
             self.jsonout.setdefault('prometheus-push', {'exitCode': -1, 'output': []})
             self.nodeExporterPush()
-            self.jsonout['prometheus-push']['exitCode'] = 0
+            self.jsonout['exitCode'] = 0
         elif self.requestdict['type'] == 'arp-push':
             self.jsonout.setdefault('arp-push', {'exitCode': -1, 'output': []})
             self.arpPush()
-            self.jsonout['arp-push']['exitCode'] = 0
+            self.jsonout['exitCode'] = 0
         else:
             self.logMessage(f"Unsupported push method. Submitted request: {self.backgConfig}")
             raise Exception(f"Unsupported push method. Submitted request: {self.backgConfig}")

@@ -33,4 +33,4 @@ class IperfServer(BaseDebugAction):
                                                                      '-1' if self.requestdict['onetime'] == 'True' else '')
         self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles['stdout'], self.outfiles['stderr'])
-        self.jsonout['iperf-server']['exitCode'] = 0
+        self.jsonout['exitCode'] = 0
