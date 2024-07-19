@@ -11,6 +11,7 @@ var entityMap = {
 
 function newAlert(alertMessage, params, alertType='alert-success') {
     alert = $('<div class="alert ' + alertType + ' alert-dismissible fade show" role="alert"><\/div>');
+    alert.append(alertMessage);
     alert.append('<button type="button" class="close" data-dismiss="alert" aria-label="Close">');
     $('#alerts' + params['type']).append(alert);
 }
