@@ -78,6 +78,10 @@
                                   if (typeof value2 === 'object' && value2 !== null && key2 == 2) {
                                     for (let i = 0; i < ipkeys.length; i++) {
                                       addDropDown(value2[0]['address'], $("#" + ipkeys[i]));
+                                    }}
+                                  if (typeof value2 === 'object' && value2 !== null && key2 == 10) {
+                                    for (let i = 0; i < ipkeys.length; i++) {
+                                      addDropDown(value2[0]['address'], $("#" + ipkeys[i]));
                                     }}}}}}}}}})}
 
         function addDropDown(dropdownVal, saveObj){
