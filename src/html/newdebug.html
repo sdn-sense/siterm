@@ -17,20 +17,27 @@
         });
 
     function collectInputs(tagName) {
-        docObj =  document.getElementById(tagName);
-        var params = {};
-        for( var i=0; i<docObj.elements.length; i++ ){
-            var fieldName = docObj.elements[i].name;
-            var fieldValue = docObj.elements[i].value;
-            if (fieldName){
-                params[fieldName] = fieldValue;
-            }
+      docObj = document.getElementById(tagName);
+      var params = {};
+      for (var i = 0; i < docObj.elements.length; i++) {
+        var fieldName = docObj.elements[i].name;
+        var fieldValue = docObj.elements[i].value;
+        if (fieldName) {
+          params[fieldName] = fieldValue;
         }
-        $.post("/"+params['sitename']+"/sitefe/json/frontend/submitdebug/NEW", params, function(result){
-            newAlert("New debug action submit state:" + JSON.stringify(result), params);
-        })}
-
-
+      }
+      $.ajax({
+        type: "POST",
+        url: "/" + params['sitename'] + "/sitefe/json/frontend/submitdebug/NEW",
+        data: params,
+        success: function (result) {
+          newAlert("New debug action submit state: " + JSON.stringify(result), params);
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+          newAlert("Error: " + textStatus + " - " + errorThrown + " - Status: " + jqXHR.status + " - Response: " + jqXHR.responseText, params, "alert-danger");
+        }
+      });
+    }
         function doSiteUpdate(ids) {
         strSite = document.getElementById(ids + "sitename").value;
         $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
@@ -51,7 +58,7 @@
                     addDropDown(name, $("#" + ids + "hostname"))
                   })}}})}
 
-        function doDTNUpdate(ids) {
+        function doDTNUpdate(ids, ipkeys, intkeys) {
         strDTN = document.getElementById(ids + "hostname").value;
         strSite = document.getElementById(ids + "sitename").value;
         $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
@@ -63,14 +70,15 @@
                         for (const [key, value] of Object.entries(myObject['NetInfo']['interfaces'])) {
                             if (! $.isEmptyObject(value['vlans'])) {
                               for (const [key1, value1] of Object.entries(value['vlans'])) {
-                                addDropDown(key1, $("#" + ids + "interface"));
-                                addDropDown(key1, $("#" + ids + "from_interface"));
+                                for (let i = 0; i < intkeys.length; i++) {
+                                  addDropDown(key1, $("#" + intkeys[i]));
+                                }
                                 for (const [key2, value2] of Object.entries(value1)){
-                                  if (typeof value2 === 'object' && value2 !== null && key2 == 2 && ids === "f5_") {
-                                      addDropDown(value2[0]['address'], $("#" + ids + "ip"));
-                                      addDropDown(key1, $("#" + ids + "from_ip"));
-                                    }}}}}}}}});
-      }
+                                  console.log(key2, value2);
+                                  if (typeof value2 === 'object' && value2 !== null && key2 == 2) {
+                                    for (let i = 0; i < ipkeys.length; i++) {
+                                      addDropDown(value2[0]['address'], $("#" + ipkeys[i]));
+                                    }}}}}}}}}})}
 
         function addDropDown(dropdownVal, saveObj){
           saveObj.append('<option>'+dropdownVal+'<\/option>');
@@ -174,7 +182,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f1_hostname" name="hostname" onchange="doDTNUpdate('f1_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f1_hostname" name="hostname" onchange="doDTNUpdate('f1_', [], ['f1_interface']);" required="">
                     <option value="">
                       Choose Hostname
                     </option>
@@ -231,7 +239,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f2_hostname" name="hostname" onchange="doDTNUpdate('f2_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f2_hostname" name="hostname" onchange="doDTNUpdate('f2_', [], ['f2_interface']);" required="">
                     <option value="">
                       Choose Hostname
                     </option>
@@ -267,7 +275,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f3_hostname" name="hostname" onchange="doDTNUpdate('f3_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f3_hostname" name="hostname" onchange="doDTNUpdate('f3_', [], ['f3_interface']);" required="">
                     <option value="">
                       Choose Hostname
                     </option>
@@ -310,7 +318,7 @@ It will execute the following command:<br/>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f4_hostname" name="hostname" onchange="doDTNUpdate('f4_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f4_hostname" name="hostname" onchange="doDTNUpdate('f4_', ['f4_ip'], ['f4_interface']);" required="">
                     <option value="">
                       Choose Hostname
                     </option>
@@ -374,7 +382,7 @@ It will execute the following command:<br/>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f5_hostname" name="hostname" onchange="doDTNUpdate('f5_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f5_hostname" name="hostname" onchange="doDTNUpdate('f5_', ['f5_ip'], ['f5_interface']);" required="">
                     <option value="">
                       Choose Hostname
                     </option>
@@ -447,7 +455,7 @@ It will execute the following command:<br/>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f6_hostname" name="hostname" onchange="doDTNUpdate('f6_');" required="">
+                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f6_hostname" name="hostname" onchange="doDTNUpdate('f6_', ['f6_from_ip'], ['f6_from_interface']);" required="">
                     <option value="">
                       Choose Hostname
                     </option>
@@ -470,11 +478,7 @@ It will execute the following command:<br/>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="exampleFormControlSelect1">To IP:</label> <select class="form-control" id="f6_ip" name="ip" required="">
-                    <option value="">
-                      Choose Interface
-                    </option>
-                  </select>
+                  <label for="exampleFormControlSelect1">To IP:</label> <input class="form-control" type="text" placeholder="Traceroute to IP" id="f6_ip" name="ip" required="">
                 </div>
                 <input type="submit">
               </form>

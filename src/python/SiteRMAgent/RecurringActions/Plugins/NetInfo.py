@@ -24,6 +24,36 @@ def str2bool(val):
         return val
     return val.lower() in ("yes", "true", "t", "1")
 
+
+def expand_ipv6(netmask):
+    """Expand IPv6 netmask to full form"""
+    parts = netmask.split(':')
+    full_parts = []
+    for part in parts:
+        if part == '':
+            # Add missing parts for "::"
+            missing_parts = 8 - len(parts) + 1
+            full_parts.extend(['0000'] * missing_parts)
+        else:
+            full_parts.append(part.zfill(4))
+    return ':'.join(full_parts)
+
+def ipv6_netmask_to_prefix_length(netmask):
+    """Convert the netmask to an IPv6Network object"""
+    if not netmask:
+        return netmask
+    try:
+        # Expand the netmask to full form
+        expanded_netmask = expand_ipv6(netmask)
+        # Remove the colons and convert each hexadecimal block to its binary representation
+        binary_str = ''.join([bin(int(block, 16))[2:].zfill(16) for block in expanded_netmask.split(':')])
+        # Count the number of '1' bits in the binary string
+        prefix_length = binary_str.count('1')
+        return prefix_length
+    except ValueError:
+        return netmask
+
+
 class NetInfo(BWService):
     """Net Info"""
     def __init__(self, config=None, logger=None):
@@ -141,15 +171,16 @@ class NetInfo(BWService):
                 continue
             for vals in tmpifAddr[nic]:
                 nicInfo.setdefault(str(vals.family.value), [])
+                netmask = ipv6_netmask_to_prefix_length(vals.netmask)
                 familyInfo = {
                     "family": vals.family.value,
                     "address": vals.address,
-                    "netmask": vals.netmask,
+                    "netmask": netmask,
                 }
                 if int(vals.family.value) in [2, 10] and vals.address and vals.netmask:
                     try:
                         ipwithnetmask = ipaddress.ip_interface(
-                            f"{vals.address}/{vals.netmask}"
+                            f"{vals.address}/{netmask}"
                         )
                         if isinstance(ipwithnetmask, ipaddress.IPv4Interface):
                             familyInfo["ipv4-address"] = str(ipwithnetmask)

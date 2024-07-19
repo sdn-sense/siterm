@@ -96,8 +96,8 @@ class CallValidator:
         for key in ["from_interface", "from_ip"]:
             if key in inputDict:
                 optional = True
-            if key == "from_ip" and ipVersion(inputDict['from_ip']) == -1:
-                raise BadRequestError(f"IP {inputDict['from_ip']} does not appear to be an IPv4 or IPv6")
+            if key == "from_ip" and inputDict["from_ip"] and ipVersion(inputDict['from_ip']) == -1:
+                raise BadRequestError(f"Soure IP {inputDict['from_ip']} does not appear to be an IPv4 or IPv6")
         if not optional:
             raise BadRequestError("One of these keys must be present: from_interface, from_ip")
 

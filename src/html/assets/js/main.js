@@ -9,9 +9,8 @@ var entityMap = {
   '=': '&#x3D;',
 };
 
-function newAlert(alertMessage, params){
-    alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert"><\/div>');
-    alert.append(alertMessage);
+function newAlert(alertMessage, params, alertType='alert-success') {
+    alert = $('<div class="alert ' + alertType + ' alert-dismissible fade show" role="alert"><\/div>');
     alert.append('<button type="button" class="close" data-dismiss="alert" aria-label="Close">');
     $('#alerts' + params['type']).append(alert);
 }
