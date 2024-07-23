@@ -79,6 +79,7 @@ class PolicyService(RDFHelper, Timing):
         self.currentActive = getActiveDeltas(self)
         self.newActive = {}
         self._refreshHosts()
+        self.kube = False
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -91,6 +92,7 @@ class PolicyService(RDFHelper, Timing):
         self.scannedRoutes = []
         self.newActive = {}
         self._refreshHosts()
+        self.kube = False
 
     def _refreshHosts(self):
         """Refresh all hosts information"""
@@ -228,10 +230,12 @@ class PolicyService(RDFHelper, Timing):
             if hostDict.get("hostinfo", {}).get("KubeInfo", {}).get("isAlias"):
                 self.logger.info("Parsing Kube requests from model")
                 for intf, _val in hostDict["hostinfo"]["KubeInfo"]["isAlias"].items():
+                    self.kube = True
                     connID = f"{self.prefixes['site']}:{host}:{intf}"
                     out.setdefault("kube", {})
                     connOut = out["kube"].setdefault(str(connID), {})
                     self.parseL2Ports(gIn, URIRef(connID), connOut)
+                    self.kube = False
         return out
 
     def getRoute(self, gIn, connID, returnout):
@@ -436,6 +440,8 @@ class PolicyService(RDFHelper, Timing):
                     # If hostsOnly is set - this already parses a subInterface of port;
                     # which usually is a isAlias. It should be parsed on it's own in another
                     # scan - as it needs to be in correct layout. (IsAlias defined by modeling, no force add)
+                    if self.kube and (not port.startswith(self.prefixes['site'])):
+                        connOut["isAlias"] = str(port)
                     if not self.hostsOnly(port):
                         continue
                 if port not in self.bidPorts and port not in self.scannedPorts:
