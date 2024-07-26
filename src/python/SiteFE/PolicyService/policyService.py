@@ -442,6 +442,8 @@ class PolicyService(RDFHelper, Timing):
                     # scan - as it needs to be in correct layout. (IsAlias defined by modeling, no force add)
                     if self.kube and (not port.startswith(self.prefixes['site'])):
                         connOut["isAlias"] = str(port)
+                    elif key == 'isAlias':
+                        connOut["isAlias"] = str(port)
                     if not self.hostsOnly(port):
                         continue
                 if port not in self.bidPorts and port not in self.scannedPorts:
