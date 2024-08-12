@@ -1,3 +1,25 @@
+1.4.62
+This release includes:
+
+SiteRM Frontend 1.4.62 release:
+  * Allow to control HTTP Port dynamically via environment variable;
+  * Allow to issue PING and Traceroute from Network devices;
+  * Fix Kubernetes isAlias labels and also update PolicyService to including information inside model;
+  * DBCleaner and AnsibleCleaner for Sites (Feature for reinstallation)
+
+Agent 1.4.62 release:
+  * Ping Fixes for splitting netmask and allow to use IPv6;
+  * Support Prometheus federate endpoints for Autogole monitoring (in case Site already run's Node Exporters and Prometheus)
+
+Supported systems: x86_64 and ppc64le(beta)
+Installation details: https://sdn-sense.github.io/Installation.html
+
+Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
+Docker version for this release:
+x86_64:
+  Agent: sdnsense/site-agent-sense:latest-20240812 (Or use latest)
+  Frontend: sdnsense/site-rm-sense:latest-20240812 (Or use latest)
+
 1.4.61
 This release includes:
 
