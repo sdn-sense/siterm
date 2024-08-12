@@ -14,6 +14,11 @@ class DBCleaner:
         self.dbI = getVal(getDBConn("DBWorker", self), **{"sitename": self.sitename})
         self.nextRun = int(getUTCnow() - 1) # Make sure runs first time
 
+    def refreshthread(self):
+        """Call to refresh thread for this specific class and reset parameters"""
+        # Just a place holder (no need to change anything for DBCleaner)
+        return
+
     def clean(self, dbtable, olderthan):
         """Clean the database"""
         print(f"Cleaning {dbtable} for {self.sitename}")
