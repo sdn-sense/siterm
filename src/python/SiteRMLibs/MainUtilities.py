@@ -723,6 +723,6 @@ def getArpVals():
             'IPaddress': parts[0],
             'Device': parts[2],
             'HWaddress': parts[4],
-            'Flags': parts[len(parts)-1]
+            'Flags': parts[-1]
         }
         yield block
