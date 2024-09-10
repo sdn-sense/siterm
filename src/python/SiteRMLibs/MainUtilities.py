@@ -16,7 +16,6 @@ import email.utils as eut
 import hashlib
 import http.client
 import io
-import csv
 import logging
 import logging.handlers
 import os
@@ -713,35 +712,17 @@ def strtolist(intext, splitter):
     out = intext.split(splitter)
     return list(filter(None, out))
 
-
-# From https://github.com/torvalds/linux/blob/master/include/uapi/linux/if_arp.h
-HW_FLAGS = {'0x1': 'ETHER', '0x32': 'INFINIBAND'}
-ARP_FLAGS = {'0x0': 'I',
-             '0x2': 'C',
-             '0x4': 'M',
-             '0x6': 'CM',
-             '0x8': 'PUB',
-             '0x10': 'PROXY',
-             '0x20': 'NETMASK',
-             '0x40': 'DONTPUB'}
-
 def getArpVals():
     """Get Arp Values from /proc/net/arp. Return generator."""
-    with open('/proc/net/arp', encoding='utf-8') as arpfd:
-        arpKeys = ['IP address', 'HW type', 'Flags', 'HW address', 'Mask', 'Device']
-        reader = csv.DictReader(arpfd,
-                                fieldnames=arpKeys,
-                                skipinitialspace=True,
-                                delimiter=' ')
-        skippedHeader = False
-        for block in reader:
-            if not skippedHeader:
-                skippedHeader = True
-                continue
-            if block['HW type'] in HW_FLAGS:
-                block['HW type'] = HW_FLAGS[block['HW type']]
-            if block['Flags'] in ARP_FLAGS:
-                block['Flags'] = ARP_FLAGS[block['Flags']]
-            print(block)
-            yblock = {x.replace(' ', ''): v for x, v in block.items()}
-            yield yblock
+    neighs = externalCommand("ip neigh")
+    for arpline in neighs[0].decode("UTF-8").splitlines():
+        parts = arpline.split()
+        if len(parts) < 5:
+            continue
+        block = {
+            'IPaddress': parts[0],
+            'Device': parts[2],
+            'HWaddress': parts[4],
+            'Flags': parts[len(parts)-1]
+        }
+        yield block

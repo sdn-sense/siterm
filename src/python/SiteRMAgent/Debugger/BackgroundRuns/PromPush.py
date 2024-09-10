@@ -24,7 +24,7 @@ class PromPush(BaseDebugAction):
         self.requestdict = backgConfig.get('requestdict', {})
         self.service = "PromPush"
         self.arpLabels = {'Device': '', 'Flags': '', 'HWaddress': '',
-                          'HWtype': '', 'IPaddress': '', 'Mask': ''}
+                          'IPaddress': ''}
         self.arpLabels.update(self.__getMetadataParams())
         super().__init__()
 
