@@ -39,8 +39,7 @@ class PrometheusCalls:
         self.memMonitor = {}
         self.activeAPI = ActiveWrapper()
         self.arpLabels = {'Device': '', 'Flags': '', 'HWaddress': '',
-                          'HWtype': '', 'IPaddress': '', 'Mask': '',
-                          'Hostname': ''}
+                          'IPaddress': '', 'Hostname': ''}
 
     def __urlParams(self):
         """Define URL Params for this class"""
