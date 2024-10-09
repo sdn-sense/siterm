@@ -80,18 +80,25 @@ class SwitchInfo():
         """Add Switch Port Info for ports, vlans"""
         for switchName, switchDict in list(switchInfo[key].items()):
             self.logger.debug(f'Adding Switch Port Info {switchName}')
+            # Get info if vsw is enabled in configuration
             try:
                 vsw = self.config.get(switchName, 'vsw')
             except (NoOptionError, NoSectionError) as ex:
                 self.logger.debug('Warning: vsw parameter is not defined for %s. Err: %s', switchName, ex)
                 continue
+            # Get info if vswmp is enabled in configuration (Multipoint)
+            try:
+                vswmp = self.config.get(switchName, 'vswmp')
+            except (NoOptionError, NoSectionError):
+                vswmp = False
+            # Get info if rst is enabled in configuration
             try:
                 rst = self.config.get(switchName, 'rst')
             except (NoOptionError, NoSectionError):
                 rst = False
             for portName, portSwitch in list(switchDict.items()):
                 newuri = f":{switchName}:{self.switch.getSystemValidPortName(portName)}"
-                self._addVswPort(hostname=switchName, portName=portName, vsw=vsw)
+                self._addVswPort(hostname=switchName, portName=portName, vsw=vsw, vswmp=vswmp)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
                 if rst:
                     self._addAddressPool(newuri)

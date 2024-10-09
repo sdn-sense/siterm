@@ -377,7 +377,23 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site', svcService),
                            self.genUriRef('nml', 'encoding'),
                            self.genUriRef('schema')))
+        kwargs['uri'] = svcService
+        self._addMultiPointService(**kwargs)
         return svcService
+
+    def _addMultiPointService(self, **kwargs):
+        """Add MultiPoint Service to Model"""
+        if not kwargs.get('vswmp', ''):
+            return
+        self.newGraph.add((self.genUriRef('site', kwargs['uri']),
+                           self.genUriRef('sd', 'hasServiceDefinition'),
+                           self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswmp']}")))
+        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswmp']}"),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('sd', 'ServiceDefinition')))
+        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswmp']}"),
+                           self.genUriRef('sd', 'serviceType'),
+                           self.genLiteral('http://services.ogf.org/nsi/2018/06/descriptions/l2-mp-es')))
 
     def _addSwitchingSubnet(self, **kwargs):
         """Add Switching Subnet which comes from delta parsed request"""
