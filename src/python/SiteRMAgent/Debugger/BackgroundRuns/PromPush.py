@@ -46,17 +46,28 @@ class PromPush(BaseDebugAction):
         return postUrl
 
     def nodeExporterPush(self):
-        """Push Node Exporter Output to Push Gateway"""
+        """Push Node Exporter/Prometheus Federate Output to Push Gateway"""
         # Get parameter of node_exporter from config
+        nodeOut = None
         nodeExporterUrl = self.config.get('general', 'node_exporter')
-        if not nodeExporterUrl:
-            return
-        if not nodeExporterUrl.startswith('http'):
-            nodeExporterUrl = f'http://{nodeExporterUrl}'
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-        nodeOut = getWebContentFromURL(f'{nodeExporterUrl}/metrics')
-        if 'status_code' in nodeOut and nodeOut['status_code'] == -1:
-            self.logMessage(f"Failed to get node_exporter data. Error: {nodeOut.get('error', 'Unknown')}")
+        if nodeExporterUrl:
+            if not nodeExporterUrl.startswith('http'):
+                nodeExporterUrl = f'http://{nodeExporterUrl}'
+            headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+            nodeOut = getWebContentFromURL(f'{nodeExporterUrl}/metrics')
+            if 'status_code' in nodeOut and nodeOut['status_code'] == -1:
+                self.logMessage(f"Failed to get node_exporter data. Error: {nodeOut.get('error', 'Unknown')}")
+                return
+        promFeder = self.config.get('general', 'prometheus_federate')
+        promQuery = self.config.get('general', 'prometheus_query')
+        if promFeder and promQuery:
+            headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+            nodeOut = getWebContentFromURL(promFeder, params={'match[]': promQuery})
+            if 'status_code' in nodeOut and nodeOut['status_code'] == -1:
+                self.logMessage(f"Failed to get node_exporter data. Error: {nodeOut.get('error', 'Unknown')}")
+                return
+        if not nodeOut:
+            self.logMessage("No data to push to gateway.")
             return
         response = postWebContentToURL(self.__generatePromPushUrl(),
                                        data=nodeOut.content,

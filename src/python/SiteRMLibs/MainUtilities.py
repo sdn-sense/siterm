@@ -293,14 +293,17 @@ def getDataFromSiteFE(inputDict, host, url):
             time.sleep(1)
 
 
-def getWebContentFromURL(url, raiseEx=True):
+def getWebContentFromURL(url, raiseEx=True, params=None):
     """GET from URL"""
     retries = 3
     out = {}
     while retries > 0:
         retries -= 1
         try:
-            out = requests.get(url, timeout=60)
+            if params:
+                out = requests.get(url, params=params, timeout=60)
+            else:
+                out = requests.get(url, timeout=60)
             return out
         except requests.exceptions.RequestException as ex:
             print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
