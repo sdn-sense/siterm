@@ -47,7 +47,7 @@ class DBCleaner:
         for table in ['debugrequests', 'deltas', 'deltatimestates', 'hosts', 'models', 'servicestates', 'states',
                       'hoststates', 'hoststateshistory', 'parsed', 'switch', 'snmpmon', 'serviceaction', 'activeDeltas']:
             print(f"Cleaning {table}")
-            self.clean(table, 86400*7)
+            self.clean(table, 86400)
         print('Cleaner finished')
 
 
