@@ -463,7 +463,7 @@ class RDFHelper():
         for item in [['unit', 'unit', "mbps"],
                      ['maximumCapacity', 'maximumCapacity', 100000, XSD.long],
                      ['availableCapacity', 'availableCapacity', 100000, XSD.long],
-                     ['granularity', 'granularity', 1, XSD.long],
+                     ['granularity', 'granularity', 1000, XSD.long],
                      ['reservableCapacity', 'reservableCapacity', 100000, XSD.long],
                      ['minReservableCapacity', 'minReservableCapacity', 1000, XSD.long],
                      ['type', 'type', 'guaranteedCapped'],
