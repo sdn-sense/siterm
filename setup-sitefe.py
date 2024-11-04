@@ -18,6 +18,7 @@ SCRIPTS = ["packaging/general/Config-Fetcher",
            "packaging/general/siterm-bgprocess",
            "packaging/general/siterm-liveness",
            "packaging/general/siterm-readiness",
+           "packaging/general/siterm-log-archiver",
            "packaging/siterm-site-fe/scripts/siterm-ansible-runner",
            "packaging/siterm-site-fe/scripts/SwitchWorker",
            "packaging/siterm-site-fe/scripts/DBCleaner-service"]

@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+"""Log archiver script for SiteRM Site Agent and Frontend. Creates archive of log files in
+    /var/log/siterm-agent and /var/log/siterm-site-fe directories."""
+import os
+import tarfile
+from datetime import datetime
+
+
+def logArchiver():
+    """Create tar.gz archive of log files in /var/log/siterm-agent and /var/log/siterm-site-fe directories."""
+    date_str = datetime.now().strftime("%Y%m%d")
+    target_file = f"/tmp/log-{date_str}.tar.gz"
+
+    if os.path.exists(target_file):
+        print(f"Warning: {target_file} already exists. Exiting.")
+        return
+    # Check if the directory exists
+    with tarfile.open(target_file, "w:gz") as tar:
+        source_dir = "/var/log/siterm-agent/"
+        if os.path.isdir(source_dir):
+            tar.add(source_dir, arcname=os.path.basename(source_dir))
+            print(f"All files in {source_dir} have been archived to {target_file}")
+            return
+        source_dir = "/var/log/siterm-site-fe/"
+        if os.path.isdir(source_dir):
+            tar.add(source_dir, arcname=os.path.basename(source_dir))
+            print(f"All files in {source_dir} have been archived to {target_file}")
+            return
+        source_dir = "/var/log/httpd/"
+        if os.path.isdir(source_dir):
+            tar.add(source_dir, arcname=os.path.basename(source_dir))
+            print(f"All files in {source_dir} have been archived to {target_file}")
+            return
+        print(f"Warning: {source_dir} does not exist. Exiting.")
+    os.remove(target_file)
+
+if __name__ == "__main__":
+    logArchiver()

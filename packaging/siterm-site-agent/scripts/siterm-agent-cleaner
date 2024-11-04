@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""Agent cleaner based on host configuration"""
+import subprocess
+import re
+import yaml
+
+def read_yaml(file_path):
+    """Read YAML file and return its content"""
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return yaml.safe_load(file)
+
+def getVlanList(vlan_range):
+    """Get list of VLANs from a range"""
+    vlan_list = []
+    ranges = vlan_range.split(',')
+    for r in ranges:
+        if '-' in r:
+            start, end = map(int, r.split('-'))
+            vlan_list.extend(range(start, end + 1))
+        else:
+            vlan_list.append(int(r))
+    return vlan_list
+
+def get_active_vlans():
+    """Get active VLANs on the host"""
+    ip_a_output = subprocess.check_output(['ip', 'a'], text=True)
+    vlan_interfaces = re.findall(r'vlan\.(\d+)@(\S+):', ip_a_output)
+    active_vlans = {}
+    for vlan_id, base_intf in vlan_interfaces:
+        if base_intf not in active_vlans:
+            active_vlans[base_intf] = set()
+        active_vlans[base_intf].add(int(vlan_id))
+    return active_vlans
+
+def generateVlanRemove(config, active_vlans):
+    """Generate commands to remove VLANs"""
+    commands = []
+    for interface, data in config.items():
+        if 'vlan_range' in data and interface in active_vlans:
+            vlan_ranges = data['vlan_range']
+            for vlan_range in vlan_ranges:
+                for vlan_id in getVlanList(vlan_range):
+                    if vlan_id in active_vlans[interface]:
+                        commands.append(f"ip link delete vlan.{vlan_id}")
+    return commands
+
+def main():
+    """Main function"""
+    config = read_yaml('/tmp/siterm-link-Agent-main.yaml')
+    active_vlans = get_active_vlans()
+    commands = generateVlanRemove(config, active_vlans)
+    print('Here are commands to delete all SENSE Vlans:')
+    print('='*50)
+    for command in commands:
+        print(command)
+    print('Here is command to delete QoS Rules')
+    print('='*50)
+    print('fireqos clear_all_qos')
+    print('rm -f /etc/firehol/fireqos.conf')
+
+
+if __name__ == "__main__":
+    main()
