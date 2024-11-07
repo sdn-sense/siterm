@@ -201,15 +201,11 @@ class Switch:
         swname = inData.get("event_data", {}).get("host", "")
         ports = self.getports(inData)
         tmpout = [vlan for vlan in ports if vlan.startswith("Vlan")]
-        if self.config.has_option(swname, "allvlans") and self.config.get(
-            swname, "allvlans"
-        ):
+        if self.config.has_option(swname, "allvlans") and self.config.get(swname, "allvlans"):
             return tmpout
         # If we reach here, means allvlans flag is false. It should include into model only SENSE Vlans.
         out = []
-        if self.config.has_option(swname, "all_vlan_range_list") and self.config.get(
-            swname, "all_vlan_range_list"
-        ):
+        if self.config.has_option(swname, "all_vlan_range_list") and self.config.get(swname, "all_vlan_range_list"):
             for item in tmpout:
                 vlanid = self.getVlanKey(item)
                 if isinstance(vlanid, int):
