@@ -345,7 +345,7 @@ class GitConfig:
     def has_option(self, key, subkey):
         """Check if option available"""
         if not self.config["MAIN"].get(key, {}):
-            raise NoSectionError(f"{key} section is not available in configuration.")
+            return False
         if subkey in self.config["MAIN"][key]:
             return True
         return False
