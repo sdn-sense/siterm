@@ -381,6 +381,7 @@ class RDFHelper():
                            self.genUriRef('schema')))
         kwargs['uri'] = svcService
         self._addMultiPointService(**kwargs)
+        self._addDebugIPService(**kwargs)
         return svcService
 
     def _addMultiPointService(self, **kwargs):
@@ -396,6 +397,20 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswmp']}"),
                            self.genUriRef('sd', 'serviceType'),
                            self.genLiteral('http://services.ogf.org/nsi/2018/06/descriptions/l2-mp-es')))
+
+    def _addDebugIPService(self, **kwargs):
+        """Add DebugIP Service to model"""
+        if not kwargs.get('vswdbip', ''):
+            return
+        self.newGraph.add((self.genUriRef('site', kwargs['uri']),
+                           self.genUriRef('sd', 'hasServiceDefinition'),
+                           self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswdbip']}")))
+        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswdbip']}"),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('sd', 'ServiceDefinition')))
+        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswdbip']}"),
+                           self.genUriRef('sd', 'serviceType'),
+                           self.genLiteral('http://services.ogf.org/nsi/2019/08/descriptions/config-debug-ip')))
 
     def _addSwitchingSubnet(self, **kwargs):
         """Add Switching Subnet which comes from delta parsed request"""

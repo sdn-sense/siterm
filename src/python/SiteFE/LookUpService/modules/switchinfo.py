@@ -90,7 +90,12 @@ class SwitchInfo():
             try:
                 vswmp = self.config.get(switchName, 'vswmp')
             except (NoOptionError, NoSectionError):
-                vswmp = False
+                vswmp = f"{vsw}_mp"
+            # Get info if vswdbip is enabled in configuration (Debug IP)
+            try:
+                vswdbip = self.config.get(switchName, 'vswdbip')
+            except (NoOptionError, NoSectionError):
+                vswdbip = f"{vsw}_debugip"
             # Get info if rst is enabled in configuration
             try:
                 rst = self.config.get(switchName, 'rst')
@@ -98,7 +103,7 @@ class SwitchInfo():
                 rst = False
             for portName, portSwitch in list(switchDict.items()):
                 newuri = f":{switchName}:{self.switch.getSystemValidPortName(portName)}"
-                self._addVswPort(hostname=switchName, portName=portName, vsw=vsw, vswmp=vswmp)
+                self._addVswPort(hostname=switchName, portName=portName, vsw=vsw, vswmp=vswmp, vswdbip=vswdbip)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
                 if rst:
                     self._addAddressPool(newuri)
