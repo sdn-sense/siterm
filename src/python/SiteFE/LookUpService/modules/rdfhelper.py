@@ -339,6 +339,8 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}"),
                            self.genUriRef('rdf', 'type'),
                            self.genUriRef('nml', 'Node')))
+        # Add mrs:NetworkAddress (nml:hostname is for legacy)
+        self._addNetworkAddress(f":{kwargs['hostname']}", "fqdn", kwargs['hostname'])
         return f":{kwargs['hostname']}"
 
     def _addPort(self, **kwargs):
