@@ -521,6 +521,10 @@ class PolicyService(RDFHelper, Timing):
                 connOut.setdefault("_params", {}).setdefault(
                     "labelSwapping", str(out[0])
                 )
+            # Parse hasNetworkAddress (debugip)
+            paramsOut = connOut.setdefault("_params", {})
+            self._hasNetwork(gIn, connectionID, paramsOut)
+            self.logger.debug(f'ParamsOut: {paramsOut}')
             self.parseL2Ports(gIn, connectionID, connOut)
         return returnout
 
