@@ -94,6 +94,9 @@ class DeltaInfo():
                                     val))
         self.addTimeline(params, uri)
         self.addNetworkStatus(params, uri)
+        # Debug IP ADD
+        self.logger.debug(f'ParamsAdd Debug: {params}')
+        self._addNetworkAddr(params.get('_params', {}), uri, True)
 
     def _addService(self, portDict, uri):
         if not portDict.get('hasService', {}):
@@ -106,7 +109,7 @@ class DeltaInfo():
         # TODO: This should depend on switch config if this is configurable
         # self.addNetworkStatus(portDict['hasService'], bwuri)
 
-    def _addNetworkAddr(self, portDict, uri):
+    def _addNetworkAddr(self, portDict, uri, vswParams=False):
         """Add Network delta info"""
         del uri
         netDict = portDict.get('hasNetworkAddress', {})
@@ -120,7 +123,8 @@ class DeltaInfo():
             uri = ipdict.get('uri', '')
             if val and uri:
                 self._addVals(ipkey, ipkey, val, portDict['uri'][len(self.prefixes['site']):])
-                self._addParams(ipdict, uri)
+                if not vswParams:
+                    self._addParams(ipdict, uri)
 
     def addvswInfo(self, vswDict, uri):
         """Add vsw Info from params"""

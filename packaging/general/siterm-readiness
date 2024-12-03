@@ -2,8 +2,10 @@
 """
 Kubernetes readiness checker for the pod.
 """
+import os
 import sys
-from os import walk
+import argparse
+from datetime import datetime
 from SiteRMLibs.MainUtilities import getFileContentAsJson
 
 
@@ -12,7 +14,7 @@ def getStates():
     directory = '/tmp/siterm-states/'
     files = []
     exitCode = 0
-    for (_, _, filenames) in walk(directory):
+    for (_, _, filenames) in os.walk(directory):
         files.extend(filenames)
         break
     for fname in files:
@@ -23,6 +25,53 @@ def getStates():
                 print("State for service is not OK. Details: ", fname, out)
     return exitCode
 
+def enableReadinessCheck(statFile):
+    """Enable the Readiness check by removing the disable file if it exists."""
+    if os.path.exists(statFile):
+        try:
+            os.remove(statFile)
+            print("Readiness check enabled. Removed disable file.")
+        except OSError as e:
+            print(f"Error removing disable file: {e}")
+            sys.exit(1)
+    else:
+        print("Readiness check is already enabled.")
+
+
+def disableReadinessCheck(statFile):
+    """Disable the Readiness check by creating the disable file if it doesn't exist."""
+    if not os.path.exists(statFile):
+        try:
+            with open(statFile, 'w', encoding='utf-8') as fd:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                fd.write("Readiness check disabled at " + {timestamp} + "\n")
+            print("Readiness check disabled. Created disable file.")
+        except OSError as e:
+            print(f"Error creating disable file: {e}")
+            sys.exit(1)
+    else:
+        print("Readiness check is already disabled.")
+        with open(statFile, 'r', encoding='utf-8') as fd:
+            print(fd.read())
+
+
 if __name__ == "__main__":
+    readinessFile = "/tmp/siterm-readiness-disable"
+    parser = argparse.ArgumentParser(description="Kubernetes liveness checker with enable/disable options.")
+    parser.add_argument("--enable", action="store_true", help="Enable the liveness check.")
+    parser.add_argument("--disable", action="store_true", help="Disable the liveness check.")
+    args = parser.parse_args()
+
+    if args.enable:
+        enableReadinessCheck(readinessFile)
+        sys.exit(0)
+
+    if args.disable:
+        disableReadinessCheck(readinessFile)
+        sys.exit(0)
+
+    if os.path.exists(readinessFile):
+        print("Readiness check is disabled. Exiting Use --enable to enable.")
+        sys.exit(0)
     state = getStates()
     sys.exit(state)

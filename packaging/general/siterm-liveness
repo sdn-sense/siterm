@@ -2,8 +2,12 @@
 """
 Kubernetes liveness checker for the service;
 """
+import os
 import sys
+import argparse
 import subprocess
+from datetime import datetime
+
 
 def checkServices():
     """Check if all services are running in supervisorctl"""
@@ -25,7 +29,55 @@ def checkServices():
         print("Will ignore error and return all is good.")
     return ret
 
+def enableLivenessCheck(statFile):
+    """Enable the liveness check by removing the disable file if it exists."""
+    if os.path.exists(statFile):
+        try:
+            os.remove(statFile)
+            print("Liveness check enabled. Removed disable file.")
+        except OSError as e:
+            print(f"Error removing disable file: {e}")
+            sys.exit(1)
+    else:
+        print("Liveness check is already enabled.")
+
+
+def disableLivenessCheck(statFile):
+    """Disable the liveness check by creating the disable file if it doesn't exist."""
+    if not os.path.exists(statFile):
+        try:
+            with open(statFile, 'w', encoding='utf-8') as fd:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                fd.write("Liveness check disabled at " + {timestamp} + "\n")
+            print("Liveness check disabled. Created disable file.")
+        except OSError as e:
+            print(f"Error creating disable file: {e}")
+            sys.exit(1)
+    else:
+        print("Liveness check is already disabled.")
+        with open(statFile, 'r', encoding='utf-8') as fd:
+            print(fd.read())
+
+
 if __name__ == "__main__":
+    livenessFile = "/tmp/siterm-liveness-disable"
+    parser = argparse.ArgumentParser(description="Kubernetes liveness checker with enable/disable options.")
+    parser.add_argument("--enable", action="store_true", help="Enable the liveness check.")
+    parser.add_argument("--disable", action="store_true", help="Disable the liveness check.")
+    args = parser.parse_args()
+
+    if args.enable:
+        enableLivenessCheck(livenessFile)
+        sys.exit(0)
+
+    if args.disable:
+        disableLivenessCheck(livenessFile)
+        sys.exit(0)
+
+    if os.path.exists(livenessFile):
+        print("Liveness check is disabled. Exiting Use --enable to enable.")
+        sys.exit(0)
+
     if checkServices():
         sys.exit(0)
     else:
