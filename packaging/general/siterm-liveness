@@ -48,7 +48,7 @@ def disableLivenessCheck(statFile):
         try:
             with open(statFile, 'w', encoding='utf-8') as fd:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                fd.write("Liveness check disabled at " + {timestamp} + "\n")
+                fd.write(f"Liveness check disabled at {timestamp} \n")
             print("Liveness check disabled. Created disable file.")
         except OSError as e:
             print(f"Error creating disable file: {e}")

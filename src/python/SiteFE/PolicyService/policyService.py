@@ -395,9 +395,10 @@ class PolicyService(RDFHelper, Timing):
                     except ValueError:
                         scanVals[key] = str(out[0])
 
-    def _hasNetwork(self, gIn, bidPort, returnout):
+    def _hasNetwork(self, gIn, bidPort, returnout, vswParams=False):
         """Query Graph and get ip address, type and uri"""
-        self._hasTags(gIn, bidPort, returnout)
+        if not vswParams:
+            self._hasTags(gIn, bidPort, returnout)
         # Get all hasNetworkAddress items
         out = self.queryGraph(gIn, bidPort, search=URIRef(f"{self.prefixes['mrs']}hasNetworkAddress"))
         for item in out:
@@ -417,7 +418,8 @@ class PolicyService(RDFHelper, Timing):
             out2 = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}value"))
             if out2:
                 vals["value"] = str(out2[0])
-            self._hasTags(gIn, item, vals)
+            if not vswParams:
+                self._hasTags(gIn, item, vals)
 
     def _recordMapping(self, subnet, returnout, mappingKey, subKey, val=""):
         """Query Graph and add all mappings"""
@@ -523,7 +525,7 @@ class PolicyService(RDFHelper, Timing):
                 )
             # Parse hasNetworkAddress (debugip)
             paramsOut = connOut.setdefault("_params", {})
-            self._hasNetwork(gIn, connectionID, paramsOut)
+            self._hasNetwork(gIn, connectionID, paramsOut, True)
             self.logger.debug(f'ParamsOut: {paramsOut}')
             self.parseL2Ports(gIn, connectionID, connOut)
         return returnout

@@ -44,7 +44,7 @@ def disableReadinessCheck(statFile):
         try:
             with open(statFile, 'w', encoding='utf-8') as fd:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                fd.write("Readiness check disabled at " + {timestamp} + "\n")
+                fd.write(f"Readiness check disabled at {timestamp} \n")
             print("Readiness check disabled. Created disable file.")
         except OSError as e:
             print(f"Error creating disable file: {e}")
