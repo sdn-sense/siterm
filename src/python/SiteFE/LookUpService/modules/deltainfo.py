@@ -96,7 +96,7 @@ class DeltaInfo():
         self.addNetworkStatus(params, uri)
         # Debug IP ADD
         self.logger.debug(f'ParamsAdd Debug: {params}')
-        self._addNetworkAddr(params.get('_params', {}), uri, True)
+        self._addNetworkAddrVsw(params.get('_params', {}), uri)
 
     def _addService(self, portDict, uri):
         if not portDict.get('hasService', {}):
@@ -109,7 +109,7 @@ class DeltaInfo():
         # TODO: This should depend on switch config if this is configurable
         # self.addNetworkStatus(portDict['hasService'], bwuri)
 
-    def _addNetworkAddr(self, portDict, uri, vswParams=False):
+    def _addNetworkAddr(self, portDict, uri):
         """Add Network delta info"""
         del uri
         netDict = portDict.get('hasNetworkAddress', {})
@@ -123,8 +123,20 @@ class DeltaInfo():
             uri = ipdict.get('uri', '')
             if val and uri:
                 self._addVals(ipkey, ipkey, val, portDict['uri'][len(self.prefixes['site']):])
-                if not vswParams:
-                    self._addParams(ipdict, uri)
+                self._addParams(ipdict, uri)
+
+    def _addNetworkAddrVsw(self, portDict, uri):
+        """Add Network delta info"""
+        netDict = portDict.get('hasNetworkAddress', {})
+        if not netDict:
+            return
+        for ipkey in ['ipv4', 'ipv6']:
+            ipdict = netDict.get(f'{ipkey}-address', {})
+            if not ipdict:
+                continue
+            val = normalizedip(ipdict.get('value', ''))
+            if val and uri:
+                self._addVals(ipkey, ipkey, val, uri)
 
     def addvswInfo(self, vswDict, uri):
         """Add vsw Info from params"""

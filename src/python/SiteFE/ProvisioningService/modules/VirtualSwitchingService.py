@@ -60,6 +60,14 @@ class VirtualSwitchingService:
         tmpD = tmpD.setdefault(subkey, {})
         return tmpD
 
+    @staticmethod
+    def __getIP(iptype, inval):
+        """Get IP from input"""
+        ipval = inval.get("hasNetworkAddress", {}).get(f"{iptype}-address", {}).get("value", "")
+        if ipval:
+            return normalizedip(ipval)
+        return None
+
     def __getVlanID(self, host, port, portDict):
         """Get vlan id from portDict"""
         if "hasLabel" not in portDict or "value" not in portDict["hasLabel"]:
@@ -84,7 +92,7 @@ class VirtualSwitchingService:
             vlanDict.setdefault("mtu", tmpVlanMTU)
         return vlanDict
 
-    def _addQoS(self, host, port, portDict):
+    def _addQoS(self, host, port, portDict, _params):
         """Add QoS to expected yaml conf"""
         resvRate, resvUnit = self.convertToRate(portDict.get("hasService", {}))
         if resvRate == 0:
@@ -101,39 +109,41 @@ class VirtualSwitchingService:
             vlanD.setdefault("unit", resvUnit)
             vlanD.setdefault("state", "present")
 
-    def _addTaggedInterfaces(self, host, port, portDict):
+    def _addTaggedInterfaces(self, host, port, portDict, _params):
         """Add Tagged Interfaces to expected yaml conf"""
         vlanDict = self.__getdefaultVlan(host, port, portDict)
         portName = self.switch.getSwitchPortName(host, port)
         vlanDict.setdefault("tagged_members", {})
         vlanDict["tagged_members"][portName] = "present"
 
-    def _addIPv4Address(self, host, port, portDict):
+    def _addIPv4Address(self, host, port, portDict, params):
         """Add IPv4 to expected yaml conf"""
         # For IPv4 - only single IP is supported. No secondary ones
         vlanDict = self.__getdefaultVlan(host, port, portDict)
-        if (
-            portDict.get("hasNetworkAddress", {})
-            .get("ipv4-address", {})
-            .get("value", "")
-        ):
+        ipaddr = self.__getIP("ipv4", portDict)
+        if ipaddr:
             vlanDict.setdefault("ipv4_address", {})
-            ip = normalizedip(portDict["hasNetworkAddress"]["ipv4-address"]["value"])
-            vlanDict["ipv4_address"][ip] = "present"
+            vlanDict["ipv4_address"][ipaddr] = "present"
+        # Add Debug IP if present
+        ipaddr = self.__getIP("ipv4", params)
+        if ipaddr:
+            vlanDict.setdefault("ipv4_address", {})
+            vlanDict["ipv4_address"][ipaddr] = "present"
 
-    def _addIPv6Address(self, host, port, portDict):
+    def _addIPv6Address(self, host, port, portDict, params):
         """Add IPv6 to expected yaml conf"""
         vlanDict = self.__getdefaultVlan(host, port, portDict)
-        if (
-            portDict.get("hasNetworkAddress", {})
-            .get("ipv6-address", {})
-            .get("value", "")
-        ):
+        ipaddr = self.__getIP("ipv6", portDict)
+        if ipaddr:
             vlanDict.setdefault("ipv6_address", {})
-            ip = normalizedip(portDict["hasNetworkAddress"]["ipv6-address"]["value"])
-            vlanDict["ipv6_address"][ip] = "present"
+            vlanDict["ipv6_address"][ipaddr] = "present"
+        # Add Debug IP if present
+        ipaddr = self.__getIP("ipv6", params)
+        if ipaddr:
+            vlanDict.setdefault("ipv6_address", {})
+            vlanDict["ipv6_address"][ipaddr] = "present"
 
-    def _presetDefaultParams(self, host, port, portDict):
+    def _presetDefaultParams(self, host, port, portDict, _params):
         vlanDict = self.__getdefaultVlan(host, port, portDict)
         vlanDict["description"] = portDict.get("_params", {}).get(
             "tag", "SENSE-VLAN-Without-Tag"
@@ -145,16 +155,17 @@ class VirtualSwitchingService:
 
     def _addparamsVsw(self, connDict, switches):
         """Wrapper for add params, to put individual request info too inside dictionary"""
+        params = connDict.get("_params", {})
         for host, hostDict in connDict.items():
             if host in switches:
                 for port, portDict in hostDict.items():
                     if port == "_params":
                         continue
-                    self._presetDefaultParams(host, port, portDict)
-                    self._addTaggedInterfaces(host, port, portDict)
-                    self._addIPv4Address(host, port, portDict)
-                    self._addIPv6Address(host, port, portDict)
-                    self._addQoS(host, port, portDict)
+                    self._presetDefaultParams(host, port, portDict, params)
+                    self._addTaggedInterfaces(host, port, portDict, params)
+                    self._addIPv4Address(host, port, portDict, params)
+                    self._addIPv6Address(host, port, portDict, params)
+                    self._addQoS(host, port, portDict, params)
 
     def addvsw(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for vsw)"""
