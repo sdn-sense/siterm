@@ -20,7 +20,8 @@ Email                   : jbalcas (at) caltech (dot) edu
 Date                    : 2023/01/03
 """
 from SiteRMLibs.MainUtilities import evaldict
-
+from SiteRMLibs.MainUtilities import getUTCnow, read_input_data
+from SiteRMLibs.CustomExceptions import NotFoundError
 
 class FrontendCalls:
     """Frontend Calls API Module"""
@@ -40,6 +41,7 @@ class FrontendCalls:
             "getactivedeltas": {"allowedMethods": ["GET"]},
             "getqosdata": {"allowedMethods": ["GET"]},
             "getservicestates": {"allowedMethods": ["GET"]},
+            "setinstancestartend": {"allowedMethods": ["POST"]},
         }
         self.urlParams.update(urlParams)
 
@@ -50,22 +52,11 @@ class FrontendCalls:
         )
         self.routeMap.connect("getdata", "/json/frontend/getdata", action="getdata")
         self.routeMap.connect("gethosts", "/json/frontend/gethosts", action="gethosts")
-        self.routeMap.connect(
-            "getswitchdata", "/json/frontend/getswitchdata", action="getswitchdata"
-        )
-        self.routeMap.connect(
-            "getactivedeltas",
-            "/json/frontend/getactivedeltas",
-            action="getactivedeltas",
-        )
-        self.routeMap.connect(
-            "getqosdata", "/json/frontend/getqosdata", action="getqosdata"
-        )
-        self.routeMap.connect(
-            "getservicestates",
-            "/json/frontend/getservicestates",
-            action="getservicestates",
-        )
+        self.routeMap.connect("getswitchdata", "/json/frontend/getswitchdata", action="getswitchdata")
+        self.routeMap.connect("getactivedeltas", "/json/frontend/getactivedeltas", action="getactivedeltas")
+        self.routeMap.connect("getqosdata", "/json/frontend/getqosdata", action="getqosdata")
+        self.routeMap.connect("getservicestates", "/json/frontend/getservicestates", action="getservicestates")
+        self.routeMap.connect("setinstancestartend", "/json/frontend/setinstancestartend", action="setinstancestartend")
 
     def feconfig(self, environ, **kwargs):
         """Returns Frontend configuration"""
@@ -131,3 +122,31 @@ class FrontendCalls:
         """Return Service states"""
         self.responseHeaders(environ, **kwargs)
         return self.dbI.get("servicestates", orderby=["updatedate", "DESC"], limit=1000)
+
+    def setinstancestartend(self, environ, **kwargs):
+        """Set Instance Start and End time"""
+        inputDict = read_input_data(environ)
+        # Check if instance ID provided
+        instanceID = inputDict.get("instanceid", None)
+        if not instanceID:
+            raise NotFoundError("Instance ID is not provided.")
+        # Validate that these entries are known...
+        activeDeltas = self.dbI.get("activeDeltas", orderby=["updatedate", "DESC"], limit=1000)
+        if not activeDeltas:
+            raise NotFoundError("No Active Deltas found.")
+
+        activeDeltas = activeDeltas[0]
+        activeDeltas["output"] = evaldict(activeDeltas["output"])
+        if instanceID not in activeDeltas["output"]['vsw'] or not activeDeltas["output"]['rst']:
+            raise NotFoundError(f"Instance ID {instanceID} is not found in activeDeltas.")
+
+        # Insert start and end time in instancestartend table
+        out = {
+            "instanceid": instanceID,
+            "insertdate": getUTCnow(),
+            "endtimestamp": inputDict.get("endtimestamp", 0),
+            "starttimestamp": inputDict.get("starttimestamp", 0),
+        }
+        self.dbI.insert("instancestartend", out)
+        self.responseHeaders(environ, **kwargs)
+        return {"Status": "OK"}

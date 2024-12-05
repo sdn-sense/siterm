@@ -647,22 +647,73 @@ class PolicyService(RDFHelper, Timing):
         if self.recordDeltaStates():
             changesApplied = True
 
-        # Write New Active to Database
+        # Check if there is any difference between old and current.
         for diff in list(dictdiffer.diff(self.currentActive["output"], self.newActive["output"])):
             self.logger.debug(f"New diff: {diff}")
         self.currentActive["output"] = copy.deepcopy(self.newActive["output"])
-        writeActiveDeltas(self, self.currentActive["output"])
 
+        # Check if there is any conflict with expired entities
         self.logger.info("Conflict Check of expired entities")
-        newconf, cleaned = self.conflictChecker.checkActiveConfig(
-            self.currentActive["output"]
-        )
+        newconf, cleaned = self.conflictChecker.checkActiveConfig(self.currentActive["output"])
         if cleaned:
             self.logger.info("IMPORTANT: State changed. Writing new config to DB.")
             self.currentActive["output"] = copy.deepcopy(newconf)
-            writeActiveDeltas(self, self.currentActive["output"])
             changesApplied = True
+
+        # Check if there are any forced cleanups (via API)
+        newconf, override =self._instanceoverride(self.currentActive["output"])
+        if override:
+            self.logger.info("IMPORTANT: State changed due to forced DB timestamp change. Writing new config to DB.")
+            self.currentActive["output"] = copy.deepcopy(newconf)
+            changesApplied = True
+        # Write active deltas to DB (either changed or not changed).
+        writeActiveDeltas(self, self.currentActive["output"])
         return changesApplied
+
+    def _instanceoverride(self, currentActive):
+        """Check if there are any forced cleanups (via API)."""
+        def __setlifetime(initem, timestamps):
+            """Set lifetime inside initem."""
+            lifetime = initem.setdefault('existsDuring', {})
+            if timestamps[0] != 0:
+                lifetime['start'] = timestamps[0]
+            else:
+                del lifetime['start']
+            if timestamps[1] != 0:
+                lifetime['end'] = timestamps[1]
+            else:
+                del lifetime['end']
+
+        def __loopsubitems(indeltas, outdeltas, timestamps):
+            """Loop subitems under instance and set lifetime."""
+            for key, val in indeltas.items():
+                if key == '_params':
+                    workitem = outdeltas.setdefault('_params', {})
+                    __setlifetime(workitem, timestamps)
+                elif isinstance(val, dict):
+                    workitem = outdeltas.setdefault(key, {})
+                    __loopsubitems(val, workitem, timestamps)
+
+        modified = False
+        # Get from database all overrides in instancestartend database
+        newconf = copy.deepcopy(currentActive)
+        for override in self.dbI.get("instancestartend", limit=100):
+            instanceid = override["instanceid"]
+            timestamps = (int(override["starttimestamp"]), int(override["endtimestamp"]))
+            # Identify if it vsw or rst
+            if instanceid in newconf.get("vsw", {}):
+                args = ("vsw", instanceid)
+            elif instanceid in newconf.get("rst", {}):
+                args = ("rst", instanceid)
+            else:
+                continue
+            # Set lifetime for all subitems
+            __loopsubitems(currentActive[args[0]][args[1]], newconf[args[0]][args[1]], timestamps)
+            # Remove from database
+            self.dbI.delete("instancestartend", [["id", override["id"]]])
+            modified = True
+        return newconf, modified
+
 
     def startworklookup(self, currentGraph):
         """Start Policy Service."""

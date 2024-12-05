@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.4.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="assets/css/bootstrap.css" rel="stylesheet">
+  <link href="assets/css/custom.css" rel="stylesheet">
+  <script src="assets/js/jquery.min.js" type="text/javascript"></script>
+  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  <script src="assets/js/main.js" type="text/javascript"></script>
+  <script type="text/javascript">
+  //<![CDATA[
+        google.load('visualization', '1', {packages:['table', 'controls']});
+        $(document).ready(function() {
+            load_data();
+        });
+
+      // Function to prefill the site dropdown
+      function prefillSites() {
+        $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
+          for (i=0; i < data['general']['sites'].length; i++){
+            sitename = data['general']['sites'][i];
+            const dropdown = document.getElementById("f0_sitename");
+            sites.forEach(site => {
+              const opt = document.createElement("option");
+              opt.value = site;
+              opt.textContent = site;
+              dropdown.appendChild(opt);
+            });
+          }
+        });
+
+        // Helper function to add options to a dropdown
+        function addDropDown(name, dropdown) {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          dropdown.append(opt);
+        }
+
+        // Function to load active deltas and populate the instance dropdown
+        function loadModel(sitename) {
+          $.ajax({
+            url: sitename + '/sitefe/v1/activedeltas/',
+            dataType: 'json',
+            async: false,
+            success: function (json) {
+              const dropdown = document.getElementById("f0_instanceid");
+              dropdown.innerHTML = '<option value="">Choose an instance</option>'; // Reset dropdown
+
+              // Loop through each delta in the response
+              json.forEach(delta => {
+                // Access vsw or rst if present
+                ['vsw', 'rst'].forEach(type => {
+                  if (delta.output && delta.output[type]) {
+                    // Loop through each key in vsw or rst
+                    for (const key in delta.output[type]) {
+                      if (delta.output[type].hasOwnProperty(key)) {
+                        const opt = document.createElement("option");
+                        opt.value = key; // The key is used as the value
+                        opt.textContent = key; // The key is shown as the option text
+                        dropdown.appendChild(opt);
+                      }}}})})}})}
+
+        // Function to handle form submission
+        function submitForm(formId) {
+          const form = document.getElementById(formId);
+          const formData = new FormData(form);
+
+          fetch(form.action, {
+            method: "POST",
+            body: formData,
+          })
+                  .then(response => response.json())
+                  .then(data => {
+                    console.log("Success:", data);
+                    alert("Form submitted successfully!");
+                  })
+                  .catch(error => {
+                    console.error("Error:", error);
+                    alert("An error occurred.");
+                  });
+
+          return false; // Prevent default form submission
+        }
+        function load_data() {
+          prefillSites();
+        };
+      }
+  //]]>
+  </script>
+  <script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/loader.js"></script>
+  <title>Site-RM: Request New Debug Action</title>
+</head>
+<body>
+  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
+  </header>
+  <div class="container-fluid">
+    <div class="row">
+      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+        <div class="position-sticky pt-3">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link" href="/index.html">Topology</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/frontendconfig.html">Frontend Configuration</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/models.html">Models</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/servicestates.html">ServiceStates</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/deltas.html">Deltas</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/activerequests.html">Active Requests</a>
+            </li>
+          </ul>
+          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"><span>Debugging tools</span> <a class="link-secondary" href="#" aria-label="Debugging tools"></a></h6>
+          <ul class="nav flex-column mb-2">
+            <li class="nav-item">
+              <a class="nav-link" aria-current="page" href="/newdebug.html">Request new debug action</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/debughistory.html">Debug history</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="/changeactive.html">Change Active Start/End</a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">Change Active Start/End></h1>
+        </div>
+        <div class="row" id="maindiv">
+          <div class="col-md-12" id="alertstop"></div>
+          <div class="row col-md-12 border border-primary">
+            <div class="row col-md-12">
+              <h3 class="h3">Change Active Start/End</h3>
+            </div>
+            <div class="col-md-12" id="alertsrapid-ping"></div>
+            <div class="col">
+              Description: Change the start and end times of an instance.
+              <br/>
+              Instance start and end times are used to determine when an instance is active and when it is not.
+              Select Instance and provide new start and end times.
+            </div>
+            <div class="col">
+              <form onsubmit="submitForm('f0'); return false" id="f0" name="f0" method="POST" action="/json/frontend/setinstancestartend">
+                <div class="form-group">
+                  <label for="f0_sitename">Select Site</label>
+                  <select class="form-control" id="f0_sitename" name="sitename" onchange="loadModel(this.value)" required="">
+                    <option value="">Choose a site</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="f0_instanceid">Select Instance</label>
+                  <select class="form-control" id="f0_instanceid" name="instanceid" required="">
+                    <option value="">Choose an instance</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="f0_start">Start Timestamp</label>
+                  <input class="form-control" type="text" id="f0_start" name="starttimestamp" placeholder="Enter UNIX timestamp" required="">
+                </div>
+                <div class="form-group">
+                  <label for="f0_end">End Timestamp</label>
+                  <input class="form-control" type="text" id="f0_end" name="endtimestamp" placeholder="Enter UNIX timestamp" required="">
+                </div>
+                <input type="submit" class="btn btn-primary" value="Submit">
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div><span class="border" style="width:100%">
+  <script src="assets/js/bootstrap.bundle.js"></script>
+  <script src="assets/js/bootstrap.js"></script>
+  <script>
+      $('#myTab a').click(function (e) {
+        e.preventDefault();
+        $(this).tab('show');
+      })
+  </script></span>
+</body>
+</html>
