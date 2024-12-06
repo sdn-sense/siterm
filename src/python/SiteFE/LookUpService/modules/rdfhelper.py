@@ -171,7 +171,7 @@ class RDFHelper():
                'portName' in kwargs and kwargs['portName']:
                 self._addRstPort(**kwargs)
 
-    def _addVals(self, key, subkey, val, newuri):
+    def _addVals(self, key, subkey, val, newuri, **kwargs):
         if not subkey:
             return
         if key in ['ipv4', 'ipv6']:
@@ -199,6 +199,8 @@ class RDFHelper():
         else:
             labeluri = f"{newuri}:{key}+{subkey}"
             reptype = key
+        if 'labeluri' in kwargs and kwargs['labeluri']:
+            labeluri = kwargs['labeluri']
         val = generateVal(self, val, key, False)
         self.addToGraph(['site', newuri],
                         ['mrs', 'hasNetworkAddress'],
