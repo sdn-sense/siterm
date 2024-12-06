@@ -137,7 +137,12 @@ class FrontendCalls:
 
         activeDeltas = activeDeltas[0]
         activeDeltas["output"] = evaldict(activeDeltas["output"])
-        if instanceID not in activeDeltas["output"]['vsw'] or not activeDeltas["output"]['rst']:
+        found = False
+        if instanceID in activeDeltas.get("output", {}).get('vsw', {}):
+            found = True
+        if instanceID in activeDeltas.get("output", {}).get('rst', {}):
+            found = True
+        if not found:
             raise NotFoundError(f"Instance ID {instanceID} is not found in activeDeltas.")
 
         # Insert start and end time in instancestartend table
@@ -147,6 +152,6 @@ class FrontendCalls:
             "endtimestamp": inputDict.get("endtimestamp", 0),
             "starttimestamp": inputDict.get("starttimestamp", 0),
         }
-        self.dbI.insert("instancestartend", out)
+        insOut = self.dbI.insert("instancestartend", out)
         self.responseHeaders(environ, **kwargs)
-        return {"Status": "OK"}
+        return {"Status": insOut[0], "ID": insOut[2]}
