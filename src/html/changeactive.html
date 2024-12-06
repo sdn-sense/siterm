@@ -74,7 +74,7 @@
               <form onsubmit="submitForm('f0'); return false" id="f0" name="f0" method="POST">
                 <div class="form-group">
                   <label for="f0_sitename">Select Site</label>
-                  <select class="form-control" id="f0_sitename" name="sitename" onchange="loadModel(this.value); updateFormAction();" required="">
+                  <select class="form-control" id="f0_sitename" name="sitename" onchange="loadModel(this.value);" required="">
                     <option value="">Choose a site</option>
                   </select>
                 </div>
@@ -155,14 +155,6 @@
                         dropdown.appendChild(opt);
                       }}}})})}})}
 
-         function updateFormAction() {
-          const sitename = document.getElementById("f0_sitename").value;
-          if (sitename) {
-            const form = document.getElementById("f0");
-            form.action = `/${sitename}/sitefe/json/frontend/setinstancestartend`;
-          }
-        }
-
         function submitForm(formId) {
             docObj = document.getElementById(formId);
             var params = {};
@@ -178,7 +170,7 @@
                 }}}
             $.ajax({
               type: "POST",
-              url: "/" + params['sitename'] + "/json/frontend/setinstancestartend",
+              url: "/" + params['sitename'] + "/sitefe/json/frontend/setinstancestartend",
               data: params,
               success: function (result) {
                 params['type'] = 'main';

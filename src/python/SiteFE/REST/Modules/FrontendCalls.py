@@ -152,6 +152,6 @@ class FrontendCalls:
             "endtimestamp": inputDict.get("endtimestamp", 0),
             "starttimestamp": inputDict.get("starttimestamp", 0),
         }
-        insOut = self.dbI.insert("instancestartend", out)
+        insOut = self.dbI.insert("instancestartend", [out])
         self.responseHeaders(environ, **kwargs)
         return {"Status": insOut[0], "ID": insOut[2]}
