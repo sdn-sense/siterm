@@ -95,6 +95,16 @@ class DeltaCalls:
         self.routeMap.connect("deltatimestates", "/v1/deltatimestates", action="deltatimestates")
         self.routeMap.connect("deltaforceapply", "/v1/deltaforceapply", action="deltaforceapply")
 
+    def _logDeltaUserAction(self, deltaInfo, userAction, otherInfo, environ):
+        """Log Delta User Action"""
+        print("-"*40)
+        print(f"User Action: {userAction}")
+        print(f"Delta Info: {deltaInfo}")
+        print(f"Other Info: {otherInfo}")
+        print(f"Environ: {environ}")
+        print("-"*40)
+        #self.dbI.insert("deltasusertracking", [{"username": userName, "insertdate": getUTCnow(), "deltaid": deltaID, "useraction": userAction, "otherinfo": otherInfo}])
+
     @staticmethod
     def __intGetPostData(environ, **_kwargs):
         """Parse POST Data"""
@@ -157,6 +167,7 @@ class DeltaCalls:
                 outContent["Error"] = f"Unknown Error. Dump all out content {jsondumps(out)}"
             else:
                 outContent["Error"] = out["Error"]
+
         return outContent
 
     def __getdeltaINT(self, deltaID=None, **_kwargs):
@@ -289,6 +300,7 @@ class DeltaCalls:
                 "You did POST method, but nor reduction, nor addition is present"
             )
         out = self.__addNewDeltaINT(newDelta, environ, **kwargs)
+        self._logDeltaUserAction(newDelta, 'add', out, environ)
         if out["State"] in ["accepted"]:
             self.httpresp.ret_201(
                 "application/json",
@@ -397,6 +409,7 @@ class DeltaCalls:
                     siterm-site-frontend
         """
         msgOut = self.__commitdelta(kwargs["deltaid"], environ, **kwargs)
+        self._logDeltaUserAction(kwargs, 'commit', msgOut, environ)
         self.httpresp.ret_204("application/json", kwargs["start_response"], None)
         return msgOut
 
@@ -427,13 +440,15 @@ class DeltaCalls:
             "hostport": out["hostport"],
             "uuidstate": out["uuidstate"],
         }
-        self.dbI.insert("deltatimestates", [dbout])
+        dbansw = self.dbI.insert("deltatimestates", [dbout])
+        self._logDeltaUserAction(out, 'setstate', dbansw, environ)
         self.responseHeaders(environ, **kwargs)
         return {"status": "Recorded"}
 
     def deltaforceapply(self, environ, **kwargs):
         """Force apply based on delta UUID"""
         out = self.__intGetPostData(environ, **kwargs)
-        self.dbI.insert("forceapplyuuid", [{"uuid": out["uuid"]}])
+        dbansw = self.dbI.insert("forceapplyuuid", [{"uuid": out["uuid"]}])
+        self._logDeltaUserAction({"uuid": out["uuid"]}, 'setstate', dbansw, environ)
         self.responseHeaders(environ, **kwargs)
         return {"status": "OK"}
