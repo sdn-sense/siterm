@@ -144,6 +144,14 @@ create_instancestartend = """CREATE TABLE IF NOT EXISTS instancestartend(
                                 starttimestamp int NOT NULL,
                                 endtimestamp int NOT NULL,
                                 primary key(id))"""
+create_deltasusertracking = """CREATE TABLE IF NOT EXISTS deltasusertracking(
+                                id int auto_increment,
+                                username text NOT NULL,
+                                insertdate int NOT NULL,
+                                deltaid text NOT NULL,
+                                useraction text NOT NULL,
+                                otherinfo longtext NOT NULL,
+                                primary key(id))"""
 
 insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s, %(content)s)"
 insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, modadd)
@@ -164,6 +172,7 @@ insert_deltatimestates = "INSERT INTO deltatimestates(insertdate, uuid, uuidtype
 insert_serviceaction = "INSERT INTO serviceaction(servicename, hostname, serviceaction, insertdate) VALUES(%(servicename)s, %(hostname)s, %(serviceaction)s, %(insertdate)s)"
 insert_forceapplyuuid = "INSERT INTO forceapplyuuid(uuid) VALUES(%(uuid)s)"
 insert_instancestartend = "INSERT INTO instancestartend(instanceid, insertdate, starttimestamp, endtimestamp) VALUES(%(instanceid)s, %(insertdate)s, %(starttimestamp)s, %(endtimestamp)s)"
+insert_deltasusertracking = "INSERT INTO deltasusertracking(username, insertdate, deltaid, useraction, otherinfo) VALUES(%(username)s, %(insertdate)s, %(deltaid)s, %(useraction)s, %(otherinfo)s)"
 
 get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
 get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, modadd FROM deltas"
@@ -183,6 +192,7 @@ get_deltatimestates = "SELECT id, insertdate, uuid, uuidtype, hostname, hostport
 get_serviceaction = "SELECT id, servicename, hostname, serviceaction, insertdate FROM serviceaction"
 get_forceapplyuuid = "SELECT id, uuid FROM forceapplyuuid"
 get_instancestartend = "SELECT id, instanceid, insertdate, starttimestamp, endtimestamp FROM instancestartend"
+get_deltasusertracking = "SELECT id, username, insertdate, deltaid, useraction, otherinfo FROM deltasusertracking"
 
 update_deltas = "UPDATE deltas SET updatedate = %(updatedate)s, state = %(state)s WHERE uid = %(uid)s"
 update_delta_connections = "UPDATE delta_connections SET state = %(state)s WHERE connectionid = %(connectionid)s AND deltaid = %(deltaid)s"
@@ -199,6 +209,7 @@ update_snmpmon = "UPDATE snmpmon SET updatedate = %(updatedate)s, output = %(out
 update_serviceaction = "UPDATE serviceaction SET serviceaction = %(serviceaction)s WHERE id = %(id)s"
 update_forceapplyuuid = "UPDATE forceapplyuuid SET uuid = %(uuid)s WHERE id = %(id)s"
 # update_instancestartend - Update call is not needed for update instance start end. It always write a new entry and update not needed.
+# update_deltasusertracking - Update call is not needed for update deltas user tracking. It always write a new entry and update not needed.
 
 delete_models = "DELETE FROM models"
 delete_deltas = "DELETE FROM deltas"
@@ -217,3 +228,4 @@ delete_deltatimestates = "DELETE FROM deltatimestates"
 delete_serviceaction = "DELETE FROM serviceaction"
 delete_forceapplyuuid = "DELETE FROM forceapplyuuid"
 delete_instancestartend = "DELETE FROM instancestartend"
+delete_deltasusertracking = "DELETE FROM deltasusertracking"
