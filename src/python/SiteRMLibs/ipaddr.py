@@ -208,6 +208,8 @@ def validMRMLName(valIn):
 def checkOverlap(inrange, ipval, iptype):
     """Check if overlap"""
     overlap = False
+    if not isinstance(inrange, list):
+        inrange = inrange.split(',')
     for vrange in inrange:
         overlap = ipOverlap(vrange, ipval, iptype)
         if overlap:
