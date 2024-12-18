@@ -97,12 +97,6 @@ class DeltaCalls:
 
     def _logDeltaUserAction(self, deltaInfo, userAction, otherInfo, environ):
         """Log Delta User Action"""
-        print("-"*40)
-        print(f"User Action: {userAction}")
-        print(f"Delta Info: {deltaInfo}")
-        print(f"Other Info: {otherInfo}")
-        print(f"Environ: {environ}")
-        print("-"*40)
         #self.dbI.insert("deltasusertracking", [{"username": userName, "insertdate": getUTCnow(), "deltaid": deltaID, "useraction": userAction, "otherinfo": otherInfo}])
 
     @staticmethod
