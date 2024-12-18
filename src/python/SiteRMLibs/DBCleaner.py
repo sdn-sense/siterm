@@ -45,9 +45,10 @@ class DBCleaner:
         self.nextRun = int(getUTCnow() + 7200) # Run every 2 hours
         print('Starting cleaner')
         for table in ['debugrequests', 'deltas', 'deltatimestates', 'hosts', 'models', 'servicestates', 'states',
-                      'hoststates', 'hoststateshistory', 'parsed', 'switch', 'snmpmon', 'serviceaction', 'activeDeltas']:
+                      'hoststates', 'hoststateshistory', 'parsed', 'switch', 'snmpmon', 'serviceaction', 'activeDeltas',
+                      'instancestartend', 'deltasusertracking']:
             print(f"Cleaning {table}")
-            self.clean(table, 86400)
+            self.clean(table, 7*86400)
         print('Cleaner finished')
 
 
