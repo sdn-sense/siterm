@@ -100,7 +100,7 @@ class DeltaCalls:
         username = environ.get("USERINFO", {}).get("username", "UNKNOWN") + "-"
         username += environ.get("CERTINFO", {}).get("fullDN", "UNKNOWN") + "-"
         username += environ.get('REMOTE_ADDR', 'UNKNOWN')
-        otherInfo = jsondumps({'otherInfo': otherInfo, 'deltaInfo': deltaInfo})
+        otherInfo = str({'otherInfo': otherInfo, 'deltaInfo': deltaInfo})
         self.dbI.insert("deltasusertracking", [{"username": username, "insertdate": getUTCnow(), "deltaid": deltaInfo.get("uuid", "UNKNOWN"), "useraction": userAction, "otherinfo": otherInfo}])
 
     @staticmethod
