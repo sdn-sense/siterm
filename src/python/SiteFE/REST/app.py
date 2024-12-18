@@ -172,7 +172,7 @@ class Frontend(
         # Certificate must be valid
         try:
             environ["CERTINFO"] = self.getCertInfo(environ)
-            self.validateCertificate(environ)
+            environ["USERINFO"] = self.validateCertificate(environ)
         except Exception as ex:
             self.httpresp.ret_401("application/json", start_response, None)
             return [
