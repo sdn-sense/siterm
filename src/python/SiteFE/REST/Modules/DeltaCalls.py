@@ -97,13 +97,11 @@ class DeltaCalls:
 
     def _logDeltaUserAction(self, deltaInfo, userAction, otherInfo, environ):
         """Log Delta User Action"""
-        print("-"*40)
-        print(f"User Action: {userAction}")
-        print(f"Delta Info: {deltaInfo}")
-        print(f"Other Info: {otherInfo}")
-        print(f"Environ: {environ}")
-        print("-"*40)
-        #self.dbI.insert("deltasusertracking", [{"username": userName, "insertdate": getUTCnow(), "deltaid": deltaID, "useraction": userAction, "otherinfo": otherInfo}])
+        username = environ.get("USERINFO", {}).get("username", "UNKNOWN") + "-"
+        username += environ.get("CERTINFO", {}).get("fullDN", "UNKNOWN") + "-"
+        username += environ.get('REMOTE_ADDR', 'UNKNOWN')
+        otherInfo = jsondumps({'otherInfo': otherInfo, 'deltaInfo': deltaInfo})
+        self.dbI.insert("deltasusertracking", [{"username": username, "insertdate": getUTCnow(), "deltaid": deltaInfo.get("uuid", "UNKNOWN"), "useraction": userAction, "otherinfo": otherInfo}])
 
     @staticmethod
     def __intGetPostData(environ, **_kwargs):
