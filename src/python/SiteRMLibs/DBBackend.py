@@ -51,104 +51,108 @@ class DBBackend():
         self.mhost = os.getenv('MARIA_DB_HOST', 'localhost')
         self.mport = int(os.getenv('MARIA_DB_PORT', '3306'))
         self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
+        self.cursor, self.conn = None, None
 
-    @staticmethod
-    def destroy(conn, cursor):
-        """Destroy connection."""
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+    def __enter__(self):
+        """Enter the runtime context related to this object."""
+        self.initialize()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Exit the runtime context related to this object."""
+        self.close()
+
+    def __del__(self):
+        """Exit the runtime context related to this object."""
+        self.close()
+
+    def close(self):
+        """Close cursor and connection."""
+        if self.cursor:
+            self.cursor.close()
+        if self.conn:
+            self.conn.close()
+    def initialize(self):
+        """Open connection and cursor."""
+        if not self.conn or not self.cursor:
+            self.conn = mariadb.connect(user=self.muser,
+                                        password=self.mpass,
+                                        host=self.mhost,
+                                        port=self.mport,
+                                        database=self.mdb)
+            self.cursor = self.conn.cursor()
 
     def _createdb(self):
         """Create database."""
-        conn, cursor = self.initialize()
+        self.initialize()
         for argname in dir(dbcalls):
             if argname.startswith('create_'):
                 print(f'Call to create {argname}')
-                cursor.execute(getattr(dbcalls, argname))
-        conn.commit()
-        self.destroy(conn, cursor)
+                self.cursor.execute(getattr(dbcalls, argname))
+        self.conn.commit()
 
     def _cleandbtable(self, dbtable):
         """Clean only specific table if available"""
-        conn, cursor = self.initialize()
+        self.initialize()
         for argname in dir(dbcalls):
             if argname == f'delete_{dbtable}':
                 print(f'Call to clean from {argname}')
-                cursor.execute(getattr(dbcalls, argname))
-        conn.commit()
-        self.destroy(conn, cursor)
+                self.cursor.execute(getattr(dbcalls, argname))
+        self.conn.commit()
 
     def _cleandb(self):
         """Clean database."""
-        conn, cursor = self.initialize()
+        self.initialize()
         for argname in dir(dbcalls):
             if argname.startswith('delete_'):
                 print(f'Call to clean from {argname}')
-                cursor.execute(getattr(dbcalls, argname))
-        conn.commit()
-        self.destroy(conn, cursor)
+                self.cursor.execute(getattr(dbcalls, argname))
+        self.conn.commit()
 
-    def initialize(self):
-        """Initialize mariadb connection."""
-        conn = mariadb.connect(user=self.muser,
-                               password=self.mpass,
-                               host=self.mhost,
-                               port=self.mport,
-                               database=self.mdb)
-        cursor = conn.cursor()
-        return conn, cursor
 
     def execute_get(self, query):
         """GET Execution."""
+        self.initialize()
         alldata = []
         colname = []
-        conn, cursor = self.initialize()
         try:
-            cursor.execute(query)
-            colname = [tup[0] for tup in cursor.description]
-            alldata = cursor.fetchall()
+            self.cursor.execute(query)
+            colname = [tup[0] for tup in self.cursor.description]
+            alldata = self.cursor.fetchall()
         except Exception as ex:
             raise ex
-        finally:
-            self.destroy(conn, cursor)
         return 'OK', colname, alldata
 
     def execute_ins(self, query, values):
         """INSERT Execute."""
+        self.initialize()
         lastID = -1
-        conn, cursor = self.initialize()
         try:
             for item in values:
-                cursor.execute(query, item)
-                lastID = cursor.lastrowid
-            conn.commit()
+                self.cursor.execute(query, item)
+                lastID = self.cursor.lastrowid
+            self.conn.commit()
         except mariadb.Error as ex:
             print(f'MariaDBError. Ex: {ex}')
-            conn.rollback()
+            self.conn.rollback()
             raise ex
         except Exception as ex:
             print(f'Got Exception {ex} ')
-            conn.rollback()
+            self.conn.rollback()
             raise ex
-        finally:
-            self.destroy(conn, cursor)
         return 'OK', '', lastID
 
     def execute_del(self, query, values):
         """DELETE Execute."""
+        self.initialize()
         del values
-        conn, cursor = self.initialize()
         try:
-            cursor.execute(query)
-            conn.commit()
+            self.cursor.execute(query)
+            self.conn.commit()
         except Exception as ex:
             print(f'Got Exception {ex} ')
-            conn.rollback()
+            self.conn.rollback()
             raise ex
-        finally:
-            self.destroy(conn, cursor)
         return 'OK', '', ''
 
 

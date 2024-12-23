@@ -178,13 +178,14 @@ def evaldict(inputDict):
     if isinstance(inputDict, (list, dict)):
         return inputDict
     try:
-        out = ast.literal_eval(inputDict)
-    except ValueError:
         out = json.loads(inputDict)
-    except SyntaxError as ex:
-        raise WrongInputError(
-            f"SyntaxError: Failed to literal eval dict. Err:{ex} "
-        ) from ex
+    except (json.JSONDecodeError, TypeError):
+        try:
+            out = ast.literal_eval(inputDict)
+        except (ValueError, SyntaxError) as ex:
+            raise WrongInputError(
+                f"Failed to evaluate dict. Error: {ex}"
+            ) from ex
     return out
 
 
