@@ -37,7 +37,7 @@ def get_path_to_root(appendLocation=None):
     """
     fullPath = os.path.dirname(os.path.abspath(os.path.join(os.getcwd(), sys.argv[0])))
     if appendLocation:
-        return "%s/%s" % (fullPath, appendLocation)
+        return f"{fullPath}/{appendLocation}"
     return fullPath
 
 
@@ -57,7 +57,7 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
     for aDir in packageDirs:
         if recurse:
             # Recurse the sub-directories
-            for dirpath, dummyDirnames, dummyFilenames in os.walk('%s' % aDir, topdown=True):
+            for dirpath, dummyDirnames, dummyFilenames in os.walk(aDir, topdown=True):
                 pathelements = dirpath.split('/')
                 # If any part of pathelements is in the ignore_these set skip the path
                 if not list(set(pathelements) & ignoreThese):
@@ -72,7 +72,7 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
                                not fileName.endswith('.py'):
                                 continue
                             relName = fileName.rsplit('.', 1)
-                            modules.append("%s.%s" % ('.'.join(relPath), relName[0]))
+                            modules.append(f"{'.'.join(relPath)}.{relName[0]}")
                 else:
                     continue
         else:
@@ -87,3 +87,14 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
 def get_py_modules(modulesDirs):
     """Get py modules for setup.py."""
     return list_packages(modulesDirs, pyFiles=True)
+
+# Collect all files in packaging/release_mods recursively
+def collect_files(src_dir, target_dir):
+    """Collect and append all files in src_dir to target_dir."""
+    paths = []
+    for root, _, files in os.walk(src_dir):
+        for file in files:
+            full_path = os.path.join(root, file)
+            install_path = os.path.join(target_dir, os.path.relpath(full_path, src_dir))
+            paths.append((os.path.dirname(install_path), [full_path]))
+    return paths

@@ -76,7 +76,7 @@ create_hosts = """CREATE TABLE IF NOT EXISTS hosts(
                           insertdate datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
                           updatedate datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                           hostinfo varchar(4096) NOT NULL,
-                          primary key(id)), unique key(ip)"""
+                          primary key(id), unique key(ip))"""
 create_switch = """CREATE TABLE IF NOT EXISTS switch(
                           id int auto_increment,
                           sitename text NOT NULL,
