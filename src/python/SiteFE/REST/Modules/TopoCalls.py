@@ -19,7 +19,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/08/03
 """
-from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson
 
 
 class TopoCalls:
