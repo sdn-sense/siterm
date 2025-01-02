@@ -109,7 +109,7 @@ class TopoCalls:
                                                    'port': remPort})
         # Now lets get host information
         for host in self.dbI.get('hosts'):
-            parsedInfo = evaldict(host.get('hostinfo', {}))
+            parsedInfo = getFileContentAsJson(host.get('hostinfo', ""))
             hostconfig = parsedInfo.get('Summary', {}).get('config', {})
             hostname = hostconfig.get('agent', {}).get('hostname', '')
             lldpInfo = parsedInfo.get('NetInfo', {}).get('lldp', {})

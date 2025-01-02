@@ -71,12 +71,12 @@ create_parsed = """CREATE TABLE IF NOT EXISTS parsed(
                           primary key(id))"""
 create_hosts = """CREATE TABLE IF NOT EXISTS hosts(
                           id int auto_increment,
-                          ip text NOT NULL,
-                          hostname text NOT NULL,
-                          insertdate int NOT NULL,
-                          updatedate int NOT NULL,
-                          hostinfo longtext NOT NULL,
-                          primary key(id))"""
+                          ip varchar(45) NOT NULL,
+                          hostname varchar(255) NOT NULL,
+                          insertdate datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                          updatedate datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                          hostinfo varchar(4096) NOT NULL,
+                          primary key(id)), unique key(ip)"""
 create_switch = """CREATE TABLE IF NOT EXISTS switch(
                           id int auto_increment,
                           sitename text NOT NULL,
@@ -152,6 +152,10 @@ create_deltasusertracking = """CREATE TABLE IF NOT EXISTS deltasusertracking(
                                 useraction text NOT NULL,
                                 otherinfo longtext NOT NULL,
                                 primary key(id))"""
+create_dbversion = """CREATE TABLE IF NOT EXISTS dbversion(
+                                id int auto_increment,
+                                version text NOT NULL,
+                                primary key(id))"""
 
 insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s, %(content)s)"
 insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, modadd)
@@ -161,7 +165,7 @@ insert_states = "INSERT INTO states(deltaid, state, insertdate) VALUES(%(deltaid
 insert_hoststates = "INSERT INTO hoststates(deltaid, state, insertdate, updatedate, hostname) VALUES(%(deltaid)s, %(state)s, %(insertdate)s, %(updatedate)s, %(hostname)s)"
 insert_hoststateshistory = "INSERT INTO hoststateshistory(deltaid, state, insertdate, hostname) VALUES(%(deltaid)s, %(state)s, %(insertdate)s, %(hostname)s)"
 insert_parsed = "INSERT INTO parsed(deltaid, vals, insertdate) VALUES(%(deltaid)s, %(vals)s, %(insertdate)s)"
-insert_hosts = "INSERT INTO hosts(ip, hostname, insertdate, updatedate, hostinfo) VALUES(%(ip)s, %(hostname)s, %(insertdate)s, %(updatedate)s, %(hostinfo)s)"
+insert_hosts = "INSERT INTO hosts(ip, hostname, insertdate, updatedate, hostinfo) VALUES (%(ip)s, %(hostname)s, UNIX_TIMESTAMP(%(insertdate)s), UNIX_TIMESTAMP(%(updatedate)s), %(hostinfo)s)"
 insert_switch = "INSERT INTO switch(sitename, device, insertdate, updatedate, output, error) VALUES(%(sitename)s, %(device)s, %(insertdate)s, %(updatedate)s, %(output)s, %(error)s)"
 insert_switch_error = "INSERT INTO switch(sitename, device, insertdate, updatedate, output, error) VALUES(%(sitename)s, %(device)s, %(updatedate)s, %(updatedate)s, '{}', %(error)s)"
 insert_activeDeltas = "INSERT INTO activeDeltas(insertdate, updatedate, output) VALUES(%(insertdate)s, %(updatedate)s, %(output)s)"
@@ -173,6 +177,7 @@ insert_serviceaction = "INSERT INTO serviceaction(servicename, hostname, service
 insert_forceapplyuuid = "INSERT INTO forceapplyuuid(uuid) VALUES(%(uuid)s)"
 insert_instancestartend = "INSERT INTO instancestartend(instanceid, insertdate, starttimestamp, endtimestamp) VALUES(%(instanceid)s, %(insertdate)s, %(starttimestamp)s, %(endtimestamp)s)"
 insert_deltasusertracking = "INSERT INTO deltasusertracking(username, insertdate, deltaid, useraction, otherinfo) VALUES(%(username)s, %(insertdate)s, %(deltaid)s, %(useraction)s, %(otherinfo)s)"
+insert_dbversion = "INSERT INTO dbversion(version) VALUES(%(version)s)"
 
 get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
 get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, modadd FROM deltas"
@@ -193,12 +198,13 @@ get_serviceaction = "SELECT id, servicename, hostname, serviceaction, insertdate
 get_forceapplyuuid = "SELECT id, uuid FROM forceapplyuuid"
 get_instancestartend = "SELECT id, instanceid, insertdate, starttimestamp, endtimestamp FROM instancestartend"
 get_deltasusertracking = "SELECT id, username, insertdate, deltaid, useraction, otherinfo FROM deltasusertracking"
+get_dbversion = "SELECT id, version FROM dbversion"
 
 update_deltas = "UPDATE deltas SET updatedate = %(updatedate)s, state = %(state)s WHERE uid = %(uid)s"
 update_delta_connections = "UPDATE delta_connections SET state = %(state)s WHERE connectionid = %(connectionid)s AND deltaid = %(deltaid)s"
 update_deltasmod = "UPDATE deltas SET updatedate = %(updatedate)s, modadd = %(modadd)s WHERE uid = %(uid)s"
 update_hoststates = "UPDATE hoststates SET state = %(state)s, updatedate = %(updatedate)s WHERE id = %(id)s"
-update_hosts = "UPDATE hosts SET ip = %(ip)s, hostname = %(hostname)s, updatedate = %(updatedate)s, hostinfo = %(hostinfo)s WHERE id = %(id)s"
+update_hosts = "UPDATE hosts SET ip = %(ip)s, hostname = %(hostname)s, updatedate = FROM_UNIXTIME(%(updatedate)s), hostinfo = %(hostinfo)s WHERE id = %(id)s"
 update_switch = "UPDATE switch SET sitename = %(sitename)s, updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
 update_switch_error = "UPDATE switch SET sitename = %(sitename)s, updatedate = %(updatedate)s, error = %(error)s WHERE id = %(id)s"
 update_activeDeltas = "UPDATE activeDeltas SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
@@ -210,6 +216,7 @@ update_serviceaction = "UPDATE serviceaction SET serviceaction = %(serviceaction
 update_forceapplyuuid = "UPDATE forceapplyuuid SET uuid = %(uuid)s WHERE id = %(id)s"
 # update_instancestartend - Update call is not needed for update instance start end. It always write a new entry and update not needed.
 # update_deltasusertracking - Update call is not needed for update deltas user tracking. It always write a new entry and update not needed.
+update_dbversion = "UPDATE dbversion SET version = %(version)s WHERE id = %(id)s"
 
 delete_models = "DELETE FROM models"
 delete_deltas = "DELETE FROM deltas"
@@ -229,3 +236,4 @@ delete_serviceaction = "DELETE FROM serviceaction"
 delete_forceapplyuuid = "DELETE FROM forceapplyuuid"
 delete_instancestartend = "DELETE FROM instancestartend"
 delete_deltasusertracking = "DELETE FROM deltasusertracking"
+delete_dbversion = "DELETE FROM dbversion"

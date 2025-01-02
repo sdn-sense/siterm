@@ -28,6 +28,7 @@ from SiteRMLibs.MainUtilities import (
     contentDB, createDirs, decodebase64, dictSearch,
     evaldict, getActiveDeltas, getAllHosts, getCurrentModel,
     getDBConn, getLoggingObject, getVal, writeActiveDeltas,
+    getFileContentAsJson
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.timing import Timing
@@ -99,7 +100,7 @@ class PolicyService(RDFHelper, Timing):
         allHosts = getAllHosts(self.dbI)
         for host, hostDict in allHosts.items():
             self.hosts.setdefault(host, hostDict)
-            self.hosts[host]["hostinfo"] = evaldict(hostDict["hostinfo"])
+            self.hosts[host]["hostinfo"] = getFileContentAsJson(hostDict["hostinfo"])
         # Clean up hosts which are not in DB anymore
         for host in list(self.hosts.keys()):
             if host not in allHosts:

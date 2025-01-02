@@ -39,5 +39,6 @@ setup(
     packages=['SiteFE', 'SiteRMLibs'] + list_packages(['src/python/SiteFE/', 'src/python/SiteRMLibs/']),
     install_requires=[],
     py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/SiteRMLibs']),
-    scripts=SCRIPTS
+    scripts=SCRIPTS,
+    package_data = {'': ['packaging/release_mods/**/*']}
 )

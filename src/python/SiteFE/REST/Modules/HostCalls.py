@@ -19,12 +19,13 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
+import os
 from SiteFE.REST.Modules.Functions.Host import HostSubCalls
 from SiteRMLibs.CustomExceptions import BadRequestError, NotFoundError, OverlapException
-from SiteRMLibs.MainUtilities import getUTCnow, jsondumps, read_input_data
+from SiteRMLibs.MainUtilities import getUTCnow, read_input_data, contentDB
 
 
-class HostCalls(HostSubCalls):
+class HostCalls(HostSubCalls, contentDB):
     """Host Info/Add/Update Calls API Module"""
 
     # pylint: disable=E1101
@@ -34,6 +35,11 @@ class HostCalls(HostSubCalls):
                               "Prometheus-Push", "Arp-Push", "ConfigFetcher"]
         self.__defineRoutes()
         self.__urlParams()
+        self.hostdirs = {}
+        for sitename in self.sites:
+            if sitename != "MAIN":
+                self.hostdirs.setdefault(sitename, "")
+                self.hostdirs[sitename] = os.path.join(self.config.get(sitename, "privatedir"), "HostData")
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -83,13 +89,15 @@ class HostCalls(HostSubCalls):
         inputDict = read_input_data(environ)
         host = self.dbI.get("hosts", limit=1, search=[["ip", inputDict["ip"]]])
         if not host:
+            fname = os.path.join(self.hostdirs[kwargs["sitename"]], inputDict["hostname"], "hostinfo.json")
             out = {
                 "hostname": inputDict["hostname"],
                 "ip": inputDict["ip"],
                 "insertdate": inputDict["insertTime"],
                 "updatedate": inputDict["updateTime"],
-                "hostinfo": jsondumps(inputDict),
+                "hostinfo": fname,
             }
+            self.dumpFileContentAsJson(fname, inputDict)
             self.dbI.insert("hosts", [out])
         else:
             raise BadRequestError(
@@ -114,13 +122,15 @@ class HostCalls(HostSubCalls):
             raise NotFoundError(
                 f"This IP {inputDict['ip']} is not registered at all. Call addhost"
             )
+        fname = os.path.join(self.hostdirs[kwargs["sitename"]], inputDict["hostname"], "hostinfo.json")
         out = {
             "id": host[0]["id"],
             "hostname": inputDict["hostname"],
             "ip": inputDict["ip"],
             "updatedate": getUTCnow(),
-            "hostinfo": jsondumps(inputDict),
+            "hostinfo": fname,
         }
+        self.dumpFileContentAsJson(fname, inputDict)
         self.dbI.update("hosts", [out])
         self.responseHeaders(environ, **kwargs)
         return {"Status": "UPDATED"}

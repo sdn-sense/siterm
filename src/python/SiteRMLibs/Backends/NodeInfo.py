@@ -8,7 +8,7 @@ Authors:
 
 Date: 2021/12/01
 """
-from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson
 from SiteRMLibs.MainUtilities import getAllHosts
 
 
@@ -23,7 +23,7 @@ class Node():
         if not output:
             output = self.output
         for _, nodeDict in list(nodesInfo.items()):
-            hostinfo = evaldict(nodeDict['hostinfo'])
+            hostinfo = getFileContentAsJson(nodeDict['hostinfo'])
             for intfKey, intfDict in list(hostinfo['NetInfo'].get("interfaces", {}).items()):
                 breakLoop = False
                 for key in ['switch_port', 'switch', 'vlan_range_list', 'available_bandwidth']:

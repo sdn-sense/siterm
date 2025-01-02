@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Helper Script to interact with SiteRM."""
+import sys
 import copy
 import pprint
 from SiteRMLibs.MainUtilities import getVal
@@ -7,7 +8,7 @@ from SiteRMLibs.MainUtilities import getDBConn
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import writeActiveDeltas
 from SiteRMLibs.MainUtilities import getActiveDeltas
-from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import getFileContentAsJson
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteFE.PolicyService.stateMachine import StateMachine
 
@@ -103,7 +104,7 @@ class Helper:
         """Print all hosts"""
         hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
         for host in hosts:
-            tmpH = evaldict(host.get("hostinfo", {}))
+            tmpH = getFileContentAsJson(host.get("hostinfo", ""))
             pprint.pprint(tmpH)
 
     def cancelresource(self):
@@ -158,7 +159,7 @@ class Helper:
     def exithelper():
         """Exit Helper Script"""
         print('Finished.')
-        exit(0)
+        sys.exit(0)
 
     def startup(self):
         """Startup"""

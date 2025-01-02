@@ -25,7 +25,7 @@ import psutil
 from prometheus_client import (CONTENT_TYPE_LATEST, CollectorRegistry, Enum,
                                Gauge, Info, generate_latest)
 from SiteRMLibs.MainUtilities import (evaldict, getActiveDeltas, getAllHosts,
-                                      getUTCnow, isValFloat)
+                                      getUTCnow, isValFloat, getFileContentAsJson)
 
 
 class PrometheusCalls:
@@ -142,7 +142,7 @@ class PrometheusCalls:
                          labelnames=self.arpLabels.keys(),
                          registry=registry)
         for host, hostDict in getAllHosts(self.dbI).items():
-            hostDict["hostinfo"] = evaldict(hostDict["hostinfo"])
+            hostDict["hostinfo"] = getFileContentAsJson(hostDict["hostinfo"])
             if int(self.timenow - hostDict["updatedate"]) > 300:
                 continue
             if "CertInfo" in hostDict.get("hostinfo", {}).keys():
