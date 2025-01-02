@@ -13,6 +13,7 @@ import os
 import sys
 import time
 import traceback
+import tracemalloc
 
 import psutil
 from SiteRMLibs import __version__ as runningVersion
@@ -206,6 +207,9 @@ class Daemon(DBBackend):
                             'failure': int(self.inargs.sleeptimefailure)}
         self.totalRuntime = 0
         self._loadDB(component)
+        self.memdebug = False
+        if os.getenv('SITERM_MEMORY_DEBUG'):
+            self.memdebug = True
 
     def _refreshConfig(self):
         """Config refresh call"""
@@ -417,6 +421,25 @@ class Daemon(DBBackend):
                 self.logger.critical("Exception!!! Error details:  %s", exc)
                 time.sleep(self.sleepTimers['failure'])
 
+    def __run(self, rthread):
+        """Run main execution and record memory usage (if env variable memdebug is set)"""
+        if self.memdebug:
+            if not tracemalloc.is_tracing():
+                tracemalloc.start()
+            self.logger.debug("Started Memory Usage Tracking")
+            self.logger.debug("Memory usage: %s", tracemalloc.get_traced_memory())
+        try:
+            rthread.startwork()
+        finally:
+            if self.memdebug:
+                snapshot = tracemalloc.take_snapshot()
+                self.logger.debug("Snapshot taken after rthread startwork attempt")
+                for stat in snapshot.statistics("lineno")[:10]:
+                    self.logger.debug("MEM_STAT:", stat)
+                self.logger.debug("Final Memory usage: %s", tracemalloc.get_traced_memory())
+                self.logger.debug("="*50)
+
+
     def run(self):
         """Run main execution"""
         # pylint: disable=W0702
@@ -433,7 +456,7 @@ class Daemon(DBBackend):
                     self.logger.info('Start worker for %s site', sitename)
                     try:
                         self.preRunThread(sitename, rthread)
-                        rthread.startwork()
+                        self.__run(rthread)
                         self.reporter('OK', sitename, stwork)
                     except:
                         hadFailure = True

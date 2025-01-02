@@ -101,7 +101,7 @@ class Frontend(
             )
         return
 
-    def responseHeaders(self, environ, **kwargs):
+    def responseHeaders(self, _environ, **kwargs):
         """Response with 200 Header. OK"""
         self.httpresp.ret_200("application/json", kwargs["start_response"], None)
 

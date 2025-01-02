@@ -10,7 +10,7 @@ Authors:
 Date: 2021/12/01
 """
 from SiteRMLibs.CustomExceptions import NoOptionError
-from SiteRMLibs.MainUtilities import evaldict, getAllHosts, strtolist
+from SiteRMLibs.MainUtilities import getAllHosts, strtolist, getFileContentAsJson
 
 
 def ignoreInterface(intfKey, intfDict, hostinfo):
@@ -53,7 +53,7 @@ class NodeInfo:
         """Add Agent Node Information"""
         jOut = getAllHosts(self.dbI)
         for _, nodeDict in list(jOut.items()):
-            nodeDict["hostinfo"] = evaldict(nodeDict["hostinfo"])
+            nodeDict["hostinfo"] = getFileContentAsJson(nodeDict["hostinfo"])
             # ==================================================================================
             # General Node Information
             # ==================================================================================

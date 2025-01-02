@@ -341,6 +341,8 @@ def postWebContentToURL(url, **kwargs):
 def getFileContentAsJson(inputFile):
     """Get file content as json."""
     out = {}
+    if not inputFile:
+        return out
     if os.path.isfile(inputFile):
         with open(inputFile, "r", encoding="utf-8") as fd:
             try:
@@ -386,6 +388,9 @@ class contentDB:
     @staticmethod
     def dumpFileContentAsJson(outFile, content):
         """Dump File content with locks."""
+        # Check if directory exists, create if not
+        if not os.path.isdir(os.path.dirname(outFile)):
+            createDirs(outFile)
         tmpoutFile = outFile + ".tmp"
         with open(tmpoutFile, "w+", encoding="utf-8") as fd:
             json.dump(content, fd)

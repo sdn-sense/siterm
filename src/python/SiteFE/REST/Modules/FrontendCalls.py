@@ -19,7 +19,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
-from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson
 from SiteRMLibs.MainUtilities import getUTCnow, read_input_data
 from SiteRMLibs.CustomExceptions import NotFoundError
 
@@ -89,7 +89,7 @@ class FrontendCalls:
         hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
         out = {}
         for host in hosts:
-            tmpH = evaldict(host.get("hostinfo", {}))
+            tmpH = getFileContentAsJson(host.get("hostinfo", ""))
             tmpInf = (
                 tmpH.get("Summary", {})
                 .get("config", {})

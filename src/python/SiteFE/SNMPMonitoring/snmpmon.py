@@ -80,15 +80,15 @@ class SNMPMonitoring():
             self.session.update_session(hostname=hostname)
 
 
-    def _getSNMPVals(self, key):
+    def _getSNMPVals(self, key, host=None):
         try:
             allvals = self.session.walk(key)
             return allvals
         except EasySNMPUnknownObjectIDError as ex:
-            self.logger.warning(f'Got exception for key {key}: {ex}')
+            self.logger.warning(f'[{host}]: Got exception for key {key}: {ex}')
             self.err.append(ex)
         except EasySNMPTimeoutError as ex:
-            self.logger.warning(f'Got SNMP Timeout Exception: {ex}')
+            self.logger.warning(f'[{host}]: Got SNMP Timeout Exception: {ex}')
             self.err.append(ex)
         return []
 
@@ -118,7 +118,7 @@ class SNMPMonitoring():
         if 'mac_parser' in self.hostconf[host]['snmp_monitoring']:
             oid = self.hostconf[host]['snmp_monitoring']['mac_parser']['oid']
             mib = self.hostconf[host]['snmp_monitoring']['mac_parser']['mib']
-            allvals = self._getSNMPVals(oid)
+            allvals = self._getSNMPVals(oid, host)
             for item in allvals:
                 splt = item.oid[(len(mib)):].split('.')
                 vlan = splt.pop(0)
@@ -139,7 +139,7 @@ class SNMPMonitoring():
             out = {}
             self._getMacAddrSession(host, macs)
             for key in self.config['MAIN']['snmp']['mibs']:
-                allvals = self._getSNMPVals(key)
+                allvals = self._getSNMPVals(key, host)
                 for item in allvals:
                     indx = item.oid_index
                     out.setdefault(indx, {})

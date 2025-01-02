@@ -82,7 +82,7 @@ class DBBackend():
                                         database=self.mdb)
             self.cursor = self.conn.cursor()
 
-    def _createdb(self):
+    def createdb(self):
         """Create database."""
         self.initialize()
         for argname in dir(dbcalls):
@@ -91,7 +91,7 @@ class DBBackend():
                 self.cursor.execute(getattr(dbcalls, argname))
         self.conn.commit()
 
-    def _cleandbtable(self, dbtable):
+    def cleandbtable(self, dbtable):
         """Clean only specific table if available"""
         self.initialize()
         for argname in dir(dbcalls):
@@ -100,7 +100,7 @@ class DBBackend():
                 self.cursor.execute(getattr(dbcalls, argname))
         self.conn.commit()
 
-    def _cleandb(self):
+    def cleandb(self):
         """Clean database."""
         self.initialize()
         for argname in dir(dbcalls):
@@ -155,6 +155,17 @@ class DBBackend():
             raise ex
         return 'OK', '', ''
 
+    def execute(self, query):
+        """Execute query."""
+        self.initialize()
+        try:
+            self.cursor.execute(query)
+            self.conn.commit()
+        except Exception as ex:
+            print(f'Got Exception {ex} ')
+            self.conn.rollback()
+            raise ex
+        return 'OK', '', ''
 
 class dbinterface():
     """Database interface."""
@@ -166,12 +177,16 @@ class dbinterface():
         self.callStart = None
         self.callEnd = None
 
+    def createdb(self):
+        """Create Database."""
+        self.db.createdb()
+
     def _setStartCallTime(self, calltype):
         """Set Call Start timer."""
         del calltype
         self.callStart = float(getUTCnow())
 
-    def _setEndCallTime(self, calltype, callExit):
+    def _setEndCallTime(self, _calltype, _callExit):
         """Set Call End timer."""
         self.callEnd = float(getUTCnow())
 
@@ -273,9 +288,9 @@ class dbinterface():
     def _clean(self, calltype, values):
         """Database Clean Up"""
         del calltype, values
-        self.db._cleandb()
+        self.db.cleandb()
 
     def _cleantable(self, calltype, values):
         """Clean specific table"""
         del values
-        self.db._cleandbtable(calltype)
+        self.db.cleandbtable(calltype)
