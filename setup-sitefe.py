@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Setup tools script for SiteRM Site Frontend.
 Authors:
@@ -7,7 +6,7 @@ Authors:
 Date: 2022/05/20
 """
 from setuptools import setup
-from setupUtilities import list_packages, get_py_modules, VERSION
+from setupUtilities import list_packages, get_py_modules, collect_files, VERSION
 
 # Cronjobs which are running also have to be prepared with correct timing.
 # Also another cronjob, which monitors config file and modifies cronjobs if needed.
@@ -40,5 +39,6 @@ setup(
     install_requires=[],
     py_modules=get_py_modules(['src/python/SiteFE/', 'src/python/SiteRMLibs']),
     scripts=SCRIPTS,
-    package_data={'': ['packaging/release_mods/**/*']}
+    include_package_data=True,
+    data_files=collect_files("release/", "/SiteFE/release"),
 )
