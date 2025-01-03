@@ -73,8 +73,8 @@ create_hosts = """CREATE TABLE IF NOT EXISTS hosts(
                           id int auto_increment,
                           ip varchar(45) NOT NULL,
                           hostname varchar(255) NOT NULL,
-                          insertdate datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                          updatedate datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                          insertdate int NOT NULL,
+                          updatedate int NOT NULL,
                           hostinfo varchar(4096) NOT NULL,
                           primary key(id), unique key(ip))"""
 create_switch = """CREATE TABLE IF NOT EXISTS switch(
@@ -165,7 +165,7 @@ insert_states = "INSERT INTO states(deltaid, state, insertdate) VALUES(%(deltaid
 insert_hoststates = "INSERT INTO hoststates(deltaid, state, insertdate, updatedate, hostname) VALUES(%(deltaid)s, %(state)s, %(insertdate)s, %(updatedate)s, %(hostname)s)"
 insert_hoststateshistory = "INSERT INTO hoststateshistory(deltaid, state, insertdate, hostname) VALUES(%(deltaid)s, %(state)s, %(insertdate)s, %(hostname)s)"
 insert_parsed = "INSERT INTO parsed(deltaid, vals, insertdate) VALUES(%(deltaid)s, %(vals)s, %(insertdate)s)"
-insert_hosts = "INSERT INTO hosts(ip, hostname, insertdate, updatedate, hostinfo) VALUES (%(ip)s, %(hostname)s, UNIX_TIMESTAMP(%(insertdate)s), UNIX_TIMESTAMP(%(updatedate)s), %(hostinfo)s)"
+insert_hosts = "INSERT INTO hosts(ip, hostname, insertdate, updatedate, hostinfo) VALUES (%(ip)s, %(hostname)s, %(insertdate)s, %(updatedate)s, %(hostinfo)s)"
 insert_switch = "INSERT INTO switch(sitename, device, insertdate, updatedate, output, error) VALUES(%(sitename)s, %(device)s, %(insertdate)s, %(updatedate)s, %(output)s, %(error)s)"
 insert_switch_error = "INSERT INTO switch(sitename, device, insertdate, updatedate, output, error) VALUES(%(sitename)s, %(device)s, %(updatedate)s, %(updatedate)s, '{}', %(error)s)"
 insert_activeDeltas = "INSERT INTO activeDeltas(insertdate, updatedate, output) VALUES(%(insertdate)s, %(updatedate)s, %(output)s)"
@@ -204,7 +204,7 @@ update_deltas = "UPDATE deltas SET updatedate = %(updatedate)s, state = %(state)
 update_delta_connections = "UPDATE delta_connections SET state = %(state)s WHERE connectionid = %(connectionid)s AND deltaid = %(deltaid)s"
 update_deltasmod = "UPDATE deltas SET updatedate = %(updatedate)s, modadd = %(modadd)s WHERE uid = %(uid)s"
 update_hoststates = "UPDATE hoststates SET state = %(state)s, updatedate = %(updatedate)s WHERE id = %(id)s"
-update_hosts = "UPDATE hosts SET ip = %(ip)s, hostname = %(hostname)s, updatedate = FROM_UNIXTIME(%(updatedate)s), hostinfo = %(hostinfo)s WHERE id = %(id)s"
+update_hosts = "UPDATE hosts SET ip = %(ip)s, hostname = %(hostname)s, updatedate = %(updatedate)s, hostinfo = %(hostinfo)s WHERE id = %(id)s"
 update_switch = "UPDATE switch SET sitename = %(sitename)s, updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
 update_switch_error = "UPDATE switch SET sitename = %(sitename)s, updatedate = %(updatedate)s, error = %(error)s WHERE id = %(id)s"
 update_activeDeltas = "UPDATE activeDeltas SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
