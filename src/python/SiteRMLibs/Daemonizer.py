@@ -211,6 +211,24 @@ class Daemon(DBBackend):
         if os.getenv('SITERM_MEMORY_DEBUG'):
             self.memdebug = True
 
+    def dbready(self):
+        """Check if the database is ready"""
+        if os.path.exists("/tmp/siterm-mariadb-init"):
+            try:
+                self.logger.info("Database init/upgrade started at:")
+                with open("/tmp/siterm-mariadb-init", 'r', encoding='utf-8') as fd:
+                    self.logger.info(fd.read())
+            except IOError:
+                pass
+            self.logger.info("Database not ready. See details above. If continous, check the mariadb and mariadb_init process.")
+            return False
+        return True
+
+    def dbreadyloop(self):
+        """Check if the database is ready"""
+        while not self.dbready():
+            time.sleep(5)
+
     def _refreshConfig(self):
         """Config refresh call"""
         self.config = getGitConfig()
@@ -265,6 +283,7 @@ class Daemon(DBBackend):
 
     def start(self):
         """Start the daemon."""
+        self.dbreadyloop()
         # Check for a pidfile to see if the daemon already runs
         pid = None
         try:
@@ -393,6 +412,7 @@ class Daemon(DBBackend):
 
     def runLoop(self):
         """Return True if it is not onetime run."""
+        self.dbreadyloop()
         if self.inargs.onetimerun and self.runCount == 0:
             return True
         if self.inargs.onetimerun and self.runCount > 0:

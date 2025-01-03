@@ -78,6 +78,10 @@ if __name__ == "__main__":
         print("Liveness check is disabled. Exiting Use --enable to enable.")
         sys.exit(0)
 
+    if os.path.exists("/tmp/siterm-mariadb-init"):
+        print("Mariadb init is still running. Exiting.")
+        sys.exit(0)
+
     if checkServices():
         sys.exit(0)
     else:
