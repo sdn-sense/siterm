@@ -465,7 +465,7 @@ def read_input_data(environ):
     outjson = {}
     try:
         outjson = evaldict(body.getvalue())
-    except ValueError as ex:
+    except (ValueError, WrongInputError) as ex:
         outjson = parse_gui_form_post(body.getvalue())
         if not outjson:
             errMsg = f"Failed to parse json input: {body.getvalue()}, Err: {ex}."

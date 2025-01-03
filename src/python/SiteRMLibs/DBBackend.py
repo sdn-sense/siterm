@@ -51,6 +51,7 @@ class DBBackend():
         self.mhost = os.getenv('MARIA_DB_HOST', 'localhost')
         self.mport = int(os.getenv('MARIA_DB_PORT', '3306'))
         self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
+        self.autocommit = os.getenv('MARIA_DB_AUTOCOMMIT', True)
         self.cursor, self.conn = None, None
 
     def __enter__(self):
@@ -79,7 +80,8 @@ class DBBackend():
                                         password=self.mpass,
                                         host=self.mhost,
                                         port=self.mport,
-                                        database=self.mdb)
+                                        database=self.mdb,
+                                        autocommit=self.autocommit)
             self.cursor = self.conn.cursor()
 
     def createdb(self):
