@@ -161,6 +161,8 @@ class DBBackend():
         try:
             self.cursor.execute(query)
             self.conn.commit()
+        except mariadb.InterfaceError as ex:
+            print(f'Got Exception {ex} ')
         except Exception as ex:
             print(f'Got Exception {ex} ')
             self.conn.rollback()
