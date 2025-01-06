@@ -8,7 +8,6 @@ Authors:
 Date: 2024/06/10
 """
 import os
-import time
 from SiteRMLibs.MainUtilities import (getDBConn, getLoggingObject, getVal, getUTCnow)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteFE.PolicyService.policyService import PolicyService
@@ -22,6 +21,8 @@ class DBWorker():
         self.logger = getLoggingObject(config=self.config, service="DBWorker")
         self.dbI = getVal(getDBConn("DBWorker", self), **{"sitename": self.sitename})
         self.police = PolicyService(self.config, self.sitename)
+        self.runCounter = {'stateactions': 0, 'modelactions': 10}
+        self.runCounterDefaults =  {'stateactions': 0, 'modelactions': 100}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -39,8 +40,6 @@ class DBWorker():
                     ["removed", self.police.stateMachine.removed]]:
             self.logger.debug("Start %s", job[0])
             job[1](self.dbI)
-            # Sleep 0.1 sec between diff checks
-            time.sleep(0.5)
 
     def modelactions(self):
         """Clean up process to remove old data"""
@@ -57,8 +56,17 @@ class DBWorker():
 
     def startwork(self):
         """Database thread worker - to change delta states"""
-        self.stateActions()
-        self.modelactions()
+        # Run state actions
+        if self.runCounter['stateactions'] <= 0:
+            self.runCounter['stateactions'] = self.runCounterDefaults['stateactions']
+            self.stateActions()
+        # Run model actions
+        if self.runCounter['modelactions'] <= 0:
+            self.runCounter['modelactions'] = self.runCounterDefaults['modelactions']
+            self.modelactions()
+        # Decrease counters
+        self.runCounter['stateactions'] -= 1
+        self.runCounter['modelactions'] -= 1
 
 
 if __name__ == "__main__":

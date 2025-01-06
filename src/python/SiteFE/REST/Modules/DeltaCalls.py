@@ -89,7 +89,7 @@ class DeltaCalls:
         """Define Routes for this class"""
         self.routeMap.connect("deltas", "/v1/deltas", action="deltas")
         self.routeMap.connect("deltasid", "/v1/deltas/:deltaid", action="deltasid")
-        self.routeMap.connect("deltasaction", "/v1/deltas/:deltaid/actions/commit", action="deltasaction")
+        self.routeMap.connect("deltasaction", "/v1/deltas/:deltaid/actions/:action", action="deltasaction")
         self.routeMap.connect("activedeltas", "/v1/activedeltas", action="activedeltas")
         self.routeMap.connect("deltastates", "/v1/deltastates/:deltaid", action="deltastates")
         self.routeMap.connect("deltatimestates", "/v1/deltatimestates", action="deltatimestates")
@@ -186,38 +186,17 @@ class DeltaCalls:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out
 
-    def __commitdelta(self, deltaID, _environ, newState="UNKNOWN", internal=False, hostname=None, **kwargs):
+    def __commitdelta(self, deltaID, action, _environ, **kwargs):
         """Change delta state."""
-        if internal:
-            out = self.dbI.get(
-                "hoststates", search=[["deltaid", deltaID], ["hostname", hostname]], orderby=['insertdate', 'DESC']
-            )
-            if not out:
-                msg = f"This query did not returned any host states for {deltaID} {hostname}"
-                raise WrongDeltaStatusTransition(msg)
-            self.stateM.stateChangerHost(
-                self.dbI,
-                out[0]["id"],
-                **{
-                    "deltaid": deltaID,
-                    "state": newState,
-                    "insertdate": getUTCnow(),
-                    "hostname": hostname,
-                },
-            )
-            if newState == "remove":
-                # Remove state comes only from modify
-                self.stateM.stateChange(self.dbI, {"uid": deltaID, "state": newState})
-            return {"status": "OK", "msg": "Internal State change approved"}
         delta = self.__getdeltaINT(deltaID, **kwargs)
-        # Now we go directly to commited in case of commit
-        if delta["state"] != "accepted":
-            msg = (
-                f"Delta state in the system is not in accepted state."
-                f"State on the system: {delta['state']}. Not allowed to change."
-            )
+        if action == "commit" and delta["state"] == "accepted":
+            self.stateM.commit(self.dbI, {"uid": deltaID, "state": "committing"})
+        if action == "forcecommit" and delta["state"] in ["activated", "failed"]:
+            self.stateM.stateChangerDelta(self.dbI, 'committed', **delta)
+            self.stateM.modelstatechanger(self.dbI, 'add', **delta)
+        else:
+            msg = f"Delta state in the system is not in final state. State on the system: {delta['state']}."
             raise WrongDeltaStatusTransition(msg)
-        self.stateM.commit(self.dbI, {"uid": deltaID, "state": "committing"})
         return {"status": "OK"}
 
     def getActiveDeltas(self, _environ, **_kwargs):
@@ -403,10 +382,8 @@ class DeltaCalls:
         Method: GET
         Output: application/json
         Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/actions/(commit)
-                  # Will commit or remove specific delta. remove is allowed only from same host or
-                    siterm-site-frontend
         """
-        msgOut = self.__commitdelta(kwargs["deltaid"], environ, **kwargs)
+        msgOut = self.__commitdelta(kwargs["deltaid"], kwargs["action"], environ, **kwargs)
         self._logDeltaUserAction(kwargs, 'commit', msgOut, environ)
         self.httpresp.ret_204("application/json", kwargs["start_response"], None)
         return msgOut
@@ -450,3 +427,4 @@ class DeltaCalls:
         self._logDeltaUserAction({"uuid": out["uuid"]}, 'setstate', dbansw, environ)
         self.responseHeaders(environ, **kwargs)
         return {"status": "OK"}
+
