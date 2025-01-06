@@ -33,7 +33,7 @@ from SiteRMLibs.CustomExceptions import (BadRequestError, DeltaNotFound,
                                          HTTPResponses, MethodNotSupported,
                                          ModelNotFound, NotAcceptedHeader,
                                          NotFoundError, NotSupportedArgument,
-                                         OverlapException,
+                                         OverlapException, WrongDeltaStatusTransition,
                                          TooManyArgumentalValues)
 from SiteRMLibs.MainUtilities import (contentDB, getCustomOutMsg, getDBConn,
                                       getHeaders, getUrlParams,
@@ -145,6 +145,10 @@ class Frontend(
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=500)
         except BadRequestError as ex:
             exception = f"Received BadRequestError: {ex}"
+            self.httpresp.ret_400("application/json", kwargs["start_response"], None)
+            returnDict = getCustomOutMsg(errMsg=str(ex), errCode=400)
+        except WrongDeltaStatusTransition as ex:
+            exception = f"Received WrongDeltaStatusTransition: {ex}"
             self.httpresp.ret_400("application/json", kwargs["start_response"], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=400)
         except (NotSupportedArgument, TooManyArgumentalValues, OverlapException) as ex:

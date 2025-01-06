@@ -89,7 +89,7 @@ class DeltaCalls:
         """Define Routes for this class"""
         self.routeMap.connect("deltas", "/v1/deltas", action="deltas")
         self.routeMap.connect("deltasid", "/v1/deltas/:deltaid", action="deltasid")
-        self.routeMap.connect("deltasaction", "/v1/deltas/:deltaid/actions/:action", action="deltasaction")
+        self.routeMap.connect("deltasaction", "/v1/deltas/:deltaid/actions/:newaction", action="deltasaction")
         self.routeMap.connect("activedeltas", "/v1/activedeltas", action="activedeltas")
         self.routeMap.connect("deltastates", "/v1/deltastates/:deltaid", action="deltastates")
         self.routeMap.connect("deltatimestates", "/v1/deltatimestates", action="deltatimestates")
@@ -186,16 +186,16 @@ class DeltaCalls:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out
 
-    def __commitdelta(self, deltaID, action, _environ, **kwargs):
+    def __commitdelta(self, deltaID, _environ, **kwargs):
         """Change delta state."""
         delta = self.__getdeltaINT(deltaID, **kwargs)
-        if action == "commit" and delta["state"] == "accepted":
+        if kwargs['newaction'] == "commit" and delta["state"] == "accepted":
             self.stateM.commit(self.dbI, {"uid": deltaID, "state": "committing"})
-        if action == "forcecommit" and delta["state"] in ["activated", "failed"]:
+        elif kwargs['newaction'] == "forcecommit" and delta["state"] in ["activated", "failed"]:
             self.stateM.stateChangerDelta(self.dbI, 'committed', **delta)
             self.stateM.modelstatechanger(self.dbI, 'add', **delta)
         else:
-            msg = f"Delta state in the system is not in final state. State on the system: {delta['state']}."
+            msg = f"Delta state in the system is not in final state. State on the system: {delta['state']}. commit allows only for accepted state. forcecommit allows only for activated or failed states."
             raise WrongDeltaStatusTransition(msg)
         return {"status": "OK"}
 
@@ -383,7 +383,7 @@ class DeltaCalls:
         Output: application/json
         Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/actions/(commit)
         """
-        msgOut = self.__commitdelta(kwargs["deltaid"], kwargs["action"], environ, **kwargs)
+        msgOut = self.__commitdelta(kwargs["deltaid"], environ, **kwargs)
         self._logDeltaUserAction(kwargs, 'commit', msgOut, environ)
         self.httpresp.ret_204("application/json", kwargs["start_response"], None)
         return msgOut
@@ -427,4 +427,3 @@ class DeltaCalls:
         self._logDeltaUserAction({"uuid": out["uuid"]}, 'setstate', dbansw, environ)
         self.responseHeaders(environ, **kwargs)
         return {"status": "OK"}
-
