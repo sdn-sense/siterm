@@ -179,7 +179,7 @@ def evaldict(inputDict):
         return inputDict
     try:
         out = json.loads(inputDict)
-    except (json.JSONDecodeError, TypeError):
+    except (json.errors.JSONDecodeError, TypeError):
         try:
             out = ast.literal_eval(inputDict)
         except (ValueError, SyntaxError) as ex:

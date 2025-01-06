@@ -65,28 +65,38 @@ class FrontendCalls:
 
     def gethosts(self, environ, **kwargs):
         """Return all available Hosts, where key is IP address."""
+        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100)
+        out = []
+        for host in hosts:
+            host["hostinfo"] = getFileContentAsJson(host.get("hostinfo", ""))
+            out.append(host)
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
+        return out
 
     def getdata(self, environ, **kwargs):
         """Return all available Hosts data, where key is IP address."""
+        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100)
+        out = []
+        for host in hosts:
+            host["hostinfo"] = getFileContentAsJson(host.get("hostinfo", ""))
+            out.append(host)
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
+        return out
 
     def getswitchdata(self, environ, **kwargs):
         """Return all Switches information"""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get("switch", orderby=["updatedate", "DESC"], limit=1000)
+        return self.dbI.get("switch", orderby=["updatedate", "DESC"], limit=100)
 
     def getactivedeltas(self, environ, **kwargs):
         """Return all Active Deltas"""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get("activeDeltas", orderby=["updatedate", "DESC"], limit=1000)
+        return self.dbI.get("activeDeltas", orderby=["updatedate", "DESC"], limit=1)
 
     def getqosdata(self, environ, **kwargs):
         """Return QoS Stats for all IPv6 Ranges"""
         self.responseHeaders(environ, **kwargs)
-        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=1000)
+        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100)
         out = {}
         for host in hosts:
             tmpH = getFileContentAsJson(host.get("hostinfo", ""))
@@ -121,7 +131,7 @@ class FrontendCalls:
     def getservicestates(self, environ, **kwargs):
         """Return Service states"""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get("servicestates", orderby=["updatedate", "DESC"], limit=1000)
+        return self.dbI.get("servicestates", orderby=["updatedate", "DESC"], limit=100)
 
     def setinstancestartend(self, environ, **kwargs):
         """Set Instance Start and End time"""
@@ -131,7 +141,7 @@ class FrontendCalls:
         if not instanceID:
             raise NotFoundError("Instance ID is not provided.")
         # Validate that these entries are known...
-        activeDeltas = self.dbI.get("activeDeltas", orderby=["updatedate", "DESC"], limit=1000)
+        activeDeltas = self.dbI.get("activeDeltas", orderby=["updatedate", "DESC"], limit=1)
         if not activeDeltas:
             raise NotFoundError("No Active Deltas found.")
 
