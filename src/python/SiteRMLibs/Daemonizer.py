@@ -122,6 +122,7 @@ class DBBackend():
                 "runtime": kwargs["runtime"],
                 "hostname": getHostname(self.config),
                 "version": runningVersion,
+                "exc": kwargs.get("exc", "No Exception provided by service"),
             }
             publishToSiteFE(dic, fullUrl, "/json/frontend/servicestate")
         except Exception:
@@ -376,13 +377,14 @@ class Daemon(DBBackend):
             sys.exit(2)
         sys.exit(0)
 
-    def reporter(self, state, sitename, stwork):
+    def reporter(self, state, sitename, stwork, exc=None):
         """Report Service State to FE"""
         if not self.inargs.noreporting:
             runtime = int(getUTCnow()) - stwork
+            exc = exc if exc else "No Exception provided by service"
             self._pubStateRemote(servicename=self.component,
                                  servicestate=state, sitename=sitename,
-                                 version=runningVersion, runtime=runtime)
+                                 version=runningVersion, runtime=runtime, exc=exc)
             # Log state also to local file
             createDirs("/tmp/siterm-states/")
             fname = f"/tmp/siterm-states/{self.component}.json"
@@ -391,7 +393,8 @@ class Daemon(DBBackend):
             self.contentDB.dumpFileContentAsJson(
                 fname,
                 {"state": state, "sitename": sitename,
-                 "runtime": runtime, "version": runningVersion})
+                 "runtime": runtime, "version": runningVersion,
+                 "exc": exc})
 
     def autoRefreshDB(self, **kwargs):
         """Auto Refresh if there is a DB request to do so."""
@@ -480,8 +483,8 @@ class Daemon(DBBackend):
                         self.reporter('OK', sitename, stwork)
                     except:
                         hadFailure = True
-                        self.reporter('FAILED', sitename, stwork)
                         exc = traceback.format_exc()
+                        self.reporter('FAILED', sitename, stwork, str(exc))
                         self.logger.critical("Exception!!! Error details:  %s", exc)
                     finally:
                         self.postRunThread(sitename, rthread)

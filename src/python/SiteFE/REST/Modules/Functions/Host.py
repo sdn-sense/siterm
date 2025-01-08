@@ -34,6 +34,7 @@ class HostSubCalls:
                 "runtime": kwargs.get("runtime", -1),
                 "version": kwargs.get("version", runningVersion),
                 "updatedate": getUTCnow(),
+                "exc": kwargs.get("exc", "Exc not set"),
             }
             services = self.dbI.get(
                 "servicestates",
