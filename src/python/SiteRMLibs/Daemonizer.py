@@ -47,6 +47,7 @@ def getParser(description):
                          help="Sleep time in seconds when there is a failure. Default 30")
     oparser.add_argument('--devicename', dest='devicename', default='',
                          help='Device name to start the process. Only for SwitchWorker process.')
+    oparser.add_argument('--bypassstartcheck', action='store_true', help="Bypass start check. Default false", default=False)
     oparser.set_defaults(logtostdout=False)
     return oparser
 
@@ -214,8 +215,11 @@ class Daemon(DBBackend):
         if os.getenv('SITERM_MEMORY_DEBUG'):
             self.memdebug = True
 
-    def dbready(self):
-        """Check if the database is ready"""
+    def startready(self):
+        """Check if the startup is ready"""
+        retval = True
+        if self.inargs.bypassstartcheck:
+            return retval
         if os.path.exists("/tmp/siterm-mariadb-init"):
             try:
                 self.logger.info("Database init/upgrade started at:")
@@ -224,12 +228,15 @@ class Daemon(DBBackend):
             except IOError:
                 pass
             self.logger.info("Database not ready. See details above. If continous, check the mariadb and mariadb_init process.")
-            return False
-        return True
+            retval = False
+        if not os.path.exists("/tmp/config-fetcher-ready"):
+            self.logger.info("Config Fetcher not ready. See details above. If continous, check the config-fetcher process.")
+            retval = False
+        return retval
 
-    def dbreadyloop(self):
+    def startreadyloop(self):
         """Check if the database is ready"""
-        while not self.dbready():
+        while not self.startready():
             time.sleep(5)
 
     def _refreshConfigAfterFailure(self):
@@ -294,7 +301,7 @@ class Daemon(DBBackend):
 
     def start(self):
         """Start the daemon."""
-        self.dbreadyloop()
+        self.startreadyloop()
         # Check for a pidfile to see if the daemon already runs
         pid = None
         try:
@@ -425,7 +432,7 @@ class Daemon(DBBackend):
 
     def runLoop(self):
         """Return True if it is not onetime run."""
-        self.dbreadyloop()
+        self.startreadyloop()
         if self.inargs.onetimerun and self.runCount == 0:
             return True
         if self.inargs.onetimerun and self.runCount > 0:
