@@ -120,6 +120,10 @@ class ConfigFetcher():
         self.gitObj.config['MAPPING'] = copy.deepcopy(mapping[self.gitObj.config['MD5']])
         self.fetchAgent()
         self.fetchFE()
+        # Create tmp file that fetcher is done. /tmp/config-fetcher-ready
+        if not os.path.isfile('/tmp/config-fetcher-ready'):
+            with open('/tmp/config-fetcher-ready', 'w', encoding='utf-8') as fd:
+                fd.write('Ready at: ' + str(datetime.datetime.now()))
 
 
 if __name__ == "__main__":
