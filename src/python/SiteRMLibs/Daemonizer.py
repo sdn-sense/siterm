@@ -20,6 +20,7 @@ from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.MainUtilities import (getDataFromSiteFE, getDBConn, getFullUrl,
                                       getHostname, getLoggingObject, getUTCnow,
                                       getVal, publishToSiteFE, contentDB, createDirs)
+from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
 from SiteRMLibs.GitConfig import getGitConfig
 
 
@@ -122,6 +123,7 @@ class DBBackend():
                 "runtime": kwargs["runtime"],
                 "hostname": getHostname(self.config),
                 "version": runningVersion,
+                "exc": kwargs.get("exc", "No Exception provided by service"),
             }
             publishToSiteFE(dic, fullUrl, "/json/frontend/servicestate")
         except Exception:
@@ -193,8 +195,9 @@ class Daemon(DBBackend):
         self.logger = None
         self.runThreads = {}
         self.contentDB = contentDB()
-        if getGitConf:
-            self.config = getGitConfig()
+        self.getGitConf = getGitConf
+        if self.getGitConf:
+            self._refreshConfig()
             self.logger = getLoggingObject(config=self.config,
                                            logfile=f"{self.config.get('general', 'logDir')}/{component}/",
                                            logLevel=self.config.get('general', 'logLevel'), logType=logType,
@@ -229,9 +232,17 @@ class Daemon(DBBackend):
         while not self.dbready():
             time.sleep(5)
 
+    def _refreshConfigAfterFailure(self):
+        """Config refresh call after failure"""
+        if self.getGitConf:
+            self.logger.info("Refreshing Config after failure after 10 second sleep")
+            time.sleep(10)
+            self.config = getGitConfig()
+
     def _refreshConfig(self):
         """Config refresh call"""
-        self.config = getGitConfig()
+        if self.getGitConf:
+            self.config = getGitConfig()
 
     def daemonize(self):
         """do the UNIX double-fork magic, see Stevens' "Advanced Programming in
@@ -376,13 +387,14 @@ class Daemon(DBBackend):
             sys.exit(2)
         sys.exit(0)
 
-    def reporter(self, state, sitename, stwork):
+    def reporter(self, state, sitename, stwork, exc=None):
         """Report Service State to FE"""
         if not self.inargs.noreporting:
             runtime = int(getUTCnow()) - stwork
+            exc = exc if exc else "No Exception provided by service"
             self._pubStateRemote(servicename=self.component,
                                  servicestate=state, sitename=sitename,
-                                 version=runningVersion, runtime=runtime)
+                                 version=runningVersion, runtime=runtime, exc=exc)
             # Log state also to local file
             createDirs("/tmp/siterm-states/")
             fname = f"/tmp/siterm-states/{self.component}.json"
@@ -391,7 +403,8 @@ class Daemon(DBBackend):
             self.contentDB.dumpFileContentAsJson(
                 fname,
                 {"state": state, "sitename": sitename,
-                 "runtime": runtime, "version": runningVersion})
+                 "runtime": runtime, "version": runningVersion,
+                 "exc": exc})
 
     def autoRefreshDB(self, **kwargs):
         """Auto Refresh if there is a DB request to do so."""
@@ -434,11 +447,16 @@ class Daemon(DBBackend):
                 return
             except SystemExit:
                 exc = traceback.format_exc()
-                self.logger.critical("SystemExit!!! Error details:  %s", exc)
+                self.logger.critical(f"SystemExit!!! Error details:  {exc}")
                 sys.exit(1)
+            except (NoOptionError, NoSectionError) as ex:
+                exc = traceback.format_exc()
+                self.logger.critical(f"Exception!!! Traceback details: {exc}, Catched Exception: {ex}")
+                time.sleep(self.sleepTimers['failure'])
+                self._refreshConfigAfterFailure()
             except:
                 exc = traceback.format_exc()
-                self.logger.critical("Exception!!! Error details:  %s", exc)
+                self.logger.critical(f"Exception!!! Error details: {exc}")
                 time.sleep(self.sleepTimers['failure'])
 
     def __run(self, rthread):
@@ -480,8 +498,8 @@ class Daemon(DBBackend):
                         self.reporter('OK', sitename, stwork)
                     except:
                         hadFailure = True
-                        self.reporter('FAILED', sitename, stwork)
                         exc = traceback.format_exc()
+                        self.reporter('FAILED', sitename, stwork, str(exc))
                         self.logger.critical("Exception!!! Error details:  %s", exc)
                     finally:
                         self.postRunThread(sitename, rthread)
