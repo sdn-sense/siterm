@@ -32,7 +32,7 @@ class HostCalls(HostSubCalls, contentDB):
     def __init__(self):
         self.host_services = ["Agent", "Ruler", "Debugger", "LookUpService",
                               "ProvisioningService", "SNMPMonitoring",
-                              "DBWorker", "PolicyService",
+                              "DBWorker", "PolicyService", "SwitchWorker",
                               "Prometheus-Push", "Arp-Push", "ConfigFetcher"]
         self.__defineRoutes()
         self.__urlParams()
