@@ -50,7 +50,6 @@ class ConfigFetcher():
         datetimeNow = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=10)
         filename = f"/tmp/{datetimeNow.strftime('%Y-%m-%d-%H')}-{name}.yaml"
         if os.path.isfile(filename):
-            self.logger.info(f'Config files are not yet needed for update. For {name} from {url}')
             with open(filename, 'r', encoding='utf-8') as fd:
                 output = yload(fd.read())
         else:
