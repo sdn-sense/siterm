@@ -195,6 +195,9 @@ class VInterfaces():
                     'ipv6': netInfo.get('ipv6-address', {}).get('value', ''),
                     'mtu': netInfo.get('mtu', {}).get('value', getDefaultMTU(self.config, key)),
                     'txqueuelen': netInfo.get('txqueuelen', {}).get('value', getDefaultTXQ(self.config, key))}
+            if not vlan['vlan']:
+                self.logger.error(f"VLAN ID is not set for {key}. Skipping this interface. All info: {inParams}")
+                continue
             vlans.append(vlan)
         return vlans
 
