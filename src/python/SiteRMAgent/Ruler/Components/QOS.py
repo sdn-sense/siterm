@@ -296,10 +296,7 @@ class QOS:
                 continue
             outrate, outtype = self.convertToRate(l2req["params"])
             if self.params[interface]["intf_max"] - outrate <= 0:
-                raise OverSubscribeException(
-                    "Node is oversubscribed. \
-                                             Will not modify present QoS Rules."
-                )
+                raise OverSubscribeException(f"Node is oversubscribed. Will not modify present QoS Rules. Max Rate: {self.params[interface]['intf_max']} Requested Rate: {outrate}")
             self.params[interface]["intf_max"] -= outrate
             tmpFD.write(
                 f"""

@@ -17,6 +17,7 @@ from SiteRMLibs.MainUtilities import (evaldict, externalCommand, getFileContentA
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.ipaddr import getInterfaceSpeed
 
 def str2bool(val):
     """Check if str is true boolean."""
@@ -136,15 +137,21 @@ class NetInfo(BWService):
             nicInfo["bwParams"]["unit"] = "mbit"
             nicInfo["bwParams"]["type"] = self.config.get(intf, "bwParams").get("type", "guaranteedCapped")
             nicInfo["bwParams"]["priority"] = self.config.get(intf, "bwParams").get("priority", 0)
-            nicInfo["bwParams"]["minReservableCapacity"] = int(self.config.get(intf, "bwParams").get("minReservableCapacity", 0))
-            nicInfo["bwParams"]["maximumCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", 0))
-            nicInfo["bwParams"]["granularity"] = int(self.config.get(intf, "bwParams").get("granularity", 0))
-
+            nicInfo["bwParams"]["minReservableCapacity"] = int(self.config.get(intf, "bwParams").get("minReservableCapacity", 1000))
+            nicInfo["bwParams"]["maximumCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", getInterfaceSpeed(intf)))
+            nicInfo["bwParams"]["granularity"] = int(self.config.get(intf, "bwParams").get("granularity", 1000))
+            nicInfo["bwParams"]["reservedCapacity"] = int(self.config.get(intf, "bwParams").get("reservedCapacity", 1000))
+            # Take out reserved from maximumCapacity
+            nicInfo["bwParams"]["maximumCapacity"] -= nicInfo["bwParams"]["reservedCapacity"]
+            if nicInfo["bwParams"]["maximumCapacity"] < 0:
+                self.logger.warning(f"Interface {intf} has negative capacity. Setting it to 0")
+                nicInfo["bwParams"]["maximumCapacity"] = 0
             reservedCap = self.bwCalculatereservableServer(self.config.config["MAIN"],
                                                            self.config.get('agent', 'hostname'), intf,
                                                            nicInfo["bwParams"]["maximumCapacity"])
             nicInfo["bwParams"]["availableCapacity"] = reservedCap
             nicInfo["bwParams"]["reservableCapacity"] = reservedCap
+            nicInfo["bwParams"]['usedCapacity'] = nicInfo["bwParams"]["maximumCapacity"] - reservedCap
         tmpifAddr, tmpifStats = getIfAddrStats()
 
         nics = externalCommand("ip -br a")
@@ -250,9 +257,7 @@ class NetInfo(BWService):
                         }
             return out
         except:
-            self.logger.debug(
-                "Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?"
-            )
+            self.logger.debug("Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?")
         return {}
 
 
