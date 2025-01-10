@@ -56,7 +56,7 @@ class DBBackend():
 
     def __enter__(self):
         """Enter the runtime context related to this object."""
-        self.initialize()
+        self.checkdbconnection()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -71,8 +71,10 @@ class DBBackend():
         """Close cursor and connection."""
         if self.cursor:
             self.cursor.close()
+            self.cursor = None
         if self.conn:
             self.conn.close()
+            self.conn = None
     def initialize(self):
         """Open connection and cursor."""
         if not self.conn or not self.cursor:
@@ -84,9 +86,29 @@ class DBBackend():
                                         autocommit=self.autocommit)
             self.cursor = self.conn.cursor()
 
+    def checkdbconnection(self):
+        """
+        Check if the database connection is alive.
+        """
+        try:
+            if not self.conn or not self.cursor:
+                self.close()
+                self.initialize()
+            if not self.conn.is_connected():
+                self.close()
+                self.initialize()
+            self.cursor.execute("SELECT 1")
+            result = self.cursor.fetchone()
+            if result and result[0] == 1:
+                return True
+            raise Exception(f"Error while checking the database connection: {result}")
+        except Exception as ex:
+            print(f"Error while checking the database connection: {ex}")
+            raise ex
+
     def createdb(self):
         """Create database."""
-        self.initialize()
+        self.checkdbconnection()
         for argname in dir(dbcalls):
             if argname.startswith('create_'):
                 print(f'Call to create {argname}')
@@ -95,7 +117,7 @@ class DBBackend():
 
     def cleandbtable(self, dbtable):
         """Clean only specific table if available"""
-        self.initialize()
+        self.checkdbconnection()
         for argname in dir(dbcalls):
             if argname == f'delete_{dbtable}':
                 print(f'Call to clean from {argname}')
@@ -104,7 +126,7 @@ class DBBackend():
 
     def cleandb(self):
         """Clean database."""
-        self.initialize()
+        self.checkdbconnection()
         for argname in dir(dbcalls):
             if argname.startswith('delete_'):
                 print(f'Call to clean from {argname}')
@@ -114,7 +136,7 @@ class DBBackend():
 
     def execute_get(self, query):
         """GET Execution."""
-        self.initialize()
+        self.checkdbconnection()
         alldata = []
         colname = []
         try:
@@ -127,7 +149,7 @@ class DBBackend():
 
     def execute_ins(self, query, values):
         """INSERT Execute."""
-        self.initialize()
+        self.checkdbconnection()
         lastID = -1
         try:
             for item in values:
@@ -146,7 +168,7 @@ class DBBackend():
 
     def execute_del(self, query, values):
         """DELETE Execute."""
-        self.initialize()
+        self.checkdbconnection()
         del values
         try:
             self.cursor.execute(query)
@@ -159,7 +181,7 @@ class DBBackend():
 
     def execute(self, query):
         """Execute query."""
-        self.initialize()
+        self.checkdbconnection()
         try:
             self.cursor.execute(query)
             self.conn.commit()
