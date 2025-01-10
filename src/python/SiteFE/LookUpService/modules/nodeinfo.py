@@ -72,6 +72,12 @@ class NodeInfo:
                 continue
             if item['mac-address']:
                 self._addNetworkAddress(prefixuri, 'mac-address', item['mac-address'])
+        # Add mtu and txqueuelen
+        for item in inputDict.get('2', []):
+            if 'MTU' in item:
+                self._addHasNetworkAttribute(prefixuri, 'MTU', 'mtu', item['MTU'])
+            if 'txqueuelen' in item:
+                self._addHasNetworkAttribute(prefixuri, 'txqueuelen', 'txqueuelen', item['txqueuelen'])
 
     def defineNodeInformation(self, nodeDict):
         """Define node information."""
