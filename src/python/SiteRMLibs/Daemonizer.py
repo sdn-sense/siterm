@@ -86,6 +86,8 @@ class DBBackend():
                 "runtime": kwargs.get("runtime", -1),
                 "version": kwargs.get("version", runningVersion),
                 "updatedate": getUTCnow(),
+                "exc": kwargs.get("exc", "No Exception provided by service"),
+
             }
             dbobj = getVal(self.dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
             services = dbobj.get(
@@ -101,11 +103,7 @@ class DBBackend():
                 dbobj.update("servicestates", [dbOut])
         except Exception:
             excType, excValue = sys.exc_info()[:2]
-            print(
-                "Error details in reportServiceStatus. ErrorType: %s, ErrMsg: %s",
-                str(excType.__name__),
-                excValue,
-            )
+            print(f"Error details in reportServiceStatus. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
             reported = False
         return reported
 
