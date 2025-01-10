@@ -86,7 +86,7 @@ class DBBackend():
                                         autocommit=self.autocommit)
             self.cursor = self.conn.cursor()
 
-    def checkdbconnection(self):
+    def checkdbconnection(self, retry=True):
         """
         Check if the database connection is alive.
         """
@@ -94,13 +94,17 @@ class DBBackend():
             if not self.conn or not self.cursor:
                 self.close()
                 self.initialize()
-            if not self.conn.is_connected():
+            try:
+                self.cursor.execute("SELECT 1")
+                result = self.cursor.fetchone()
+                if result and result[0] == 1:
+                    return True
+            except mariadb.Error as ex:
+                print(f"Error while checking the database connection: {ex}")
                 self.close()
                 self.initialize()
-            self.cursor.execute("SELECT 1")
-            result = self.cursor.fetchone()
-            if result and result[0] == 1:
-                return True
+                if retry:
+                    return self.checkdbconnection(retry=False)
             raise Exception(f"Error while checking the database connection: {result}")
         except Exception as ex:
             print(f"Error while checking the database connection: {ex}")
