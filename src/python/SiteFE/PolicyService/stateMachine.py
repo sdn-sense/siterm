@@ -171,6 +171,13 @@ class StateMachine():
     def activating(self, dbObj):
         """Check on all deltas in state activating."""
         for delta in dbObj.get('deltas', search=[['state', 'activating']]):
+            # Delay making active for 30seconds. Allow agents and switchworker to apply.
+            tNow = getUTCnow()
+            deltaupdated = delta.get('updatedate', tNow)
+            if (tNow - deltaupdated) <= 30:
+                self.logger.info(f"Delta {delta['uid']} is not ready to be activated. Waiting for 30 seconds")
+                self.logger.info(f"Current time {tNow} - Delta updated time {deltaupdated} = Diff: {tNow - deltaupdated}")
+                continue
             if delta['modadd'] in ['added', 'removed']:
                 self.stateChangerDelta(dbObj, 'activated', **delta)
             if delta['modadd'] == 'failed':
