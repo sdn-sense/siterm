@@ -41,10 +41,10 @@ def getParser(description):
                          help="Do not report service Status to FE (Only for start/restart). Default false")
     oparser.add_argument('--runnum', dest='runnum', default='1',
                          help="Run Number. Default 1. Used only for multi thread debugging purpose. No need to specify manually")
-    oparser.add_argument('--sleeptimeok', dest='sleeptimeok', default='10',
-                         help="Sleep time in seconds when everything is ok. Default 10")
-    oparser.add_argument('--sleeptimefailure', dest='sleeptimefailure', default='30',
-                         help="Sleep time in seconds when there is a failure. Default 30")
+    oparser.add_argument('--sleeptimeok', dest='sleeptimeok', default='5',
+                         help="Sleep time in seconds when everything is ok. Default 5")
+    oparser.add_argument('--sleeptimefailure', dest='sleeptimefailure', default='10',
+                         help="Sleep time in seconds when there is a failure. Default 10")
     oparser.add_argument('--devicename', dest='devicename', default='',
                          help='Device name to start the process. Only for SwitchWorker process.')
     oparser.add_argument('--bypassstartcheck', action='store_true', help="Bypass start check. Default false", default=False)
