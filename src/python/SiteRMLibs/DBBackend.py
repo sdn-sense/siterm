@@ -19,6 +19,7 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2019/05/01
 """
 import os
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import mariadb
 from SiteRMLibs import dbcalls
@@ -52,63 +53,49 @@ class DBBackend():
         self.mport = int(os.getenv('MARIA_DB_PORT', '3306'))
         self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
         self.autocommit = os.getenv('MARIA_DB_AUTOCOMMIT', 'True') in ['True', 'true', '1']
-        self.cursor, self.conn = None, None
 
     def __enter__(self):
         """Enter the runtime context related to this object."""
         self.checkdbconnection()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Exit the runtime context related to this object."""
-        self.close()
-
-    def __del__(self):
-        """Exit the runtime context related to this object."""
-        self.close()
-
-    def close(self):
-        """Close cursor and connection."""
-        if self.cursor:
-            self.cursor.close()
-            self.cursor = None
-        if self.conn:
-            self.conn.close()
-            self.conn = None
-    def initialize(self):
+    @contextmanager
+    def get_connection(self):
         """Open connection and cursor."""
-        if not self.conn or not self.cursor:
-            self.conn = mariadb.connect(user=self.muser,
-                                        password=self.mpass,
-                                        host=self.mhost,
-                                        port=self.mport,
-                                        database=self.mdb,
-                                        autocommit=self.autocommit)
-            self.cursor = self.conn.cursor()
+        conn = None
+        cursor = None
+        try:
+            conn = mariadb.connect(user=self.muser,
+                                   password=self.mpass,
+                                   host=self.mhost,
+                                   port=self.mport,
+                                   database=self.mdb,
+                                   autocommit=self.autocommit)
+            cursor = conn.cursor()
+            yield conn, cursor
+        except Exception as e:
+            print(f"Error establishing database connection: {e}")
+            raise e
+        finally:
+            if conn:
+                conn.close()
+
 
     def checkdbconnection(self, retry=True):
         """
         Check if the database connection is alive.
         """
         try:
-            if not self.conn or not self.cursor:
-                self.close()
-                self.initialize()
-            try:
-                self.cursor.execute("SELECT 1")
-                result = self.cursor.fetchone()
+            with self.get_connection() as (_conn, cursor):
+                cursor.execute("SELECT 1")
+                result = cursor.fetchone()
                 if result and result[0] == 1:
                     return True
-            except mariadb.Error as ex:
-                print(f"Error while checking the database connection: {ex}")
-                self.close()
-                self.initialize()
-                if retry:
-                    return self.checkdbconnection(retry=False)
-            raise Exception(f"Error while checking the database connection: {result}")
+            if retry:
+                return self.checkdbconnection(retry=False)
         except Exception as ex:
-            print(f"Error while checking the database connection: {ex}")
             raise ex
+        raise Exception(f"Error while checking the database connection: {result}")
 
     def createdb(self):
         """Create database."""
@@ -116,8 +103,8 @@ class DBBackend():
         for argname in dir(dbcalls):
             if argname.startswith('create_'):
                 print(f'Call to create {argname}')
-                self.cursor.execute(getattr(dbcalls, argname))
-        self.conn.commit()
+                with self.get_connection() as (_conn, cursor):
+                    cursor.execute(getattr(dbcalls, argname))
 
     def cleandbtable(self, dbtable):
         """Clean only specific table if available"""
@@ -125,8 +112,8 @@ class DBBackend():
         for argname in dir(dbcalls):
             if argname == f'delete_{dbtable}':
                 print(f'Call to clean from {argname}')
-                self.cursor.execute(getattr(dbcalls, argname))
-        self.conn.commit()
+                with self.get_connection() as (_conn, cursor):
+                    cursor.execute(getattr(dbcalls, argname))
 
     def cleandb(self):
         """Clean database."""
@@ -134,8 +121,8 @@ class DBBackend():
         for argname in dir(dbcalls):
             if argname.startswith('delete_'):
                 print(f'Call to clean from {argname}')
-                self.cursor.execute(getattr(dbcalls, argname))
-        self.conn.commit()
+                with self.get_connection() as (_conn, cursor):
+                    cursor.execute(getattr(dbcalls, argname))
 
 
     def execute_get(self, query):
@@ -143,58 +130,58 @@ class DBBackend():
         self.checkdbconnection()
         alldata = []
         colname = []
-        try:
-            self.cursor.execute(query)
-            colname = [tup[0] for tup in self.cursor.description]
-            alldata = self.cursor.fetchall()
-        except Exception as ex:
-            raise ex
+        with self.get_connection() as (_conn, cursor):
+            try:
+                cursor.execute(query)
+                colname = [tup[0] for tup in cursor.description]
+                alldata = cursor.fetchall()
+            except Exception as ex:
+                raise ex
         return 'OK', colname, alldata
 
     def execute_ins(self, query, values):
         """INSERT Execute."""
         self.checkdbconnection()
         lastID = -1
-        try:
-            for item in values:
-                self.cursor.execute(query, item)
-                lastID = self.cursor.lastrowid
-            self.conn.commit()
-        except mariadb.Error as ex:
-            print(f'MariaDBError. Ex: {ex}')
-            self.conn.rollback()
-            raise ex
-        except Exception as ex:
-            print(f'Got Exception {ex} ')
-            self.conn.rollback()
-            raise ex
+        with self.get_connection() as (conn, cursor):
+            try:
+                for item in values:
+                    cursor.execute(query, item)
+                    lastID = cursor.lastrowid
+            except mariadb.Error as ex:
+                print(f'MariaDBError. Ex: {ex}')
+                conn.rollback()
+            except Exception as ex:
+                print(f'Got Exception {ex} ')
+                conn.rollback()
+                raise ex
         return 'OK', '', lastID
 
     def execute_del(self, query, values):
         """DELETE Execute."""
         self.checkdbconnection()
         del values
-        try:
-            self.cursor.execute(query)
-            self.conn.commit()
-        except Exception as ex:
-            print(f'Got Exception {ex} ')
-            self.conn.rollback()
-            raise ex
+        with self.get_connection() as (conn, cursor):
+            try:
+                cursor.execute(query)
+            except Exception as ex:
+                print(f'Got Exception {ex} ')
+                conn.rollback()
+                raise ex
         return 'OK', '', ''
 
     def execute(self, query):
         """Execute query."""
         self.checkdbconnection()
-        try:
-            self.cursor.execute(query)
-            self.conn.commit()
-        except mariadb.InterfaceError as ex:
-            print(f'Got Exception {ex} ')
-        except Exception as ex:
-            print(f'Got Exception {ex} ')
-            self.conn.rollback()
-            raise ex
+        with self.get_connection() as (conn, cursor):
+            try:
+                cursor.execute(query)
+            except mariadb.InterfaceError as ex:
+                print(f'Got Exception {ex} ')
+            except Exception as ex:
+                print(f'Got Exception {ex} ')
+                conn.rollback()
+                raise ex
         return 'OK', '', ''
 
 class dbinterface():

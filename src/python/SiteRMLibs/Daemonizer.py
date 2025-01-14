@@ -478,7 +478,7 @@ class Daemon(DBBackend):
                 snapshot = tracemalloc.take_snapshot()
                 self.logger.debug("Snapshot taken after rthread startwork attempt")
                 for stat in snapshot.statistics("lineno")[:10]:
-                    self.logger.debug("MEM_STAT:", stat)
+                    self.logger.debug("MEM_STAT: %s", stat)
                 self.logger.debug("Final Memory usage: %s", tracemalloc.get_traced_memory())
                 self.logger.debug("="*50)
 
