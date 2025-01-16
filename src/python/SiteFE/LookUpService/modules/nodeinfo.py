@@ -10,7 +10,7 @@ Authors:
 Date: 2021/12/01
 """
 from SiteRMLibs.CustomExceptions import NoOptionError
-from SiteRMLibs.MainUtilities import getAllHosts, strtolist, getFileContentAsJson
+from SiteRMLibs.MainUtilities import getAllHosts, strtolist, getFileContentAsJson, getUTCnow
 
 
 def ignoreInterface(intfKey, intfDict, hostinfo):
@@ -52,7 +52,11 @@ class NodeInfo:
     def addNodeInfo(self):
         """Add Agent Node Information"""
         jOut = getAllHosts(self.dbI)
-        for _, nodeDict in list(jOut.items()):
+        for nodeHostname, nodeDict in list(jOut.items()):
+            # Remove node from model if it did not updated for 5 minutes:
+            if nodeDict["updatedate"] < getUTCnow() - 300:
+                self.logger.debug(f"Node {nodeHostname} did not update for 5 minutes. Removing from model")
+                continue
             nodeDict["hostinfo"] = getFileContentAsJson(nodeDict["hostinfo"])
             # ==================================================================================
             # General Node Information
