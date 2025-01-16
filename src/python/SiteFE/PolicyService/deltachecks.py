@@ -295,7 +295,7 @@ class ConflictChecker(Timing):
                     continue
                 nStats = self._getVlanIPs(hostitems)
                 # Check if host updated frontend in the last 5minutes
-                self._checkIfHostAlive(cls, nStats, hostname)
+                # self._checkIfHostAlive(cls, nStats, hostname) TODO - Review this only check if new node is in request
                 # Check if vlan is in allowed list;
                 self._checkVlanInRange(cls, nStats, hostname)
                 # check if ip address with-in available ranges
