@@ -36,6 +36,14 @@ class ConflictChecker(Timing):
         """Check if IP Overlap. Return True/False"""
         return inipOverlap(ip1, ip2, iptype)
 
+    def _checkIfHostAlive(self, polcls, nStats, hostname):
+        """Check if Host is alive"""
+        if hostname in polcls.hosts:
+            updatedate = polcls.hosts[hostname]["updatedate"]
+            if updatedate < self.getUTCnow() - 300:
+                raise OverlapException(f"Host {hostname} did not update in the last 5minutes. \
+                                       Cannot proceed with this request. Check Agent status for host")
+
     @staticmethod
     def _checkVlanInRange(polcls, vlan, hostname):
         """Check if VLAN in Allowed range"""
@@ -286,6 +294,8 @@ class ConflictChecker(Timing):
                 if hostname == "_params":
                     continue
                 nStats = self._getVlanIPs(hostitems)
+                # Check if host updated frontend in the last 5minutes
+                self._checkIfHostAlive(cls, nStats, hostname)
                 # Check if vlan is in allowed list;
                 self._checkVlanInRange(cls, nStats, hostname)
                 # check if ip address with-in available ranges
