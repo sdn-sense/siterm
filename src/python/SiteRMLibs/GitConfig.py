@@ -313,15 +313,21 @@ class GitConfig:
 
     def get(self, key, subkey, default=None):
         """Custom get from dictionary in a way like configparser"""
-        if key not in self.config["MAIN"]:
+        try:
+            if key not in self.config["MAIN"]:
+                if default:
+                    return default
+                raise NoSectionError(f"{key} is not available in configuration.")
+            if subkey not in self.config["MAIN"][key]:
+                if default:
+                    return default
+                raise NoOptionError(f"{subkey} is not available under {key} section in configuration.")
+            return self.config["MAIN"].get(key, {}).get(subkey, {})
+        except AttributeError as ex:
             if default:
                 return default
-            raise NoSectionError(f"{key} is not available in configuration.")
-        if subkey not in self.config["MAIN"][key]:
-            if default:
-                return default
-            raise NoOptionError(f"{subkey} is not available under {key} section in configuration.")
-        return self.config["MAIN"].get(key, {}).get(subkey, {})
+            raise ex
+        return default
 
     def getraw(self, key):
         """Get RAW DICT of key"""
