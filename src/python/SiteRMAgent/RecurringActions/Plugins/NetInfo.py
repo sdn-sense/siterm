@@ -17,7 +17,8 @@ from SiteRMLibs.MainUtilities import (evaldict, externalCommand, getFileContentA
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.ipaddr import getInterfaceSpeed
+from SiteRMLibs.ipaddr import getInterfaceSpeed, getIfInterfaceReady
+from SiteRMLibs.CustomExceptions import NotFoundError
 
 def str2bool(val):
     """Check if str is true boolean."""
@@ -104,12 +105,9 @@ class NetInfo(BWService):
             pass
         return None
 
-    def get(self, **_kwargs):
-        """Get all network information"""
-        self._getActive()
+    def _getconfig(self):
+        """Get all info from configuration file"""
         netInfo = {}
-        privVlans = self.getvlans()
-
         for intf in self.config.get("agent", "interfaces"):
             nicInfo = netInfo.setdefault(intf, {})
             if self.config.has_option(intf, "isAlias"):
@@ -152,8 +150,12 @@ class NetInfo(BWService):
             nicInfo["bwParams"]["availableCapacity"] = reservedCap
             nicInfo["bwParams"]["reservableCapacity"] = reservedCap
             nicInfo["bwParams"]['usedCapacity'] = nicInfo["bwParams"]["maximumCapacity"] - reservedCap
-        tmpifAddr, tmpifStats = getIfAddrStats()
+        return netInfo
 
+    def _getintfstats(self, netInfo):
+        """Get interface stats"""
+        privVlans = self.getvlans()
+        tmpifAddr, tmpifStats = getIfAddrStats()
         nics = externalCommand("ip -br a")
         for nicline in nics[0].decode("UTF-8").split("\n"):
             if not nicline:
@@ -218,15 +220,27 @@ class NetInfo(BWService):
                     )
                     familyInfo["txqueuelen"] = txQueueLen[0].strip()
                 nicInfo[str(vals.family.value)].append(familyInfo)
+        return netInfo
+
+
+    def get(self, **_kwargs):
+        """Get all network information"""
+        self._getActive()
+        netInfo = self._getconfig()
+        netInfo = self._getintfstats(netInfo)
+
         # Check in the end which interfaces where defined in config but not available...
         outputForFE = {"interfaces": {}, "routes": [], "lldp": {}}
         for intfName, intfDict in netInfo.items():
             if intfName.split(".")[0] not in self.config.get("agent", "interfaces"):
-                self.logger.debug(
-                    f"This interface {intfName} was defined in configuration, but not available. Will not add it to final output"
-                )
-            else:
-                outputForFE["interfaces"][intfName] = intfDict
+                msg = f"Interface {intfName} was defined in configuration, but not available on the system. Misconfiguration"
+                self.logger.error(msg)
+                raise NotFoundError(msg)
+            intfready, errmsg = getIfInterfaceReady(intfName)
+            if not intfready:
+                self.logger.error(errmsg)
+                raise NotFoundError(errmsg)
+            outputForFE["interfaces"][intfName] = intfDict
         # Get Routing Information
         outputForFE["routes"] = self.getRoutes()
         outputForFE["lldp"] = self.getLLDP()

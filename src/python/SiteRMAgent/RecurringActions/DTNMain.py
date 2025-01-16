@@ -13,7 +13,7 @@ from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.CustomExceptions import PluginException
+from SiteRMLibs.CustomExceptions import PluginException, NotFoundError
 from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
 from SiteRMAgent.RecurringActions.Plugins.CPUInfo import CPUInfo
 from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
@@ -33,6 +33,7 @@ class RecurringAction():
         self.sitename = sitename
         self.classes = {}
         self._loadClasses()
+        self.agent = contentDB()
 
     def _loadClasses(self):
         """Load all classes"""
@@ -51,6 +52,7 @@ class RecurringAction():
         excMsg = ""
         outputDict = {'Summary': {}}
         tmpName = None
+        raiseError = False
         for tmpName, method in self.classes.items():
             try:
                 tmp = method.get()
@@ -59,6 +61,16 @@ class RecurringAction():
                     self.logger.error(msg)
                     raise ValueError(msg)
                 outputDict[tmpName] = tmp
+            except NotFoundError as ex:
+                outputDict[tmpName] = {"errorType": "NotFoundError",
+                                       "errorNo": -5,
+                                       "errMsg": str(ex),
+                                       "exception": str(ex)}
+                excMsg += f" {str(ex)}"
+                self.logger.error("%s received %s. Exception details: %s", tmpName,
+                                  outputDict[tmpName]['errorType'], outputDict[tmpName])
+                self.logger.error("This error is fatal. Will not continue to report back to FE.")
+                raiseError = True
             except Exception as ex:
                 excType, excValue = sys.exc_info()[:2]
                 outputDict[tmpName] = {"errorType": str(excType.__name__),
@@ -73,6 +85,8 @@ class RecurringAction():
             postMethod = getattr(method, 'postProcess', None)
             if postMethod:
                 outputDict = postMethod(outputDict)
+        if raiseError:
+            raise PluginException(excMsg)
         return outputDict, excMsg
 
     def appendConfig(self, dic):
@@ -93,8 +107,7 @@ class RecurringAction():
         fullUrl = getFullUrl(self.config, self.sitename)
         dic = self.appendConfig(dic)
 
-        agent = contentDB()
-        agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
+        self.agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
 
         self.logger.info('Will try to publish information to SiteFE')
         fullUrl += '/sitefe'
