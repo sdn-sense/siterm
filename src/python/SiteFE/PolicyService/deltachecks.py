@@ -11,7 +11,7 @@ import copy
 from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress
 from SiteRMLibs.ipaddr import checkOverlap as incheckOverlap
 from SiteRMLibs.ipaddr import ipOverlap as inipOverlap
-from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import getLoggingObject, getUTCnow
 from SiteRMLibs.timing import Timing
 
 
@@ -40,7 +40,7 @@ class ConflictChecker(Timing):
         """Check if Host is alive"""
         if hostname in polcls.hosts:
             updatedate = polcls.hosts[hostname]["updatedate"]
-            if updatedate < self.getUTCnow() - 300:
+            if updatedate < getUTCnow() - 300:
                 raise OverlapException(f"Host {hostname} did not update in the last 5minutes. \
                                        Cannot proceed with this request. Check Agent status for host")
 
