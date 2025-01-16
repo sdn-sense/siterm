@@ -48,6 +48,9 @@ def getParser(description):
     oparser.add_argument('--devicename', dest='devicename', default='',
                          help='Device name to start the process. Only for SwitchWorker process.')
     oparser.add_argument('--bypassstartcheck', action='store_true', help="Bypass start check. Default false", default=False)
+    # Add config param for debug level
+    oparser.add_argument('--loglevel', dest='loglevel', default=None,
+                         help="Log level. Default None")
     oparser.set_defaults(logtostdout=False)
     return oparser
 
@@ -199,11 +202,11 @@ class Daemon(DBBackend):
             self._refreshConfig()
             self.logger = getLoggingObject(config=self.config,
                                            logfile=f"{self.config.get('general', 'logDir')}/{component}/",
-                                           logLevel=self.config.get('general', 'logLevel'), logType=logType,
+                                           logLevel=self._getLogLevel(), logType=logType,
                                            service=self.component)
         else:
             self.logger = getLoggingObject(logFile=f"/var/log/{component}-",
-                                           logLevel='DEBUG', logType=logType,
+                                           logLevel=self._getLogLevel(), logType=logType,
                                            service=self.component)
         self.sleepTimers = {'ok': int(self.inargs.sleeptimeok),
                             'failure': int(self.inargs.sleeptimefailure)}
@@ -212,6 +215,12 @@ class Daemon(DBBackend):
         self.memdebug = False
         if os.getenv('SITERM_MEMORY_DEBUG'):
             self.memdebug = True
+
+    def _getLogLevel(self):
+        """Get log level."""
+        if self.inargs.loglevel:
+            return self.inargs.loglevel
+        return self.config.get('general', 'logLevel', 'DEBUG')
 
     def startready(self):
         """Check if the startup is ready"""
@@ -496,7 +505,7 @@ class Daemon(DBBackend):
                 for sitename, rthread in list(self.runThreads.items()):
                     stwork = int(getUTCnow())
                     refresh = self.autoRefreshDB(**{"sitename": sitename})
-                    self.logger.info('Start worker for %s site', sitename)
+                    self.logger.debug('Start worker for %s site', sitename)
                     try:
                         self.preRunThread(sitename, rthread)
                         self.__run(rthread)
