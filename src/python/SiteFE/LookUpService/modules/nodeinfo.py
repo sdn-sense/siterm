@@ -52,11 +52,13 @@ class NodeInfo:
     def addNodeInfo(self):
         """Add Agent Node Information"""
         jOut = getAllHosts(self.dbI)
-        for nodeHostname, nodeDict in list(jOut.items()):
+        for _nodeHostname, nodeDict in list(jOut.items()):
             # Remove node from model if it did not updated for 5 minutes:
-            if nodeDict["updatedate"] < getUTCnow() - 300:
-                self.logger.debug(f"Node {nodeHostname} did not update for 5 minutes. Removing from model")
-                continue
+            # Comment out - it wipes out all model and all provisioned information.
+            # We need a better way to handle this. TODO
+            #if nodeDict["updatedate"] < getUTCnow() - 300:
+            #    self.logger.debug(f"Node {nodeHostname} did not update for 5 minutes. Removing from model")
+            #    continue
             nodeDict["hostinfo"] = getFileContentAsJson(nodeDict["hostinfo"])
             # ==================================================================================
             # General Node Information
