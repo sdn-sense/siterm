@@ -36,13 +36,13 @@ class ConflictChecker(Timing):
         """Check if IP Overlap. Return True/False"""
         return inipOverlap(ip1, ip2, iptype)
 
-    def _checkIfHostAlive(self, polcls, nStats, hostname):
+    def _checkIfHostAlive(self, polcls, hostname):
         """Check if Host is alive"""
         if hostname in polcls.hosts:
             updatedate = polcls.hosts[hostname]["updatedate"]
             if updatedate < getUTCnow() - 300:
                 raise OverlapException(f"Host {hostname} did not update in the last 5minutes. \
-                                       Cannot proceed with this request. Check Agent status for host")
+                                       Cannot proceed with this request. Check Agent status for the host")
 
     @staticmethod
     def _checkVlanInRange(polcls, vlan, hostname):
@@ -270,6 +270,7 @@ class ConflictChecker(Timing):
 
     def checkvsw(self, cls, svc, svcitems, oldConfig, newDelta=False):
         """Check vsw Service"""
+        idstatetrack = {'modified': [], 'new': [], 'deleted': [], 'unchanged': []}
         for connID, connItems in svcitems.items():
             if connID == "_params":
                 continue
@@ -282,20 +283,24 @@ class ConflictChecker(Timing):
                     self.logger.debug(oldConfig[svc][connID])
                     self.logger.debug(connItems)
                     self.logger.debug("="*50)
+                    idstatetrack['modified'].append(connID)
                 if oldConfig[svc][connID] == connItems:
                     # No Changes - connID is same, ignoring it
+                    idstatetrack['unchanged'].append(connID)
                     continue
                 if newDelta:
                     self.checkEnd(connItems, oldConfig[svc][connID])
             elif newDelta:
                 # This is new delta and not available in oldConfig. Check that it is not in past
                 self.checkEnd(connItems, {})
+                idstatetrack['new'].append(connID)
             for hostname, hostitems in connItems.items():
                 if hostname == "_params":
                     continue
                 nStats = self._getVlanIPs(hostitems)
                 # Check if host updated frontend in the last 5minutes
-                # self._checkIfHostAlive(cls, nStats, hostname) TODO - Review this only check if new node is in request
+                if newDelta:
+                    self._checkIfHostAlive(cls, hostname)
                 # Check if vlan is in allowed list;
                 self._checkVlanInRange(cls, nStats, hostname)
                 # check if ip address with-in available ranges
@@ -326,6 +331,18 @@ class ConflictChecker(Timing):
                                 oStats.get("ipv4-address", ""),
                                 "ipv4",
                             )
+        for oldID, oldItems in oldConfig.get(svc, {}).items():
+            if oldID not in svcitems:
+                idstatetrack['deleted'].append(oldID)
+        self.logger.info(f"Summary of vsw instances: {idstatetrack}")
+        # Check all which are deleted ones only if newDelta
+        if not newDelta:
+            return
+        for connID in idstatetrack['deleted']:
+            for hostname, hostitems in oldConfig[svc][connID].items():
+                if hostname == "_params":
+                    continue
+                self._checkIfHostAlive(cls, hostname)
 
     def _checkRSTIPOverlap(self, nIPs, oIPs, iptype):
         """Check if routes overlap on diff requests"""
