@@ -100,7 +100,11 @@ class PolicyService(RDFHelper, Timing):
         allHosts = getAllHosts(self.dbI)
         for host, hostDict in allHosts.items():
             self.hosts.setdefault(host, hostDict)
-            self.hosts[host]["hostinfo"] = getFileContentAsJson(hostDict["hostinfo"])
+            for key in hostDict:
+                if key == "hostinfo":
+                    self.hosts[host]["hostinfo"] = getFileContentAsJson(hostDict["hostinfo"])
+                    continue
+                self.hosts[host][key] = hostDict[key]
         # Clean up hosts which are not in DB anymore
         for host in list(self.hosts.keys()):
             if host not in allHosts:
