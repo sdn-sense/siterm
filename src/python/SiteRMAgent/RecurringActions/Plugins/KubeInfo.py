@@ -77,9 +77,11 @@ class KubeInfo:
             if 'isAlias' in kubeLabels:
                 isAliasLabel = f"{kubeLabels['isAlias']}.{intf}"
                 if isAliasLabel in self.allLabels:
-                    # Kubernetes does not allow label's to have :. in the value, so we use --
+                    # Kubernetes does not allow label's to have :.+ in the value, so we use -- for : and --- for +
                     # In future - we might need to allow this to be controlled via config file.
-                    out.setdefault('isAlias', {}).setdefault(intf, self.allLabels[isAliasLabel].replace("--", ":"))
+                    newlabel = self.allLabels[isAliasLabel].replace("--", ":")
+                    newlabel = newlabel.replace("---", "+")
+                    out.setdefault('isAlias', {}).setdefault(intf, newlabel)
             if 'multus' in kubeLabels:
                 multusLabel = f"{kubeLabels['multus']}"
                 if multusLabel in self.allLabels:
