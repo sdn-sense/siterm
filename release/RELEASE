@@ -1,3 +1,38 @@
+1.5.1
+
+SiteRM Frontend 1.5.1 release:
+  * Ansible Juniper Junos collection first version. This collection is used to manage Juniper devices; Plugin here: https://github.com/sdn-sense/sense-junos-collection
+  * Support to add Debug IP on Network devices;
+  * Support for Multipoint Deltas inside SiteRM;
+  * Control ansible repo for development with `ANSIBLE_REPO` env variable;
+  * Liveness and Readiness enable/disable flag. In case of any error, error will be shown via docker logs or kubectl describe pod;
+  * WebUI Changes: Allow modify delta start/end; Allow force commit delta; Allow change any active request state;
+  * Database updgrades and automatic migrations from old version to new version;
+  * Monitor memory usage if `SITERM_MEMORY_DEBUG` env variable is set to `true`; Memory usage decreased for most processes 50%;
+  * Allow control httpd ports via env variables;
+  * Delta check improvements: Host alive, port available and up, vlans, ips not used by other services;
+  * Helm updates: Auto add SSH key, Include version and app in yaml;
+
+Agent 1.5.1 release:
+  * Support Prometheus federate for Autogole monitoring (in case Site already run's Node Exporters and Prometheus);
+  * Report any exceptions back to Frontend;
+  * Liveness and Readiness enable/disable flag. In case of any error, error will be shown via docker logs or kubectl describe pod;
+  * Delta check improvements: port available and up, vlan not used, ips not used by other services;
+  * Ping Fixes for splitting netmask and allow to use IPv6;
+  * Support Prometheus federate endpoints for Autogole monitoring (in case Site already run's Node Exporters and Prometheus).
+
+For all fixes and improvements, see the difference here: https://github.com/sdn-sense/siterm/compare/1.5.1...1.4.62
+
+Supported systems: x86_64 and ppc64le(beta)
+Installation details: https://sdn-sense.github.io/Installation.html
+
+Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
+Docker version for this release:
+x86_64:
+  Agent: sdnsense/site-agent-sense:latest-20250123 (Or use latest)
+  Frontend: sdnsense/site-rm-sense:latest-20250123 (Or use latest)
+
+
 1.4.62
 This release includes:
 
