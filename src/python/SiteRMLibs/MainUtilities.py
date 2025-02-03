@@ -20,6 +20,8 @@ import logging
 import logging.handlers
 import os
 import os.path
+import fcntl
+import functools
 import pwd
 import shlex
 import shutil
@@ -366,6 +368,26 @@ def getUsername():
     return pwd.getpwuid(os.getuid())[0]
 
 
+def fileLock(func):
+    """Decorator to create a lock file and wait if another process holds it."""
+    @functools.wraps(func)
+    def wrapper(outFile, *args, **kwargs):
+        lockfile = f"{outFile}.lock"
+        os.makedirs(os.path.dirname(lockfile), exist_ok=True)
+        for _ in range(10):
+            try:
+                with open(lockfile, "w", encoding="utf-8") as lock_fd:
+                    fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    try:
+                        return func(outFile, *args, **kwargs)
+                    finally:
+                        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                        os.remove(lockfile)
+            except BlockingIOError:
+                time.sleep(0.5)
+        raise TimeoutError(f"Could not acquire lock for {outFile} after 10 seconds")
+    return wrapper
+
 class contentDB:
     """File Saver, loader class."""
 
@@ -386,11 +408,9 @@ class contentDB:
         return str(newuuid4 + inputText)
 
     @staticmethod
+    @fileLock
     def dumpFileContentAsJson(outFile, content):
         """Dump File content with locks."""
-        # Check if directory exists, create if not
-        if not os.path.isdir(os.path.dirname(outFile)):
-            createDirs(outFile)
         tmpoutFile = outFile + ".tmp"
         with open(tmpoutFile, "w+", encoding="utf-8") as fd:
             json.dump(content, fd)
