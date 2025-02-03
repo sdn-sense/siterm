@@ -133,6 +133,10 @@ class Frontend(
                     f"No such API. {environ.get('PATH_INFO', '').rstrip('/')} call."
                 )
                 returnDict = getCustomOutMsg(errMsg=str(exception), errCode=501)
+        except TimeoutError as ex:
+            exception = f"Received TimeoutError: {ex}"
+            self.httpresp.ret_408("application/json", kwargs["start_response"], None)
+            returnDict = getCustomOutMsg(errMsg=str(ex), errCode=408)
         except (ModelNotFound, DeltaNotFound) as ex:
             exception = f"Received Exception: {ex}"
             self.httpresp.ret_404("application/json", kwargs["start_response"], None)
