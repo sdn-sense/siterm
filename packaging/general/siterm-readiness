@@ -6,7 +6,15 @@ import os
 import sys
 import argparse
 from datetime import datetime
-from SiteRMLibs.MainUtilities import getFileContentAsJson
+from SiteRMLibs.MainUtilities import getFileContentAsJson, timedhourcheck
+from SiteRMLibs.x509 import CertHandler
+
+def certCheker():
+    """Check if certificates are valid and ready to use."""
+    if timedhourcheck('siterm-readiness', 1):
+        return 0
+    certHandler = CertHandler()
+    return certHandler.externalCertChecker()
 
 
 def getStates():
@@ -78,4 +86,5 @@ if __name__ == "__main__":
         print("Readiness check is disabled. Exiting Use --enable to enable.")
         sys.exit(0)
     state = getStates()
+    state = state or certCheker()
     sys.exit(state)

@@ -7,6 +7,15 @@ import sys
 import argparse
 import subprocess
 from datetime import datetime
+from SiteRMLibs.MainUtilities import timedhourcheck
+from SiteRMLibs.x509 import CertHandler
+
+def certCheker():
+    """Check if certificates are valid and ready to use."""
+    if timedhourcheck('siterm-liveness', 1):
+        return 0
+    certHandler = CertHandler()
+    return certHandler.externalCertChecker()
 
 
 def checkServices():
@@ -82,7 +91,6 @@ if __name__ == "__main__":
         print("Mariadb init is still running. Exiting.")
         sys.exit(0)
 
-    if checkServices():
-        sys.exit(0)
-    else:
-        sys.exit(1)
+    state = 0 if checkServices() else 1
+    state = state or certCheker()
+    sys.exit(state)
