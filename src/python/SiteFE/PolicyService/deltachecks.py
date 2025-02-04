@@ -129,12 +129,8 @@ class ConflictChecker(Timing):
     def _checkIfVlanOverlap(self, vlan1, vlan2):
         """Check if Vlan equal. Raise error if True"""
         v1, v2 = vlan1.get('vlan', None), vlan2.get('vlan', None)
-        int1, int2 = vlan1.get('interface', None), vlan2.get('interface', None)
         if not v1 or not v2:
-            return
-        if not int1 or not int2:
-            return
-        if int1 != int2:
+            self.logger.debug(f"Vlan not available for {self.newid} or {self.oldid}. Input: {vlan1}, {vlan2}")
             return
         if v1 == v2:
             raise OverlapException(
@@ -335,7 +331,9 @@ class ConflictChecker(Timing):
         for oldID, oldItems in oldConfig.get(svc, {}).items():
             if oldID not in svcitems:
                 idstatetrack['deleted'].append(oldID)
-        self.logger.info(f"Summary of vsw instances: {idstatetrack}")
+        self.logger.info("Summary of vsw instances:")
+        for key, vals in idstatetrack.items():
+            self.logger.info(f"{key}: {vals}")
         # Check all which are deleted ones only if newDelta
         if not newDelta:
             return
