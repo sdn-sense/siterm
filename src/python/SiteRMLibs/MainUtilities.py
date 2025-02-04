@@ -763,7 +763,6 @@ def timedhourcheck(lockname, hours=1):
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as fd:
             timestamp = fd.read()
-            timestamp = ' '.join(timestamp)
             timestamp = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
             now = datetime.datetime.now()
             diff = now - timestamp
