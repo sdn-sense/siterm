@@ -260,34 +260,22 @@ class NodeInfo:
                     )
                     self._mrsLiteral(vlanuri, "type", self.shared)
 
-                    self.newGraph.add(
-                        (
+                    self.newGraph.add((
                             self.genUriRef("site", vlanuri),
                             self.genUriRef("nml", "hasLabel"),
-                            self.genUriRef("site", f"{vlanuri}:vlan"),
-                        )
-                    )
-                    self.newGraph.add(
-                        (
-                            self.genUriRef("site", f"{vlanuri}:vlan"),
+                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),))
+                    self.newGraph.add((
+                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),
                             self.genUriRef("rdf", "type"),
-                            self.genUriRef("nml", "Label"),
-                        )
-                    )
-                    self.newGraph.add(
-                        (
-                            self.genUriRef("site", f"{vlanuri}:vlan"),
+                            self.genUriRef("nml", "Label"),))
+                    self.newGraph.add((
+                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),
                             self.genUriRef("nml", "labeltype"),
-                            self.genUriRef("schema", "#vlan"),
-                        )
-                    )
-                    self.newGraph.set(
-                        (
-                            self.genUriRef("site", f"{vlanuri}:vlan"),
+                            self.genUriRef("schema", "#vlan"),))
+                    self.newGraph.set((
+                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),
                             self.genUriRef("nml", "value"),
-                            self.genLiteral(str(vlanDict["vlanid"])),
-                        )
-                    )
+                            self.genLiteral(str(vlanDict["vlanid"])),))
                     # Add hasNetworkAddress for vlan
                     self.addIntfInfo(vlanDict, vlanuri)
                     # Now the mapping of the interface information:

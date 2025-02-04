@@ -139,7 +139,7 @@ class ConflictChecker(Timing):
         if v1 == v2:
             raise OverlapException(
                 f"New Request VLANs Overlap on same controlled resources. \
-                                   Overlap resources: {self.newid} and {self.oldid}"
+                  Vlan {vlan1} already used by {self.oldid}. New Request {self.newid} not allowed"
             )
 
     def _checkIfIPOverlap(self, ip1, ip2, iptype):
@@ -148,7 +148,7 @@ class ConflictChecker(Timing):
         if overlap:
             raise OverlapException(
                 f"New Request {iptype} overlap on same controlled resources. \
-                                   Overlap resources: {self.newid} and {self.oldid}"
+                  {iptype} IP {ip1} already used by {self.oldid}. New Request {self.newid} not allowed"
             )
 
     def _checkIfIPRouteAll(self, polcls, ipval, iptype, hostname):

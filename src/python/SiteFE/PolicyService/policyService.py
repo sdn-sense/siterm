@@ -419,7 +419,7 @@ class PolicyService(RDFHelper, Timing):
                 continue
             vals = scanVals.setdefault(name, {})
             vals["uri"] = str(item)
-            vals["type"] = "|".join([str(item) for item in out1])
+            vals["type"] = "|".join([str(item) for item in sorted(out1)])
             out2 = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}value"))
             if out2:
                 vals["value"] = str(out2[0])
