@@ -16,7 +16,6 @@ def certCheker():
     certHandler = HostCertHandler()
     return certHandler.externalCertChecker()
 
-
 def getStates():
     """Get the states of all services and return the exit code"""
     directory = '/tmp/siterm-states/'
