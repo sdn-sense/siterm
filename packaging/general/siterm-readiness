@@ -7,13 +7,13 @@ import sys
 import argparse
 from datetime import datetime
 from SiteRMLibs.MainUtilities import getFileContentAsJson, timedhourcheck
-from SiteRMLibs.x509 import CertHandler
+from SiteRMLibs.hostcert import HostCertHandler
 
 def certCheker():
     """Check if certificates are valid and ready to use."""
     if timedhourcheck('siterm-readiness', 1):
         return 0
-    certHandler = CertHandler()
+    certHandler = HostCertHandler()
     return certHandler.externalCertChecker()
 
 
