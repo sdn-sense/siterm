@@ -755,3 +755,26 @@ def getArpVals():
             'Flags': parts[-1]
         }
         yield block
+
+
+def timedhourcheck(lockname, hours=1):
+    """Timed Lock for file."""
+    filename = f'/tmp/siterm-timed-lock-{lockname}'
+    if os.path.exists(filename):
+        with open(filename, 'r', encoding='utf-8') as fd:
+            timestamp = fd.read()
+            timestamp = ' '.join(timestamp)
+            timestamp = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            now = datetime.datetime.now()
+            diff = now - timestamp
+            if diff.days < hours:
+                return False
+    else:
+        try:
+            with open(filename, 'w', encoding='utf-8') as fd:
+                timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                fd.write(timestamp)
+        except OSError as ex:
+            print(f"Error creating timestamp file: {ex}. Will return False for timedhourcheck")
+            return False
+    return True
