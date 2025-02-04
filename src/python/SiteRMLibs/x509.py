@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from OpenSSL import crypto
 from SiteRMLibs.GitConfig import getGitConfig
 
+
 class CertHandler():
     """Cert handler."""
     def __init__(self):
@@ -97,7 +98,8 @@ class CertHandler():
         # Check DN in authorized list
         return self.checkAuthorized(environ)
 
-    def loadCACerts(self, capath):
+    @staticmethod
+    def loadCACerts(capath):
         """Load CA certificates."""
         # Load CA certificates from /etc/grid-security/certificates
         store = crypto.X509Store()
@@ -147,7 +149,6 @@ class CertHandler():
             out['failure'] = f"Certificate and key verification failed at general: {ex}"
         return out
 
-
     def externalCertChecker(self):
         """Call for External service like Readiness/Liveness"""
         exitCode = 0
@@ -155,7 +156,7 @@ class CertHandler():
                           ('/etc/httpd/certs/cert.pem', '/etc/httpd/certs/privkey.pem')]:
             certCheck = self.validateHostCertKey(cert, key)
             timestampnow = int(datetime.now().timestamp())
-            if certCheck.get('failure', None):
+            if certCheck.get('failure', False):
                 print(f"Certificate check failed. Error: {certCheck['failure']}")
                 exitCode = 2
             if certCheck['notAfter'] < timestampnow:
