@@ -50,7 +50,7 @@ class SwitchInfo():
                 self.addToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['nml', 'labeltype'],
                                 ['schema', '#vlan'])
-                vlanRange = self.self.filterOutAvailbVlans(switchName, portSwitch['vlan_range_list'])
+                vlanRange = self.filterOutAvailbVlans(switchName, portSwitch['vlan_range_list'])
                 self.setToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['nml', 'values'],
                                 [",".join(map(str, vlanRange))])
