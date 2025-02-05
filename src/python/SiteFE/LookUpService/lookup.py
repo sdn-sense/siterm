@@ -124,6 +124,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.activeDeltas = {}
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {'vlans': {}, 'ips': {}}
+        self.usedVlans = {'deltas': {}, 'system': {}}
         for dirname in ['LookUpService', 'SwitchWorker']:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
@@ -161,6 +162,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                             self.URIs['vlans'].setdefault(host, {})
                             self.URIs['vlans'][host].setdefault(port, {})
                             self.URIs['vlans'][host][port][int(vlan)] = reqDict['uri']
+                            # Add vlan into used vlans list
+                            self.usedVlans['deltas'].setdefault(host, [])
+                            if int(vlan) not in self.usedVlans['deltas'][host]:
+                                self.usedVlans['deltas'][host].append(int(vlan))
                     self._getIPURIs(reqDict, 'ipv4')
                     self._getIPURIs(reqDict, 'ipv6')
 
@@ -253,6 +258,22 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                         self.logger.error(f"Got OS Error writing {fname}. {ex}")
                         time.sleep(1)
 
+    def filterOutAvailbVlans(self, hostname, vlanrange):
+        """Filter out available vlans for a hostname."""
+        self.logger.debug(f"Filtering out available vlans for {hostname}.")
+        if hostname in self.usedVlans.get('deltas', {}):
+            self.logger.debug(f"Filtering out deltas vlans for {hostname}. Used by deltas: {self.usedVlans['deltas'][hostname]}")
+            for vlan in self.usedVlans['deltas'][hostname]:
+                if vlan in vlanrange:
+                    vlanrange.remove(vlan)
+        if hostname in self.usedVlans.get('system', {}):
+            self.logger.debug(f"Filtering out system vlans for {hostname}. Used by system: {self.usedVlans['system'][hostname]}")
+            for vlan in self.usedVlans['system'][hostname]:
+                if vlan in vlanrange:
+                    vlanrange.remove(vlan)
+        self.logger.debug(f"Remaining available vlans for {hostname} are {vlanrange}")
+        return vlanrange
+
     def startwork(self):
         """Main start."""
         self.logger.info("Started LookupService work")
@@ -264,6 +285,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.multiworker.startwork()
         self.activeDeltas = getActiveDeltas(self)
         self.URIs = {'vlans': {}, 'ips': {}} # Reset URIs
+        self.usedVlans = {'deltas': {}, 'system': {}} # Reset used vlans
         self._getUniqueVlanURIs('vsw')
         self._getUniqueVlanURIs('kube')
         self.newGraph = Graph()

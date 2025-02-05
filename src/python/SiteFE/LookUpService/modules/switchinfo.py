@@ -50,9 +50,10 @@ class SwitchInfo():
                 self.addToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['nml', 'labeltype'],
                                 ['schema', '#vlan'])
+                vlanRange = self.self.filterOutAvailbVlans(switchName, portSwitch['vlan_range_list'])
                 self.setToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['nml', 'values'],
-                                [",".join(map(str, portSwitch['vlan_range_list']))])
+                                [",".join(map(str, vlanRange))])
                 # Generate host alias or adds' isAlias
                 self._addIsAlias(uri=newuri, isAlias=portSwitch.get('isAlias'), hostname=switchName, portName=portName, nodetype='switch')
             elif key == 'channel-member':
@@ -232,11 +233,23 @@ class SwitchInfo():
                         out['value'] = route['from']
                         self._addRouteEntry(**out)
 
+    def __recordSwitchUsedVlans(self, switchInfo):
+        """Add Switch Used Vlans"""
+        for switchName, switchDict in list(switchInfo['vlans'].items()):
+            self.logger.debug(f'Adding Switch Used Vlans {switchName}')
+            for _portName, portSwitch in list(switchDict.items()):
+                vlanid = portSwitch.get('value', None)
+                if vlanid:
+                    self.usedVlans['system'].setdefault(switchName, [])
+                    self.usedVlans['system'][switchName].append(int(vlanid))
+
+
     def addSwitchInfo(self):
         """Add All Switch information from switch Backends plugin."""
         # Get switch information...
         switchInfo = self.switch.getinfo()
-        # Add Switch information to MRML
+        # Add Switch information to
+        self.__recordSwitchUsedVlans(switchInfo)
         self._addSwitchPortInfo('ports', switchInfo)
         self._addSwitchVlanInfo('vlans', switchInfo)
         self._addSwitchLldpInfo(switchInfo)

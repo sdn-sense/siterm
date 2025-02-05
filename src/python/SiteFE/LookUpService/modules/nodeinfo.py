@@ -49,17 +49,28 @@ class NodeInfo:
         )
         return strtolist(rstsEnabled, ",")
 
+    def __recordHostUsedVlans(self, nodeDict):
+        """Record all host used vlans"""
+        # Record used vlans
+        for _intfKey, intfDict in list(nodeDict.get('hostinfo', {}).get("NetInfo", {}).get("interfaces", {}).items()):
+            if "vlans" in intfDict and intfDict["vlans"]:
+                for _vlanName, vlanDict in list(intfDict["vlans"].items()):
+                    vlanid = vlanDict.get("vlanid", None)
+                    if vlanid is None:
+                        continue
+                    self.usedVlans['system'].setdefault(nodeDict['hostname'], [])
+                    if vlanid not in self.usedVlans['system'][nodeDict['hostname']]:
+                        self.usedVlans['system'][nodeDict['hostname']].append(vlanid)
+
     def addNodeInfo(self):
         """Add Agent Node Information"""
         jOut = getAllHosts(self.dbI)
         for _nodeHostname, nodeDict in list(jOut.items()):
-            # Remove node from model if it did not updated for 5 minutes:
-            # Comment out - it wipes out all model and all provisioned information.
-            # We need a better way to handle this. TODO
-            #if nodeDict["updatedate"] < getUTCnow() - 300:
-            #    self.logger.debug(f"Node {nodeHostname} did not update for 5 minutes. Removing from model")
-            #    continue
             nodeDict["hostinfo"] = getFileContentAsJson(nodeDict["hostinfo"])
+            # ==================================================================================
+            # Record used vlans
+            # ==================================================================================
+            self.__recordHostUsedVlans(nodeDict)
             # ==================================================================================
             # General Node Information
             # ==================================================================================
@@ -187,10 +198,11 @@ class NodeInfo:
                  self.genUriRef("nml", "labeltype"),
                  self.genUriRef("schema", "#vlan"),
                 ))
+            vlanRange = self.self.filterOutAvailbVlans(hostname, intfDict['vlan_range_list'])
             self._nmlLiteral(
                 f"{newuri}:vlan-range",
                 "values",
-                ",".join(map(str, intfDict["vlan_range_list"])),
+                ",".join(map(str, vlanRange)),
             )
 
         self.shared = "notshared"
