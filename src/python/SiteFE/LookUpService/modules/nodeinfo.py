@@ -198,7 +198,7 @@ class NodeInfo:
                  self.genUriRef("nml", "labeltype"),
                  self.genUriRef("schema", "#vlan"),
                 ))
-            vlanRange = self.self.filterOutAvailbVlans(hostname, intfDict['vlan_range_list'])
+            vlanRange = self.filterOutAvailbVlans(hostname, intfDict['vlan_range_list'])
             self._nmlLiteral(
                 f"{newuri}:vlan-range",
                 "values",
