@@ -110,6 +110,11 @@
     }))}
 </script>
 <script>
+
+  function normalizeKey(str) {
+      return str.toLowerCase().replace(/\s+/g, '');
+  }
+
   function filterSelect(name){
     var input = []
     inputSelect = document.getElementById(name);
@@ -145,16 +150,18 @@
     tmpid = 0;
   for (var x=Object.keys(data),i=0;i<x.length,key=x[i],value=data[key];i++){
   if(filterAddItem(key, value["DeviceInfo"]["type"], filterswitch, filterserver)) {
-    topologyData["nodes"].push({
-      "id": value["_id"],
-      "name": key,
-      "icontype": value["DeviceInfo"]["type"]
-    })
+    tmpdata = {"id": value["_id"], "name": key, "icontype": value["DeviceInfo"]["type"]}
+    if (value["DeviceInfo"]["type"] === "cloud") {
+      tmpdata["isAlias"] = value["DeviceInfo"]["name"]
+    }
+    topologyData["nodes"].push(tmpdata)
 
     for (var l = Object.keys(data[key]["topo"]), j = 0; j < x.length, intkey = l[j], intval = data[key]["topo"][intkey]; j++) {
       if(filterAddItem(intval["device"], 'switch', filterswitch, filterserver) || filterAddItem(intval["device"], 'server', filterswitch, filterserver)) {
         linkkey = key + " " + intkey + " " + intval["device"] + " " + intval["port"]
+        linkkey = normalizeKey(linkkey)
         linkkey1 = intval["device"] + " " + intval["port"] + " " + key + " " + intkey
+        linkkey1 = normalizeKey(linkkey1)
         if (linkkey in links && linkkey1 in links) {
           linkid = links[linkkey]
         } else {
