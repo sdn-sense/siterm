@@ -72,7 +72,7 @@ class RoutingService():
 
     def _getDefaultBGP(self, host):
         """Default yaml dict setup"""
-        tmpD = self.yamlconfuuid.setdefault('rst', {}).setdefault(self.connID, {})
+        tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(self.connID, {})
         tmpD = tmpD.setdefault(host, {})
         tmpD = tmpD.setdefault('sense_bgp', {})
         tmpD['asn'] = self.getConfigValue(host, 'private_asn')
@@ -155,8 +155,8 @@ class RoutingService():
 
     def addrst(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for rst)"""
-        if 'rst' in activeConfig:
-            for connID, connDict in activeConfig['rst'].items():
+        if self.acttype in activeConfig:
+            for connID, connDict in activeConfig[self.acttype].items():
                 self.connID = connID
                 self._addparamsrst(connDict, switches)
                 if self.firstrun and connID not in self.forceapply:
@@ -164,7 +164,7 @@ class RoutingService():
 
     def compareBGP(self, switch, runningConf, uuid):
         """Compare L3 BGP"""
-        tmpD = self.yamlconfuuid.setdefault("rst", {}).setdefault(uuid, {}).setdefault(switch, {})
+        tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault('sense_bgp', {})
         # If equal - return no difference
         if tmpD == runningConf:

@@ -78,7 +78,7 @@ class VirtualSwitchingService:
 
     def __getdefaultVlan(self, host, port, portDict):
         """Default yaml dict setup"""
-        tmpD = self.__getdefaultIntf(host)
+        tmpD = self.__getdefaultIntf(host, self.acttype)
         vlan = self.__getVlanID(host, port, portDict)
         vlanName = f"Vlan{vlan}"
         vlanDict = tmpD.setdefault(vlanName, {})
@@ -169,8 +169,8 @@ class VirtualSwitchingService:
 
     def addvsw(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for vsw)"""
-        if "vsw" in activeConfig:
-            for connID, connDict in activeConfig["vsw"].items():
+        if self.acttype in activeConfig:
+            for connID, connDict in activeConfig[self.acttype].items():
                 self.connID = connID
                 if not self.checkIfStarted(connDict):
                     self.logger.info(f"{connID} has not started yet. Not adding to apply list")
@@ -209,7 +209,7 @@ class VirtualSwitchingService:
     def compareVsw(self, switch, runningConf, uuid):
         """Compare expected and running conf"""
         different = False
-        tmpD = self.yamlconfuuid.setdefault("vsw", {}).setdefault(uuid, {}).setdefault(switch, {})
+        tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault("interface", {})
         # If equal - return no difference
         if tmpD == runningConf:

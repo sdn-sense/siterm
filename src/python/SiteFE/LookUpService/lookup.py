@@ -125,6 +125,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {'vlans': {}, 'ips': {}}
         self.usedVlans = {'deltas': {}, 'system': {}}
+        self.usedIPs = {'deltas': {'ipv4': [], 'ipv6': []}, 'system': {'ipv4': [], 'ipv6': []}}
         for dirname in ['LookUpService', 'SwitchWorker']:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
@@ -142,6 +143,11 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         if 'hasNetworkAddress' in indict and f'{iptype}-address' in indict['hasNetworkAddress']:
             uri = indict['hasNetworkAddress'][f'{iptype}-address'].get('uri', '')
             ip = indict['hasNetworkAddress'][f'{iptype}-address'].get('value', '')
+            if ip:
+                ip = normalizedip(ip)
+                self.usedIPs['deltas'].setdefault(iptype, [])
+                if ip not in self.usedIPs['deltas'][iptype]:
+                    self.usedIPs['deltas'][iptype].append(ip)
             if uri and ip:
                 self.URIs['ips'].setdefault(normalizedip(ip), indict['hasNetworkAddress'][f'{iptype}-address'])
 
@@ -286,8 +292,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.activeDeltas = getActiveDeltas(self)
         self.URIs = {'vlans': {}, 'ips': {}} # Reset URIs
         self.usedVlans = {'deltas': {}, 'system': {}} # Reset used vlans
-        self._getUniqueVlanURIs('vsw')
-        self._getUniqueVlanURIs('kube')
+        self.usedIPs = {'deltas': {'ipv4': [], 'ipv6': []}, 'system': {'ipv4': [], 'ipv6': []}} # Reset used IPs
+        for key in ['vsw', 'kube', 'singleport']:
+            self._getUniqueVlanURIs(key)
         self.newGraph = Graph()
         # ==================================================================================
         # 1. Define Basic MRML Prefixes
