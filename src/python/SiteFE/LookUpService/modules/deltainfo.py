@@ -211,6 +211,9 @@ class DeltaInfo():
         # Add Kube Info (for hosts without vsw)
         for urn, vals in self.activeDeltas.get('output', {}).get('kube', {}).items():
             self.addvswInfo(vals, urn)
+        # Add Single port info
+        for urn, vals in self.activeDeltas.get('output', {}).get('singleport', {}).items():
+            self.addvswInfo(vals, urn)
         # Routing Service Info
         self.addRouteTables()
         self.addRoutes()

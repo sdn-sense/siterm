@@ -241,6 +241,16 @@ class PolicyService(RDFHelper, Timing):
                     connOut = out["kube"].setdefault(str(connID), {})
                     self.parseL2Ports(gIn, URIRef(connID), connOut)
                     self.kube = False
+        # Parse single port which are not connected to any service;
+        for switchName in self.config.get(self.sitename, "switch"):
+            for portName in self.config.get(switchName, "ports"):
+                connID = f"{self.prefixes['site']}:{switchName}:{portName}"
+                if connID in self.scannedPorts:
+                    continue
+                out.setdefault("singleport", {})
+                connOut = out["singleport"].setdefault(str(connID), {})
+                self.parseL2Ports(gIn, URIRef(connID), connOut)
+        # Loop via all switches and their ports, generate connection id and parse L2 ports
         return out
 
     def getRoute(self, gIn, connID, returnout):

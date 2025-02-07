@@ -57,6 +57,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         self.activeOutput = {"output": {}}
         self.forceapply = []
         self.firstrun = False
+        self.acttype = None
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -82,8 +83,13 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
 
     def prepareYamlConf(self, activeConfig, switches):
         """Prepare yaml config"""
+        self.acttype = "vsw"
         self.addvsw(activeConfig, switches)
+        self.acttype = "singleport"
+        self.addvsw(activeConfig, switches)
+        self.acttype = "rst"
         self.addrst(activeConfig, switches)
+        self.acttype = None
 
     def applyConfig(self, raiseExc=True, hosts=None, subitem=""):
         """Apply yaml config on Switch"""
@@ -141,7 +147,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
 
     def __reportDeltaState(self, **kwargs):
         """Report state to db (requires diff reporting based on vsw/rst)"""
-        if kwargs["acttype"] == "vsw" and kwargs.get("applied", None):
+        if kwargs["acttype"] in ["vsw", "singleport"] and kwargs.get("applied"):
             for _key, items in kwargs["applied"].items():
                 tmpkwargs = copy.deepcopy(kwargs)
                 tmpkwargs["uuidstate"] = self.__identifyReportState(items, **kwargs)
@@ -206,7 +212,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         """Compare individual entries and report it's status"""
         changed = False
         for acttype, actcalls in {"vsw": {"interface": self.compareVsw},
-                                  "rst": {"sense_bgp": self.compareBGP}}.items():
+                                  "rst": {"sense_bgp": self.compareBGP},
+                                  "singleport": {"interface": self.compareVsw}}.items():
+            self.acttype = acttype
             uuidDict = self.yamlconfuuidActive.get(acttype, {})
             if not self.yamlconfuuidActive:
                 uuidDict = self.yamlconfuuid.get(acttype, {})
