@@ -292,7 +292,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.activeDeltas = getActiveDeltas(self)
         self.URIs = {'vlans': {}, 'ips': {}} # Reset URIs
         self.usedVlans = {'deltas': {}, 'system': {}} # Reset used vlans
-        self.usedIPs = {'deltas': {'ipv4': [], 'ipv6': []}, 'system': {'ipv4': [], 'ipv6': []}} # Reset used IPs
+        self.usedIPs = {'deltas': {'ipv4': [], 'ipv6': []}, 'system': {'ipv4': [], 'ipv6': []}}  # Reset used IPs
         for key in ['vsw', 'kube', 'singleport']:
             self._getUniqueVlanURIs(key)
         self.newGraph = Graph()

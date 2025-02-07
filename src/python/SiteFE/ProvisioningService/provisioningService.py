@@ -147,7 +147,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
 
     def __reportDeltaState(self, **kwargs):
         """Report state to db (requires diff reporting based on vsw/rst)"""
-        if kwargs["acttype"] in ["vsw", "singleport"] and kwargs.get("applied", None):
+        if kwargs["acttype"] in ["vsw", "singleport"] and kwargs.get("applied"):
             for _key, items in kwargs["applied"].items():
                 tmpkwargs = copy.deepcopy(kwargs)
                 tmpkwargs["uuidstate"] = self.__identifyReportState(items, **kwargs)

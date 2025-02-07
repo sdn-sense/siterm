@@ -245,7 +245,7 @@ class PolicyService(RDFHelper, Timing):
         for switchName in self.config.get(self.sitename, "switch"):
             for portName in self.config.get(switchName, "ports"):
                 connID = f"{self.prefixes['site']}:{switchName}:{portName}"
-                if connID  in self.scannedPorts:
+                if connID in self.scannedPorts:
                     continue
                 out.setdefault("singleport", {})
                 connOut = out["singleport"].setdefault(str(connID), {})
