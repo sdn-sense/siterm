@@ -79,6 +79,20 @@ class KubeInfo:
                 alarm = f"Interface {key} not found in Host. Either interface does not exist or NetInfo Plugin failed."
                 alarm += "Please make sure that interface exists and same interface name defined in git configuration file."
                 raise PluginFatalException(alarm)
+        # And finally, check if all info now is present for all Interfaces
+        for key, intfData in data.get('NetInfo', {}).get('interfaces', {}).items():
+            if not intfData.get('switch_port'):
+                alarm = f"Interface {key} has no switch port defined, nor was available from Kube (in case Kube install)!"
+                alarm += "Please make sure that interface exists and same interface name defined in git configuration file."
+                alarm += "If you are using Kube, make sure that Kube Labels are defined correctly."
+                alarm += f"KubeInfo: {self._identifyKubeLabelsisAlias(key)}"
+                raise PluginFatalException(alarm)
+            if not intfData.get('switch'):
+                alarm = f"Interface {key} has no switch defined, nor was available from Kube (in case Kube install)!"
+                alarm += "Please make sure that interface exists and same interface name defined in git configuration file."
+                alarm += "If you are using Kube, make sure that Kube Labels are defined correctly."
+                alarm += f"KubeInfo: {self._identifyKubeLabelsisAlias(key)}"
+                raise PluginFatalException(alarm)
         return data
 
     def get(self, **_kwargs):
