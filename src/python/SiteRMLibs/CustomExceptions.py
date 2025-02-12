@@ -114,6 +114,9 @@ class PluginException(ExceptionTemplate):
     """Plugin Exception."""
 
 
+class PluginFatalException(ExceptionTemplate):
+    """Plugin Fatal Exception."""
+
 class OverlapException(ExceptionTemplate):
     """Overlap Exception."""
 
