@@ -12,6 +12,7 @@ from kubernetes import config as k8sconfig
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
+from SiteRMLibs.CustomExceptions import PluginFatalException
 
 class KubeInfo:
     """KubeInfo Plugin"""
@@ -21,6 +22,7 @@ class KubeInfo:
         self.logger = logger if logger else getLoggingObject(config=self.config, service='Agent')
         self.hostname = self.config.get('agent', 'hostname')
         self.allLabels = {}
+        self.failedLabels = {}
 
     def _getAllLabels(self, hostname):
         # Load kubeconfig from default location or in-cluster configuration
@@ -32,6 +34,19 @@ class KubeInfo:
         # Extract and return node labels
         self.allLabels = node.metadata.labels
 
+    def _identifyKubeLabelsisAlias(self, interface):
+        """Identify which kubelabels are defined"""
+        errormsg = ""
+        if self.failedLabels.get('isAlias'):
+            # Find all labels that start with isAlias
+            isAliasLabel = self.config.get(interface, "kubeLabels").get('isAlias')
+            if isAliasLabel:
+                for label, labelval in self.allLabels.items():
+                    if label.startswith(isAliasLabel):
+                        errormsg += f"Kube Labels: Label {label} | Value {labelval}"
+        return errormsg
+
+
     def postProcess(self, data):
         """Post process data"""
         for key, val in data.get('KubeInfo', {}).get('isAlias', {}).items():
@@ -41,21 +56,29 @@ class KubeInfo:
             if data.get('NetInfo', {}).get('interfaces', {}).get(key, {}):
                 # if isAlias is defined - than it is an issue which one to use. Leave one from NetInfo
                 if data.get('NetInfo', {}).get('interfaces', {}).get(key, {}).get('isAlias'):
-                    self.logger.error(f"Interface {key} already has isAlias (and we get it from Kube Labels. Which one is right?")
-                else:
-                    data['NetInfo']['interfaces'][key]['isAlias'] = val
+                    alarm = f"Interface {key} already has isAlias in git config (and we get it from Kube Labels. Which one is right?"
+                    alarm += f"NetInfo: {data.get('NetInfo', {}).get('interfaces', {}).get(key, {}).get('isAlias')}"
+                    alarm += f"KubeInfo: {self._identifyKubeLabelsisAlias(key)}"
+                    raise PluginFatalException(alarm)
+                data['NetInfo']['interfaces'][key]['isAlias'] = val
                 # if switch_port is defined - than it is an issue which one to use. Leave one from NetInfo
                 if data.get('NetInfo', {}).get('interfaces', {}).get(key, {}).get('switch_port'):
-                    self.logger.error(f"Interface {key} already has switch port (and we get it from Kube Labels. Which one is right?")
-                else:
-                    data['NetInfo']['interfaces'][key]['switch_port'] = replaceSpecialSymbols(port, reverse=True)
+                    alarm = f"Interface {key} already has switch port in git config (and we get it from Kube Labels. Which one is right?"
+                    alarm += f"NetInfo: {data.get('NetInfo', {}).get('interfaces', {}).get(key, {}).get('switch_port')}"
+                    alarm += f"KubeInfo: {self._identifyKubeLabelsisAlias(key)}"
+                    raise PluginFatalException(alarm)
+                data['NetInfo']['interfaces'][key]['switch_port'] = replaceSpecialSymbols(port, reverse=True)
                 # if port is defined - than it is an issue which one to use. Leave one from NetInfo
                 if data.get('NetInfo', {}).get('interfaces', {}).get(key, {}).get('switch'):
-                    self.logger.error(f"Interface {key} already has switch (and we get it from Kube Labels. Which one is right?")
-                else:
-                    data['NetInfo']['interfaces'][key]['switch'] = switch
+                    alarm = f"Interface {key} already has switch in git config (and we get it from Kube Labels. Which one is right?"
+                    alarm += f"NetInfo: {data.get('NetInfo', {}).get('interfaces', {}).get(key, {}).get('switch')}"
+                    alarm += f"KubeInfo: {self._identifyKubeLabelsisAlias(key)}"
+                    raise PluginFatalException(alarm)
+                data['NetInfo']['interfaces'][key]['switch'] = switch
             else:
-                self.logger.error(f"Interface {key} not found in NetInfo. Failed NetInfo plugin?")
+                alarm = f"Interface {key} not found in Host. Either interface does not exist or NetInfo Plugin failed."
+                alarm += "Please make sure that interface exists and same interface name defined in git configuration file."
+                raise PluginFatalException(alarm)
         return data
 
     def get(self, **_kwargs):
@@ -82,10 +105,14 @@ class KubeInfo:
                     newlabel = self.allLabels[isAliasLabel].replace("---", "+")
                     newlabel = newlabel.replace("--", ":")
                     out.setdefault('isAlias', {}).setdefault(intf, newlabel)
+                else:
+                    self.failedLabels['isAlias'] = True
             if 'multus' in kubeLabels:
                 multusLabel = f"{kubeLabels['multus']}"
                 if multusLabel in self.allLabels:
                     out.setdefault('multus', {}).setdefault(intf, self.allLabels[multusLabel])
+            else:
+                self.failedLabels['multus'] = True
         return out
 
 if __name__ == "__main__":

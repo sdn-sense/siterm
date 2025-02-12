@@ -13,7 +13,7 @@ from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.CustomExceptions import PluginException, NotFoundError
+from SiteRMLibs.CustomExceptions import PluginException, NotFoundError, PluginFatalException
 from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
 from SiteRMAgent.RecurringActions.Plugins.CPUInfo import CPUInfo
 from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
@@ -82,9 +82,13 @@ class RecurringAction():
                                      outputDict[tmpName]['errorType'], outputDict[tmpName])
         # Post processing of output (allows any class to modify output based on other Plugins output)
         for tmpName, method in self.classes.items():
-            postMethod = getattr(method, 'postProcess', None)
-            if postMethod:
-                outputDict = postMethod(outputDict)
+            try:
+                postMethod = getattr(method, 'postProcess', None)
+                if postMethod:
+                    outputDict = postMethod(outputDict)
+            except PluginFatalException:
+                self.logger.error("Plugin %s raised fatal exception. Will not continue to report back to FE.", tmpName)
+                raiseError = True
         if raiseError:
             raise PluginException(excMsg)
         return outputDict, excMsg
