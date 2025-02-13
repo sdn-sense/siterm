@@ -182,8 +182,17 @@ class Switch:
             .get("res", {})
             .get("ansible_facts", {})
             .get("ansible_net_interfaces", {})
-            .keys()
-        )
+            .keys())
+
+    def getPortMembers(self, inData, port):
+        """Get port members from ansible output"""
+        return (
+            inData.get("event_data", {})
+            .get("res", {})
+            .get("ansible_facts", {})
+            .get("ansible_net_interfaces", {})
+            .get(port, {})
+            .get("channel-member", []))
 
     @staticmethod
     def getportdata(inData, port):

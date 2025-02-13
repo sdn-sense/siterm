@@ -23,7 +23,7 @@ from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to ge
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteRMLibs.Backends.main import Switch
-from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress
+from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress, NotFoundError
 from SiteRMLibs.MainUtilities import (
     contentDB, createDirs, decodebase64, dictSearch,
     evaldict, getActiveDeltas, getAllHosts, getCurrentModel,
@@ -81,6 +81,7 @@ class PolicyService(RDFHelper, Timing):
         self.newActive = {}
         self._refreshHosts()
         self.kube = False
+        self.singleport = False
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -242,15 +243,19 @@ class PolicyService(RDFHelper, Timing):
                     self.parseL2Ports(gIn, URIRef(connID), connOut)
                     self.kube = False
         # Parse single port which are not connected to any service;
-        for switchName in self.config.get(self.sitename, "switch"):
-            for portName in self.config.get(switchName, "ports"):
-                connID = f"{self.prefixes['site']}:{switchName}:{portName}"
+        self.singleport = True
+        for switchName in self.switch.getAllSwitches():
+            for portName in self.switch.getAllAllowedPorts(switchName):
+                connID = f"{self.prefixes['site']}:{switchName}:{self.switch.getSystemValidPortName(portName)}"
                 if connID in self.scannedPorts:
                     continue
                 out.setdefault("singleport", {})
                 connOut = out["singleport"].setdefault(str(connID), {})
-                self.parseL2Ports(gIn, URIRef(connID), connOut)
-        # Loop via all switches and their ports, generate connection id and parse L2 ports
+                try:
+                    self.parseL2Ports(gIn, URIRef(connID), connOut)
+                except NotFoundError:
+                    del out["singleport"][str(connID)]
+        self.singleport = False
         return out
 
     def getRoute(self, gIn, connID, returnout):
@@ -346,7 +351,7 @@ class PolicyService(RDFHelper, Timing):
                             "belongsToRoutingTable", str(connectionID)
                         )
 
-    def _hasTags(self, gIn, bidPort, returnout):
+    def _hasTags(self, gIn, bidPort, returnout, portScan=False):
         """Query Graph and get Tags"""
         scanVals = returnout.setdefault("_params", {})
         for tag, pref in {"tag": "mrs", "belongsTo": "nml", "encoding": "nml"}.items():
@@ -358,6 +363,10 @@ class PolicyService(RDFHelper, Timing):
             )
             if out:
                 scanVals[tag] = str("|".join(out))
+        # In case it is portScan, which is == self.singleport
+        # We check if tag is found. If no tag found - raise NotFoundError
+        if portScan and not scanVals.get('tag'):
+            raise NotFoundError('PortScan is true and tag not found. Will not add interface')
         # Get network status if exists
         self.getHasNetworkStatus(gIn, bidPort, returnout)
 
@@ -501,7 +510,7 @@ class PolicyService(RDFHelper, Timing):
                 # Get time scheduling information from delta
                 self.getTimeScheduling(gIn, bidPort, portOut)
                 # Get all tags for Port
-                self._hasTags(gIn, bidPort, portOut)
+                self._hasTags(gIn, bidPort, portOut, self.singleport)
                 # Get All Labels
                 self._hasLabel(gIn, bidPort, portOut)
                 # Get all Services

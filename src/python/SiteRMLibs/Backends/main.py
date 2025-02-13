@@ -171,6 +171,15 @@ class Switch(Node):
             return [switchName] if switchName in self.output["switches"] else []
         return self.output["switches"].keys()
 
+    def getAllAllowedPorts(self, switchName):
+        """Get All Allowed Ports for switch"""
+        ports, _, portIgnore = getConfigParams(self.config, switchName, self)
+        return ports if not portIgnore else [x for x in ports if x not in portIgnore]
+
+    def getPortMembers(self, switchName, portName):
+        """Get Port Members"""
+        return self.plugin.getPortMembers(self.switches["output"][switchName], portName)
+
     def _insertToDB(self, data):
         """Insert to database new switches data"""
         self._getDBOut()
