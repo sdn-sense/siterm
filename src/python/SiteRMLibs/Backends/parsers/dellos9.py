@@ -10,14 +10,13 @@ Authors:
 
 Date: 2021/12/01
 """
-import re
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.ipaddr import normalizedip
+
 
 class DellOS9():
     """Dell OS 9 Parser"""
     def __init__(self, **kwargs):
         self.factName = ['sense.dellos9.dellos9_facts']
         self.defVlanNaming = 'Vlan%(vlanid)s'
+
 
 MODULE = DellOS9
