@@ -97,6 +97,11 @@ class Switch:
         ].keys()
 
     @staticmethod
+    def getPortMembers(inData, port):
+        """RAW device does not support port members"""
+        return []
+
+    @staticmethod
     def getportdata(inData, port):
         """Get port data from output"""
         # In RAW plugin - there is no data on port details

@@ -12,10 +12,12 @@ Authors:
 Date: 2022/04/13
 """
 
+
 class Sonic():
     """Default class example for building new parsers"""
     def __init__(self, **kwargs):
         self.factName = ['sense.sonic.sonic_facts']
         self.defVlanNaming = 'Vlan%(vlanid)s'
+
 
 MODULE = Sonic

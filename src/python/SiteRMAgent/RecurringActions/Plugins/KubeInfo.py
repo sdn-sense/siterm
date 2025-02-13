@@ -46,7 +46,7 @@ class KubeInfo:
                         errormsg += f"Kube Labels: Label {label} | Value {labelval}"
         return errormsg
 
-
+    # pylint: disable=C0301
     def postProcess(self, data):
         """Post process data"""
         for key, val in data.get('KubeInfo', {}).get('isAlias', {}).items():
@@ -128,6 +128,7 @@ class KubeInfo:
             else:
                 self.failedLabels['multus'] = True
         return out
+
 
 if __name__ == "__main__":
     obj = KubeInfo()

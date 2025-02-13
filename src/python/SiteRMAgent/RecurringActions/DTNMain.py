@@ -86,7 +86,7 @@ class RecurringAction():
                 postMethod = getattr(method, 'postProcess', None)
                 if postMethod:
                     outputDict = postMethod(outputDict)
-            except PluginFatalException  as ex:
+            except PluginFatalException as ex:
                 self.logger.error(f"Plugin {tmpName} raised fatal exception. Will not continue to report back to FE.")
                 self.logger.error(f"Exception details: {str(ex)}")
                 excMsg += f" {str(ex)}"
