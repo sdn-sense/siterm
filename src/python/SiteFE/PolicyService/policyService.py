@@ -146,6 +146,18 @@ class PolicyService(RDFHelper, Timing):
         ) or "isAlias" in self.scannedPorts.get(bidPort, []):
             returnout["isAlias"] = str(bidPort)
 
+    def getisAlias(self, gIn, bidPort):
+        """Get isAlias from model"""
+        out = self.queryGraph(
+            gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}isAlias"),
+            allowMultiple=True
+        )
+        if len(out) > 1:
+            raise Exception(f"Multiple isAlias found for {bidPort}")
+        if out:
+            return str(out[0])
+        return ""
+
     @staticmethod
     def queryGraph(
         graphIn, sub=None, pre=None, obj=None, search=None, allowMultiple=True
@@ -215,14 +227,16 @@ class PolicyService(RDFHelper, Timing):
 
     def _addCustomEntry(self, out, host, intf, tmpOut, key):
         """Add custom entry to output for kube and singleport - which usually has no switching service"""
-        if 'isAlias' in tmpOut.get(host, {}).get(intf, {}) and tmpOut[host][intf]['isAlias']:
+        for mainkey, mainval in tmpOut.items():
+            # If main key is equal our simple vlanport - ignore it;
+            if mainkey.startswith(f'{self.prefixes["site"]}:{host}:{intf}:vlanport+'):
+                continue
             # Check if that entry is already in output and alert if it is
-            alias = tmpOut[host][intf]['isAlias']
-            if alias in out.get(key, {}):
-                self.logger.warning(f"Alias {alias} already exists in output. Will overwrite")
-                self.logger.warning(f"Old: {out[key][alias]}")
-                self.logger.warning(f"New: {tmpOut}")
-            out.setdefault(key, {})[alias] = tmpOut
+            if mainkey in out.get(key, {}):
+                self.logger.warning(f"Alias {mainkey} already exists in output. Will overwrite")
+                self.logger.warning(f"Old: {out[key][mainkey]}")
+                self.logger.warning(f"New: {mainval}")
+            out.setdefault(key, {})[mainkey] = mainval
 
     def parseModel(self, gIn):
         """Parse delta request and generateout"""
@@ -245,12 +259,12 @@ class PolicyService(RDFHelper, Timing):
         # Parse Host information (a.k.a Kubernetes nodes connected via isAlias)
         for host, hostDict in self.hosts.items():
             if hostDict.get("hostinfo", {}).get("KubeInfo", {}).get("isAlias"):
-                self.logger.info("Parsing Kube requests from model")
+                self.logger.info(f"Parsing Kube requests from model for {host}")
                 for intf, _val in hostDict["hostinfo"]["KubeInfo"]["isAlias"].items():
+                    self.logger.info(f"Parsing Kube requests from model for {host} and {intf}")
                     self.kube = True
-                    tmpOut = {}
                     connID = f"{self.prefixes['site']}:{host}:{intf}"
-                    self.parseL2Ports(gIn, URIRef(connID), tmpOut)
+                    tmpOut = self.parseL2Ports(gIn, URIRef(connID), {}, True)
                     # Now here we check if we have for this specifich host and interface isAlias and add that to kube output
                     out.setdefault("kube", {})
                     self._addCustomEntry(out, host, intf, tmpOut, 'kube')
@@ -262,11 +276,9 @@ class PolicyService(RDFHelper, Timing):
                 connID = f"{self.prefixes['site']}:{switchName}:{self.switch.getSystemValidPortName(portName)}"
                 if connID in self.scannedPorts:
                     continue
-                out.setdefault("singleport", {})
-                tmpOut = {}
                 try:
                     out.setdefault("singleport", {})
-                    self.parseL2Ports(gIn, URIRef(connID), tmpOut)
+                    tmpOut = self.parseL2Ports(gIn, URIRef(connID), {}, True)
                     self._addCustomEntry(out, switchName, portName, tmpOut, 'singleport')
                 except NotFoundError:
                     continue
@@ -467,33 +479,19 @@ class PolicyService(RDFHelper, Timing):
         returnout[subKey].setdefault(str(subnet), {})
         returnout[subKey][str(subnet)][val] = ""
 
-    def parsePorts(self, gIn, connectionID, connOut, hostsOnly=False):
+    def parsePorts(self, gIn, connectionID, hostsOnly=False):
         """Get all ports for any connection and scan all of them"""
         for key in ["hasBidirectionalPort", "isAlias"]:
-            tmpPorts = self.queryGraph(
-                gIn,
-                connectionID,
-                search=URIRef(f"{self.prefixes['nml']}{key}"),
-                allowMultiple=True,
-            )
+            tmpPorts = self.queryGraph(gIn, connectionID,
+                search=URIRef(f"{self.prefixes['nml']}{key}"), allowMultiple=True)
             for port in tmpPorts:
-                if hostsOnly:
-                    # If hostsOnly is set - this already parses a subInterface of port;
-                    # which usually is a isAlias. It should be parsed on it's own in another
-                    # scan - as it needs to be in correct layout. (IsAlias defined by modeling, no force add)
-                    if self.kube and (not port.startswith(self.prefixes['site'])):
-                        connOut["isAlias"] = str(port)
-                    elif key == 'isAlias':
-                        connOut["isAlias"] = str(port)
-                    if not self.hostsOnly(port):
-                        continue
+                if hostsOnly and not self.hostsOnly(port):
+                    continue
                 if port not in self.bidPorts and port not in self.scannedPorts:
                     self.bidPorts.setdefault(port, [])
                     self.bidPorts[port].append(key)
                 if port in self.scannedPorts:
                     self.scannedPorts[port].append(key)
-                if key == "isAlias":
-                    connOut["isAlias"] = str(port)
 
     def _portScanFinish(self, bidPort):
         """Check if port was already scanned"""
@@ -502,12 +500,18 @@ class PolicyService(RDFHelper, Timing):
         if bidPort in self.bidPorts:
             del self.bidPorts[bidPort]
 
-    def parseL2Ports(self, gIn, connectionID, connOut):
+    def parseL2Ports(self, gIn, connectionID, connOut, custom=False):
         """Parse L2 Ports"""
         # Get All Ports
-        self.parsePorts(gIn, connectionID, connOut)
-        # Get time scheduling details for connection.
-        self.getTimeScheduling(gIn, connectionID, connOut)
+        self.parsePorts(gIn, connectionID)
+        # If not custom (means not kube or single port) - we need to get isAlias
+        # and also any time scheduling information
+        if not custom:
+            alias = self.getisAlias(gIn, connectionID)
+            if alias:
+                connOut["isAlias"] = alias
+            # Get time scheduling details for connection.
+            self.getTimeScheduling(gIn, connectionID, connOut)
         # =======================================================
         while self.bidPorts:
             for bidPort in list(self.bidPorts.keys()):
@@ -517,11 +521,20 @@ class PolicyService(RDFHelper, Timing):
                     # We dont need to parse that and it is isAlias in dict
                     self._portScanFinish(bidPort)
                     continue
-                portOut = self.intOut(bidPort, connOut)
+                if custom:
+                    # Get isAlias - which will be used as key in output
+                    tmpOut = connOut.setdefault(str(bidPort), {})
+                    self.getTimeScheduling(gIn, bidPort, tmpOut)
+                else:
+                    tmpOut = connOut
+                portOut = self.intOut(bidPort, tmpOut)
                 # Record port URI
                 portOut["uri"] = str(bidPort)
                 # Parse all ports in port definition
-                self.parsePorts(gIn, bidPort, portOut, True)
+                self.parsePorts(gIn, bidPort, True)
+                alias = self.getisAlias(gIn, bidPort)
+                if alias:
+                    portOut["isAlias"] = alias
                 # Get time scheduling information from delta
                 self.getTimeScheduling(gIn, bidPort, portOut)
                 # Get all tags for Port
@@ -534,6 +547,7 @@ class PolicyService(RDFHelper, Timing):
                 self._hasNetwork(gIn, bidPort, portOut)
                 # Move port to finished scan ports
                 self._portScanFinish(bidPort)
+        return connOut
 
     def parsel2Request(self, gIn, returnout, _switchName):
         """Parse L2 request."""
