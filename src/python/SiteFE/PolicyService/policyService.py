@@ -213,6 +213,17 @@ class PolicyService(RDFHelper, Timing):
                     temptime -= 3600
                 times[timev] = temptime
 
+    def _addCustomEntry(self, out, host, intf, tmpOut, key):
+        """Add custom entry to output for kube and singleport - which usually has no switching service"""
+        if 'isAlias' in tmpOut.get(host, {}).get(intf, {}) and tmpOut[host][intf]['isAlias']:
+            # Check if that entry is already in output and alert if it is
+            alias = tmpOut[host][intf]['isAlias']
+            if alias in out.get(key, {}):
+                self.logger.warning(f"Alias {alias} already exists in output. Will overwrite")
+                self.logger.warning(f"Old: {out[key][alias]}")
+                self.logger.warning(f"New: {tmpOut}")
+            out.setdefault(key, {})[alias] = tmpOut
+
     def parseModel(self, gIn):
         """Parse delta request and generateout"""
         self.__clean()
@@ -237,10 +248,12 @@ class PolicyService(RDFHelper, Timing):
                 self.logger.info("Parsing Kube requests from model")
                 for intf, _val in hostDict["hostinfo"]["KubeInfo"]["isAlias"].items():
                     self.kube = True
+                    tmpOut = {}
                     connID = f"{self.prefixes['site']}:{host}:{intf}"
+                    self.parseL2Ports(gIn, URIRef(connID), tmpOut)
+                    # Now here we check if we have for this specifich host and interface isAlias and add that to kube output
                     out.setdefault("kube", {})
-                    connOut = out["kube"].setdefault(str(connID), {})
-                    self.parseL2Ports(gIn, URIRef(connID), connOut)
+                    self._addCustomEntry(out, host, intf, tmpOut, 'kube')
                     self.kube = False
         # Parse single port which are not connected to any service;
         self.singleport = True
@@ -250,11 +263,13 @@ class PolicyService(RDFHelper, Timing):
                 if connID in self.scannedPorts:
                     continue
                 out.setdefault("singleport", {})
-                connOut = out["singleport"].setdefault(str(connID), {})
+                tmpOut = {}
                 try:
-                    self.parseL2Ports(gIn, URIRef(connID), connOut)
+                    out.setdefault("singleport", {})
+                    self.parseL2Ports(gIn, URIRef(connID), tmpOut)
+                    self._addCustomEntry(out, switchName, portName, tmpOut, 'singleport')
                 except NotFoundError:
-                    del out["singleport"][str(connID)]
+                    continue
         self.singleport = False
         return out
 
