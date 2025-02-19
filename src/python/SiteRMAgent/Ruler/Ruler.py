@@ -40,7 +40,6 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
         # L2,L3 move it to Class Imports at top.
         self.layer2 = VInterfaces(self.config, self.sitename)
         self.layer3 = Routing(self.config, self.sitename)
-        self.activeIPs = {"ipv4": [], "ipv6": []}
         self.activeDeltas = {}
         self.activeFromFE = {}
         self.activeNew = {}
@@ -56,10 +55,6 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
         self.layer2 = VInterfaces(self.config, self.sitename)
         self.layer3 = Routing(self.config, self.sitename)
 
-    def __clean(self):
-        """Clean variables before run"""
-        self.activeIPs = {"ipv4": {}, "ipv6": {}}
-
     def getData(self, url):
         """Get data from FE."""
         out = getDataFromSiteFE({}, self.fullURL, url)
@@ -74,16 +69,6 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
     def getActiveDeltas(self):
         """Get Delta information."""
         return self.getData("/sitefe/v1/activedeltas/")
-
-    def logIPs(self, tmpvlans):
-        """Log all Active IPs"""
-        for vlan in tmpvlans:
-            if "ip" in vlan and vlan["ip"]:
-                tmpd = self.activeIPs["ipv4"].setdefault(f"vlan.{vlan['vlan']}", [])
-                tmpd.append(vlan["ip"])
-            if "ipv6" in vlan and vlan["ipv6"]:
-                tmpd = self.activeIPs["ipv6"].setdefault(f"vlan.{vlan['vlan']}", [])
-                tmpd.append(vlan["ipv6"])
 
     def checkIfOverlap(self, ip, intf, iptype):
         """Check if IPs overlap with what is set in configuration"""
@@ -101,34 +86,6 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
                     if overlap:
                         break
         return overlap
-
-    def ipConsistency(self, iptype):
-        """Do IP Consistency. In case of Modify call, vlan remains, just IP changes."""
-        self.getAllIPs()
-        # Consistency for IPv4
-        for key, values in self.allIPs[iptype].items():
-            if iptype == "ipv4":
-                tmpip = key.split("/")
-                tmpip[1] = str(self._getNetmaskBit(tmpip[1]))
-                ip = "/".join(tmpip)
-            else:
-                ip = key
-            for intf in values:
-                if intf["master"] in self.activeIPs[iptype]:
-                    # Check if IP is in the list of active:
-                    if ip not in self.activeIPs[iptype][intf["master"]]:
-                        overlap = self.checkIfOverlap(ip, intf["master"], iptype)
-                        if overlap:
-                            self.logger.info(
-                                f"Removing {ip} from {intf['master']}. Not in active delta."
-                            )
-                            self.layer2._removeIP(
-                                {"ip": ip, "vlan": intf["master"].split(".")[1]}
-                            )
-                        else:
-                            self.logger.info(
-                                f"Not removing {ip} from {intf['master']} as it is not from configuration. Manual IP?"
-                            )
 
     def activeComparison(self, actKey, actCall):
         """Compare active vs file on node config"""
@@ -154,12 +111,9 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
                             == self.activeFromFE["output"][actKey][key][self.hostname]
                         ):
                             continue
-                        tmpret = actCall.modify(
-                            vals[self.hostname],
-                            self.activeFromFE["output"][actKey][key][self.hostname],
-                            key,
-                        )
-                        self.logIPs(tmpret)
+                        actCall.modify(vals[self.hostname],
+                                       self.activeFromFE["output"][actKey][key][self.hostname],
+                                       key)
                     else:
                         actCall.terminate(vals[self.hostname], key)
         if actKey == "rst" and self.qosPolicy == "hostlevel":
@@ -184,8 +138,7 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
                 if self.hostname in vals:
                     if self.checkIfStarted(vals):
                         # Means resource is active at given time.
-                        tmpret = actCall.activate(vals[self.hostname], key)
-                        self.logIPs(tmpret)
+                        actCall.activate(vals[self.hostname], key)
                     else:
                         # Termination. Here is a bit of an issue
                         # if FE is down or broken - and we have multiple deltas
@@ -201,7 +154,6 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
 
     def startwork(self):
         """Start execution and get new requests from FE."""
-        self.__clean()
         # if activeDeltas did not change - do not do any comparison
         # Comparison is needed to identify if any param has changed.
         # Otherwise - do precheck if all resources are active
@@ -229,7 +181,6 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
             self.logger.info("Agent is not configured to apply rules")
         self.logger.info("Ended function start")
         self.logger.info("Started IP Consistency Check")
-        self.ipConsistency("ipv4")
 
 
 def execute(config=None):

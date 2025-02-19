@@ -188,6 +188,9 @@ class VInterfaces():
         """Get All Vlan List"""
         vlans = []
         for key, vals in inParams.items():
+            uri = vals.get('uri', '')
+            if uri and uri.endswith(f'{self.hostname}:{key}'):
+                continue
             netInfo = vals.get('hasNetworkAddress', {})
             vlan = {'destport': key,
                     'vlan': vals.get('hasLabel', {}).get('value', ''),
@@ -197,6 +200,8 @@ class VInterfaces():
                     'txqueuelen': netInfo.get('txqueuelen', {}).get('value', getDefaultTXQ(self.config, key))}
             if not vlan['vlan']:
                 self.logger.error(f"VLAN ID is not set for {key}. Skipping this interface. All info: {inParams}")
+                continue
+            if uri.endswith(f'{self.hostname}:{key}:vlanport+{vlan["vlan"]}'):
                 continue
             vlans.append(vlan)
         return vlans
@@ -237,10 +242,10 @@ class VInterfaces():
         old = self._getvlanlist(oldParams)
         new = self._getvlanlist(newParams)
         if old == new:
-            # This can happen if we modify QOS only. So there is no IP or VLAN
-            # change.
+            # This can happen if we modify QOS only. So there is no IP or VLAN change.
             return []
-        # TODO: check if vlan same, if not - tier down old one, set up new one
-        # check if IPs ==, if not - set new IPs.
-        print('Called modify. TODO')
-        return []
+        if old:
+            self.terminate(oldParams, uuid)
+        if new:
+            self.activate(newParams, uuid)
+        return new
