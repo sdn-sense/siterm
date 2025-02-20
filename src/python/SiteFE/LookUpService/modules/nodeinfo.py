@@ -256,6 +256,9 @@ class NodeInfo:
                         continue
                     if "vlanid" not in vlanDict:
                         continue
+                    if 'vlan_range_list' in intfDict and intfDict["vlan_range_list"]:
+                        if vlanDict["vlanid"] not in intfDict["vlan_range_list"]:
+                            continue
                     vlanuri = self._addVlanPort(
                         hostname=nodeDict["hostname"],
                         portName=intfKey,
