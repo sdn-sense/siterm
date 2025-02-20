@@ -135,9 +135,9 @@ class NetInfo(BWService):
             nicInfo["bwParams"]["unit"] = "mbit"
             nicInfo["bwParams"]["type"] = self.config.get(intf, "bwParams").get("type", "guaranteedCapped")
             nicInfo["bwParams"]["priority"] = self.config.get(intf, "bwParams").get("priority", 0)
-            nicInfo["bwParams"]["minReservableCapacity"] = int(self.config.get(intf, "bwParams").get("minReservableCapacity", 1000))
+            nicInfo["bwParams"]["minReservableCapacity"] = int(self.config.get(intf, "bwParams").get("minReservableCapacity", 100))
             nicInfo["bwParams"]["maximumCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", getInterfaceSpeed(intf)))
-            nicInfo["bwParams"]["granularity"] = int(self.config.get(intf, "bwParams").get("granularity", 1000))
+            nicInfo["bwParams"]["granularity"] = int(self.config.get(intf, "bwParams").get("granularity", 100))
             nicInfo["bwParams"]["reservedCapacity"] = int(self.config.get(intf, "bwParams").get("reservedCapacity", 1000))
             # Take out reserved from maximumCapacity
             nicInfo["bwParams"]["maximumCapacity"] -= nicInfo["bwParams"]["reservedCapacity"]
