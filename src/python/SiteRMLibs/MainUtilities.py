@@ -72,8 +72,23 @@ def isValFloat(inVal):
     return True
 
 
-def getUTCnow():
+def getUTCnow(**kwargs):
     """Get UTC Time."""
+    # In case kwargs are passed, we need to return time in the future.
+    # check all parameters passed and ensure we take only valid ones.
+    if kwargs:
+        # Generate new dictionary with only valid keys.
+        validKeys = ["seconds", "minutes", "hours", "days", "weeks", "months", "years"]
+        newKwargs = {k: v for k, v in kwargs.items() if k in validKeys}
+        # years and months are not supported by timedelta, so we need to calculate them manually.
+        if "years" in newKwargs:
+            newKwargs["days"] = newKwargs.get("days", 0) + newKwargs["years"] * 365
+            del newKwargs["years"]
+        if "months" in newKwargs:
+            newKwargs["days"] = newKwargs.get("days", 0) + newKwargs["months"] * 30
+            del newKwargs["months"]
+        delta = datetime.timedelta(**newKwargs)
+        return int((datetime.datetime.now(datetime.timezone.utc) + delta).timestamp())
     return int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
 
