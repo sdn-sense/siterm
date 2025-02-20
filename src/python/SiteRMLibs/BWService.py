@@ -47,6 +47,33 @@ class BWService:
             return outRate, outType
         raise Exception(f"Unknown input rate parameter {inputRate} and {inputVal}")
 
+    def convertForBWService(self, params):
+        """Convert input to rate understandable to sense-o"""
+        # SiteRM Reports everything in mbps and we need to cover user input
+        # bps, bytes per second
+        # kbps, Kbps, kilobytes per second
+        # mbps, Mbps, megabytes per second
+        # gbps, Gbps, gigabytes per second
+        # Input: "unit": "mbps", "minCapacity": "100"
+        inputVal = params.get("minCapacity", 100)
+        inputRate = params.get("unit", "mbps")
+        retVal = 100
+        try:
+            if inputRate == "mbps":
+                retVal = inputVal
+            elif inputRate == "gbps":
+                retVal = inputVal * 1000
+            elif inputRate == "bps":
+                retVal = int(inputVal // 1000000)
+            elif inputRate == "kbps":
+                retVal = int(inputVal // 1000)
+            else:
+                self.logger.error(f"Unknown input rate parameter {inputRate} and {inputVal}")
+                retVal = 100
+        except TypeError as ex:
+            self.logger.error(f"Error converting BW Service. {ex}. Input {params}")
+        return retVal
+
     def _calculateRemaining(self, device, port, maxbw, reserve):
         """Calculate remaining bandwidth for device and port."""
         # If reserve is still -1, means full link speed allowed; if not, then we need to calculate
