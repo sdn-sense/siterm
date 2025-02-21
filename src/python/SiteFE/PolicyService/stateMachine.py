@@ -158,6 +158,11 @@ class StateMachine():
 
     def committing(self, dbObj):
         """Committing state Check."""
+        # it should change state only if there are no activating deltas right now
+        # Otherwise print message that I have to wait
+        for delta in dbObj.get('deltas', search=[['state', 'activating']]):
+            self.logger.info(f"Delta {delta['uid']} is still in state activating. Will not commit anything until it is done")
+            return
         for delta in dbObj.get('deltas', search=[['state', 'committing']]):
             self.stateChangerDelta(dbObj, 'committed', **delta)
             self.modelstatechanger(dbObj, 'add', **delta)
