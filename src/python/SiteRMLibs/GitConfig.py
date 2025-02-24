@@ -93,14 +93,14 @@ class GitConfig:
 
     def __addSiteDefaults(self, defaults):
         """Add default site config parameters"""
-        for sitename in self.config["general"]["sites"]:
-            if sitename not in self.config:
+        for sitename in self.config.get("MAIN", {}).get("general", {}).get("sites", []):
+            if sitename not in self.config["MAIN"]:
                 raise Exception(f"Site {sitename} is not available in configuration. Will not start services")
-            self.config[sitename].setdefault("default_params", {})
+            self.config["MAIN"][sitename].setdefault("default_params", {})
             for key1, val1 in defaults.items():
-                self.config[sitename]["default_params"].setdefault(key1, {})
+                self.config["MAIN"][sitename]["default_params"].setdefault(key1, {})
                 for key2, val2 in val1.items():
-                    self.config[sitename]["default_params"][key1].setdefault(key2, val2)
+                    self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, val2)
 
     def presetAgentDefaultConfigs(self):
         """Preset default config parameters for Agent"""
