@@ -84,7 +84,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.singleport = False
         self.startend = {}
         self.defaultBW = {"availableCapacity": 0, "granularity": 100, "maximumCapacity": 0,
-                          "priority": 0, "reservableCapacity": 0, "type": "besteffort", "unit": "mbps"}
+                          "priority": 0, "reservableCapacity": 0, "type": "bestEffort", "unit": "mbps"}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -101,7 +101,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.singleport = False
         self.startend = {}
         self.defaultBW = {"availableCapacity": 0, "granularity": 100, "maximumCapacity": 0, "minReservableCapacity": 100,
-                          "priority": 0, "reservableCapacity": 0, "type": "besteffort", "unit": "mbps"}
+                          "priority": 0, "reservableCapacity": 0, "type": "bestEffort", "unit": "mbps"}
 
     def _refreshHosts(self):
         """Refresh all hosts information"""

@@ -276,7 +276,7 @@ class GitConfig:
         siteDefaults = {"default_params":
                             {"starttime":{"seconds": 10,"minutes": 0,"hours": 0,"days": 0,"weeks": 0,"months": 0,"years": 0},
                              "endtime":{"seconds": 0,"minutes": 0,"hours": 0,"days": 0,"weeks": 0,"months": 3,"years": 0},
-                             "bw":{"type":"besteffort","unit":"mbps","minCapacity":"100"}}}
+                             "bw":{"type":"bestEffort","unit":"mbps","minCapacity":"100"}}}
         self.__addDefaults(defConfig)
         self.__addSiteDefaults(siteDefaults)
         # Generate list vals - not in a str format. Needed in delta checks
