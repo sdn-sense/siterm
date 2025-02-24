@@ -80,6 +80,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Kubernetes liveness checker with enable/disable options.")
     parser.add_argument("--enable", action="store_true", help="Enable the liveness check.")
     parser.add_argument("--disable", action="store_true", help="Disable the liveness check.")
+    parser.add_argument("--ignorelock", action="store_true", help="Ignore Liveness lock file and run all checks. (Useful for debugging failing service)", )
     args = parser.parse_args()
 
     if args.enable:
@@ -90,12 +91,12 @@ if __name__ == "__main__":
         disableLivenessCheck(livenessFile)
         sys.exit(0)
 
-    if os.path.exists(livenessFile):
-        print("Liveness check is disabled. Exiting Use --enable to enable.")
-        sys.exit(0)
-
     if os.path.exists("/tmp/siterm-mariadb-init"):
-        print("Mariadb init is still running. Exiting.")
+        print("Mariadb init is still running. Exiting. Check /var/log/supervisor/mariadb_* log files")
         sys.exit(0)
-    sys.exit(runchecks())
 
+    if os.path.exists(livenessFile) and not args.ignorelock:
+        print("Liveness check is disabled. Use --enable to enable or --ignorelock to run all checks and bypass this.")
+        sys.exit(0)
+
+    sys.exit(runchecks())

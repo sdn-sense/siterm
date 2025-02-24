@@ -785,19 +785,22 @@ def checkHTTPService(config):
     if not config:
         return 0
     # This is only done on FE:
-    if config.getraw('MAPPING', {}).get('type', None) != 'FE':
+    if config.getraw('MAPPING').get('type', None) != 'FE':
         return 0
     returnvals = []
     for sitename in config.get('general', 'sites'):
         try:
             hostname = getFullUrl(config, sitename)
-            # /sitefe/v1/models?current=true&summary=false&encode=false
             url = "/sitefe/v1/models?current=true&summary=false&encode=false"
-            out = getDataFromSiteFE(config, hostname, url)
+            out = getDataFromSiteFE({}, hostname, url)
             # Need to check out that it received information back
-            # otherwise raise an exception
-            print(out)
-            returnvals.append(0)
+            # otherwise print error and return 1
+            if out[1] != 200 or out[2] != 'OK':
+                print('Was not able to receive 200 http exit code.')
+                print(f'Output: {out}')
+                returnvals.append(1)
+            else:
+                returnvals.append(0)
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
