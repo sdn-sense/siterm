@@ -97,7 +97,7 @@ class GitConfig:
             if sitename not in self.config["MAIN"]:
                 raise Exception(f"Site {sitename} is not available in configuration. Will not start services")
             self.config["MAIN"][sitename].setdefault("default_params", {})
-            for key1, val1 in defaults.items():
+            for key1, val1 in defaults["default_params"].items():
                 self.config["MAIN"][sitename]["default_params"].setdefault(key1, {})
                 for key2, val2 in val1.items():
                     self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, val2)
