@@ -86,20 +86,25 @@ class QOS:
     def _getvlanlistqos(self):
         """Get vlan qos dict"""
         self.activeL2 = []
-        for _key, vals in self.activeDeltas.get("output", {}).get("vsw", {}).items():
-            if self.hostname not in vals:
-                continue
-            if not self._started(vals):
-                # This resource has not started yet. Continue.
-                continue
-            for key, vals1 in vals[self.hostname].items():
-                self.activeL2.append(
-                    {
-                        "destport": key,
-                        "vlan": vals1.get("hasLabel", {}).get("value", ""),
-                        "params": vals1.get("hasService", {}),
-                    }
-                )
+        for actkey in ["vsw", "kube", "singleport"]:
+            for _key, vals in self.activeDeltas.get("output", {}).get(actkey, {}).items():
+                if self.hostname not in vals:
+                    continue
+                if not self._started(vals):
+                    # This resource has not started yet. Continue.
+                    continue
+                for key, vals1 in vals[self.hostname].items():
+                    if not vals1.get("hasLabel", {}).get("value", ""):
+                        self.logger.warning("This specific vlan request did not provided vlan id.Ignoring QOS Rules for it")
+                        self.logger.warning(f"Resource: {vals1}")
+                        continue
+                    self.activeL2.append(
+                        {
+                            "destport": key,
+                            "vlan": vals1.get("hasLabel", {}).get("value", ""),
+                            "params": vals1.get("hasService", {}),
+                        }
+                    )
 
     def getParams(self):
         """Get all params from Host Config"""

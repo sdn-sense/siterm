@@ -155,7 +155,7 @@ class PolicyService(RDFHelper, Timing, BWService):
 
     def _addDefaultTimeBW(self, out):
         """Add default timeBW to output"""
-        for key in ["vsw", "singleport", "kubeport"]:
+        for key in ["vsw", "singleport", "kube"]:
             for uri in out.get(key, {}):
                 # If _params exists, check and default timing
                 if "_params" in out[key][uri]:
