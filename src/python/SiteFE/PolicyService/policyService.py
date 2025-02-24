@@ -178,10 +178,9 @@ class PolicyService(RDFHelper, Timing):
                             newTime = self.__setTime(out[key][uri][key1][key2]["_params"]["existsDuring"], suburi)
                             out[key][uri][key1][key2]["_params"]["existsDuring"] = newTime
                         # This one checks for Bandwidth service and add defaults.
-                        if suburi and 'hasService' in out[key][uri][key1][key2]:
-                            if not out[key][uri][key1][key2]['hasService']:
-                                # if it is empty, means was best effort service
-                                out[key][uri][key1][key2]['hasService'] = self.__getDefBandwidth(suburi)
+                        if suburi and not out[key][uri][key1][key2].get('hasService', {}):
+                            # if it is empty, means was best effort service
+                            out[key][uri][key1][key2]['hasService'] = self.__getDefBandwidth(suburi)
         return out
 
     def intOut(self, inport, out):
