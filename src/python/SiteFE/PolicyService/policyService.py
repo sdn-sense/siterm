@@ -32,7 +32,7 @@ from SiteRMLibs.MainUtilities import (
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.timing import Timing
-
+from SiteRMLibs.BWService import BWService
 
 def getError(ex):
     """Get Error from Exception."""
@@ -57,7 +57,7 @@ def getError(ex):
     return out
 
 
-class PolicyService(RDFHelper, Timing):
+class PolicyService(RDFHelper, Timing, BWService):
     """Policy Service to accept deltas."""
 
     def __init__(self, config, sitename):
@@ -149,7 +149,7 @@ class PolicyService(RDFHelper, Timing):
         newBW["maximumCapacity"] = newval
         newBW["reservableCapacity"] = newval
         newBW["minReservableCapacity"] = newval
-        newBW["type"] = self.config[self.sitename]["default_params"]["type"]
+        newBW["type"] = self.config[self.sitename]["default_params"]["bw"]["type"]
         newBW["uri"] = f"{suburi}:service+bw"
         return newBW
 
