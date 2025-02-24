@@ -289,7 +289,8 @@ class QOS:
     def addVlanQoS(self, tmpFD):
         """Add Vlan BW Request parameters"""
         self._getvlanlistqos()
-
+        alllines = {}
+        counter = 0
         for l2req in self.activeL2:
             interface = l2req["destport"]
             name = f"{interface}-{l2req['vlan']}"
@@ -303,12 +304,48 @@ class QOS:
             if self.params[interface]["intf_max"] - outrate <= 0:
                 raise OverSubscribeException(f"Node is oversubscribed. Will not modify present QoS Rules. Max Rate: {self.params[interface]['intf_max']} Requested Rate: {outrate}")
             self.params[interface]["intf_max"] -= outrate
-            tmpFD.write(
-                f"""
-# SENSE VLAN {l2req['vlan']} {l2req['destport']} {outrate}{outtype}
-interface vlan.{l2req['vlan']} {name}-IN input rate {outrate}{outtype}
-interface vlan.{l2req['vlan']} {name}-OUT output rate {outrate}{outtype}\n"""
-            )
+            # Get params from request
+            reqclass = l2req["params"].get("type", "undefined")
+            uri = l2req["params"].get("uri", "undefined")
+            outlines = []
+            outlines.append(f"# SENSE VLAN {l2req['vlan']} {l2req['destport']} {outrate}{outtype} Class: {reqclass}\n")
+            outlines.append(f"# Request: {uri}\n")
+            outlines.append("# " + "-"*80 + "\n")
+            # In case it is: guaranteedCapped,softCapped,bestEffort - we add diff class
+            if reqclass == "guaranteedCapped":
+                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n")
+            elif reqclass == "softCapped":
+                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n")
+                outlines.append(f"  class default rate {outrate}{outtype}\n")
+                # interface vlan.2074 bond0-2074 bidirectional rate 20gbit
+                #   class default commit 100mbit
+            elif reqclass == "bestEffort":
+                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n")
+                outlines.append(f"  class default rate {outrate}{outtype}\n")
+            else:
+                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n")
+                outlines.append(f"  class default rate {outrate}{outtype}\n")
+            outlines.append("# " + "-"*80 + "\n\n")
+            alllines[counter] = {"outlines": outlines, "outrate": outrate, "destport": interface,
+                                 "outtype": outtype, "uri": uri, "reqclass": reqclass}
+            counter += 1
+        # Write everything into file
+        for counter, l2req in alllines.items():
+
+            maxintf = self.params[l2req["destport"]]["intf_max"] + l2req["outrate"]
+            # In case request is bestEffort, we want it to be lower than softCapped or guaranteedCapped
+            # So we check which ones evaluates first 1/10, 1/9, 1/8, 1/7, 1/6, 1/5, 1/4, 1/3, 1/2 (and last one is 1)
+            # and take the max
+            # Loop via range from 10 to 1
+            if l2req["reqclass"] == "bestEffort":
+                for i in range(10, 0, -1):
+                    maxintf = max(maxintf//i, l2req["outrate"])
+                    if maxintf > l2req["outrate"]:
+                        break
+            for line in l2req["outlines"]:
+                line = line.replace("##REPLACEME##", str(maxintf))
+                tmpFD.writelines(line)
+
 
     def getAllQOSed(self):
         """Read all configs and prepare qos doc."""
