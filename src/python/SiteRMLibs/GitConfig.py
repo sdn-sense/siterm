@@ -91,6 +91,17 @@ class GitConfig:
                 for key3, val3 in val2.items():
                     self.config[key1][key2].setdefault(key3, val3)
 
+    def __addSiteDefaults(self, defaults):
+        """Add default site config parameters"""
+        for sitename in self.config["general"]["sites"]:
+            if sitename not in self.config:
+                raise Exception(f"Site {sitename} is not available in configuration. Will not start services")
+            self.config[sitename].setdefault("default_params", {})
+            for key1, val1 in defaults.items():
+                self.config[sitename]["default_params"].setdefault(key1, {})
+                for key2, val2 in val1.items():
+                    self.config[sitename]["default_params"][key1].setdefault(key2, val2)
+
     def presetAgentDefaultConfigs(self):
         """Preset default config parameters for Agent"""
         defConfig = {
@@ -257,30 +268,17 @@ class GitConfig:
                 },
                 "snmp": {
                     "mibs": [
-                        "ifDescr",
-                        "ifType",
-                        "ifMtu",
-                        "ifAdminStatus",
-                        "ifOperStatus",
-                        "ifHighSpeed",
-                        "ifAlias",
-                        "ifHCInOctets",
-                        "ifHCOutOctets",
-                        "ifInDiscards",
-                        "ifOutDiscards",
-                        "ifInErrors",
-                        "ifOutErrors",
-                        "ifHCInUcastPkts",
-                        "ifHCOutUcastPkts",
-                        "ifHCInMulticastPkts",
-                        "ifHCOutMulticastPkts",
-                        "ifHCInBroadcastPkts",
-                        "ifHCOutBroadcastPkts",
-                    ]
-                },
-            }
-        }
+                        "ifDescr","ifType","ifMtu","ifAdminStatus","ifOperStatus",
+                        "ifHighSpeed","ifAlias","ifHCInOctets","ifHCOutOctets","ifInDiscards",
+                        "ifOutDiscards","ifInErrors","ifOutErrors","ifHCInUcastPkts","ifHCOutUcastPkts",
+                        "ifHCInMulticastPkts","ifHCOutMulticastPkts","ifHCInBroadcastPkts","ifHCOutBroadcastPkts",
+                    ]}}}
+        siteDefaults = {"default_params":
+                            {"starttime":{"seconds": 10,"minutes": 0,"hours": 0,"days": 0,"weeks": 0,"months": 0,"years": 0},
+                             "endtime":{"seconds": 0,"minutes": 0,"hours": 0,"days": 0,"weeks": 0,"months": 3,"years": 0},
+                             "bw":{"type":"besteffort","unit":"mbps","minCapacity":"100"}}}
         self.__addDefaults(defConfig)
+        self.__addSiteDefaults(siteDefaults)
         # Generate list vals - not in a str format. Needed in delta checks
         self.__generatevlaniplists()
 

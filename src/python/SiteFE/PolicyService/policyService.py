@@ -28,7 +28,7 @@ from SiteRMLibs.MainUtilities import (
     contentDB, createDirs, decodebase64, dictSearch,
     evaldict, getActiveDeltas, getAllHosts, getCurrentModel,
     getDBConn, getLoggingObject, getVal, writeActiveDeltas,
-    getFileContentAsJson
+    getFileContentAsJson, getUTCnow
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.timing import Timing
@@ -82,6 +82,9 @@ class PolicyService(RDFHelper, Timing):
         self._refreshHosts()
         self.kube = False
         self.singleport = False
+        self.startend = {}
+        self.defaultBW = {"availableCapacity": 0, "granularity": 100, "maximumCapacity": 0,
+                          "priority": 0, "reservableCapacity": 0, "type": "besteffort", "unit": "mbps"}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -95,6 +98,10 @@ class PolicyService(RDFHelper, Timing):
         self.newActive = {}
         self._refreshHosts()
         self.kube = False
+        self.singleport = False
+        self.startend = {}
+        self.defaultBW = {"availableCapacity": 0, "granularity": 100, "maximumCapacity": 0, "minReservableCapacity": 100,
+                          "priority": 0, "reservableCapacity": 0, "type": "besteffort", "unit": "mbps"}
 
     def _refreshHosts(self):
         """Refresh all hosts information"""
@@ -119,6 +126,63 @@ class PolicyService(RDFHelper, Timing):
         self.scannedPorts = {}
         self.scannedRoutes = []
         self.newActive = {}
+
+    def __generateStartEnd(self):
+        """Generate start and end time for existsDuring"""
+        self.startend = {
+            "start": getUTCnow(self.config[self.sitename]["default_params"]["starttime"]),
+            "end": getUTCnow(self.config[self.sitename]["default_params"]["endtime"])
+        }
+
+    def __setTime(self, existsDuring, uri):
+        """Set time for existsDuring"""
+        existsDuring.setdefault("start", self.startend["start"])
+        existsDuring.setdefault("end", self.startend["end"])
+        existsDuring.setdefault("uri", f"{uri}:lifetime")
+        return existsDuring
+
+    def __getDefBandwidth(self, suburi):
+        """Get default bandwidth"""
+        newBW = copy.deepcopy(self.defaultBW)
+        newval = self.convertForBWService(self.config[self.sitename]["default_params"]["bw"])
+        newBW["availableCapacity"] = newval
+        newBW["maximumCapacity"] = newval
+        newBW["reservableCapacity"] = newval
+        newBW["minReservableCapacity"] = newval
+        newBW["type"] = self.config[self.sitename]["default_params"]["type"]
+        newBW["uri"] = f"{suburi}:service+bw"
+        return newBW
+
+    def _addDefaultTimeBW(self, out):
+        """Add default timeBW to output"""
+        for key in ["vsw", "singleport", "kubeport"]:
+            for uri in out.get(key, {}):
+                # If _params exists, check and default timing
+                if "_params" in out[key][uri]:
+                    out[key][uri]["_params"].setdefault("existsDuring", {})
+                    newTime = self.__setTime(out[key][uri]["_params"]["existsDuring"], uri)
+                    out[key][uri]["_params"]["existsDuring"] = newTime
+                # Now we go deeper into switch, port and add params
+                for key1 in out[key][uri]:
+                    if key1 == "_params":
+                        continue
+                    for key2 in out[key][uri][key1]:
+                        if key2 == "_params":
+                            continue
+                        # If params exists, check and default timing
+                        out[key][uri][key1][key2].setdefault("_params", {})
+                        suburi = out[key][uri][key1][key2].get("uri")
+                        # That should not happen, but just in case something breaks, leave resources active
+                        if suburi:
+                            out[key][uri][key1][key2]["_params"].setdefault("existsDuring", {})
+                            newTime = self.__setTime(out[key][uri][key1][key2]["_params"]["existsDuring"], suburi)
+                            out[key][uri][key1][key2]["_params"]["existsDuring"] = newTime
+                        # This one checks for Bandwidth service and add defaults.
+                        if suburi and 'hasService' in out[key][uri][key1][key2]:
+                            if not out[key][uri][key1][key2]['hasService']:
+                                # if it is empty, means was best effort service
+                                out[key][uri][key1][key2]['hasService'] = self.__getDefBandwidth(suburi)
+        return out
 
     def intOut(self, inport, out):
         """
@@ -283,6 +347,10 @@ class PolicyService(RDFHelper, Timing):
                 except NotFoundError:
                     continue
         self.singleport = False
+        # Add defaults for BW and Time
+        # Generate new default start and end time
+        self.__generateStartEnd()
+        out = self._addDefaultTimeBW(out)
         return out
 
     def getRoute(self, gIn, connID, returnout):
