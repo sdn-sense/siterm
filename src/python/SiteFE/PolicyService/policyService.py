@@ -130,8 +130,8 @@ class PolicyService(RDFHelper, Timing):
     def __generateStartEnd(self):
         """Generate start and end time for existsDuring"""
         self.startend = {
-            "start": getUTCnow(self.config[self.sitename]["default_params"]["starttime"]),
-            "end": getUTCnow(self.config[self.sitename]["default_params"]["endtime"])
+            "start": getUTCnow(**self.config[self.sitename]["default_params"]["starttime"]),
+            "end": getUTCnow(**self.config[self.sitename]["default_params"]["endtime"])
         }
 
     def __setTime(self, existsDuring, uri):
