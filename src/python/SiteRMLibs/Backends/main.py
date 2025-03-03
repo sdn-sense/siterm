@@ -165,7 +165,7 @@ class Switch(Node):
             sysPort = portName
         return sysPort
 
-    def getAnsibleParams(self, switchName, _portName):
+    def getAnsibleParams(self, switchName):
         """Get additional ansible parameters from configuration"""
         return getConfigParams(self.config, switchName, self)[3]
 
