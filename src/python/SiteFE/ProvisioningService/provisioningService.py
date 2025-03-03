@@ -185,6 +185,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             .get(swname, {})
             .get(key, {})
         )
+        # Add ansible specific parameters
+        curActiveConf["ansparams"] = self.switch.getAnsibleParams(swname)
         # Write curActiveConf to single apply dir
         self.logger.info(f"Apply configuration for {uuid}, {swname}, {key}, {acttype}")
         self.logger.info(f"{curActiveConf[key]}")
