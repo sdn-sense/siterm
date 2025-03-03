@@ -51,6 +51,7 @@ def getConfigParams(config, switch, cls=None):
     ports = []
     vlanRange = ""
     portsIgnore = []
+    ansibleParams = {}
     if config.has_option(switch, 'allports') and config.get(switch, 'allports'):
         if switch in cls.switches['output']:
             ports = cls.plugin.getports(cls.switches['output'][switch])
@@ -60,4 +61,6 @@ def getConfigParams(config, switch, cls=None):
         vlanRange = config.get(switch, 'vlan_range_list')
     if config.has_option(switch, 'ports_ignore'):
         portsIgnore = config.get(switch, 'ports_ignore')
-    return ports, vlanRange, portsIgnore
+    if config.has_option(switch, 'ansible_params'):
+        ansibleParams = config.get(switch, 'ansible_params')
+    return ports, vlanRange, portsIgnore, ansibleParams

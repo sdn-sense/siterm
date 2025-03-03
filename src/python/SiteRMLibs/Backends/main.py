@@ -86,7 +86,7 @@ class Switch(Node):
         """Check if port is not switchport"""
         if "switchport" not in tmpData:
             return True
-        if tmpData["switchport"] != "yes":
+        if tmpData["switchport"] not in ["yes", True, "true"]:
             return True
         return False
 
@@ -165,6 +165,10 @@ class Switch(Node):
             sysPort = portName
         return sysPort
 
+    def getAnsibleParams(self, switchName, _portName):
+        """Get additional ansible parameters from configuration"""
+        return getConfigParams(self.config, switchName, self)[3]
+
     def getAllSwitches(self, switchName=None):
         """Get All Switches"""
         if switchName:
@@ -173,7 +177,7 @@ class Switch(Node):
 
     def getAllAllowedPorts(self, switchName):
         """Get All Allowed Ports for switch"""
-        ports, _, portIgnore = getConfigParams(self.config, switchName, self)
+        ports, _, portIgnore, _ = getConfigParams(self.config, switchName, self)
         return ports if not portIgnore else [x for x in ports if x not in portIgnore]
 
     def getPortMembers(self, switchName, portName):
@@ -253,7 +257,7 @@ class Switch(Node):
     def _mergeYamlAndSwitch(self, switch):
         """Merge yaml and Switch Info. Yaml info overwrites
         any parameter in switch  configuration."""
-        ports, defVlans, portsIgn = getConfigParams(self.config, switch, self)
+        ports, defVlans, portsIgn, _ = getConfigParams(self.config, switch, self)
         if switch not in self.switches["output"]:
             return
         vlans = self.plugin.getvlans(self.switches["output"][switch])
