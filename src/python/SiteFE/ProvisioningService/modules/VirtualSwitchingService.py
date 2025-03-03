@@ -223,7 +223,7 @@ class VirtualSwitchingService:
                 # set vlan to state: 'absent'. In case it is absent already
                 # we dont need to set it again. Switch is unhappy to apply
                 # same command if service is not present.
-                tmpD.setdefault(key, {"state": "absent", "vlanid": val["vlanid"]})
+                tmpD.setdefault(key, {"state": "absent", "vlanid": val["vlanid"], "name": key})
                 different = True
             if val["state"] != "absent":
                 for key1, val1 in val.items():
