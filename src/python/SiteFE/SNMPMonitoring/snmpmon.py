@@ -94,6 +94,28 @@ class SNMPMonitoring():
             self.err.append(ex)
         return []
 
+    def _junosmac(self, host, macs):
+        """Junos Mac Parser (custom as it requires to get multiple values)"""
+        # Junos uses ansible to get mac addresses
+        # mainly because SNMP not always returns vlan id associated with mac address
+        # There might be some MIBs/oids which can be used to get this information
+        # for now, we will use ansible to get mac addresses (as enabling more features
+        # at sites - might be more complex)
+        updatedate = self.switch.switches.get('output', {}).get(host, {}).get('dbinfo', {}).get('updatedate', 0)
+        if (getUTCnow() - updatedate) > 600:
+            self.logger.info(f'[{host}]: Forcing ansible to update device information')
+            self.switch.deviceUpdate(self.sitename, host)
+        self.switch.getinfo()
+        mactable = self.switch.output.get('mactable', {}).get(host, {})
+        macs.setdefault(host, {'vlans': {}})
+        for vlanid, allmacs in mactable.items():
+            if not self._isVlanAllowed(host, vlanid):
+                continue
+            macs[host]['vlans'].setdefault(vlanid, [])
+            for mac in allmacs:
+                macs[host]['vlans'][vlanid].append(mac)
+
+
     def _writeToDB(self, host, output):
         """Write SNMP Data to DB"""
         out = {'id': 0, 'insertdate': getUTCnow(), 'updatedate': getUTCnow(),
@@ -115,6 +137,9 @@ class SNMPMonitoring():
 
     def _getMacAddrSession(self, host, macs):
         if not self.session:
+            return
+        if self.hostconf[host].get('ansible_network_os', 'undefined') == 'sense.junos.junos':
+            self._junosmac(host, macs)
             return
         macs.setdefault(host, {'vlans': {}})
         if 'mac_parser' in self.hostconf[host]['snmp_monitoring']:

@@ -246,24 +246,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             out["switchingserviceuri"] = self._addSwitchingService(**out)
             self._addLabelSwapping(**out)
 
-    def _deviceUpdate(self):
-        """Update all devices information."""
-        self.logger.info("Forcefully update all device information")
-        for siteName in self.config.get("general", "sites"):
-            for dev in self.config.get(siteName, "switch"):
-                fname = f"{self.config.get(siteName, 'privatedir')}/SwitchWorker/{dev}.update"
-                self.logger.info(f"Set Update flag for device {dev} {siteName}, {fname}")
-                success = False
-                while not success:
-                    try:
-                        with open(fname, "w", encoding="utf-8") as fd:
-                            # write timetsamp
-                            fd.write(str(getUTCnow()))
-                            success = True
-                    except OSError as ex:
-                        self.logger.error(f"Got OS Error writing {fname}. {ex}")
-                        time.sleep(1)
-
     def filterOutAvailbVlans(self, hostname, vlanrange):
         """Filter out available vlans for a hostname."""
         self.logger.debug(f"Filtering out available vlans for {hostname}.")
@@ -369,7 +351,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         if updateNeeded or stateChanged or stateChangedFirstRun:
             self.logger.info("Update is needed. Informing to renew all devices state")
             # If models are different, we need to update all devices information
-            self._deviceUpdate()
+            self.switch.deviceUpdate(self.sitename)
 
 def execute(config=None):
     """Main Execute."""

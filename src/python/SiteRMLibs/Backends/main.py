@@ -8,6 +8,7 @@ Authors:
 
 Date: 2021/12/01
 """
+import time
 from SiteRMLibs.Backends.Ansible import Switch as Ansible
 from SiteRMLibs.Backends.generalFunctions import (checkConfig, cleanupEmpty,
                                                   getConfigParams,
@@ -38,6 +39,7 @@ class Switch(Node):
             "info": {},
             "portMapping": {},
             "nametomac": {},
+            "mactable": {},
         }
         self.plugin = None
         if self.config[site]["plugin"] == "ansible":
@@ -73,7 +75,29 @@ class Switch(Node):
             "info": {},
             "portMapping": {},
             "nametomac": {},
+            "mactable": {},
         }
+
+    def deviceUpdate(self, site=None, device=None):
+        """Update all devices information."""
+        self.logger.info("Forcefully update all device information")
+        for siteName in self.config.get("general", "sites"):
+            if site and siteName != site:
+                continue
+            for dev in self.config.get(siteName, "switch"):
+                if device and dev != device:
+                    continue
+                fname = f"{self.config.get(siteName, 'privatedir')}/SwitchWorker/{dev}.update"
+                self.logger.info(f"Set Update flag for device {dev} {siteName}, {fname}")
+                success = False
+                while not success:
+                    try:
+                        with open(fname, "w", encoding="utf-8") as fd:
+                            fd.write(str(getUTCnow()))
+                            success = True
+                    except OSError as ex:
+                        self.logger.error(f"Got OS Error writing {fname}. {ex}")
+                        time.sleep(1)
 
     def _delPortFromOut(self, switch, portname):
         """Delete Port from Output"""
@@ -309,6 +333,9 @@ class Switch(Node):
         )
         self.output["nametomac"][switch] = self.plugin.nametomac(
             self.switches["output"][switch], switch
+        )
+        self.output["mactable"][switch] = self.plugin.getfactvalues(
+            self.switches["output"][switch], "ansible_net_mactable"
         )
 
     def getinfo(self):
