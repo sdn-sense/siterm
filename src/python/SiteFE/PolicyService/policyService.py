@@ -713,7 +713,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.topLevelDeltaState()
         return changed
 
-    def generateActiveConfigDict(self, currentGraph, usedIDs, usedVLANs):
+    def generateActiveConfigDict(self, currentGraph, usedIPs, usedVLANs):
         """Generate new config from parser model."""
         self._refreshHosts()
         changesApplied = False
@@ -787,7 +787,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             self.currentActive["output"] = copy.deepcopy(newconf)
             changesApplied = True
         # Include used IPs and VLANs
-        self.currentActive["output"]["usedIDs"] = usedIDs
+        self.currentActive["output"]["usedIPs"] = usedIPs
         self.currentActive["output"]["usedVLANs"] = usedVLANs
         # Write active deltas to DB (either changed or not changed).
         writeActiveDeltas(self, self.currentActive["output"])
