@@ -7,6 +7,7 @@ Authors:
 
 Date: 2021/01/20
 """
+import sys
 import ast
 import base64
 import cgi
@@ -795,3 +796,31 @@ def timedhourcheck(lockname, hours=1):
             print(f"Error creating timestamp file: {ex}. Will return False for timedhourcheck")
             return False
     return True
+
+def checkHTTPService(config):
+    """Auto Refresh via API check"""
+    # If config not present, continue normally (that fails at other checks)
+    if not config:
+        return 0
+    # This is only done on FE:
+    if config.getraw('MAPPING').get('type', None) != 'FE':
+        return 0
+    returnvals = []
+    for sitename in config.get('general', 'sites'):
+        try:
+            hostname = getFullUrl(config, sitename)
+            url = "/sitefe/v1/models?current=true&summary=false&encode=false"
+            out = getDataFromSiteFE({}, hostname, url)
+            # Need to check out that it received information back
+            # otherwise print error and return 1
+            if out[1] != 200 or out[2] != 'OK':
+                print('Was not able to receive 200 http exit code.')
+                print(f'Output: {out}')
+                returnvals.append(1)
+            else:
+                returnvals.append(0)
+        except Exception:
+            excType, excValue = sys.exc_info()[:2]
+            print(f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
+            returnvals.append(1)
+    return 0 if not returnvals else any(returnvals)

@@ -278,6 +278,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         stateChangedFirstRun = False
         if self.firstRun:
             self.logger.info("Because it is first run, we will start apply first to all devices individually")
+            self.logger.info("In case there are many resources, it might take a while. Check ProvisioningService logs for more information")
             stateChangedFirstRun = self.provision.startwork(self.firstRun)
             self.firstRun = False
         self.multiworker.startwork()
