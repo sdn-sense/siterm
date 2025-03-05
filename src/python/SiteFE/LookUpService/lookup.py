@@ -125,7 +125,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {'vlans': {}, 'ips': {}}
         self.usedVlans = {'deltas': {}, 'system': {}}
-        self.usedIPs = {'deltas': {'ipv4': [], 'ipv6': []}, 'system': {'ipv4': [], 'ipv6': []}}
+        self.usedIPs = {'deltas': {}, 'system': {}}  # Reset used IPs.
         for dirname in ['LookUpService', 'SwitchWorker']:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
@@ -138,16 +138,16 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.provision.refreshthread()
         self.multiworker.refreshthread()
 
-    def _getIPURIs(self, indict, iptype):
+    def _getIPURIs(self, indict, host, iptype):
         """Get All IP URIs if any"""
         if 'hasNetworkAddress' in indict and f'{iptype}-address' in indict['hasNetworkAddress']:
             uri = indict['hasNetworkAddress'][f'{iptype}-address'].get('uri', '')
             ip = indict['hasNetworkAddress'][f'{iptype}-address'].get('value', '')
             if ip:
                 ip = normalizedip(ip)
-                self.usedIPs['deltas'].setdefault(iptype, [])
-                if ip not in self.usedIPs['deltas'][iptype]:
-                    self.usedIPs['deltas'][iptype].append(ip)
+                self.usedIPs['deltas'].setdefault(host, {'ipv4': [], 'ipv6': []})
+                if ip not in self.usedIPs['deltas'][host][iptype]:
+                    self.usedIPs['deltas'][host][iptype].append(ip)
             if uri and ip:
                 self.URIs['ips'].setdefault(normalizedip(ip), indict['hasNetworkAddress'][f'{iptype}-address'])
 
@@ -162,6 +162,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 if not self.checkIfStarted(portDict):
                     continue
                 for port, reqDict in portDict.items():
+                    if not isinstance(reqDict, dict):
+                        continue
                     if 'uri' in reqDict and reqDict['uri'] and 'hasLabel' in reqDict and reqDict['hasLabel']:
                         vlan = reqDict['hasLabel'].get('value', 0)
                         if vlan:
@@ -172,8 +174,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                             self.usedVlans['deltas'].setdefault(host, [])
                             if int(vlan) not in self.usedVlans['deltas'][host]:
                                 self.usedVlans['deltas'][host].append(int(vlan))
-                    self._getIPURIs(reqDict, 'ipv4')
-                    self._getIPURIs(reqDict, 'ipv6')
+                    self._getIPURIs(reqDict, host, 'ipv4')
+                    self._getIPURIs(reqDict, host, 'ipv6')
 
 
     def checkForModelDiff(self, saveName):
@@ -246,20 +248,28 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             out["switchingserviceuri"] = self._addSwitchingService(**out)
             self._addLabelSwapping(**out)
 
+    def recordSystemIPs(self, switchName, key, val):
+        """Record System IPs."""
+        if key not in ["ipv4", "ipv6"]:
+            return
+        self.usedIPs['system'].setdefault(switchName, {'ipv4': [], 'ipv6': []})
+        for item in val:
+            if 'address' not in item or 'masklen' not in item:
+                continue
+            ipaddr = f"{item.get('address', '')}/{item.get('masklen', '')}"
+            if ipaddr not in self.usedIPs['system'][switchName][key] and ipaddr not in self.usedIPs['deltas'].get(switchName, {}).get(key, []):
+                self.usedIPs['system'][switchName][key].append(ipaddr)
+
     def filterOutAvailbVlans(self, hostname, vlanrange):
         """Filter out available vlans for a hostname."""
-        self.logger.debug(f"Filtering out available vlans for {hostname}.")
         if hostname in self.usedVlans.get('deltas', {}):
-            self.logger.debug(f"Filtering out deltas vlans for {hostname}. Used by deltas: {self.usedVlans['deltas'][hostname]}")
             for vlan in self.usedVlans['deltas'][hostname]:
                 if vlan in vlanrange:
                     vlanrange.remove(vlan)
         if hostname in self.usedVlans.get('system', {}):
-            self.logger.debug(f"Filtering out system vlans for {hostname}. Used by system: {self.usedVlans['system'][hostname]}")
             for vlan in self.usedVlans['system'][hostname]:
                 if vlan in vlanrange:
                     vlanrange.remove(vlan)
-        self.logger.debug(f"Remaining available vlans for {hostname} are {vlanrange}")
         return vlanrange
 
     def startwork(self):
@@ -274,7 +284,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.activeDeltas = getActiveDeltas(self)
         self.URIs = {'vlans': {}, 'ips': {}} # Reset URIs
         self.usedVlans = {'deltas': {}, 'system': {}} # Reset used vlans
-        self.usedIPs = {'deltas': {'ipv4': [], 'ipv6': []}, 'system': {'ipv4': [], 'ipv6': []}}  # Reset used IPs
+        self.usedIPs = {'deltas': {}, 'system': {}}  # Reset used IPs.
         for key in ['vsw', 'kube', 'singleport']:
             self._getUniqueVlanURIs(key)
         self.newGraph = Graph()
@@ -302,7 +312,15 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         # 6. Add all active running config
         # ==================================================================================
         self.addDeltaInfo()
-        changesApplied = self.police.startworklookup(self.newGraph)
+        # ==================================================================================
+        # 7. Print used IPs and vlans
+        # ==================================================================================
+        self.logger.info(f"Used IPs: {self.usedIPs}")
+        self.logger.info(f"Used vlans: {self.usedVlans}")
+        # ==================================================================================
+        # 8. Start Policy Service and apply any changes (if any)
+        # ==================================================================================
+        changesApplied = self.police.startworklookup(self.newGraph, self.usedIPs, self.usedVlans)
         self.logger.info(f"Changes there recorded in db: {changesApplied}")
         self.activeDeltas = getActiveDeltas(self)
         self.addDeltaInfo()

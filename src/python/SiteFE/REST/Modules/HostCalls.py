@@ -22,7 +22,7 @@ Date                    : 2023/01/03
 import os
 from SiteFE.REST.Modules.Functions.Host import HostSubCalls
 from SiteRMLibs.CustomExceptions import BadRequestError, NotFoundError, OverlapException
-from SiteRMLibs.MainUtilities import getUTCnow, read_input_data, contentDB
+from SiteRMLibs.MainUtilities import getUTCnow, read_input_data, contentDB, HOSTSERVICES
 
 
 class HostCalls(HostSubCalls, contentDB):
@@ -30,10 +30,7 @@ class HostCalls(HostSubCalls, contentDB):
 
     # pylint: disable=E1101
     def __init__(self):
-        self.host_services = ["Agent", "Ruler", "Debugger", "LookUpService",
-                              "ProvisioningService", "SNMPMonitoring",
-                              "DBWorker", "PolicyService", "SwitchWorker",
-                              "Prometheus-Push", "Arp-Push", "ConfigFetcher"]
+        self.host_services = HOSTSERVICES
         self.__defineRoutes()
         self.__urlParams()
         self.hostdirs = {}

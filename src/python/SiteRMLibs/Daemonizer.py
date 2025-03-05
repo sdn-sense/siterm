@@ -19,7 +19,8 @@ import psutil
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.MainUtilities import (getDataFromSiteFE, getDBConn, getFullUrl,
                                       getHostname, getLoggingObject, getUTCnow,
-                                      getVal, publishToSiteFE, contentDB, createDirs)
+                                      getVal, publishToSiteFE, contentDB, createDirs,
+                                      HOSTSERVICES)
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
 from SiteRMLibs.GitConfig import getGitConfig
 
@@ -424,6 +425,8 @@ class Daemon(DBBackend):
         """Auto Refresh if there is a DB request to do so."""
         # pylint: disable=W0703
         refresh = False
+        if self.component not in HOSTSERVICES:
+            return False
         try:
             if self.dbI:
                 refresh = self._autoRefreshDB(**kwargs)
