@@ -118,10 +118,15 @@ class RecurringAction():
         self.logger.info('Will try to publish information to SiteFE')
         fullUrl += '/sitefe'
         outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/updatehost')
-        self.logger.debug('Update Host result %s', outVals)
+        self.logger.info('Update Host result %s', outVals)
         if outVals[2] != 'OK' or outVals[1] != 200 and outVals[3]:
-            outVals = publishToSiteFE(dic, fullUrl, '/json/frontend/addhost')
-            self.logger.debug('Insert Host result %s', outVals)
+            outValsAdd = publishToSiteFE(dic, fullUrl, '/json/frontend/addhost')
+            self.logger.info('Insert Host result %s', outVals)
+            if outValsAdd[2] != 'OK' or outValsAdd[1] != 200:
+                excMsg += " Could not publish to SiteFE Frontend."
+                excMsg += f"Update to FE: Error: {outVals[2]} HTTP Code: {outVals[1]}"
+                excMsg += f"Add tp FE: Error: {outValsAdd[2]} HTTP Code: {outValsAdd[1]}"
+                self.logger.error(excMsg)
         if excMsg:
             raise PluginException(excMsg)
 

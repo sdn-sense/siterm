@@ -44,6 +44,9 @@ from SiteRMLibs.DBBackend import dbinterface
 from SiteRMLibs.HTTPLibrary import Requests
 
 
+HOSTSERVICES = ["Agent", "Ruler", "Debugger", "LookUpService", "ProvisioningService", "SNMPMonitoring",
+                "DBWorker", "PolicyService", "SwitchWorker", "Prometheus-Push", "Arp-Push", "ConfigFetcher"]
+
 def dictSearch(key, var, ret, ignoreKeys=None):
     """Search item in dictionary"""
     if isinstance(var, dict):

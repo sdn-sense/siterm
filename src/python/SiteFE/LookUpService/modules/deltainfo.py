@@ -95,7 +95,6 @@ class DeltaInfo():
         self.addTimeline(params, uri)
         self.addNetworkStatus(params, uri)
         # Debug IP ADD
-        self.logger.debug(f'ParamsAdd Debug: {params}')
         self._addNetworkAddrVsw(params.get('_params', {}), uri)
 
     def _addService(self, portDict, uri):

@@ -80,7 +80,7 @@ class NodeInfo:
             # ==================================================================================
             self.defineHostInfo(nodeDict, nodeDict["hostinfo"])
 
-    def addIntfInfo(self, inputDict, prefixuri):
+    def addIntfInfo(self, hostname, inputDict, prefixuri):
         """This will add all information about specific interface."""
         # We limit what to add, and right now add only mac-address
         # If there will be need in future to add more, we can extend it;
@@ -95,6 +95,16 @@ class NodeInfo:
                 self._addHasNetworkAttribute(prefixuri, 'MTU', 'mtu', item['MTU'])
             if 'txqueuelen' in item:
                 self._addHasNetworkAttribute(prefixuri, 'txqueuelen', 'txqueuelen', item['txqueuelen'])
+            if item.get('ipv4-address'):
+                splt = item['ipv4-address'].split('/')
+                if len(splt) == 2:
+                    # Record IP Address as used
+                    self.recordSystemIPs(hostname, 'ipv4', [{'address': splt[0], 'masklen': splt[1]}])
+        for item in inputDict.get('10', []):
+            if item.get('ipv6-address'):
+                splt = item['ipv6-address'].split('/')
+                if len(splt) == 2:
+                    self.recordSystemIPs(hostname, 'ipv6', [{'address': splt[0], 'masklen': splt[1]}])
 
     def defineNodeInformation(self, nodeDict):
         """Define node information."""
@@ -243,7 +253,7 @@ class NodeInfo:
             # =====================================================================
             self.addAgentConfigtoMRML(intfDict, newuri, nodeDict["hostname"], intfKey)
             # Now lets also list all interface information to MRML
-            self.addIntfInfo(intfDict, newuri)
+            self.addIntfInfo(nodeDict["hostname"], intfDict, newuri)
             self.addMonName(intfKey, newuri)
             # List each VLAN:
             if "vlans" in list(intfDict.keys()):
@@ -292,6 +302,6 @@ class NodeInfo:
                             self.genUriRef("nml", "value"),
                             self.genLiteral(str(vlanDict["vlanid"])),))
                     # Add hasNetworkAddress for vlan
-                    self.addIntfInfo(vlanDict, vlanuri)
+                    self.addIntfInfo(nodeDict["hostname"], vlanDict, vlanuri)
                     # Now the mapping of the interface information:
                     self.addMonName(vlanName, vlanuri)

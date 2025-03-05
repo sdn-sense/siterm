@@ -713,7 +713,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.topLevelDeltaState()
         return changed
 
-    def generateActiveConfigDict(self, currentGraph):
+    def generateActiveConfigDict(self, currentGraph, usedIPs, usedVLANs):
         """Generate new config from parser model."""
         self._refreshHosts()
         changesApplied = False
@@ -786,6 +786,9 @@ class PolicyService(RDFHelper, Timing, BWService):
             self.logger.info("IMPORTANT: State changed due to forced DB timestamp change. Writing new config to DB.")
             self.currentActive["output"] = copy.deepcopy(newconf)
             changesApplied = True
+        # Include used IPs and VLANs
+        self.currentActive["output"]["usedIPs"] = usedIPs
+        self.currentActive["output"]["usedVLANs"] = usedVLANs
         # Write active deltas to DB (either changed or not changed).
         writeActiveDeltas(self, self.currentActive["output"])
         return changesApplied
@@ -835,13 +838,13 @@ class PolicyService(RDFHelper, Timing, BWService):
         return newconf, modified
 
 
-    def startworklookup(self, currentGraph):
+    def startworklookup(self, currentGraph, usedIPs, usedVlans):
         """Start Policy Service."""
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started via Lookup")
         self.__clean()
         # generate new out
-        changesApplied = self.generateActiveConfigDict(currentGraph)
+        changesApplied = self.generateActiveConfigDict(currentGraph, usedIPs, usedVlans)
         return changesApplied
 
     def startwork(self):
