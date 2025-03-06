@@ -72,8 +72,9 @@ def runchecks():
     """Run all checks"""
     state = 0 if checkServices() else 1
     state = state or certCheker()
-    if os.path.exists("/tmp/config-fetcher-ready"):
-        state = state or checkHTTPService(getGitConfig())
+    # TODO - Review delay of config fetch (timeouts, need update Helm delay)
+    #if os.path.exists("/tmp/config-fetcher-ready"):
+    #    state = state or checkHTTPService(getGitConfig())
     return state
 
 if __name__ == "__main__":
