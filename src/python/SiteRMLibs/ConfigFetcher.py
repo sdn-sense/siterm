@@ -31,6 +31,11 @@ class ConfigFetcher():
         self.gitObj = GitConfig()
         self.config = None
 
+    def _newfetch(self):
+        """In case it is a new fetch, remove ready file"""
+        if os.path.isfile('/tmp/config-fetcher-ready'):
+            os.remove('/tmp/config-fetcher-ready')
+
     def _fetchFile(self, name, url):
         def retryPolicy(outObj, retries=3):
             if 'status_code' in outObj and outObj['status_code'] == -1:
@@ -53,6 +58,7 @@ class ConfigFetcher():
             with open(filename, 'r', encoding='utf-8') as fd:
                 output = yload(fd.read())
         else:
+            self._newfetch()
             self.logger.info(f'Fetching new config file for {name} from {url}')
             datetimelasthour = datetimeNow - datetime.timedelta(hours=1)
             prevfilename = f"/tmp/{datetimelasthour.strftime('%Y-%m-%d-%H')}-{name}.yaml"

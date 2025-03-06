@@ -72,7 +72,8 @@ def runchecks():
     """Run all checks"""
     state = 0 if checkServices() else 1
     state = state or certCheker()
-    state = state or checkHTTPService(getGitConfig())
+    if os.path.exists("/tmp/config-fetcher-ready"):
+        state = state or checkHTTPService(getGitConfig())
     return state
 
 if __name__ == "__main__":
