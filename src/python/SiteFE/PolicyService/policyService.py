@@ -768,7 +768,9 @@ class PolicyService(RDFHelper, Timing, BWService):
             changesApplied = True
 
         # Check if there is any difference between old and current.
-        for diff in list(dictdiffer.diff(self.currentActive["output"], self.newActive["output"])):
+        for diff in list(dictdiffer.diff(self.currentActive["output"],
+                                         self.newActive["output"],
+                                         ignore=set(["usedIPs", "usedVLANs"]))):
             self.logger.debug(f"New diff: {diff}")
         self.currentActive["output"] = copy.deepcopy(self.newActive["output"])
 
