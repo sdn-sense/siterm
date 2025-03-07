@@ -101,7 +101,11 @@ class DeltaCalls:
         username += environ.get("CERTINFO", {}).get("fullDN", "UNKNOWN") + "-"
         username += environ.get('REMOTE_ADDR', 'UNKNOWN')
         otherInfo = str({'otherInfo': otherInfo, 'deltaInfo': deltaInfo})
-        self.dbI.insert("deltasusertracking", [{"username": username, "insertdate": getUTCnow(), "deltaid": deltaInfo.get("uuid", "UNKNOWN"), "useraction": userAction, "otherinfo": otherInfo}])
+        print([{"username": username, "insertdate": getUTCnow(), "deltaid": deltaInfo.get("uuid", "UNKNOWN"), "useraction": userAction, "otherinfo": otherInfo}])
+        # TODO: Review user tracking as it gets many updates from agenst to do set state.
+        # Which is correct as agents keep informing FE that resource is activated and did not drift anyhow.
+        # This can easily explode and grow database quickly. For now we save it in the log, and not inside database;
+        #self.dbI.insert("deltasusertracking", [{"username": username, "insertdate": getUTCnow(), "deltaid": deltaInfo.get("uuid", "UNKNOWN"), "useraction": userAction, "otherinfo": otherInfo}])
 
     @staticmethod
     def __intGetPostData(environ, **_kwargs):
