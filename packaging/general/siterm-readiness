@@ -27,9 +27,15 @@ def getStates():
     for fname in files:
         if fname.endswith('.json'):
             out = getFileContentAsJson(directory + fname)
-            if out.get('state', 'UNKNOWN') != 'OK':
+            if out.get('state', 'UNKNOWN') == 'WARNING':
+                # Get content and report back, but exitCode does not change that - as this is just a warning
+                msg = f"[WARNING] {out.get('component', 'UNKNOWN')}. Exception: {out.get('exc', 'UNKNOWN')}"
+                print(msg)
+            elif out.get('state', 'UNKNOWN') != 'OK':
                 exitCode = 1
-                print("State for service is not OK. Details: ", fname, out)
+                msg = f"[FAILED] {out.get('component', 'UNKNOWN')}. Exception: {out.get('exc', 'UNKNOWN')}."
+                msg += f" State: {out.get('state', 'UNKNOWN')}."
+                print(msg)
     return exitCode
 
 def enableReadinessCheck(statFile):

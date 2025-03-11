@@ -21,7 +21,7 @@ from SiteFE.PolicyService.policyService import PolicyService
 from SiteFE.ProvisioningService.provisioningService import ProvisioningService
 from SiteRMLibs.timing import Timing
 from SiteRMLibs.Backends.main import Switch
-from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
+from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
 from SiteRMLibs.MainUtilities import (createDirs, generateHash,
                                       getActiveDeltas, getCurrentModel,
                                       getDBConn, getLoggingObject, getUTCnow, getVal,
@@ -129,6 +129,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         for dirname in ['LookUpService', 'SwitchWorker']:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
+        self.warnings = []
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -272,6 +273,29 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                     vlanrange.remove(vlan)
         return vlanrange
 
+    def addWarning(self, warning):
+        """Record Alarm."""
+        self.warnings.append(warning)
+
+    def checkAndRaiseWarnings(self):
+        """Check and raise warnings in case some vlans are used/configured manually."""
+        # Check that for all vlan range, if it is on system usedVlans - it should be on deltas too;
+        # otherwise it means vlan is configured manually (or deletion did not happen)
+        for host, vlans in self.usedVlans['system'].items():
+            if host in self.config.get('MAIN', {}):
+                # Means it is a switch (host check remains for Agents itself)
+                all_vlan_range_list = self.config.get('MAIN', {}).get(host, {}).get('all_vlan_range_list', [])
+                for vlan in vlans:
+                    if vlan in all_vlan_range_list and vlan not in self.usedVlans['deltas'].get(host, []):
+                        self.addWarning(f"Vlan {vlan} is configured manually on {host}. It comes not from delta."
+                                         "Either deletion did not happen or was manually configured.")
+        if self.warnings:
+            self.logger.warning("Warnings: %s", self.warnings)
+            warnings = "\n".join(self.warnings)
+            self.warnings = []
+            raise ServiceWarning(warnings)
+
+
     def startwork(self):
         """Main start."""
         self.logger.info("Started LookupService work")
@@ -371,6 +395,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             self.logger.info("Update is needed. Informing to renew all devices state")
             # If models are different, we need to update all devices information
             self.switch.deviceUpdate(self.sitename)
+        self.checkAndRaiseWarnings()
 
 def execute(config=None):
     """Main Execute."""

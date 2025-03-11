@@ -21,7 +21,7 @@ from SiteRMLibs.MainUtilities import (getDataFromSiteFE, getDBConn, getFullUrl,
                                       getHostname, getLoggingObject, getUTCnow,
                                       getVal, publishToSiteFE, contentDB, createDirs,
                                       HOSTSERVICES)
-from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
+from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
 from SiteRMLibs.GitConfig import getGitConfig
 
 
@@ -415,11 +415,9 @@ class Daemon(DBBackend):
             fname = f"/tmp/siterm-states/{self.component}.json"
             if self.inargs.devicename:
                 fname = f"/tmp/siterm-states/{self.component}-{self.inargs.devicename}.json"
-            self.contentDB.dumpFileContentAsJson(
-                fname,
-                {"state": state, "sitename": sitename,
-                 "runtime": runtime, "version": runningVersion,
-                 "exc": exc})
+            self.contentDB.dumpFileContentAsJson(fname,
+                {"state": state, "sitename": sitename, "component": self.component,
+                 "runtime": runtime, "version": runningVersion, "exc": exc})
 
     def autoRefreshDB(self, **kwargs):
         """Auto Refresh if there is a DB request to do so."""
@@ -513,6 +511,12 @@ class Daemon(DBBackend):
                         self.preRunThread(sitename, rthread)
                         self.__run(rthread)
                         self.reporter('OK', sitename, stwork)
+                    except ServiceWarning as ex:
+                        exc = traceback.format_exc()
+                        self.reporter('WARNING', sitename, stwork, str(ex))
+                        self.logger.warning("Service Warning!!! Error details:  %s", ex)
+                        self.logger.warning("Service Warning!!! Traceback details:  %s", exc)
+                        self.logger.warning("It is not fatal error. Continue to run normally.")
                     except:
                         hadFailure = True
                         exc = traceback.format_exc()

@@ -10,6 +10,9 @@ import yaml
 from yaml import safe_dump as ydump
 import ansible_runner
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import getActiveDeltas
+from SiteRMLibs.MainUtilities import getVal
+from SiteRMLibs.MainUtilities import getDBConn
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.Backends.main import Switch
 
@@ -23,9 +26,19 @@ def getParser(description):
     oparser.add_argument('--dumpconfig', action='store_true',
                          help="Run ansible and dump configuration received from ansible.")
     oparser.set_defaults(dumpconfig=False)
-    oparser.add_argument('--cleanswitch', action='store_true',
-                         help="Run ansible and print commands to clean switch.")
-    oparser.set_defaults(cleanswitch=False)
+    oparser.add_argument('--cleanswitch', choices=['exceptactive', 'onlyactive', 'all'],
+                         help="Run ansible to clean switch with specified option: "
+                              "'exceptactive', 'onlyactive', or 'all'."
+                              "It will not execute on the device, just print the commands. Default is None."
+                              "IMPORTANT:While exceptactive is safe to run,"
+                              "          onlyactive and all are dangerous and execute only if you know what you are doing."
+                              "exceptactive - clean all vlans except active ones/provisioned by SENSE."
+                              "onlyactive - clean all vlans provisioned by SENSE."
+                              "all - clean all vlans.")
+    oparser.set_defaults(cleanswitch=None)
+    oparser.add_argument('--autoapply', action='store_true',
+                         help="auto apply the configuration to the switch. Only for 'cleanswitch' option.")
+    oparser.set_defaults(autoapply=False)
     oparser.add_argument('--fulldebug', action='store_true',
                          help="Run ansible with full debug output.")
     return oparser
@@ -33,10 +46,12 @@ def getParser(description):
 
 class SwitchCleaner():
     """Class to clean switch data of sense vlans"""
-    def __init__(self):
+    def __init__(self, args):
         self.config = getGitConfig()
         self.logger = getLoggingObject(logType="StreamLogger", service="AnsibleCleaner")
         self.switch = Switch(self.config, self.config.config["SITENAME"])
+        self.dbI = getVal(getDBConn('List', self), **{'sitename': self.config.config["SITENAME"]})
+        self.args = args
 
 
     def _getAnsibleCleanCommands(self, swname, inputInterface):
@@ -46,9 +61,9 @@ class SwitchCleaner():
         # Get host configuration;
         curActiveConf = self.switch.plugin.getHostConfig(swname)
         # Clean all configuration params and add new interfaces
-        curActiveConf.pop("interface", None)
-        curActiveConf.pop("sense_bgp", None)
-        curActiveConf.pop("qos", None)
+        curActiveConf.pop("interface", {})
+        curActiveConf.pop("sense_bgp", {})
+        curActiveConf.pop("qos", {})
         curActiveConf["interface"] = inputInterface
         # Write new configuration to file
         self.switch.plugin._writeHostConfig(swname, curActiveConf, "_debug")
@@ -66,30 +81,64 @@ class SwitchCleaner():
             print(fd.read())
         self.logger.info("-"*100)
         os.remove(fname)
+        # If autoapply is set, apply the clean commands
+        if self.args.autoapply:
+            self.logger.info("-"*100)
+            self.logger.info(f"Apply clean commands for {swname}")
+            # Loop via each interface and apply it
+            for intf, intfdict in inputInterface.items():
+                self.logger.info(f"Applying clean command for {intf}")
+                # Get host configuration;
+                curActiveConf = self.switch.plugin.getHostConfig(swname)
+                # Clean all configuration params and add new interfaces
+                curActiveConf.pop("interface", {})
+                curActiveConf.pop("sense_bgp", {})
+                curActiveConf.pop("qos", {})
+                curActiveConf["interface"] = {intf: intfdict}
+                # Write new configuration to file
+                self.switch.plugin._writeHostConfig(swname, curActiveConf, "_debug")
+                self.switch.plugin._applyNewConfig([swname], "_debug", templateName="applyconfig.yaml")
 
     def _addVlan(self, hostclean, intf, vlanid, intfdict):
         """Add vlan to hostclean"""
-        hostclean.setdefault(intf, {'description': intfdict.get('description', ''),
+        tmpEntry = {'description': intfdict.get('description', ''),
                                     'mtu': int(intfdict.get('mtu', 1500)),
                                     'name': intf,
                                     'state': 'absent',
                                     'vlanid': vlanid,
-                                    'tagged_members': {k: 'absent' for k in intfdict.get('tagged', []) if k}})
+                                    'tagged_members': {k: 'absent' for k in intfdict.get('tagged', []) if k}}
+        ipsadded = []
+        for key in ['ipv4', 'ipv6']:
+            for ipdict in intfdict.get(key, []):
+                fullIP = f"{ipdict['address']}/{ipdict['masklen']}"
+                if fullIP not in ipsadded:
+                    tmpEntry.setdefault(f'{key}_address', {})[fullIP] = 'absent'
+                    ipsadded.append(fullIP)
+        hostclean.setdefault(intf, tmpEntry)
 
 
     def clean(self, host, dataIn):
         """Clean switch data of sense vlans. It will not execute on the device, just print the commands"""
         allvlans = self.config.config.get('MAIN', {}).get(host, {}).get('all_vlan_range_list', [])
+        activeDeltas = getActiveDeltas(self)
         if not allvlans:
             self.logger.error(f"NO VLANs configured found for {host}. Ignore host")
             return
         hostclean = {}
+        usedvlansbydeltas = activeDeltas.get('usedVLANs', {}).get('deltas', {}).get(host, [])
         for intf, intfdict in dataIn.get('ansible_net_interfaces', {}).items():
             if intf.startswith('Vlan'):
                 vlanid = int(intf.replace('Vlan', '').strip())
                 if vlanid in allvlans:
-                    print(f"CLEANING VLAN: {host} - {vlanid}")
-                    self._addVlan(hostclean, intf, vlanid, intfdict)
+                    if vlanid in usedvlansbydeltas and self.args.cleanswitch == 'onlyactive':
+                        print(f"CLEANING VLAN: {host} - {vlanid}")
+                        self._addVlan(hostclean, intf, vlanid, intfdict)
+                    elif vlanid not in usedvlansbydeltas and self.args.cleanswitch == 'exceptactive':
+                        print(f"CLEANING VLAN: {host} - {vlanid}")
+                        self._addVlan(hostclean, intf, vlanid, intfdict)
+                    elif self.args.cleanswitch == 'all':
+                        print(f"CLEANING VLAN: {host} - {vlanid}")
+                        self._addVlan(hostclean, intf, vlanid, intfdict)
         print(f"CLEANING SWITCH: {host}")
         if hostclean:
             self._getAnsibleCleanCommands(host, hostclean)
@@ -111,11 +160,11 @@ def runAnsible(playbookFile, fulldebug=False):
                                    playbook=playbookFile, verbosity=verbosity)
     return ansRunner
 
-def printports(host, dataIn):
+def printports(host, dataIn, _args):
     """Print port data as an example config for rm-configs"""
     out = {host: {'vsw': host, 'allPorts': False, 'allVlans': False, 'ports': {}}}
     for port, portData in dataIn.get('ansible_net_interfaces', {}).items():
-        if 'switchport' in portData and portData['switchport'] == 'yes':
+        if 'switchport' in portData and portData['switchport'] in ["yes", True, "true"]:
             out[host]['ports'][port] = {}
             if 'bandwidth' in portData and portData['bandwidth']:
                 out[host]['ports'][port]['capacity'] = int(portData['bandwidth'])
@@ -134,9 +183,9 @@ def printports(host, dataIn):
     print(ydump(out))
     print('-'*100)
 
-def cleanswitch(host, dataIn):
+def cleanswitch(host, dataIn, args):
     """Clean switch data of sense vlans. It will not execute on the device, just print the commands"""
-    cls = SwitchCleaner()
+    cls = SwitchCleaner(args)
     cls.clean(host, dataIn)
 
 
@@ -165,11 +214,11 @@ def run(args):
                         print('-'*100)
                     if args.printports:
                         print('-'*100)
-                        printports(host, host_events['event_data']['res']['ansible_facts'])
+                        printports(host, host_events['event_data']['res']['ansible_facts'], args)
                         print('-'*100)
                     if args.cleanswitch:
                         print('-'*100)
-                        cleanswitch(host, host_events['event_data']['res']['ansible_facts'])
+                        cleanswitch(host, host_events['event_data']['res']['ansible_facts'], args)
                         print('-'*100)
             print('='*100)
 

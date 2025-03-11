@@ -18,7 +18,7 @@ from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import getInterfaceSpeed, getIfInterfaceReady
-from SiteRMLibs.CustomExceptions import NotFoundError
+from SiteRMLibs.CustomExceptions import NotFoundError, ServiceWarning
 
 def str2bool(val):
     """Check if str is true boolean."""
@@ -295,12 +295,43 @@ class NetInfo(BWService):
 
     def postProcess(self, data):
         """Post process data"""
+        errors = []
+        hostname = self.config.get('agent', 'hostname')
         for key, intfData in data.get('NetInfo', {}).get('interfaces', {}).items():
+            # This will not raise exception, as this info can come from Kubernetes.
             if not intfData.get('switch_port'):
                 self.logger.error(f"Interface {key} has no switch port defined, nor was available from Kube (in case Kube install)!")
             if not intfData.get('switch'):
                 self.logger.error(f"Interface {key} has no switch defined, nor was available from Kube (in case Kube install)!")
+            # Check if there are any warnings to raise (e.g. no remaining vlans in vlan_range_list or bwParams over subscribed)
+            if intfData.get('bwParams', {}).get('reservableCapacity', 0) <= intfData.get('bwParams', {}).get('minReservableCapacity', 0):
+                errmsg = f"Interface {key} has no remaining reservable capacity! Over subscribed?"
+                self.logger.error(errmsg)
+                errors.append(errmsg)
+            vlanrange = intfData.get('vlan_range_list', [])
+            if not vlanrange:
+                errmsg = f"Interface {key} has no vlan range list defined!"
+                self.logger.error(errmsg)
+                errors.append(errmsg)
+                continue
+            for _vlankey, vlandict in intfData.get('vlans', {}).items():
+                vlanid = vlandict.get('vlanid', 0)
+                if vlanid in vlanrange:
+                    # Check if vlan comes from delta
+                    if vlanid not in self.activeDeltas.get('output', {}).get('usedVLANs', {}).get('deltas', {}).get(hostname, []):
+                        errmsg = f"Vlan {vlanid} in interface {key} is not from delta! Manual provisioned or deletion failed?"
+                        self.logger.error(errmsg)
+                        errors.append(errmsg)
+                    vlanrange.remove(vlanid)
+            # If vlanrange is empty, then all vlans are provisioned/used and there are no vlans remaining
+            if not vlanrange:
+                errmsg = f"No remaining vlans in vlan range list for interface {key}. All used?"
+                self.logger.error(errmsg)
+                errors.append(errmsg)
+        if errors:
+            raise ServiceWarning("\n".join(errors), data)
         return data
+
 
 if __name__ == "__main__":
     obj = NetInfo()

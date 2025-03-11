@@ -209,6 +209,8 @@ class NodeInfo:
                  self.genUriRef("schema", "#vlan"),
                 ))
             vlanRange = self.filterOutAvailbVlans(hostname, intfDict['vlan_range_list'])
+            if not vlanRange:
+                self.addWarning(f"VLAN Range for {hostname}:{intf} is not available or remaining vlans is empty.")
             self._nmlLiteral(
                 f"{newuri}:vlan-range",
                 "values",

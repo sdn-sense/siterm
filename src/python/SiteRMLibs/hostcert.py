@@ -81,22 +81,34 @@ class HostCertHandler():
             out['failure'] = f"Certificate and key verification failed at general: {ex}"
         return out
 
+    def runChecks(self, certinfo):
+        exitCode = 0
+        msg = ""
+        timestampnow = int(datetime.now().timestamp())
+        if certinfo.get('failure', False):
+            msg = f"Certificate check failed. Error: {certinfo['failure']}"
+            print(msg)
+            exitCode = 2
+        if 'notAfter' in certinfo and certinfo['notAfter'] < timestampnow:
+            msg = f"Certificate expired. Expired at: {certinfo['notAfter']}"
+            print(msg)
+            exitCode = 3
+        if 'notBefore' in certinfo and certinfo['notBefore'] > timestampnow:
+            msg = f"Certificate not valid yet. Not valid before: {certinfo['notBefore']}"
+            print(msg)
+            exitCode = 4
+        if 'notAfter' in certinfo and certinfo['notAfter'] - timestampnow < 1209600:
+            msg = f"Certificate will expire in less than 14 days. Expires at: {certinfo['notAfter']}"
+            print(msg)
+        return exitCode, msg
+
     def externalCertChecker(self):
         """Call for External service like Readiness/Liveness"""
         exitCode = 0
         for cert, key in [('/etc/siterm/certs/hostcert.pem', '/etc/siterm/certs/hostkey.pem'),
                           ('/etc/httpd/certs/cert.pem', '/etc/httpd/certs/privkey.pem')]:
             certCheck = self.validateHostCertKey(cert, key)
-            timestampnow = int(datetime.now().timestamp())
-            if certCheck.get('failure', False):
-                print(f"Certificate check failed. Error: {certCheck['failure']}")
-                exitCode = 2
-            if 'notAfter' in certCheck and certCheck['notAfter'] < timestampnow:
-                print(f"Certificate expired. Expired at: {certCheck['notAfter']}")
-                exitCode = 3
-            if 'notBefore' in certCheck and certCheck['notBefore'] > timestampnow:
-                print(f"Certificate not valid yet. Not valid before: {certCheck['notBefore']}")
-                exitCode = 4
-            if 'notAfter' in certCheck and certCheck['notAfter'] - timestampnow < 604800:
-                print(f"Certificate will expire in less than 7 days. Expires at: {certCheck['notAfter']}")
+            tmpExitCode, _msg = self.runChecks(certCheck)
+            if tmpExitCode > exitCode:
+                exitCode = tmpExitCode
         return exitCode
