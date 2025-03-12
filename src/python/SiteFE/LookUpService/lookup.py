@@ -295,7 +295,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             self.warnings = []
             raise ServiceWarning(warnings)
 
-
     def startwork(self):
         """Main start."""
         self.logger.info("Started LookupService work")

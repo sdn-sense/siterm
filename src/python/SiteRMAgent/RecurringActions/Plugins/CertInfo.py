@@ -19,7 +19,6 @@ class CertInfo:
         self.logger = logger if logger else getLoggingObject(config=self.config, service='Agent')
         self.certHandler = HostCertHandler()
 
-
     def get(self, **_kwargs):
         """Get certificate info."""
         certInfo = self.certHandler.validateHostCertKey('/etc/grid-security/hostcert.pem',
@@ -27,9 +26,7 @@ class CertInfo:
         exitCode, msg = self.certHandler.runChecks(certInfo)
         if exitCode:
             self.logger.error(f"Failed to validate host certificate: {msg}")
-
         return certInfo
-
 
 
 if __name__ == "__main__":

@@ -81,7 +81,9 @@ class HostCertHandler():
             out['failure'] = f"Certificate and key verification failed at general: {ex}"
         return out
 
-    def runChecks(self, certinfo):
+    @staticmethod
+    def runChecks(certinfo):
+        """Run certificate checks"""
         exitCode = 0
         msg = ""
         timestampnow = int(datetime.now().timestamp())

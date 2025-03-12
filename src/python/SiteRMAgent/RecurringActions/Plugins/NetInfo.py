@@ -303,7 +303,9 @@ class NetInfo(BWService):
                 self.logger.error(f"Interface {key} has no switch port defined, nor was available from Kube (in case Kube install)!")
             if not intfData.get('switch'):
                 self.logger.error(f"Interface {key} has no switch defined, nor was available from Kube (in case Kube install)!")
-            # Check if there are any warnings to raise (e.g. no remaining vlans in vlan_range_list or bwParams over subscribed)
+            # Check if there are any warnings to raise, e.g.:
+            # -no remaining vlans in vlan_range_list
+            # - bwParams over subscribed
             if intfData.get('bwParams', {}).get('reservableCapacity', 0) <= intfData.get('bwParams', {}).get('minReservableCapacity', 0):
                 errmsg = f"Interface {key} has no remaining reservable capacity! Over subscribed?"
                 self.logger.error(errmsg)
