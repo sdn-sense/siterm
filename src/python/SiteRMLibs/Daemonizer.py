@@ -196,6 +196,7 @@ class Daemon(DBBackend):
             self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}-{self.inargs.devicename}.pid"
         self.config = None
         self.logger = None
+        self.firstInitDone = False
         self.runThreads = {}
         self.contentDB = contentDB()
         self.getGitConf = getGitConf
@@ -237,7 +238,7 @@ class Daemon(DBBackend):
                 pass
             self.logger.info("Database not ready. See details above. If continous, check the mariadb and mariadb_init process.")
             retval = False
-        if not os.path.exists("/tmp/config-fetcher-ready"):
+        if not os.path.exists("/tmp/config-fetcher-ready") and not self.firstInitDone:
             self.logger.info("Config Fetcher not ready. See details above. If continous, check the config-fetcher process.")
             retval = False
         return retval
@@ -246,6 +247,7 @@ class Daemon(DBBackend):
         """Check if the database is ready"""
         while not self.startready():
             time.sleep(5)
+        self.firstInitDone = True
 
     def _refreshConfigAfterFailure(self):
         """Config refresh call after failure"""
