@@ -13,7 +13,7 @@ from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.CustomExceptions import PluginException, NotFoundError, PluginFatalException
+from SiteRMLibs.CustomExceptions import PluginException, NotFoundError, PluginFatalException, ServiceWarning
 from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
 from SiteRMAgent.RecurringActions.Plugins.CPUInfo import CPUInfo
 from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
@@ -91,9 +91,14 @@ class RecurringAction():
                 self.logger.error(f"Exception details: {str(ex)}")
                 excMsg += f" {str(ex)}"
                 raiseError = True
+            except ServiceWarning as ex:
+                self.logger.warning(f"Plugin {tmpName} raised warning. Will continue to report back to FE.")
+                self.logger.warning(f"Exception details: {str(ex)}")
+                excMsg += f" {str(ex)}"
+                outputDict = ex.data
         if raiseError:
             raise PluginException(excMsg)
-        return outputDict, excMsg
+        return outputDict, excMsg, raiseError
 
     def appendConfig(self, dic):
         """Append to dic values from config and also dates."""
@@ -109,7 +114,7 @@ class RecurringAction():
         """Execute main script for SiteRM Agent output preparation."""
         workDir = self.config.get('general', 'privatedir') + "/SiteRM/"
         createDirs(workDir)
-        dic, excMsg = self.prepareJsonOut()
+        dic, excMsg, raiseError = self.prepareJsonOut()
         fullUrl = getFullUrl(self.config, self.sitename)
         dic = self.appendConfig(dic)
 
@@ -127,9 +132,10 @@ class RecurringAction():
                 excMsg += f"Update to FE: Error: {outVals[2]} HTTP Code: {outVals[1]}"
                 excMsg += f"Add tp FE: Error: {outValsAdd[2]} HTTP Code: {outValsAdd[1]}"
                 self.logger.error(excMsg)
-        if excMsg:
+        if excMsg and raiseError:
             raise PluginException(excMsg)
-
+        if excMsg:
+            raise ServiceWarning(excMsg)
 
 def execute(config):
     """Main Execute."""

@@ -11,7 +11,15 @@ def exceptionCode(excName):
     """Return Exception code.
     """
     exCodes = {IOError: -1, KeyError: -2, AttributeError: -3, IndentationError: -4,
-               ValueError: -5, PluginException: -6, NameError: -7}
+               ValueError: -5, PluginException: -6, NameError: -7, PluginFatalException: -8,
+               OverlapException: -9, NotFoundError: -10, BackgroundException: -11,
+               ServiceWarning: -12, ConfigException: -13, WrongInputError: -14,
+               FailedToParseError: -15, BadRequestError: -16, ValidityFailure: -17,
+               NoOptionError: -18, NoSectionError: -19, WrongDeltaStatusTransition: -20,
+               DeltaNotFound: -21, ModelNotFound: -22, HostNotFound: -23, ExceededCapacity: -24,
+               ExceededLinkCapacity: -25, ExceededSwitchCapacity: -26, DeltaKeyMissing: -27,
+               UnrecognizedDeltaOption: -28, FailedInterfaceCommand: -29, FailedRoutingCommand: -30,
+               TooManyArgumentalValues: -31, NotSupportedArgument: -32}
     if excName in exCodes:
         return exCodes[excName]
     return -100
@@ -29,6 +37,9 @@ class NotFoundError(ExceptionTemplate):
 
 class BackgroundException(ExceptionTemplate):
     """Background Exception."""
+
+class ServiceWarning(ExceptionTemplate):
+    """Service Warning - Not Fatal."""
 
 class ConfigException(ExceptionTemplate):
     """Config Exception."""

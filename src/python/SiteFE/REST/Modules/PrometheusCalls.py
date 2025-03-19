@@ -285,7 +285,7 @@ class PrometheusCalls:
             "service_state",
             "Description of enum",
             labelnames=["servicename", "hostname"],
-            states=["OK", "UNKNOWN", "FAILED", "KEYBOARDINTERRUPT", "UNSET"],
+            states=["OK", "WARNING", "UNKNOWN", "FAILED", "KEYBOARDINTERRUPT", "UNSET"],
             registry=registry,
         )
         runtimeInfo = Gauge(

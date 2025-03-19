@@ -51,6 +51,8 @@ class SwitchInfo():
                                 ['nml', 'labeltype'],
                                 ['schema', '#vlan'])
                 vlanRange = self.filterOutAvailbVlans(switchName, portSwitch['vlan_range_list'])
+                if not vlanRange:
+                    self.addWarning(f"VLAN Range for {switchName}:{portName} is not available or remaining vlans is empty.")
                 self.setToGraph(['site', f"{newuri}:{'vlan-range'}"],
                                 ['nml', 'values'],
                                 [",".join(map(str, vlanRange))])
