@@ -793,6 +793,10 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.currentActive["output"]["usedVLANs"] = usedVLANs
         # Write active deltas to DB (either changed or not changed).
         writeActiveDeltas(self, self.currentActive["output"])
+        if changesApplied:
+            self.logger.info('-'*100)
+            self.logger.info('Here is new current Active output')
+            self.logger.info(pprint.pformat(self.currentActive["output"]))
         return changesApplied
 
     def _instanceoverride(self, currentActive):
