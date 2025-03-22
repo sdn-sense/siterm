@@ -221,7 +221,10 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             if not self.yamlconfuuidActive:
                 uuidDict = self.yamlconfuuid.get(acttype, {})
             scannedUUIDs = []
-            for uuid, ddict in uuidDict.items():
+            total = len(uuidDict)
+            for idx, (uuid, ddict) in enumerate(uuidDict.items(), start=1):
+                self.logger.info('-'*100)
+                self.logger.info(f'Working on acttype {idx} out of {total}')
                 scannedUUIDs.append(uuid)
                 for swname, swdict in ddict.items():
                     if swname not in switches:
@@ -241,10 +244,13 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)
             # We also want to apply any new ones asap (timed especially, which start at any time set)
-            for uuid, ddict in self.yamlconfuuid.get(acttype, {}).items():
+            self.logger.info('Start check of all new applies')
+            total = len(self.yamlconfuuid.get(acttype, {}))
+            for idx, (uuid, ddict) in enumerate(self.yamlconfuuid.get(acttype, {}).items(), start=1):
                 if uuid in scannedUUIDs:
                     continue
-                self.logger.info(f'New apply for {uuid}')
+                self.logger.debug('-'*100)
+                self.logger.info(f'[NEW APPLY]: Working on acttype {idx} out of {total}. UUID: {uuid}')
                 for swname, swdict in ddict.items():
                     if swname not in switches:
                         continue

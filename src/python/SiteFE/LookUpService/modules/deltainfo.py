@@ -8,6 +8,7 @@ Authors:
 
 Date: 2021/12/01
 """
+from rdflib.namespace import XSD
 from SiteRMLibs.MainUtilities import convertTSToDatetime
 from SiteRMLibs.ipaddr import normalizedip
 
@@ -79,14 +80,14 @@ class DeltaInfo():
         """Add all params, like tag, belongsTo, labelSwapping, timeline"""
         if '_params' not in params:
             return
-        for key in [['tag', 'mrs', True], ['labelSwapping', 'nml', True],
-                    ['belongsTo', 'nml', False], ['encoding', 'nml', False]]:
+        for key in [['tag', 'mrs', True, None], ['labelSwapping', 'nml', True, XSD.boolean],
+                    ['belongsTo', 'nml', False, None], ['encoding', 'nml', False, None]]:
             val = ""
             for val in set(params.get('_params', {}).get(key[0], "").split('|')):
                 if not val:
                     continue
                 if key[2]:
-                    val = self.genLiteral(str(val))
+                    val = self.genLiteral(str(val), key[3])
                 else:
                     val = self.genUriRef('', custom=val)
                 self.newGraph.add((self.genUriRef('site', uri),

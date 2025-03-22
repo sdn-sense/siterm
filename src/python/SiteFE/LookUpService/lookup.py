@@ -282,9 +282,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         # Check that for all vlan range, if it is on system usedVlans - it should be on deltas too;
         # otherwise it means vlan is configured manually (or deletion did not happen)
         for host, vlans in self.usedVlans['system'].items():
-            if host in self.config.get('MAIN', {}):
+            if host in self.config.config.get('MAIN', {}):
                 # Means it is a switch (host check remains for Agents itself)
-                all_vlan_range_list = self.config.get('MAIN', {}).get(host, {}).get('all_vlan_range_list', [])
+                all_vlan_range_list = self.config.config.get('MAIN', {}).get(host, {}).get('all_vlan_range_list', [])
                 for vlan in vlans:
                     if vlan in all_vlan_range_list and vlan not in self.usedVlans['deltas'].get(host, []):
                         self.addWarning(f"Vlan {vlan} is configured manually on {host}. It comes not from delta."

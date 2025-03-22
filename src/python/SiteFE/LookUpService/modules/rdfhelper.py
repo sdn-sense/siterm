@@ -697,7 +697,7 @@ class RDFHelper():
         reqKeys = ['switchingserviceuri', 'labelswapping']
         if self.__checkifReqKeysMissing(reqKeys, kwargs):
             return ""
-        self._nmlLiteral(kwargs['switchingserviceuri'], 'labelSwapping', str(kwargs['labelswapping']))
+        self._nmlLiteral(kwargs['switchingserviceuri'], 'labelSwapping', str(kwargs['labelswapping']), XSD.boolean)
         return kwargs['labelswapping']
 
     def _addNetworkAddress(self, uri, name, value):
