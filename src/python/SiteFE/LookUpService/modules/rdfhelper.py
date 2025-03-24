@@ -187,8 +187,12 @@ class RDFHelper():
                 self.logger.info(f'Unexpected value for IP. Skipping entry. Input data: {key}, {subkey}, {val}, {newuri}')
             if not tmpVal:
                 return
-            labeluri = self.URIs.get('ips', {}).get(tmpVal, {}).get('uri', f"{newuri}:{key}-address+{validMRMLName(tmpVal)}")
-            reptype = self.URIs.get('ips', {}).get(tmpVal, {}).get('type', f'{key}-address')
+            if kwargs.get('delta', False):
+                labeluri = self.URIs.get('ips', {}).get(tmpVal, {}).get('uri', f"{newuri}:{key}-address+{validMRMLName(tmpVal)}")
+                reptype = self.URIs.get('ips', {}).get(tmpVal, {}).get('type', f'{key}-address')
+            else:
+                labeluri = f"{newuri}:{key}-address+{validMRMLName(tmpVal)}"
+                reptype = f'{key}-address'
 
         elif key == 'sense-rtmon':
             labeluri = f"{newuri}:{key}+{subkey}"
@@ -463,9 +467,6 @@ class RDFHelper():
         self.newGraph.add((self.genUriRef('site', bws),
                            self.genUriRef('mrs', 'type'),
                            self.genLiteral('guaranteedCapped')))
-        # add
-        # TODO: In future we should allow not only guaranteedCapped, but also other types.
-        # Requires mainly change on Agents to apply diff Traffic Shaping policies
         return bws
 
     def _addBandwidthServiceRoute(self, **kwargs):
@@ -490,7 +491,6 @@ class RDFHelper():
             if item[0] not in kwargs:
                 kwargs[item[0]] = item[2]
             if len(item) == 4:
-                # Means XSD type is defined.
                 self._mrsLiteral(bws, item[1], str(kwargs[item[0]]), item[3])
             else:
                 self._mrsLiteral(bws, item[1], str(kwargs[item[0]]))
