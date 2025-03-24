@@ -18,7 +18,7 @@ from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import getInterfaceSpeed, getIfInterfaceReady
-from SiteRMLibs.CustomExceptions import NotFoundError, ServiceWarning
+from SiteRMLibs.CustomExceptions import NotFoundError
 
 def str2bool(val):
     """Check if str is true boolean."""
@@ -270,8 +270,9 @@ class NetInfo(BWService):
                             "local_port_id": intf,
                         }
             return out
-        except:
+        except Exception as ex:
             self.logger.debug("Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?")
+            self.logger.debug(f"Exception: {ex}")
         return {}
 
 
@@ -331,8 +332,8 @@ class NetInfo(BWService):
                 self.logger.error(errmsg)
                 errors.append(errmsg)
         if errors:
-            raise ServiceWarning("\n".join(errors), data)
-        return data
+            return data, "\n".join(errors)
+        return data, ""
 
 
 if __name__ == "__main__":
