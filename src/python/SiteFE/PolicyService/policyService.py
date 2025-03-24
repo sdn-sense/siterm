@@ -445,10 +445,11 @@ class PolicyService(RDFHelper, Timing, BWService):
                             "belongsToRoutingTable", str(connectionID)
                         )
 
-    def _hasTags(self, gIn, bidPort, returnout, portScan=False):
+    def _hasTags(self, gIn, bidPort, returnout, portScan=False, vswParams=False):
         """Query Graph and get Tags"""
         scanVals = returnout.setdefault("_params", {})
-        for tag, pref in {"tag": "mrs", "belongsTo": "nml", "encoding": "nml"}.items():
+        keys =  {"tag": "mrs"} if vswParams else {"tag": "mrs", "belongsTo": "nml", "encoding": "nml"}
+        for tag, pref in keys.items():
             out = self.queryGraph(
                 gIn,
                 bidPort,
@@ -459,6 +460,8 @@ class PolicyService(RDFHelper, Timing, BWService):
                 scanVals[tag] = str("|".join(out))
         # In case it is portScan, which is == self.singleport
         # We check if tag is found. If no tag found - raise NotFoundError
+        if vswParams:
+            return
         if portScan and not scanVals.get('tag'):
             raise NotFoundError('PortScan is true and tag not found. Will not add interface')
         # Get network status if exists
@@ -536,8 +539,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             out2 = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}value"))
             if out2:
                 vals["value"] = str(out2[0])
-            if not vswParams:
-                self._hasTags(gIn, item, vals)
+            self._hasTags(gIn, item, vals, False, vswParams)
 
     def _recordMapping(self, subnet, returnout, mappingKey, subKey, val=""):
         """Query Graph and add all mappings"""
