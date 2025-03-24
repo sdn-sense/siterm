@@ -130,6 +130,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
         self.warnings = []
+        self.warningstart = 0
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -290,6 +291,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                         self.addWarning(f"Vlan {vlan} is configured manually on {host}. It comes not from delta."
                                          "Either deletion did not happen or was manually configured.")
         if self.warnings:
+            self.warningstart = self.warningstart if self.warningstart else getUTCnow()
             self.logger.warning("Warnings: %s", self.warnings)
             warnings = "\n".join(self.warnings)
             self.warnings = []
@@ -393,6 +395,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         if updateNeeded or stateChanged or stateChangedFirstRun:
             self.logger.info("Update is needed. Informing to renew all devices state")
             # If models are different, we need to update all devices information
+            self.switch.deviceUpdate(self.sitename)
+        elif self.warningstart <= getUTCnow() + 3600 : # If warnings raise an hour ago - refresh
+            self.warningstart = 0
+            self.logger.info("Warnings were raised more than 1hr ago. Informing to renew all devices state")
             self.switch.deviceUpdate(self.sitename)
         self.checkAndRaiseWarnings()
 
