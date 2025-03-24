@@ -82,20 +82,21 @@ class RecurringAction():
                                      outputDict[tmpName]['errorType'], outputDict[tmpName])
         # Post processing of output (allows any class to modify output based on other Plugins output)
         for tmpName, method in self.classes.items():
+            warnings = ""
             try:
                 postMethod = getattr(method, 'postProcess', None)
                 if postMethod:
-                    outputDict = postMethod(outputDict)
+                    outputDict, warnings = postMethod(outputDict)
             except PluginFatalException as ex:
                 self.logger.error(f"Plugin {tmpName} raised fatal exception. Will not continue to report back to FE.")
                 self.logger.error(f"Exception details: {str(ex)}")
                 excMsg += f" {str(ex)}"
                 raiseError = True
-            except ServiceWarning as ex:
+            if warnings:
                 self.logger.warning(f"Plugin {tmpName} raised warning. Will continue to report back to FE.")
-                self.logger.warning(f"Exception details: {str(ex)}")
-                excMsg += f" {str(ex)}"
-                outputDict = ex.data
+                self.logger.warning(f"Exception details: {str(warnings)}")
+                excMsg += f" {str(warnings)}"
+                warnings = ""
         if raiseError:
             raise PluginException(excMsg)
         return outputDict, excMsg, raiseError

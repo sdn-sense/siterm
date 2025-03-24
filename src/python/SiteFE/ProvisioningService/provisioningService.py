@@ -224,7 +224,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             total = len(uuidDict)
             for idx, (uuid, ddict) in enumerate(uuidDict.items(), start=1):
                 self.logger.info('-'*100)
-                self.logger.info(f'Working on acttype {idx} out of {total}')
+                self.logger.info(f'Working on {acttype} {idx} out of {total}')
                 scannedUUIDs.append(uuid)
                 for swname, swdict in ddict.items():
                     if swname not in switches:
@@ -250,7 +250,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                 if uuid in scannedUUIDs:
                     continue
                 self.logger.debug('-'*100)
-                self.logger.info(f'[NEW APPLY]: Working on acttype {idx} out of {total}. UUID: {uuid}')
+                self.logger.info(f'[NEW APPLY]: Working on {acttype} {idx} out of {total}. UUID: {uuid}')
                 for swname, swdict in ddict.items():
                     if swname not in switches:
                         continue

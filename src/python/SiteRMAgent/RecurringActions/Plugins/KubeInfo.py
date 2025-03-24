@@ -93,7 +93,7 @@ class KubeInfo:
                 alarm += "If you are using Kube, make sure that Kube Labels are defined correctly."
                 alarm += f"KubeInfo: {self._identifyKubeLabelsisAlias(key)}"
                 raise PluginFatalException(alarm)
-        return data
+        return data, ""
 
     def get(self, **_kwargs):
         """Get certificate info."""
