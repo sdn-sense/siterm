@@ -66,7 +66,9 @@ class SwitchInfo():
                                     ['site', f'{switchuri}:{self.switch.getSystemValidPortName(value)}'])
             # All available: ipv4, ipv6, mac, macaddress, lineprotocol, operstatus, mtu, capacity, bandwidth
             elif key in ['ipv4', 'ipv6', 'macaddress']:
-                self.recordSystemIPs(switchName, key, val)
+                if key in ['ipv4', 'ipv6']:
+                    self.recordSystemIPs(switchName, key, val)
+                    continue
                 subkey = self.generateKey(val, key)
                 if isinstance(subkey, list):
                     for item in subkey:
