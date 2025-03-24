@@ -189,7 +189,7 @@ class RDFHelper():
                 return
             if kwargs.get('delta', False):
                 labeluri = self.URIs.get('ips', {}).get(tmpVal, {}).get('uri', f"{newuri}:{key}-address+{validMRMLName(tmpVal)}")
-                reptype = self.URIs.get('ips', {}).get(tmpVal, {}).get('type', f'{key}-address')
+                reptype = self.URIs.get('ips', {}).get(tmpVal, {}).get('type', f'{key}-address|unverifiable')
             else:
                 labeluri = f"{newuri}:{key}-address+{validMRMLName(tmpVal)}"
                 reptype = f'{key}-address'
