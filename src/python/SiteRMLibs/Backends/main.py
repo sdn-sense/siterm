@@ -30,6 +30,7 @@ class Switch(Node):
         self.switches = {'output': {}}
         checkConfig(self.config, self.site)
         self.dbI = getDBConn("Switch", self)[self.site]
+        self.warnings = []
         self.output = {
             "switches": {},
             "ports": {},
@@ -51,6 +52,10 @@ class Switch(Node):
                 f"Plugin {self.config[site]['plugin']} is not supported. Contact Support"
             )
 
+    def getWarnings(self):
+        """Get Warnings"""
+        return self.warnings
+
     def mainCall(self, stateCall, inputDict, actionState):
         """Main caller function which calls specific state."""
         if stateCall == "activate":
@@ -66,6 +71,7 @@ class Switch(Node):
 
     def _cleanOutput(self):
         """Clean output"""
+        self.warnings = []
         self.output = {
             "switches": {},
             "ports": {},
@@ -294,14 +300,14 @@ class Switch(Node):
                 continue
             tmpData = self.plugin.getportdata(self.switches["output"][switch], port)
             confPort = self.config.config["MAIN"].get(switch, {}).get("ports", {}).get(port, {})
-            if self._notSwitchport(tmpData) and confPort:
+            if not tmpData and confPort:
                 # This port only defined in RM Config (fake switch port)
-                portDict = self.output["ports"][switch].setdefault(port, confPort)
+                self.output["ports"][switch].setdefault(port, confPort)
                 continue
             if self._notSwitchport(tmpData) and port not in vlans and not port.lower().startswith('vlan'):
-                self.logger.debug(
-                    f"Warning. Port {switch}{port} not added into model. Its status not switchport."
-                )
+                warning = f"Warning. Port {switch}{port} not added into model. Its status not switchport. Ansible runner returned: {tmpData}."
+                self.logger.debug(warning)
+                self.warnings.append(warning)
                 self._delPortFromOut(switch, port)
                 continue
             if port in vlans:
