@@ -291,7 +291,8 @@ class ConflictChecker(Timing):
                                                oStats.get("ipv4-address", ""),
                                                "ipv4")
 
-    def _checkSystemIPOverlap(self, nStats, hostname, oldConfig):
+    @staticmethod
+    def _checkSystemIPOverlap(nStats, hostname, oldConfig):
         """Check if overlaps with any IP set on the system"""
         for iptype in ['ipv4', 'ipv6']:
             ipaddr = nStats.get(f"{iptype}-address", "")
