@@ -283,7 +283,7 @@ class PrometheusCalls:
                     labels["valuetype"] = key
                     qosGauge.labels(**labels).set(item.get(key, 0))
 
-    def __getServiceStates(self, registry, **kwargs):
+    def __getServiceStates(self, registry):
         """Get all Services states."""
         serviceState = Enum(
             "service_state",
@@ -327,7 +327,7 @@ class PrometheusCalls:
             runtimeInfo.labels(**labels).set(runtime)
         self.__getSNMPData(registry)
         self.__getAgentData(registry)
-        self.__memStats(registry, **kwargs)
+        self.__memStats(registry)
         self.__getSwitchErrors(registry)
         self.__getActiveQoSStates(registry)
 
@@ -335,7 +335,7 @@ class PrometheusCalls:
         """Return all available Hosts, where key is IP address."""
         self.__refreshTimeNow()
         registry = self.__cleanRegistry()
-        self.__getServiceStates(registry, **kwargs)
+        self.__getServiceStates(registry)
         data = generate_latest(registry)
         self.httpresp.ret_200(CONTENT_TYPE_LATEST, kwargs["start_response"], None)
         return iter([data])
