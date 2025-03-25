@@ -25,6 +25,7 @@ class ConflictChecker(Timing):
         self.newid = ""
         self.oldid = ""
         self.logger.info("Conflict Checker initialized")
+        self.checkmethod = ""
 
     @staticmethod
     def checkOverlap(inrange, ipval, iptype):
@@ -265,32 +266,72 @@ class ConflictChecker(Timing):
             self.logger.debug(f"Connection Items: {connItems}")
             raise OverlapException(f"End date is in past for {self.newid}. Cannot modify or add new resources.")
 
-    def checkvsw(self, cls, svc, svcitems, oldConfig, newDelta=False):
+
+    def _checkIPOverlaps(self, nStats, connItems, hostname, oldConfig):
+        """Check if IP Overlaps"""
+        for svcitem in ['vsw', 'singleport', 'kube']:
+            for oldID, oldItems in oldConfig.get(svcitem, {}).items():
+                # connID == oldID was checked in step3. Skipping it
+                if oldID == self.newid:
+                    continue
+                self.oldid = oldID
+                # Check if 2 items overlap
+                if self._checkIfOverlap(connItems, oldItems):
+                    # If 2 items overlap, and have same host for config
+                    # Check that vlans and IPs are not overlapping
+                    for oldHost, oldHostItems in oldItems.items():
+                        if hostname != oldHost:
+                            continue
+                        oStats = self._getVlanIPs(oldHostItems)
+                        self._checkIfVlanOverlap(nStats, oStats)
+                        self._checkIfIPOverlap(nStats.get("ipv6-address", ""),
+                                               oStats.get("ipv6-address", ""),
+                                               "ipv6")
+                        self._checkIfIPOverlap(nStats.get("ipv4-address", ""),
+                                               oStats.get("ipv4-address", ""),
+                                               "ipv4")
+
+    def _isModify(self, oldConfig, connItems, newDelta):
+        """Check if it is modify or new"""
+        # If Connection ID in oldConfig - it is either == or it is a modify call.
+        retstate = ""
+        if self.newid in oldConfig.get(self.checkmethod, {}):
+            if oldConfig[self.checkmethod][self.newid] != connItems:
+                self.logger.debug("="*50)
+                self.logger.debug("MODIFY!!!")
+                self.logger.debug(oldConfig[self.checkmethod][self.newid])
+                self.logger.debug(connItems)
+                self.logger.debug("="*50)
+                retstate = "modified"
+            if oldConfig[self.checkmethod][self.newid] == connItems:
+                # No Changes - connID is same, ignoring it
+                retstate = "unchanged"
+                return retstate
+            if newDelta:
+                self.checkEnd(connItems, oldConfig[self.checkmethod][self.newid])
+        elif newDelta:
+            # This is new delta and not available in oldConfig. Check that it is not in past
+            self.checkEnd(connItems, {})
+            retstate = "new"
+        return retstate
+
+    def __printSummary(self, idstatetrack):
+        """Print Summary of id state track"""
+        self.logger.info(f"Summary of {self.checkmethod} instances:")
+        for key, vals in idstatetrack.items():
+            self.logger.info(f"{key}: {vals}")
+
+    def checkvsw(self, cls, svcitems, oldConfig, newDelta=False):
         """Check vsw Service"""
         idstatetrack = {'modified': [], 'new': [], 'deleted': [], 'unchanged': []}
         for connID, connItems in svcitems.items():
             if connID == "_params":
                 continue
             self.newid = connID
-            # If Connection ID in oldConfig - it is either == or it is a modify call.
-            if connID in oldConfig.get(svc, {}):
-                if oldConfig[svc][connID] != connItems:
-                    self.logger.debug("="*50)
-                    self.logger.debug("MODIFY!!!")
-                    self.logger.debug(oldConfig[svc][connID])
-                    self.logger.debug(connItems)
-                    self.logger.debug("="*50)
-                    idstatetrack['modified'].append(connID)
-                if oldConfig[svc][connID] == connItems:
-                    # No Changes - connID is same, ignoring it
-                    idstatetrack['unchanged'].append(connID)
-                    continue
-                if newDelta:
-                    self.checkEnd(connItems, oldConfig[svc][connID])
-            elif newDelta:
-                # This is new delta and not available in oldConfig. Check that it is not in past
-                self.checkEnd(connItems, {})
-                idstatetrack['new'].append(connID)
+            retstate = self._isModify(oldConfig, connItems, newDelta)
+            idstatetrack[retstate].append(connID)
+            if retstate == "unchanged":
+                continue
             for hostname, hostitems in connItems.items():
                 if hostname == "_params":
                     continue
@@ -303,42 +344,15 @@ class ConflictChecker(Timing):
                 # check if ip address with-in available ranges
                 self._checkifIPInRange(cls, nStats, "ipv4", hostname)
                 self._checkifIPInRange(cls, nStats, "ipv6", hostname)
-                for oldID, oldItems in oldConfig.get(svc, {}).items():
-                    # connID == oldID was checked in step3. Skipping it
-                    self.oldid = oldID
-                    if oldID == connID:
-                        continue
-                    # Check if 2 items overlap
-                    overlap = self._checkIfOverlap(connItems, oldItems)
-                    if overlap:
-                        # If 2 items overlap, and have same host for config
-                        # Check that vlans and IPs are not overlapping
-                        for oldHost, oldHostItems in oldItems.items():
-                            if hostname != oldHost:
-                                continue
-                            oStats = self._getVlanIPs(oldHostItems)
-                            self._checkIfVlanOverlap(nStats, oStats)
-                            self._checkIfIPOverlap(
-                                nStats.get("ipv6-address", ""),
-                                oStats.get("ipv6-address", ""),
-                                "ipv6",
-                            )
-                            self._checkIfIPOverlap(
-                                nStats.get("ipv4-address", ""),
-                                oStats.get("ipv4-address", ""),
-                                "ipv4",
-                            )
-        for oldID, oldItems in oldConfig.get(svc, {}).items():
+                self._checkIPOverlaps(nStats, connItems, hostname, oldConfig)
+        for oldID in oldConfig.get(self.checkmethod, {}).keys():
             if oldID not in svcitems:
                 idstatetrack['deleted'].append(oldID)
-        self.logger.info("Summary of vsw instances:")
-        for key, vals in idstatetrack.items():
-            self.logger.info(f"{key}: {vals}")
-        # Check all which are deleted ones only if newDelta
+        self.__printSummary(idstatetrack)
         if not newDelta:
             return
         for connID in idstatetrack['deleted']:
-            for hostname, hostitems in oldConfig[svc][connID].items():
+            for hostname, hostitems in oldConfig[self.checkmethod][connID].items():
                 if hostname == "_params":
                     continue
                 self._checkIfHostAlive(cls, hostname)
@@ -364,28 +378,36 @@ class ConflictChecker(Timing):
                                    Overlap resources: {self.newid} and {self.oldid}"
             )
 
-    def checkrst(self, cls, rst, rstitems, oldConfig, newDelta=False):
+    def _comparewithOldConfig(self, nStats, connItems, hostname, oldConfig):
+        """Compare new config with old config"""
+        for oldID, oldItems in oldConfig.get(self.checkmethod, {}).items():
+            # connID == oldID was checked in step3. Skipping it
+            self.oldid = oldID
+            if oldID == self.newid:
+                continue
+            # Check if 2 items overlap
+            if self._checkIfOverlap(connItems, oldItems):
+                # If 2 items overlap, and have same host for config
+                # Check that vlans and IPs are not overlapping
+                if oldItems.get(hostname, {}):
+                    oStats = self._getRSTIPs(oldItems[hostname])
+                    for key in ["ipv4", "ipv6"]:
+                        self._checkIfIPOverlap(nStats.get(key, {}).get("nextHop", ""),
+                                               oStats.get(key, {}).get("nextHop", ""),
+                                               key)
+                        self._checkRSTIPOverlap(nStats.get(key, {}), oStats.get(key, {}), key)
+
+    def checkrst(self, cls, rstitems, oldConfig, newDelta=False):
         """Check rst Service"""
+        idstatetrack = {'modified': [], 'new': [], 'deleted': [], 'unchanged': []}
         for connID, connItems in rstitems.items():
             if connID == "_params":
                 continue
             self.newid = connID
-            # If Connection ID in oldConfig - it is either == or it is a modify call.
-            if connID in oldConfig.get(rst, {}):
-                if oldConfig[rst][connID] != connItems:
-                    self.logger.debug("="*50)
-                    self.logger.debug("MODIFY!!!")
-                    self.logger.debug(oldConfig[rst][connID])
-                    self.logger.debug(connItems)
-                    self.logger.debug("="*50)
-                if oldConfig[rst][connID] == connItems:
-                    # No Changes - connID is same, ignoring it
-                    continue
-                if newDelta:
-                    self.checkEnd(connItems, oldConfig[rst][connID])
-            elif newDelta:
-                # This is new delta and not available in oldConfig. Check that it is not in past
-                self.checkEnd(connItems, {})
+            retstate = self._isModify(oldConfig, connItems, newDelta)
+            idstatetrack[retstate].append(connID)
+            if retstate == "unchanged":
+                continue
             for hostname, hostitems in connItems.items():
                 if hostname == "_params":
                     continue
@@ -397,50 +419,34 @@ class ConflictChecker(Timing):
                 self._checkifIPInRange(cls, nStats, "ipv6", hostname)
                 self._checkIfIPRouteAll(cls, nStats, "ipv6", hostname)
                 self._checkIfIPRouteAll(cls, nStats, "ipv4", hostname)
-                for oldID, oldItems in oldConfig.get(rst, {}).items():
-                    # connID == oldID was checked in step3. Skipping it
-                    self.oldid = oldID
-                    if oldID == connID:
-                        continue
-                    # Check if 2 items overlap
-                    overlap = self._checkIfOverlap(connItems, oldItems)
-                    if overlap:
-                        # If 2 items overlap, and have same host for config
-                        # Check that vlans and IPs are not overlapping
-                        if oldItems.get(hostname, {}):
-                            oStats = self._getRSTIPs(oldItems[hostname])
-                            for key in ["ipv4", "ipv6"]:
-                                self._checkIfIPOverlap(
-                                    nStats.get(key, {}).get("nextHop", ""),
-                                    oStats.get(key, {}).get("nextHop", ""),
-                                    key,
-                                )
-                                self._checkRSTIPOverlap(
-                                    nStats.get(key, {}), oStats.get(key, {}), key
-                                )
+                self._comparewithOldConfig(nStats, connItems, hostname, oldConfig)
+        self.__printSummary(idstatetrack)
 
     def checkConflicts(self, cls, newConfig, oldConfig, newDelta=False):
         """Check conflicting resources and not allow them"""
         if newConfig == oldConfig:
             return False
         for dkey, ditems in newConfig.items():
-            if dkey == "vsw":
-                self.checkvsw(cls, dkey, ditems, oldConfig, newDelta)
+            self.checkmethod = dkey
+            if dkey in ["vsw", "singleport", "kube"]:
+                self.checkvsw(cls, ditems, oldConfig, newDelta)
             elif dkey == "rst":
-                self.checkrst(cls, dkey, ditems, oldConfig, newDelta)
+                self.checkrst(cls, ditems, oldConfig, newDelta)
         return False
 
     def checkActiveConfig(self, activeConfig):
         """Check all Active Config"""
         newconf = copy.deepcopy(activeConfig)
         cleaned = []
-        # VSW Cleanup
-        for host, pSubnets in activeConfig.get("SubnetMapping", {}).items():
-            for subnet, _ in pSubnets.get("providesSubnet", {}).items():
-                if self._ended(activeConfig.get("vsw", {}).get(subnet, {})):
+        # VSW, Kube and SinglePort Cleanup
+        for key in ["vsw", "kube", "singleport"]:
+            for subnet, subnetdict in activeConfig.get(key, {}).items():
+                if self._ended(subnetdict):
                     cleaned.append(subnet)
-                    newconf["SubnetMapping"][host]["providesSubnet"].pop(subnet, None)
-                    newconf["vsw"].pop(subnet, None)
+                    newconf[key].pop(subnet, None)
+                    for host in subnetdict.keys():
+                        if newconf.get("SubnetMapping", {}).get(host, {}).get("providesSubnet", {}).get(subnet, None):
+                            newconf["SubnetMapping"][host]["providesSubnet"].pop(subnet, None)
         # RST Cleanup
         for rkey, rval in {
             "providesRoute": "RoutingMapping",
