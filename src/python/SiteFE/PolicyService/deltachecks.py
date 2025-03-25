@@ -291,6 +291,16 @@ class ConflictChecker(Timing):
                                                oStats.get("ipv4-address", ""),
                                                "ipv4")
 
+    def _checkSystemIPOverlap(self, nStats, hostname, oldConfig):
+        """Check if overlaps with any IP set on the system"""
+        for iptype in ['ipv4', 'ipv6']:
+            ipaddr = nStats.get(f"{iptype}-address", "")
+            if ipaddr in oldConfig.get("usedIPs", {}).get('deltas', {}).get(hostname, {}).get(iptype, []):
+                continue
+            if ipaddr in oldConfig.get("usedIPs", {}).get('system', {}).get(hostname, {}).get(iptype, []):
+                raise OverlapException(f"IP {ipaddr} is already in use on the system (manually set \
+                                        or remains from undeleted request). Cannot proceed with this request.")
+
     def _isModify(self, oldConfig, connItems, newDelta):
         """Check if it is modify or new"""
         # If Connection ID in oldConfig - it is either == or it is a modify call.
@@ -339,6 +349,7 @@ class ConflictChecker(Timing):
                 # Check if host updated frontend in the last 5minutes
                 if newDelta:
                     self._checkIfHostAlive(cls, hostname)
+                    self._checkSystemIPOverlap(nStats, hostname, oldConfig)
                 # Check if vlan is in allowed list;
                 self._checkVlanInRange(cls, nStats, hostname)
                 # check if ip address with-in available ranges
