@@ -86,7 +86,7 @@ class PrometheusCalls:
                                 proc.memory_info(), key
                             )
 
-    def __memStats(self, registry, **kwargs):
+    def __memStats(self, registry):
         """Refresh all Memory Statistics in FE"""
 
         def procWrapper(proc, services, lookupid):
@@ -108,6 +108,10 @@ class PrometheusCalls:
                     "SNMPMonitoring-update",
                     "ProvisioningService-update",
                     "LookUpService-update",
+                    "siterm-debugger",
+                    "PolicyService-update",
+                    "DBWorker-update",
+                    "DBCleaner-service"
                 ],
                 1,
             )
@@ -130,7 +134,7 @@ class PrometheusCalls:
             arpState.labels(**self.arpLabels).set(1)
 
 
-    def __getAgentData(self, registry, **kwargs):
+    def __getAgentData(self, registry):
         """Add Agent Data (Cert validity) to prometheus output"""
         agentCertValid = Gauge(
             "agent_cert",
@@ -154,7 +158,7 @@ class PrometheusCalls:
             if "ArpInfo" in hostDict.get("hostinfo", {}).keys() and hostDict["hostinfo"]["ArpInfo"].get('arpinfo'):
                 self._addHostArpInfo(arpState, host, hostDict["hostinfo"]["ArpInfo"]['arpinfo'])
 
-    def __getSwitchErrors(self, registry, **kwargs):
+    def __getSwitchErrors(self, registry):
         """Add Switch Errors to prometheus output"""
         dbOut = self.dbI.get("switch")
         switchErrorsGauge = Gauge(
@@ -172,7 +176,7 @@ class PrometheusCalls:
                     labels = {"errortype": errorkey, "hostname": item['device']}
                     switchErrorsGauge.labels(**labels).set(len(errors))
 
-    def __getSNMPData(self, registry, **kwargs):
+    def __getSNMPData(self, registry):
         """Add SNMP Data to prometheus output"""
         # Here get info from DB for switch snmp details
         snmpData = self.dbI.get("snmpmon")
@@ -213,7 +217,7 @@ class PrometheusCalls:
                         keys["Key"] = key1
                         snmpGauge.labels(**keys).set(val[key1])
 
-    def __getActiveQoSStates(self, registry, **kwargs):
+    def __getActiveQoSStates(self, registry):
         """Report in prometheus NetworkStatus and QoS Params"""
         labelnames = ["action", "tag", "key0", "key1", "key2", "vlan", "uri"]
         labelqos = [
@@ -321,11 +325,11 @@ class PrometheusCalls:
             serviceState.labels(**labels).state(state)
             infoState.labels(**labels).info({"version": service["version"]})
             runtimeInfo.labels(**labels).set(runtime)
-        self.__getSNMPData(registry, **kwargs)
-        self.__getAgentData(registry, **kwargs)
+        self.__getSNMPData(registry)
+        self.__getAgentData(registry)
         self.__memStats(registry, **kwargs)
-        self.__getSwitchErrors(registry, **kwargs)
-        self.__getActiveQoSStates(registry, **kwargs)
+        self.__getSwitchErrors(registry)
+        self.__getActiveQoSStates(registry)
 
     def __metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""
@@ -336,7 +340,7 @@ class PrometheusCalls:
         self.httpresp.ret_200(CONTENT_TYPE_LATEST, kwargs["start_response"], None)
         return iter([data])
 
-    def prometheus(self, environ, **kwargs):
+    def prometheus(self, _environ, **kwargs):
         """Return prometheus stats."""
         return self.__metrics(**kwargs)
 
@@ -402,6 +406,6 @@ class ActiveWrapper:
     def generateReport(self, out):
         """Generate output"""
         self.__clean()
-        for key in ["vsw", "rst"]:
+        for key in ["vsw", "rst", "kube", "singleport"]:
             self._loopActKey(key, out)
         return self.reports
