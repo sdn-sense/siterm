@@ -76,7 +76,7 @@ class DeltaInfo():
         return
 
 
-    def _addParams(self, params, uri):
+    def _addParams(self, params, uri, sublevel=False):
         """Add all params, like tag, belongsTo, labelSwapping, timeline"""
         if '_params' not in params:
             return
@@ -93,10 +93,10 @@ class DeltaInfo():
                 self.newGraph.add((self.genUriRef('site', uri),
                                     self.genUriRef(key[1], key[0]),
                                     val))
-        self.addTimeline(params, uri)
-        self.addNetworkStatus(params, uri)
-        # Debug IP ADD
-        self._addNetworkAddrVsw(params.get('_params', {}), uri)
+        if not sublevel:
+            self.addTimeline(params, uri)
+            self.addNetworkStatus(params, uri)
+            self._addNetworkAddrVsw(params, uri)
 
     def _addService(self, portDict, uri):
         if not portDict.get('hasService', {}):
@@ -125,8 +125,11 @@ class DeltaInfo():
                 self._addVals(ipkey, ipkey, val, portDict['uri'][len(self.prefixes['site']):])
                 self._addParams(ipdict, uri)
 
-    def _addNetworkAddrVsw(self, portDict, uri):
+    def _addNetworkAddrVsw(self, params, uri):
         """Add Network delta info"""
+        portDict = params.get('_params', {})
+        if not portDict:
+            return
         netDict = portDict.get('hasNetworkAddress', {})
         if not netDict:
             return
@@ -136,7 +139,9 @@ class DeltaInfo():
                 continue
             val = normalizedip(ipdict.get('value', ''))
             if val and uri:
+                ipdict.setdefault('_params', {}).setdefault('tag', params.get('_params', {}).get('tag', None))
                 self._addVals(ipkey, ipkey, val, uri, **{'labeluri': ipdict.get('uri', ''), 'delta': True})
+                self._addParams(ipdict, ipdict.get('uri', ''), True)
 
     def addvswInfo(self, vswDict, uri):
         """Add vsw Info from params"""
