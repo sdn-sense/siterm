@@ -1,35 +1,68 @@
-This release includes:
+# SiteRM 1.5.2 Stable Production Release
 
+We are pleased to announce the release of **SiteRM 1.5.2** as a Stable Production version. Please refer to the official documentation for upgrade or installation instructions:
 
-SiteRM Frontend 1.5.1 release:
-  * Ansible Juniper Junos collection first version. This collection is used to manage Juniper devices; Plugin here: https://github.com/sdn-sense/sense-junos-collection
-  * Support to add Debug IP on Network devices;
-  * Support for Multipoint Deltas inside SiteRM;
-  * Control ansible repo for development with `ANSIBLE_REPO` env variable;
-  * Liveness and Readiness enable/disable flag. In case of any error, error will be shown via docker logs or kubectl describe pod;
-  * WebUI Changes: Allow modify delta start/end; Allow force commit delta; Allow change any active request state;
-  * Database updgrades and automatic migrations from old version to new version;
-  * Monitor memory usage if `SITERM_MEMORY_DEBUG` env variable is set to `true`; Memory usage decreased for most processes 50%;
-  * Allow control httpd ports via env variables;
-  * Delta check improvements: Host alive, port available and up, vlans, ips not used by other services;
-  * Helm updates: Auto add SSH key, Include version and app in yaml;
+📖 **Documentation:** [SiteRM Documentation](https://sdn-sense.github.io)
 
-Agent 1.5.1 release:
-  * Support Prometheus federate for Autogole monitoring (in case Site already run's Node Exporters and Prometheus);
-  * Report any exceptions back to Frontend;
-  * Liveness and Readiness enable/disable flag. In case of any error, error will be shown via docker logs or kubectl describe pod;
-  * Delta check improvements: port available and up, vlan not used, ips not used by other services;
-  * Ping Fixes for splitting netmask and allow to use IPv6;
-  * Support Prometheus federate endpoints for Autogole monitoring (in case Site already run's Node Exporters and Prometheus).
+All sites managed by the **SENSE Team** will be updated automatically.
 
-For all fixes and improvements, see the difference here: https://github.com/sdn-sense/siterm/compare/1.5.1...1.4.62
+## 🚀 New Features and Enhancements
 
-Supported systems: x86_64 and ppc64le(beta)
-Installation details: https://sdn-sense.github.io/Installation.html
+### 🔹 VLAN & IP Management
+- **Exclude provisioned VLANs** from allowed VLAN range if used by system or delta.
+- **Track all used IPs** on network devices and hosts.
+- **Exclude IPs from allowed list** inside the model.
 
-Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
-Docker version for this release:
-x86_64:
-  Agent: sdnsense/site-agent-sense:latest-20250123 (Or use latest)
-  Frontend: sdnsense/site-rm-sense:latest-20250123 (Or use latest)
+### 🔹 Configuration Warnings & Health Monitoring
+- **Grafana and kube/docker health status reporting** for:
+  - IP configured from **SENSE Range**, but request is not from any delta.
+  - VLAN used from **SENSE range**, but request is not from any delta.
+  - **Remaining bandwidth below 1Gbps.**
+  - **Switchport misconfiguration** (e.g., missing trunk flag).
 
+### 🔹 QoS Policy Rewrite
+- **Guaranteed Capped**: Requested **1Gbps**, rules set **max|min == 1Gbps**.
+- **Soft Capped**: Requested **1Gbps**, rules set **min = 1Gbps, max = remaining bandwidth**.
+- **Best Effort**: Requested **1Gbps**, rules set **min = 1Gbps, max = fraction (incremental order: 1/10, 1/9, 1/8, etc.)**.
+- **Minimum QoS request granularity** decreased to **100Mbps**.
+
+### 🔹 Improved Request Handling
+- **Auto-add start and end time** if not provided in the SENSE request:
+  - Default **Start:** +10s
+  - Default **End:** +3 months (configurable per site).
+
+- **Modification only allowed from the original request intent.**
+
+### 🔹 Custom Ansible Commands
+- **Site Configuration now allows custom commands for Ansible**.
+- **First supported command**: Juniper devices control to use `irb` or `vlan` for configuring L3 interfaces.
+
+### 🔹 Model Optimization & Debugging Improvements
+- **Model minimized** to exclude **non-SENSE range VLANs and IPs**.
+- **Ensure `tag` and `type` are always displayed** for debugging IP requests.
+- **Liveness and Readiness state recorded** in the database and exposed in Prometheus format.
+- **Enable/Disable Liveness and Readiness checks** for debugging purposes.
+
+### 🔹 Database Improvements
+- **Modify requests only from the original intent request** (prevents overrides by new requests on the same VLAN).
+- **Automatic database backups**:
+  - Every **hour**. Keeping the **last 72 backups**.
+
+## 🛠 Fixes and Improvements
+For a complete list of fixes and changes, check the detailed comparison:
+
+🔗 **[Compare 1.5.1 → 1.5.2](https://github.com/sdn-sense/siterm/compare/1.5.1...1.5.2)**
+
+## 🔧 Supported Architectures
+- **x86_64** ✅ (Stable)
+- **ppc64le** ⚠️ (Beta)
+
+## 📥 Installation Details
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest` or `latest-ppc64le`.
+- If enforcing a specific version is needed, refer to the following details:
+
+### Docker Versions
+#### **x86_64:**
+- **Agent:** `sdnsense/site-agent-sense:latest-20250326` *(or use `latest`)*
+- **Frontend:** `sdnsense/site-rm-sense:latest-20250326` *(or use `latest`)*
