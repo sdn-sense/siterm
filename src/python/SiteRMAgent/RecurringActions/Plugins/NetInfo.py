@@ -62,6 +62,30 @@ class NetInfo(BWService):
         self.config = config if config else getGitConfig()
         self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
         self.activeDeltas = {}
+        self.warningscounters = {}
+        self.errors = []
+        self.runcount = 0
+
+    def countError(self, errmsg):
+        """Count and increment errors"""
+        self.warningscounters.setdefault(errmsg, 0)
+        self.warningscounters[errmsg] += 1
+
+    def addError(self, errmsg):
+        """If it reaches this after 5 runs - add error to error list"""
+        self.countError(errmsg)
+        self.logger.error(errmsg)
+        if self.warningscounters.get(errmsg, 0) >= 5:
+            self.logger.warning('Error repeated for 5 times. Add warning!')
+            self.errors.append(errmsg)
+            del self.warningscounters[errmsg]
+
+    def _cleanWarningCounters(self):
+        """Clean errors after 100 cycles"""
+        self.runcount += 1
+        if self.runcount >= 100:
+            self.warningscounters = {}
+            self.runcount = 0
 
     def _getActive(self):
         """Get active deltas."""
@@ -296,7 +320,7 @@ class NetInfo(BWService):
 
     def postProcess(self, data):
         """Post process data"""
-        errors = []
+        self._cleanWarningCounters()
         hostname = self.config.get('agent', 'hostname')
         for key, intfData in data.get('NetInfo', {}).get('interfaces', {}).items():
             # This will not raise exception, as this info can come from Kubernetes.
@@ -309,13 +333,11 @@ class NetInfo(BWService):
             # - bwParams over subscribed
             if intfData.get('bwParams', {}).get('reservableCapacity', 0) <= intfData.get('bwParams', {}).get('minReservableCapacity', 0):
                 errmsg = f"Interface {key} has no remaining reservable capacity! Over subscribed?"
-                self.logger.error(errmsg)
-                errors.append(errmsg)
+                self.addError(errmsg)
             vlanrange = intfData.get('vlan_range_list', [])
             if not vlanrange:
                 errmsg = f"Interface {key} has no vlan range list defined!"
-                self.logger.error(errmsg)
-                errors.append(errmsg)
+                self.addError(errmsg)
                 continue
             for _vlankey, vlandict in intfData.get('vlans', {}).items():
                 vlanid = vlandict.get('vlanid', 0)
@@ -323,16 +345,14 @@ class NetInfo(BWService):
                     # Check if vlan comes from delta
                     if vlanid not in self.activeDeltas.get('output', {}).get('usedVLANs', {}).get('deltas', {}).get(hostname, []):
                         errmsg = f"Vlan {vlanid} in interface {key} is not from delta! Manual provisioned or deletion failed?"
-                        self.logger.error(errmsg)
-                        errors.append(errmsg)
+                        self.addError(errmsg)
                     vlanrange.remove(vlanid)
             # If vlanrange is empty, then all vlans are provisioned/used and there are no vlans remaining
             if not vlanrange:
                 errmsg = f"No remaining vlans in vlan range list for interface {key}. All used?"
-                self.logger.error(errmsg)
-                errors.append(errmsg)
-        if errors:
-            return data, "\n".join(errors)
+                self.addError(errmsg)
+        if self.errors:
+            return data, "\n".join(self.errors)
         return data, ""
 
 
