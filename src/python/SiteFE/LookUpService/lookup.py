@@ -131,6 +131,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.firstRun = True
         self.warnings = []
         self.warningstart = 0
+        self.runcount = 0
+        self.warningscounters = {}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -274,9 +276,23 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                     vlanrange.remove(vlan)
         return vlanrange
 
+    def _cleanWarningCounters(self):
+        """Clean errors after 100 cycles"""
+        self.runcount += 1
+        if self.runcount >= 100:
+            self.warningscounters = {}
+            self.runcount = 0
+
+    def countWarnings(self, warning):
+        """Warning Counter"""
+        self.warningscounters.setdefault(warning, 0)
+        self.warningscounters[warning] += 1
+
     def addWarning(self, warning):
         """Record Alarm."""
-        self.warnings.append(warning)
+        self.countWarnings(warning)
+        if self.warningscounters[warning] >= 5:
+            self.warnings.append(warning)
 
     def checkAndRaiseWarnings(self):
         """Check and raise warnings in case some vlans are used/configured manually."""
@@ -302,6 +318,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def startwork(self):
         """Main start."""
         self.logger.info("Started LookupService work")
+        self._cleanWarningCounters()
         stateChangedFirstRun = False
         if self.firstRun:
             self.logger.info("Because it is first run, we will start apply first to all devices individually")
