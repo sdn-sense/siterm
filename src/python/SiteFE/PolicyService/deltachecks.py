@@ -340,9 +340,11 @@ class ConflictChecker(Timing):
                 continue
             self.newid = connID
             retstate = self._isModify(oldConfig, connItems, newDelta)
-            idstatetrack[retstate].append(connID)
             if retstate == "unchanged":
+                idstatetrack.setdefault(retstate, []).append(connID)
                 continue
+            if retstate:
+                idstatetrack.setdefault(retstate, {}).append(connID)
             for hostname, hostitems in connItems.items():
                 if hostname == "_params":
                     continue
@@ -359,7 +361,7 @@ class ConflictChecker(Timing):
                 self._checkIPOverlaps(nStats, connItems, hostname, oldConfig)
         for oldID in oldConfig.get(self.checkmethod, {}).keys():
             if oldID not in svcitems:
-                idstatetrack['deleted'].append(oldID)
+                idstatetrack.setdefault('deleted', {}).append(oldID)
         self.__printSummary(idstatetrack)
         if not newDelta:
             return
@@ -417,9 +419,11 @@ class ConflictChecker(Timing):
                 continue
             self.newid = connID
             retstate = self._isModify(oldConfig, connItems, newDelta)
-            idstatetrack[retstate].append(connID)
             if retstate == "unchanged":
+                idstatetrack.setdefault(retstate, {}).append(connID)
                 continue
+            if retstate:
+                idstatetrack.setdefault(retstate, {}).append(connID)
             for hostname, hostitems in connItems.items():
                 if hostname == "_params":
                     continue
