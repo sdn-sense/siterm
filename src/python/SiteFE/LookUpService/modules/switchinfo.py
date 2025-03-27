@@ -26,12 +26,13 @@ class SwitchInfo():
             bw = int(portSwitch['bandwidth'])
         bwuri = self._addBandwidthService(hostname=switchName, portName=portName)
         bwremains = self.bwCalculatereservableSwitch(self.config.config["MAIN"], switchName, portName, bw)
+        bwall = self.bwCalculatereservableSwitch(self.config.config["MAIN"], switchName, portName, bw, True)
         params = {'bwuri': bwuri,
                   'unit': 'mbps',
                   'maximumCapacity': bw,
                   'availableCapacity': bwremains,
                   'reservableCapacity': bwremains,
-                  'minReservableCapacity': 100}
+                  'minimumCapacity': 100}
         self._addBandwidthServiceParams(**params)
 
 

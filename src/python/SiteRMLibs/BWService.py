@@ -74,7 +74,7 @@ class BWService:
             self.logger.error(f"Error converting BW Service. {ex}. Input {params}")
         return retVal
 
-    def _calculateRemaining(self, device, port, maxbw, reserve):
+    def _calculateRemaining(self, device, port, maxbw, reserve, nosubtract=False):
         """Calculate remaining bandwidth for device and port."""
         # If reserve is still -1, means full link speed allowed; if not, then we need to calculate
         # if reserve is 0, then no bandwidth is allowed.
@@ -86,6 +86,8 @@ class BWService:
             # Calculate fraction of maxbw based on reserve %
             reserve = int(maxbw/100*int(reserve[:-1]))
         maxbw = reserve
+        if nosubtract:
+            return maxbw
         for _uri, uriData in self.activeDeltas.get('output', {}).get('vsw', {}).items():
             if device not in uriData:
                 continue
@@ -104,19 +106,19 @@ class BWService:
             return 0
         return maxbw
 
-    def bwCalculatereservableSwitch(self, config, device, port, maxbw):
+    def bwCalculatereservableSwitch(self, config, device, port, maxbw, nosubtract=False):
         """Calculate reserved bandwidth for port on switch."""
         reserve = config.get(device, {}).get(port, {}).get("reservableCapacity", -1)
         if reserve == -1:
             reserve = config.get(device, {}).get("reservableCapacity", -1)
         # Now we need to remove all active QoS policies and calculate how much is left for the port to use.
         vport = self.switch.getSystemValidPortName(port)
-        return self._calculateRemaining(device, vport, maxbw, reserve)
+        return self._calculateRemaining(device, vport, maxbw, reserve, nosubtract)
 
-    def bwCalculatereservableServer(self, config, device, port, maxbw):
+    def bwCalculatereservableServer(self, config, device, port, maxbw, nosubtract=False):
         """Calculate reserved bandwidth for port on server."""
         reserve = config.get(port, {}).get('bwParams', {}).get("reservableCapacity", -1)
         if reserve == -1:
             reserve = config.get('agent', {}).get("reservableCapacity", -1)
         # Now we need to remove all active QoS policies and calculate how much is left for the port to use.
-        return self._calculateRemaining(device, port, maxbw, reserve)
+        return self._calculateRemaining(device, port, maxbw, reserve, nosubtract)
