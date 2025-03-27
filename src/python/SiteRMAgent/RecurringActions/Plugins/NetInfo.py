@@ -6,8 +6,9 @@ Authors:
 
 Date: 2022/01/29
 """
-import ipaddress
 import os
+import copy
+import ipaddress
 import pprint
 
 from pyroute2 import IPRoute
@@ -334,7 +335,7 @@ class NetInfo(BWService):
             if intfData.get('bwParams', {}).get('reservableCapacity', 0) <= intfData.get('bwParams', {}).get('minReservableCapacity', 0):
                 errmsg = f"Interface {key} has no remaining reservable capacity! Over subscribed?"
                 self.addError(errmsg)
-            vlanrange = intfData.get('vlan_range_list', [])
+            vlanrange = copy.deepcopy(intfData.get('vlan_range_list', []))
             if not vlanrange:
                 errmsg = f"Interface {key} has no vlan range list defined!"
                 self.addError(errmsg)
