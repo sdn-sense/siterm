@@ -608,6 +608,31 @@ class RDFHelper():
                         ['mrs', 'value'],
                         [kwargs['value']])
 
+    def addVlanRange(self, **kwargs):
+        """Add Vlan Range information inside model"""
+        # kwargs newuri
+        # kwargs name - vlan-range, vlan-range-filtered
+        # kwargs schema - #vlan
+        # kwargs values, list
+        self.newGraph.add(
+            (self.genUriRef("site", kwargs['newuri']),
+             self.genUriRef("nml", "hasLabelGroup"),
+             self.genUriRef("site", f"{kwargs['newuri']}:{kwargs['name']}")))
+
+        self.newGraph.add(
+            (self.genUriRef("site", f"{kwargs['newuri']}:{kwargs['name']}"),
+             self.genUriRef("rdf", "type"),
+             self.genUriRef("nml", "LabelGroup")))
+
+        if kwargs.get('schema'):
+            self.newGraph.add(
+                (self.genUriRef("site", f"{kwargs['newuri']}:{kwargs['name']}"),
+                self.genUriRef("nml", "labeltype"),
+                self.genUriRef("schema", kwargs['schema'])))
+        self._nmlLiteral(f"{kwargs['newuri']}:{kwargs['name']}",
+                         "values",
+                         ",".join(map(str, kwargs['values'])))
+
 
     def _addVswPort(self, **kwargs):
         """Add VSW Port to Model"""
