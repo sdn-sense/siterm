@@ -31,7 +31,7 @@ class SwitchInfo():
                   'unit': 'mbps',
                   'maximumCapacity': bw,
                   'availableCapacity': bwremains,
-                  'reservableCapacity': bwremains,
+                  'reservableCapacity': bwall,
                   'minimumCapacity': 100}
         self._addBandwidthServiceParams(**params)
 
