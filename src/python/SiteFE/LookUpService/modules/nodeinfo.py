@@ -196,8 +196,6 @@ class NodeInfo:
             vlanRange = self.filterOutAvailbVlans(hostname, intfDict['vlan_range_list'])
             if not vlanRange:
                 self.addWarning(f"VLAN Range for {hostname}:{intf} is not available or remaining vlans is empty.")
-            self.addVlanRange(**{'newuri': newuri, 'name': 'vlan-range-filtered',
-                                 'values': vlanRange})
 
 
         self.shared = "notshared"

@@ -1,6 +1,9 @@
-# SiteRM 1.5.21 Bugfix release for 1.5.2
+# SiteRM 1.5.22 Bugfix release for 1.5.21
 
-We have identified new issue with scheduled allocations and excluding vlan from allowed vlan-range list. SiteRM was patched to not exclude vlan from vlan-range - which is used by SENSE-O to compute paths.
+Modeling fix. Remove vlan-range-filtered from Model (remains in database and processes)
+
+Peering nml:BidirectionalPort instances should have nml:LabelGroup with matching label ranges. We use nml:LabelGroup range to represent available labels and use individual nml:Label instances to represent labels that have been allocated under nml:BidirectionalPort.
+See: https://github.com/esnet/SENSE-Orchestrator/wiki/Modeling-Guide https://github.com/esnet/StackV/wiki/Clarification-for-BandwidthService-and-lifetime-modeling
 
 Please refer to the official documentation for upgrade or installation instructions:
 

@@ -46,8 +46,6 @@ class SwitchInfo():
                 vlanRange = self.filterOutAvailbVlans(switchName, portSwitch['vlan_range_list'])
                 if not vlanRange:
                     self.addWarning(f"VLAN Range for {switchName}:{portName} is not available or remaining vlans is empty.")
-                self.addVlanRange(**{'newuri': newuri, 'name': 'vlan-range-filtered',
-                                     'values': vlanRange})
                 # Generate host alias or adds' isAlias
                 self._addIsAlias(uri=newuri, isAlias=portSwitch.get('isAlias'), hostname=switchName, portName=portName, nodetype='switch')
             elif key == 'channel-member':
