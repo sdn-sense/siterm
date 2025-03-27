@@ -485,7 +485,7 @@ class RDFHelper():
                      ['availableCapacity', 'availableCapacity', 100000, XSD.long],
                      ['granularity', 'granularity', 100, XSD.long],
                      ['reservableCapacity', 'reservableCapacity', 100000, XSD.long],
-                     ['minReservableCapacity', 'minReservableCapacity', 100, XSD.long],
+                     ['minimumCapacity', 'minimumCapacity', 100, XSD.long],
                      ['type', 'type', 'guaranteedCapped'],
                      ['priority', 'priority', 0]]:
             if item[0] not in kwargs:
