@@ -41,21 +41,13 @@ class SwitchInfo():
             if not val:
                 continue
             if key == 'vlan_range_list':
-                self.addToGraph(['site', newuri],
-                                ['nml', 'hasLabelGroup'],
-                                ['site', f"{newuri}:{'vlan-range'}"])
-                self.addToGraph(['site', f"{newuri}:{'vlan-range'}"],
-                                ['rdf', 'type'],
-                                ['nml', 'LabelGroup'])
-                self.addToGraph(['site', f"{newuri}:{'vlan-range'}"],
-                                ['nml', 'labeltype'],
-                                ['schema', '#vlan'])
+                self.addVlanRange(**{'newuri': newuri, 'name': 'vlan-range',
+                                     'schema': '#vlan', 'values': portSwitch['vlan_range_list']})
                 vlanRange = self.filterOutAvailbVlans(switchName, portSwitch['vlan_range_list'])
                 if not vlanRange:
                     self.addWarning(f"VLAN Range for {switchName}:{portName} is not available or remaining vlans is empty.")
-                self.setToGraph(['site', f"{newuri}:{'vlan-range'}"],
-                                ['nml', 'values'],
-                                [",".join(map(str, vlanRange))])
+                self.addVlanRange(**{'newuri': newuri, 'name': 'vlan-range-filtered',
+                                     'values': vlanRange})
                 # Generate host alias or adds' isAlias
                 self._addIsAlias(uri=newuri, isAlias=portSwitch.get('isAlias'), hostname=switchName, portName=portName, nodetype='switch')
             elif key == 'channel-member':

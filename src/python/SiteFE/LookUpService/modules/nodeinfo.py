@@ -191,31 +191,14 @@ class NodeInfo:
         if "capacity" in list(intfDict.keys()):
             self._mrsLiteral(bws, "capacity", intfDict["capacity"])
         if "vlan_range_list" in list(intfDict.keys()):
-            self.newGraph.add(
-                (self.genUriRef("site", newuri),
-                 self.genUriRef("nml", "hasLabelGroup"),
-                self.genUriRef("site", f"{newuri}:vlan-range"),
-                ))
-
-            self.newGraph.add(
-                (self.genUriRef("site", f"{newuri}:vlan-range"),
-                 self.genUriRef("rdf", "type"),
-                 self.genUriRef("nml", "LabelGroup"),
-                ))
-
-            self.newGraph.add(
-                (self.genUriRef("site", f"{newuri}:vlan-range"),
-                 self.genUriRef("nml", "labeltype"),
-                 self.genUriRef("schema", "#vlan"),
-                ))
+            self.addVlanRange(**{'newuri': newuri, 'name': 'vlan-range',
+                                 'schema': '#vlan', 'values': intfDict['vlan_range_list']})
             vlanRange = self.filterOutAvailbVlans(hostname, intfDict['vlan_range_list'])
             if not vlanRange:
                 self.addWarning(f"VLAN Range for {hostname}:{intf} is not available or remaining vlans is empty.")
-            self._nmlLiteral(
-                f"{newuri}:vlan-range",
-                "values",
-                ",".join(map(str, vlanRange)),
-            )
+            self.addVlanRange(**{'newuri': newuri, 'name': 'vlan-range-filtered',
+                                 'values': vlanRange})
+
 
         self.shared = "notshared"
         if "shared" in intfDict and intfDict["shared"]:
