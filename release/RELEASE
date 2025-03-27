@@ -1,3 +1,28 @@
+# SiteRM 1.5.21 Bugfix release for 1.5.2
+
+We have identified new issue with scheduled allocations and excluding vlan from allowed vlan-range list. SiteRM was patched to not exclude vlan from vlan-range - which is used by SENSE-O to compute paths.
+
+Please refer to the official documentation for upgrade or installation instructions:
+
+📖  **Documentation:** [SiteRM Documentation](https://sdn-sense.github.io)
+
+All sites managed by the **SENSE Team** will be updated automatically.
+
+## 🔧  Supported Architectures
+- **x86_64** ✅  (Stable)
+- **ppc64le** ⚠️ (Beta)
+
+## 📥  Installation Details
+- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest` or `latest-ppc64le`.
+- If enforcing a specific version is needed, refer to the following details:
+
+### Docker Versions
+#### **x86_64:**
+- **Agent:** `sdnsense/site-agent-sense:latest-20250327` *(or use `latest`)*
+- **Frontend:** `sdnsense/site-rm-sense:latest-20250327` *(or use `latest`)*
+
+
 # SiteRM 1.5.2 Stable Production Release
 
 We are pleased to announce the release of **SiteRM 1.5.2** as a Stable Production version. Please refer to the official documentation for upgrade or installation instructions:

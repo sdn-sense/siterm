@@ -1,57 +1,12 @@
-# SiteRM 1.5.2 Stable Production Release
+# SiteRM 1.5.21 Bugfix release for 1.5.2
 
-We are pleased to announce the release of **SiteRM 1.5.2** as a Stable Production version. Please refer to the official documentation for upgrade or installation instructions:
+We have identified new issue with scheduled allocations and excluding vlan from allowed vlan-range list. SiteRM was patched to not exclude vlan from vlan-range - which is used by SENSE-O to compute paths.
+
+Please refer to the official documentation for upgrade or installation instructions:
 
 📖 **Documentation:** [SiteRM Documentation](https://sdn-sense.github.io)
 
 All sites managed by the **SENSE Team** will be updated automatically.
-
-## 🚀 New Features and Enhancements
-
-### 🔹 VLAN & IP Management
-- **Exclude provisioned VLANs** from allowed VLAN range if used by system or delta.
-- **Track all used IPs** on network devices and hosts.
-- **Exclude IPs from allowed list** inside the model.
-
-### 🔹 Configuration Warnings & Health Monitoring
-- **Grafana and kube/docker health status reporting** for:
-  - IP configured from **SENSE Range**, but request is not from any delta.
-  - VLAN used from **SENSE range**, but request is not from any delta.
-  - **Remaining bandwidth below 1Gbps.**
-  - **Switchport misconfiguration** (e.g., missing trunk flag).
-
-### 🔹 QoS Policy Rewrite
-- **Guaranteed Capped**: Requested **1Gbps**, rules set **max|min == 1Gbps**.
-- **Soft Capped**: Requested **1Gbps**, rules set **min = 1Gbps, max = remaining bandwidth**.
-- **Best Effort**: Requested **1Gbps**, rules set **min = 1Gbps, max = fraction (incremental order: 1/10, 1/9, 1/8, etc.)**.
-- **Minimum QoS request granularity** decreased to **100Mbps**.
-
-### 🔹 Improved Request Handling
-- **Auto-add start and end time** if not provided in the SENSE request:
-  - Default **Start:** +10s
-  - Default **End:** +3 months (configurable per site).
-
-- **Modification only allowed from the original request intent.**
-
-### 🔹 Custom Ansible Commands
-- **Site Configuration now allows custom commands for Ansible**.
-- **First supported command**: Juniper devices control to use `irb` or `vlan` for configuring L3 interfaces.
-
-### 🔹 Model Optimization & Debugging Improvements
-- **Model minimized** to exclude **non-SENSE range VLANs and IPs**.
-- **Ensure `tag` and `type` are always displayed** for debugging IP requests.
-- **Liveness and Readiness state recorded** in the database and exposed in Prometheus format.
-- **Enable/Disable Liveness and Readiness checks** for debugging purposes.
-
-### 🔹 Database Improvements
-- **Modify requests only from the original intent request** (prevents overrides by new requests on the same VLAN).
-- **Automatic database backups**:
-  - Every **hour**. Keeping the **last 72 backups**.
-
-## 🛠 Fixes and Improvements
-For a complete list of fixes and changes, check the detailed comparison:
-
-🔗 **[Compare 1.5.1 → 1.5.2](https://github.com/sdn-sense/siterm/compare/1.5.1...1.5.2)**
 
 ## 🔧 Supported Architectures
 - **x86_64** ✅ (Stable)
@@ -64,5 +19,5 @@ For a complete list of fixes and changes, check the detailed comparison:
 
 ### Docker Versions
 #### **x86_64:**
-- **Agent:** `sdnsense/site-agent-sense:latest-20250326` *(or use `latest`)*
-- **Frontend:** `sdnsense/site-rm-sense:latest-20250326` *(or use `latest`)*
+- **Agent:** `sdnsense/site-agent-sense:latest-20250327` *(or use `latest`)*
+- **Frontend:** `sdnsense/site-rm-sense:latest-20250327` *(or use `latest`)*
