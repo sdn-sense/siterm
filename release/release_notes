@@ -1,6 +1,6 @@
-# SiteRM 1.5.22 Bugfix release for 1.5.21
+# SiteRM 1.5.23 Bugfix release for 1.5.22
 
-Modeling fix. Remove vlan-range-filtered from Model (remains in database and processes)
+Bandwidth static based on documentation and vlan-range for ports static too.
 
 Peering nml:BidirectionalPort instances should have nml:LabelGroup with matching label ranges. We use nml:LabelGroup range to represent available labels and use individual nml:Label instances to represent labels that have been allocated under nml:BidirectionalPort.
 See: https://github.com/esnet/SENSE-Orchestrator/wiki/Modeling-Guide https://github.com/esnet/StackV/wiki/Clarification-for-BandwidthService-and-lifetime-modeling
@@ -22,5 +22,5 @@ All sites managed by the **SENSE Team** will be updated automatically.
 
 ### Docker Versions
 #### **x86_64:**
-- **Agent:** `sdnsense/site-agent-sense:latest-20250327` *(or use `latest`)*
-- **Frontend:** `sdnsense/site-rm-sense:latest-20250327` *(or use `latest`)*
+- **Agent:** `sdnsense/site-agent-sense:latest-20250328` *(or use `latest`)*
+- **Frontend:** `sdnsense/site-rm-sense:latest-20250328` *(or use `latest`)*
