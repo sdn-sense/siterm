@@ -10,6 +10,7 @@ Date: 2021/12/01
 from datetime import datetime, timezone
 import os
 import time
+import copy
 
 from rdflib import Graph, URIRef
 from rdflib.compare import isomorphic
@@ -266,15 +267,16 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
     def filterOutAvailbVlans(self, hostname, vlanrange):
         """Filter out available vlans for a hostname."""
+        tmprange = copy.deepcopy(vlanrange)
         if hostname in self.usedVlans.get('deltas', {}):
             for vlan in self.usedVlans['deltas'][hostname]:
-                if vlan in vlanrange:
-                    vlanrange.remove(vlan)
+                if vlan in tmprange:
+                    tmprange.remove(vlan)
         if hostname in self.usedVlans.get('system', {}):
             for vlan in self.usedVlans['system'][hostname]:
-                if vlan in vlanrange:
-                    vlanrange.remove(vlan)
-        return vlanrange
+                if vlan in tmprange:
+                    tmprange.remove(vlan)
+        return tmprange
 
     def _cleanWarningCounters(self):
         """Clean errors after 100 cycles"""
