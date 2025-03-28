@@ -90,7 +90,7 @@ class DBBackend():
                 "runtime": kwargs.get("runtime", -1),
                 "version": kwargs.get("version", runningVersion),
                 "updatedate": getUTCnow(),
-                "exc": kwargs.get("exc", "No Exception provided by service"),
+                "exc": str(kwargs.get("exc", "No Exception provided by service"))[:4095],
 
             }
             dbobj = getVal(self.dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
