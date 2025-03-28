@@ -173,7 +173,7 @@ class HostCalls(HostSubCalls, contentDB):
                 "hostname": inputDict["hostname"],
                 "version": inputDict["version"],
                 "runtime": inputDict["runtime"],
-                "exc": inputDict.get("exc", "Exc Not Provided"),
+                "exc": str(inputDict.get("exc", "Exc Not Provided"))[:4095],
             }
         )
         self.responseHeaders(environ, **kwargs)

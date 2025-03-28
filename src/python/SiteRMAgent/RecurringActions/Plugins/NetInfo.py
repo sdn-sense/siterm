@@ -349,6 +349,7 @@ class NetInfo(BWService):
                 self.addError(errmsg)
         if self.errors:
             return data, "\n".join(self.errors)
+        self.errors = []
         return data, ""
 
 
