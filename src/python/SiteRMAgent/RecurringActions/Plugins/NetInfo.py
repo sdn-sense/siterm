@@ -347,9 +347,10 @@ class NetInfo(BWService):
             if not vlanrange:
                 errmsg = f"No remaining vlans in vlan range list for interface {key}. All used?"
                 self.addError(errmsg)
-        if self.errors:
-            return data, "\n".join(self.errors)
+        errmsg = "\n".join(self.errors)
         self.errors = []
+        if errmsg:
+            return data, errmsg
         return data, ""
 
 
