@@ -450,12 +450,9 @@ class PolicyService(RDFHelper, Timing, BWService):
         scanVals = returnout.setdefault("_params", {})
         keys =  {"tag": "mrs"} if vswParams else {"tag": "mrs", "belongsTo": "nml", "encoding": "nml"}
         for tag, pref in keys.items():
-            out = self.queryGraph(
-                gIn,
-                bidPort,
-                search=URIRef(f"{self.prefixes[pref]}{tag}"),
-                allowMultiple=True,
-            )
+            out = self.queryGraph(gIn, bidPort,
+                                  search=URIRef(f"{self.prefixes[pref]}{tag}"),
+                                  allowMultiple=True)
             if out:
                 scanVals[tag] = str("|".join(out))
         # In case it is portScan, which is == self.singleport
@@ -556,16 +553,16 @@ class PolicyService(RDFHelper, Timing, BWService):
             for port in tmpPorts:
                 if hostsOnly and not self.hostsOnly(port):
                     continue
-                if port not in self.bidPorts and port not in self.scannedPorts:
+                if port not in self.bidPorts and str(port) not in self.scannedPorts:
                     self.bidPorts.setdefault(port, [])
                     self.bidPorts[port].append(key)
-                if port in self.scannedPorts:
-                    self.scannedPorts[port].append(key)
+                if str(port) in self.scannedPorts:
+                    self.scannedPorts[str(port)].append(key)
 
     def _portScanFinish(self, bidPort):
         """Check if port was already scanned"""
-        if bidPort not in self.scannedPorts:
-            self.scannedPorts[bidPort] = self.bidPorts[bidPort]
+        if str(bidPort) not in self.scannedPorts:
+            self.scannedPorts[str(bidPort)] = self.bidPorts[bidPort]
         if bidPort in self.bidPorts:
             del self.bidPorts[bidPort]
 
@@ -590,6 +587,9 @@ class PolicyService(RDFHelper, Timing, BWService):
                     # We dont need to parse that and it is isAlias in dict
                     self._portScanFinish(bidPort)
                     continue
+                if str(bidPort) in self.scannedPorts:
+                    self._portScanFinish(bidPort)
+                    continue
                 if custom:
                     # Get isAlias - which will be used as key in output
                     tmpOut = connOut.setdefault(str(bidPort), {})
@@ -607,7 +607,13 @@ class PolicyService(RDFHelper, Timing, BWService):
                 # Get time scheduling information from delta
                 self.getTimeScheduling(gIn, bidPort, portOut)
                 # Get all tags for Port
-                self._hasTags(gIn, bidPort, portOut, self.singleport)
+                try:
+                    self._hasTags(gIn, bidPort, portOut, self.singleport)
+                except NotFoundError:
+                    self._portScanFinish(bidPort)
+                    if str(bidPort) in connOut:
+                        del connOut[str(bidPort)]
+                    continue
                 # Get All Labels
                 self._hasLabel(gIn, bidPort, portOut)
                 # Get all Services
@@ -620,31 +626,20 @@ class PolicyService(RDFHelper, Timing, BWService):
 
     def parsel2Request(self, gIn, returnout, _switchName):
         """Parse L2 request."""
-        self.logger.info(
-            f"Lets try to get connection ID subject for {self.prefixes['main']}"
-        )
-        cout = self.queryGraph(
-            gIn,
-            URIRef(self.prefixes["main"]),
-            search=URIRef(f"{self.prefixes['mrs']}providesSubnet"),
-        )
+        self.logger.info(f"Lets try to get connection ID subject for {self.prefixes['main']}")
+        cout = self.queryGraph(gIn, URIRef(self.prefixes["main"]),
+                               search=URIRef(f"{self.prefixes['mrs']}providesSubnet"))
         for connectionID in cout:
-            self._recordMapping(
-                connectionID, returnout, "SubnetMapping", "providesSubnet"
-            )
+            self._recordMapping(connectionID, returnout, "SubnetMapping", "providesSubnet")
             returnout.setdefault("vsw", {})
             connOut = returnout["vsw"].setdefault(str(connectionID), {})
             self._hasTags(gIn, connectionID, connOut)
             self.logger.info(f"This is our connection ID: {connectionID}")
-            out = self.queryGraph(
-                gIn,
-                connectionID,
-                search=URIRef(f"{self.prefixes['nml']}labelSwapping"),
-            )
+            out = self.queryGraph(gIn, connectionID,
+                                  search=URIRef(f"{self.prefixes['nml']}labelSwapping"))
             if out:
                 connOut.setdefault("_params", {}).setdefault(
-                    "labelSwapping", str(out[0])
-                )
+                    "labelSwapping", str(out[0]))
             # Parse hasNetworkAddress (debugip)
             paramsOut = connOut.setdefault("_params", {})
             self._hasNetwork(gIn, connectionID, paramsOut, True)
