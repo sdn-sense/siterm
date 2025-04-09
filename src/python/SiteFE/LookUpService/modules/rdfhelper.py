@@ -695,6 +695,18 @@ class RDFHelper():
             vlanuri = f"{porturi}:{kwargs['vtype']}+{kwargs['vlan']}"
         return vlanuri
 
+    def _addSwitchingVlanLabel(self, **kwargs):
+        """Add vlan into switching service"""
+        # This is simplification for SENSE-O to know that vlan is global and cant be reused
+        # by ohter ports.
+        vsw = self.config.get('vsw', {}).get(kwargs['hostname'], None)
+        globalvlan = self.config.get(kwargs['hostname'], 'globalvlan', True)
+        if vsw and globalvlan:
+            svcService = f":{vsw}:service+vsw"
+            self.newGraph.add((self.genUriRef('site', svcService),
+                               self.genUriRef('nml', 'hasLabel'),
+                               self.genUriRef('site', kwargs['labeluri'])))
+
     def _addVlanPort(self, **kwargs):
         """Add Vlan Port to Model"""
         if not kwargs['vlan'] and not kwargs['vtype']:
@@ -729,6 +741,8 @@ class RDFHelper():
         self.newGraph.set((self.genUriRef('site', labeluri),
                            self.genUriRef('nml', 'value'),
                            self.genLiteral(str(kwargs['vlan']))))
+        kwargs['labeluri'] = labeluri
+        self._addSwitchingVlanLabel(**kwargs)
         return labeluri
 
     def _addLabelSwapping(self, **kwargs):
