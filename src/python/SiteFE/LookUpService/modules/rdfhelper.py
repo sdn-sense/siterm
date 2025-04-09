@@ -699,8 +699,11 @@ class RDFHelper():
         """Add vlan into switching service"""
         # This is simplification for SENSE-O to know that vlan is global and cant be reused
         # by ohter ports.
-        vsw = self.config.get('vsw', {}).get(kwargs['hostname'], None)
-        globalvlan = self.config.get(kwargs['hostname'], 'globalvlan', True)
+        try:
+            vsw = self.config.get(kwargs['hostname'], 'vsw')
+            globalvlan = self.config.get(kwargs['hostname'], 'globalvlan', f'{vsw}_globalvlan')
+        except (NoSectionError, NoOptionError):
+            return
         if vsw and globalvlan:
             svcService = f":{vsw}:service+vsw"
             self.newGraph.add((self.genUriRef('site', svcService),
