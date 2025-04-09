@@ -88,6 +88,11 @@ class SwitchInfo():
                 vswmp = self.config.get(switchName, 'vswmp')
             except (NoOptionError, NoSectionError):
                 vswmp = f"{vsw}_mp"
+            # Get info if vlan is allocatable globally on the device
+            try:
+                globalvlan = self.config.get(switchName, 'globalvlan')
+            except (NoOptionError, NoSectionError):
+                globalvlan = f"{vsw}_globalvlan"
             # Get info if vswdbip is enabled in configuration (Debug IP)
             try:
                 vswdbip = self.config.get(switchName, 'vswdbip')
@@ -100,7 +105,8 @@ class SwitchInfo():
                 rst = False
             for portName, portSwitch in list(switchDict.items()):
                 newuri = f":{switchName}:{self.switch.getSystemValidPortName(portName)}"
-                self._addVswPort(hostname=switchName, portName=portName, vsw=vsw, vswmp=vswmp, vswdbip=vswdbip)
+                self._addVswPort(hostname=switchName, portName=portName, vsw=vsw,
+                                 vswmp=vswmp, vswdbip=vswdbip, globalvlan=globalvlan)
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
                 if rst:
                     self._addAddressPool(newuri)
