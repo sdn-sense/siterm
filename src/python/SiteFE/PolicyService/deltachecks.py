@@ -383,7 +383,7 @@ class ConflictChecker(Timing):
                 if newDelta:
                     self._checkIfHostAlive(cls, hostname)
                     self._checkSystemIPOverlap(nStats, hostname, oldConfig)
-                    self._checkVlanSwapping(cls, self._getVlans(hostitems), hostname)
+                    self._checkVlanSwapping(self._getVlans(hostitems), hostname)
                 # Check if vlan is in allowed list;
                 self._checkVlanInRange(cls, nStats, hostname)
                 # check if ip address with-in available ranges
