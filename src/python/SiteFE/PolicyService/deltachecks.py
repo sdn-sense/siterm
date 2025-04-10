@@ -9,10 +9,13 @@ Date: 2021/01/20
 import copy
 
 from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress
+from SiteRMLibs.CustomExceptions import NoOptionError
+from SiteRMLibs.CustomExceptions import NoSectionError
 from SiteRMLibs.ipaddr import checkOverlap as incheckOverlap
 from SiteRMLibs.ipaddr import ipOverlap as inipOverlap
 from SiteRMLibs.MainUtilities import getLoggingObject, getUTCnow
 from SiteRMLibs.timing import Timing
+
 
 
 class ConflictChecker(Timing):
@@ -45,6 +48,22 @@ class ConflictChecker(Timing):
                 raise OverlapException(f"Host {hostname} did not update in the last 5minutes. \
                                        Cannot proceed with this request. Check Agent status for the host \
                                        Last update: {updatedate}, CurrentTime: {getUTCnow()}")
+
+    def _checkVlanSwapping(self, vlans, hostname):
+        """Check if vlan Swapping is allowed"""
+        swapAllowed = False
+        try:
+            swapAllowed = self.config.get(hostname, "labelswapping")
+        except NoSectionError:
+            return
+        except NoOptionError:
+            swapAllowed = False
+        if swapAllowed:
+            return
+        # If we reach here, means swapping is not allowed.
+        if len(vlans) > 1:
+            raise OverlapException(f"Vlan swapping is not allowed for {hostname}. \
+                                   Request is invalid. Current requested vlans: {vlans}")
 
     @staticmethod
     def _checkVlanInRange(polcls, vlan, hostname):
@@ -186,6 +205,17 @@ class ConflictChecker(Timing):
                     f"IP {ipval} not available for {hostname} in configuration. \
                           Either used or not configured. Allowed IPs: {ipRange}"
                 )
+
+    @staticmethod
+    def _getVlans(dataIn):
+        """Get Vlans in request"""
+        out = []
+        for _, val in dataIn.items():
+            for key1, val1 in val.items():
+                if key1 == "hasLabel" and "value" in val1:
+                    if val1["value"] not in out:
+                        out.append(val1["value"])
+        return out
 
     @staticmethod
     def _getVlanIPs(dataIn):
@@ -353,6 +383,7 @@ class ConflictChecker(Timing):
                 if newDelta:
                     self._checkIfHostAlive(cls, hostname)
                     self._checkSystemIPOverlap(nStats, hostname, oldConfig)
+                    self._checkVlanSwapping(cls, self._getVlans(hostitems), hostname)
                 # Check if vlan is in allowed list;
                 self._checkVlanInRange(cls, nStats, hostname)
                 # check if ip address with-in available ranges
@@ -365,6 +396,7 @@ class ConflictChecker(Timing):
         self.__printSummary(idstatetrack)
         if not newDelta:
             return
+        # In case of deleted, check if host is alive
         for connID in idstatetrack['deleted']:
             for hostname, hostitems in oldConfig[self.checkmethod][connID].items():
                 if hostname == "_params":
