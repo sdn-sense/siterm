@@ -153,7 +153,8 @@ class PolicyService(RDFHelper, Timing, BWService):
         newBW["uri"] = f"{suburi}:service+bw"
         return newBW
 
-    def _findsuburi(self, out, uri, hostname):
+    @staticmethod
+    def _findsuburi(out, uri, hostname):
         """Find subURI inside rst based on connection id. TODO: Remove after #776 fix"""
         uuid = uri.split(":")[-1].split("+")
         if len(uuid) == 2:
@@ -194,7 +195,6 @@ class PolicyService(RDFHelper, Timing, BWService):
                         # if it is empty, means was best effort service
                         out[key][uri][key1][key2]['hasService'] = self.__getDefBandwidth(suburi)
         return out
-
 
     def _addDefaultTimeBWWrap(self, out):
         """Add default time and bw to all output"""
