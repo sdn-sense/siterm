@@ -153,34 +153,53 @@ class PolicyService(RDFHelper, Timing, BWService):
         newBW["uri"] = f"{suburi}:service+bw"
         return newBW
 
-    def _addDefaultTimeBW(self, out):
-        """Add default timeBW to output"""
-        for key in ["vsw", "singleport", "kube"]:
-            for uri in out.get(key, {}):
-                # If _params exists, check and default timing
-                if "_params" in out[key][uri]:
-                    out[key][uri]["_params"].setdefault("existsDuring", {})
-                    newTime = self.__setTime(out[key][uri]["_params"]["existsDuring"], uri)
-                    out[key][uri]["_params"]["existsDuring"] = newTime
-                # Now we go deeper into switch, port and add params
-                for key1 in out[key][uri]:
-                    if key1 == "_params":
+    @staticmethod
+    def _findsuburi(out, uri, hostname):
+        """Find subURI inside rst based on connection id. TODO: Remove after #776 fix"""
+        uuid = uri.split(":")[-1].split("+")
+        if len(uuid) == 2:
+            uuid = uuid[1]
+            for item in out.get('SubnetMapping', {}).get(hostname, {}).get('providesSubnet', {}).keys():
+                if 'uuid' in item:
+                    return item
+        return None
+
+    def _addDefaultTimeBW(self, out, key):
+        """Add default time,BW to vsw, singleport, kube output"""
+        for uri in out.get(key, {}):
+            # If _params exists, check and default timing
+            if "_params" in out[key][uri]:
+                out[key][uri]["_params"].setdefault("existsDuring", {})
+                newTime = self.__setTime(out[key][uri]["_params"]["existsDuring"], uri)
+                out[key][uri]["_params"]["existsDuring"] = newTime
+            # Now we go deeper into switch, port and add params
+            for key1 in out[key][uri]:
+                if key1 == "_params":
+                    continue
+                for key2 in out[key][uri][key1]:
+                    if key2 == "_params":
                         continue
-                    for key2 in out[key][uri][key1]:
-                        if key2 == "_params":
-                            continue
-                        # If params exists, check and default timing
-                        out[key][uri][key1][key2].setdefault("_params", {})
+                    # If params exists, check and default timing
+                    out[key][uri][key1][key2].setdefault("_params", {})
+                    if key == "rst":
+                        suburi = self._findsuburi(out, out["rst"][uri][key1][key2].get("belongsToRoutingTable"), key1)
+                    else:
                         suburi = out[key][uri][key1][key2].get("uri")
-                        # That should not happen, but just in case something breaks, leave resources active
-                        if suburi:
-                            out[key][uri][key1][key2]["_params"].setdefault("existsDuring", {})
-                            newTime = self.__setTime(out[key][uri][key1][key2]["_params"]["existsDuring"], suburi)
-                            out[key][uri][key1][key2]["_params"]["existsDuring"] = newTime
-                        # This one checks for Bandwidth service and add defaults.
-                        if suburi and not out[key][uri][key1][key2].get('hasService', {}):
-                            # if it is empty, means was best effort service
-                            out[key][uri][key1][key2]['hasService'] = self.__getDefBandwidth(suburi)
+                    # That should not happen, but just in case something breaks, leave resources active
+                    if suburi:
+                        out[key][uri][key1][key2]["_params"].setdefault("existsDuring", {})
+                        newTime = self.__setTime(out[key][uri][key1][key2]["_params"]["existsDuring"], suburi)
+                        out[key][uri][key1][key2]["_params"]["existsDuring"] = newTime
+                    # This one checks for Bandwidth service and add defaults.
+                    if suburi and not out[key][uri][key1][key2].get('hasService', {}):
+                        # if it is empty, means was best effort service
+                        out[key][uri][key1][key2]['hasService'] = self.__getDefBandwidth(suburi)
+        return out
+
+    def _addDefaultTimeBWWrap(self, out):
+        """Add default time and bw to all output"""
+        for key in ["vsw", "singleport", "kube", "rst"]:
+            out = self._addDefaultTimeBW(out, key)
         return out
 
     def intOut(self, inport, out):
@@ -349,7 +368,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         # Add defaults for BW and Time
         # Generate new default start and end time
         self.__generateStartEnd()
-        out = self._addDefaultTimeBW(out)
+        out = self._addDefaultTimeBWWrap(out)
         return out
 
     def getRoute(self, gIn, connID, returnout):
