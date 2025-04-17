@@ -162,7 +162,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         if len(uuid) == 2:
             uuid = uuid[1]
             for item in out.get('SubnetMapping', {}).get(hostname, {}).get('providesSubnet', {}).keys():
-                if 'uuid' in item:
+                if uuid in item:
                     return item
         return None
 
