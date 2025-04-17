@@ -83,8 +83,9 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.kube = False
         self.singleport = False
         self.startend = {}
-        self.defaultBW = {"availableCapacity": 0, "granularity": 100, "maximumCapacity": 0,
-                          "priority": 0, "reservableCapacity": 0, "type": "bestEffort", "unit": "mbps"}
+        defbw = self.convertForBWService(self.config[self.sitename]["default_params"]["bw"])
+        self.defaultBW = {"availableCapacity": defbw, "granularity": 100, "maximumCapacity": defbw,
+                          "priority": 0, "reservableCapacity": defbw, "type": "bestEffort", "unit": "mbps"}
 
 
 
