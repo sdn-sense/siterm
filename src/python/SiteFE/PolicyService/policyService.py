@@ -86,6 +86,8 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.defaultBW = {"availableCapacity": 0, "granularity": 100, "maximumCapacity": 0,
                           "priority": 0, "reservableCapacity": 0, "type": "bestEffort", "unit": "mbps"}
 
+
+
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
@@ -141,16 +143,12 @@ class PolicyService(RDFHelper, Timing, BWService):
         existsDuring.setdefault("uri", f"{uri}:lifetime")
         return existsDuring
 
-    def __getDefBandwidth(self, suburi):
+    def __getDefBandwidth(self, suburi, currentBW):
         """Get default bandwidth"""
-        newBW = copy.deepcopy(self.defaultBW)
-        newval = self.convertForBWService(self.config[self.sitename]["default_params"]["bw"])
-        newBW["availableCapacity"] = newval
-        newBW["maximumCapacity"] = newval
-        newBW["reservableCapacity"] = newval
-        newBW["minReservableCapacity"] = newval
-        newBW["type"] = self.config[self.sitename]["default_params"]["bw"]["type"]
-        newBW["uri"] = f"{suburi}:service+bw"
+        newBW = copy.deepcopy(currentBW)
+        for key in self.defaultBW:
+            newBW.setdefault(key, self.defaultBW[key])
+        newBW.setdefault('uri', f"{suburi}:service+bw")
         return newBW
 
     @staticmethod
@@ -193,9 +191,7 @@ class PolicyService(RDFHelper, Timing, BWService):
                         newTime = self.__setTime(out[key][uri][key1][key2]["_params"]["existsDuring"], suburi)
                         out[key][uri][key1][key2]["_params"]["existsDuring"] = newTime
                     # This one checks for Bandwidth service and add defaults.
-                    if suburi and not out[key][uri][key1][key2].get('hasService', {}):
-                        # if it is empty, means was best effort service
-                        out[key][uri][key1][key2]['hasService'] = self.__getDefBandwidth(suburi)
+                        out[key][uri][key1][key2]['hasService'] = self.__getDefBandwidth(suburi, out[key][uri][key1][key2].get('hasService', {}))
         return out
 
     def _addDefaultTimeBWWrap(self, out):
