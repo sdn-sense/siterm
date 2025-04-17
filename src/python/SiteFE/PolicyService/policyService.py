@@ -103,8 +103,9 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.kube = False
         self.singleport = False
         self.startend = {}
-        self.defaultBW = {"availableCapacity": 0, "granularity": 100, "maximumCapacity": 0, "minReservableCapacity": 100,
-                          "priority": 0, "reservableCapacity": 0, "type": "bestEffort", "unit": "mbps"}
+        defbw = self.convertForBWService(self.config[self.sitename]["default_params"]["bw"])
+        self.defaultBW = {"availableCapacity": defbw, "granularity": 100, "maximumCapacity": defbw,
+                          "priority": 0, "reservableCapacity": defbw, "type": "bestEffort", "unit": "mbps"}
 
     def _refreshHosts(self):
         """Refresh all hosts information"""
@@ -146,11 +147,13 @@ class PolicyService(RDFHelper, Timing, BWService):
 
     def __getDefBandwidth(self, suburi, currentBW):
         """Get default bandwidth"""
-        newBW = copy.deepcopy(currentBW)
         for key in self.defaultBW:
-            newBW.setdefault(key, self.defaultBW[key])
-        newBW.setdefault('uri', f"{suburi}:service+bw")
-        return newBW
+            if not currentBW.get("type") or currentBW.get("type", "bestEffort") == "bestEffort":
+                currentBW[key] = self.defaultBW[key]
+            else:
+                currentBW.setdefault(key, self.defaultBW[key])
+        currentBW.setdefault('uri', f"{suburi}:service+bw")
+        return currentBW
 
     @staticmethod
     def _findsuburi(out, uri, hostname):

@@ -192,6 +192,7 @@ class DeltaInfo():
                         self._addProvidesRoute(hostname=host, rstname=f"rst-{iptype}", routeuri=route)
                         self._addBandwidthServiceRoute(**{'routeuri': route, 'uri': routedict.get('hasService', {}).get('uri', '')})
                         self.addNetworkStatus(routedict.get('hasService', {}), routedict.get('hasService', {}).get('uri', ''))
+                        self._addBandwidthServiceParams(**routedict.get('hasService', {}))
                         for key, val in routeInfo.items():
                             for _, entrVal in val.items():
                                 netadd = {'hostname': host,
