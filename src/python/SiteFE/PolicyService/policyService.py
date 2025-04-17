@@ -156,6 +156,8 @@ class PolicyService(RDFHelper, Timing, BWService):
     @staticmethod
     def _findsuburi(out, uri, hostname):
         """Find subURI inside rst based on connection id. TODO: Remove after #776 fix"""
+        if not uri:
+            return None
         uuid = uri.split(":")[-1].split("+")
         if len(uuid) == 2:
             uuid = uuid[1]
