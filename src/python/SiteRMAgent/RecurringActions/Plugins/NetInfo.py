@@ -66,6 +66,7 @@ class NetInfo(BWService):
         self.warningscounters = {}
         self.errors = []
         self.runcount = 0
+        self.skipactivecheck = False
 
     def countError(self, errmsg):
         """Count and increment errors"""
@@ -91,8 +92,12 @@ class NetInfo(BWService):
     def _getActive(self):
         """Get active deltas."""
         self.activeDeltas = {}
+        self.skipactivecheck = False
         workDir = self.config.get("general", "privatedir") + "/SiteRM/RulerAgent/"
         activeDeltasFile = f"{workDir}/activedeltas.json"
+        failurefile = f"{workDir}/fefailure.json"
+        if os.path.isfile(failurefile):
+            self.skipactivecheck = True
         if os.path.isfile(activeDeltasFile):
             self.activeDeltas = getFileContentAsJson(activeDeltasFile)
 
@@ -316,6 +321,7 @@ class NetInfo(BWService):
 
     def postProcess(self, data):
         """Post process data"""
+        self._getActive()
         self._cleanWarningCounters()
         hostname = self.config.get('agent', 'hostname')
         for key, intfData in data.get('NetInfo', {}).get('interfaces', {}).items():
@@ -338,6 +344,9 @@ class NetInfo(BWService):
             for _vlankey, vlandict in intfData.get('vlans', {}).items():
                 vlanid = vlandict.get('vlanid', 0)
                 if vlanid in vlanrange:
+                    # Check if Ruler process is ok. If not, skip check
+                    if self.skipactivecheck:
+                        continue
                     # Check if vlan comes from delta
                     if vlanid not in self.activeDeltas.get('output', {}).get('usedVLANs', {}).get('deltas', {}).get(hostname, []):
                         errmsg = f"Vlan {vlanid} in interface {key} is not from delta! Manual provisioned or deletion failed?"
