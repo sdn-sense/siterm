@@ -392,7 +392,7 @@ class RDFHelper():
         return svcService
 
     def _addServiceDefinition(self, **kwargs):
-        # Need to provide uri, hostname, sdkey, sdtype
+        """Add Service definition to Model"""
         self.newGraph.add((self.genUriRef('site', kwargs['uri']),
                            self.genUriRef('sd', 'hasServiceDefinition'),
                            self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['sdkey']}")))

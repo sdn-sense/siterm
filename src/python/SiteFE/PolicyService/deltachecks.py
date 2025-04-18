@@ -362,7 +362,8 @@ class ConflictChecker(Timing):
         for key, vals in idstatetrack.items():
             self.logger.info(f"{key}: {vals}")
 
-    def _checkIsAlias(self, polcls, hostname, hostitems):
+    @staticmethod
+    def _checkIsAlias(polcls, hostname, hostitems):
         """Check if isAlias match what is inside the configuration"""
         for intf, vals in hostitems.items():
             if 'isAlias' in vals and vals['isAlias']:
