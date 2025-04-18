@@ -391,47 +391,41 @@ class RDFHelper():
         self._addGlobalVlanExclusion(**kwargs)
         return svcService
 
+    def _addServiceDefinition(self, **kwargs):
+        """Add Service definition to Model"""
+        self.newGraph.add((self.genUriRef('site', kwargs['uri']),
+                           self.genUriRef('sd', 'hasServiceDefinition'),
+                           self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['sdkey']}")))
+        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['sdkey']}"),
+                           self.genUriRef('rdf', 'type'),
+                           self.genUriRef('sd', 'ServiceDefinition')))
+        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['sdkey']}"),
+                           self.genUriRef('sd', 'serviceType'),
+                           self.genLiteral(self.config.get('servicedefinitions', kwargs['sdtype']))))
+
     def _addMultiPointService(self, **kwargs):
         """Add MultiPoint Service to Model"""
         if not kwargs.get('vswmp', ''):
             return
-        self.newGraph.add((self.genUriRef('site', kwargs['uri']),
-                           self.genUriRef('sd', 'hasServiceDefinition'),
-                           self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswmp']}")))
-        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswmp']}"),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('sd', 'ServiceDefinition')))
-        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswmp']}"),
-                           self.genUriRef('sd', 'serviceType'),
-                           self.genLiteral('http://services.ogf.org/nsi/2018/06/descriptions/l2-mp-es')))
+        kwargs['sdkey'] = kwargs['vswmp']
+        kwargs['sdtype'] = 'multipoint'
+        self._addServiceDefinition(**kwargs)
 
     def _addDebugIPService(self, **kwargs):
         """Add DebugIP Service to model"""
         if not kwargs.get('vswdbip', ''):
             return
-        self.newGraph.add((self.genUriRef('site', kwargs['uri']),
-                           self.genUriRef('sd', 'hasServiceDefinition'),
-                           self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswdbip']}")))
-        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswdbip']}"),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('sd', 'ServiceDefinition')))
-        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['vswdbip']}"),
-                           self.genUriRef('sd', 'serviceType'),
-                           self.genLiteral('http://services.ogf.org/nsi/2019/08/descriptions/config-debug-ip')))
+        kwargs['sdkey'] = kwargs['vswdbip']
+        kwargs['sdtype'] = 'debugip'
+        self._addServiceDefinition(**kwargs)
 
     def _addGlobalVlanExclusion(self, **kwargs):
         """Add Vlan Exclusion to the model. If set, vlan can be used once and it is global on the device"""
         if not kwargs.get('globalvlan', ''):
             return
-        self.newGraph.add((self.genUriRef('site', kwargs['uri']),
-                           self.genUriRef('sd', 'hasServiceDefinition'),
-                           self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['globalvlan']}")))
-        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['globalvlan']}"),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('sd', 'ServiceDefinition')))
-        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:{kwargs['globalvlan']}"),
-                           self.genUriRef('sd', 'serviceType'),
-                           self.genLiteral('http://services.ogf.org/nsi/2019/08/descriptions/global-vlan-exclusion')))
+        kwargs['sdkey'] = kwargs['globalvlan']
+        kwargs['sdtype'] = 'globalvlan'
+        self._addServiceDefinition(**kwargs)
 
     def _addSwitchingSubnet(self, **kwargs):
         """Add Switching Subnet which comes from delta parsed request"""
@@ -537,15 +531,7 @@ class RDFHelper():
         uri = self._addRoutingService(**kwargs)
         if not uri:
             return ""
-        self.newGraph.add((self.genUriRef('site', uri),
-                           self.genUriRef('sd', 'hasServiceDefinition'),
-                           self.genUriRef('site', f":{kwargs['hostname']}:sd:l3vpn")))
-        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:l3vpn"),
-                           self.genUriRef('rdf', 'type'),
-                           self.genUriRef('sd', 'ServiceDefinition')))
-        self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}:sd:l3vpn"),
-                           self.genUriRef('sd', 'serviceType'),
-                           self.genLiteral('http://services.ogf.org/nsi/2019/08/descriptions/l3-vpn')))
+        self._addServiceDefinition(**{'uri': uri, 'hostname': kwargs['hostname'], 'sdkey': 'l3vpn', 'sdtype': 'l3vpn'})
         return f":{kwargs['hostname']}:sd:l3vpn"
 
     def _addRoutingTable(self, **kwargs):

@@ -307,7 +307,9 @@ class Switch(Node):
             if self._notSwitchport(tmpData) and port not in vlans and not port.lower().startswith('vlan'):
                 warning = f"Warning. Port {switch}{port} not added into model. Its status not switchport. Ansible runner returned: {tmpData}."
                 self.logger.debug(warning)
-                self.warnings.append(warning)
+                # Only add warning if allports flag is False.
+                if not self.config.config["MAIN"].get(switch, {}).get("allports", False):
+                    self.warnings.append(warning)
                 self._delPortFromOut(switch, port)
                 continue
             if port in vlans:

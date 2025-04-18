@@ -362,6 +362,19 @@ class ConflictChecker(Timing):
         for key, vals in idstatetrack.items():
             self.logger.info(f"{key}: {vals}")
 
+    @staticmethod
+    def _checkIsAlias(polcls, hostname, hostitems):
+        """Check if isAlias match what is inside the configuration"""
+        for intf, vals in hostitems.items():
+            if 'isAlias' in vals and vals['isAlias']:
+                # If isAlias is set, check if it is in the configuration
+                realPortName = polcls.switch.getSwitchPortName(hostname, intf)
+                if realPortName in polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}):
+                    confAlias = polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}).get(realPortName, {}).get("isAlias", None)
+                    if confAlias and vals['isAlias'].startswith(confAlias):
+                        raise OverlapException(f"Alias mismatch for {hostname} on {intf}. \
+                                               Config: {confAlias}, Request: {vals['isAlias']}")
+
     def checkvsw(self, cls, svcitems, oldConfig, newDelta=False):
         """Check vsw Service"""
         idstatetrack = {'modified': [], 'new': [], 'deleted': [], 'unchanged': []}
@@ -384,6 +397,7 @@ class ConflictChecker(Timing):
                     self._checkIfHostAlive(cls, hostname)
                     self._checkSystemIPOverlap(nStats, hostname, oldConfig)
                     self._checkVlanSwapping(self._getVlans(hostitems), hostname)
+                    self._checkIsAlias(cls, hostname, hostitems)
                 # Check if vlan is in allowed list;
                 self._checkVlanInRange(cls, nStats, hostname)
                 # check if ip address with-in available ranges

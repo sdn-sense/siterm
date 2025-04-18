@@ -30,7 +30,8 @@ class SwitchInfo():
         params = {'bwuri': bwuri,
                   'unit': 'mbps',
                   'maximumCapacity': bw,
-                  'availableCapacity': bwremains,
+                  'availableCapacity': bw,
+                  'sitermremainingCapacity': bwremains,
                   'reservableCapacity': bwall,
                   'minimumCapacity': 100}
         self._addBandwidthServiceParams(**params)

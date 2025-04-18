@@ -68,7 +68,17 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
 
     def getActiveDeltas(self):
         """Get Delta information."""
-        return self.getData("/sitefe/v1/activedeltas/")
+        failurefile = f"{self.workDir}/fefailure.json"
+        data = {}
+        try:
+            data = self.getData("/sitefe/v1/activedeltas/")
+        except FailedGetDataFromFE as ex:
+            self.dumpFileContentAsJson(failurefile, {"exc": str(ex)})
+            self.logger.critical("Failed to get data from FE: %s", str(ex))
+            raise FailedGetDataFromFE from ex
+        if os.path.isfile(failurefile):
+            os.remove(failurefile)
+        return data
 
     def checkIfOverlap(self, ip, intf, iptype):
         """Check if IPs overlap with what is set in configuration"""
