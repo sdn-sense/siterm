@@ -266,6 +266,12 @@ class GitConfig:
                     "xml": "http://www.w3.org/XML/1998/namespace#",
                     "xsd": "http://www.w3.org/2001/XMLSchema#",
                 },
+                "servicedefinitions": {
+                    "debugip": "http://services.ogf.org/nsi/2019/08/descriptions/config-debug-ip",
+                    "globalvlan": "http://services.ogf.org/nsi/2019/08/descriptions/global-vlan-exclusion",
+                    "multipoint": "http://services.ogf.org/nsi/2018/06/descriptions/l2-mp-es",
+                    "l3vpn": "http://services.ogf.org/nsi/2019/08/descriptions/l3-vpn"
+                },
                 "snmp": {
                     "mibs": [
                         "ifDescr","ifType","ifMtu","ifAdminStatus","ifOperStatus",
