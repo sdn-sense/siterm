@@ -278,7 +278,7 @@ class RDFHelper():
                            self.genUriRef('nml', 'Topology')))
 
     def _addMetadataService(self, uri=""):
-        """Add Metadat Service"""
+        """Add Metadata Service"""
         metaService = f"{uri}:service+metadata"
         self.newGraph.add((self.genUriRef('site', uri),
                            self.genUriRef('nml', 'hasService'),
@@ -331,10 +331,9 @@ class RDFHelper():
                             self.genUriRef('mrs', 'value'),
                             self.genLiteral(kwargs['version'])))
 
-
     def _addNode(self, **kwargs):
         """Add Node to Model"""
-        if not kwargs['hostname']:
+        if self.__checkifReqKeysMissing(["hostname"], kwargs):
             return ""
         self.newGraph.add((self.genUriRef('site'),
                            self.genUriRef('nml', 'hasNode'),
@@ -352,7 +351,7 @@ class RDFHelper():
     def _addPort(self, **kwargs):
         """Add Port to Model"""
         self._addNode(**kwargs)
-        if not kwargs['hostname'] or not kwargs['portName']:
+        if self.__checkifReqKeysMissing(["hostname", "portName"], kwargs):
             return ""
         newuri = f":{kwargs['hostname']}:{self.switch.getSystemValidPortName(kwargs['portName'])}"
         self.newGraph.add((self.genUriRef('site', f":{kwargs['hostname']}"),
@@ -369,8 +368,7 @@ class RDFHelper():
 
     def _addSwitchingService(self, **kwargs):
         """Add Switching Service to Model"""
-        reqKeys = ['hostname', 'vsw']
-        if self.__checkifReqKeysMissing(reqKeys, kwargs):
+        if self.__checkifReqKeysMissing(['hostname', 'vsw'], kwargs):
             return ""
         if kwargs['vsw'] != kwargs['hostname']:
             self.logger.debug(f"Config mistake. Hostname != vsw ({kwargs['hostname']} != {kwargs['vsw']})")
@@ -405,24 +403,24 @@ class RDFHelper():
 
     def _addMultiPointService(self, **kwargs):
         """Add MultiPoint Service to Model"""
-        if not kwargs.get('vswmp', ''):
-            return
+        if self.__checkifReqKeysMissing(['vswmp'], kwargs):
+            return ""
         kwargs['sdkey'] = kwargs['vswmp']
         kwargs['sdtype'] = 'multipoint'
         self._addServiceDefinition(**kwargs)
 
     def _addDebugIPService(self, **kwargs):
         """Add DebugIP Service to model"""
-        if not kwargs.get('vswdbip', ''):
-            return
+        if self.__checkifReqKeysMissing(['vswdbip'], kwargs):
+            return ""
         kwargs['sdkey'] = kwargs['vswdbip']
         kwargs['sdtype'] = 'debugip'
         self._addServiceDefinition(**kwargs)
 
     def _addGlobalVlanExclusion(self, **kwargs):
         """Add Vlan Exclusion to the model. If set, vlan can be used once and it is global on the device"""
-        if not kwargs.get('globalvlan', ''):
-            return
+        if self.__checkifReqKeysMissing(['globalvlan'], kwargs):
+            return ""
         kwargs['sdkey'] = kwargs['globalvlan']
         kwargs['sdtype'] = 'globalvlan'
         self._addServiceDefinition(**kwargs)
@@ -430,6 +428,8 @@ class RDFHelper():
     def _addSwitchingSubnet(self, **kwargs):
         """Add Switching Subnet which comes from delta parsed request"""
         svcService = self._addSwitchingService(**kwargs)
+        if self.__checkifReqKeysMissing(['subnet'], kwargs):
+            return ""
         subnetUri = f"{svcService}{kwargs['subnet']}"
         self.newGraph.add((self.genUriRef('site', svcService),
                            self.genUriRef('mrs', 'providesSubnet'),
@@ -479,8 +479,8 @@ class RDFHelper():
         return bws
 
     def _addBandwidthServiceRoute(self, **kwargs):
-        if not kwargs.get('routeuri', '') or not kwargs.get('uri', ''):
-            return
+        if self.__checkifReqKeysMissing(['routeuri', 'uri'], kwargs):
+            return ""
         self.newGraph.add((self.genUriRef('site', kwargs['routeuri']),
                            self.genUriRef('nml', 'hasService'),
                            self.genUriRef('site', kwargs['uri'])))

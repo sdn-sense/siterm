@@ -371,9 +371,9 @@ class ConflictChecker(Timing):
                 realPortName = polcls.switch.getSwitchPortName(hostname, intf)
                 if realPortName in polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}):
                     confAlias = polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}).get(realPortName, {}).get("isAlias", None)
-                    if confAlias and vals['isAlias'].startswith(confAlias):
+                    if confAlias and not vals['isAlias'].startswith(confAlias):
                         raise OverlapException(f"Alias mismatch for {hostname} on {intf}. \
-                                               Config: {confAlias}, Request: {vals['isAlias']}")
+                                                Config: {confAlias}, Request: {vals['isAlias']}")
 
     def checkvsw(self, cls, svcitems, oldConfig, newDelta=False):
         """Check vsw Service"""
