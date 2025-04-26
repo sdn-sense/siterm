@@ -135,7 +135,15 @@ class DBBackend():
                 cursor.execute(query)
                 colname = [tup[0] for tup in cursor.description]
                 alldata = cursor.fetchall()
+            except mariadb.InterfaceError as ex:
+                err = f'[GET]MariaDBInterfaceError. Ex: {ex}'
+                print(err)
+                raise err from ex
+            except mariadb.Error as ex:
+                print(f'[GET]MariaDBError. Ex: {ex}')
+                raise ex
             except Exception as ex:
+                print(f'[GET]MariaDB Exception. Ex: {ex}')
                 raise ex
         return 'OK', colname, alldata
 
@@ -148,11 +156,17 @@ class DBBackend():
                 for item in values:
                     cursor.execute(query, item)
                     lastID = cursor.lastrowid
-            except mariadb.Error as ex:
-                print(f'MariaDBError. Ex: {ex}')
+            except mariadb.InterfaceError as ex:
+                err = f'[INS]MariaDBInterfaceError. Ex: {ex}'
+                print(err)
                 conn.rollback()
+                raise err from ex
+            except mariadb.Error as ex:
+                print(f'[INS]MariaDBError. Ex: {ex}')
+                conn.rollback()
+                raise ex
             except Exception as ex:
-                print(f'Got Exception {ex} ')
+                print(f'[INS]MariaDB Exception. Ex: {ex}')
                 conn.rollback()
                 raise ex
         return 'OK', '', lastID
@@ -164,8 +178,17 @@ class DBBackend():
         with self.get_connection() as (conn, cursor):
             try:
                 cursor.execute(query)
+            except mariadb.InterfaceError as ex:
+                err = f'[DEL]MariaDBInterfaceError. Ex: {ex}'
+                print(err)
+                conn.rollback()
+                raise err from ex
+            except mariadb.Error as ex:
+                print(f'[DEL]MariaDBError. Ex: {ex}')
+                conn.rollback()
+                raise ex
             except Exception as ex:
-                print(f'Got Exception {ex} ')
+                print(f'[DEL]MariaDB Exception. Ex: {ex}')
                 conn.rollback()
                 raise ex
         return 'OK', '', ''
@@ -178,8 +201,17 @@ class DBBackend():
                 cursor.execute(query)
             except mariadb.InterfaceError as ex:
                 print(f'Got Exception {ex} ')
+            except mariadb.InterfaceError as ex:
+                err = f'[EXC]MariaDBInterfaceError. Ex: {ex}'
+                print(err)
+                conn.rollback()
+                raise err from ex
+            except mariadb.Error as ex:
+                print(f'[EXC]MariaDBError. Ex: {ex}')
+                conn.rollback()
+                raise ex
             except Exception as ex:
-                print(f'Got Exception {ex} ')
+                print(f'[EXC]MariaDB Exception. Ex: {ex}')
                 conn.rollback()
                 raise ex
         return 'OK', '', ''
