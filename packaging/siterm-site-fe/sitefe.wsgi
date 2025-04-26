@@ -1,12 +1,36 @@
 """ Main WSGI application """
 import os
+import tracemalloc
+import threading
 import traceback
+import time
 from SiteFE.REST.app import Frontend
 
 class Application():
     """Application class for WSGI"""
     def __init__(self):
         self.threadcalls = {}
+        # Start tracemalloc if debug is set.
+        if os.getenv('SITERM_MEMORY_DEBUG'):
+            tracemalloc.start()
+            threading.Thread(target=self.memLogger, daemon=True).start()
+
+    def memLogger(self):
+        """Background thread to log memory snapshots periodically"""
+        while True:
+            snapshot = tracemalloc.take_snapshot()
+            top_stats = snapshot.statistics('lineno')[:20]
+
+            with open(f"/var/log/httpd/memory_snapshot_{os.getpid()}.log", "a", encoding="utf-8") as fd:
+                fd.write(f"Memory usage: {tracemalloc.get_traced_memory()}\n")
+                fd.write(f"=== Memory snapshot at {time.ctime()} PID {os.getpid()} ===\n")
+                for stat in top_stats:
+                    fd.write(str(stat) + "\n")
+                fd.write("\n\n")
+                fd.write("=== End of snapshot ===\n")
+                fd.write("======\n\n")
+            time.sleep(60)
+
 
     def __getwrapper(self, environ):
         """ Get the wrapper for the current thread """
