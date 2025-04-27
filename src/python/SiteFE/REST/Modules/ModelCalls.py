@@ -77,7 +77,7 @@ class ModelCalls():
         outmodels = [outmodels] if isinstance(outmodels, dict) else outmodels
         current = {"id": outmodels[0]['uid'],
                    "creationTime": convertTSToDatetime(outmodels[0]['insertdate']),
-                   "href": f"{environ['SCRIPT_URI']}/{outmodels[0]['uid']}"}
+                   "href": f"{environ['APP_CALLBACK']}/{outmodels[0]['uid']}"}
         if outmodels[0]['insertdate'] < modTime:
             self.httpresp.ret_304('application/json', kwargs["start_response"],
                                   [('Last-Modified', httpdate(outmodels[0]['insertdate']))])
@@ -99,7 +99,7 @@ class ModelCalls():
             for model in outmodels:
                 tmpDict = {"id": model['uid'],
                            "creationTime": convertTSToDatetime(model['insertdate']),
-                           "href": f"{environ['SCRIPT_URI']}/{model['uid']}"}
+                           "href": f"{environ['APP_CALLBACK']}/{model['uid']}"}
                 if not kwargs['urlParams']['summary']:
                     tmpDict['model'] = encodebase64(self.getmodel(environ,
                                                                     model['uid'],
@@ -124,7 +124,7 @@ class ModelCalls():
             return []
         current = {"id": model['uid'],
                    "creationTime": convertTSToDatetime(model['insertdate']),
-                   "href": f"{environ['SCRIPT_URI']}/{model['uid']}"}
+                   "href": f"{environ['APP_CALLBACK']}/{model['uid']}"}
         if not kwargs['urlParams']['summary']:
             current['model'] = encodebase64(self.getmodel(environ,
                                                             model['uid'],
