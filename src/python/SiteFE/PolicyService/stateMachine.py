@@ -18,6 +18,7 @@ Email                   : justas.balcas (at) cern.ch
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2018/11/26
 """
+import json
 from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import getLoggingObject
@@ -127,7 +128,7 @@ class StateMachine():
                  'updatedate': int(delta['UpdateTime']),
                  'state': str(state),
                  'deltat': str(delta['Type']),
-                 'content': str(delta['Content']),
+                 'content': json.dumps(delta['Content']),
                  'modelid': str(delta['modelId']),
                  'modadd': str(delta['modadd']),
                  'error': '' if 'Error' not in list(delta.keys()) else str(delta['Error'])}

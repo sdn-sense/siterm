@@ -212,9 +212,7 @@ def evaldict(inputDict):
     except (json.JSONDecodeError, TypeError, ValueError):
         pass  # fall back
     # Try to fix common issues:
-    fixedInput = inputDict
-    # Replace single quotes with double quotes
-    fixedInput = re.sub(r"'", r'"', fixedInput)
+    fixedInput = re.sub(r"'", r'"', inputDict)
     # Remove trailing commas (optional)
     fixedInput = re.sub(r",(\s*[}\]])", r"\1", fixedInput)
     try:
