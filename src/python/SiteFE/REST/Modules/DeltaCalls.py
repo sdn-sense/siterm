@@ -163,7 +163,7 @@ class DeltaCalls:
         outContent["State"] = out["State"]
         outContent["id"] = hashNum
         outContent["lastModified"] = convertTSToDatetime(outContent["UpdateTime"])
-        outContent["href"] = f"{environ['SCRIPT_URI']}/{hashNum}"
+        outContent["href"] = f"{environ['APP_CALLBACK']}/{hashNum}"
         if outContent["State"] not in ["accepted"]:
             if "Error" not in out:
                 outContent["Error"] = f"Unknown Error. Dump all out content {jsondumps(out)}"
@@ -241,7 +241,7 @@ class DeltaCalls:
                 "id": delta["uid"],
                 "lastModified": convertTSToDatetime(delta["updatedate"]),
                 "state": delta["state"],
-                "href": f"{environ['SCRIPT_URI']}/{delta['uid']}",
+                "href": f"{environ['APP_CALLBACK']}/{delta['uid']}",
                 "modelId": delta["modelid"],
             }
             if not kwargs["urlParams"]["summary"]:
@@ -363,7 +363,7 @@ class DeltaCalls:
             "id": delta["uid"],
             "lastModified": convertTSToDatetime(delta["updatedate"]),
             "state": delta["state"],
-            "href": f"{environ['SCRIPT_URI']}",
+            "href": f"{environ['APP_CALLBACK']}",
             "modelId": delta["modelid"],
         }
         if not kwargs["urlParams"]["summary"]:
@@ -390,7 +390,7 @@ class DeltaCalls:
         msgOut = self.__commitdelta(kwargs["deltaid"], environ, **kwargs)
         self._logDeltaUserAction(kwargs, 'commit', msgOut, environ)
         self.httpresp.ret_204("application/json", kwargs["start_response"], None)
-        return msgOut
+        return []
 
     def activedeltas(self, environ, **kwargs):
         """

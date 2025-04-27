@@ -8,7 +8,6 @@ Authors:
 Date: 2021/01/20
 """
 import sys
-import ast
 import base64
 import cgi
 import copy
@@ -31,6 +30,7 @@ import subprocess
 import time
 import uuid
 import urllib.parse
+import re
 
 # Custom exceptions imports
 import pycurl
@@ -193,21 +193,33 @@ def getTimeRotLogger(**kwargs):
 
 
 def evaldict(inputDict):
-    """Output from the server needs to be evaluated."""
+    """Safely evaluate input to dict/list."""
     if not inputDict:
         return {}
     if isinstance(inputDict, (list, dict)):
         return inputDict
-    try:
-        out = json.loads(inputDict)
-    except (json.errors.JSONDecodeError, TypeError, ValueError, SyntaxError):
+    # Decode if it is bytes
+    if isinstance(inputDict, bytes):
         try:
-            out = ast.literal_eval(inputDict)
-        except (ValueError, SyntaxError) as ex:
-            raise WrongInputError(
-                f"Failed to evaluate dict. Error: {ex}"
-            ) from ex
-    return out
+            inputDict = inputDict.decode('utf-8')
+        except UnicodeDecodeError as ex:
+            raise WrongInputError(f"Input bytes could not be decoded. Error: {ex}") from ex
+    # At this stage, if not string, raise error.  list/dict is checked in previous if
+    if not isinstance(inputDict, str):
+        raise WrongInputError("Input must be a string or dict/list.")
+    try:
+        return json.loads(inputDict)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass  # fall back
+    # Try to fix common issues:
+    fixedInput = re.sub(r"'", r'"', inputDict)
+    # Remove trailing commas (optional)
+    fixedInput = re.sub(r",(\s*[}\]])", r"\1", fixedInput)
+    try:
+        return json.loads(fixedInput)
+    except (json.JSONDecodeError, TypeError, ValueError) as ex:
+        raise WrongInputError(
+            f"Input looks like JSON but could not be parsed even after fixup. Error: {ex}") from ex
 
 
 def jsondumps(inputDict):
