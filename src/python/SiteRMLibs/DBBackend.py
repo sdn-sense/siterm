@@ -73,9 +73,9 @@ class DBBackend():
                                    autocommit=self.autocommit)
             cursor = conn.cursor()
             yield conn, cursor
-        except Exception as e:
+        except Exception as ex:
             print(f"Error establishing database connection: {e}")
-            raise e
+            raise ex
         finally:
             if cursor:
                 try:
@@ -145,14 +145,13 @@ class DBBackend():
                 alldata = cursor.fetchall()
             except mariadb.InterfaceError as ex:
                 err = f'[GET]MariaDBInterfaceError. Ex: {ex}'
-                print(err)
-                raise err from ex
+                raise mariadb.InterfaceError(err) from ex
             except mariadb.Error as ex:
-                print(f'[GET]MariaDBError. Ex: {ex}')
-                raise ex
+                err = f'[GET]MariaDBError. Ex: {ex}'
+                raise mariadb.Error(err) from ex
             except Exception as ex:
-                print(f'[GET]MariaDB Exception. Ex: {ex}')
-                raise ex
+                err = f'[GET]MariaDB Exception. Ex: {ex}'
+                raise Exception(err) from ex
         return 'OK', colname, alldata
 
     def execute_ins(self, query, values):
@@ -166,17 +165,16 @@ class DBBackend():
                     lastID = cursor.lastrowid
             except mariadb.InterfaceError as ex:
                 err = f'[INS]MariaDBInterfaceError. Ex: {ex}'
-                print(err)
                 conn.rollback()
-                raise err from ex
+                raise mariadb.InterfaceError(err) from ex
             except mariadb.Error as ex:
-                print(f'[INS]MariaDBError. Ex: {ex}')
+                err = f'[INS]MariaDBError. Ex: {ex}'
                 conn.rollback()
-                raise ex
+                raise mariadb.Error(err) from ex
             except Exception as ex:
-                print(f'[INS]MariaDB Exception. Ex: {ex}')
+                err = f'[INS]MariaDB Exception. Ex: {ex}'
                 conn.rollback()
-                raise ex
+                raise Exception(err) from ex
         return 'OK', '', lastID
 
     def execute_del(self, query, values):
@@ -188,17 +186,16 @@ class DBBackend():
                 cursor.execute(query)
             except mariadb.InterfaceError as ex:
                 err = f'[DEL]MariaDBInterfaceError. Ex: {ex}'
-                print(err)
                 conn.rollback()
-                raise err from ex
+                raise mariadb.InterfaceError(err) from ex
             except mariadb.Error as ex:
-                print(f'[DEL]MariaDBError. Ex: {ex}')
+                err = f'[DEL]MariaDBError. Ex: {ex}'
                 conn.rollback()
-                raise ex
+                raise mariadb.Error(err) from ex
             except Exception as ex:
-                print(f'[DEL]MariaDB Exception. Ex: {ex}')
+                err = f'[DEL]MariaDB Exception. Ex: {ex}'
                 conn.rollback()
-                raise ex
+                raise Exception(err) from ex
         return 'OK', '', ''
 
     def execute(self, query):
@@ -208,20 +205,17 @@ class DBBackend():
             try:
                 cursor.execute(query)
             except mariadb.InterfaceError as ex:
-                print(f'Got Exception {ex} ')
-            except mariadb.InterfaceError as ex:
                 err = f'[EXC]MariaDBInterfaceError. Ex: {ex}'
-                print(err)
                 conn.rollback()
-                raise err from ex
+                raise mariadb.InterfaceError(err) from ex
             except mariadb.Error as ex:
-                print(f'[EXC]MariaDBError. Ex: {ex}')
+                err = f'[EXC]MariaDBError. Ex: {ex}'
                 conn.rollback()
-                raise ex
+                raise mariadb.Error(err) from ex
             except Exception as ex:
-                print(f'[EXC]MariaDB Exception. Ex: {ex}')
+                err = f'[EXC]MariaDB Exception. Ex: {ex}'
                 conn.rollback()
-                raise ex
+                raise Exception(err) from ex
         return 'OK', '', ''
 
 class dbinterface():
@@ -254,8 +248,8 @@ class dbinterface():
         try:
             callquery = getattr(dbcalls, f'{callaction}_{calltype}')
         except AttributeError as ex:
-            print('Called %s_%s, but got exception %s', callaction, calltype, ex)
-            raise ex
+            err = f'Called {callaction}_{calltype}, but got exception {str(ex)}'
+            raise AttributeError(err) from ex
         return callquery
 
     # =====================================================

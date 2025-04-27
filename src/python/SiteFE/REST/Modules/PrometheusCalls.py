@@ -21,7 +21,6 @@ Date                    : 2023/01/03
 """
 import copy
 
-import psutil
 from prometheus_client import (CONTENT_TYPE_LATEST, CollectorRegistry, Enum,
                                Gauge, Info, generate_latest)
 from SiteRMLibs.MainUtilities import (evaldict, getActiveDeltas, getAllHosts,
@@ -62,71 +61,21 @@ class PrometheusCalls:
         registry = CollectorRegistry()
         return registry
 
-    def __processStats(self, proc, services, lookupid):
-        """Get Process Stats - memory"""
-        procList = proc.cmdline()
-        if len(procList) > lookupid:
-            for serviceName in services:
-                if procList[lookupid].endswith(serviceName):
-                    self.memMonitor.setdefault(
-                        serviceName,
-                        {
-                            "rss": 0,
-                            "vms": 0,
-                            "shared": 0,
-                            "text": 0,
-                            "lib": 0,
-                            "data": 0,
-                            "dirty": 0,
-                        },
-                    )
-                    for key in self.memMonitor[serviceName].keys():
-                        if hasattr(proc.memory_info(), key):
-                            self.memMonitor[serviceName][key] += getattr(
-                                proc.memory_info(), key
-                            )
-
     def __memStats(self, registry):
         """Refresh all Memory Statistics in FE"""
 
-        def procWrapper(proc, services, lookupid):
-            """Process Wrapper to catch exited process or zombie process"""
-            try:
-                self.__processStats(proc, services, lookupid)
-            except psutil.NoSuchProcess:
-                pass
-            except psutil.ZombieProcess:
-                pass
-
-        self.memMonitor = {}
-        for proc in psutil.process_iter(attrs=None, ad_value=None):
-            procWrapper(proc, ["mariadbd", "httpd"], 0)
-            procWrapper(
-                proc,
-                [
-                    "Config-Fetcher",
-                    "SNMPMonitoring-update",
-                    "ProvisioningService-update",
-                    "LookUpService-update",
-                    "siterm-debugger",
-                    "PolicyService-update",
-                    "DBWorker-update",
-                    "DBCleaner-service",
-                    "SwitchWorker",
-                    "gunicorn"
-                ],
-                1,
-            )
         memInfo = Gauge(
             "memory_usage",
             "Memory Usage for Service",
             ["servicename", "key"],
             registry=registry,
         )
-        for serviceName, vals in self.memMonitor.items():
-            for key, val in vals.items():
-                labels = {"servicename": serviceName, "key": key}
-                memInfo.labels(**labels).set(val)
+        # TODO: In future pass agent memory mon usage also, and record it
+        for _, hostDict in self.memMonitor.items():
+            for serviceName, vals in hostDict.items():
+                for key, val in vals.items():
+                    labels = {"servicename": serviceName, "key": key}
+                    memInfo.labels(**labels).set(val)
 
     def _addHostArpInfo(self, arpState,  host, arpInfo):
         """Add Host Arp Info"""
@@ -198,6 +147,10 @@ class PrometheusCalls:
             if int(self.timenow - item["updatedate"]) > 300:
                 continue
             out = evaldict(item.get("output", {}))
+            if item["hostname"].startswith("hostnamemem-"):
+                # Skip hostnamemem- devices. This is covered in __memStats
+                self.memMonitor[item["hostname"]] = out
+                continue
             for key, val in out.items():
                 if key == "macs":
                     if "vlans" in val:

@@ -18,6 +18,7 @@ Authors:
 Date: 2022/11/21
 """
 import sys
+import psutil
 from easysnmp import Session
 from easysnmp.exceptions import EasySNMPUnknownObjectIDError
 from easysnmp.exceptions import EasySNMPTimeoutError
@@ -45,6 +46,7 @@ class SNMPMonitoring():
         self.session = None
         self.err = []
         self.hostconf = {}
+        self.memMonitor = {}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -118,7 +120,7 @@ class SNMPMonitoring():
 
     def _writeToDB(self, host, output):
         """Write SNMP Data to DB"""
-        out = {'id': 0, 'insertdate': getUTCnow(), 'updatedate': getUTCnow(),
+        out = {'insertdate': getUTCnow(), 'updatedate': getUTCnow(),
                'hostname': host, 'output': jsondumps(output)}
         dbOut = self.dbI.get('snmpmon', limit=1, search=[['hostname', host]])
         if dbOut:
@@ -131,7 +133,7 @@ class SNMPMonitoring():
         try:
             if int(vlan) in self.config.get(host, 'vlan_range_list'):
                 return True
-        except:
+        except Exception:
             return False
         return False
 
@@ -153,6 +155,46 @@ class SNMPMonitoring():
                 if self._isVlanAllowed(host, vlan):
                     macs[host]['vlans'].setdefault(vlan, [])
                     macs[host]['vlans'][vlan].append(":".join(mac))
+
+    def _processStats(self, proc, services, lookupid):
+        """Get Process Stats - memory"""
+        procList = proc.cmdline()
+        if len(procList) > lookupid:
+            for serviceName in services:
+                if procList[lookupid].endswith(serviceName):
+                    self.memMonitor.setdefault(
+                        serviceName,
+                        {"rss": 0, "vms": 0, "shared": 0, "text": 0,
+                        "lib": 0, "data": 0, "dirty": 0,})
+                    for key in self.memMonitor[serviceName].keys():
+                        if hasattr(proc.memory_info(), key):
+                            self.memMonitor[serviceName][key] += getattr(
+                                proc.memory_info(), key
+                            )
+
+    def getMemStats(self):
+        """Refresh all Memory Statistics in FE"""
+
+        def procWrapper(proc, services, lookupid):
+            """Process Wrapper to catch exited process or zombie process"""
+            try:
+                self._processStats(proc, services, lookupid)
+            except psutil.NoSuchProcess:
+                pass
+            except psutil.ZombieProcess:
+                pass
+
+        self.memMonitor = {}
+        for proc in psutil.process_iter(attrs=None, ad_value=None):
+            procWrapper(proc, ["mariadbd", "httpd"], 0)
+            procWrapper(proc, ["Config-Fetcher", "SNMPMonitoring-update",
+                               "ProvisioningService-update", "LookUpService-update",
+                               "siterm-debugger", "PolicyService-update",
+                               "DBWorker-update", "DBCleaner-service",
+                               "SwitchWorker", "gunicorn"], 1)
+        # Write to DB
+        self._writeToDB('hostnamemem-fe', self.memMonitor)
+
 
     def startwork(self):
         """Scan all switches and get snmp data"""

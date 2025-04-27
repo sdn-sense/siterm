@@ -16,6 +16,7 @@ from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.MainUtilities import (
     contentDB, createDirs,  getFileContentAsJson, getAllHosts,
     getDBConn, getLoggingObject, getVal, getUTCnow, getActiveDeltas)
+from SiteRMLibs.CustomExceptions import ServiceWarning
 from SiteRMLibs.GitConfig import getGitConfig
 
 
@@ -106,7 +107,7 @@ class Validator():
         {'hostname': 'transfer-14.ultralight.org', 'intf': 'bondpublic', 'mac-address': 'b8:59:9f:ed:2a:fa', 'switch': 'dellos10_s1', 'port': 'Ethernet 1/1/2:5'}
 {'local_port_id': 'Ethernet 1/1/2:5', 'remote_system_name': 'transfer-14.ultralight.org', 'remote_port_id': 'b8:59:9f:ed:2a:fa', 'remote_chassis_id': '04:32:01:04:94:8c'}
         """
-        if hostinfo['mac-address'] == switchlldp['remote_port_id']:
+        if hostinfo.get('mac-address') == switchlldp.get('remote_port_id'):
             return True
         self.addWarning(f"Host {hostinfo['hostname']} does not match lldp information. Host Info: {hostinfo}, Switch LLDP Info: {switchlldp}")
         self._setwarningstart()
@@ -136,19 +137,7 @@ class Validator():
             self.warnings.append(warning)
 
     def checkAndRaiseWarnings(self):
-        """Check and raise warnings in case some vlans are used/configured manually."""
-        # Check that for all vlan range, if it is on system usedVlans - it should be on deltas too;
-        # otherwise it means vlan is configured manually (or deletion did not happen)
-        # Get all active here and use everything from Active
-        
-        for host, vlans in self.activeDeltas['output']['usedVlans']['system'].items():
-            if host in self.config.config.get('MAIN', {}):
-                # Means it is a switch (host check remains for Agents itself)
-                all_vlan_range_list = self.config.config.get('MAIN', {}).get(host, {}).get('all_vlan_range_list', [])
-                for vlan in vlans:
-                    if vlan in all_vlan_range_list and vlan not in self.usedVlans['deltas'].get(host, []):
-                        self.addWarning(f"Vlan {vlan} is configured manually on {host}. It comes not from delta."
-                                         "Either deletion did not happen or was manually configured.")
+        """Check and raise warnings."""
         # Add switchwarnings (in case any exists)
         self.warnings += self.switch.getWarnings()
         if self.warnings:
@@ -157,8 +146,6 @@ class Validator():
             warnings = "\n".join(self.warnings)
             self.warnings = []
             raise ServiceWarning(warnings)
-
-
 
     def startwork(self):
         """Main run"""

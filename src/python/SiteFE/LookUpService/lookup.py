@@ -309,6 +309,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                         self.addWarning(f"Vlan {vlan} is configured manually on {host}. It comes not from delta."
                                          "Either deletion did not happen or was manually configured.")
         # Add switchwarnings (in case any exists)
+        self.warnings += self.switch.getWarnings()
         if self.warnings:
             self.warningstart = self.warningstart if self.warningstart else getUTCnow()
             self.logger.warning("Warnings: %s", self.warnings)
