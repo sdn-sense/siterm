@@ -111,7 +111,9 @@ class PrometheusCalls:
                     "siterm-debugger",
                     "PolicyService-update",
                     "DBWorker-update",
-                    "DBCleaner-service"
+                    "DBCleaner-service",
+                    "SwitchWorker",
+                    "gunicorn"
                 ],
                 1,
             )
