@@ -77,8 +77,16 @@ class DBBackend():
             print(f"Error establishing database connection: {e}")
             raise e
         finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
             if conn:
-                conn.close()
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
 
     def checkdbconnection(self, retry=True):

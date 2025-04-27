@@ -55,6 +55,16 @@ def returnDump(out):
         out = [out.encode("UTF-8")]
     return out
 
+def cleanURL(path):
+    """ Normalize PATH_INFO safely """
+    if not path:
+        return ""
+    path = path.strip()
+    while path.startswith("/"):
+        path = path[1:]
+    parts = [p for p in path.split("/") if p]
+    return parts
+
 
 class Frontend(
     CertHandler,
@@ -110,7 +120,7 @@ class Frontend(
         returnDict = {}
         exception = ""
         try:
-            routeMatch = self.routeMap.match(environ.get("PATH_INFO", "").rstrip("/"))
+            routeMatch = self.routeMap.match(environ.get('APP_APIURL'))
             if routeMatch and hasattr(self, routeMatch.get("action", "")):
                 self.checkIfMethodAllowed(environ, routeMatch["action"])
                 kwargs.update(routeMatch)
@@ -130,7 +140,7 @@ class Frontend(
                     "application/json", kwargs["start_response"], None
                 )
                 exception = (
-                    f"No such API. {environ.get('PATH_INFO', '').rstrip('/')} call."
+                    f'No such API. {environ.get("APP_APIURL")} call.'
                 )
                 returnDict = getCustomOutMsg(errMsg=str(exception), errCode=501)
         except TimeoutError as ex:
@@ -187,21 +197,24 @@ class Frontend(
                 bytes(jsondumps(getCustomOutMsg(errMsg=str(ex), errCode=401)), "UTF-8")
             ]
         # Sitename must be configured on FE
-        sitename = environ.get("REQUEST_URI", "").split("/")[1]
-        if sitename not in self.sites:
+        urlparts = cleanURL(environ.get("PATH_INFO", ""))
+        environ['APP_SITENAME'] = urlparts[0]
+        environ['APP_APIURL'] = "/" + "/".join(urlparts[2:])
+        environ['APP_CALLBACK'] = "https://" + environ.get('HTTP_HOST') + "/" + "/".join(urlparts)
+        if environ['APP_SITENAME'] not in self.sites:
             self.httpresp.ret_404("application/json", start_response, None)
             return [
                 bytes(
                     jsondumps(
                         getCustomOutMsg(
-                            errMsg=f"Sitename {sitename} is not configured. Contact Support.",
+                            errMsg=f"Sitename {environ['APP_SITENAME']} is not configured. Contact Support.",
                             errCode=404,
                         )
                     ),
                     "UTF-8",
                 )
             ]
-        self.dbI = getVal(self.dbobj, **{"sitename": sitename})
+        self.dbI = getVal(self.dbobj, **{"sitename": environ['APP_SITENAME']})
         return self.internallCall(
-            environ=environ, start_response=start_response, sitename=sitename
+            environ=environ, start_response=start_response, sitename=environ['APP_SITENAME']
         )
