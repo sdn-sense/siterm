@@ -390,7 +390,7 @@ class DeltaCalls:
         msgOut = self.__commitdelta(kwargs["deltaid"], environ, **kwargs)
         self._logDeltaUserAction(kwargs, 'commit', msgOut, environ)
         self.httpresp.ret_204("application/json", kwargs["start_response"], None)
-        return msgOut
+        return []
 
     def activedeltas(self, environ, **kwargs):
         """

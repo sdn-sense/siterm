@@ -179,7 +179,7 @@ class Frontend(
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=406)
         if exception:
             print(exception)
-        return returnDump(returnDict)
+        return returnDump(returnDict) if returnDict else []
 
     def mainCall(self, environ, start_response):
         """Main start.
