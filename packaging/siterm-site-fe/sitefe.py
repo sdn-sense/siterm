@@ -4,6 +4,7 @@ import tracemalloc
 import threading
 import traceback
 import time
+from uvicorn.middleware.wsgi import WSGIMiddleware
 from SiteFE.REST.app import Frontend
 
 class Application():
@@ -50,4 +51,4 @@ class Application():
             print(traceback.print_exc())
             raise
 
-application = Application()
+application = WSGIMiddleware(Application())

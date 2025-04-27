@@ -53,14 +53,14 @@ class CertHandler():
     def getCertInfo(environ):
         """Get certificate info."""
         out = {}
-        for key in ['SSL_CLIENT_V_REMAIN', 'SSL_CLIENT_S_DN', 'SSL_CLIENT_I_DN', 'SSL_CLIENT_V_START', 'SSL_CLIENT_V_END']:
+        for key in ['HTTP_SSL_CLIENT_V_REMAIN', 'HTTP_SSL_CLIENT_S_DN', 'HTTP_SSL_CLIENT_I_DN', 'HTTP_SSL_CLIENT_V_START', 'HTTP_SSL_CLIENT_V_END']:
             if key not in environ:
                 print('Request without certificate. Unauthorized')
                 raise Exception('Unauthorized access. Request without certificate.')
-        out['subject'] = environ['SSL_CLIENT_S_DN']
-        out['notAfter'] = int(datetime.strptime(environ['SSL_CLIENT_V_END'], "%b %d %H:%M:%S %Y %Z").timestamp())
-        out['notBefore'] = int(datetime.strptime(environ['SSL_CLIENT_V_START'], "%b %d %H:%M:%S %Y %Z").timestamp())
-        out['issuer'] = environ['SSL_CLIENT_I_DN']
+        out['subject'] = environ['HTTP_SSL_CLIENT_S_DN']
+        out['notAfter'] = int(datetime.strptime(environ['HTTP_SSL_CLIENT_V_END'], "%b %d %H:%M:%S %Y %Z").timestamp())
+        out['notBefore'] = int(datetime.strptime(environ['HTTP_SSL_CLIENT_V_START'], "%b %d %H:%M:%S %Y %Z").timestamp())
+        out['issuer'] = environ['HTTP_SSL_CLIENT_I_DN']
         out['fullDN'] = f"{out['issuer']}{out['subject']}"
         return out
 
