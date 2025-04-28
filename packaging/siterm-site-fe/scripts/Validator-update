@@ -22,7 +22,7 @@ class MyDaemon(Daemon):
         """Multi threading. Allow multiple sites under single FE"""
         for sitename in self.config.get('general', 'sites'):
             if sitename not in self.runThreads:
-                thr = VL.LookUpService(self.config, sitename)
+                thr = VL.Validator(self.config, sitename)
                 self.runThreads[sitename] = thr
             self.runThreads[sitename].refreshthread()
 
