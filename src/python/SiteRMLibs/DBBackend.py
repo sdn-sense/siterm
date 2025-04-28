@@ -74,7 +74,7 @@ class DBBackend():
             cursor = conn.cursor()
             yield conn, cursor
         except Exception as ex:
-            print(f"Error establishing database connection: {e}")
+            print(f"Error establishing database connection: {ex}")
             raise ex
         finally:
             if cursor:

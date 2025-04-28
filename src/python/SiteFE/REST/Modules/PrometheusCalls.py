@@ -63,7 +63,6 @@ class PrometheusCalls:
 
     def __memStats(self, registry):
         """Refresh all Memory Statistics in FE"""
-
         memInfo = Gauge(
             "memory_usage",
             "Memory Usage for Service",

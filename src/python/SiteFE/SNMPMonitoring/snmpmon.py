@@ -165,12 +165,11 @@ class SNMPMonitoring():
                     self.memMonitor.setdefault(
                         serviceName,
                         {"rss": 0, "vms": 0, "shared": 0, "text": 0,
-                        "lib": 0, "data": 0, "dirty": 0,})
+                         "lib": 0, "data": 0, "dirty": 0})
                     for key in self.memMonitor[serviceName].keys():
                         if hasattr(proc.memory_info(), key):
                             self.memMonitor[serviceName][key] += getattr(
-                                proc.memory_info(), key
-                            )
+                                proc.memory_info(), key)
 
     def getMemStats(self):
         """Refresh all Memory Statistics in FE"""
@@ -194,7 +193,6 @@ class SNMPMonitoring():
                                "SwitchWorker", "gunicorn"], 1)
         # Write to DB
         self._writeToDB('hostnamemem-fe', self.memMonitor)
-
 
     def startwork(self):
         """Scan all switches and get snmp data"""

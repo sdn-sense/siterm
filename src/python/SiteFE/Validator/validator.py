@@ -14,7 +14,7 @@ import argparse
 
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.MainUtilities import (
-    contentDB, createDirs,  getFileContentAsJson, getAllHosts,
+    contentDB, createDirs, getFileContentAsJson, getAllHosts,
     getDBConn, getLoggingObject, getVal, getUTCnow, getActiveDeltas)
 from SiteRMLibs.CustomExceptions import ServiceWarning
 from SiteRMLibs.GitConfig import getGitConfig
@@ -41,7 +41,6 @@ class Validator():
         self.runcount = 0
         self.warningscounters = {}
 
-
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
@@ -52,29 +51,31 @@ class Validator():
         self.runcount = 0
         self.warningscounters = {}
 
-    def _getMacAddress(self, nodeDict, interface):
+    @staticmethod
+    def _getMacAddress(nodeDict, interface):
         """Get MAC address from configuration."""
-        for entry in nodeDict.get("hostinfo",{}).get('NetInfo', {}).get('interfaces', {}).get(interface, {}).get('17', []):
+        for entry in nodeDict.get("hostinfo", {}).get('NetInfo', {}).get('interfaces', {}).get(interface, {}).get('17', []):
             if 'mac-address' in entry and entry['mac-address']:
                 return entry['mac-address']
         return None
 
-    def _allvaluesDefined(self, inval):
+    @staticmethod
+    def _allvaluesDefined(inval):
         """Check if all values are defined and not None"""
-        for _key, value in inval.items():
-            if not value:
-                return False
-        return True
+        return all(value for value in inval.values())
 
-    def _getHostInterfaces(self, nodeDict):
+    @staticmethod
+    def _getHostInterfaces(nodeDict):
         """Get Host Interfaces from configuration."""
         return nodeDict.get("hostinfo", {}).get('Summary', {}).get('config', {}).get('agent', {}).get('interfaces', [])
 
-    def _getSwitchInterface(self, nodeDict, interface):
+    @staticmethod
+    def _getSwitchInterface(nodeDict, interface):
         """Get Switch Interface from configuration."""
         return nodeDict.get("hostinfo", {}).get('Summary', {}).get('config', {}).get(interface, {}).get('port', None)
 
-    def _getSwitchName(self, nodeDict, interface):
+    @staticmethod
+    def _getSwitchName(nodeDict, interface):
         """Get Switch Name from configuration."""
         return nodeDict.get("hostinfo", {}).get('Summary', {}).get('config', {}).get(interface, {}).get('switch', None)
 
@@ -103,10 +104,7 @@ class Validator():
         return self.switchInfo.get('lldp', {}).get(hostcheck['switch'], {}).get(hostcheck['port'], {})
 
     def _validateHostSwitchInfo(self, hostinfo, switchlldp):
-        """
-        {'hostname': 'transfer-14.ultralight.org', 'intf': 'bondpublic', 'mac-address': 'b8:59:9f:ed:2a:fa', 'switch': 'dellos10_s1', 'port': 'Ethernet 1/1/2:5'}
-{'local_port_id': 'Ethernet 1/1/2:5', 'remote_system_name': 'transfer-14.ultralight.org', 'remote_port_id': 'b8:59:9f:ed:2a:fa', 'remote_chassis_id': '04:32:01:04:94:8c'}
-        """
+        """Validate Host and Switch information"""
         if hostinfo.get('mac-address') == switchlldp.get('remote_port_id'):
             return True
         self.addWarning(f"Host {hostinfo['hostname']} does not match lldp information. Host Info: {hostinfo}, Switch LLDP Info: {switchlldp}")
@@ -158,7 +156,7 @@ class Validator():
             if hostcheck and switchlldp:
                 self._validateHostSwitchInfo(hostcheck, switchlldp)
         # Raise warnings if any exists
-        if self.warningstart and self.warningstart <= getUTCnow() + 3600 : # If warnings raise an hour ago - refresh
+        if self.warningstart and self.warningstart <= getUTCnow() + 3600 :  # If warnings raise an hour ago - refresh
             self.warningstart = 0
             self.logger.info("Warnings were raised more than 1hr ago. Informing to renew all devices state")
             self.switch.deviceUpdate(self.sitename)
@@ -169,10 +167,10 @@ def execute(config=None, args=None):
     """Main Execute."""
     if not config:
         config = getGitConfig()
-    if args:
-        if args.sitename:
-            validator = Validator(config, args.sitename)
-            validator.startwork()
+    if args and args.sitename:
+        validator = Validator(config, args.sitename)
+        validator.startwork()
+
 
 def get_parser():
     """Returns the argparse parser."""
@@ -190,6 +188,7 @@ def get_parser():
         help="Sitename of FE. Must be present in configuration and database.",
     )
     return oparser
+
 
 if __name__ == "__main__":
     argparser = get_parser()

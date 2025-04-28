@@ -139,7 +139,6 @@ class RDFHelper():
         """Check if key is not missing"""
         for key in reqKeys:
             if key not in allArgs or not allArgs.get(key, None):
-                self.logger.debug(f"Key {key} is missing in allArgs: {allArgs}")
                 return True
         return False
 
@@ -404,7 +403,7 @@ class RDFHelper():
     def _addMultiPointService(self, **kwargs):
         """Add MultiPoint Service to Model"""
         if self.__checkifReqKeysMissing(['vswmp'], kwargs):
-            return ""
+            return
         kwargs['sdkey'] = kwargs['vswmp']
         kwargs['sdtype'] = 'multipoint'
         self._addServiceDefinition(**kwargs)
@@ -412,7 +411,7 @@ class RDFHelper():
     def _addDebugIPService(self, **kwargs):
         """Add DebugIP Service to model"""
         if self.__checkifReqKeysMissing(['vswdbip'], kwargs):
-            return ""
+            return
         kwargs['sdkey'] = kwargs['vswdbip']
         kwargs['sdtype'] = 'debugip'
         self._addServiceDefinition(**kwargs)
@@ -420,7 +419,7 @@ class RDFHelper():
     def _addGlobalVlanExclusion(self, **kwargs):
         """Add Vlan Exclusion to the model. If set, vlan can be used once and it is global on the device"""
         if self.__checkifReqKeysMissing(['globalvlan'], kwargs):
-            return ""
+            return
         kwargs['sdkey'] = kwargs['globalvlan']
         kwargs['sdtype'] = 'globalvlan'
         self._addServiceDefinition(**kwargs)
@@ -480,7 +479,7 @@ class RDFHelper():
 
     def _addBandwidthServiceRoute(self, **kwargs):
         if self.__checkifReqKeysMissing(['routeuri', 'uri'], kwargs):
-            return ""
+            return
         self.newGraph.add((self.genUriRef('site', kwargs['routeuri']),
                            self.genUriRef('nml', 'hasService'),
                            self.genUriRef('site', kwargs['uri'])))
