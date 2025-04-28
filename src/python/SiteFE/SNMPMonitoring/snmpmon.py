@@ -213,6 +213,9 @@ class SNMPMonitoring():
                     out[indx][key] = item.value.replace('\x00', '')
             out['macs'] = macs[host]
             self._writeToDB(host, out)
+        self.logger.info(f'[{self.sitename}]: SNMP Monitoring finished for {len(self.switches)} switches')
+        self.getMemStats()
+        self.logger.info(f'[{self.sitename}]: Memory statistics written to DB')
         if self.err:
             raise Exception(f'SNMP Monitoring Errors: {self.err}')
 

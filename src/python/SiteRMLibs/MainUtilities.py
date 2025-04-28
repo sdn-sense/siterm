@@ -700,16 +700,21 @@ def decodebase64(inputStr, decodeFlag=True):
 
 def getDBConn(serviceName="", cls=None):
     """Get database connection."""
-    dbConn = {}
+    if not hasattr(cls, 'dbConnMain') or cls.dbConnMain is None:
+        cls.dbConnMain = {}
+
+    dbConnMain = cls.dbConnMain.setdefault(serviceName, {})
+
+    if dbConnMain:
+        return dbConnMain
+
     sites = ["MAIN"] + cls.config["MAIN"].get("general", {}).get("sites", [])
     for sitename in sites:
-        if hasattr(cls, "dbI"):
-            if hasattr(cls.dbI, sitename):
-                # DB Object is already in place!
-                continue
-        dbConn[sitename] = dbinterface(serviceName, cls.config, sitename)
-    return dbConn
+        if hasattr(cls, "dbI") and hasattr(cls.dbI, sitename):
+            continue
+        dbConnMain[sitename] = dbinterface(serviceName, cls.config, sitename)
 
+    return dbConnMain
 
 
 def getCurrentModel(cls, raiseException=False):

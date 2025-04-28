@@ -19,6 +19,7 @@ Email                   : justas.balcas (at) cern.ch
 Date                    : 2019/05/01
 """
 import os
+import copy
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import mariadb
@@ -160,9 +161,16 @@ class DBBackend():
         lastID = -1
         with self.get_connection() as (conn, cursor):
             try:
-                for item in values:
-                    cursor.execute(query, item)
+                idx = 0
+                while values:
+                    cursor.execute(query, values.pop())
                     lastID = cursor.lastrowid
+                    idx += 1
+                    if idx > 0 and idx % 100 == 0:
+                        conn.commit()
+                        cursor.close()
+                        cursor = conn.cursor()
+                conn.commit()
             except mariadb.InterfaceError as ex:
                 err = f'[INS]MariaDBInterfaceError. Ex: {ex}'
                 conn.rollback()
@@ -286,8 +294,13 @@ class dbinterface():
         if mapping:
             for item in dbout:
                 out.append(dict(list(zip(colname, list(item)))))
-            return out
-        return dbout
+        else:
+            out = copy.deepcopy(dbout)
+        # Memory cleaning
+        del dbout
+        del colname
+        del callExit
+        return out
 
     # =====================================================
     #  HERE GOES INSERT CALLS
@@ -296,8 +309,10 @@ class dbinterface():
     def insert(self, calltype, values):
         """INSERT call for APPs."""
         self._setStartCallTime(calltype)
-        out = self.db.execute_ins(self.getcall('insert', calltype), values)
-        self._setEndCallTime(calltype, out[0])
+        retout = self.db.execute_ins(self.getcall('insert', calltype), values)
+        self._setEndCallTime(calltype, retout[0])
+        out = copy.deepcopy(retout)
+        del retout
         return out
 
     # =====================================================
@@ -307,8 +322,10 @@ class dbinterface():
     def update(self, calltype, values):
         """UPDATE Call for APPs."""
         self._setStartCallTime(calltype)
-        out = self.db.execute_ins(self.getcall('update', calltype), values)
-        self._setEndCallTime(calltype, out[0])
+        retout = self.db.execute_ins(self.getcall('update', calltype), values)
+        self._setEndCallTime(calltype, retout[0])
+        out = copy.deepcopy(retout)
+        del retout
         return out
 
     # =====================================================
@@ -329,8 +346,10 @@ class dbinterface():
                 query += f'{item[0]} = "{item[1]}" '
         fullquery = f"{self.getcall('delete', calltype)} {query}"
         self._setStartCallTime(calltype)
-        out = self.db.execute_del(fullquery, None)
-        self._setEndCallTime(calltype, out[0])
+        retout = self.db.execute_del(fullquery, None)
+        self._setEndCallTime(calltype, retout[0])
+        out = copy.deepcopy(retout)
+        del retout
         return out
 
     # =====================================================
