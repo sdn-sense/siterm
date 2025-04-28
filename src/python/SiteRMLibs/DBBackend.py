@@ -90,21 +90,21 @@ class DBBackend():
                     pass
 
 
-    def checkdbconnection(self, retry=True):
+    def checkdbconnection(self):
         """
         Check if the database connection is alive.
         """
-        try:
-            with self.get_connection() as (_conn, cursor):
-                cursor.execute("SELECT 1")
-                result = cursor.fetchone()
-                if result and result[0] == 1:
-                    return True
-            if retry:
-                return self.checkdbconnection(retry=False)
-        except Exception as ex:
-            raise ex
-        raise Exception(f"Error while checking the database connection: {result}")
+        last_error = None
+        for _ in range(2):
+            try:
+                with self.get_connection() as (_conn, cursor):
+                    cursor.execute("SELECT 1")
+                    result = cursor.fetchone()
+                    if result and result[0] == 1:
+                        return True
+            except Exception as ex:
+                last_error = ex
+        raise Exception(f"Error while checking the database connection: {last_error}")
 
     def createdb(self):
         """Create database."""
@@ -185,10 +185,9 @@ class DBBackend():
                 raise Exception(err) from ex
         return 'OK', '', lastID
 
-    def execute_del(self, query, values):
+    def execute_del(self, query, _values):
         """DELETE Execute."""
         self.checkdbconnection()
-        del values
         with self.get_connection() as (conn, cursor):
             try:
                 cursor.execute(query)
