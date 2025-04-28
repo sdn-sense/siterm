@@ -135,12 +135,10 @@ class RDFHelper():
                     continue
         self.prefixes = prefixes
 
-    def __checkifReqKeysMissing(self, reqKeys, allArgs):
+    @staticmethod
+    def __checkifReqKeysMissing(reqKeys, allArgs):
         """Check if key is not missing"""
-        for key in reqKeys:
-            if key not in allArgs or not allArgs.get(key, None):
-                return True
-        return False
+        return any(key not in allArgs or not allArgs.get(key) for key in reqKeys)
 
     def genUriRef(self, prefix=None, add=None, custom=None):
         """Generate URIRef and return."""
