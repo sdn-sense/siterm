@@ -190,7 +190,7 @@ class SNMPMonitoring():
                                "ProvisioningService-update", "LookUpService-update",
                                "siterm-debugger", "PolicyService-update",
                                "DBWorker-update", "DBCleaner-service",
-                               "SwitchWorker", "gunicorn"], 1)
+                               "SwitchWorker", "gunicorn", "Validator-update"], 1)
         # Write to DB
         self._writeToDB('hostnamemem-fe', self.memMonitor)
 

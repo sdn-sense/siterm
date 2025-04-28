@@ -151,7 +151,6 @@ class Validator():
         self.activeDeltas = getActiveDeltas(self)
         self.switchInfo = self.switch.getinfo()
         for hostcheck in self.getAllHostIntfMacs():
-            print(hostcheck)
             switchlldp = self._getSwitchLLDPInfo(hostcheck)
             if hostcheck and switchlldp:
                 self._validateHostSwitchInfo(hostcheck, switchlldp)
