@@ -9,7 +9,7 @@ Changes applied to this code:
 """
 import sys
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
-from SiteFE.Validator import validate as VL
+from SiteFE.Validator import validator as VL
 
 COMPONENT = 'ValidatorService'
 DESCRIPTION = "ValidatorService responsible for validating switch config with and lldp information."
