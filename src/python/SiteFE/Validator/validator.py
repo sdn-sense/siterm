@@ -155,7 +155,7 @@ class Validator():
             if hostcheck and switchlldp:
                 self._validateHostSwitchInfo(hostcheck, switchlldp)
         # Raise warnings if any exists
-        if self.warningstart and self.warningstart <= getUTCnow() + 3600 :  # If warnings raise an hour ago - refresh
+        if self.warningstart and self.warningstart <= getUTCnow() - 3600 :  # If warnings raise an hour ago - refresh
             self.warningstart = 0
             self.logger.info("Warnings were raised more than 1hr ago. Informing to renew all devices state")
             self.switch.deviceUpdate(self.sitename)

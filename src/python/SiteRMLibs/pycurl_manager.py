@@ -204,12 +204,16 @@ class RequestHandler():
         """
         if decode:
             try:
-                res = json.loads(data)
-            except ValueError as exc:
+                if isinstance(data, bytes):
+                    data = data.decode("utf-8").strip()
+                if not data:
+                    logging.warning("Empty data received, skipping JSON parsing.")
+                    return data
+                return json.loads(data)
+            except (ValueError, json.JSONDecodeError) as exc:
                 msg = f'Unable to load JSON data, {str(exc)}, data type={type(data)}, pass as is'
                 logging.warning(msg)
                 return data
-            return res
         return data
 
     @staticmethod
