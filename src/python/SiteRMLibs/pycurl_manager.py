@@ -207,7 +207,6 @@ class RequestHandler():
                 if isinstance(data, bytes):
                     data = data.decode("utf-8").strip()
                 if not data:
-                    logging.warning("Empty data received, skipping JSON parsing.")
                     return data
                 return json.loads(data)
             except (ValueError, json.JSONDecodeError) as exc:
