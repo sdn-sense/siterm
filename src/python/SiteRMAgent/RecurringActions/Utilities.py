@@ -21,25 +21,6 @@ Date			: 2017/09/26
 import psutil
 
 
-def tryConvertToNumeric(value):
-    """Convert str to float or int.
-
-    Returns what should be expected, t.y.: if str is float, int will
-    fail and float will be returned; if str is int, float and int will
-    succeed, returns int; if any of these fail, returns value."""
-    floatVal = None
-    intVal = None
-    try:
-        floatVal = float(value)
-    except ValueError:
-        return value
-    try:
-        intVal = int(value)
-    except ValueError:
-        return floatVal if floatVal else value
-    return intVal
-
-
 def getProcInfo(procID):
     """Get Process informationa about specific process."""
     procOutInfo = {}

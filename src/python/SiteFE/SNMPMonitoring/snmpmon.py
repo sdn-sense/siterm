@@ -28,6 +28,7 @@ from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import jsondumps
+from SiteRMLibs.MainUtilities import getStorageInfo
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.GitConfig import getGitConfig
 
@@ -193,6 +194,10 @@ class SNMPMonitoring():
                                "SwitchWorker", "gunicorn", "Validator-update"], 1)
         # Write to DB
         self._writeToDB('hostnamemem-fe', self.memMonitor)
+
+    def getDiskStats(self):
+        """Get Disk Statistics"""
+        self._writeToDB('hostnamedisk-fe', getStorageInfo())
 
     def startwork(self):
         """Scan all switches and get snmp data"""

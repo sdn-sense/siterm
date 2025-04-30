@@ -8,7 +8,7 @@ Date: 2022/01/29
 """
 import pprint
 
-from SiteRMAgent.RecurringActions.Utilities import tryConvertToNumeric
+from SiteRMAgent.MainUtilities import tryConvertToNumeric
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject
 

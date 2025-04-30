@@ -36,6 +36,7 @@ class PrometheusCalls:
         self.__defineRoutes()
         self.__urlParams()
         self.memMonitor = {}
+        self.diskMonitor = {}
         self.activeAPI = ActiveWrapper()
         self.arpLabels = {'Device': '', 'Flags': '', 'HWaddress': '',
                           'IPaddress': '', 'Hostname': ''}
@@ -75,6 +76,28 @@ class PrometheusCalls:
                 for key, val in vals.items():
                     labels = {"servicename": serviceName, "key": key}
                     memInfo.labels(**labels).set(val)
+
+    def __diskStats(self, registry):
+        """Refresh all Disk Statistics in FE"""
+        diskGauge = Gauge("disk_usage",
+                          "Disk usage statistics for each filesystem",
+                          ["filesystem", "key"],
+                          registry=registry)
+
+        for _, hostDict in self.diskMonitor.items():
+            for fs, stats in hostDict.get("Values", {}).items():
+                tmpfs = fs
+                if 'Mounted_on' in stats and stats['Mounted_on']:
+                    tmpfs = stats['Mounted_on']
+                for key, val in stats.items():
+                    labels = {"filesystem": tmpfs, "key": key}
+                    if isinstance(val, str):
+                        val = val.strip().rstrip('%')
+                        try:
+                            val = float(val)
+                        except ValueError:
+                            continue  # skip non-numeric fields
+                    diskGauge.labels(**labels).set(val)
 
     def _addHostArpInfo(self, arpState,  host, arpInfo):
         """Add Host Arp Info"""
@@ -146,9 +169,12 @@ class PrometheusCalls:
             if int(self.timenow - item["updatedate"]) > 300:
                 continue
             out = evaldict(item.get("output", {}))
+            # Skip hostnamemem- and hostnamedisk- devices. This is covered in __memStats/__diskStats
             if item["hostname"].startswith("hostnamemem-"):
-                # Skip hostnamemem- devices. This is covered in __memStats
                 self.memMonitor[item["hostname"]] = out
+                continue
+            if item["hostname"].startswith("hostnamedisk-"):
+                self.diskMonitor[item["hostname"]] = out
                 continue
             for key, val in out.items():
                 if key == "macs":
@@ -282,6 +308,7 @@ class PrometheusCalls:
         self.__getSNMPData(registry)
         self.__getAgentData(registry)
         self.__memStats(registry)
+        self.__diskStats(registry)
         self.__getSwitchErrors(registry)
         self.__getActiveQoSStates(registry)
 

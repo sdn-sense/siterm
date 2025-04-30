@@ -841,3 +841,76 @@ def checkHTTPService(config):
             print(f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
             returnvals.append(1)
     return 0 if not returnvals else any(returnvals)
+
+
+def tryConvertToNumeric(value):
+    """Convert str to float or int.
+
+    Returns what should be expected, t.y.: if str is float, int will
+    fail and float will be returned; if str is int, float and int will
+    succeed, returns int; if any of these fail, returns value."""
+    floatVal = None
+    intVal = None
+    try:
+        floatVal = float(value)
+    except ValueError:
+        return value
+    try:
+        intVal = int(value)
+    except ValueError:
+        return floatVal if floatVal else value
+    return intVal
+
+
+def parseStorageInfo(tmpOut, storageInfo):
+    """Parse df stdout and add to storageInfo var."""
+    lineNum = 0
+    localOut = {"Keys": [], "Values": []}
+    for item in tmpOut:
+        if not item:
+            continue
+        for line in item.decode("UTF-8").split("\n"):
+            if "unrecognized option" in line:
+                return storageInfo, False
+            line = re.sub(" +", " ", line)
+            if lineNum == 0:
+                lineNum += 1
+                line = line.replace("Mounted on", "Mounted_on")
+                localOut["Keys"] = line.split()
+            else:
+                newList = [tryConvertToNumeric(x) for x in line.split()]
+                if newList:
+                    localOut["Values"].append(newList)
+    for oneLine in localOut["Values"]:
+        storageInfo["Values"].setdefault(oneLine[0], {})
+        for index, elem in enumerate(oneLine):
+            key = localOut["Keys"][index].replace("%", "Percentage")
+            # Append size and also change to underscore
+            if key in ["Avail", "Used", "Size"]:
+                key = f"{key}_gb"
+                try:
+                    storageInfo["Values"][oneLine[0]][key] = elem[:1]
+                except TypeError:
+                    storageInfo["Values"][oneLine[0]][key] = elem
+                continue
+            if key == "1024-blocks":
+                key = "1024_blocks"
+            storageInfo["Values"][oneLine[0]][key] = elem
+    return storageInfo, True
+
+
+def getStorageInfo():
+    """Get storage mount points information."""
+    storageInfo = {"Values": {}}
+    tmpOut = externalCommand("df -P -h")
+    storageInfo, _ = parseStorageInfo(tmpOut, dict(storageInfo))
+    tmpOut = externalCommand("df -i -P")
+    storageInfo, _ = parseStorageInfo(tmpOut, dict(storageInfo))
+    outStorage = {"FileSystems": {}, "total_gb": 0, "app": "FileSystem"}
+    totalSum = 0
+    for mountName, mountVals in storageInfo["Values"].items():
+        outStorage["FileSystems"][mountName] = mountVals["Avail_gb"]
+        totalSum += int(mountVals["Avail_gb"])
+    outStorage["total_gb"] = totalSum
+    storageInfo["FileSystems"] = outStorage
+    return storageInfo
