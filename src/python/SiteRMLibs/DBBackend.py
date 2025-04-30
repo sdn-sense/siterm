@@ -153,11 +153,9 @@ class DBBackend():
         lastID = -1
         with self.get_connection() as (conn, cursor):
             try:
-                idx = 0
-                while values:
-                    cursor.execute(query, values.pop())
+                for idx, val in enumerate(values):
+                    cursor.execute(query, val)
                     lastID = cursor.lastrowid
-                    idx += 1
                     if idx > 0 and idx % 100 == 0:
                         conn.commit()
                 conn.commit()
