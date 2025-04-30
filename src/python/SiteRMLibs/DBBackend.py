@@ -21,6 +21,8 @@ Date                    : 2019/05/01
 import os
 import copy
 import uuid
+import random
+import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import mariadb
@@ -56,8 +58,11 @@ class DBBackend():
         self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
         self.autocommit = os.getenv('MARIA_DB_AUTOCOMMIT', 'True') in ['True', 'true', '1']
         self.poolName = f"{os.getenv('MARIA_DB_POOLNAME', 'sitefe')}_{uuid.uuid4().hex}"
-        self.poolSize = int(os.getenv('MARIA_DB_POOLSIZE', '1'))
-        self.connPool = None
+        if os.getenv('WORKERS') and os.getenv('THREADS'):
+            self.poolSize = int(os.getenv('WORKERS')) * int(os.getenv('THREADS')) * 2
+        else:
+            self.poolSize = int(os.getenv('MARIA_DB_POOLSIZE', '1'))
+        self.connPool = self.__createConnPool()
 
     @staticmethod
     def __checkConnection(cursor):
@@ -68,40 +73,55 @@ class DBBackend():
         if not result or result[0] != 1:
             raise mariadb.Error("Failed to establish a connection to the database.")
 
+    def __createConnPool(self):
+        """Create connection pool."""
+        try:
+            return mariadb.ConnectionPool(user=self.muser,
+                                          password=self.mpass,
+                                          host=self.mhost,
+                                          port=self.mport,
+                                          database=self.mdb,
+                                          autocommit=self.autocommit,
+                                          pool_name=self.poolName,
+                                          pool_size=self.poolSize)
+        except mariadb.Error as ex:
+            print(f"Error creating connection pool: {ex}")
+            raise ex
+
     @contextmanager
-    def get_connection(self):
+    def get_connection(self, maxretries=10, delay=0.1):
         """Open connection and cursor."""
         conn = None
         cursor = None
-        try:
-            if self.connPool is None:
-                self.connPool = mariadb.ConnectionPool(user=self.muser,
-                                                    password=self.mpass,
-                                                    host=self.mhost,
-                                                    port=self.mport,
-                                                    database=self.mdb,
-                                                    autocommit=self.autocommit,
-                                                    pool_name=self.poolName,
-                                                    pool_size=self.poolSize)
-            conn = self.connPool.get_connection()
-            cursor = conn.cursor()
-            self.__checkConnection(cursor)
-            yield conn, cursor
-        except Exception as ex:
-            print(f"Error establishing database connection: {ex}")
-            raise ex
-        finally:
-            if cursor:
-                try:
-                    cursor.close()
-                except Exception:
-                    pass
-            if conn:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-
+        attempt = 0
+        while attempt < maxretries:
+            try:
+                conn = self.connPool.get_connection()
+                cursor = conn.cursor()
+                self.__checkConnection(cursor)
+                yield conn, cursor
+                break
+            except mariadb.PoolError:
+                attempt += 1
+                wait = delay * (2 ** attempt) + random.uniform(0, 0.1)
+                print(f"[WARN] DB pool exhausted. Retrying in {wait:.2f}s (attempt {attempt})")
+                time.sleep(wait)
+            except Exception as ex:
+                print(f"Error establishing database connection: {ex}")
+                raise ex
+            finally:
+                if cursor:
+                    try:
+                        cursor.close()
+                    except Exception:
+                        pass
+                if conn:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+        else:
+            raise mariadb.Error("Failed to establish a connection to the database after multiple attempts.")
 
     def createdb(self):
         """Create database."""
