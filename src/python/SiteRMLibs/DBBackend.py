@@ -56,7 +56,7 @@ class DBBackend():
         self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
         self.autocommit = os.getenv('MARIA_DB_AUTOCOMMIT', 'True') in ['True', 'true', '1']
         self.poolName = f"{os.getenv('MARIA_DB_POOLNAME', 'sitefe')}_{uuid.uuid4().hex}"
-        self.poolSize = int(os.getenv('MARIA_DB_POOLSIZE', '5'))
+        self.poolSize = int(os.getenv('MARIA_DB_POOLSIZE', '1'))
         self.connPool = None
 
     @staticmethod
