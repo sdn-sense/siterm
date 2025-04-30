@@ -59,7 +59,7 @@ class DBBackend():
         self.autocommit = os.getenv('MARIA_DB_AUTOCOMMIT', 'True') in ['True', 'true', '1']
         self.poolName = f"{os.getenv('MARIA_DB_POOLNAME', 'sitefe')}_{uuid.uuid4().hex}"
         if os.getenv('WORKERS') and os.getenv('THREADS'):
-            self.poolSize = int(os.getenv('WORKERS')) * int(os.getenv('THREADS')) * 2
+            self.poolSize = int(os.getenv('WORKERS')) * int(os.getenv('THREADS')) * 3
         else:
             self.poolSize = int(os.getenv('MARIA_DB_POOLSIZE', '1'))
         self.connPool = self.__createConnPool()
@@ -104,7 +104,6 @@ class DBBackend():
             except mariadb.PoolError:
                 attempt += 1
                 wait = delay * (2 ** attempt) + random.uniform(0, 0.1)
-                print(f"[WARN] DB pool exhausted. Retrying in {wait:.2f}s (attempt {attempt})")
                 time.sleep(wait)
             except Exception as ex:
                 print(f"Error establishing database connection: {ex}")
