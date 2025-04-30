@@ -20,6 +20,7 @@ Date                    : 2019/05/01
 """
 import os
 import copy
+import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import mariadb
@@ -54,11 +55,18 @@ class DBBackend():
         self.mport = int(os.getenv('MARIA_DB_PORT', '3306'))
         self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
         self.autocommit = os.getenv('MARIA_DB_AUTOCOMMIT', 'True') in ['True', 'true', '1']
+        self.poolName = f"{os.getenv('MARIA_DB_POOLNAME', 'sitefe')}_{uuid.uuid4().hex}"
+        self.poolSize = int(os.getenv('MARIA_DB_POOLSIZE', '5'))
+        self.connPool = None
 
-    def __enter__(self):
-        """Enter the runtime context related to this object."""
-        self.checkdbconnection()
-        return self
+    @staticmethod
+    def __checkConnection(cursor):
+        """Check if connection is available."""
+        # Check that the connection was successful
+        cursor.execute("SELECT 1")
+        result = cursor.fetchone()
+        if not result or result[0] != 1:
+            raise mariadb.Error("Failed to establish a connection to the database.")
 
     @contextmanager
     def get_connection(self):
@@ -66,13 +74,18 @@ class DBBackend():
         conn = None
         cursor = None
         try:
-            conn = mariadb.connect(user=self.muser,
-                                   password=self.mpass,
-                                   host=self.mhost,
-                                   port=self.mport,
-                                   database=self.mdb,
-                                   autocommit=self.autocommit)
+            if self.connPool is None:
+                self.connPool = mariadb.ConnectionPool(user=self.muser,
+                                                    password=self.mpass,
+                                                    host=self.mhost,
+                                                    port=self.mport,
+                                                    database=self.mdb,
+                                                    autocommit=self.autocommit,
+                                                    pool_name=self.poolName,
+                                                    pool_size=self.poolSize)
+            conn = self.connPool.get_connection()
             cursor = conn.cursor()
+            self.__checkConnection(cursor)
             yield conn, cursor
         except Exception as ex:
             print(f"Error establishing database connection: {ex}")
@@ -90,25 +103,8 @@ class DBBackend():
                     pass
 
 
-    def checkdbconnection(self):
-        """
-        Check if the database connection is alive.
-        """
-        last_error = None
-        for _ in range(2):
-            try:
-                with self.get_connection() as (_conn, cursor):
-                    cursor.execute("SELECT 1")
-                    result = cursor.fetchone()
-                    if result and result[0] == 1:
-                        return True
-            except Exception as ex:
-                last_error = ex
-        raise Exception(f"Error while checking the database connection: {last_error}")
-
     def createdb(self):
         """Create database."""
-        self.checkdbconnection()
         for argname in dir(dbcalls):
             if argname.startswith('create_'):
                 print(f'Call to create {argname}')
@@ -117,7 +113,6 @@ class DBBackend():
 
     def cleandbtable(self, dbtable):
         """Clean only specific table if available"""
-        self.checkdbconnection()
         for argname in dir(dbcalls):
             if argname == f'delete_{dbtable}':
                 print(f'Call to clean from {argname}')
@@ -126,7 +121,6 @@ class DBBackend():
 
     def cleandb(self):
         """Clean database."""
-        self.checkdbconnection()
         for argname in dir(dbcalls):
             if argname.startswith('delete_'):
                 print(f'Call to clean from {argname}')
@@ -136,7 +130,6 @@ class DBBackend():
 
     def execute_get(self, query):
         """GET Execution."""
-        self.checkdbconnection()
         alldata = []
         colname = []
         with self.get_connection() as (_conn, cursor):
@@ -157,7 +150,6 @@ class DBBackend():
 
     def execute_ins(self, query, values):
         """INSERT Execute."""
-        self.checkdbconnection()
         lastID = -1
         with self.get_connection() as (conn, cursor):
             try:
@@ -168,8 +160,6 @@ class DBBackend():
                     idx += 1
                     if idx > 0 and idx % 100 == 0:
                         conn.commit()
-                        cursor.close()
-                        cursor = conn.cursor()
                 conn.commit()
             except mariadb.InterfaceError as ex:
                 err = f'[INS]MariaDBInterfaceError. Ex: {ex}'
@@ -187,7 +177,6 @@ class DBBackend():
 
     def execute_del(self, query, _values):
         """DELETE Execute."""
-        self.checkdbconnection()
         with self.get_connection() as (conn, cursor):
             try:
                 cursor.execute(query)
@@ -207,7 +196,6 @@ class DBBackend():
 
     def execute(self, query):
         """Execute query."""
-        self.checkdbconnection()
         with self.get_connection() as (conn, cursor):
             try:
                 cursor.execute(query)
