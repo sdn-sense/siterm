@@ -59,10 +59,11 @@ class DBBackend():
         self.autocommit = os.getenv('MARIA_DB_AUTOCOMMIT', 'True') in ['True', 'true', '1']
         self.poolName = f"{os.getenv('MARIA_DB_POOLNAME', 'sitefe')}_{uuid.uuid4().hex}"
         if os.getenv('WORKERS') and os.getenv('THREADS'):
-            self.poolSize = int(os.getenv('WORKERS')) * int(os.getenv('THREADS')) * 3
+            self.poolSize = int(os.getenv('WORKERS')) * int(os.getenv('THREADS')) * 2
+            self.connPool = None
         else:
             self.poolSize = int(os.getenv('MARIA_DB_POOLSIZE', '1'))
-        self.connPool = self.__createConnPool()
+            self.connPool = self.__createConnPool()
 
     @staticmethod
     def __checkConnection(cursor):
@@ -96,11 +97,31 @@ class DBBackend():
         attempt = 0
         while attempt < maxretries:
             try:
-                conn = self.connPool.get_connection()
+                if self.connPool is None:
+                    conn = mariadb.connect(user=self.muser,
+                                           password=self.mpass,
+                                           host=self.mhost,
+                                           port=self.mport,
+                                           database=self.mdb,
+                                           autocommit=self.autocommit)
+                else:
+                    # Use the connection pool to get a connection
+                    conn = self.connPool.get_connection()
                 cursor = conn.cursor()
                 self.__checkConnection(cursor)
-                yield conn, cursor
-                break
+                try:
+                    yield conn, cursor
+                finally:
+                    if cursor:
+                        try:
+                            cursor.close()
+                        except Exception:
+                            pass
+                    if conn:
+                        try:
+                            conn.close()
+                        except Exception:
+                            pass
             except mariadb.PoolError:
                 attempt += 1
                 wait = delay * (2 ** attempt) + random.uniform(0, 0.1)
@@ -108,19 +129,7 @@ class DBBackend():
             except Exception as ex:
                 print(f"Error establishing database connection: {ex}")
                 raise ex
-            finally:
-                if cursor:
-                    try:
-                        cursor.close()
-                    except Exception:
-                        pass
-                if conn:
-                    try:
-                        conn.close()
-                    except Exception:
-                        pass
-        else:
-            raise mariadb.Error("Failed to establish a connection to the database after multiple attempts.")
+        raise mariadb.Error("Failed to establish a connection to the database after multiple attempts.")
 
     def createdb(self):
         """Create database."""
