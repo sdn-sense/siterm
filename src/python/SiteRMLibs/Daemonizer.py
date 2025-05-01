@@ -25,6 +25,26 @@ from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWa
 from SiteRMLibs.GitConfig import getGitConfig
 
 
+def loadEnvFile(filepath):
+    """Loads environment variables from a file if"""
+    if not os.path.isfile(filepath):
+        return
+    try:
+        with open(filepath, 'r', encoding='utf-8') as fd:
+            for line in fd:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if line.startswith('export '):
+                    line = line[len('export '):]
+                if '=' not in line:
+                    continue
+                key, value = line.split('=', 1)
+                os.environ[key.strip()] = value.strip()
+    except Exception as ex:
+        print(f"Failed to load environment file {filepath}. Error: {ex}")
+
+
 def getParser(description):
     """Returns the argparse parser."""
     oparser = argparse.ArgumentParser(description=description,
@@ -184,6 +204,8 @@ class Daemon(DBBackend):
     # pylint: disable=R0902
 
     def __init__(self, component, inargs, getGitConf=True):
+        """Initialize the daemon."""
+        loadEnvFile('/etc/environment')
         logType = 'TimedRotatingFileHandler'
         if inargs.logtostdout:
             logType = 'StreamLogger'
@@ -493,7 +515,6 @@ class Daemon(DBBackend):
                     self.logger.debug("MEM_STAT: %s", stat)
                 self.logger.debug("Final Memory usage: %s", tracemalloc.get_traced_memory())
                 self.logger.debug("="*50)
-
 
     def run(self):
         """Run main execution"""
