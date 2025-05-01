@@ -122,6 +122,7 @@ class DBBackend():
                             conn.close()
                         except Exception:
                             pass
+                return
             except mariadb.PoolError:
                 attempt += 1
                 wait = delay * (2 ** attempt) + random.uniform(0, 0.1)
