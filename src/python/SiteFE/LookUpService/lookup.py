@@ -118,8 +118,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.hosts = {}
         self.switch = Switch(config, sitename)
         self.prefixes = {}
-        self.police = PolicyService(self.config, self.sitename)
-        self.provision = ProvisioningService(self.config, self.sitename)
+        self.police = PolicyService(self.config, self.sitename, self.logger)
+        self.provision = ProvisioningService(self.config, self.sitename, self.logger)
         self.tmpout = {}
         self.modelVersion = ""
         self.activeDeltas = {}

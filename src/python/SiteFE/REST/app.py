@@ -170,11 +170,11 @@ class Frontend(
             self.httpresp.ret_400("application/json", kwargs["start_response"], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=400)
         except MethodNotSupported as ex:
-            exception = f"Received BadRequestError: {ex}"
+            exception = f"Received MethodNotSupported: {ex}"
             self.httpresp.ret_405("application/json", kwargs["start_response"], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=405)
         except NotAcceptedHeader as ex:
-            exception = f"Received BadRequestError: {ex}"
+            exception = f"Received NotAcceptedHeader: {ex}"
             self.httpresp.ret_406("application/json", kwargs["start_response"], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=406)
         if exception:

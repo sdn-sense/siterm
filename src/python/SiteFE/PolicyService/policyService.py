@@ -60,10 +60,13 @@ def getError(ex):
 class PolicyService(RDFHelper, Timing, BWService):
     """Policy Service to accept deltas."""
 
-    def __init__(self, config, sitename):
+    def __init__(self, config, sitename, logger=None):
         self.sitename = sitename
         self.config = config
-        self.logger = getLoggingObject(config=self.config, service="PolicyService")
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = getLoggingObject(config=self.config, service="PolicyService")
         self.siteDB = contentDB()
         self.dbI = getVal(getDBConn("PolicyService", self), **{"sitename": self.sitename})
         self.stateMachine = StateMachine(self.config)
