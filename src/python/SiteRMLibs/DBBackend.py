@@ -20,7 +20,6 @@ Date                    : 2019/05/01
 """
 import os
 import copy
-import uuid
 import random
 import time
 from contextlib import contextmanager
@@ -57,13 +56,6 @@ class DBBackend():
         self.mport = int(os.getenv('MARIA_DB_PORT', '3306'))
         self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
         self.autocommit = os.getenv('MARIA_DB_AUTOCOMMIT', 'True') in ['True', 'true', '1']
-        self.poolName = f"{os.getenv('MARIA_DB_POOLNAME', 'sitefe')}_{uuid.uuid4().hex}"
-        if os.getenv('WORKERS') and os.getenv('THREADS'):
-            self.poolSize = int(os.getenv('WORKERS')) * int(os.getenv('THREADS')) * 2
-            self.connPool = None
-        else:
-            self.poolSize = int(os.getenv('MARIA_DB_POOLSIZE', '1'))
-            self.connPool = self.__createConnPool()
 
     @staticmethod
     def __checkConnection(cursor):
@@ -74,21 +66,6 @@ class DBBackend():
         if not result or result[0] != 1:
             raise mariadb.Error("Failed to establish a connection to the database.")
 
-    def __createConnPool(self):
-        """Create connection pool."""
-        try:
-            return mariadb.ConnectionPool(user=self.muser,
-                                          password=self.mpass,
-                                          host=self.mhost,
-                                          port=self.mport,
-                                          database=self.mdb,
-                                          autocommit=self.autocommit,
-                                          pool_name=self.poolName,
-                                          pool_size=self.poolSize)
-        except mariadb.Error as ex:
-            print(f"Error creating connection pool: {ex}")
-            raise ex
-
     @contextmanager
     def get_connection(self, maxretries=10, delay=0.1):
         """Open connection and cursor."""
@@ -97,16 +74,12 @@ class DBBackend():
         attempt = 0
         while attempt < maxretries:
             try:
-                if self.connPool is None:
-                    conn = mariadb.connect(user=self.muser,
-                                           password=self.mpass,
-                                           host=self.mhost,
-                                           port=self.mport,
-                                           database=self.mdb,
-                                           autocommit=self.autocommit)
-                else:
-                    # Use the connection pool to get a connection
-                    conn = self.connPool.get_connection()
+                conn = mariadb.connect(user=self.muser,
+                                       password=self.mpass,
+                                       host=self.mhost,
+                                       port=self.mport,
+                                       database=self.mdb,
+                                       autocommit=self.autocommit)
                 cursor = conn.cursor()
                 self.__checkConnection(cursor)
                 try:
