@@ -42,10 +42,13 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
     network changes.
     """
 
-    def __init__(self, config, sitename):
+    def __init__(self, config, sitename, logger=None):
         super().__init__()
         self.config = config
-        self.logger = getLoggingObject(config=self.config, service="ProvisioningService")
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = getLoggingObject(config=self.config, service="ProvisioningService")
         self.sitename = sitename
         self.switch = Switch(config, sitename)
         self.dbI = getVal(getDBConn("ProvisioningService", self), **{"sitename": self.sitename})

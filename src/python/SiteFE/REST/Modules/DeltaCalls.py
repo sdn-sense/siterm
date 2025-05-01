@@ -146,8 +146,8 @@ class DeltaCalls:
         self.siteDB.saveContent(fname, outContent)
         finishedName = os.path.join(self.policerdirs[kwargs["sitename"]]['finished'], f"{hashNum}.json")
         out = {}
-        # Loop for max 110seconds and check if we have file in finished directory.
-        timer = 110
+        # Loop for max 50seconds and check if we have file in finished directory.
+        timer = 50
         while timer > 0:
             if os.path.isfile(finishedName):
                 out = self.siteDB.getFileContentAsJson(finishedName)
@@ -155,10 +155,16 @@ class DeltaCalls:
                 break
             timer -= 1
             time.sleep(1)
-        if not out:
+        # If timer reached 0, we will not have file in finished directory
+        if timer == 0 and not out:
             print(f"Failed to accept delta. Timeout reached. {hashNum}")
             outContent["State"] = "failed"
-            outContent["Error"] = "Failed to accept delta. Timeout reached."
+            outContent["Error"] = f"Failed to accept delta. Timeout reached. {hashNum}"
+            return outContent
+        if not out:
+            print(f"Failed to accept delta. Timeout not reached, but output is empty. {hashNum}")
+            outContent["State"] = "failed"
+            outContent["Error"] = f"Failed to accept delta. Timeout not reached, but output is empty. {hashNum}"
             return outContent
         outContent["State"] = out["State"]
         outContent["id"] = hashNum
