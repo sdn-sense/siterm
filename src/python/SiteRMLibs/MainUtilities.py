@@ -212,9 +212,10 @@ def evaldict(inputDict):
     except (json.JSONDecodeError, TypeError, ValueError):
         pass  # fall back
     # Try to fix common issues:
-    fixedInput = re.sub(r"'", r'"', inputDict)
-    # Remove trailing commas (optional)
-    fixedInput = re.sub(r",(\s*[}\]])", r"\1", fixedInput)
+    if "'" in inputDict or ",}" in inputDict or ",]" in inputDict:
+        inputDict = re.sub(r"'", r'"', inputDict)
+         # Remove trailing commas (optional)
+        inputDict = re.sub(r",(\s*[}\]])", r"\1", inputDict)
     try:
         return json.loads(fixedInput)
     except (json.JSONDecodeError, TypeError, ValueError) as ex:
