@@ -23,7 +23,6 @@ class BWService:
     # pylint: disable=E1101
     def convertToRate(self, params):
         """Convert input to rate understandable to fireqos."""
-        self.logger.info(f"Converting rate for QoS. Input {params}")
         inputVal = params.get("reservableCapacity", 0)
         inputRate = params.get("unit", "undef")
         if inputVal == 0 and inputRate == "undef":
@@ -43,7 +42,6 @@ class BWService:
             outRate = int(inputVal * 1000)
             outType = "mbit"
         if outRate != -1:
-            self.logger.info(f"Converted rate for QoS from {inputRate} {inputVal} to {outRate}")
             return outRate, outType
         raise Exception(f"Unknown input rate parameter {inputRate} and {inputVal}")
 

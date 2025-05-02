@@ -667,7 +667,6 @@ class PolicyService(RDFHelper, Timing, BWService):
             # Parse hasNetworkAddress (debugip)
             paramsOut = connOut.setdefault("_params", {})
             self._hasNetwork(gIn, connectionID, paramsOut, True)
-            self.logger.debug(f'ParamsOut: {paramsOut}')
             self.parseL2Ports(gIn, connectionID, connOut)
         return returnout
 
