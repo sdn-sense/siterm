@@ -56,7 +56,8 @@ class RoutingService():
     def __init__(self):
         super().__init__()
 
-    def __generateGroupName(self, line):
+    @staticmethod
+    def __generateGroupName(line):
         """Generate group name for BGP"""
         try:
             groupName = line.split("table+")[1].split(":")[0]
@@ -160,7 +161,6 @@ class RoutingService():
                 self._addparamsrst(connDict, switches)
                 if self.firstrun and connID not in self.forceapply:
                     self.forceapply.append(connID)
-
 
     def compareBGP(self, switch, runningConf, uuid):
         """Compare L3 BGP"""

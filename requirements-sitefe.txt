@@ -12,7 +12,7 @@ requests
 pycurl
 pyOpenSSL
 netifaces
-mariadb==1.0.8
+pymysql
 cryptography>=35.0
 wheel
 paramiko

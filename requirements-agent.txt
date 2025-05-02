@@ -12,7 +12,7 @@ simplejson
 pyOpenSSL
 rdflib
 typing-extensions==4.1.1
-mariadb==1.0.8
+pymysql
 setuptools>=70.0.0
 prometheus-client
 kubernetes
