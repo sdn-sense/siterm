@@ -19,11 +19,9 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
-import copy
-
 from prometheus_client import (CONTENT_TYPE_LATEST, CollectorRegistry, Enum,
                                Gauge, Info, generate_latest)
-from SiteRMLibs.MainUtilities import (evaldict, getActiveDeltas, getAllHosts,
+from SiteRMLibs.MainUtilities import (evaldict, getAllHosts,
                                       getUTCnow, isValFloat, getFileContentAsJson)
 
 
@@ -37,7 +35,6 @@ class PrometheusCalls:
         self.__urlParams()
         self.memMonitor = {}
         self.diskMonitor = {}
-        self.activeAPI = ActiveWrapper()
         self.arpLabels = {'Device': '', 'Flags': '', 'HWaddress': '',
                           'IPaddress': '', 'Hostname': ''}
 
@@ -197,71 +194,7 @@ class PrometheusCalls:
                         keys["Key"] = key1
                         snmpGauge.labels(**keys).set(val[key1])
 
-    def __getActiveQoSStates(self, registry):
-        """Report in prometheus NetworkStatus and QoS Params"""
-        labelnames = ["action", "tag", "key0", "key1", "key2", "vlan", "uri"]
-        labelqos = [
-            "action",
-            "tag",
-            "key0",
-            "key1",
-            "key2",
-            "vlan",
-            "uri",
-            "unit",
-            "type",
-            "valuetype",
-        ]
 
-        def genStatusLabels(item):
-            """Generate Status Labels"""
-            out = {}
-            for key in labelnames:
-                out[key] = item.get(key, "")
-            return out
-
-        def getQoSLabels(item):
-            """Generate QoS Labels"""
-            out = {}
-            for key in labelqos:
-                out[key] = item.get(key, "")
-            return out
-
-        netState = Enum(
-            "network_status",
-            "Network Status information",
-            labelnames=labelnames,
-            states=[
-                "activating",
-                "activated",
-                "activate-error",
-                "deactivated",
-                "deactivate-error",
-                "unknown",
-            ],
-            registry=registry,
-        )
-        qosGauge = Gauge(
-            "qos_status", "QoS Requests Status", labelqos, registry=registry
-        )
-
-        currentActive = getActiveDeltas(self)
-        for item in self.activeAPI.generateReport(currentActive):
-            netstatus = item.get("networkstatus", "unknown")
-            if not netstatus:
-                netstatus = "unknown"
-            netState.labels(**genStatusLabels(item)).state(netstatus)
-            if "uri" in item and item["uri"]:
-                for key in [
-                    "availableCapacity",
-                    "granularity",
-                    "maximumCapacity",
-                    "priority",
-                    "reservableCapacity",
-                ]:
-                    labels = getQoSLabels(item)
-                    labels["valuetype"] = key
-                    qosGauge.labels(**labels).set(item.get(key, 0))
 
     def __getServiceStates(self, registry):
         """Get all Services states."""
@@ -310,7 +243,6 @@ class PrometheusCalls:
         self.__memStats(registry)
         self.__diskStats(registry)
         self.__getSwitchErrors(registry)
-        self.__getActiveQoSStates(registry)
 
     def __metrics(self, **kwargs):
         """Return all available Hosts, where key is IP address."""
@@ -325,73 +257,3 @@ class PrometheusCalls:
     def prometheus(self, _environ, **kwargs):
         """Return prometheus stats."""
         return self.__metrics(**kwargs)
-
-
-class ActiveWrapper:
-    """Active State and QoS Wrapper to report in prometheus format"""
-
-    def __init__(self):
-        self.reports = []
-
-    def __clean(self):
-        """Clean Reports"""
-        self.reports = []
-
-    def _addStats(self, indict, **kwargs):
-        """Get all Stats and add to list"""
-        return
-        # This can easily grow in memory usage, disabling now for debugging
-        #kwargs["tag"] = indict.get("_params", {}).get("tag", "")
-        #kwargs["networkstatus"] = indict.get("_params", {}).get("networkstatus", "")
-        #if "hasLabel" in indict and indict["hasLabel"].get("value", ""):
-        #    kwargs["vlan"] = f"Vlan {indict['hasLabel']['value']}"
-        #self.reports.append(kwargs)
-
-        #if "hasService" in indict and indict["hasService"].get("uri", ""):
-        #    tmpargs = copy.deepcopy(kwargs)
-        #    tmpargs["uri"] = indict["hasService"]["uri"]
-        #    tmpargs["networkstatus"] = (
-        #        indict["hasService"].get("_params", {}).get("networkstatus", "")
-        #    )
-        #    for key in [
-        #        "availableCapacity",
-        #        "granularity",
-        #        "maximumCapacity",
-        #        "priority",
-        #        "reservableCapacity",
-        #        "type",
-        #        "unit",
-        #    ]:
-        #        tmpargs[key] = indict["hasService"].get(key, "")
-        #    self.reports.append(tmpargs)
-
-    def _activeLooper(self, indict, **kwargs):
-        """Loop over nested dictionary of activatestates up to level 3"""
-        kwargs["level"] += 1
-        if kwargs["level"] == 3:
-            self._addStats(indict, **kwargs)
-            return
-        for key, vals in indict.items():
-            if key == "_params":
-                kwargs["tag"] = vals.get("tag", "")
-                kwargs["networkstatus"] = vals.get("networkstatus", "")
-                self.reports.append(kwargs)
-                continue
-            if isinstance(vals, dict) and kwargs["level"] < 3:
-                kwargs[f"key{kwargs['level']}"] = key
-                self._activeLooper(vals, **kwargs)
-        return
-
-    def _loopActKey(self, tkey, out):
-        """Loop over vsw/rst key"""
-        for key, vals in out.get("output", {}).get(tkey, {}).items():
-            self._activeLooper(vals, **{"action": tkey, "key0": key, "level": 0})
-
-    def generateReport(self, out):
-        """Generate output"""
-        self.__clean()
-        for key in ["vsw", "rst", "kube", "singleport"]:
-            self._loopActKey(key, out)
-        result = copy.deepcopy(self.reports)
-        self.__clean()
-        return result
