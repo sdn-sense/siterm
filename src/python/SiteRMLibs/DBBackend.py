@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""DB Backend for communication with database. Mainly we use mariadb, but in
+"""DB Backend for communication with database. Mainly we use MySQL, but in
 near future can be any other database.
 
 Copyright 2019 California Institute of Technology
@@ -20,11 +20,9 @@ Date                    : 2019/05/01
 """
 import os
 import copy
-import random
-import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
-import mariadb
+import pymysql
 from SiteRMLibs import dbcalls
 
 
@@ -55,6 +53,7 @@ class DBBackend():
         self.mhost = os.getenv('MARIA_DB_HOST', 'localhost')
         self.mport = int(os.getenv('MARIA_DB_PORT', '3306'))
         self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
+        self.charset = os.getenv('MARIA_DB_CHARSET', 'utf8mb4')
         self.autocommit = os.getenv('MARIA_DB_AUTOCOMMIT', 'True') in ['True', 'true', '1']
 
     @staticmethod
@@ -64,46 +63,40 @@ class DBBackend():
         cursor.execute("SELECT 1")
         result = cursor.fetchone()
         if not result or result[0] != 1:
-            raise mariadb.Error("Failed to establish a connection to the database.")
+            raise pymysql.MySQLError("Failed to establish a connection to the database.")
 
     @contextmanager
-    def get_connection(self, maxretries=10, delay=0.1):
+    def get_connection(self):
         """Open connection and cursor."""
         conn = None
         cursor = None
-        attempt = 0
-        while attempt < maxretries:
+        try:
+            conn = pymysql.connect(user=self.muser,
+                                   password=self.mpass,
+                                   host=self.mhost,
+                                   port=self.mport,
+                                   database='sitefe',
+                                   autocommit=self.mdb,
+                                   charset=self.charset,
+                                   cursorclass=pymysql.cursors.Cursor)
+            cursor = conn.cursor()
+            self.__checkConnection(cursor)
             try:
-                conn = mariadb.connect(user=self.muser,
-                                       password=self.mpass,
-                                       host=self.mhost,
-                                       port=self.mport,
-                                       database=self.mdb,
-                                       autocommit=self.autocommit)
-                cursor = conn.cursor()
-                self.__checkConnection(cursor)
-                try:
-                    yield conn, cursor
-                finally:
-                    if cursor:
-                        try:
-                            cursor.close()
-                        except Exception:
-                            pass
-                    if conn:
-                        try:
-                            conn.close()
-                        except Exception:
-                            pass
-                return
-            except mariadb.PoolError:
-                attempt += 1
-                wait = delay * (2 ** attempt) + random.uniform(0, 0.1)
-                time.sleep(wait)
-            except Exception as ex:
-                print(f"Error establishing database connection: {ex}")
-                raise ex
-        raise mariadb.Error("Failed to establish a connection to the database after multiple attempts.")
+                yield conn, cursor
+            finally:
+                if cursor:
+                    try:
+                        cursor.close()
+                    except Exception:
+                        pass
+                if conn:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+        except Exception as ex:
+            print(f"Error establishing database connection: {ex}")
+            raise ex
 
     def createdb(self):
         """Create database."""
@@ -139,14 +132,14 @@ class DBBackend():
                 cursor.execute(query)
                 colname = [tup[0] for tup in cursor.description]
                 alldata = cursor.fetchall()
-            except mariadb.InterfaceError as ex:
-                err = f'[GET]MariaDBInterfaceError. Ex: {ex}'
-                raise mariadb.InterfaceError(err) from ex
-            except mariadb.Error as ex:
-                err = f'[GET]MariaDBError. Ex: {ex}'
-                raise mariadb.Error(err) from ex
+            except pymysql.InterfaceError as ex:
+                err = f'[GET]MySQLInterfaceError. Ex: {ex}'
+                raise pymysql.InterfaceError(err) from ex
+            except pymysql.Error as ex:
+                err = f'[GET]MySQLError. Ex: {ex}'
+                raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f'[GET]MariaDB Exception. Ex: {ex}'
+                err = f'[GET]MySQL Exception. Ex: {ex}'
                 raise Exception(err) from ex
         return 'OK', colname, alldata
 
@@ -161,16 +154,16 @@ class DBBackend():
                     if idx > 0 and idx % 100 == 0:
                         conn.commit()
                 conn.commit()
-            except mariadb.InterfaceError as ex:
-                err = f'[INS]MariaDBInterfaceError. Ex: {ex}'
+            except pymysql.InterfaceError as ex:
+                err = f'[INS]MySQLInterfaceError. Ex: {ex}'
                 conn.rollback()
-                raise mariadb.InterfaceError(err) from ex
-            except mariadb.Error as ex:
-                err = f'[INS]MariaDBError. Ex: {ex}'
+                raise pymysql.InterfaceError(err) from ex
+            except pymysql.Error as ex:
+                err = f'[INS]MySQLError. Ex: {ex}'
                 conn.rollback()
-                raise mariadb.Error(err) from ex
+                raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f'[INS]MariaDB Exception. Ex: {ex}'
+                err = f'[INS]MySQL Exception. Ex: {ex}'
                 conn.rollback()
                 raise Exception(err) from ex
         return 'OK', '', lastID
@@ -180,16 +173,16 @@ class DBBackend():
         with self.get_connection() as (conn, cursor):
             try:
                 cursor.execute(query)
-            except mariadb.InterfaceError as ex:
-                err = f'[DEL]MariaDBInterfaceError. Ex: {ex}'
+            except pymysql.InterfaceError as ex:
+                err = f'[DEL]MySQLInterfaceError. Ex: {ex}'
                 conn.rollback()
-                raise mariadb.InterfaceError(err) from ex
-            except mariadb.Error as ex:
-                err = f'[DEL]MariaDBError. Ex: {ex}'
+                raise pymysql.InterfaceError(err) from ex
+            except pymysql.Error as ex:
+                err = f'[DEL]MySQLError. Ex: {ex}'
                 conn.rollback()
-                raise mariadb.Error(err) from ex
+                raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f'[DEL]MariaDB Exception. Ex: {ex}'
+                err = f'[DEL]MySQL Exception. Ex: {ex}'
                 conn.rollback()
                 raise Exception(err) from ex
         return 'OK', '', ''
@@ -199,16 +192,16 @@ class DBBackend():
         with self.get_connection() as (conn, cursor):
             try:
                 cursor.execute(query)
-            except mariadb.InterfaceError as ex:
-                err = f'[EXC]MariaDBInterfaceError. Ex: {ex}'
+            except pymysql.InterfaceError as ex:
+                err = f'[EXC]MySQLInterfaceError. Ex: {ex}'
                 conn.rollback()
-                raise mariadb.InterfaceError(err) from ex
-            except mariadb.Error as ex:
-                err = f'[EXC]MariaDBError. Ex: {ex}'
+                raise pymysql.InterfaceError(err) from ex
+            except pymysql.Error as ex:
+                err = f'[EXC]MySQLError. Ex: {ex}'
                 conn.rollback()
-                raise mariadb.Error(err) from ex
+                raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f'[EXC]MariaDB Exception. Ex: {ex}'
+                err = f'[EXC]MySQL Exception. Ex: {ex}'
                 conn.rollback()
                 raise Exception(err) from ex
         return 'OK', '', ''

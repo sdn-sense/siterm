@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Database cleaner"""
-import mariadb
+import pymysql
 from SiteRMLibs.MainUtilities import (getDBConn, getLoggingObject, getVal, getUTCnow)
 from SiteRMLibs.GitConfig import getGitConfig
 
@@ -24,7 +24,7 @@ class DBCleaner:
         print(f"Cleaning {dbtable} for {self.sitename}")
         try:
             data = self.dbI.get(dbtable, limit=100, orderby=["insertdate", "ASC"])
-        except mariadb.OperationalError:
+        except pymysql.OperationalError:
             data = self.dbI.get(dbtable, limit=100, orderby=["updatedate", "ASC"])
         for item in data:
             if 'updatedate' in item:
