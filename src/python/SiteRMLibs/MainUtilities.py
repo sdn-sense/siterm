@@ -212,12 +212,13 @@ def evaldict(inputDict):
     except (json.JSONDecodeError, TypeError, ValueError):
         pass  # fall back
     # Try to fix common issues:
+    print(f'Got dict which is not json loadable. Print for debugging: {inputDict[:100]}')
     if "'" in inputDict or ",}" in inputDict or ",]" in inputDict:
         inputDict = re.sub(r"'", r'"', inputDict)
          # Remove trailing commas (optional)
         inputDict = re.sub(r",(\s*[}\]])", r"\1", inputDict)
     try:
-        return json.loads(fixedInput)
+        return json.loads(inputDict)
     except (json.JSONDecodeError, TypeError, ValueError) as ex:
         raise WrongInputError(
             f"Input looks like JSON but could not be parsed even after fixup. Error: {ex}") from ex
