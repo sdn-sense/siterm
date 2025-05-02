@@ -56,27 +56,26 @@ class RoutingService():
     def __init__(self):
         super().__init__()
 
-    def __defbgp(self, host):
-        """Return def bgp dict. Skip apply if empty"""
-        tmpD = {}
-        tmpD['asn'] = self.getConfigValue(host, 'private_asn')
-        tmpD['belongsTo'] = self.connID
-        if not tmpD['asn']:
-            del tmpD['asn']
-        tmpD['vrf'] = self.getConfigValue(host, 'vrf')
-        if not tmpD['vrf']:
-            del tmpD['vrf']
-        if tmpD:
-            tmpD['state'] = 'present'
-        return tmpD
+    def __generateGroupName(self, line):
+        """Generate group name for BGP"""
+        try:
+            groupName = line.split("table+")[1].split(":")[0]
+            return groupName
+        except Exception as err:
+            raise Exception(f'Error while generating group name: {err}') from err
 
-    def _getDefaultBGP(self, host):
+    def _getDefaultBGP(self, host, emptydict=False):
         """Default yaml dict setup"""
-        tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(self.connID, {})
-        tmpD = tmpD.setdefault(host, {})
-        tmpD = tmpD.setdefault('sense_bgp', {})
+        if emptydict:
+            tmpD = {}
+        else:
+            tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(self.connID, {})
+            tmpD = tmpD.setdefault(host, {})
+            tmpD = tmpD.setdefault('sense_bgp', {})
         tmpD['asn'] = self.getConfigValue(host, 'private_asn')
         tmpD['belongsTo'] = self.connID
+        # Identify groupName (Only used by Juniper)
+        tmpD['groupName'] = self.__generateGroupName(self.connID)
         if not tmpD['asn']:
             del tmpD['asn']
         tmpD['vrf'] = self.getConfigValue(host, 'vrf')
@@ -162,6 +161,7 @@ class RoutingService():
                 if self.firstrun and connID not in self.forceapply:
                     self.forceapply.append(connID)
 
+
     def compareBGP(self, switch, runningConf, uuid):
         """Compare L3 BGP"""
         tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(uuid, {}).setdefault(switch, {})
@@ -188,7 +188,7 @@ class RoutingService():
             else:
                 tmpD[key] = val
         # Compare empty dict with prepared new conf:
-        if self.__defbgp(switch) == tmpD:
+        if self._getDefaultBGP(switch, True) == tmpD:
             self.logger.debug(f'Def BGP and new BGP is empty for {uuid}. Will return False')
             different = False
         # In case of new - keys not equal, need to write

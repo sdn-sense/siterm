@@ -92,12 +92,28 @@ class Switch:
             return self.verbosity
         return self.config.getint("ansible", "verbosity" + subitem)
 
+    def __logAnsibleOutput(self, ansOut):
+        """Log Ansible Output"""
+        if ansOut and hasattr(ansOut, "stdout") and ansOut.stdout:
+            for line in ansOut.stdout:
+                self.logger.debug(f'[STDOUT] {line}')
+        else:
+            self.logger.debug("No stdout available from ansible_runner.")
+        if ansOut and hasattr(ansOut, "stderr") and ansOut.stderr:
+            for line in ansOut.stderr:
+                self.logger.debug(f'[STDERR] {line}')
+        else:
+            self.logger.debug("No stderr available from ansible_runner.")
+        if ansOut and hasattr(ansOut, "stats") and ansOut.stats:
+            for key, value in ansOut.stats.items():
+                self.logger.debug(f'[STATS] {key}: {value}')
+
 
     def _executeAnsible(self, playbook, hosts=None, subitem=""):
         """Execute Ansible playbook"""
         # As we might be running multiple workers, we need to make sure
         # cleanup process is done correctly.
-        return ansible_runner.run(
+        ansOut = ansible_runner.run(
             private_data_dir=self.config.get("ansible", "private_data_dir" + subitem),
             inventory=self.config.get("ansible", "inventory" + subitem),
             playbook=playbook,
@@ -106,6 +122,8 @@ class Switch:
             verbosity=self.__getVerbosity(subitem),
             ignore_logging=self.config.getboolean("ansible", "ignore_logging" + subitem),
         )
+        self.__logAnsibleOutput(ansOut)
+        return ansOut
 
     def getAnsNetworkOS(self, host, subitem=""):
         """Get Ansible network os from hosts file"""
