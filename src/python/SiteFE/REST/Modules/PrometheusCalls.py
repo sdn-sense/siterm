@@ -339,29 +339,31 @@ class ActiveWrapper:
 
     def _addStats(self, indict, **kwargs):
         """Get all Stats and add to list"""
-        kwargs["tag"] = indict.get("_params", {}).get("tag", "")
-        kwargs["networkstatus"] = indict.get("_params", {}).get("networkstatus", "")
-        if "hasLabel" in indict and indict["hasLabel"].get("value", ""):
-            kwargs["vlan"] = f"Vlan {indict['hasLabel']['value']}"
-        self.reports.append(kwargs)
+        return
+        # This can easily grow in memory usage, disabling now for debugging
+        #kwargs["tag"] = indict.get("_params", {}).get("tag", "")
+        #kwargs["networkstatus"] = indict.get("_params", {}).get("networkstatus", "")
+        #if "hasLabel" in indict and indict["hasLabel"].get("value", ""):
+        #    kwargs["vlan"] = f"Vlan {indict['hasLabel']['value']}"
+        #self.reports.append(kwargs)
 
-        if "hasService" in indict and indict["hasService"].get("uri", ""):
-            tmpargs = copy.deepcopy(kwargs)
-            tmpargs["uri"] = indict["hasService"]["uri"]
-            tmpargs["networkstatus"] = (
-                indict["hasService"].get("_params", {}).get("networkstatus", "")
-            )
-            for key in [
-                "availableCapacity",
-                "granularity",
-                "maximumCapacity",
-                "priority",
-                "reservableCapacity",
-                "type",
-                "unit",
-            ]:
-                tmpargs[key] = indict["hasService"].get(key, "")
-            self.reports.append(tmpargs)
+        #if "hasService" in indict and indict["hasService"].get("uri", ""):
+        #    tmpargs = copy.deepcopy(kwargs)
+        #    tmpargs["uri"] = indict["hasService"]["uri"]
+        #    tmpargs["networkstatus"] = (
+        #        indict["hasService"].get("_params", {}).get("networkstatus", "")
+        #    )
+        #    for key in [
+        #        "availableCapacity",
+        #        "granularity",
+        #        "maximumCapacity",
+        #        "priority",
+        #        "reservableCapacity",
+        #        "type",
+        #        "unit",
+        #    ]:
+        #        tmpargs[key] = indict["hasService"].get(key, "")
+        #    self.reports.append(tmpargs)
 
     def _activeLooper(self, indict, **kwargs):
         """Loop over nested dictionary of activatestates up to level 3"""
