@@ -318,6 +318,7 @@ class PrometheusCalls:
         registry = self.__cleanRegistry()
         self.__getServiceStates(registry)
         data = generate_latest(registry)
+        del registry # Explicit dereference of Collector Registry
         self.httpresp.ret_200(CONTENT_TYPE_LATEST, kwargs["start_response"], None)
         return iter([data])
 
@@ -389,4 +390,6 @@ class ActiveWrapper:
         self.__clean()
         for key in ["vsw", "rst", "kube", "singleport"]:
             self._loopActKey(key, out)
-        return self.reports
+        result = copy.deepcopy(self.reports)
+        self.__clean()
+        return result
