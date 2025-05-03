@@ -17,7 +17,9 @@ Authors:
 
 Date: 2022/11/21
 """
+import os
 import sys
+import copy
 import psutil
 from easysnmp import Session
 from easysnmp.exceptions import EasySNMPUnknownObjectIDError
@@ -29,8 +31,371 @@ from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import jsondumps
 from SiteRMLibs.MainUtilities import getStorageInfo
+from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import getAllHosts
+from SiteRMLibs.MainUtilities import getActiveDeltas
+from SiteRMLibs.MainUtilities import isValFloat
+from SiteRMLibs.MainUtilities import getFileContentAsJson
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.GitConfig import getGitConfig
+from prometheus_client import (CollectorRegistry, Enum,
+                               Gauge, Info, generate_latest)
+
+class ActiveWrapper:
+    """Active State and QoS Wrapper to report in prometheus format"""
+
+    def __init__(self):
+        self.reports = []
+
+    def __clean(self):
+        """Clean Reports"""
+        self.reports = []
+
+    def _addStats(self, indict, **kwargs):
+        """Get all Stats and add to list"""
+        kwargs["tag"] = indict.get("_params", {}).get("tag", "")
+        kwargs["networkstatus"] = indict.get("_params", {}).get("networkstatus", "")
+        if "hasLabel" in indict and indict["hasLabel"].get("value", ""):
+            kwargs["vlan"] = f"Vlan {indict['hasLabel']['value']}"
+        self.reports.append(kwargs)
+
+        if "hasService" in indict and indict["hasService"].get("uri", ""):
+            tmpargs = copy.deepcopy(kwargs)
+            tmpargs["uri"] = indict["hasService"]["uri"]
+            tmpargs["networkstatus"] = (
+                indict["hasService"].get("_params", {}).get("networkstatus", "")
+            )
+            for key in [
+                "availableCapacity",
+                "granularity",
+                "maximumCapacity",
+                "priority",
+                "reservableCapacity",
+                "type",
+                "unit",
+            ]:
+                tmpargs[key] = indict["hasService"].get(key, "")
+            self.reports.append(tmpargs)
+
+    def _activeLooper(self, indict, **kwargs):
+        """Loop over nested dictionary of activatestates up to level 3"""
+        kwargs["level"] += 1
+        if kwargs["level"] == 3:
+            self._addStats(indict, **kwargs)
+            return
+        for key, vals in indict.items():
+            if key == "_params":
+                kwargs["tag"] = vals.get("tag", "")
+                kwargs["networkstatus"] = vals.get("networkstatus", "")
+                self.reports.append(kwargs)
+                continue
+            if isinstance(vals, dict) and kwargs["level"] < 3:
+                kwargs[f"key{kwargs['level']}"] = key
+                self._activeLooper(vals, **kwargs)
+        return
+
+    def _loopActKey(self, tkey, out):
+        """Loop over vsw/rst key"""
+        for key, vals in out.get("output", {}).get(tkey, {}).items():
+            self._activeLooper(vals, **{"action": tkey, "key0": key, "level": 0})
+
+    def generateReport(self, out):
+        """Generate output"""
+        self.__clean()
+        for key in ["vsw", "rst", "kube", "singleport"]:
+            self._loopActKey(key, out)
+        result = copy.deepcopy(self.reports)
+        self.__clean()
+        return result
+
+class PromOut():
+    """Prometheus Output Class"""
+    def __init__(self, config, sitename):
+        self.config = config
+        self.sitename = sitename
+        self.logger = getLoggingObject(config=self.config, service='SNMPMonitoring')
+        self.dbI = getVal(getDBConn('SNMPMonitoring', self), **{'sitename': self.sitename})
+        self.diragent = contentDB()
+        self.timenow = int(getUTCnow())
+        self.activeAPI = ActiveWrapper()
+        self.memMonitor = {}
+        self.diskMonitor = {}
+        self.arpLabels = {'Device': '', 'Flags': '', 'HWaddress': '',
+                          'IPaddress': '', 'Hostname': ''}
+        self.snmpdir = os.path.join(self.config.get(sitename, "privatedir"), "SNMPData")
+
+
+    @staticmethod
+    def __cleanRegistry():
+        """Get new/clean prometheus registry."""
+        registry = CollectorRegistry()
+        return registry
+
+    def __refreshTimeNow(self):
+        """Refresh timenow"""
+        self.timenow = int(getUTCnow())
+
+
+
+    def __memStats(self, registry):
+        """Refresh all Memory Statistics in FE"""
+        memInfo = Gauge(
+            "memory_usage",
+            "Memory Usage for Service",
+            ["servicename", "key"],
+            registry=registry,
+        )
+        # TODO: In future pass agent memory mon usage also, and record it
+        for _, hostDict in self.memMonitor.items():
+            for serviceName, vals in hostDict.items():
+                for key, val in vals.items():
+                    labels = {"servicename": serviceName, "key": key}
+                    memInfo.labels(**labels).set(val)
+
+    def __diskStats(self, registry):
+        """Refresh all Disk Statistics in FE"""
+        diskGauge = Gauge("disk_usage",
+                          "Disk usage statistics for each filesystem",
+                          ["filesystem", "key"],
+                          registry=registry)
+
+        for _, hostDict in self.diskMonitor.items():
+            for fs, stats in hostDict.get("Values", {}).items():
+                tmpfs = fs
+                if 'Mounted_on' in stats and stats['Mounted_on']:
+                    tmpfs = stats['Mounted_on']
+                for key, val in stats.items():
+                    labels = {"filesystem": tmpfs, "key": key}
+                    if isinstance(val, str):
+                        val = val.strip().rstrip('%')
+                        try:
+                            val = float(val)
+                        except ValueError:
+                            continue  # skip non-numeric fields
+                    diskGauge.labels(**labels).set(val)
+
+    def _addHostArpInfo(self, arpState,  host, arpInfo):
+        """Add Host Arp Info"""
+        self.arpLabels["Hostname"] = host
+        for arpEntry in arpInfo:
+            self.arpLabels.update(arpEntry)
+            arpState.labels(**self.arpLabels).set(1)
+
+
+    def __getAgentData(self, registry):
+        """Add Agent Data (Cert validity) to prometheus output"""
+        agentCertValid = Gauge(
+            "agent_cert",
+            "Agent Certificate Validity",
+            ["hostname", "Key"],
+            registry=registry,
+        )
+        arpState = Gauge('arp_state', 'ARP Address Table for Host',
+                         labelnames=self.arpLabels.keys(),
+                         registry=registry)
+        for host, hostDict in getAllHosts(self.dbI).items():
+            hostDict["hostinfo"] = getFileContentAsJson(hostDict["hostinfo"])
+            if int(self.timenow - hostDict["updatedate"]) > 300:
+                continue
+            if "CertInfo" in hostDict.get("hostinfo", {}).keys():
+                for key in ["notAfter", "notBefore"]:
+                    keys = {"hostname": host, "Key": key}
+                    agentCertValid.labels(**keys).set(
+                        hostDict["hostinfo"]["CertInfo"].get(key, 0)
+                    )
+            if "ArpInfo" in hostDict.get("hostinfo", {}).keys() and hostDict["hostinfo"]["ArpInfo"].get('arpinfo'):
+                self._addHostArpInfo(arpState, host, hostDict["hostinfo"]["ArpInfo"]['arpinfo'])
+
+    def __getSwitchErrors(self, registry):
+        """Add Switch Errors to prometheus output"""
+        dbOut = self.dbI.get("switch")
+        switchErrorsGauge = Gauge(
+            "switch_errors",
+            "Switch Errors",
+            ["hostname", "errortype"],
+            registry=registry,
+        )
+        for item in dbOut:
+            if int(self.timenow - item["updatedate"]) > 300:
+                continue
+            out = evaldict(item.get("error", {}))
+            if out:
+                for errorkey, errors in out.items():
+                    labels = {"errortype": errorkey, "hostname": item['device']}
+                    switchErrorsGauge.labels(**labels).set(len(errors))
+
+    def __getSNMPData(self, registry):
+        """Add SNMP Data to prometheus output"""
+        # Here get info from DB for switch snmp details
+        snmpData = self.dbI.get("snmpmon")
+        snmpGauge = Gauge(
+            "interface_statistics",
+            "Interface Statistics",
+            ["ifDescr", "ifType", "ifAlias", "hostname", "Key"],
+            registry=registry,
+        )
+        macState = Info(
+            "mac_table",
+            "Mac Address Table",
+            labelnames=["vlan", "hostname", "incr"],
+            registry=registry,
+        )
+        for item in snmpData:
+            if int(self.timenow - item["updatedate"]) > 300:
+                continue
+            out = evaldict(item.get("output", {}))
+            # Skip hostnamemem- and hostnamedisk- devices. This is covered in __memStats/__diskStats
+            if item["hostname"].startswith("hostnamemem-"):
+                self.memMonitor[item["hostname"]] = out
+                continue
+            if item["hostname"].startswith("hostnamedisk-"):
+                self.diskMonitor[item["hostname"]] = out
+                continue
+            for key, val in out.items():
+                if key == "macs":
+                    if "vlans" in val:
+                        for key1, macs in val["vlans"].items():
+                            incr = 0
+                            for macaddr in macs:
+                                labels = {"vlan": key1,"hostname": item["hostname"], "incr": str(incr)}
+                                macState.labels(**labels).info({"macaddress": macaddr})
+                                incr += 1
+                    continue
+                keys = {
+                    "ifDescr": val.get("ifDescr", ""),
+                    "ifType": val.get("ifType", ""),
+                    "ifAlias": val.get("ifAlias", ""),
+                    "hostname": item["hostname"],
+                }
+                for key1 in self.config["MAIN"]["snmp"]["mibs"]:
+                    if key1 in val and isValFloat(val[key1]):
+                        keys["Key"] = key1
+                        snmpGauge.labels(**keys).set(val[key1])
+
+    def __getActiveQoSStates(self, registry):
+        """Report in prometheus NetworkStatus and QoS Params"""
+        labelnames = ["action", "tag", "key0", "key1", "key2", "vlan", "uri"]
+        labelqos = [
+            "action",
+            "tag",
+            "key0",
+            "key1",
+            "key2",
+            "vlan",
+            "uri",
+            "unit",
+            "type",
+            "valuetype",
+        ]
+
+        def genStatusLabels(item):
+            """Generate Status Labels"""
+            out = {}
+            for key in labelnames:
+                out[key] = item.get(key, "")
+            return out
+
+        def getQoSLabels(item):
+            """Generate QoS Labels"""
+            out = {}
+            for key in labelqos:
+                out[key] = item.get(key, "")
+            return out
+
+        netState = Enum(
+            "network_status",
+            "Network Status information",
+            labelnames=labelnames,
+            states=[
+                "activating",
+                "activated",
+                "activate-error",
+                "deactivated",
+                "deactivate-error",
+                "unknown",
+            ],
+            registry=registry,
+        )
+        qosGauge = Gauge(
+            "qos_status", "QoS Requests Status", labelqos, registry=registry
+        )
+
+        currentActive = getActiveDeltas(self)
+        for item in self.activeAPI.generateReport(currentActive):
+            netstatus = item.get("networkstatus", "unknown")
+            if not netstatus:
+                netstatus = "unknown"
+            netState.labels(**genStatusLabels(item)).state(netstatus)
+            if "uri" in item and item["uri"]:
+                for key in [
+                    "availableCapacity",
+                    "granularity",
+                    "maximumCapacity",
+                    "priority",
+                    "reservableCapacity",
+                ]:
+                    labels = getQoSLabels(item)
+                    labels["valuetype"] = key
+                    qosGauge.labels(**labels).set(item.get(key, 0))
+
+    def __getServiceStates(self, registry):
+        """Get all Services states."""
+        serviceState = Enum(
+            "service_state",
+            "Description of enum",
+            labelnames=["servicename", "hostname"],
+            states=["OK", "WARNING", "UNKNOWN", "FAILED", "KEYBOARDINTERRUPT", "UNSET"],
+            registry=registry,
+        )
+        runtimeInfo = Gauge(
+            "service_runtime",
+            "Service Runtime",
+            ["servicename", "hostname"],
+            registry=registry,
+        )
+        infoState = Info(
+            "running_version",
+            "Running Code Version.",
+            labelnames=["servicename", "hostname"],
+            registry=registry,
+        )
+        services = self.dbI.get("servicestates")
+        for service in services:
+            state = "UNKNOWN"
+            runtime = -1
+            if (
+                service["servicename"]
+                in ["SNMPMonitoring", "ProvisioningService", "LookUpService"]
+                and service.get("hostname", "UNSET") != "default"
+            ):
+                continue
+            if int(self.timenow - service["updatedate"]) < 600:
+                # If we are not getting service state for 10 mins, set state as unknown
+                state = service["servicestate"]
+                runtime = service["runtime"]
+            labels = {
+                "servicename": service["servicename"],
+                "hostname": service.get("hostname", "UNSET"),
+            }
+            serviceState.labels(**labels).state(state)
+            infoState.labels(**labels).info({"version": service["version"]})
+            runtimeInfo.labels(**labels).set(runtime)
+        self.__getSNMPData(registry)
+        self.__getAgentData(registry)
+        self.__memStats(registry)
+        self.__diskStats(registry)
+        self.__getSwitchErrors(registry)
+        self.__getActiveQoSStates(registry)
+
+    def metrics(self, **kwargs):
+        """Return all available Hosts, where key is IP address."""
+        self.__refreshTimeNow()
+        registry = self.__cleanRegistry()
+        self.__getServiceStates(registry)
+        data = generate_latest(registry)
+        del registry # Explicit dereference of Collector Registry
+        fname = os.path.join(self.snmpdir, "snmpinfo.txt")
+        self.diragent.dumpFileContent(fname, data)
 
 
 class SNMPMonitoring():
@@ -45,6 +410,7 @@ class SNMPMonitoring():
         self.diragent = contentDB()
         self.switches = {}
         self.session = None
+        self.prom = PromOut(config, sitename)
         self.err = []
         self.hostconf = {}
         self.memMonitor = {}
@@ -223,6 +589,9 @@ class SNMPMonitoring():
         self.logger.info(f'[{self.sitename}]: Memory statistics written to DB')
         if self.err:
             raise Exception(f'SNMP Monitoring Errors: {self.err}')
+        # We could do delete and re-init everytime, or at refresh.
+        # Need to track memory usage and see what is best
+        self.prom.metrics()
 
 
 def execute(config=None, args=None):

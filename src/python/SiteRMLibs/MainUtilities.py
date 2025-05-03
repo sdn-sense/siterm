@@ -450,6 +450,16 @@ class contentDB:
         shutil.move(tmpoutFile, outFile)
         return True
 
+    @staticmethod
+    @fileLock
+    def dumpFileContent(outFile, content):
+        """Dump File content with locks."""
+        tmpoutFile = outFile + ".tmp"
+        with open(tmpoutFile, "wb+") as fd:
+            fd.write(content)
+        shutil.move(tmpoutFile, outFile)
+        return True
+
     def saveContent(self, destFileName, outputDict):
         """Saves all content to a file."""
         return self.dumpFileContentAsJson(destFileName, outputDict)
