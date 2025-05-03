@@ -43,7 +43,7 @@ class PrometheusCalls:
 
     def prometheus(self, environ, **kwargs):
         """Return prometheus stats."""
-        snmpdir = os.path.join(self.config.get(environ['APP_SITENAME'], "privatedir"), "HostData")
+        snmpdir = os.path.join(self.config.get(environ['APP_SITENAME'], "privatedir"), "SNMPData")
         fname = os.path.join(snmpdir, 'snmpinfo.txt')
         if not os.path.exists(fname):
             self.httpresp.ret_404("text/plain", kwargs["start_response"], None)
