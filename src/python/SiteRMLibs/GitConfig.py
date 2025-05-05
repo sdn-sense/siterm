@@ -111,7 +111,7 @@ class GitConfig:
                     "logLevel": "INFO",
                     "privatedir": "/opt/siterm/config/",
                 },
-                "agent": {"norules": False, "rsts_enabled": "ipv4,ipv6"},
+                "agent": {"norules": False, "rsts_enabled": "ipv4,ipv6", "noqos": False},
                 "qos": {
                     "policy": "default-not-set",
                     "qos_params": "mtu 9000 mpu 9000 quantum 200000 burst 300000 cburst 300000 qdisc sfq balanced",
