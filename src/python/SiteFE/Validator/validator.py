@@ -4,7 +4,7 @@
 Validator service to validate host and switch configurations and link mappings.
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2025/04/21
 """

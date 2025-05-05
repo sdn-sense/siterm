@@ -4,7 +4,7 @@
     SNMPMonitoring gets all information from switches using SNMP and pushes to gateway.
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2023/03/17
 """

@@ -4,7 +4,7 @@
 Host API SubCalls
 
 Author                  : Justas Balcas
-Email                   : juztas (at) gmail (dot) com
+Email                   : jbalcas (at) es (dot) net
 Date                    : 2024/01/03
 """
 from SiteRMLibs import __version__ as runningVersion

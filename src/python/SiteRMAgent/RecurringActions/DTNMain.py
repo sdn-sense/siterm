@@ -2,7 +2,7 @@
 """DTN Main Agent code, which executes all Plugins and publishes values to FE.
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2022/01/29
 """

@@ -13,7 +13,7 @@ Copyright 2017 California Institute of Technology
    limitations under the License.
 Title                   : siterm
 Author                  : Justas Balcas
-Email                   : justas.balcas (at) cern.ch
+Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2019/10/01
 """

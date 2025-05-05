@@ -13,7 +13,7 @@ snmp_monitoring:
     oid: "1.3.6.1.2.1.17.7.1.2.2.1.3"
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2022/11/21
 """

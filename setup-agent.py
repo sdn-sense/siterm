@@ -2,7 +2,7 @@
 """
 Setup tools script for SiteRM Site Agent.
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2022/05/20
 """

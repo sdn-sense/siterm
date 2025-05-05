@@ -6,7 +6,7 @@ Ansible module does not parse vlans, channel members
 attached to interfaces. Needed for SENSE
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2021/12/01
 """

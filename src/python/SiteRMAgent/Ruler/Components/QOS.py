@@ -44,7 +44,7 @@ Site uplink is capable to support that, but DTNs each are limited to 10gbps. For
     NewRate3rd = 5gbps
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2021/01/20
 """

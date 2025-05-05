@@ -4,7 +4,7 @@
 Main Switch class called by all modules.
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2021/12/01
 """

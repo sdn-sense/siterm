@@ -3,7 +3,7 @@
 """
 Title                   : siterm
 Author                  : Justas Balcas
-Email                   : juztas (at) gmail (dot) com
+Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/07/17
 """

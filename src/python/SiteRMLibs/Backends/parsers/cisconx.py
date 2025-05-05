@@ -4,7 +4,7 @@
 Cisco NX 9 Additional Parser.
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2023/09/19
 """

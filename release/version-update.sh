@@ -11,7 +11,7 @@
 #   limitations under the License.
 # Title             : siterm
 # Author            : Justas Balcas
-# Email             : justas.balcas (at) cern.ch
+# Email             : jbalcas (at) es (dot) net
 # @Copyright        : Copyright (C) 2021 California Institute of Technology
 # Date            : 2021/02/08
 # =============================================================================

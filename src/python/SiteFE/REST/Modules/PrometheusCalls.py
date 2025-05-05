@@ -14,7 +14,7 @@ Copyright 2023 California Institute of Technology
    limitations under the License.
 Title                   : siterm
 Author                  : Justas Balcas
-Email                   : jbalcas (at) caltech (dot) edu
+Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """

@@ -2,7 +2,7 @@
 """Plugins which gathers all information from /proc/meminfo.
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2022/01/29
 """

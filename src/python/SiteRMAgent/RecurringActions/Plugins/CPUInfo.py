@@ -8,7 +8,7 @@
  'L3 cache': '8192K', 'BogoMIPS': 6784.32, 'Stepping': 3, 'Byte Order': 'Little Endian', 'NUMA node(s)': 1}
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2022/01/29
 """

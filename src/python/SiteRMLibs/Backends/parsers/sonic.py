@@ -7,7 +7,7 @@ to parse all to our way to represent inside the model
 Needed for SENSE
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2022/04/13
 """

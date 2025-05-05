@@ -3,7 +3,7 @@
 BW Service - converts bandwidth to QoS understandable format.
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2024/02/21
 """

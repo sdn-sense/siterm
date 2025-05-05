@@ -3,7 +3,7 @@
 This is called from a Ruler component.
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2022/01/20
 """

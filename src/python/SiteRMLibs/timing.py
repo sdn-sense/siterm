@@ -3,7 +3,7 @@
 Timing functions to check delta start/stop/overlap
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2023/10/16
 """

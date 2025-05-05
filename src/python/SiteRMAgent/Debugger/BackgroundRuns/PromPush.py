@@ -4,7 +4,7 @@
     Push Daemon for Prometheus stats.
 
 Authors:
-  Justas Balcas jbalcas (at) caltech.edu
+  Justas Balcas jbalcas (at) es (dot) net
 
 Date: 2023/03/17
 """
