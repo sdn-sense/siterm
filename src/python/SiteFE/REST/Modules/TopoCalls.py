@@ -21,6 +21,7 @@ Date                    : 2023/08/03
 import os
 from SiteRMLibs.MainUtilities import getFileContentAsJson
 
+
 class TopoCalls:
     """Frontend Calls API Module"""
     # pylint: disable=E1101

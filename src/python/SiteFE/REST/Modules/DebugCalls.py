@@ -254,7 +254,6 @@ class DebugCalls:
 
     def getdebug(self, environ, **kwargs):
         """Get Debug action for specific ID."""
-
         self.responseHeaders(environ, **kwargs)
         if kwargs["debugvar"] != "ALL":
             return self._getdebuginfo(environ, **kwargs)

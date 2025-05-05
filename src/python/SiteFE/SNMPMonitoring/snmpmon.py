@@ -62,7 +62,9 @@ class Topology:
                 return {'switch': switch, 'id': switchdata['id']}
         return None
 
-    def _getansdata(self, indata, keys):
+    @staticmethod
+    def _getansdata(indata, keys):
+        """Get Ansible data from ansible output"""
         if len(keys) == 1:
             return indata.get('event_data', {}).get('res', {}).get(
                               'ansible_facts', {}).get(keys[0], {})
