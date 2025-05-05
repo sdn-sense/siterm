@@ -162,9 +162,7 @@ class HostCalls(HostSubCalls, contentDB):
         """Set Service State in DB."""
         inputDict = read_input_data(environ)
         if not self._host_supportedService(inputDict.get("servicename", "")):
-            raise NotFoundError(
-                f"This Service {inputDict['servicename']} is not supported by Frontend"
-            )
+            raise NotFoundError(f"This Service {inputDict['servicename']} is not supported by Frontend")
         self._host_reportServiceStatus(
             **{
                 "servicename": inputDict["servicename"],

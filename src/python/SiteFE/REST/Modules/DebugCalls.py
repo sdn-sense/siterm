@@ -19,6 +19,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
+import os
 import re
 
 from SiteRMLibs.CustomExceptions import BadRequestError
@@ -101,11 +102,9 @@ class CallValidator:
         if not optional:
             raise BadRequestError("One of these keys must be present: from_interface, from_ip")
 
-
     def __validateArp(self, inputDict):
         """Validate aprdump debug request."""
         self.__validateKeys(inputDict, ["interface"])
-
 
     def __validateIperf(self, inputDict):
         """Validate iperfclient debug request."""
@@ -229,48 +228,43 @@ class DebugCalls:
 
     def __defineRoutes(self):
         """Define Routes for this class"""
-        self.routeMap.connect(
-            "getdebug", "/json/frontend/getdebug/:debugvar", action="getdebug"
-        )
-        self.routeMap.connect(
-            "getalldebughostname",
-            "/json/frontend/getalldebughostname/:hostname/:state",
-            action="getalldebughostname",
-        )
-        self.routeMap.connect(
-            "submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug"
-        )
-        self.routeMap.connect(
-            "updatedebug", "/json/frontend/updatedebug/:debugvar", action="updatedebug"
-        )
-        self.routeMap.connect(
-            "deletedebug", "/json/frontend/deletedebug/:debugvar", action="deletedebug"
-        )
+        self.routeMap.connect("getdebug", "/json/frontend/getdebug/:debugvar", action="getdebug")
+        self.routeMap.connect("getalldebughostname",
+                              "/json/frontend/getalldebughostname/:hostname/:state",
+                              action="getalldebughostname")
+        self.routeMap.connect("submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug")
+        self.routeMap.connect("updatedebug", "/json/frontend/updatedebug/:debugvar", action="updatedebug")
+        self.routeMap.connect("deletedebug", "/json/frontend/deletedebug/:debugvar", action="deletedebug")
+
+    def _getdebuginfo(self, _environ, **kwargs):
+        """Get Debug action information."""
+        search = [["id", kwargs["debugvar"]]]
+        out = self.dbI.get("debugrequests", orderby=["insertdate", "DESC"], search=search, limit=1)
+        if out is None:
+            raise BadRequestError(f"Debug request with ID {kwargs['debugvar']} not found.")
+        out = out[0]
+        debugdir = os.path.join(self.config.get(kwargs['sitename'], "privatedir"), "DebugRequests")
+        # Get Request JSON
+        requestfname = os.path.join(debugdir, out["hostname"], kwargs["debugvar"], "request.json")
+        out["requestdict"] = self.getFileContentAsJson(requestfname)
+        # Get Output JSON
+        outputfname = os.path.join(debugdir, out["hostname"], kwargs["debugvar"], "output.json")
+        out["output"] = self.getFileContentAsJson(outputfname)
+        return out
 
     def getdebug(self, environ, **kwargs):
         """Get Debug action for specific ID."""
-        search = None
-        if kwargs["debugvar"] != "ALL":
-            search = [["id", kwargs["debugvar"]]]
-        self.responseHeaders(environ, **kwargs)
-        return self.dbI.get(
-            "debugrequests", orderby=["insertdate", "DESC"], search=search, limit=1000
-        )
 
-    def getalldebugids(self, environ, **kwargs):
-        """Get All Debug IDs."""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get(
-            "debugrequestsids", orderby=["updatedate", "DESC"], limit=1000
-        )
+        if kwargs["debugvar"] != "ALL":
+            return self._getdebuginfo(environ, **kwargs)
+        return self.dbI.get("debugrequests", orderby=["insertdate", "DESC"], search=None, limit=50)
 
     def getalldebughostname(self, environ, **kwargs):
         """Get all Debug Requests for hostname"""
         search = [["hostname", kwargs["hostname"]], ["state", kwargs["state"]]]
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get(
-            "debugrequests", orderby=["updatedate", "DESC"], search=search, limit=1000
-        )
+        return self.dbI.get("debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50)
 
     def submitdebug(self, environ, **kwargs):
         """Submit new debug action request."""
@@ -280,23 +274,33 @@ class DebugCalls:
             if symbol in jsondump:
                 raise BadRequestError("Unsupported symbol in input request. Contact Support")
         inputDict = self.validator.validate(inputDict)
+        # This submit a new request to the database, and then based on the ID/Hostanem
+        # write request to the file.
         out = {"hostname": inputDict["hostname"],
                "state": "new",
-               "requestdict": jsondumps(inputDict),
-               "output": "",
                "insertdate": getUTCnow(),
                "updatedate": getUTCnow()
                }
         insOut = self.dbI.insert("debugrequests", [out])
+        debugdir = os.path.join(self.config.get(kwargs['sitename'], "privatedir"), "DebugRequests")
+        requestfname = os.path.join(debugdir, inputDict["hostname"], insOut[2], "request.json")
+        self.dumpFileContentAsJson(requestfname, inputDict)
         self.responseHeaders(environ, **kwargs)
         return {"Status": insOut[0], "ID": insOut[2]}
 
     def updatedebug(self, environ, **kwargs):
         """Update debug action information."""
         inputDict = read_input_data(environ)
+        if not self._getdebuginfo(environ, **kwargs):
+            raise BadRequestError(f"Debug request with ID {kwargs['debugvar']} not found.")
+        # ==================================
+        debugdir = os.path.join(self.config.get(kwargs['sitename'], "privatedir"), "DebugRequests")
+        requestfname = os.path.join(debugdir, inputDict["hostname"], kwargs["debugvar"], "output.json")
+        self.dumpFileContentAsJson(requestfname, inputDict.get("output", {}))
+
+        # Update the state in database.
         out = {"id": kwargs["debugvar"],
                "state": inputDict["state"],
-               "output": inputDict["output"],
                "updatedate": getUTCnow()
                }
         updOut = self.dbI.update("debugrequests", [out])
@@ -305,6 +309,9 @@ class DebugCalls:
 
     def deletedebug(self, environ, **kwargs):
         """Delete debug action information."""
+        if not self._getdebuginfo(environ, **kwargs):
+            raise BadRequestError(f"Debug request with ID {kwargs['debugvar']} not found.")
+        # ==================================
         updOut = self.dbI.delete("debugrequests", [["id", kwargs["debugvar"]]])
         self.responseHeaders(environ, **kwargs)
         return {"Status": updOut[0], "ID": updOut[2]}

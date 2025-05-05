@@ -17,7 +17,7 @@ Email                   : jbalcas (at) caltech (dot) edu
 @Copyright              : Copyright (C) 2021 California Institute of Technology
 Date                    : 2021/03/12
 """
-
+import os
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import getDBConn, getVal
@@ -51,7 +51,15 @@ class Debugger(DebugService):
     def getData(self, hostname, state):
         """Get data from DB."""
         search = [["hostname", hostname], ["state", state]]
-        return self.dbI.get("debugrequests", orderby=["updatedate", "DESC"], search=search, limit=1000)
+        return self.dbI.get("debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50)
+
+    def getFullData(self, hostname, item):
+        """Get full data from DB."""
+        debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
+        # Get Request JSON
+        requestfname = os.path.join(debugdir, hostname, item['id'], "request.json")
+        item["requestdict"] = self.getFileContentAsJson(requestfname)
+        return item
 
     def startwork(self):
         """Start execution and get new requests from FE"""
@@ -62,6 +70,9 @@ class Debugger(DebugService):
                 self.logger.info(f"Get all {wtype} requests")
                 data = self.getData(host, wtype)
                 for item in data:
+                    if not self.backgroundProcessItemExists(item):
+                        self.logger.info(f"Background process item does not exist. ID: {item['id']}")
+                        item = self.getFullData(host, item)
                     self.checkBackgroundProcess(item)
 
 

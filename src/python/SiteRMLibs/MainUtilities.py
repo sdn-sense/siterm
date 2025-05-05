@@ -775,7 +775,7 @@ def writeActiveDeltas(cls, newConfig):
     else:
         activeDeltas = activeDeltas[0]
     activeDeltas["updatedate"] = int(getUTCnow())
-    activeDeltas["output"] = str(newConfig)
+    activeDeltas["output"] = jsondumps(newConfig)
     if action == "insert":
         cls.dbI.insert("activeDeltas", [activeDeltas])
     elif action == "update":

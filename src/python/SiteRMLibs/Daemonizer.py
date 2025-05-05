@@ -235,6 +235,7 @@ class Daemon(DBBackend):
         self.sleepTimers = {'ok': int(self.inargs.sleeptimeok),
                             'failure': int(self.inargs.sleeptimefailure)}
         self.totalRuntime = 0
+        self.lastRefresh = getUTCnow()
         self._loadDB(component)
         self.memdebug = False
         if os.getenv('SITERM_MEMORY_DEBUG'):
@@ -446,9 +447,13 @@ class Daemon(DBBackend):
     def autoRefreshDB(self, **kwargs):
         """Auto Refresh if there is a DB request to do so."""
         # pylint: disable=W0703
+        # Minimize queries to this and do this only every 5 minutes
+        if self.lastRefresh + 300 > int(getUTCnow()):
+            return False
+        self.lastRefresh = int(getUTCnow())
         refresh = False
         if self.component not in HOSTSERVICES:
-            return False
+            return refresh
         try:
             if self.dbI:
                 refresh = self._autoRefreshDB(**kwargs)
@@ -459,7 +464,7 @@ class Daemon(DBBackend):
             print(
                 f"Error details in autoRefreshDB. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
             )
-            return False
+            return refresh
         return refresh
 
     def runLoop(self):

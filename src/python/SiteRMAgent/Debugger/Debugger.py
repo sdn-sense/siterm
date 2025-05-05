@@ -63,6 +63,14 @@ class Debugger(DebugService):
             self.logger.info(f"Get all {wtype} requests")
             data = self.getData(f"/sitefe/json/frontend/getalldebughostname/{self.hostname}/{wtype}")
             for item in data:
+                # Do we need to get full data from FE? E.G. Request info?
+                if not self.backgroundProcessItemExists(item):
+                    self.logger.info(f"Background process item does not exist. ID: {item['id']}")
+                    try:
+                        item = self.getData(f"/sitefe/json/frontend/getdebug/{item['id']}")
+                    except FailedGetDataFromFE as ex:
+                        self.logger.error(f"Failed to get data from FE: {ex}")
+                        continue
                 self.checkBackgroundProcess(item)
 
 

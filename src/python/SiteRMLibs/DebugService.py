@@ -45,6 +45,22 @@ class DebugService:
             return
         publishToSiteFE(inDic, self.fullURL, f"/sitefe/json/frontend/updatedebug/{inDic['id']}")
 
+    def backgroundProcessItemExists(self, item):
+        """Check if background process item exists"""
+        fname = self.workDir + f"/background-process-{item['id']}.json"
+        if not os.path.isfile(fname):
+            return False
+        try:
+            out = self.diragent.getFileContentAsJson(fname)
+            if out.get('id', -1) == item['id']:
+                return True
+            self.logger.warning(f"Background process item {item['id']} does not match with file: {fname}")
+            self.logger.warning(f"File content: {out}")
+            self.logger.warning(f"Item content: {item}")
+        except Exception as ex:
+            self.logger.warning(f"Error while checking background process item: {ex}")
+        return False
+
     def checkBackgroundProcess(self, item):
         """Start Background work on specific item"""
         fname = self.workDir + f"/background-process-{item['id']}.json"
