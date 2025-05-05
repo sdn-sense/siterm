@@ -35,11 +35,118 @@ from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getAllHosts
 from SiteRMLibs.MainUtilities import getActiveDeltas
 from SiteRMLibs.MainUtilities import isValFloat
-from SiteRMLibs.MainUtilities import getFileContentAsJson
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.GitConfig import getGitConfig
 from prometheus_client import (CollectorRegistry, Enum,
                                Gauge, Info, generate_latest)
+
+
+class Topology:
+    """Topology json preparation for visualization"""
+    # pylint: disable=E1101
+    def __init__(self, config, sitename):
+        self.config = config
+        self.sitename = sitename
+        self.logger = getLoggingObject(config=self.config, service='SNMPMonitoring')
+        self.dbI = getVal(getDBConn('SNMPMonitoring', self), **{'sitename': self.sitename})
+        self.diragent = contentDB()
+        self.topodir = os.path.join(self.config.get(sitename, "privatedir"), "Topology")
+
+    @staticmethod
+    def _findConnection(workdata, remMac):
+        """Find connections based on MAC aaddress"""
+        if not remMac:
+            return None
+        for switch, switchdata in workdata.items():
+            if remMac in switchdata['macs']:
+                return {'switch': switch, 'id': switchdata['id']}
+        return None
+
+    @staticmethod
+    def _getansdata(indata, keys):
+        """Get Ansible data from ansible output"""
+        if len(keys) == 1:
+            return indata.get('event_data', {}).get('res', {}).get(
+                              'ansible_facts', {}).get(keys[0], {})
+        if len(keys) == 2:
+            return indata.get('event_data', {}).get('res', {}).get(
+                              'ansible_facts', {}).get(keys[0], {}).get(keys[1], {})
+        return {}
+
+    def _getWANLinks(self, incr):
+        """Get WAN Links for visualization"""
+        wan_links = {}
+        for site in self.config['MAIN'].get('general', {}).get('sites', []):
+            for sw in self.config['MAIN'].get(site, {}).get('switch', []):
+                if not self.config['MAIN'].get(sw, {}):
+                    continue
+                if not isinstance(self.config['MAIN'].get(sw, {}).get('ports', None), dict):
+                    continue
+                for _, val in self.config['MAIN'].get(sw, {}).get('ports', {}).items():
+                    if 'wanlink' in val and val['wanlink'] and val.get('isAlias', None):
+                        wan_links.setdefault(f"wan{incr}", {"_id": incr,
+                                                            "topo": {},
+                                                            "DeviceInfo": {"type": "cloud",
+                                                                           "name": val['isAlias']}})
+                        wan_links[f"wan{incr}"]["topo"].setdefault(val['isAlias'].split(':')[-1],
+                                                                   {"device": sw, "port": val})
+                        incr += 1
+        return wan_links
+
+    def gettopology(self):
+        """Return all Switches information"""
+        workdata = {}
+        incr = 0
+        # Get all Switch information
+        for item in self.dbI.get('switch', orderby=['updatedate', 'DESC'], limit=100):
+            if 'output' not in item:
+                continue
+            tmpdict = evaldict(item['output'])
+            workdata[item['device']] = {'id': incr, 'type': 'switch'}
+            incr += 1
+            for dkey, keys in {'macs': ['ansible_net_info', 'macs'],
+                               'lldp': ['ansible_net_lldp'],
+                               'intstats': ['ansible_net_interfaces']}.items():
+                workdata[item['device']][dkey] = self._getansdata(tmpdict, keys)
+        # Now that we have specific data; lets loop over it and get nodes/links
+        out = {}
+        for switch, switchdata in workdata.items():
+            swout = out.setdefault(switch, {'topo': {},
+                                            'DeviceInfo': {'type': 'switch', 'name': switch},
+                                            '_id': switchdata['id']})
+            for key, vals in switchdata['lldp'].items():
+                remSwitch = self._findConnection(workdata, vals.get('remote_chassis_id', ""))
+                remPort = vals.get('remote_port_id', "")
+                if remSwitch and remPort:
+                    swout['topo'].setdefault(key, {'device': remSwitch['switch'],
+                                                   'port': remPort})
+        # Now lets get host information
+        for host in self.dbI.get('hosts', orderby=['updatedate', 'DESC'], limit=100):
+            parsedInfo = self.diragent.getFileContentAsJson(host.get('hostinfo', ""))
+            hostconfig = parsedInfo.get('Summary', {}).get('config', {})
+            hostname = hostconfig.get('agent', {}).get('hostname', '')
+            lldpInfo = parsedInfo.get('NetInfo', {}).get('lldp', {})
+            hout = out.setdefault(hostname, {'topo': {},
+                                             'DeviceInfo': {'type': 'server', 'name': hostname, },
+                                             '_id': incr})
+            incr += 1
+            if lldpInfo:
+                for intf, vals in lldpInfo.items():
+                    remSwitch = self._findConnection(workdata, vals.get('remote_chassis_id', ""))
+                    remPort = vals.get('remote_port_id', "")
+                    if remSwitch and remPort:
+                        hout['topo'].setdefault(intf, {'device': remSwitch['switch'],
+                                                       'port': remPort})
+            else:
+                for intf in hostconfig.get('agent', {}).get('interfaces', []):
+                    swintf = hostconfig.get(intf, {}).get('port', '')
+                    switch = hostconfig.get(intf, {}).get('switch', '')
+                    if switch and swintf:
+                        hout['topo'].setdefault(intf, {'device': switch, 'port': swintf})
+        out.update(self._getWANLinks(incr))
+        # Write new out to file
+        fname = os.path.join(self.topodir, "topology.json")
+        self.diragent.dumpFileContentAsJson(fname, out)
 
 class ActiveWrapper:
     """Active State and QoS Wrapper to report in prometheus format"""
@@ -124,7 +231,6 @@ class PromOut():
                           'IPaddress': '', 'Hostname': ''}
         self.snmpdir = os.path.join(self.config.get(sitename, "privatedir"), "SNMPData")
 
-
     @staticmethod
     def __cleanRegistry():
         """Get new/clean prometheus registry."""
@@ -134,8 +240,6 @@ class PromOut():
     def __refreshTimeNow(self):
         """Refresh timenow"""
         self.timenow = int(getUTCnow())
-
-
 
     def __memStats(self, registry):
         """Refresh all Memory Statistics in FE"""
@@ -194,7 +298,7 @@ class PromOut():
                          labelnames=self.arpLabels.keys(),
                          registry=registry)
         for host, hostDict in getAllHosts(self.dbI).items():
-            hostDict["hostinfo"] = getFileContentAsJson(hostDict["hostinfo"])
+            hostDict["hostinfo"] = self.diragent.getFileContentAsJson(hostDict["hostinfo"])
             if int(self.timenow - hostDict["updatedate"]) > 300:
                 continue
             if "CertInfo" in hostDict.get("hostinfo", {}).keys():
@@ -325,6 +429,7 @@ class PromOut():
             netstatus = item.get("networkstatus", "unknown")
             if not netstatus:
                 netstatus = "unknown"
+            # pylint: disable=E1101
             netState.labels(**genStatusLabels(item)).state(netstatus)
             if "uri" in item and item["uri"]:
                 for key in [
@@ -377,6 +482,7 @@ class PromOut():
                 "servicename": service["servicename"],
                 "hostname": service.get("hostname", "UNSET"),
             }
+            # pylint: disable=E1101
             serviceState.labels(**labels).state(state)
             infoState.labels(**labels).info({"version": service["version"]})
             runtimeInfo.labels(**labels).set(runtime)
@@ -387,7 +493,7 @@ class PromOut():
         self.__getSwitchErrors(registry)
         self.__getActiveQoSStates(registry)
 
-    def metrics(self, **kwargs):
+    def metrics(self):
         """Return all available Hosts, where key is IP address."""
         self.__refreshTimeNow()
         registry = self.__cleanRegistry()
@@ -411,6 +517,7 @@ class SNMPMonitoring():
         self.switches = {}
         self.session = None
         self.prom = PromOut(config, sitename)
+        self.topo = Topology(config, sitename)
         self.err = []
         self.hostconf = {}
         self.memMonitor = {}
@@ -592,6 +699,8 @@ class SNMPMonitoring():
         # We could do delete and re-init everytime, or at refresh.
         # Need to track memory usage and see what is best
         self.prom.metrics()
+        # Get Topology json
+        self.topo.gettopology()
 
 
 def execute(config=None, args=None):

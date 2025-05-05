@@ -100,8 +100,8 @@ class DeltaCalls:
         username = environ.get("USERINFO", {}).get("username", "UNKNOWN") + "-"
         username += environ.get("CERTINFO", {}).get("fullDN", "UNKNOWN") + "-"
         username += environ.get('REMOTE_ADDR', 'UNKNOWN')
-        otherInfo = str({'otherInfo': otherInfo, 'deltaInfo': deltaInfo})
-        print([{"username": username, "insertdate": getUTCnow(), "deltaid": deltaInfo.get("uuid", "UNKNOWN"), "useraction": userAction, "otherinfo": otherInfo}])
+        print([{"username": username, "insertdate": getUTCnow(), "deltaid": deltaInfo.get("uuid", "UNKNOWN"),
+                "useraction": userAction, "otherinfo": {'otherInfo': otherInfo, 'deltaInfo': deltaInfo}}])
         # TODO: Review user tracking as it gets many updates from agenst to do set state.
         # Which is correct as agents keep informing FE that resource is activated and did not drift anyhow.
         # This can easily explode and grow database quickly. For now we save it in the log, and not inside database;
@@ -211,7 +211,7 @@ class DeltaCalls:
 
     def getActiveDeltas(self, _environ, **_kwargs):
         """Get all Active Deltas"""
-        activeDeltas = self.dbI.get("activeDeltas", orderby=['insertdate', 'DESC'])
+        activeDeltas = self.dbI.get("activeDeltas", orderby=['insertdate', 'DESC'], limit=1)
         if activeDeltas:
             activeDeltas = activeDeltas[0]
             activeDeltas["output"] = evaldict(activeDeltas["output"])
@@ -221,7 +221,7 @@ class DeltaCalls:
 
     def __deltas_get(self, environ, **kwargs):
         """Private Function for Delta GET API"""
-        modTime = getModTime(kwargs["headers"])
+        modTime = getModTime(kwargs.get("headers"))
         outdeltas = self.__getdeltaINT(None, **kwargs)
         if kwargs["urlParams"]["oldview"]:
             self.httpresp.ret_200("application/json", kwargs["start_response"], None)

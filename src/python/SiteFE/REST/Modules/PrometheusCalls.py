@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# pylint: disable=line-too-long
 """
 Prometheus API Output Calls.
 
@@ -41,9 +40,9 @@ class PrometheusCalls:
             "prometheus", "/json/frontend/metrics", action="prometheus"
         )
 
-    def prometheus(self, environ, **kwargs):
+    def prometheus(self, _environ, **kwargs):
         """Return prometheus stats."""
-        snmpdir = os.path.join(self.config.get(environ['APP_SITENAME'], "privatedir"), "SNMPData")
+        snmpdir = os.path.join(self.config.get(kwargs['sitename'], "privatedir"), "SNMPData")
         fname = os.path.join(snmpdir, 'snmpinfo.txt')
         if not os.path.exists(fname):
             self.httpresp.ret_404("text/plain", kwargs["start_response"], None)

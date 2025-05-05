@@ -243,7 +243,6 @@ class dbinterface():
     # =====================================================
     #  HERE GOES GET CALLS
     # =====================================================
-
     def _caller(self, origquery, limit=None, orderby=None, search=None):
         """Modifies get call and include WHER/ORDER/LIMIT."""
         query = ""

@@ -65,7 +65,7 @@ class FrontendCalls:
 
     def gethosts(self, environ, **kwargs):
         """Return all available Hosts, where key is IP address."""
-        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100)
+        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=50)
         out = []
         for host in hosts:
             host["hostinfo"] = getFileContentAsJson(host.get("hostinfo", ""))
@@ -75,7 +75,7 @@ class FrontendCalls:
 
     def getdata(self, environ, **kwargs):
         """Return all available Hosts data, where key is IP address."""
-        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100)
+        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=50)
         out = []
         for host in hosts:
             host["hostinfo"] = getFileContentAsJson(host.get("hostinfo", ""))
@@ -86,7 +86,7 @@ class FrontendCalls:
     def getswitchdata(self, environ, **kwargs):
         """Return all Switches information"""
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get("switch", orderby=["updatedate", "DESC"], limit=100)
+        return self.dbI.get("switch", orderby=["updatedate", "DESC"], limit=50)
 
     def getactivedeltas(self, environ, **kwargs):
         """Return all Active Deltas"""
@@ -96,7 +96,7 @@ class FrontendCalls:
     def getqosdata(self, environ, **kwargs):
         """Return QoS Stats for all IPv6 Ranges"""
         self.responseHeaders(environ, **kwargs)
-        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100)
+        hosts = self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=50)
         out = {}
         for host in hosts:
             tmpH = getFileContentAsJson(host.get("hostinfo", ""))

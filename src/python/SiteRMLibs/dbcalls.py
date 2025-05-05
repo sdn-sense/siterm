@@ -98,10 +98,8 @@ create_servicestates = """CREATE TABLE IF NOT EXISTS servicestates(
                           primary key(id))"""
 create_debugrequests = """CREATE TABLE IF NOT EXISTS debugrequests(
                           id int auto_increment,
-                          hostname text NOT NULL,
-                          state text NOT NULL,
-                          requestdict longtext NOT NULL,
-                          output longtext NOT NULL,
+                          hostname VARCHAR(255) NOT NULL,
+                          state VARCHAR(20) NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
                           primary key(id))"""
@@ -171,7 +169,7 @@ insert_switch = "INSERT INTO switch(sitename, device, insertdate, updatedate, ou
 insert_switch_error = "INSERT INTO switch(sitename, device, insertdate, updatedate, output, error) VALUES(%(sitename)s, %(device)s, %(updatedate)s, %(updatedate)s, '{}', %(error)s)"
 insert_activeDeltas = "INSERT INTO activeDeltas(insertdate, updatedate, output) VALUES(%(insertdate)s, %(updatedate)s, %(output)s)"
 insert_servicestates = "INSERT INTO servicestates(hostname, servicename, servicestate, runtime, version, updatedate, exc) VALUES(%(hostname)s, %(servicename)s, %(servicestate)s, %(runtime)s, %(version)s, %(updatedate)s, %(exc)s)"
-insert_debugrequests = "INSERT INTO debugrequests(hostname, state, requestdict, output, insertdate, updatedate) VALUES(%(hostname)s, %(state)s, %(requestdict)s, %(output)s, %(insertdate)s, %(updatedate)s)"
+insert_debugrequests = "INSERT INTO debugrequests(hostname, state, insertdate, updatedate) VALUES(%(hostname)s, %(state)s, %(insertdate)s, %(updatedate)s)"
 insert_snmpmon = "INSERT INTO snmpmon(hostname, insertdate, updatedate, output) VALUES(%(hostname)s, %(insertdate)s, %(updatedate)s, %(output)s)"
 insert_deltatimestates = "INSERT INTO deltatimestates(insertdate, uuid, uuidtype, hostname, hostport, uuidstate) VALUES(%(insertdate)s, %(uuid)s, %(uuidtype)s, %(hostname)s, %(hostport)s, %(uuidstate)s)"
 insert_serviceaction = "INSERT INTO serviceaction(servicename, hostname, serviceaction, insertdate) VALUES(%(servicename)s, %(hostname)s, %(serviceaction)s, %(insertdate)s)"
@@ -191,8 +189,7 @@ get_hosts = "SELECT id, ip, hostname, insertdate, updatedate, hostinfo FROM host
 get_switch = "SELECT id, sitename, device, insertdate, updatedate, output FROM switch"
 get_activeDeltas = "SELECT id, insertdate, updatedate, output FROM activeDeltas"
 get_servicestates = "SELECT id, hostname, servicename, servicestate, runtime, version, updatedate, exc FROM servicestates"
-get_debugrequests = "SELECT id, hostname, state, requestdict, output, insertdate, updatedate FROM debugrequests"
-get_debugrequestsids = "SELECT id FROM debugrequests"
+get_debugrequests = "SELECT id, hostname, state, insertdate, updatedate FROM debugrequests"
 get_snmpmon = "SELECT id, hostname, insertdate, updatedate, output FROM snmpmon"
 get_deltatimestates = "SELECT id, insertdate, uuid, uuidtype, hostname, hostport, uuidstate FROM deltatimestates"
 get_serviceaction = "SELECT id, servicename, hostname, serviceaction, insertdate FROM serviceaction"
