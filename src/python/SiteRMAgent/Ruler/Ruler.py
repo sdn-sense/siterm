@@ -186,7 +186,8 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
                 self.activeEnsure(actKey, actCall)
             # QoS Can be modified and depends only on Active
             self.activeNow = self.activeNew
-            self.startqos()
+            if not self.config.getboolean("agent", "noqos"):
+                self.startqos()
         else:
             self.logger.info("Agent is not configured to apply rules")
         self.logger.info("Ended function start")
