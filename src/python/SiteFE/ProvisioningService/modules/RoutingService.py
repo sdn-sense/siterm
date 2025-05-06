@@ -57,7 +57,7 @@ class RoutingService():
         super().__init__()
 
     @staticmethod
-    def __generateGroupName(line):
+    def generateGroupName(line):
         """Generate group name for BGP"""
         try:
             groupName = line.split("table+")[1].split(":")[0]
@@ -75,8 +75,6 @@ class RoutingService():
             tmpD = tmpD.setdefault('sense_bgp', {})
         tmpD['asn'] = self.getConfigValue(host, 'private_asn')
         tmpD['belongsTo'] = self.connID
-        # Identify groupName (Only used by Juniper)
-        tmpD['groupName'] = self.__generateGroupName(self.connID)
         if not tmpD['asn']:
             del tmpD['asn']
         tmpD['vrf'] = self.getConfigValue(host, 'vrf')
