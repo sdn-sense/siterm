@@ -522,21 +522,21 @@ class RDFHelper():
             self._addNetworkAddress(rst, 'private_asn', str(kwargs['private_asn']))
         return rst
 
-    def _addL3VPN(self, **kwargs):
+    def _addL3BGPMP(self, **kwargs):
         """Add L3 VPN Definition to Model"""
         # Service Definition for L3
         uri = self._addRoutingService(**kwargs)
         if not uri:
             return ""
-        self._addServiceDefinition(**{'uri': uri, 'hostname': kwargs['hostname'], 'sdkey': 'l3vpn', 'sdtype': 'l3vpn'})
-        return f":{kwargs['hostname']}:sd:l3vpn"
+        self._addServiceDefinition(**{'uri': uri, 'hostname': kwargs['hostname'], 'sdkey': 'l3bgpmp', 'sdtype': 'l3bgpmp'})
+        return f":{kwargs['hostname']}:sd:l3bgpmp"
 
     def _addRoutingTable(self, **kwargs):
         """Add Routing Table to Model"""
         uri = self._addRoutingService(**kwargs)
         if not uri:
             return ""
-        self._addL3VPN(**kwargs)
+        self._addL3BGPMP(**kwargs)
         if kwargs.get('rt-table', None):
             routingtable = f"{uri}:rt-table+{kwargs.get('rt-table')}"
         elif 'rtableuri' in kwargs and kwargs['rtableuri']:

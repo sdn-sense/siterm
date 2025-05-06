@@ -270,7 +270,7 @@ class GitConfig:
                     "debugip": "http://services.ogf.org/nsi/2019/08/descriptions/config-debug-ip",
                     "globalvlan": "http://services.ogf.org/nsi/2019/08/descriptions/global-vlan-exclusion",
                     "multipoint": "http://services.ogf.org/nsi/2018/06/descriptions/l2-mp-es",
-                    "l3vpn": "http://services.ogf.org/nsi/2019/08/descriptions/l3-vpn"
+                    "l3bgpmp": "http://services.ogf.org/nsi/2019/08/descriptions/l3-bgp-mp"
                 },
                 "snmp": {
                     "mibs": [
