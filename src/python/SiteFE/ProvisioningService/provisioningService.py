@@ -188,6 +188,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             .get(swname, {})
             .get(key, {})
         )
+        # If key is sense_bgp, then we need to identify groupName, Used by Juniper only
+        if key == "sense_bgp":
+            curActiveConf[key]['groupName'] = self.generateGroupName(uuid)
         # Add ansible specific parameters
         curActiveConf["ansparams"] = self.switch.getAnsibleParams(swname)
         # Write curActiveConf to single apply dir
