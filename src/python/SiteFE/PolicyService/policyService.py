@@ -463,11 +463,11 @@ class PolicyService(RDFHelper, Timing, BWService):
                     if rettmp and rsttype["key"] == "providesRoutingTable":
                         # We need to know mapping back, which route belongs to which routing table
                         # There is no such mapping in json, so we manually add this from providesRoutingTable
-                        returnout["rst"].setdefault(str(rettmp[0]), {}).setdefault(
-                            switchName, {}
-                        ).setdefault(iptype, {}).setdefault(
-                            "belongsToRoutingTable", str(connectionID)
-                        )
+                        for rttmp in rettmp:
+                            returnout["rst"].setdefault(str(rttmp), {}).setdefault(
+                                switchName, {}).setdefault(
+                                    iptype, {}).setdefault(
+                                        "belongsToRoutingTable", str(connectionID))
 
     def _hasTags(self, gIn, bidPort, returnout, portScan=False, vswParams=False):
         """Query Graph and get Tags"""
