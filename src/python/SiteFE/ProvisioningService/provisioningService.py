@@ -190,7 +190,10 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         )
         # If key is sense_bgp, then we need to identify groupName, Used by Juniper only
         if key == "sense_bgp":
-            curActiveConf[key]['groupName'] = self.generateGroupName(uuid)
+            try:
+                curActiveConf[key]['groupName'] = self.generateGroupName(uuid)
+            except Exception:
+                return
         # Add ansible specific parameters
         curActiveConf["ansparams"] = self.switch.getAnsibleParams(swname)
         # Write curActiveConf to single apply dir
@@ -219,6 +222,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
     def compareIndv(self, switches):
         """Compare individual entries and report it's status"""
         changed = False
+        scannedUUIDs = []
         for acttype, actcalls in {"vsw": {"interface": self.compareVsw},
                                   "rst": {"sense_bgp": self.compareBGP},
                                   "singleport": {"interface": self.compareVsw}}.items():
@@ -226,7 +230,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             uuidDict = self.yamlconfuuidActive.get(acttype, {})
             if not self.yamlconfuuidActive:
                 uuidDict = self.yamlconfuuid.get(acttype, {})
-            scannedUUIDs = []
             total = len(uuidDict)
             for idx, (uuid, ddict) in enumerate(uuidDict.items(), start=1):
                 self.logger.info('-'*100)
@@ -255,6 +258,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             for idx, (uuid, ddict) in enumerate(self.yamlconfuuid.get(acttype, {}).items(), start=1):
                 if uuid in scannedUUIDs:
                     continue
+                scannedUUIDs.append(uuid)
                 self.logger.debug('-'*100)
                 self.logger.info(f'[NEW APPLY]: Working on {acttype} {idx} out of {total}. UUID: {uuid}')
                 for swname, swdict in ddict.items():

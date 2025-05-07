@@ -80,25 +80,38 @@
   <script src="assets/js/bootstrap.bundle.js"></script>
   <script src="assets/js/bootstrap.js"></script>
   <script>
-      $('#myTab a').click(function (e) {
-        e.preventDefault();
-        $(this).tab('show');
-      })
-      data = {};
+  $('#myTab a').click(function (e) {
+    e.preventDefault();
+    $(this).tab('show');
+  })
+  var data = {};
   var topologyData = {"nodes": [], "links": []}
-  $.ajax({url: '/MAIN/sitefe/json/topo/gettopology',
+
+  var configdata = null;
+  $.ajax({
+    url: '/MAIN/sitefe/json/frontend/configuration',
     dataType: 'json',
-    data: {},
-    async: false,
-    success: function(json){
-      for (j=0; j < json.length; j++){
-        var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
-        json[j]['hostinfo'] = myObject;
-      }
-      data = json;
+    async: false,  // blocks the browser until request completes
+    success: function(response) {
+      configdata = response;
     }
   });
-
+  if (configdata){
+    var sites = configdata['general']['sites'];
+    for (i=0; i < sites.length; i++){
+      sitename = sites[i];
+      $.ajax({url: sitename +'/sitefe/json/topo/gettopology',
+        dataType: 'json',
+        async: false,
+        success: function(json){
+          for (j=0; j < json.length; j++){
+            var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
+            json[j]['hostinfo'] = myObject;
+          }
+          data = json;
+        }
+      })
+  }};
   for (var x=Object.keys(data),i=0;i<x.length,key=x[i],value=data[key];i++){
       topologyData["nodes"].push({"id": value["_id"],
       "name": key,

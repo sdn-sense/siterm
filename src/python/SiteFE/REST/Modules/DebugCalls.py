@@ -282,7 +282,7 @@ class DebugCalls:
                }
         insOut = self.dbI.insert("debugrequests", [out])
         debugdir = os.path.join(self.config.get(kwargs['sitename'], "privatedir"), "DebugRequests")
-        requestfname = os.path.join(debugdir, inputDict["hostname"], insOut[2], "request.json")
+        requestfname = os.path.join(debugdir, inputDict["hostname"], str(insOut[2]), "request.json")
         self.dumpFileContentAsJson(requestfname, inputDict)
         self.responseHeaders(environ, **kwargs)
         return {"Status": insOut[0], "ID": insOut[2]}
@@ -290,11 +290,12 @@ class DebugCalls:
     def updatedebug(self, environ, **kwargs):
         """Update debug action information."""
         inputDict = read_input_data(environ)
-        if not self._getdebuginfo(environ, **kwargs):
+        dbentry = self._getdebuginfo(environ, **kwargs)
+        if not dbentry:
             raise BadRequestError(f"Debug request with ID {kwargs['debugvar']} not found.")
         # ==================================
         debugdir = os.path.join(self.config.get(kwargs['sitename'], "privatedir"), "DebugRequests")
-        requestfname = os.path.join(debugdir, inputDict["hostname"], kwargs["debugvar"], "output.json")
+        requestfname = os.path.join(debugdir, dbentry["hostname"], kwargs["debugvar"], "output.json")
         self.dumpFileContentAsJson(requestfname, inputDict.get("output", {}))
 
         # Update the state in database.
