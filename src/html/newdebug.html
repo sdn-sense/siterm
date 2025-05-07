@@ -66,7 +66,7 @@
             success: function(json){
                 for (j=0; j < json.length; j++){
                     if (strDTN === json[j]['hostname']) {
-                        var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
+                        var myObject = json[j]['hostinfo'];
                         for (const [key, value] of Object.entries(myObject['NetInfo']['interfaces'])) {
                             if (! $.isEmptyObject(value['vlans'])) {
                               for (const [key1, value1] of Object.entries(value['vlans'])) {

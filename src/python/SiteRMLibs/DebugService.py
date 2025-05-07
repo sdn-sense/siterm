@@ -66,6 +66,8 @@ class DebugService:
         fname = self.workDir + f"/background-process-{item['id']}.json"
         if not os.path.isfile(fname):
             self.diragent.dumpFileContentAsJson(fname, item)
+        else:
+            item = self.diragent.getFileContentAsJson(fname)
         try:
             out, exitCode, newstate = self.run(item)
         except (ValueError, KeyError, OSError) as ex:
