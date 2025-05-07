@@ -67,7 +67,12 @@ class DebugService:
         if not os.path.isfile(fname):
             self.diragent.dumpFileContentAsJson(fname, item)
         else:
-            item = self.diragent.getFileContentAsJson(fname)
+            itemfe = self.diragent.getFileContentAsJson(fname)
+            # Check state of the item and if it is not the same, then we need to update it.
+            if itemfe.get('state', 'new') != item['state']:
+                itemfe['state'] = item['state']
+                self.diragent.dumpFileContentAsJson(fname, itemfe)
+            item = itemfe
         try:
             out, exitCode, newstate = self.run(item)
         except (ValueError, KeyError, OSError) as ex:
@@ -176,7 +181,7 @@ class DebugService:
             self.logger.info(f"Force stoping background process (time finished): {inputDict['id']}")
             retOut = self._runCmd(inputDict, 'stop', True)
             retOut['processOut'].append(f"Force stoping background process: {inputDict['id']}")
-            if retOut['jsonout'].get('output', {}).get('exitCode', -1) == 0:
+            if retOut['jsonout'].get('exitCode', -1) == 0:
                 self._clean(inputDict)
                 return retOut, 2, "finished"
             # In case failed, we keep logs remaining. Not best practice, but we keep it for now.
