@@ -469,16 +469,31 @@ class PolicyService(RDFHelper, Timing, BWService):
                                     iptype, {}).setdefault(
                                         "belongsToRoutingTable", str(connectionID))
 
+    def _parseNetworkAttributes(self, gIn, bidPort, scanVals, attrkeys):
+        """Query and parse all Network Attributes"""
+        out = scanVals.setdefault("hasNetworkAttribute", {})
+        for attrkey in attrkeys:
+            attrout = out.setdefault(str(attrkey), {})
+            mtype = self.queryGraph(gIn, attrkey, search=URIRef(f"{self.prefixes['mrs']}type"), allowMultiple=True)
+            if mtype:
+                attrout["type"] = str("|".join(mtype))
+            mvalue = self.queryGraph(gIn, attrkey, search=URIRef(f"{self.prefixes['mrs']}value"), allowMultiple=True)
+            if mvalue:
+                attrout["value"] = str("|".join(mvalue))
+
     def _hasTags(self, gIn, bidPort, returnout, portScan=False, vswParams=False):
         """Query Graph and get Tags"""
         scanVals = returnout.setdefault("_params", {})
-        keys =  {"tag": "mrs"} if vswParams else {"tag": "mrs", "belongsTo": "nml", "encoding": "nml"}
+        keys =  {"tag": "mrs", "hasNetworkAttribute": "mrs"} if vswParams else {"tag": "mrs", "hasNetworkAttribute": "mrs",
+                                                                                "belongsTo": "nml", "encoding": "nml"}
         for tag, pref in keys.items():
             out = self.queryGraph(gIn, bidPort,
                                   search=URIRef(f"{self.prefixes[pref]}{tag}"),
                                   allowMultiple=True)
-            if out:
+            if out and tag != "hasNetworkAttribute":
                 scanVals[tag] = str("|".join(out))
+            elif out:
+                self._parseNetworkAttributes(gIn, bidPort, scanVals, out)
         # In case it is portScan, which is == self.singleport
         # We check if tag is found. If no tag found - raise NotFoundError
         if vswParams:

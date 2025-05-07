@@ -75,6 +75,23 @@ class DeltaInfo():
                             [convertTSToDatetime(timeline['end'])])
         return
 
+    def addhasNetworkAttribute(self, params, uri):
+        """Add hasNetworkAttribute to model"""
+        for attrkey, attrval in params.get('hasNetworkAttribute', {}).items():
+            if 'type' not in attrval or 'value' not in attrval:
+                continue
+            self.addToGraph(['site', uri],
+                            ['mrs', 'hasNetworkAttribute'],
+                            ['site', attrkey])
+            self.addToGraph(['site', attrkey],
+                            ['rdf', 'type'],
+                            ['mrs', 'NetworkAttribute'])
+            self.addToGraph(['site', attrkey],
+                            ['mrs', 'type'],
+                            [attrval['type']])
+            self.setToGraph(['site', attrkey],
+                            ['mrs', 'value'],
+                            [attrval['value']])
 
     def _addParams(self, params, uri, sublevel=False):
         """Add all params, like tag, belongsTo, labelSwapping, timeline"""
@@ -93,6 +110,9 @@ class DeltaInfo():
                 self.newGraph.add((self.genUriRef('site', uri),
                                     self.genUriRef(key[1], key[0]),
                                     val))
+        # Add all hasNetworkAttribute if exists
+        if 'hasNetworkAttribute' in params.get('_params', {}):
+            self.addhasNetworkAttribute(params['_params'], uri)
         if not sublevel:
             self.addTimeline(params, uri)
             self.addNetworkStatus(params, uri)
