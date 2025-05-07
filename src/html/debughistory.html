@@ -74,7 +74,6 @@
             data: {},
             async: false,
             success: function(json){
-              json = json[0];
               model = $('<div><\/div>');
               model.append('<div class="row"><b>Debug ID: <\/b>' + json['id'] + '<\/div>');
               model.append('<div class="row"><b>Debug Hostname: <\/b>' + json['hostname'] + '<\/div>');
@@ -83,7 +82,7 @@
               model.append('<div class="row"><b>Debug State: <\/b>' + json['state'] + '<\/div>');
               // Debug Request
               model.append('<div class="row"><b>Debug Request:<\/b><\/div>');
-              var myObject = (0, eval)('(' + json['requestdict'] + ')');
+              var myObject = json['requestdict'];
               tableAddKeyVal(myObject, ['Key', 'Value'], model);
               // Debug Output
               if (json['output']){
