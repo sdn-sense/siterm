@@ -528,8 +528,14 @@ class RDFHelper():
         uri = self._addRoutingService(**kwargs)
         if not uri:
             return ""
-        self._addServiceDefinition(**{'uri': uri, 'hostname': kwargs['hostname'], 'sdkey': 'l3bgpmp', 'sdtype': 'l3bgpmp'})
-        return f":{kwargs['hostname']}:sd:l3bgpmp"
+        try:
+            bgpmp = self.config.getboolean(kwargs['hostname'], 'bgpmp')
+        except (NoSectionError, NoOptionError):
+            bgpmp = False
+        if bgpmp:
+            self._addServiceDefinition(**{'uri': uri, 'hostname': kwargs['hostname'], 'sdkey': 'l3bgpmp', 'sdtype': 'l3bgpmp'})
+            return f":{kwargs['hostname']}:sd:l3bgpmp"
+        return ""
 
     def _addRoutingTable(self, **kwargs):
         """Add Routing Table to Model"""
