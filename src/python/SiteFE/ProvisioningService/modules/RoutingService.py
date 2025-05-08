@@ -25,13 +25,15 @@ from SiteRMLibs.ipaddr import normalizedip
 def dictCompare(inDict, oldDict):
     """Compare dict and set any remaining items
        from current ansible yaml as absent in new one if
-       it's status is present"""
+       it's status is present.
+       Return True if there is a difference, False if not"""
     # If equal - return
+    eqval = False
     if inDict == oldDict:
-        return
+        return eqval
     for key, val in oldDict.items():
         if isinstance(val, dict):
-            dictCompare(inDict.setdefault(key, {}), val)
+            eqval = dictCompare(inDict.setdefault(key, {}), val)
             if not inDict[key]:
                 # if it is empty after back from loop, delete
                 del inDict[key]
@@ -43,10 +45,11 @@ def dictCompare(inDict, oldDict):
         if val == 'present' and key not in inDict.keys():
             # Means current state is present, but model does not know anything
             inDict[key] = 'absent'
+            eqval = True
         elif val not in ['present', 'absent']:
             # Ensure we pre-keep all other keys
             inDict[key] = val
-    return
+    return eqval
 
 class RoutingService():
     """ Routing Service Class. Adds all activeDelta params,
@@ -180,9 +183,10 @@ class RoutingService():
                 continue
             if key in ['ipv6_network', 'ipv4_network', 'prefix_list', 'route_map', 'neighbor']:
                 yamlOut = tmpD.setdefault(key, {})
-                dictCompare(yamlOut, val)
-                self.logger.debug(f'There is {key} change for {uuid}. Will return True')
-                different = True
+                equal = dictCompare(yamlOut, val)
+                if equal:
+                    self.logger.debug(f'There is {key} change for {uuid}. Will return True')
+                    different = True
             else:
                 tmpD[key] = val
         # Compare empty dict with prepared new conf:
