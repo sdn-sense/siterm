@@ -17,7 +17,9 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2021 California Institute of Technology
 Date                    : 2021/03/12
 """
-
+import os
+import sys
+import argparse
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getDataFromSiteFE, evaldict
 from SiteRMLibs.MainUtilities import getFullUrl
@@ -67,18 +69,42 @@ class Debugger(DebugService):
                 if not self.backgroundProcessItemExists(item):
                     self.logger.info(f"Background process item does not exist. ID: {item['id']}")
                     try:
-                        item = self.getData(f"/sitefe/json/frontend/getdebug/{item['id']}")
+                        ditem = self.getData(f"/sitefe/json/frontend/getdebug/{item['id']}")
+                        if ditem:
+                            self.checkBackgroundProcess(ditem[0])
                     except FailedGetDataFromFE as ex:
                         self.logger.error(f"Failed to get data from FE: {ex}")
                         continue
-                self.checkBackgroundProcess(item)
 
 
-def execute(config=None):
+def execute(config=None, sitename=None):
     """Execute main script for Debugger execution."""
-    debugger = Debugger(config, 'T2_US_Caltech_Test')
+    debugger = Debugger(config, sitename)
     debugger.startwork()
 
+
+def get_parser():
+    """Returns the argparse parser."""
+    # pylint: disable=line-too-long
+    oparser = argparse.ArgumentParser(
+        description="This daemon is used for delta reduction, addition parsing",
+        prog=os.path.basename(sys.argv[0]),
+        add_help=True,
+    )
+    oparser.add_argument(
+        "--sitename",
+        dest="sitename",
+        default="",
+        required=True,
+        help="Sitename. Must be present in configuration and database.")
+
+    return oparser
+
 if __name__ == '__main__':
+    argparser = get_parser()
+    print("WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:", len(sys.argv), "arguments.")
+    if len(sys.argv) == 1:
+        argparser.print_help()
+    inargs = argparser.parse_args(sys.argv[1:])
     getLoggingObject(logType='StreamLogger', service='Debugger')
-    execute()
+    execute(sitename=inargs.sitename)
