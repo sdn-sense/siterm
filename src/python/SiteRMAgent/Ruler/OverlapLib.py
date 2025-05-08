@@ -92,6 +92,13 @@ class OverlapLib:
                 return ipPresent.split("/")[0], self.allIPs[iptype][ipPresent]
         return None, None
 
+    @staticmethod
+    def mergeBWDicts(d1, d2):
+        int_keys = ['availableCapacity', 'granularity', 'maximumCapacity', 'priority', 'reservableCapacity']
+        for key in int_keys:
+            d1[key] = d1.get(key, 0) + d2.get(key, 0)
+        return d1
+
     def getAllOverlaps(self, activeDeltas):
         """Get all overlaps"""
         self.getAllIPs()
@@ -141,5 +148,8 @@ class OverlapLib:
                                     .get("value", None)
                                 )
                                 intServ[f"dst_{iptype}"] = iprange
-                                intServ["rules"] = routes["hasService"]
+                                if intServ["rules"]:
+                                    intServ["rules"] = self.mergeBWDicts(intServ["rules"], routes["hasService"])
+                                else:
+                                    intServ["rules"] = routes["hasService"]
         return overlapServices
