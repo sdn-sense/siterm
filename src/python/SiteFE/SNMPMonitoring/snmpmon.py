@@ -694,6 +694,8 @@ class SNMPMonitoring():
         self.logger.info(f'[{self.sitename}]: SNMP Monitoring finished for {len(self.switches)} switches')
         self.getMemStats()
         self.logger.info(f'[{self.sitename}]: Memory statistics written to DB')
+        self.getDiskStats()
+        self.logger.info(f'[{self.sitename}]: Disk statistics written to DB')
         if self.err:
             raise Exception(f'SNMP Monitoring Errors: {self.err}')
         # We could do delete and re-init everytime, or at refresh.
@@ -701,6 +703,7 @@ class SNMPMonitoring():
         self.prom.metrics()
         # Get Topology json
         self.topo.gettopology()
+        self.logger.info(f'[{self.sitename}]: Topology map written to DB')
 
 
 def execute(config=None, args=None):
