@@ -71,7 +71,7 @@ class Debugger(DebugService):
                     try:
                         ditem = self.getData(f"/sitefe/json/frontend/getdebug/{item['id']}")
                         if ditem:
-                            self.checkBackgroundProcess(ditem[0])
+                            self.checkBackgroundProcess(ditem)
                     except FailedGetDataFromFE as ex:
                         self.logger.error(f"Failed to get data from FE: {ex}")
                         continue
