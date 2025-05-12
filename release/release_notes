@@ -1,99 +1,34 @@
-# SiteRM 1.5.3 Release
+# SiteRM 1.5.32 BugFix Release
 
-## Networking and Routing Enhancements
+## SiteRM Codebase Fixes
 
-- **BGP Multipath Support (ECMP Equivalent)**  
-  Added support for BGP Multipath to allow the same BGP peering over multiple paths, similar to Equal-Cost Multi-Path (ECMP).
+- **Record Disk Usage in Database**  
+  - The previous release did not record disk usage in the database, which prevented it from being displayed in Grafana/Prometheus. This has been fixed.
 
-- **Juniper BGP Control Support**  
-  Initial Juniper BGP control integration added.  
-  > _Note: VRF support is not yet available and will be included in the next release._
+- **Fix Debugger to Use New API Format**  
+  - The Debugger service (on agents) used an outdated API to retrieve debug information (e.g., ping) and was unable to execute actions. This update enables the debugger service to function correctly on agents.
 
-- **Cisco Nexus 9/10 Fixes**  
-  Resolved an issue with neighbor peerings not being removed during path deletion.
+- **Fix Misleading Validation Errors**  
+  - Dell OS10 showed misleading validation errors when comparing MAC addresses with LLDP info. This has been corrected to compare the appropriate keys for Dell OS10.
 
-## Deployment and Environment Separation
+## Kubernetes Helm Fixes
 
-- **Separated Development and Production Environments**  
-  New developments are deployed only on select Development Sites, reducing risk to Production environments.
-
-## Containerization and Kubernetes Improvements
-
-- **Docker Startup Script Enhancements**  
-  Startup parameters are now recorded and reused on container restarts. This resolves issues with incorrect startup or changes to networking (e.g., switching to host networking).
-
-- **Init Containers for Directory Creation**  
-  Kubernetes deployments now use init containers to pre-create required directories.
-
-- **Disk Usage Monitoring**  
-  Frontend now records and exposes disk usage metrics to Prometheus. Alerts are triggered when usage exceeds 80%.
-
-- **Database Optimization on Container Restart**  
-  On each container restart, all database tables are optimized to improve performance.
-
-- **Persistent Logging Volume**  
-  Option to use a persistent volume for logs is now supported (except when using Kubernetes DaemonSet, due to dynamic PVC limitations).
-
-## Stability and Error Detection
-
-- **LLDP Consistency Checks**  
-  Errors are raised if the switch LLDP information does not match the MAC address of the interface.  
-  > _This prevents issues when switch ports are changed without updating SiteRM configuration._
-
-- **Correct Agent Warnings**
-  In case Agent unable to communicate with Frontend, error message will show this in the logs (without proceeding further).
-
-## Memory and Performance Improvements
-
-- **Resolved Memory Leaks. Memory usage remains stable (< 2GB for 2 switches and 10 nodes Site)**
-  - Migrated from `MariaDB` Python connector to `MySQL` connector.
-  - Prometheus output generation moved to a background process. Memory usage remains stable
-  - Removed use of `ast.literal_eval` to prevent excessive memory usage.
-
-- **QoS Handling Update**  
-  BestEffort QoS will **not** limit traffic for Layer 3 (L3) requests. Instead, it sets a committed rate of 1 Gbps or `max_interface` capacity.
-  In case of Multipath-BGP, QoS requests are summed on the Agent.
-
-## Backend and Application Architecture
-
-- **Longtext Storage Optimization**  
-  Longtext entries are now stored on disk rather than within the database.
-
-- **Migrated from WSGI to ASGI**  
-  Application backend migrated from synchronous WSGI to asynchronous ASGI (using `gunicorn` and `uvicorn`) for improved concurrency.
-
-## Debugging and Observability
-
-- **Memory Debugging Controls**
-  - All processes now source `/etc/environment`.
-  - Enabling `SITERM_MEMORY_DEBUG=1` triggers memory snapshots and displays the top 10 memory-holding objects using `tracemalloc`.
-
-- **Liveness and Readiness Probes**
-  - Kubernetes deployments can now fully control parameters for liveness and readiness probes.
-
-## New Feature Flags
-
-- `bgpmp`: Instructs the SENSE Orchestrator that BGP Multipath is supported.  
-  > _Default: `False`_
-
-- `noqos`: Tells agents not to apply any QoS settings on host systems.
-  > _Default: `False`_
-
-Please refer to the official documentation for upgrade or installation instructions:
-
-📖 **Documentation:** [SiteRM Documentation](https://sdn-sense.github.io)
-
-All sites managed by the **SENSE Team** will be updated automatically.
+- **Allow CPU Requests/Limits Below 1 Core (e.g., 600m)**  
+- **Support Custom Volume Name for Storage Mounting**  
+- **Update Documentation in `values.yaml` for All Certificate Options**  
 
 ## 🔧 Supported Architectures
 - **x86_64** ✅ (Stable)
 
 ## 📥 Installation Details
 - 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
-- **Recommended Version:** Always use `latest` or `latest-ppc64le`.
-- If enforcing a specific version is needed, refer to the following details:
+- **Recommended Version:** Always use `latest`.
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 
 ### Docker Versions
-#### **x86_64:**
-- **Agent:** `sdnsense/site-agent-sense:latest-20250508` *(or use `latest`)*
-- **Frontend:** `sdnsense/site-rm-sense:latest-20250508` *(or use `latest`)*
+- **Agent:** `sdnsense/site-agent-sense:latest-20250512` *(or use `latest`)*
+- **Frontend:** `sdnsense/site-rm-sense:latest-20250512` *(or use `latest`)*
+
+### Helm versions
+- **Agent:** Chart version siterm-agent/siterm-agent 1.5.32
+- **Frontend:** Chart version siterm-fe/siterm-fe 1.5.32

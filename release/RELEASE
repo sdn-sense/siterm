@@ -1,3 +1,39 @@
+# SiteRM 1.5.32 BugFix Release
+
+## SiteRM Codebase Fixes
+
+- **Record Disk Usage in Database**
+  - The previous release did not record disk usage in the database, which prevented it from being displayed in Grafana/Prometheus. This has been fixed.
+
+- **Fix Debugger to Use New API Format**
+  - The Debugger service (on agents) used an outdated API to retrieve debug information (e.g., ping) and was unable to execute actions. This update enables the debugger service to function correctly on agents.
+
+- **Fix Misleading Validation Errors**
+  - Dell OS10 showed misleading validation errors when comparing MAC addresses with LLDP info. This has been corrected to compare the appropriate keys for Dell OS10.
+
+## Kubernetes Helm Fixes
+
+- **Allow CPU Requests/Limits Below 1 Core (e.g., 600m)**
+- **Support Custom Volume Name for Storage Mounting**
+- **Update Documentation in `values.yaml` for All Certificate Options**
+
+## 🔧 Supported Architectures
+- **x86_64** ✅ (Stable)
+
+## 📥 Installation Details
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest`.
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
+
+### Docker Versions
+- **Agent:** `sdnsense/site-agent-sense:latest-20250512` *(or use `latest`)*
+- **Frontend:** `sdnsense/site-rm-sense:latest-20250512` *(or use `latest`)*
+
+### Helm versions
+- **Agent:** Chart version siterm-agent/siterm-agent 1.5.32
+- **Frontend:** Chart version siterm-fe/siterm-fe 1.5.32
+
+
 # SiteRM 1.5.3 Release
 
 ## Networking and Routing Enhancements
