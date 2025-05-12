@@ -107,6 +107,8 @@ class Validator():
         """Validate Host and Switch information"""
         if hostinfo.get('mac-address') == switchlldp.get('remote_port_id'):
             return True
+        elif hostinfo.get('mac-address') == switchlldp.get('remote_chassis_id'):
+            return True
         self.addWarning(f"Host {hostinfo['hostname']} does not match lldp information. Host Info: {hostinfo}, Switch LLDP Info: {switchlldp}")
         self._setwarningstart()
         return False
