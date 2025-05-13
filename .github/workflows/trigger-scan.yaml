@@ -33,3 +33,6 @@ jobs:
     uses: sdn-sense/siterm/.github/workflows/trusted-scan.yaml@master
     with:
       changed_files: ${{ needs.get_diff.outputs.files_json }}
+    secrets:
+      AIAPIKEY: ${{ secrets.AIAPIKEY }}
+      AIAPIURL: ${{ secrets.AIAPIURL }}

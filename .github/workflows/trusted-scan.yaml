@@ -6,6 +6,11 @@ on:
       changed_files:
         required: true
         type: string
+    secrets:
+      AIAPIKEY:
+        required: true
+      AIAPIURL:
+        required: true
 
 jobs:
   scan:
