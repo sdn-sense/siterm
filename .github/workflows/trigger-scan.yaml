@@ -23,11 +23,15 @@ jobs:
         git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
         git checkout FETCH_HEAD
         git diff --name-only origin/${{ github.event.pull_request.base.ref }} > file_list.txt
-        cat file_list.txt
-        echo "CHANGED=$(jq -Rs 'split("\n") | map(select(length > 0))' < file_list.txt)" >> $GITHUB_ENV
+
+        FILES_JSON=$(jq -Rs 'split("\n") | map(select(length > 0))' < file_list.txt)
+
+        echo "files_json<<EOF" >> $GITHUB_OUTPUT
+        echo "$FILES_JSON" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Call trusted scan
       uses: ./.github/workflows/trusted-scan.yml
       with:
-        changed_files: ${{ env.CHANGED }}
+        changed_files: ${{ steps.get_diff.outputs.files_json }}
 
