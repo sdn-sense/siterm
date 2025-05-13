@@ -31,7 +31,7 @@ jobs:
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Call trusted scan
-      uses: ${{ github.repository }}/.github/workflows/trusted-scan.yaml@master
+      uses: sdn-sense/siterm/.github/workflows/trusted-scan.yaml@master
       with:
         changed_files: ${{ steps.get_diff.outputs.files_json }}
 
