@@ -17,6 +17,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout PR source
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+
     - name: Debug changed_files input
       run: |
         echo "Raw changed_files input:"
@@ -27,6 +32,14 @@ jobs:
         echo "${{ inputs.changed_files }}" | tr ',' '\n' > file_list.txt
         echo "Files to be scanned:"
         cat file_list.txt
+
+    - name: Ensure .leakignore exists
+      run: |
+        if [ ! -f .leakignore ]; then
+          echo ".leakignore not found in PR; falling back to base branch"
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          git show origin/${{ github.event.pull_request.base.ref }}:.leakignore > .leakignore || true
+        fi
 
     - name: Load .leakignore patterns
       run: |
