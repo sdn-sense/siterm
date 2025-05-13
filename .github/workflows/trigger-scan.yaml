@@ -5,11 +5,6 @@ on:
     types: [opened, synchronize]
 
 jobs:
-  prepare-and-call:
-    uses: sdn-sense/siterm/.github/workflows/trusted-scan.yaml@master
-    with:
-      changed_files: ${{ jobs.get_diff.outputs.files_json }}
-
   get_diff:
     runs-on: ubuntu-latest
     outputs:
@@ -32,3 +27,9 @@ jobs:
         echo "files_json<<EOF" >> $GITHUB_OUTPUT
         echo "$FILES_JSON" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
+
+  prepare-and-call:
+    needs: get_diff
+    uses: sdn-sense/siterm/.github/workflows/trusted-scan.yaml@master
+    with:
+      changed_files: ${{ needs.get_diff.outputs.files_json }}
