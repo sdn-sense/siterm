@@ -31,7 +31,8 @@ jobs:
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Call trusted scan
-      uses: ./.github/workflows/trusted-scan.yml
+      uses: ${{ github.repository }}/.github/workflows/trusted-scan.yaml@main
       with:
         changed_files: ${{ steps.get_diff.outputs.files_json }}
+
 
