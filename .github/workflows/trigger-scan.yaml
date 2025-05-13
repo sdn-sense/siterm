@@ -6,11 +6,14 @@ on:
 
 jobs:
   prepare-and-call:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
+    uses: sdn-sense/siterm/.github/workflows/trusted-scan.yaml@master
+    with:
+      changed_files: ${{ jobs.get_diff.outputs.files_json }}
 
+  get_diff:
+    runs-on: ubuntu-latest
+    outputs:
+      files_json: ${{ steps.get.outputs.files_json }}
     steps:
     - name: Checkout base repo
       uses: actions/checkout@v3
@@ -18,7 +21,7 @@ jobs:
         ref: ${{ github.event.pull_request.base.ref }}
 
     - name: Get changed files in PR
-      id: get_diff
+      id: get
       run: |
         git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
         git checkout FETCH_HEAD
@@ -29,10 +32,3 @@ jobs:
         echo "files_json<<EOF" >> $GITHUB_OUTPUT
         echo "$FILES_JSON" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
-
-    - name: Call trusted scan
-      uses: sdn-sense/siterm/.github/workflows/trusted-scan.yaml@master
-      with:
-        changed_files: ${{ steps.get_diff.outputs.files_json }}
-
-
