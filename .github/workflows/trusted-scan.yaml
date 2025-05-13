@@ -17,12 +17,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Pretty print changed_files
+    - name: Debug changed_files input
       run: |
-        echo '${{ inputs.changed_files }}' | jq .
+        echo "Raw changed_files input:"
+        echo "${{ inputs.changed_files }}"
+
     - name: Write file list
       run: |
-        echo '${{ inputs.changed_files }}' | jq -r '.[]' > file_list.txt
+        echo "${{ inputs.changed_files }}" | tr ',' '\n' > file_list.txt
+        echo "Files to be scanned:"
         cat file_list.txt
 
     - name: Load .leakignore patterns
@@ -32,6 +35,7 @@ jobs:
         else
           IGNORE="\"\""
         fi
+        echo "Here is ignored passwords: $IGNORE"
         echo "IGNORE=$IGNORE" >> $GITHUB_ENV
 
     - name: Analyze each file
@@ -49,7 +53,10 @@ jobs:
         RESULT=0
 
         while IFS= read -r FILE; do
-          if [ ! -f "$FILE" ]; then continue; fi
+          if [ ! -f "$FILE" ]; then
+            echo "Skipping missing file: $FILE"
+            continue
+          fi
           echo "Scanning: $FILE"
 
           CONTENT=$(jq -Rs . < "$FILE")
@@ -92,7 +99,7 @@ jobs:
 
           if [ "$SCORE" -ge 50 ]; then
             echo "Secret risk in file: $FILE (score: $SCORE)"
-            echo "Reason:\n$RESPONSE"
+            echo -e "Reason:\n$RESPONSE"
             RESULT=1
           fi
         done < file_list.txt
