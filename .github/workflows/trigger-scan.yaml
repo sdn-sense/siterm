@@ -24,9 +24,11 @@ jobs:
 
         FILES_JSON=$(jq -Rs 'split("\n") | map(select(length > 0))' < file_list.txt)
 
-        echo "files_json<<EOF" >> $GITHUB_OUTPUT
-        echo "$FILES_JSON" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+        {
+          echo "files_json<<EOF"
+          echo "$FILES_JSON"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
 
   prepare-and-call:
     needs: get_diff

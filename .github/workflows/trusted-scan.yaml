@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Debug: show input changed_files
+      run: echo "${{ inputs.changed_files }}"
     - name: Write file list
       run: |
         echo '${{ inputs.changed_files }}' | jq -r '.[]' > file_list.txt
