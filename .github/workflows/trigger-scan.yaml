@@ -8,7 +8,7 @@ jobs:
   get_diff:
     runs-on: ubuntu-latest
     outputs:
-      files_json: ${{ steps.get.outputs.files_json }}
+      files_csv: ${{ steps.get.outputs.files_csv }}
     steps:
     - name: Checkout base repo
       uses: actions/checkout@v3
@@ -34,7 +34,7 @@ jobs:
     needs: get_diff
     uses: sdn-sense/siterm/.github/workflows/trusted-scan.yaml@master
     with:
-      changed_files: ${{ needs.get_diff.outputs.files_json }}
+      changed_files: ${{ needs.get_diff.outputs.files_csv }}
     secrets:
       AIAPIKEY: ${{ secrets.AIAPIKEY }}
       AIAPIURL: ${{ secrets.AIAPIURL }}
