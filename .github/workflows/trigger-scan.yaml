@@ -1,0 +1,33 @@
+name: Trigger Secret Scan from Fork
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
+jobs:
+  prepare-and-call:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+    - name: Checkout base repo
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.base.ref }}
+
+    - name: Get changed files in PR
+      id: get_diff
+      run: |
+        git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
+        git checkout FETCH_HEAD
+        git diff --name-only origin/${{ github.event.pull_request.base.ref }} > file_list.txt
+        cat file_list.txt
+        echo "CHANGED=$(jq -Rs 'split("\n") | map(select(length > 0))' < file_list.txt)" >> $GITHUB_ENV
+
+    - name: Call trusted scan
+      uses: ./.github/workflows/trusted-scan.yml
+      with:
+        changed_files: ${{ env.CHANGED }}
+
