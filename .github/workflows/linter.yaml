@@ -5,6 +5,9 @@ on:  # yamllint disable-line rule:truthy
   push: null
   pull_request: null
 
+permissions:
+  contents: read
+
 jobs:
   linter:
     name: Lint
@@ -25,7 +28,7 @@ jobs:
       - name: Super-linter
         uses: super-linter/super-linter/slim@latest  # x-release-please-version
         env:
-          DEFAULT_BRANCH: master
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           VALIDATE_ALL_CODEBASE: false
           VALIDATE_PYTHON_BLACK: false
           VALIDATE_PYTHON_FLAKE8: false
