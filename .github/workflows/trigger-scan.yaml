@@ -32,7 +32,7 @@ jobs:
 
   prepare-and-call:
     needs: get_diff
-    uses: sdn-sense/siterm/.github/workflows/trusted-scan.yaml@master
+    uses: esnet/sense-rtmon/.github/workflows/trusted-scan.yaml@master
     with:
       changed_files: ${{ needs.get_diff.outputs.files_csv }}
     secrets:
