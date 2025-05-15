@@ -1,7 +1,6 @@
-# checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
 name: Docker Image Build For SiteRM FE
 
-on:
+on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
   workflow_dispatch:
     inputs:
       buildtag:
