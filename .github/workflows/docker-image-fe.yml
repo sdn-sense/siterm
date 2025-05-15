@@ -1,3 +1,4 @@
+# checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
 name: Docker Image Build For SiteRM FE
 
 on:
@@ -11,6 +12,9 @@ on:
         description: "Branch to use of siterm/ansible-collections code?"
         default: "master"
         type: "string"
+
+permissions:
+  contents: read
 
 jobs:
   build:
