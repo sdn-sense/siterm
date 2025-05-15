@@ -98,3 +98,4 @@ def collect_files(src_dir, target_dir):
             install_path = os.path.join(target_dir, os.path.relpath(full_path, src_dir))
             paths.append((os.path.dirname(install_path), [full_path]))
     return paths
+
