@@ -29,17 +29,31 @@ from SiteFE.REST.Modules.HostCalls import HostCalls
 from SiteFE.REST.Modules.ModelCalls import ModelCalls
 from SiteFE.REST.Modules.PrometheusCalls import PrometheusCalls
 from SiteFE.REST.Modules.TopoCalls import TopoCalls
-from SiteRMLibs.CustomExceptions import (BadRequestError, DeltaNotFound,
-                                         HTTPResponses, MethodNotSupported,
-                                         ModelNotFound, NotAcceptedHeader,
-                                         NotFoundError, NotSupportedArgument,
-                                         OverlapException, WrongDeltaStatusTransition,
-                                         TooManyArgumentalValues)
-from SiteRMLibs.MainUtilities import (contentDB, getCustomOutMsg, getDBConn,
-                                      getHeaders, getUrlParams,
-                                      getVal, jsondumps)
+from SiteRMLibs.CustomExceptions import (
+    BadRequestError,
+    DeltaNotFound,
+    HTTPResponses,
+    MethodNotSupported,
+    ModelNotFound,
+    NotAcceptedHeader,
+    NotFoundError,
+    NotSupportedArgument,
+    OverlapException,
+    WrongDeltaStatusTransition,
+    TooManyArgumentalValues,
+    RequestWithoutCert,
+)
+from SiteRMLibs.MainUtilities import (
+    contentDB,
+    getCustomOutMsg,
+    getDBConn,
+    getHeaders,
+    getUrlParams,
+    getVal,
+    jsondumps,
+)
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.x509 import CertHandler
+from SiteRMLibs.x509 import CertHandler, OIDCHandler
 
 
 def isiterable(inVal):
@@ -55,8 +69,9 @@ def returnDump(out):
         out = [out.encode("UTF-8")]
     return out
 
+
 def cleanURL(path):
-    """ Normalize PATH_INFO safely """
+    """Normalize PATH_INFO safely"""
     if not path:
         return ""
     path = path.strip()
@@ -68,6 +83,7 @@ def cleanURL(path):
 
 class Frontend(
     CertHandler,
+    OIDCHandler,
     FrontendCalls,
     PrometheusCalls,
     HostCalls,
@@ -88,6 +104,7 @@ class Frontend(
         self.urlParams = {}
         self.routeMap = Mapper()
         CertHandler.__init__(self)
+        OIDCHandler.__init__(self)
         FrontendCalls.__init__(self)
         PrometheusCalls.__init__(self)
         HostCalls.__init__(self)
@@ -120,7 +137,7 @@ class Frontend(
         returnDict = {}
         exception = ""
         try:
-            routeMatch = self.routeMap.match(environ.get('APP_APIURL'))
+            routeMatch = self.routeMap.match(environ.get("APP_APIURL"))
             if routeMatch and hasattr(self, routeMatch.get("action", "")):
                 self.checkIfMethodAllowed(environ, routeMatch["action"])
                 kwargs.update(routeMatch)
@@ -139,9 +156,7 @@ class Frontend(
                 self.httpresp.ret_501(
                     "application/json", kwargs["start_response"], None
                 )
-                exception = (
-                    f'No such API. {environ.get("APP_APIURL")} call.'
-                )
+                exception = f'No such API. {environ.get("APP_APIURL")} call.'
                 returnDict = getCustomOutMsg(errMsg=str(exception), errCode=501)
         except TimeoutError as ex:
             exception = f"Received TimeoutError: {ex}"
@@ -191,6 +206,9 @@ class Frontend(
         try:
             environ["CERTINFO"] = self.getCertInfo(environ)
             environ["USERINFO"] = self.validateCertificate(environ)
+        except RequestWithoutCert:
+            # If this happens, we look if this login has OIDC credentials
+            environ["USERINFO"] = self.validateOIDCInfo(environ)
         except Exception as ex:
             self.httpresp.ret_401("application/json", start_response, None)
             return [
@@ -198,10 +216,12 @@ class Frontend(
             ]
         # Sitename must be configured on FE
         urlparts = cleanURL(environ.get("PATH_INFO", ""))
-        environ['APP_SITENAME'] = urlparts[0]
-        environ['APP_APIURL'] = "/" + "/".join(urlparts[2:])
-        environ['APP_CALLBACK'] = "https://" + environ.get('HTTP_HOST') + "/" + "/".join(urlparts)
-        if environ['APP_SITENAME'] not in self.sites:
+        environ["APP_SITENAME"] = urlparts[0]
+        environ["APP_APIURL"] = "/" + "/".join(urlparts[2:])
+        environ["APP_CALLBACK"] = (
+            "https://" + environ.get("HTTP_HOST") + "/" + "/".join(urlparts)
+        )
+        if environ["APP_SITENAME"] not in self.sites:
             self.httpresp.ret_404("application/json", start_response, None)
             return [
                 bytes(
@@ -214,7 +234,9 @@ class Frontend(
                     "UTF-8",
                 )
             ]
-        self.dbI = getVal(self.dbobj, **{"sitename": environ['APP_SITENAME']})
+        self.dbI = getVal(self.dbobj, **{"sitename": environ["APP_SITENAME"]})
         return self.internallCall(
-            environ=environ, start_response=start_response, sitename=environ['APP_SITENAME']
+            environ=environ,
+            start_response=start_response,
+            sitename=environ["APP_SITENAME"],
         )
