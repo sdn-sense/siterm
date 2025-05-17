@@ -35,11 +35,14 @@ class ExceptionTemplate(Exception):
 class NotFoundError(ExceptionTemplate):
     """Not Found error."""
 
+
 class BackgroundException(ExceptionTemplate):
     """Background Exception."""
 
+
 class ServiceWarning(ExceptionTemplate):
     """Service Warning - Not Fatal."""
+
 
 class ConfigException(ExceptionTemplate):
     """Config Exception."""
@@ -159,6 +162,12 @@ class ConflictEntries(ExceptionTemplate):
 class SwitchException(ExceptionTemplate):
     """Switch communication exception"""
 
+
+class RequestWithoutCert(ExceptionTemplate):
+    """Request Without Certificate Error."""
+
+class IssuesWithAuth(ExceptionTemplate):
+    """IssuesWithAuth Error."""
 
 class HTTPResponses():
     """Frontend HTTP Responses."""

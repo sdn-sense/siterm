@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Certificate loading and validation tool.
+"""User/Application authentication using Cert or OIDC.
 
 Copyright 2017 California Institute of Technology
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,63 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2019/10/01
 """
+import os
 import re
+import json
 from datetime import datetime, timezone
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import loadEnvFile
+from SiteRMLibs.CustomExceptions import RequestWithoutCert, IssuesWithAuth
+
+
+class OIDCHandler:
+    """OIDC handler to validate claims from Apache environment."""
+
+    def __init__(self):
+        """Init OIDC Handler"""
+        loadEnvFile()
+        self.required_issuer = os.environ.get("OIDC_REQUIRED_ISSUER", "https://login.sdn-sense.net/")
+        self.permission_claim_prefix = os.environ.get("OIDC_PERMISSIONS_CLAIM", "OIDC_CLAIM_https---sdn-sense.net-permissions")
+
+    @staticmethod
+    def _getEnv(environ, key):
+        value = environ.get(key)
+        if not value:
+            print(f"Missing required OIDC claim: {key}")
+            raise IssuesWithAuth("Issues with permissions. Check backend logs.")
+        return value
+
+    def parsePermissions(self, environ):
+        """Extract and parse the custom permissions claim."""
+        for key, value in environ.items():
+            if key.startswith(self.permission_claim_prefix):
+                try:
+                    return json.loads(value)
+                except json.JSONDecodeError as ex:
+                    print(f"Invalid JSON in permissions claim: {value}")
+                    raise IssuesWithAuth("Issues with permissions. Check backend logs.") from ex
+        print(f"Permissions claim with prefix '{self.permission_claim_prefix}' not found")
+        raise IssuesWithAuth("Issues with permissions. Check backend logs.")
+
+    def validateOIDCInfo(self, environ):
+        """Validate OIDC claims and extract user identity & permissions."""
+        email = self._getEnv(environ, "OIDC_CLAIM_email")
+        issuer = self._getEnv(environ, "OIDC_CLAIM_iss")
+        emailVerified = self._getEnv(environ, "OIDC_CLAIM_email_verified")
+
+        if issuer != self.required_issuer:
+            print(f"Unexpected issuer: {issuer} (expected {self.required_issuer})")
+            raise IssuesWithAuth("Issues with permissions. Check backend logs.")
+
+        if emailVerified not in ("1", "true", "True", True):
+            print(f"Email not verified. Debug info {email} {issuer} {emailVerified}")
+            raise IssuesWithAuth("Issues with permissions. Check backend logs.")
+
+        permissions = self.parsePermissions(environ)
+
+        return {"email": email, "issuer": issuer,
+                "permissions": permissions, "claims": {
+                    k: v for k, v in environ.items() if k.startswith("OIDC_CLAIM_")}}
 
 
 class CertHandler():
@@ -55,8 +109,7 @@ class CertHandler():
         out = {}
         for key in ['HTTP_SSL_CLIENT_V_REMAIN', 'HTTP_SSL_CLIENT_S_DN', 'HTTP_SSL_CLIENT_I_DN', 'HTTP_SSL_CLIENT_V_START', 'HTTP_SSL_CLIENT_V_END']:
             if key not in environ:
-                print('Request without certificate. Unauthorized')
-                raise Exception('Unauthorized access. Request without certificate.')
+                raise RequestWithoutCert('Unauthorized access. Request without certificate.')
         out['subject'] = environ['HTTP_SSL_CLIENT_S_DN']
         out['notAfter'] = int(datetime.strptime(environ['HTTP_SSL_CLIENT_V_END'], "%b %d %H:%M:%S %Y %Z").timestamp())
         out['notBefore'] = int(datetime.strptime(environ['HTTP_SSL_CLIENT_V_START'], "%b %d %H:%M:%S %Y %Z").timestamp())
@@ -72,25 +125,25 @@ class CertHandler():
             if re.match(wildcarddn, environ['CERTINFO']['fullDN']):
                 return userinfo
         print(f"User DN {environ['CERTINFO']['fullDN']} is not in authorized list. Full info: {environ['CERTINFO']}")
-        raise Exception(f"User DN {environ['CERTINFO']['fullDN']} is not in authorized list. Full info: {environ['CERTINFO']}")
+        raise IssuesWithAuth("Issues with permissions. Check backend logs.")
 
     def validateCertificate(self, environ):
         """Validate certification validity."""
         timestamp = int(datetime.now(timezone.utc).timestamp())
         if 'CERTINFO' not in environ:
-            raise Exception('Certificate not found. Unauthorized')
+            raise RequestWithoutCert('Unauthorized access. Request without certificate.')
         for key in ['subject', 'notAfter', 'notBefore', 'issuer', 'fullDN']:
             if key not in list(environ['CERTINFO'].keys()):
                 print(f'{key} not available in certificate retrieval')
-                raise Exception('Unauthorized access')
+                raise IssuesWithAuth("Issues with permissions. Check backend logs.")
         # Check time before
         if environ['CERTINFO']['notBefore'] > timestamp:
             print(f"Certificate Invalid. Current Time: {timestamp} NotBefore: {environ['CERTINFO']['notBefore']}")
-            raise Exception(f"Certificate Invalid. Full Info: {environ['CERTINFO']}")
+            raise IssuesWithAuth("Issues with permissions. Check backend logs.")
         # Check time after
         if environ['CERTINFO']['notAfter'] < timestamp:
             print(f"Certificate Invalid. Current Time: {timestamp} NotAfter: {environ['CERTINFO']['notAfter']}")
-            raise Exception(f"Certificate Invalid. Full Info: {environ['CERTINFO']}")
+            raise IssuesWithAuth("Issues with permissions. Check backend logs.")
         # Check if reload of auth list is needed.
         self.loadAuthorized()
         # Check DN in authorized list

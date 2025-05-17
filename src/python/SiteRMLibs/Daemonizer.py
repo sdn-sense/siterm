@@ -20,30 +20,9 @@ from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.MainUtilities import (getDataFromSiteFE, getDBConn, getFullUrl,
                                       getHostname, getLoggingObject, getUTCnow,
                                       getVal, publishToSiteFE, contentDB, createDirs,
-                                      HOSTSERVICES)
+                                      HOSTSERVICES, loadEnvFile)
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
 from SiteRMLibs.GitConfig import getGitConfig
-
-
-def loadEnvFile(filepath):
-    """Loads environment variables from a file if"""
-    if not os.path.isfile(filepath):
-        return
-    try:
-        with open(filepath, 'r', encoding='utf-8') as fd:
-            for line in fd:
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-                if line.startswith('export '):
-                    line = line[len('export '):]
-                if '=' not in line:
-                    continue
-                key, value = line.split('=', 1)
-                os.environ[key.strip()] = value.strip()
-    except Exception as ex:
-        print(f"Failed to load environment file {filepath}. Error: {ex}")
-
 
 def getParser(description):
     """Returns the argparse parser."""
@@ -205,7 +184,7 @@ class Daemon(DBBackend):
 
     def __init__(self, component, inargs, getGitConf=True):
         """Initialize the daemon."""
-        loadEnvFile('/etc/environment')
+        loadEnvFile()
         logType = 'TimedRotatingFileHandler'
         if inargs.logtostdout:
             logType = 'StreamLogger'

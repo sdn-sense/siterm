@@ -48,6 +48,27 @@ from SiteRMLibs.HTTPLibrary import Requests
 HOSTSERVICES = ["Agent", "Ruler", "Debugger", "LookUpService", "ProvisioningService", "SNMPMonitoring",
                 "DBWorker", "PolicyService", "SwitchWorker", "Prometheus-Push", "Arp-Push", "ConfigFetcher"]
 
+
+def loadEnvFile(filepath='/etc/environment'):
+    """Loads environment variables from a file if"""
+    if not os.path.isfile(filepath):
+        return
+    try:
+        with open(filepath, 'r', encoding='utf-8') as fd:
+            for line in fd:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if line.startswith('export '):
+                    line = line[len('export '):]
+                if '=' not in line:
+                    continue
+                key, value = line.split('=', 1)
+                os.environ[key.strip()] = value.strip()
+    except Exception as ex:
+        print(f"Failed to load environment file {filepath}. Error: {ex}")
+
+
 def dictSearch(key, var, ret, ignoreKeys=None):
     """Search item in dictionary"""
     if isinstance(var, dict):

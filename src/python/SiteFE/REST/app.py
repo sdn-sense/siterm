@@ -34,12 +34,12 @@ from SiteRMLibs.CustomExceptions import (BadRequestError, DeltaNotFound,
                                          ModelNotFound, NotAcceptedHeader,
                                          NotFoundError, NotSupportedArgument,
                                          OverlapException, WrongDeltaStatusTransition,
-                                         TooManyArgumentalValues)
+                                         TooManyArgumentalValues, RequestWithoutCert)
 from SiteRMLibs.MainUtilities import (contentDB, getCustomOutMsg, getDBConn,
                                       getHeaders, getUrlParams,
                                       getVal, jsondumps)
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.x509 import CertHandler
+from SiteRMLibs.x509 import CertHandler, OIDCHandler
 
 
 def isiterable(inVal):
@@ -68,6 +68,7 @@ def cleanURL(path):
 
 class Frontend(
     CertHandler,
+    OIDCHandler,
     FrontendCalls,
     PrometheusCalls,
     HostCalls,
@@ -88,6 +89,7 @@ class Frontend(
         self.urlParams = {}
         self.routeMap = Mapper()
         CertHandler.__init__(self)
+        OIDCHandler.__init__(self)
         FrontendCalls.__init__(self)
         PrometheusCalls.__init__(self)
         HostCalls.__init__(self)
@@ -191,6 +193,9 @@ class Frontend(
         try:
             environ["CERTINFO"] = self.getCertInfo(environ)
             environ["USERINFO"] = self.validateCertificate(environ)
+        except RequestWithoutCert:
+            # If this happens, we look if this login has OIDC credentials
+            environ["USERINFO"] = self.validateOIDCInfo(environ)
         except Exception as ex:
             self.httpresp.ret_401("application/json", start_response, None)
             return [
