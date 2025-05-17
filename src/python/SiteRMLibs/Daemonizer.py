@@ -17,63 +17,116 @@ import tracemalloc
 
 import psutil
 from SiteRMLibs import __version__ as runningVersion
-from SiteRMLibs.MainUtilities import (getDataFromSiteFE, getDBConn, getFullUrl,
-                                      getHostname, getLoggingObject, getUTCnow,
-                                      getVal, publishToSiteFE, contentDB, createDirs,
-                                      HOSTSERVICES, loadEnvFile)
+from SiteRMLibs.MainUtilities import (
+    getDataFromSiteFE,
+    getDBConn,
+    getFullUrl,
+    getHostname,
+    getLoggingObject,
+    getUTCnow,
+    getVal,
+    publishToSiteFE,
+    contentDB,
+    createDirs,
+    HOSTSERVICES,
+    loadEnvFile,
+)
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
 from SiteRMLibs.GitConfig import getGitConfig
 
+
 def getParser(description):
     """Returns the argparse parser."""
-    oparser = argparse.ArgumentParser(description=description,
-                                      prog=os.path.basename(sys.argv[0]), add_help=True)
-    oparser.add_argument('--action', dest='action', default='',
-                         help='Action - start, stop, status, restart service.')
-    oparser.add_argument('--foreground', action='store_true',
-                         help="Run program in foreground. Default no")
+    oparser = argparse.ArgumentParser(
+        description=description, prog=os.path.basename(sys.argv[0]), add_help=True
+    )
+    oparser.add_argument(
+        "--action",
+        dest="action",
+        default="",
+        help="Action - start, stop, status, restart service.",
+    )
+    oparser.add_argument(
+        "--foreground",
+        action="store_true",
+        help="Run program in foreground. Default no",
+    )
     oparser.set_defaults(foreground=False)
-    oparser.add_argument('--logtostdout', action='store_true',
-                         help="Log to stdout and not to file. Default false")
-    oparser.add_argument('--onetimerun', action='store_true',
-                         help="Run once and exit from loop (Only for start). Default false")
-    oparser.add_argument('--noreporting', action='store_true',
-                         help="Do not report service Status to FE (Only for start/restart). Default false")
-    oparser.add_argument('--runnum', dest='runnum', default='1',
-                         help="Run Number. Default 1. Used only for multi thread debugging purpose. No need to specify manually")
-    oparser.add_argument('--sleeptimeok', dest='sleeptimeok', default='5',
-                         help="Sleep time in seconds when everything is ok. Default 5")
-    oparser.add_argument('--sleeptimefailure', dest='sleeptimefailure', default='10',
-                         help="Sleep time in seconds when there is a failure. Default 10")
-    oparser.add_argument('--devicename', dest='devicename', default='',
-                         help='Device name to start the process. Only for SwitchWorker process.')
-    oparser.add_argument('--bypassstartcheck', action='store_true', help="Bypass start check. Default false", default=False)
+    oparser.add_argument(
+        "--logtostdout",
+        action="store_true",
+        help="Log to stdout and not to file. Default false",
+    )
+    oparser.add_argument(
+        "--onetimerun",
+        action="store_true",
+        help="Run once and exit from loop (Only for start). Default false",
+    )
+    oparser.add_argument(
+        "--noreporting",
+        action="store_true",
+        help="Do not report service Status to FE (Only for start/restart). Default false",
+    )
+    oparser.add_argument(
+        "--runnum",
+        dest="runnum",
+        default="1",
+        help="Run Number. Default 1. Used only for multi thread debugging purpose. No need to specify manually",
+    )
+    oparser.add_argument(
+        "--sleeptimeok",
+        dest="sleeptimeok",
+        default="5",
+        help="Sleep time in seconds when everything is ok. Default 5",
+    )
+    oparser.add_argument(
+        "--sleeptimefailure",
+        dest="sleeptimefailure",
+        default="10",
+        help="Sleep time in seconds when there is a failure. Default 10",
+    )
+    oparser.add_argument(
+        "--devicename",
+        dest="devicename",
+        default="",
+        help="Device name to start the process. Only for SwitchWorker process.",
+    )
+    oparser.add_argument(
+        "--bypassstartcheck",
+        action="store_true",
+        help="Bypass start check. Default false",
+        default=False,
+    )
     # Add config param for debug level
-    oparser.add_argument('--loglevel', dest='loglevel', default=None,
-                         help="Log level. Default None")
+    oparser.add_argument(
+        "--loglevel", dest="loglevel", default=None, help="Log level. Default None"
+    )
     oparser.set_defaults(logtostdout=False)
     return oparser
 
+
 def validateArgs(inargs):
     """Validate arguments."""
-        # Check port
-    if inargs.action not in ['start', 'stop', 'status', 'restart']:
-        raise Exception(f"Action '{inargs.action}' not supported. Supported actions: start, stop, status, restart")
+    # Check port
+    if inargs.action not in ["start", "stop", "status", "restart"]:
+        raise Exception(
+            f"Action '{inargs.action}' not supported. Supported actions: start, stop, status, restart"
+        )
 
 
-class DBBackend():
+class DBBackend:
     """DB Backend class."""
+
     # pylint: disable=E1101,E0203,W0201
     def _loadDB(self, component):
         """Load DB connection."""
         if self.dbI or not self.config:
             return
-        if self.config.getraw('MAPPING').get('type', None) == 'FE':
+        if self.config.getraw("MAPPING").get("type", None) == "FE":
             try:
                 self.dbI = getDBConn(component, self)
             except KeyError:
                 self.dbI = None
-
 
     def _reportServiceStatus(self, **kwargs):
         """Report service state to DB."""
@@ -89,8 +142,9 @@ class DBBackend():
                 "runtime": kwargs.get("runtime", -1),
                 "version": kwargs.get("version", runningVersion),
                 "updatedate": getUTCnow(),
-                "exc": str(kwargs.get("exc", "No Exception provided by service"))[:4095],
-
+                "exc": str(kwargs.get("exc", "No Exception provided by service"))[
+                    :4095
+                ],
             }
             dbobj = getVal(self.dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
             services = dbobj.get(
@@ -106,7 +160,9 @@ class DBBackend():
                 dbobj.update("servicestates", [dbOut])
         except Exception:
             excType, excValue = sys.exc_info()[:2]
-            print(f"Error details in reportServiceStatus. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
+            print(
+                f"Error details in reportServiceStatus. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
+            )
             reported = False
         return reported
 
@@ -146,7 +202,7 @@ class DBBackend():
             if self.component == "ConfigFetcher":
                 return True
             for action in actions:
-                dbOut = [["id", action['id']]]
+                dbOut = [["id", action["id"]]]
                 dbobj.delete("serviceaction", dbOut)
             return True
         return False
@@ -158,14 +214,19 @@ class DBBackend():
         try:
             hostname = getFullUrl(self.config, kwargs["sitename"])
             url = "/sitefe/json/frontend/serviceaction"
-            kwargs['servicename'] = self.component
-            kwargs['hostname'] = getHostname(self.config)
+            kwargs["servicename"] = self.component
+            kwargs["hostname"] = getHostname(self.config)
             actions = getDataFromSiteFE(kwargs, hostname, url)
             # Config Fetcher is not allowed to delete other services refresh.
             if actions[0] and self.component == "ConfigFetcher":
                 return True
             for action in actions[0]:
-                publishToSiteFE({'id': action['id'], 'servicename': self.component}, hostname, url, verb="DELETE")
+                publishToSiteFE(
+                    {"id": action["id"], "servicename": self.component},
+                    hostname,
+                    url,
+                    verb="DELETE",
+                )
                 refresh = True
         except Exception:
             excType, excValue = sys.exc_info()[:2]
@@ -180,14 +241,15 @@ class Daemon(DBBackend):
 
     Usage: subclass the Daemon class and override the run() method.
     """
+
     # pylint: disable=R0902
 
     def __init__(self, component, inargs, getGitConf=True):
         """Initialize the daemon."""
         loadEnvFile()
-        logType = 'TimedRotatingFileHandler'
+        logType = "TimedRotatingFileHandler"
         if inargs.logtostdout:
-            logType = 'StreamLogger'
+            logType = "StreamLogger"
         self.component = component
         self.inargs = inargs
         self.dbI = None
@@ -203,28 +265,36 @@ class Daemon(DBBackend):
         self.getGitConf = getGitConf
         if self.getGitConf:
             self._refreshConfig()
-            self.logger = getLoggingObject(config=self.config,
-                                           logfile=f"{self.config.get('general', 'logDir')}/{component}/",
-                                           logLevel=self._getLogLevel(), logType=logType,
-                                           service=self.component)
+            self.logger = getLoggingObject(
+                config=self.config,
+                logfile=f"{self.config.get('general', 'logDir')}/{component}/",
+                logLevel=self._getLogLevel(),
+                logType=logType,
+                service=self.component,
+            )
         else:
-            self.logger = getLoggingObject(logFile=f"/var/log/{component}-",
-                                           logLevel=self._getLogLevel(), logType=logType,
-                                           service=self.component)
-        self.sleepTimers = {'ok': int(self.inargs.sleeptimeok),
-                            'failure': int(self.inargs.sleeptimefailure)}
+            self.logger = getLoggingObject(
+                logFile=f"/var/log/{component}-",
+                logLevel=self._getLogLevel(),
+                logType=logType,
+                service=self.component,
+            )
+        self.sleepTimers = {
+            "ok": int(self.inargs.sleeptimeok),
+            "failure": int(self.inargs.sleeptimefailure),
+        }
         self.totalRuntime = 0
         self.lastRefresh = getUTCnow()
         self._loadDB(component)
         self.memdebug = False
-        if os.getenv('SITERM_MEMORY_DEBUG'):
+        if os.getenv("SITERM_MEMORY_DEBUG"):
             self.memdebug = True
 
     def _getLogLevel(self):
         """Get log level."""
         if self.inargs.loglevel:
             return self.inargs.loglevel
-        return self.config.get('general', 'logLevel', 'DEBUG')
+        return self.config.get("general", "logLevel", "DEBUG")
 
     def startready(self):
         """Check if the startup is ready"""
@@ -234,14 +304,18 @@ class Daemon(DBBackend):
         if os.path.exists("/tmp/siterm-mariadb-init"):
             try:
                 self.logger.info("Database init/upgrade started at:")
-                with open("/tmp/siterm-mariadb-init", 'r', encoding='utf-8') as fd:
+                with open("/tmp/siterm-mariadb-init", "r", encoding="utf-8") as fd:
                     self.logger.info(fd.read())
             except IOError:
                 pass
-            self.logger.info("Database not ready. See details above. If continous, check the mariadb and mariadb_init process.")
+            self.logger.info(
+                "Database not ready. See details above. If continous, check the mariadb and mariadb_init process."
+            )
             retval = False
         if not os.path.exists("/tmp/config-fetcher-ready") and not self.firstInitDone:
-            self.logger.info("Config Fetcher not ready. See details above. If continous, check the config-fetcher process.")
+            self.logger.info(
+                "Config Fetcher not ready. See details above. If continous, check the config-fetcher process."
+            )
             retval = False
         return retval
 
@@ -294,17 +368,17 @@ class Daemon(DBBackend):
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
-        with open('/dev/null', 'r', encoding='utf-8') as fd:
+        with open("/dev/null", "r", encoding="utf-8") as fd:
             os.dup2(fd.fileno(), sys.stdin.fileno())
-        with open('/dev/null', 'a+', encoding='utf-8') as fd:
+        with open("/dev/null", "a+", encoding="utf-8") as fd:
             os.dup2(fd.fileno(), sys.stdout.fileno())
-        with open('/dev/null', 'a+', encoding='utf-8') as fd:
+        with open("/dev/null", "a+", encoding="utf-8") as fd:
             os.dup2(fd.fileno(), sys.stderr.fileno())
 
         # write pidfile
         atexit.register(self.delpid)
         pid = str(os.getpid())
-        with open(self.pidfile, 'w+', encoding='utf-8') as fd:
+        with open(self.pidfile, "w+", encoding="utf-8") as fd:
             fd.write(f"{pid}\n")
 
     def delpid(self):
@@ -320,7 +394,7 @@ class Daemon(DBBackend):
             directory = os.path.dirname(self.pidfile)
             if not os.path.exists(directory):
                 os.makedirs(directory)
-            with open(self.pidfile, 'r', encoding='utf-8') as fd:
+            with open(self.pidfile, "r", encoding="utf-8") as fd:
                 pid = int(fd.read().strip())
         except IOError:
             pid = None
@@ -337,11 +411,13 @@ class Daemon(DBBackend):
     @staticmethod
     def __kill(pid):
         """Kill process using psutil lib"""
+
         def processKill(procObj):
             try:
                 procObj.kill()
             except psutil.NoSuchProcess:
                 pass
+
         try:
             process = psutil.Process(pid)
         except psutil.NoSuchProcess:
@@ -355,7 +431,7 @@ class Daemon(DBBackend):
         # Get the pid from the pidfile
         pid = None
         try:
-            with open(self.pidfile, 'r', encoding='utf-8') as fd:
+            with open(self.pidfile, "r", encoding="utf-8") as fd:
                 pid = int(fd.read().strip())
         except IOError:
             pid = None
@@ -378,28 +454,30 @@ class Daemon(DBBackend):
     def status(self):
         """Daemon status."""
         try:
-            with open(self.pidfile, 'r', encoding='utf-8') as fd:
+            with open(self.pidfile, "r", encoding="utf-8") as fd:
                 pid = int(fd.read().strip())
                 psutil.Process(pid)
-                print(f'Application info: PID {pid}')
+                print(f"Application info: PID {pid}")
         except psutil.NoSuchProcess:
-            print(f'PID lock present, but process not running. Remove lock file {self.pidfile}')
+            print(
+                f"PID lock present, but process not running. Remove lock file {self.pidfile}"
+            )
             sys.exit(1)
         except IOError:
-            print(f'Is application running? No Lock file {self.pidfile}')
+            print(f"Is application running? No Lock file {self.pidfile}")
             sys.exit(1)
 
     def command(self):
         """Execute a specific command to service."""
-        if self.inargs.action == 'start' and self.inargs.foreground:
+        if self.inargs.action == "start" and self.inargs.foreground:
             self.start()
-        elif self.inargs.action == 'start' and not self.inargs.foreground:
+        elif self.inargs.action == "start" and not self.inargs.foreground:
             self.run()
-        elif self.inargs.action == 'stop':
+        elif self.inargs.action == "stop":
             self.stop()
-        elif self.inargs.action == 'restart':
+        elif self.inargs.action == "restart":
             self.restart()
-        elif self.inargs.action == 'status':
+        elif self.inargs.action == "status":
             self.status()
         else:
             print("Unknown command")
@@ -411,17 +489,32 @@ class Daemon(DBBackend):
         if not self.inargs.noreporting:
             runtime = int(getUTCnow()) - stwork
             exc = exc if exc else "No Exception provided by service"
-            self._pubStateRemote(servicename=self.component,
-                                 servicestate=state, sitename=sitename,
-                                 version=runningVersion, runtime=runtime, exc=exc)
+            self._pubStateRemote(
+                servicename=self.component,
+                servicestate=state,
+                sitename=sitename,
+                version=runningVersion,
+                runtime=runtime,
+                exc=exc,
+            )
             # Log state also to local file
             createDirs("/tmp/siterm-states/")
             fname = f"/tmp/siterm-states/{self.component}.json"
             if self.inargs.devicename:
-                fname = f"/tmp/siterm-states/{self.component}-{self.inargs.devicename}.json"
-            self.contentDB.dumpFileContentAsJson(fname,
-                {"state": state, "sitename": sitename, "component": self.component,
-                 "runtime": runtime, "version": runningVersion, "exc": exc})
+                fname = (
+                    f"/tmp/siterm-states/{self.component}-{self.inargs.devicename}.json"
+                )
+            self.contentDB.dumpFileContentAsJson(
+                fname,
+                {
+                    "state": state,
+                    "sitename": sitename,
+                    "component": self.component,
+                    "runtime": runtime,
+                    "version": runningVersion,
+                    "exc": exc,
+                },
+            )
 
     def autoRefreshDB(self, **kwargs):
         """Auto Refresh if there is a DB request to do so."""
@@ -474,13 +567,15 @@ class Daemon(DBBackend):
                 sys.exit(1)
             except (NoOptionError, NoSectionError) as ex:
                 exc = traceback.format_exc()
-                self.logger.critical(f"Exception!!! Traceback details: {exc}, Catched Exception: {ex}")
-                time.sleep(self.sleepTimers['failure'])
+                self.logger.critical(
+                    f"Exception!!! Traceback details: {exc}, Catched Exception: {ex}"
+                )
+                time.sleep(self.sleepTimers["failure"])
                 self._refreshConfigAfterFailure()
             except:
                 exc = traceback.format_exc()
                 self.logger.critical(f"Exception!!! Error details: {exc}")
-                time.sleep(self.sleepTimers['failure'])
+                time.sleep(self.sleepTimers["failure"])
 
     def __run(self, rthread):
         """Run main execution and record memory usage (if env variable memdebug is set)"""
@@ -497,8 +592,10 @@ class Daemon(DBBackend):
                 self.logger.debug("Snapshot taken after rthread startwork attempt")
                 for stat in snapshot.statistics("lineno")[:10]:
                     self.logger.debug("MEM_STAT: %s", stat)
-                self.logger.debug("Final Memory usage: %s", tracemalloc.get_traced_memory())
-                self.logger.debug("="*50)
+                self.logger.debug(
+                    "Final Memory usage: %s", tracemalloc.get_traced_memory()
+                )
+                self.logger.debug("=" * 50)
 
     def run(self):
         """Run main execution"""
@@ -513,41 +610,47 @@ class Daemon(DBBackend):
                 for sitename, rthread in list(self.runThreads.items()):
                     stwork = int(getUTCnow())
                     refresh = self.autoRefreshDB(**{"sitename": sitename})
-                    self.logger.debug('Start worker for %s site', sitename)
+                    self.logger.debug("Start worker for %s site", sitename)
                     try:
                         self.preRunThread(sitename, rthread)
                         self.__run(rthread)
-                        self.reporter('OK', sitename, stwork)
+                        self.reporter("OK", sitename, stwork)
                     except ServiceWarning as ex:
                         exc = traceback.format_exc()
-                        self.reporter('WARNING', sitename, stwork, str(ex))
+                        self.reporter("WARNING", sitename, stwork, str(ex))
                         self.logger.warning("Service Warning!!! Error details:  %s", ex)
-                        self.logger.warning("Service Warning!!! Traceback details:  %s", exc)
-                        self.logger.warning("It is not fatal error. Continue to run normally.")
+                        self.logger.warning(
+                            "Service Warning!!! Traceback details:  %s", exc
+                        )
+                        self.logger.warning(
+                            "It is not fatal error. Continue to run normally."
+                        )
                     except:
                         hadFailure = True
                         exc = traceback.format_exc()
-                        self.reporter('FAILED', sitename, stwork, str(exc))
+                        self.reporter("FAILED", sitename, stwork, str(exc))
                         self.logger.critical("Exception!!! Error details:  %s", exc)
                     finally:
                         self.postRunThread(sitename, rthread)
                 if self.runLoop():
-                    time.sleep(self.sleepTimers['ok'])
+                    time.sleep(self.sleepTimers["ok"])
             except KeyboardInterrupt as ex:
-                self.reporter('KEYBOARDINTERRUPT', sitename, stwork)
+                self.reporter("KEYBOARDINTERRUPT", sitename, stwork)
                 self.logger.critical("Received KeyboardInterrupt: %s ", ex)
                 sys.exit(3)
             if hadFailure:
-                self.logger.info('Had Runtime Failure. Sleep for 30 seconds')
+                self.logger.info("Had Runtime Failure. Sleep for 30 seconds")
                 if self.runLoop():
-                    time.sleep(self.sleepTimers['failure'])
+                    time.sleep(self.sleepTimers["failure"])
                 else:
                     sys.exit(4)
             if self.timeToExit():
-                self.logger.info('Total Runtime expired. Stopping Service')
+                self.logger.info("Total Runtime expired. Stopping Service")
                 sys.exit(0)
             if refresh:
-                self.logger.info('Re-initiating Service with new configuration from GIT. Forced by DB')
+                self.logger.info(
+                    "Re-initiating Service with new configuration from GIT. Forced by DB"
+                )
                 self.cleaner()
                 self._refreshConfig()
                 self.refreshThreads()

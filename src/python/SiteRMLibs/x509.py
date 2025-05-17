@@ -32,8 +32,12 @@ class OIDCHandler:
     def __init__(self):
         """Init OIDC Handler"""
         loadEnvFile()
-        self.required_issuer = os.environ.get("OIDC_REQUIRED_ISSUER", "https://login.sdn-sense.net/")
-        self.permission_claim_prefix = os.environ.get("OIDC_PERMISSIONS_CLAIM", "OIDC_CLAIM_https---sdn-sense.net-permissions")
+        self.required_issuer = os.environ.get(
+            "OIDC_REQUIRED_ISSUER", "https://login.sdn-sense.net/"
+        )
+        self.permission_claim_prefix = os.environ.get(
+            "OIDC_PERMISSIONS_CLAIM", "OIDC_CLAIM_https---sdn-sense.net-permissions"
+        )
 
     @staticmethod
     def _getEnv(environ, key):
@@ -51,8 +55,12 @@ class OIDCHandler:
                     return json.loads(value)
                 except json.JSONDecodeError as ex:
                     print(f"Invalid JSON in permissions claim: {value}")
-                    raise IssuesWithAuth("Issues with permissions. Check backend logs.") from ex
-        print(f"Permissions claim with prefix '{self.permission_claim_prefix}' not found")
+                    raise IssuesWithAuth(
+                        "Issues with permissions. Check backend logs."
+                    ) from ex
+        print(
+            f"Permissions claim with prefix '{self.permission_claim_prefix}' not found"
+        )
         raise IssuesWithAuth("Issues with permissions. Check backend logs.")
 
     def validateOIDCInfo(self, environ):
@@ -71,13 +79,17 @@ class OIDCHandler:
 
         permissions = self.parsePermissions(environ)
 
-        return {"email": email, "issuer": issuer,
-                "permissions": permissions, "claims": {
-                    k: v for k, v in environ.items() if k.startswith("OIDC_CLAIM_")}}
+        return {
+            "email": email,
+            "issuer": issuer,
+            "permissions": permissions,
+            "claims": {k: v for k, v in environ.items() if k.startswith("OIDC_CLAIM_")},
+        }
 
 
-class CertHandler():
+class CertHandler:
     """Cert handler."""
+
     def __init__(self):
         self.allowedCerts = {}
         self.allowedWCerts = {}
@@ -87,62 +99,92 @@ class CertHandler():
 
     def loadAuthorized(self):
         """Load all authorized users for FE from git."""
-        dateNow = datetime.now(timezone.utc).strftime('%Y-%m-%d-%H')
+        dateNow = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H")
         if dateNow != self.loadTime:
             self.loadTime = dateNow
             self.gitConf = getGitConfig()
             self.allowedCerts = {}
-            if self.gitConf.config.get('AUTH', {}):
-                for user, userinfo in list(self.gitConf.config.get('AUTH', {}).items()):
-                    self.allowedCerts.setdefault(userinfo['full_dn'], {})
-                    self.allowedCerts[userinfo['full_dn']]['username'] = user
-                    self.allowedCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
-            if self.gitConf.config.get('AUTH_RE', {}):
-                for user, userinfo in list(self.gitConf.config.get('AUTH_RE', {}).items()):
-                    self.allowedWCerts.setdefault(userinfo['full_dn'], {})
-                    self.allowedWCerts[userinfo['full_dn']]['username'] = user
-                    self.allowedWCerts[userinfo['full_dn']]['permissions'] = userinfo['permissions']
+            if self.gitConf.config.get("AUTH", {}):
+                for user, userinfo in list(self.gitConf.config.get("AUTH", {}).items()):
+                    self.allowedCerts.setdefault(userinfo["full_dn"], {})
+                    self.allowedCerts[userinfo["full_dn"]]["username"] = user
+                    self.allowedCerts[userinfo["full_dn"]]["permissions"] = userinfo[
+                        "permissions"
+                    ]
+            if self.gitConf.config.get("AUTH_RE", {}):
+                for user, userinfo in list(
+                    self.gitConf.config.get("AUTH_RE", {}).items()
+                ):
+                    self.allowedWCerts.setdefault(userinfo["full_dn"], {})
+                    self.allowedWCerts[userinfo["full_dn"]]["username"] = user
+                    self.allowedWCerts[userinfo["full_dn"]]["permissions"] = userinfo[
+                        "permissions"
+                    ]
 
     @staticmethod
     def getCertInfo(environ):
         """Get certificate info."""
         out = {}
-        for key in ['HTTP_SSL_CLIENT_V_REMAIN', 'HTTP_SSL_CLIENT_S_DN', 'HTTP_SSL_CLIENT_I_DN', 'HTTP_SSL_CLIENT_V_START', 'HTTP_SSL_CLIENT_V_END']:
+        for key in [
+            "HTTP_SSL_CLIENT_V_REMAIN",
+            "HTTP_SSL_CLIENT_S_DN",
+            "HTTP_SSL_CLIENT_I_DN",
+            "HTTP_SSL_CLIENT_V_START",
+            "HTTP_SSL_CLIENT_V_END",
+        ]:
             if key not in environ:
-                raise RequestWithoutCert('Unauthorized access. Request without certificate.')
-        out['subject'] = environ['HTTP_SSL_CLIENT_S_DN']
-        out['notAfter'] = int(datetime.strptime(environ['HTTP_SSL_CLIENT_V_END'], "%b %d %H:%M:%S %Y %Z").timestamp())
-        out['notBefore'] = int(datetime.strptime(environ['HTTP_SSL_CLIENT_V_START'], "%b %d %H:%M:%S %Y %Z").timestamp())
-        out['issuer'] = environ['HTTP_SSL_CLIENT_I_DN']
-        out['fullDN'] = f"{out['issuer']}{out['subject']}"
+                raise RequestWithoutCert(
+                    "Unauthorized access. Request without certificate."
+                )
+        out["subject"] = environ["HTTP_SSL_CLIENT_S_DN"]
+        out["notAfter"] = int(
+            datetime.strptime(
+                environ["HTTP_SSL_CLIENT_V_END"], "%b %d %H:%M:%S %Y %Z"
+            ).timestamp()
+        )
+        out["notBefore"] = int(
+            datetime.strptime(
+                environ["HTTP_SSL_CLIENT_V_START"], "%b %d %H:%M:%S %Y %Z"
+            ).timestamp()
+        )
+        out["issuer"] = environ["HTTP_SSL_CLIENT_I_DN"]
+        out["fullDN"] = f"{out['issuer']}{out['subject']}"
         return out
 
     def checkAuthorized(self, environ):
         """Check if user is authorized."""
-        if environ['CERTINFO']['fullDN'] in self.allowedCerts:
-            return self.allowedCerts[environ['CERTINFO']['fullDN']]
+        if environ["CERTINFO"]["fullDN"] in self.allowedCerts:
+            return self.allowedCerts[environ["CERTINFO"]["fullDN"]]
         for wildcarddn, userinfo in self.allowedWCerts.items():
-            if re.match(wildcarddn, environ['CERTINFO']['fullDN']):
+            if re.match(wildcarddn, environ["CERTINFO"]["fullDN"]):
                 return userinfo
-        print(f"User DN {environ['CERTINFO']['fullDN']} is not in authorized list. Full info: {environ['CERTINFO']}")
+        print(
+            f"User DN {environ['CERTINFO']['fullDN']} is not in authorized list. Full info: {environ['CERTINFO']}"
+        )
         raise IssuesWithAuth("Issues with permissions. Check backend logs.")
 
     def validateCertificate(self, environ):
         """Validate certification validity."""
         timestamp = int(datetime.now(timezone.utc).timestamp())
-        if 'CERTINFO' not in environ:
-            raise RequestWithoutCert('Unauthorized access. Request without certificate.')
-        for key in ['subject', 'notAfter', 'notBefore', 'issuer', 'fullDN']:
-            if key not in list(environ['CERTINFO'].keys()):
-                print(f'{key} not available in certificate retrieval')
+        if "CERTINFO" not in environ:
+            raise RequestWithoutCert(
+                "Unauthorized access. Request without certificate."
+            )
+        for key in ["subject", "notAfter", "notBefore", "issuer", "fullDN"]:
+            if key not in list(environ["CERTINFO"].keys()):
+                print(f"{key} not available in certificate retrieval")
                 raise IssuesWithAuth("Issues with permissions. Check backend logs.")
         # Check time before
-        if environ['CERTINFO']['notBefore'] > timestamp:
-            print(f"Certificate Invalid. Current Time: {timestamp} NotBefore: {environ['CERTINFO']['notBefore']}")
+        if environ["CERTINFO"]["notBefore"] > timestamp:
+            print(
+                f"Certificate Invalid. Current Time: {timestamp} NotBefore: {environ['CERTINFO']['notBefore']}"
+            )
             raise IssuesWithAuth("Issues with permissions. Check backend logs.")
         # Check time after
-        if environ['CERTINFO']['notAfter'] < timestamp:
-            print(f"Certificate Invalid. Current Time: {timestamp} NotAfter: {environ['CERTINFO']['notAfter']}")
+        if environ["CERTINFO"]["notAfter"] < timestamp:
+            print(
+                f"Certificate Invalid. Current Time: {timestamp} NotAfter: {environ['CERTINFO']['notAfter']}"
+            )
             raise IssuesWithAuth("Issues with permissions. Check backend logs.")
         # Check if reload of auth list is needed.
         self.loadAuthorized()

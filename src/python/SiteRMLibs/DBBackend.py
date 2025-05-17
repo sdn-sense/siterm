@@ -31,38 +31,42 @@ def getUTCnow():
     return int(datetime.now(timezone.utc).timestamp())
 
 
-def loadEnvFile(filepath='/etc/environment'):
+def loadEnvFile(filepath="/etc/environment"):
     """Loads environment variables from a file if"""
     if not os.path.isfile(filepath):
         return
     try:
-        with open(filepath, 'r', encoding='utf-8') as fd:
+        with open(filepath, "r", encoding="utf-8") as fd:
             for line in fd:
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line or line.startswith("#"):
                     continue
-                if line.startswith('export '):
-                    line = line[len('export '):]
-                if '=' not in line:
+                if line.startswith("export "):
+                    line = line[len("export ") :]
+                if "=" not in line:
                     continue
-                key, value = line.split('=', 1)
+                key, value = line.split("=", 1)
                 os.environ[key.strip()] = value.strip()
     except Exception as ex:
         print(f"Failed to load environment file {filepath}. Error: {ex}")
 
 
-
-class DBBackend():
+class DBBackend:
     """Database Backend class."""
+
     def __init__(self):
         loadEnvFile()
-        self.mpass = os.getenv('MARIA_DB_PASSWORD')
-        self.muser = os.getenv('MARIA_DB_USER', 'root')
-        self.mhost = os.getenv('MARIA_DB_HOST', 'localhost')
-        self.mport = int(os.getenv('MARIA_DB_PORT', '3306'))
-        self.mdb = os.getenv('MARIA_DB_DATABASE', 'sitefe')
-        self.charset = os.getenv('MARIA_DB_CHARSET', 'utf8mb4')
-        self.autocommit = os.getenv('MARIA_DB_AUTOCOMMIT', 'True') in ['True', 'true', '1']
+        self.mpass = os.getenv("MARIA_DB_PASSWORD")
+        self.muser = os.getenv("MARIA_DB_USER", "root")
+        self.mhost = os.getenv("MARIA_DB_HOST", "localhost")
+        self.mport = int(os.getenv("MARIA_DB_PORT", "3306"))
+        self.mdb = os.getenv("MARIA_DB_DATABASE", "sitefe")
+        self.charset = os.getenv("MARIA_DB_CHARSET", "utf8mb4")
+        self.autocommit = os.getenv("MARIA_DB_AUTOCOMMIT", "True") in [
+            "True",
+            "true",
+            "1",
+        ]
 
     @staticmethod
     def __checkConnection(cursor):
@@ -71,7 +75,9 @@ class DBBackend():
         cursor.execute("SELECT 1")
         result = cursor.fetchone()
         if not result or result[0] != 1:
-            raise pymysql.MySQLError("Failed to establish a connection to the database.")
+            raise pymysql.MySQLError(
+                "Failed to establish a connection to the database."
+            )
 
     @contextmanager
     def get_connection(self):
@@ -79,14 +85,16 @@ class DBBackend():
         conn = None
         cursor = None
         try:
-            conn = pymysql.connect(user=self.muser,
-                                   password=self.mpass,
-                                   host=self.mhost,
-                                   port=self.mport,
-                                   database='sitefe',
-                                   autocommit=self.mdb,
-                                   charset=self.charset,
-                                   cursorclass=pymysql.cursors.Cursor)
+            conn = pymysql.connect(
+                user=self.muser,
+                password=self.mpass,
+                host=self.mhost,
+                port=self.mport,
+                database="sitefe",
+                autocommit=self.mdb,
+                charset=self.charset,
+                cursorclass=pymysql.cursors.Cursor,
+            )
             cursor = conn.cursor()
             self.__checkConnection(cursor)
             try:
@@ -109,27 +117,26 @@ class DBBackend():
     def createdb(self):
         """Create database."""
         for argname in dir(dbcalls):
-            if argname.startswith('create_'):
-                print(f'Call to create {argname}')
+            if argname.startswith("create_"):
+                print(f"Call to create {argname}")
                 with self.get_connection() as (_conn, cursor):
                     cursor.execute(getattr(dbcalls, argname))
 
     def cleandbtable(self, dbtable):
         """Clean only specific table if available"""
         for argname in dir(dbcalls):
-            if argname == f'delete_{dbtable}':
-                print(f'Call to clean from {argname}')
+            if argname == f"delete_{dbtable}":
+                print(f"Call to clean from {argname}")
                 with self.get_connection() as (_conn, cursor):
                     cursor.execute(getattr(dbcalls, argname))
 
     def cleandb(self):
         """Clean database."""
         for argname in dir(dbcalls):
-            if argname.startswith('delete_'):
-                print(f'Call to clean from {argname}')
+            if argname.startswith("delete_"):
+                print(f"Call to clean from {argname}")
                 with self.get_connection() as (_conn, cursor):
                     cursor.execute(getattr(dbcalls, argname))
-
 
     def execute_get(self, query):
         """GET Execution."""
@@ -141,15 +148,15 @@ class DBBackend():
                 colname = [tup[0] for tup in cursor.description]
                 alldata = cursor.fetchall()
             except pymysql.InterfaceError as ex:
-                err = f'[GET]MySQLInterfaceError. Ex: {ex}'
+                err = f"[GET]MySQLInterfaceError. Ex: {ex}"
                 raise pymysql.InterfaceError(err) from ex
             except pymysql.Error as ex:
-                err = f'[GET]MySQLError. Ex: {ex}'
+                err = f"[GET]MySQLError. Ex: {ex}"
                 raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f'[GET]MySQL Exception. Ex: {ex}'
+                err = f"[GET]MySQL Exception. Ex: {ex}"
                 raise Exception(err) from ex
-        return 'OK', colname, alldata
+        return "OK", colname, alldata
 
     def execute_ins(self, query, values):
         """INSERT Execute."""
@@ -163,18 +170,18 @@ class DBBackend():
                         conn.commit()
                 conn.commit()
             except pymysql.InterfaceError as ex:
-                err = f'[INS]MySQLInterfaceError. Ex: {ex}'
+                err = f"[INS]MySQLInterfaceError. Ex: {ex}"
                 conn.rollback()
                 raise pymysql.InterfaceError(err) from ex
             except pymysql.Error as ex:
-                err = f'[INS]MySQLError. Ex: {ex}'
+                err = f"[INS]MySQLError. Ex: {ex}"
                 conn.rollback()
                 raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f'[INS]MySQL Exception. Ex: {ex}'
+                err = f"[INS]MySQL Exception. Ex: {ex}"
                 conn.rollback()
                 raise Exception(err) from ex
-        return 'OK', '', lastID
+        return "OK", "", lastID
 
     def execute_del(self, query, _values):
         """DELETE Execute."""
@@ -182,18 +189,18 @@ class DBBackend():
             try:
                 cursor.execute(query)
             except pymysql.InterfaceError as ex:
-                err = f'[DEL]MySQLInterfaceError. Ex: {ex}'
+                err = f"[DEL]MySQLInterfaceError. Ex: {ex}"
                 conn.rollback()
                 raise pymysql.InterfaceError(err) from ex
             except pymysql.Error as ex:
-                err = f'[DEL]MySQLError. Ex: {ex}'
+                err = f"[DEL]MySQLError. Ex: {ex}"
                 conn.rollback()
                 raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f'[DEL]MySQL Exception. Ex: {ex}'
+                err = f"[DEL]MySQL Exception. Ex: {ex}"
                 conn.rollback()
                 raise Exception(err) from ex
-        return 'OK', '', ''
+        return "OK", "", ""
 
     def execute(self, query):
         """Execute query."""
@@ -201,21 +208,23 @@ class DBBackend():
             try:
                 cursor.execute(query)
             except pymysql.InterfaceError as ex:
-                err = f'[EXC]MySQLInterfaceError. Ex: {ex}'
+                err = f"[EXC]MySQLInterfaceError. Ex: {ex}"
                 conn.rollback()
                 raise pymysql.InterfaceError(err) from ex
             except pymysql.Error as ex:
-                err = f'[EXC]MySQLError. Ex: {ex}'
+                err = f"[EXC]MySQLError. Ex: {ex}"
                 conn.rollback()
                 raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f'[EXC]MySQL Exception. Ex: {ex}'
+                err = f"[EXC]MySQL Exception. Ex: {ex}"
                 conn.rollback()
                 raise Exception(err) from ex
-        return 'OK', '', ''
+        return "OK", "", ""
 
-class dbinterface():
+
+class dbinterface:
     """Database interface."""
+
     def __init__(self, serviceName, config, sitename):
         self.config = config
         self.sitename = sitename
@@ -242,9 +251,9 @@ class dbinterface():
         """Get call from ALL available ones."""
         callquery = ""
         try:
-            callquery = getattr(dbcalls, f'{callaction}_{calltype}')
+            callquery = getattr(dbcalls, f"{callaction}_{calltype}")
         except AttributeError as ex:
-            err = f'Called {callaction}_{calltype}, but got exception {str(ex)}'
+            err = f"Called {callaction}_{calltype}, but got exception {str(ex)}"
             raise AttributeError(err) from ex
         return callquery
 
@@ -275,7 +284,9 @@ class dbinterface():
     def get(self, calltype, limit=None, search=None, orderby=None, mapping=True):
         """GET Call for APPs."""
         self._setStartCallTime(calltype)
-        callExit, colname, dbout = self._caller(self.getcall('get', calltype), limit, orderby, search)
+        callExit, colname, dbout = self._caller(
+            self.getcall("get", calltype), limit, orderby, search
+        )
         self._setEndCallTime(calltype, callExit)
         out = []
         if mapping:
@@ -296,7 +307,7 @@ class dbinterface():
     def insert(self, calltype, values):
         """INSERT call for APPs."""
         self._setStartCallTime(calltype)
-        retout = self.db.execute_ins(self.getcall('insert', calltype), values)
+        retout = self.db.execute_ins(self.getcall("insert", calltype), values)
         self._setEndCallTime(calltype, retout[0])
         out = copy.deepcopy(retout)
         del retout
@@ -309,7 +320,7 @@ class dbinterface():
     def update(self, calltype, values):
         """UPDATE Call for APPs."""
         self._setStartCallTime(calltype)
-        retout = self.db.execute_ins(self.getcall('update', calltype), values)
+        retout = self.db.execute_ins(self.getcall("update", calltype), values)
         self._setEndCallTime(calltype, retout[0])
         out = copy.deepcopy(retout)
         del retout

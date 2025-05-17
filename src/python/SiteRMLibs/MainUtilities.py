@@ -45,25 +45,37 @@ from SiteRMLibs.DBBackend import dbinterface
 from SiteRMLibs.HTTPLibrary import Requests
 
 
-HOSTSERVICES = ["Agent", "Ruler", "Debugger", "LookUpService", "ProvisioningService", "SNMPMonitoring",
-                "DBWorker", "PolicyService", "SwitchWorker", "Prometheus-Push", "Arp-Push", "ConfigFetcher"]
+HOSTSERVICES = [
+    "Agent",
+    "Ruler",
+    "Debugger",
+    "LookUpService",
+    "ProvisioningService",
+    "SNMPMonitoring",
+    "DBWorker",
+    "PolicyService",
+    "SwitchWorker",
+    "Prometheus-Push",
+    "Arp-Push",
+    "ConfigFetcher",
+]
 
 
-def loadEnvFile(filepath='/etc/environment'):
+def loadEnvFile(filepath="/etc/environment"):
     """Loads environment variables from a file if"""
     if not os.path.isfile(filepath):
         return
     try:
-        with open(filepath, 'r', encoding='utf-8') as fd:
+        with open(filepath, "r", encoding="utf-8") as fd:
             for line in fd:
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line or line.startswith("#"):
                     continue
-                if line.startswith('export '):
-                    line = line[len('export '):]
-                if '=' not in line:
+                if line.startswith("export "):
+                    line = line[len("export ") :]
+                if "=" not in line:
                     continue
-                key, value = line.split('=', 1)
+                key, value = line.split("=", 1)
                 os.environ[key.strip()] = value.strip()
     except Exception as ex:
         print(f"Failed to load environment file {filepath}. Error: {ex}")
@@ -187,9 +199,9 @@ def getTimeRotLogger(**kwargs):
     handler = checkLoggingHandler(**kwargs)
     if "logFile" not in kwargs:
         if "config" in kwargs:
-            kwargs[
-                "logFile"
-            ] = f"{kwargs['config'].get('general', 'logDir')}/{kwargs.get('service', __name__)}/"
+            kwargs["logFile"] = (
+                f"{kwargs['config'].get('general', 'logDir')}/{kwargs.get('service', __name__)}/"
+            )
         else:
             print("No config passed, will log to StreamLogger... Code issue!")
             return getStreamLogger(**kwargs)
@@ -222,9 +234,11 @@ def evaldict(inputDict):
     # Decode if it is bytes
     if isinstance(inputDict, bytes):
         try:
-            inputDict = inputDict.decode('utf-8')
+            inputDict = inputDict.decode("utf-8")
         except UnicodeDecodeError as ex:
-            raise WrongInputError(f"Input bytes could not be decoded. Error: {ex}") from ex
+            raise WrongInputError(
+                f"Input bytes could not be decoded. Error: {ex}"
+            ) from ex
     # At this stage, if not string, raise error.  list/dict is checked in previous if
     if not isinstance(inputDict, str):
         raise WrongInputError("Input must be a string or dict/list.")
@@ -233,16 +247,19 @@ def evaldict(inputDict):
     except (json.JSONDecodeError, TypeError, ValueError):
         pass  # fall back
     # Try to fix common issues:
-    print(f'Got dict which is not json loadable. Print for debugging: {inputDict[:100]}')
+    print(
+        f"Got dict which is not json loadable. Print for debugging: {inputDict[:100]}"
+    )
     if "'" in inputDict or ",}" in inputDict or ",]" in inputDict:
         inputDict = re.sub(r"'", r'"', inputDict)
-         # Remove trailing commas (optional)
+        # Remove trailing commas (optional)
         inputDict = re.sub(r",(\s*[}\]])", r"\1", inputDict)
     try:
         return json.loads(inputDict)
     except (json.JSONDecodeError, TypeError, ValueError) as ex:
         raise WrongInputError(
-            f"Input looks like JSON but could not be parsed even after fixup. Error: {ex}") from ex
+            f"Input looks like JSON but could not be parsed even after fixup. Error: {ex}"
+        ) from ex
 
 
 def jsondumps(inputDict):
@@ -270,12 +287,16 @@ def externalCommand(command, communicate=True):
         return proc.communicate()
     return proc
 
+
 def externalCommandStdOutErr(command, stdout, stderr):
     """Execute External Commands and return stdout and stderr."""
     command = shlex.split(str(command))
-    with open(stdout, "w", encoding='utf-8') as outFD, open(stderr, "w", encoding='utf-8') as errFD:
+    with open(stdout, "w", encoding="utf-8") as outFD, open(
+        stderr, "w", encoding="utf-8"
+    ) as errFD:
         with subprocess.Popen(command, stdout=outFD, stderr=errFD) as proc:
             return proc.communicate()
+
 
 def execute(command, logger, raiseError=True):
     """Execute interfaces commands."""
@@ -363,19 +384,21 @@ def getWebContentFromURL(url, raiseEx=True, params=None):
                 out = requests.get(url, timeout=60)
             return out
         except requests.exceptions.RequestException as ex:
-            print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
+            print(
+                f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}"
+            )
             if raiseEx and retries == 0:
                 raise
             out = {}
-            out['error'] = str(ex)
-            out['status_code'] = -1
+            out["error"] = str(ex)
+            out["status_code"] = -1
             time.sleep(1)
     return out
 
 
 def postWebContentToURL(url, **kwargs):
     """POST to URL"""
-    raiseEx = bool(kwargs.get('raiseEx', True))
+    raiseEx = bool(kwargs.get("raiseEx", True))
     retries = 3
     out = {}
     while retries > 0:
@@ -384,12 +407,14 @@ def postWebContentToURL(url, **kwargs):
             out = requests.post(url, timeout=60, **kwargs)
             return out
         except requests.exceptions.RequestException as ex:
-            print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
+            print(
+                f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}"
+            )
             if raiseEx and retries == 0:
                 raise
             out = {}
-            out['error'] = str(ex)
-            out['status_code'] = -1
+            out["error"] = str(ex)
+            out["status_code"] = -1
             time.sleep(1)
     return out
 
@@ -424,6 +449,7 @@ def getUsername():
 
 def fileLock(func):
     """Decorator to create a lock file and wait if another process holds it."""
+
     @functools.wraps(func)
     def wrapper(outFile, *args, **kwargs):
         lockfile = f"{outFile}.lock"
@@ -440,7 +466,9 @@ def fileLock(func):
             except BlockingIOError:
                 time.sleep(0.5)
         raise TimeoutError(f"Could not acquire lock for {outFile} after 10 seconds")
+
     return wrapper
+
 
 class contentDB:
     """File Saver, loader class."""
@@ -536,7 +564,9 @@ def parse_gui_form_post(inputVal):
     out = {}
     for item in inputVal.split(b"&"):
         tmpItem = item.split(b"=")
-        out[tmpItem[0].decode("utf-8")] = urllib.parse.unquote(tmpItem[1].decode("utf-8"))
+        out[tmpItem[0].decode("utf-8")] = urllib.parse.unquote(
+            tmpItem[1].decode("utf-8")
+        )
     return out
 
 
@@ -594,7 +624,7 @@ def generateMD5(inText):
 def getHostname(config=None):
     """Return running server hostname"""
     # In case of FE, we need to return hostname as default
-    if config and  config.getraw('MAPPING').get('type', None) == 'FE':
+    if config and config.getraw("MAPPING").get("type", None) == "FE":
         return "default"
     return socket.gethostname()
 
@@ -643,8 +673,8 @@ def getUrlParams(environ, paramsList):
                     raise NotSupportedArgument(
                         f"Parameter {param['key']} value not acceptable. Allowed options: [tT]rue,[fF]alse"
                     )
-            elif param["type"] == str and 'options' in param:
-                if  outVals[0] not in param["options"]:
+            elif param["type"] == str and "options" in param:
+                if outVals[0] not in param["options"]:
                     raise NotSupportedArgument(
                         f"Server does not support parameter {param['key']}={outVals[0]}. Supported: {param['options']}"
                     )
@@ -733,7 +763,7 @@ def decodebase64(inputStr, decodeFlag=True):
 
 def getDBConn(serviceName="", cls=None):
     """Get database connection."""
-    if not hasattr(cls, 'dbConnMain') or cls.dbConnMain is None:
+    if not hasattr(cls, "dbConnMain") or cls.dbConnMain is None:
         cls.dbConnMain = {}
 
     dbConnMain = cls.dbConnMain.setdefault(serviceName, {})
@@ -810,6 +840,7 @@ def strtolist(intext, splitter):
     out = intext.split(splitter)
     return list(filter(None, out))
 
+
 def getArpVals():
     """Get Arp Values from /proc/net/arp. Return generator."""
     neighs = externalCommand("ip neigh")
@@ -818,19 +849,19 @@ def getArpVals():
         if len(parts) < 5:
             continue
         block = {
-            'IPaddress': parts[0],
-            'Device': parts[2],
-            'HWaddress': parts[4],
-            'Flags': parts[-1]
+            "IPaddress": parts[0],
+            "Device": parts[2],
+            "HWaddress": parts[4],
+            "Flags": parts[-1],
         }
         yield block
 
 
 def timedhourcheck(lockname, hours=1):
     """Timed Lock for file."""
-    filename = f'/tmp/siterm-timed-lock-{lockname}'
+    filename = f"/tmp/siterm-timed-lock-{lockname}"
     if os.path.exists(filename):
-        with open(filename, 'r', encoding='utf-8') as fd:
+        with open(filename, "r", encoding="utf-8") as fd:
             timestamp = fd.read()
             timestamp = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
             now = datetime.datetime.now()
@@ -839,13 +870,16 @@ def timedhourcheck(lockname, hours=1):
                 return False
     else:
         try:
-            with open(filename, 'w', encoding='utf-8') as fd:
+            with open(filename, "w", encoding="utf-8") as fd:
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 fd.write(timestamp)
         except OSError as ex:
-            print(f"Error creating timestamp file: {ex}. Will return False for timedhourcheck")
+            print(
+                f"Error creating timestamp file: {ex}. Will return False for timedhourcheck"
+            )
             return False
     return True
+
 
 def checkHTTPService(config):
     """Auto Refresh via API check"""
@@ -853,25 +887,27 @@ def checkHTTPService(config):
     if not config:
         return 0
     # This is only done on FE:
-    if config.getraw('MAPPING').get('type', None) != 'FE':
+    if config.getraw("MAPPING").get("type", None) != "FE":
         return 0
     returnvals = []
-    for sitename in config.get('general', 'sites'):
+    for sitename in config.get("general", "sites"):
         try:
             hostname = getFullUrl(config, sitename)
             url = "/sitefe/v1/models?current=true&summary=false&encode=false"
             out = getDataFromSiteFE({}, hostname, url)
             # Need to check out that it received information back
             # otherwise print error and return 1
-            if out[1] != 200 or out[2] != 'OK':
-                print('Was not able to receive 200 http exit code.')
-                print(f'Output: {out}')
+            if out[1] != 200 or out[2] != "OK":
+                print("Was not able to receive 200 http exit code.")
+                print(f"Output: {out}")
                 returnvals.append(1)
             else:
                 returnvals.append(0)
         except Exception:
             excType, excValue = sys.exc_info()[:2]
-            print(f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
+            print(
+                f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
+            )
             returnvals.append(1)
     return 0 if not returnvals else any(returnvals)
 
