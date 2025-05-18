@@ -36,7 +36,7 @@ class OIDCHandler:
             "OIDC_REQUIRED_ISSUER", "https://login.sdn-sense.net/"
         )
         self.permission_claim_prefix = "HTTP_" + os.environ.get(
-            "OIDC_PERMISSIONS_CLAIM", "OIDC_CLAIM_https---sdn-sense.net-permissions"
+            "OIDC_PERMISSIONS_CLAIM", "OIDC_CLAIM_HTTPS___SDN_SENSE.NET_PERMISSIONS"
         )
 
     @staticmethod
@@ -65,9 +65,9 @@ class OIDCHandler:
 
     def validateOIDCInfo(self, environ):
         """Validate OIDC claims and extract user identity & permissions."""
-        email = self._getEnv(environ, "HTTP_OIDC_CLAIM_email")
-        issuer = self._getEnv(environ, "HTTP_OIDC_CLAIM_iss")
-        emailVerified = self._getEnv(environ, "HTTP_OIDC_CLAIM_email_verified")
+        email = self._getEnv(environ, "HTTP_OIDC_CLAIM_EMAIL")
+        issuer = self._getEnv(environ, "HTTP_OIDC_CLAIM_ISS")
+        emailVerified = self._getEnv(environ, "HTTP_OIDC_CLAIM_EMAIL_VERIFIED")
 
         if issuer != self.required_issuer:
             print(f"Unexpected issuer: {issuer} (expected {self.required_issuer})")
