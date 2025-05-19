@@ -165,6 +165,15 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                 kwargs["hostport"] = key
                 self.__insertDeltaStateDB(**kwargs)
 
+    @staticmethod
+    def _checkifEmpty(key, activeConf):
+        """
+        Check if the given configuration is empty.
+        """
+        if key == 'sense_bgp':
+            return all(not activeConf.get(f) for f in ("ipv6_network", "neighbor", "prefix_list", "route_map"))
+        return not activeConf
+
     def applyIndvConfig(self, swname, uuid, key, acttype, raiseExc=True):
         """Apply a single delta to network devices and report to DB it's state"""
         # Write new inventory file, based on the currect active(just in case things have changed)
@@ -188,10 +197,12 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             .get(swname, {})
             .get(key, {})
         )
+        if self._checkifEmpty(key, curActiveConf[key]):
+            return
         # If key is sense_bgp, then we need to identify groupName, Used by Juniper only
         if key == "sense_bgp":
             try:
-                curActiveConf[key]['groupName'] = self.generateGroupName(uuid)
+                curActiveConf[key]['groupName'] = self.generateGroupName(curActiveConf[key], uuid)
             except Exception:
                 return
         # Add ansible specific parameters

@@ -60,8 +60,12 @@ class RoutingService():
         super().__init__()
 
     @staticmethod
-    def generateGroupName(line):
+    def generateGroupName(activeInfo, line):
         """Generate group name for BGP"""
+        # In case all the rest parameters are empty, we set DEFAULT group name;
+        if all(not activeInfo.get(k) for k in ("ipv6_network", "neighbor", "prefix_list", "route_map")):
+            # This should never reach, but just in case not to delete any provisioned ones.
+            return "DEFAULT"
         try:
             groupName = line.split("table+")[1].split(":")[0]
             return groupName
