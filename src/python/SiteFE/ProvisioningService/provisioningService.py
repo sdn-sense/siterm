@@ -24,13 +24,17 @@ import copy
 import sys
 
 from SiteFE.ProvisioningService.modules.RoutingService import RoutingService
-from SiteFE.ProvisioningService.modules.VirtualSwitchingService import \
-    VirtualSwitchingService
+from SiteFE.ProvisioningService.modules.VirtualSwitchingService import VirtualSwitchingService
 from SiteRMLibs.Backends.main import Switch
-from SiteRMLibs.CustomExceptions import (NoOptionError, NoSectionError,
-                                         SwitchException)
-from SiteRMLibs.MainUtilities import (createDirs, evaldict, getDBConn,
-                                      getLoggingObject, getUTCnow, getVal)
+from SiteRMLibs.CustomExceptions import (NoOptionError, NoSectionError, SwitchException)
+from SiteRMLibs.MainUtilities import (
+    createDirs,
+    evaldict,
+    getDBConn,
+    getLoggingObject,
+    getUTCnow,
+    getVal,
+)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.timing import Timing
@@ -48,10 +52,14 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         if logger:
             self.logger = logger
         else:
-            self.logger = getLoggingObject(config=self.config, service="ProvisioningService")
+            self.logger = getLoggingObject(
+                config=self.config, service="ProvisioningService"
+            )
         self.sitename = sitename
         self.switch = Switch(config, sitename)
-        self.dbI = getVal(getDBConn("ProvisioningService", self), **{"sitename": self.sitename})
+        self.dbI = getVal(
+            getDBConn("ProvisioningService", self), **{"sitename": self.sitename}
+        )
         workDir = self.config.get("general", "privatedir") + "/ProvisioningService/"
         createDirs(workDir)
         self.yamlconfuuid = {}
@@ -132,7 +140,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         activated, activate-error, deactivated, deactive-error
         """
         nstate = "unknown"
-        if items.get('state', None) not in ["present", "error"] or kwargs.get('uuidstate', None) not in ["ok", "error"]:
+        if items.get("state", None) not in ["present", "error"] or kwargs.get(
+            "uuidstate", None
+        ) not in ["ok", "error"]:
             nstate = "unknown"
         elif items["state"] == "present" and kwargs["uuidstate"] == "ok":
             # This means it was activated;
@@ -170,15 +180,23 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         """
         Check if the given configuration is empty.
         """
-        if key == 'sense_bgp':
-            return all(not activeConf.get(f) for f in ("ipv6_network", "neighbor", "prefix_list", "route_map"))
+        if key == "sense_bgp":
+            return all(
+                not activeConf.get(f)
+                for f in ("ipv6_network", "neighbor", "prefix_list", "route_map")
+            )
         return not activeConf
 
     def applyIndvConfig(self, swname, uuid, key, acttype, raiseExc=True):
         """Apply a single delta to network devices and report to DB it's state"""
         # Write new inventory file, based on the currect active(just in case things have changed)
         # or container was restarted
-        if not self.yamlconfuuid.get(acttype, {}).get(uuid, {}).get(swname, {}).get(key, {}):
+        if (
+            not self.yamlconfuuid.get(acttype, {})
+            .get(uuid, {})
+            .get(swname, {})
+            .get(key, {})
+        ):
             return
         inventory = self.switch.plugin._getInventoryInfo([swname])
         self.switch.plugin._writeInventoryInfo(inventory, "_singleapply")
@@ -202,7 +220,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         # If key is sense_bgp, then we need to identify groupName, Used by Juniper only
         if key == "sense_bgp":
             try:
-                curActiveConf[key]['groupName'] = self.generateGroupName(curActiveConf[key], uuid)
+                curActiveConf[key]["groupName"] = self.generateGroupName(
+                    curActiveConf[key], uuid
+                )
             except Exception:
                 return
         # Add ansible specific parameters
@@ -214,9 +234,13 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         try:
             self.applyConfig(raiseExc, [swname], "_singleapply")
             networkstate = "ok"
-            self.logger.info(f"Apply was succesful for {uuid}, {swname}, {key}, {acttype}")
+            self.logger.info(
+                f"Apply was succesful for {uuid}, {swname}, {key}, {acttype}"
+            )
         except SwitchException as ex:
-            self.logger.info(f"Received an error to apply for {uuid}, {swname}, {key}, {acttype}")
+            self.logger.info(
+                f"Received an error to apply for {uuid}, {swname}, {key}, {acttype}"
+            )
             self.logger.info(f"Exception: {ex}")
             networkstate = "error"
         self.__reportDeltaState(
@@ -234,28 +258,38 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         """Compare individual entries and report it's status"""
         changed = False
         scannedUUIDs = []
-        for acttype, actcalls in {"vsw": {"interface": self.compareVsw},
-                                  "rst": {"sense_bgp": self.compareBGP},
-                                  "singleport": {"interface": self.compareVsw}}.items():
+        for acttype, actcalls in {
+            "vsw": {"interface": self.compareVsw},
+            "rst": {"sense_bgp": self.compareBGP},
+            "singleport": {"interface": self.compareVsw},
+        }.items():
             self.acttype = acttype
             uuidDict = self.yamlconfuuidActive.get(acttype, {})
             if not self.yamlconfuuidActive:
                 uuidDict = self.yamlconfuuid.get(acttype, {})
             total = len(uuidDict)
             for idx, (uuid, ddict) in enumerate(uuidDict.items(), start=1):
-                self.logger.info('-'*100)
-                self.logger.info(f'Working on {acttype} {idx} out of {total}')
+                self.logger.info("-" * 100)
+                self.logger.info(f"Working on {acttype} {idx} out of {total}")
                 scannedUUIDs.append(uuid)
                 for swname, swdict in ddict.items():
                     if swname not in switches:
                         continue
                     for key, call in actcalls.items():
                         if key in swdict and call:
-                            self.logger.info(f"Comparing {acttype} for {uuid} config with ansible config")
-                            curAct = (self.yamlconfuuidActive.get(acttype, {})
-                                      .get(uuid, {}).get(swname, {}).get(key, {}))
+                            self.logger.info(
+                                f"Comparing {acttype} for {uuid} config with ansible config"
+                            )
+                            curAct = (
+                                self.yamlconfuuidActive.get(acttype, {})
+                                .get(uuid, {})
+                                .get(swname, {})
+                                .get(key, {})
+                            )
                             diff = call(swname, curAct, uuid)
-                            self.logger.info(f"Comparing {acttype} for {uuid}. Difference: {diff}")
+                            self.logger.info(
+                                f"Comparing {acttype} for {uuid}. Difference: {diff}"
+                            )
                             if diff:
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)
@@ -264,14 +298,18 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)
             # We also want to apply any new ones asap (timed especially, which start at any time set)
-            self.logger.info('Start check of all new applies')
+            self.logger.info("Start check of all new applies")
             total = len(self.yamlconfuuid.get(acttype, {}))
-            for idx, (uuid, ddict) in enumerate(self.yamlconfuuid.get(acttype, {}).items(), start=1):
+            for idx, (uuid, ddict) in enumerate(
+                self.yamlconfuuid.get(acttype, {}).items(), start=1
+            ):
                 if uuid in scannedUUIDs:
                     continue
                 scannedUUIDs.append(uuid)
-                self.logger.debug('-'*100)
-                self.logger.info(f'[NEW APPLY]: Working on {acttype} {idx} out of {total}. UUID: {uuid}')
+                self.logger.debug("-" * 100)
+                self.logger.info(
+                    f"[NEW APPLY]: Working on {acttype} {idx} out of {total}. UUID: {uuid}"
+                )
                 for swname, swdict in ddict.items():
                     if swname not in switches:
                         continue
