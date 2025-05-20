@@ -190,6 +190,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
     @staticmethod
     def _identifyFinalState(activeConf):
         """Identify Final State for service."""
+
         def anyNestedPresent(d):
             if isinstance(d, dict):
                 for v in d.values():
@@ -246,7 +247,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             return
         # If key is sense_bgp, then we need to identify groupName, Used by Juniper only
         if key == "sense_bgp":
-            curActiveConf[key]['state'] = self._identifyFinalState(curActiveConf[key])
+            curActiveConf[key]["state"] = self._identifyFinalState(curActiveConf[key])
             try:
                 curActiveConf[key]["groupName"] = self.generateGroupName(
                     curActiveConf[key], uuid
