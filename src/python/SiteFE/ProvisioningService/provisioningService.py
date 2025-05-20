@@ -190,7 +190,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
     @staticmethod
     def _identifyFinalState(activeConf):
         """Identify Final State for service."""
-
         def anyNestedPresent(d):
             if isinstance(d, dict):
                 for v in d.values():
