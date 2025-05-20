@@ -187,6 +187,33 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             )
         return not activeConf
 
+    @staticmethod
+    def _identifyFinalState(activeConf):
+        """Identify Final State for service."""
+        def anyNestedPresent(d):
+            if isinstance(d, dict):
+                for v in d.values():
+                    if isinstance(v, dict):
+                        if anyNestedPresent(v):
+                            return True
+                    elif v == "present":
+                        return True
+            return False
+
+        # If state already not prsent, return absent
+        # Loop via all items, ignore state key
+        # And if anyNetstedItem == present, keep
+        # global state as present; Otherwise return absent
+        if activeConf.get("state") != "present":
+            return "absent"
+
+        for key, val in activeConf.items():
+            if key == "state":
+                continue
+            if anyNestedPresent(val):
+                return "present"
+        return "absent"
+
     def applyIndvConfig(self, swname, uuid, key, acttype, raiseExc=True):
         """Apply a single delta to network devices and report to DB it's state"""
         # Write new inventory file, based on the currect active(just in case things have changed)
@@ -219,6 +246,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             return
         # If key is sense_bgp, then we need to identify groupName, Used by Juniper only
         if key == "sense_bgp":
+            curActiveConf[key]['state'] = self._identifyFinalState(curActiveConf[key])
             try:
                 curActiveConf[key]["groupName"] = self.generateGroupName(
                     curActiveConf[key], uuid
