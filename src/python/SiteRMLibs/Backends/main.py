@@ -122,6 +122,7 @@ class Switch(Node):
 
     def _getDBOut(self):
         """Get Database output of all switches configs for site"""
+        self.switches = {'output': {}}
         tmp = self.dbI.get("switch", search=[["sitename", self.site]])
         for item in tmp:
             self.switches['output'][item["device"]] = evaldict(item["output"])
@@ -129,7 +130,7 @@ class Switch(Node):
             for key in item.keys():
                 if key != "output":
                     self.switches['output'][item["device"]]['dbinfo'][key] = item[key]
-        if not self.switches:
+        if not self.switches.get('output', None):
             self.logger.debug("No switches in database.")
 
     @staticmethod

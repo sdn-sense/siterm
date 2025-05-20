@@ -98,7 +98,7 @@ class BWService:
             reservedRate = self.convertToRate(bwparams)
             self.logger.debug(f"Device {device} port {port} has reserved {reservedRate[0]} {reservedRate[1]}")
             maxbw -= reservedRate[0]
-            self.logger.debug(f"Device {device} port {port} has reserved {maxbw} left")
+            self.logger.debug(f"Device {device} port {port} has left {maxbw}")
         if maxbw < 0:
             self.logger.warning(f"Device {device} port {port} has reserved more than allowed. {maxbw}")
             return 0
