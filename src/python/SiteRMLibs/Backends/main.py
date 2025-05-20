@@ -10,14 +10,23 @@ Date: 2021/12/01
 """
 import time
 from SiteRMLibs.Backends.Ansible import Switch as Ansible
-from SiteRMLibs.Backends.generalFunctions import (checkConfig, cleanupEmpty,
-                                                  getConfigParams,
-                                                  getValFromConfig)
+from SiteRMLibs.Backends.generalFunctions import (
+    checkConfig,
+    cleanupEmpty,
+    getConfigParams,
+    getValFromConfig,
+)
 from SiteRMLibs.Backends.NodeInfo import Node
 from SiteRMLibs.Backends.Raw import Switch as Raw
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.MainUtilities import (evaldict, getDBConn, getLoggingObject, getUTCnow, jsondumps)
+from SiteRMLibs.MainUtilities import (
+    evaldict,
+    getDBConn,
+    getLoggingObject,
+    getUTCnow,
+    jsondumps,
+)
 
 
 class Switch(Node):
@@ -27,7 +36,7 @@ class Switch(Node):
         self.config = config
         self.logger = getLoggingObject(config=self.config, service="SwitchBackends")
         self.site = site
-        self.switches = {'output': {}}
+        self.switches = {"output": {}}
         checkConfig(self.config, self.site)
         self.dbI = getDBConn("Switch", self)[self.site]
         self.warnings = []
@@ -94,7 +103,9 @@ class Switch(Node):
                 if device and dev != device:
                     continue
                 fname = f"{self.config.get(siteName, 'privatedir')}/SwitchWorker/{dev}.update"
-                self.logger.info(f"Set Update flag for device {dev} {siteName}, {fname}")
+                self.logger.info(
+                    f"Set Update flag for device {dev} {siteName}, {fname}"
+                )
                 success = False
                 while not success:
                     try:
@@ -122,14 +133,15 @@ class Switch(Node):
 
     def _getDBOut(self):
         """Get Database output of all switches configs for site"""
+        self.switches = {"output": {}}
         tmp = self.dbI.get("switch", search=[["sitename", self.site]])
         for item in tmp:
-            self.switches['output'][item["device"]] = evaldict(item["output"])
-            self.switches['output'][item["device"]].setdefault("dbinfo", {})
+            self.switches["output"][item["device"]] = evaldict(item["output"])
+            self.switches["output"][item["device"]].setdefault("dbinfo", {})
             for key in item.keys():
                 if key != "output":
-                    self.switches['output'][item["device"]]['dbinfo'][key] = item[key]
-        if not self.switches:
+                    self.switches["output"][item["device"]]["dbinfo"][key] = item[key]
+        if not self.switches.get("output", None):
             self.logger.debug("No switches in database.")
 
     @staticmethod
@@ -250,7 +262,9 @@ class Switch(Node):
             }
             if switch not in self.switches["output"]:
                 out["insertdate"] = getUTCnow()
-                self.logger.debug(f"No switches {switch} in database. Calling to add error.")
+                self.logger.debug(
+                    f"No switches {switch} in database. Calling to add error."
+                )
                 self.logger.debug(f"Error: {errmsg}")
                 self.dbI.insert("switch_error", [out])
             else:
@@ -264,14 +278,16 @@ class Switch(Node):
 
     def _addyamlInfoToPort(self, switch, portName, defVlans, out):
         """Add Yaml info to specific port"""
-        for key, defval in {"hostname": "",
-                            "isAlias": "",
-                            "vlan_range_list": defVlans,
-                            "destport": "",
-                            "capacity": "",
-                            "granularity": "",
-                            "availableCapacity": "",
-                            "rate_limit": False}.items():
+        for key, defval in {
+            "hostname": "",
+            "isAlias": "",
+            "vlan_range_list": defVlans,
+            "destport": "",
+            "capacity": "",
+            "granularity": "",
+            "availableCapacity": "",
+            "rate_limit": False,
+        }.items():
             tmpval = getValFromConfig(self.config, switch, portName, key)
             if not tmpval:
                 if defval:
@@ -299,16 +315,29 @@ class Switch(Node):
                 self._delPortFromOut(switch, port)
                 continue
             tmpData = self.plugin.getportdata(self.switches["output"][switch], port)
-            confPort = self.config.config["MAIN"].get(switch, {}).get("ports", {}).get(port, {})
+            confPort = (
+                self.config.config["MAIN"]
+                .get(switch, {})
+                .get("ports", {})
+                .get(port, {})
+            )
             if not tmpData and confPort:
                 # This port only defined in RM Config (fake switch port)
                 self.output["ports"][switch].setdefault(port, confPort)
                 continue
-            if self._notSwitchport(tmpData) and port not in vlans and not port.lower().startswith('vlan'):
+            if (
+                self._notSwitchport(tmpData)
+                and port not in vlans
+                and not port.lower().startswith("vlan")
+            ):
                 warning = f"Warning. Port {switch}{port} not added into model. Its status not switchport. Ansible runner returned: {tmpData}."
                 self.logger.debug(warning)
                 # Only add warning if allports flag is False.
-                if not self.config.config["MAIN"].get(switch, {}).get("allports", False):
+                if (
+                    not self.config.config["MAIN"]
+                    .get(switch, {})
+                    .get("allports", False)
+                ):
                     self.warnings.append(warning)
                 self._delPortFromOut(switch, port)
                 continue
@@ -366,6 +395,7 @@ class Switch(Node):
             self._insertErrToDB(err)
             raise Exception(f"Failed ANSIBLE Runtime. See Error {str(err)}")
         self._insertToDB(out)
+
 
 def execute(config=None):
     """Main Execute."""

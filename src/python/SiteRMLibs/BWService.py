@@ -8,8 +8,10 @@ Authors:
 Date: 2024/02/21
 """
 
+
 class BWService:
     """BW Service - converts bandwidth to QoS understandable format."""
+
     # bps, bytes per second
     # kbps, Kbps, kilobytes per second
     # mbps, Mbps, megabytes per second
@@ -66,7 +68,9 @@ class BWService:
             elif inputRate == "kbps":
                 retVal = int(inputVal // 1000)
             else:
-                self.logger.error(f"Unknown input rate parameter {inputRate} and {inputVal}")
+                self.logger.error(
+                    f"Unknown input rate parameter {inputRate} and {inputVal}"
+                )
                 retVal = 100
         except TypeError as ex:
             self.logger.error(f"Error converting BW Service. {ex}. Input {params}")
@@ -82,29 +86,35 @@ class BWService:
             reserve = "100%"
         if reserve.endswith("%"):
             # Calculate fraction of maxbw based on reserve %
-            reserve = int(maxbw/100*int(reserve[:-1]))
+            reserve = int(maxbw / 100 * int(reserve[:-1]))
         maxbw = reserve
         if nosubtract:
             return maxbw
-        for _uri, uriData in self.activeDeltas.get('output', {}).get('vsw', {}).items():
+        for _uri, uriData in self.activeDeltas.get("output", {}).get("vsw", {}).items():
             if device not in uriData:
                 continue
             if port not in uriData[device]:
                 continue
             # Means device and port is in the activeDeltas and we get hasService
-            bwparams = uriData[device][port].get('hasService', {})
+            bwparams = uriData[device][port].get("hasService", {})
             if not bwparams:
                 continue
             reservedRate = self.convertToRate(bwparams)
-            self.logger.debug(f"Device {device} port {port} has reserved {reservedRate[0]} {reservedRate[1]}")
+            self.logger.debug(
+                f"Device {device} port {port} has reserved {reservedRate[0]} {reservedRate[1]}"
+            )
             maxbw -= reservedRate[0]
-            self.logger.debug(f"Device {device} port {port} has reserved {maxbw} left")
+            self.logger.debug(f"Device {device} port {port} has left {maxbw}")
         if maxbw < 0:
-            self.logger.warning(f"Device {device} port {port} has reserved more than allowed. {maxbw}")
+            self.logger.warning(
+                f"Device {device} port {port} has reserved more than allowed. {maxbw}"
+            )
             return 0
         return maxbw
 
-    def bwCalculatereservableSwitch(self, config, device, port, maxbw, nosubtract=False):
+    def bwCalculatereservableSwitch(
+        self, config, device, port, maxbw, nosubtract=False
+    ):
         """Calculate reserved bandwidth for port on switch."""
         reserve = config.get(device, {}).get(port, {}).get("reservableCapacity", -1)
         if reserve == -1:
@@ -113,10 +123,12 @@ class BWService:
         vport = self.switch.getSystemValidPortName(port)
         return self._calculateRemaining(device, vport, maxbw, reserve, nosubtract)
 
-    def bwCalculatereservableServer(self, config, device, port, maxbw, nosubtract=False):
+    def bwCalculatereservableServer(
+        self, config, device, port, maxbw, nosubtract=False
+    ):
         """Calculate reserved bandwidth for port on server."""
-        reserve = config.get(port, {}).get('bwParams', {}).get("reservableCapacity", -1)
+        reserve = config.get(port, {}).get("bwParams", {}).get("reservableCapacity", -1)
         if reserve == -1:
-            reserve = config.get('agent', {}).get("reservableCapacity", -1)
+            reserve = config.get("agent", {}).get("reservableCapacity", -1)
         # Now we need to remove all active QoS policies and calculate how much is left for the port to use.
         return self._calculateRemaining(device, port, maxbw, reserve, nosubtract)
