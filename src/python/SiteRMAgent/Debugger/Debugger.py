@@ -28,18 +28,19 @@ from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 
-COMPONENT = 'Debugger'
+COMPONENT = "Debugger"
 
 
 class Debugger(DebugService):
     """Debugger main process"""
+
     def __init__(self, config, sitename):
         super(Debugger, self).__init__(config, sitename)
         self.config = config if config else getGitConfig()
-        self.logger = getLoggingObject(config=self.config, service='Debugger')
+        self.logger = getLoggingObject(config=self.config, service="Debugger")
         self.fullURL = getFullUrl(self.config, sitename)
         self.sitename = sitename
-        self.hostname = self.config.get('agent', 'hostname')
+        self.hostname = self.config.get("agent", "hostname")
         self.diragent = contentDB()
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
 
@@ -47,14 +48,16 @@ class Debugger(DebugService):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self.fullURL = getFullUrl(self.config, self.sitename)
-        self.hostname = self.config.get('agent', 'hostname')
+        self.hostname = self.config.get("agent", "hostname")
 
     def getData(self, url):
         """Get data from FE."""
-        self.logger.info(f'Query: {self.fullURL}{url}')
+        self.logger.info(f"Query: {self.fullURL}{url}")
         out = getDataFromSiteFE({}, self.fullURL, url)
-        if out[2] != 'OK':
-            msg = f'Received a failure getting information from Site Frontend {str(out)}'
+        if out[2] != "OK":
+            msg = (
+                f"Received a failure getting information from Site Frontend {str(out)}"
+            )
             self.logger.critical(msg)
             raise FailedGetDataFromFE(msg)
         return evaldict(out[0])
@@ -63,11 +66,15 @@ class Debugger(DebugService):
         """Start execution and get new requests from FE"""
         for wtype in ["new", "active"]:
             self.logger.info(f"Get all {wtype} requests")
-            data = self.getData(f"/sitefe/json/frontend/getalldebughostname/{self.hostname}/{wtype}")
+            data = self.getData(
+                f"/sitefe/json/frontend/getalldebughostname/{self.hostname}/{wtype}"
+            )
             for item in data:
                 # Do we need to get full data from FE? E.G. Request info?
                 if not self.backgroundProcessItemExists(item):
-                    self.logger.info(f"Background process item does not exist. ID: {item['id']}")
+                    self.logger.info(
+                        f"Background process item does not exist. ID: {item['id']}"
+                    )
                 try:
                     ditem = self.getData(f"/sitefe/json/frontend/getdebug/{item['id']}")
                     if ditem:
@@ -96,15 +103,21 @@ def get_parser():
         dest="sitename",
         default="",
         required=True,
-        help="Sitename. Must be present in configuration and database.")
+        help="Sitename. Must be present in configuration and database.",
+    )
 
     return oparser
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     argparser = get_parser()
-    print("WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:", len(sys.argv), "arguments.")
+    print(
+        "WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:",
+        len(sys.argv),
+        "arguments.",
+    )
     if len(sys.argv) == 1:
         argparser.print_help()
     inargs = argparser.parse_args(sys.argv[1:])
-    getLoggingObject(logType='StreamLogger', service='Debugger')
+    getLoggingObject(logType="StreamLogger", service="Debugger")
     execute(sitename=inargs.sitename)
