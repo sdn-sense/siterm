@@ -20,7 +20,6 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2023/01/03
 """
 import os
-import re
 
 from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.MainUtilities import getUTCnow, jsondumps, read_input_data
@@ -31,22 +30,21 @@ class CallValidator:
     """Validator class for Debug Actions"""
 
     def __init__(self, config):
-        self.functions = {
-            "prometheus-push": self.__validatePrompush,
-            "arp-push": self.__validateArppush,
-            "iperf-server": self.__validateIperfserver,
-            "iperf-client": self.__validateIperf,
-            "rapid-ping": self.__validateRapidping,
-            "rapid-pingnet": self.__validateRapidpingnet,
-            "arp-table": self.__validateArp,
-            "tcpdump": self.__validateTcpdump,
-            "traceroute": self.__validateTraceRoute,
-            "traceroutenet": self.__validateTraceRouteNet
+        self.functions = {"iperf-server": self.__validateIperfserver,
+                          "iperf-client": self.__validateIperf,
+                          "fdt-client": self.__validateFdtClient,
+                          "fdt-server": self.__validateFdtServer,
+                          "rapid-ping": self.__validateRapidping,
+                          "rapid-pingnet": self.__validateRapidpingnet,
+                          "arp-table": self.__validateArp,
+                          "tcpdump": self.__validateTcpdump,
+                          "traceroute": self.__validateTraceRoute,
+                          "traceroutenet": self.__validateTraceRouteNet
         }
-        self.defparams = {"prometheus-push": {},
-                          "arp-push": {},
-                          "iperf-server": {"onetime": True},
+        self.defparams = {"iperf-server": {"onetime": True},
                           "iperf-client": {"onetime": True},
+                          "fdt-client": {},
+                          "fdt-server": {},
                           "rapid-ping": {},
                           "rapid-pingnet": {"onetime": True},
                           "arp-table": {"onetime": True},
@@ -75,13 +73,11 @@ class CallValidator:
     def validate(self, inputDict):
         """Validate wrapper for debug action."""
         inputDict = self._addDefaults(inputDict)
-        self.__validateKeys(inputDict, ["hostname"])
         if "type" in inputDict and inputDict["type"] not in self.functions:
             raise BadRequestError(f"Action {inputDict['type']} not supported. Supported actions: {self.functions.keys()}")
         self.functions[inputDict["type"]](inputDict)
-        self.__validateRuntime(inputDict)
+        self.validateRuntime(inputDict)
         return inputDict
-
 
     def __validateTraceRouteNet(self, inputDict):
         """Validate traceroute debug request for network device"""
@@ -110,8 +106,8 @@ class CallValidator:
         """Validate iperfclient debug request."""
         self.__validateKeys(inputDict, ["interface", "ip", "time", "port", "runtime"])
         # Do not allow time to be more than 5mins
-        if int(inputDict["time"]) > 300:
-            raise BadRequestError("Requested Runtime for debug request is more than 5mins.")
+        if int(inputDict["time"]) > 600:
+            raise BadRequestError("Requested Runtime for debug request is more than 10mins.")
         if ipVersion(inputDict['ip']) == -1:
             raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")
 
@@ -120,6 +116,19 @@ class CallValidator:
         self.__validateKeys(inputDict, ["port", "ip", "time", "runtime"])
         if ipVersion(inputDict['ip']) == -1:
             raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")
+
+    def __validateFdtClient(self, inputDict):
+        """Validate fdtclient debug request."""
+        self.__validateKeys(inputDict, ["ip", "runtime"])
+        if ipVersion(inputDict['ip']) == -1:
+            raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")
+        if int(inputDict["runtime"]) > 600:
+            raise BadRequestError("Requested Runtime for debug request is more than 10mins.")
+
+    def __validateFdtServer(self, inputDict):
+        """Validate fdt server debug request."""
+        if int(inputDict["runtime"]) > 600:
+            raise BadRequestError("Requested Runtime for debug request is more than 10mins.")
 
     def __validateRapidpingnet(self, inputDict):
         """Validate rapid ping debug request for network device"""
@@ -149,61 +158,13 @@ class CallValidator:
         """Validate tcpdump debug request."""
         self.__validateKeys(inputDict, ["interface"])
 
-    @staticmethod
-    def __validateMetadata(inputDict):
-        """Validate Metadata Parameters"""
-        if "metadata" in inputDict:
-            # Instance must be dictionary
-            if not isinstance(inputDict["metadata"], dict):
-                raise BadRequestError("Requested dictionary metadata is not dictionary")
-            for key, val in inputDict["metadata"].items():
-                if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", key):
-                    raise BadRequestError(f"Metadata Key {key} does not match prometheus label format")
-                if not isinstance(val, str):
-                    raise BadRequestError(f"Metadata Key {key} value is not str. Only str supported")
-
-    def __validateRuntime(self, inputDict):
+    def validateRuntime(self, inputDict):
         """Validate Runtime"""
         totalRuntime = int(int(inputDict["runtime"]) - getUTCnow())
         if totalRuntime < 600 or totalRuntime > 86400:
             raise BadRequestError(
                 f"Total Runtime must be within range of 600 < x < 86400 seconds since epoch. You requested {totalRuntime}"
             )
-
-    def __validatePrompush(self, inputDict):
-        """Validate prometheus push debug request."""
-        self.__validateKeys(inputDict, ["hosttype", "gateway", "runtime", "resolution"])
-        if inputDict["hosttype"] not in ["host", "switch"]:
-            raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
-        # Check all metadata label parameters
-        self.__validateMetadata(inputDict)
-        # Check all filter parameters
-        if "filter" in inputDict:
-            if not isinstance(inputDict["filter"], dict):
-                raise BadRequestError("Requested filter must be dictionary type")
-            for filterKey, filterVals in inputDict["filter"].items():
-                if filterKey not in ["mac", "snmp"]:
-                    raise BadRequestError(
-                        f"Requested filter {filterKey} not supported."
-                    )
-                if "operator" not in filterVals:
-                    raise BadRequestError(
-                        f"Requested filter: {filterVals}, does not have operator key"
-                    )
-                if filterVals["operator"] not in ["and", "or"]:
-                    raise BadRequestError(
-                        "Only 'and' or 'or' are supported filter operators"
-                    )
-                if "queries" not in filterVals:
-                    raise BadRequestError("Requested filter does not have queries key")
-
-    def __validateArppush(self, inputDict):
-        """Validate arp push debug request."""
-        self.__validateKeys(inputDict, ["hosttype", "gateway", "runtime", "resolution"])
-        if inputDict["hosttype"] not in ["host", "switch"]:
-            raise BadRequestError(f"Host Type {inputDict['hosttype']} not supported.")
-        # Check all metadata label parameters
-        self.__validateMetadata(inputDict)
 
 
 class DebugCalls:
@@ -214,6 +175,11 @@ class DebugCalls:
         self.__defineRoutes()
         self.__urlParams()
         self.validator = CallValidator(self.config)
+        self.debugdirs = {}
+        for sitename in self.sites:
+            if sitename != "MAIN":
+                self.debugdirs.setdefault(sitename, "")
+                self.debugdirs[sitename] = os.path.join(self.config.get(sitename, "privatedir"), "DebugServices")
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -223,6 +189,7 @@ class DebugCalls:
             "submitdebug": {"allowedMethods": ["PUT", "POST"]},
             "updatedebug": {"allowedMethods": ["PUT", "POST"]},
             "deletedebug": {"allowedMethods": ["DELETE"]},
+            "adddebugservice": {"allowedMethods": ["PUT"]}
         }
         self.urlParams.update(urlParams)
 
@@ -235,6 +202,37 @@ class DebugCalls:
         self.routeMap.connect("submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug")
         self.routeMap.connect("updatedebug", "/json/frontend/updatedebug/:debugvar", action="updatedebug")
         self.routeMap.connect("deletedebug", "/json/frontend/deletedebug/:debugvar", action="deletedebug")
+        self.routeMap.connect("adddebugservice", "/json/frontend/adddebugservice", action="adddebugservice")
+
+    def adddebugservice(self, environ, **kwargs):
+        """Adding new debug service to DB."""
+        inputDict = read_input_data(environ)
+        if "hostname" not in inputDict:
+            raise BadRequestError("Key 'hostname' not specified in debug request.")
+        host = self.dbI.get("debugworkers", limit=1, search=[["hostname", inputDict["hostname"]]])
+        if not host:
+            fname = os.path.join(self.debugdirs[kwargs["sitename"]], inputDict["hostname"], "hostinfo.json")
+            out = {
+                "hostname": inputDict["hostname"],
+                "insertdate": inputDict["insertTime"],
+                "updatedate": inputDict["updateTime"],
+                "hostinfo": fname,
+            }
+            self.dumpFileContentAsJson(fname, inputDict)
+            self.dbI.insert("hosts", [out])
+        else:
+            # Update existing host information
+            out = {
+                "hostname": inputDict["hostname"],
+                "updatedate": getUTCnow(),
+                "hostinfo": os.path.join(self.debugdirs[kwargs["sitename"]], inputDict["hostname"], "hostinfo.json"),
+            }
+            self.dumpFileContentAsJson(out["hostinfo"], inputDict)
+            updOut = self.dbI.update("debugworkers", [out])
+            if not updOut[0]:
+                raise BadRequestError(f"Failed to update debug service for {inputDict['hostname']}")
+        self.responseHeaders(environ, **kwargs)
+        return {"Status": "OK"}
 
     def _getdebuginfo(self, _environ, **kwargs):
         """Get Debug action information."""
@@ -251,6 +249,12 @@ class DebugCalls:
         outputfname = os.path.join(debugdir, out["hostname"], kwargs["debugvar"], "output.json")
         out["output"] = self.getFileContentAsJson(outputfname)
         return out
+
+    def _identifyExternalService(self, inputDict):
+        """Identify external service based on inputDict."""
+        if inputDict.get("type", "") in ["iperf-server", "iperf-client", "fdt-client", "fdt-server"]:
+            return True
+        return False
 
     def getdebug(self, environ, **kwargs):
         """Get Debug action for specific ID."""
@@ -275,7 +279,7 @@ class DebugCalls:
         inputDict = self.validator.validate(inputDict)
         # This submit a new request to the database, and then based on the ID/Hostanem
         # write request to the file.
-        out = {"hostname": inputDict["hostname"],
+        out = {"hostname": inputDict.get("hostname", 'undefined'),
                "state": "new",
                "insertdate": getUTCnow(),
                "updatedate": getUTCnow()
