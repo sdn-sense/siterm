@@ -10,6 +10,7 @@ Date                    : 2025/05/30
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.CustomExceptions import BackgroundException
 
+
 class FdtServer(BaseDebugAction):
     """FdtServer class"""
     def __init__(self, config, sitename, backgConfig):

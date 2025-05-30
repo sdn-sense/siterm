@@ -39,8 +39,7 @@ class CallValidator:
                           "arp-table": self.__validateArp,
                           "tcpdump": self.__validateTcpdump,
                           "traceroute": self.__validateTraceRoute,
-                          "traceroutenet": self.__validateTraceRouteNet
-        }
+                          "traceroutenet": self.__validateTraceRouteNet}
         self.defparams = {"iperf-server": {"onetime": True},
                           "iperf-client": {"onetime": True},
                           "fdt-client": {},
@@ -125,7 +124,8 @@ class CallValidator:
         if int(inputDict["runtime"]) > 600:
             raise BadRequestError("Requested Runtime for debug request is more than 10mins.")
 
-    def __validateFdtServer(self, inputDict):
+    @staticmethod
+    def __validateFdtServer(inputDict):
         """Validate fdt server debug request."""
         if int(inputDict["runtime"]) > 600:
             raise BadRequestError("Requested Runtime for debug request is more than 10mins.")
@@ -249,12 +249,6 @@ class DebugCalls:
         outputfname = os.path.join(debugdir, out["hostname"], kwargs["debugvar"], "output.json")
         out["output"] = self.getFileContentAsJson(outputfname)
         return out
-
-    def _identifyExternalService(self, inputDict):
-        """Identify external service based on inputDict."""
-        if inputDict.get("type", "") in ["iperf-server", "iperf-client", "fdt-client", "fdt-server"]:
-            return True
-        return False
 
     def getdebug(self, environ, **kwargs):
         """Get Debug action for specific ID."""
