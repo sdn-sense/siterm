@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=E1101
+# pylint: disable=too-few-public-methods
 """
 Title                   : siterm
 Author                  : Justas Balcas
@@ -13,11 +13,12 @@ from SiteRMLibs.CustomExceptions import BackgroundException
 
 class FdtServer(BaseDebugAction):
     """FdtServer class"""
+
     def __init__(self, config, sitename, backgConfig):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.requestdict = backgConfig.get('requestdict', {})
+        self.requestdict = backgConfig.get("requestdict", {})
         self.service = "FdtServer"
         super().__init__()
 
