@@ -18,7 +18,8 @@ try:
     from SiteRMAgent.Debugger.BackgroundRuns.ArpTable import ArpTable
     from SiteRMAgent.Debugger.BackgroundRuns.IperfClient import IperfClient
     from SiteRMAgent.Debugger.BackgroundRuns.IperfServer import IperfServer
-    from SiteRMAgent.Debugger.BackgroundRuns.PromPush import PromPush
+    from SiteRMAgent.Debugger.BackgroundRuns.FdtClient import FdtClient
+    from SiteRMAgent.Debugger.BackgroundRuns.FdtServer import FdtServer
     from SiteRMAgent.Debugger.BackgroundRuns.RapidPing import RapidPing
     from SiteRMAgent.Debugger.BackgroundRuns.RapidPingNet import RapidPingNet
     from SiteRMAgent.Debugger.BackgroundRuns.TCPDump import TCPDump
@@ -29,7 +30,8 @@ except (ImportError, ModuleNotFoundError):
     from SiteFE.Debugger.BackgroundRuns.ArpTable import ArpTable
     from SiteFE.Debugger.BackgroundRuns.IperfClient import IperfClient
     from SiteFE.Debugger.BackgroundRuns.IperfServer import IperfServer
-    from SiteFE.Debugger.BackgroundRuns.PromPush import PromPush
+    from SiteFE.Debugger.BackgroundRuns.FdtClient import FdtClient
+    from SiteFE.Debugger.BackgroundRuns.FdtServer import FdtServer
     from SiteFE.Debugger.BackgroundRuns.RapidPing import RapidPing
     from SiteFE.Debugger.BackgroundRuns.RapidPingNet import RapidPingNet
     from SiteFE.Debugger.BackgroundRuns.TCPDump import TCPDump
@@ -65,8 +67,8 @@ class MyDaemon(Daemon):
 
     def getThreads(self):
         """Check worker type"""
-        WORKERS = {'prometheus-push': PromPush, 'arp-push': PromPush,
-                   'iperf-server': IperfServer, 'iperf-client': IperfClient,
+        WORKERS = {'iperf-server': IperfServer, 'iperf-client': IperfClient,
+                   'fdt-client': FdtClient, 'fdt-server': FdtServer,
                    'rapid-ping': RapidPing, 'rapid-pingnet': RapidPingNet,
                    'arp-table': ArpTable, 'tcpdump': TCPDump,
                    'traceroute': Traceroute, 'traceroutenet': TracerouteNet}
