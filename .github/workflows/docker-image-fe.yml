@@ -35,25 +35,25 @@ jobs:
     - name: Build the BASE Docker image
       run: | 
         cd siterm-startup/helpers/base_images/fe/
-        docker build . --file Dockerfile --build-arg ARCH=amd64 --tag sdnsense/sitefe-base:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker build . --file Dockerfile --build-arg ARCH=amd64 --tag sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push BASE Image with tag and date
-      run: docker push sdnsense/sitefe-base:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+      run: docker push ssdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push BASE Image with tag
       run: |
-        docker tag sdnsense/sitefe-base:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) sdnsense/sitefe-base:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/sitefe-base:${{ github.event.inputs.buildtag }}
+        docker tag sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}
+        docker push sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}
 
     - name: Build the FE Docker image
       run: | 
         cd siterm-startup/fe/container-build-files/
-        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/site-rm-sense:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push FE Image with tag and date
-      run: docker push sdnsense/site-rm-sense:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+      run: docker push sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push FE Image with tag
       run: |
-        docker tag sdnsense/site-rm-sense:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) sdnsense/site-rm-sense:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/site-rm-sense:${{ github.event.inputs.buildtag }}
+        docker tag sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}
+        docker push sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}
