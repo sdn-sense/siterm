@@ -38,7 +38,7 @@ jobs:
         docker build . --file Dockerfile --build-arg ARCH=amd64 --tag sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push BASE Image with tag and date
-      run: docker push ssdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+      run: docker push sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push BASE Image with tag
       run: |
