@@ -37,7 +37,9 @@ class HostCalls(HostSubCalls, contentDB):
         for sitename in self.sites:
             if sitename != "MAIN":
                 self.hostdirs.setdefault(sitename, "")
-                self.hostdirs[sitename] = os.path.join(self.config.get(sitename, "privatedir"), "HostData")
+                self.hostdirs[sitename] = os.path.join(
+                    self.config.get(sitename, "privatedir"), "HostData"
+                )
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -50,7 +52,12 @@ class HostCalls(HostSubCalls, contentDB):
                 "allowedMethods": ["GET", "POST", "DELETE"],
                 "urlParams": [
                     {"key": "hostname", "default": "", "type": str},
-                    {"key": "servicename", "default": "", "type": str, "options": self.host_services + ["ALL"]},
+                    {
+                        "key": "servicename",
+                        "default": "",
+                        "type": str,
+                        "options": self.host_services + ["ALL"],
+                    },
                 ],
             },
         }
@@ -87,7 +94,11 @@ class HostCalls(HostSubCalls, contentDB):
         inputDict = read_input_data(environ)
         host = self.dbI.get("hosts", limit=1, search=[["ip", inputDict["ip"]]])
         if not host:
-            fname = os.path.join(self.hostdirs[kwargs["sitename"]], inputDict["hostname"], "hostinfo.json")
+            fname = os.path.join(
+                self.hostdirs[kwargs["sitename"]],
+                inputDict["hostname"],
+                "hostinfo.json",
+            )
             out = {
                 "hostname": inputDict["hostname"],
                 "ip": inputDict["ip"],
@@ -120,7 +131,9 @@ class HostCalls(HostSubCalls, contentDB):
             raise NotFoundError(
                 f"This IP {inputDict['ip']} is not registered at all. Call addhost"
             )
-        fname = os.path.join(self.hostdirs[kwargs["sitename"]], inputDict["hostname"], "hostinfo.json")
+        fname = os.path.join(
+            self.hostdirs[kwargs["sitename"]], inputDict["hostname"], "hostinfo.json"
+        )
         out = {
             "id": host[0]["id"],
             "hostname": inputDict["hostname"],
@@ -162,7 +175,9 @@ class HostCalls(HostSubCalls, contentDB):
         """Set Service State in DB."""
         inputDict = read_input_data(environ)
         if not self._host_supportedService(inputDict.get("servicename", "")):
-            raise NotFoundError(f"This Service {inputDict['servicename']} is not supported by Frontend")
+            raise NotFoundError(
+                f"This Service {inputDict['servicename']} is not supported by Frontend"
+            )
         self._host_reportServiceStatus(
             **{
                 "servicename": inputDict["servicename"],

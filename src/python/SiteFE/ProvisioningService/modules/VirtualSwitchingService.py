@@ -17,6 +17,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
+
 from SiteRMLibs.ipaddr import normalizedip
 
 
@@ -53,7 +54,7 @@ class VirtualSwitchingService:
     def __init__(self):
         super().__init__()
 
-    def __getdefaultIntf(self, host, key='vsw', subkey="interface"):
+    def __getdefaultIntf(self, host, key="vsw", subkey="interface"):
         """Setup default yaml dict for interfaces"""
         tmpD = self.yamlconfuuid.setdefault(key, {}).setdefault(self.connID, {})
         tmpD = tmpD.setdefault(host, {})
@@ -63,7 +64,11 @@ class VirtualSwitchingService:
     @staticmethod
     def __getIP(iptype, inval):
         """Get IP from input"""
-        ipval = inval.get("hasNetworkAddress", {}).get(f"{iptype}-address", {}).get("value", "")
+        ipval = (
+            inval.get("hasNetworkAddress", {})
+            .get(f"{iptype}-address", {})
+            .get("value", "")
+        )
         if ipval:
             return normalizedip(ipval)
         return None
@@ -99,7 +104,7 @@ class VirtualSwitchingService:
             return
         portName = self.switch.getSwitchPortName(host, port)
         portData = self.switch.getSwitchPort(host, portName)
-        if portData.get('rate_limit', False):
+        if portData.get("rate_limit", False):
             vlan = self.__getVlanID(host, port, portDict)
             tmpD = self.__getdefaultIntf(host, "qos", "qos")
             vlanD = tmpD.setdefault(f"{port}-{vlan}", {})
@@ -173,10 +178,15 @@ class VirtualSwitchingService:
             for connID, connDict in activeConfig[self.acttype].items():
                 self.connID = connID
                 if not self.checkIfStarted(connDict):
-                    self.logger.info(f"{connID} has not started yet. Not adding to apply list")
+                    self.logger.info(
+                        f"{connID} has not started yet. Not adding to apply list"
+                    )
                     continue
                 self._addparamsVsw(connDict, switches)
-                if connDict.get('_params', {}).get('networkstatus', '') == "deactivated":
+                if (
+                    connDict.get("_params", {}).get("networkstatus", "")
+                    == "deactivated"
+                ):
                     # This happens during modify, force apply;
                     self.forceapply.append(connID)
                 # If first run, we also force apply
@@ -185,7 +195,11 @@ class VirtualSwitchingService:
 
     def compareQoS(self, switch, runningConf, uuid=""):
         """Compare expected and running conf"""
-        tmpD = self.yamlconfuuid.setdefault("qos", {}).setdefault(uuid, {}).setdefault(switch, {})
+        tmpD = (
+            self.yamlconfuuid.setdefault("qos", {})
+            .setdefault(uuid, {})
+            .setdefault(switch, {})
+        )
         tmpD = tmpD.setdefault("qos", {})
         if tmpD == runningConf:
             return False
@@ -195,11 +209,16 @@ class VirtualSwitchingService:
                 # set qos to state: 'absent'. In case it is absent already
                 # we dont need to set it again. Switch is unhappy to apply
                 # same command if service is not present.
-                tmpD.setdefault(key, {"state": "absent",
-                                      "rate": val["rate"],
-                                      "unit": val["unit"],
-                                      "port": val["port"],
-                                      "vlan": val["vlan"]})
+                tmpD.setdefault(
+                    key,
+                    {
+                        "state": "absent",
+                        "rate": val["rate"],
+                        "unit": val["unit"],
+                        "port": val["port"],
+                        "vlan": val["vlan"],
+                    },
+                )
             if val["state"] != "absent":
                 for key1, val1 in val.items():
                     if key1 in ["rate", "unit"]:
@@ -209,7 +228,11 @@ class VirtualSwitchingService:
     def compareVsw(self, switch, runningConf, uuid):
         """Compare expected and running conf"""
         different = False
-        tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(uuid, {}).setdefault(switch, {})
+        tmpD = (
+            self.yamlconfuuid.setdefault(self.acttype, {})
+            .setdefault(uuid, {})
+            .setdefault(switch, {})
+        )
         tmpD = tmpD.setdefault("interface", {})
         # If equal - return no difference
         if tmpD == runningConf:
@@ -223,7 +246,9 @@ class VirtualSwitchingService:
                 # set vlan to state: 'absent'. In case it is absent already
                 # we dont need to set it again. Switch is unhappy to apply
                 # same command if service is not present.
-                tmpD.setdefault(key, {"state": "absent", "vlanid": val["vlanid"], "name": key})
+                tmpD.setdefault(
+                    key, {"state": "absent", "vlanid": val["vlanid"], "name": key}
+                )
                 different = True
             if val["state"] != "absent":
                 for key1, val1 in val.items():

@@ -24,6 +24,7 @@ from SiteRMLibs.MainUtilities import getFileContentAsJson
 
 class TopoCalls:
     """Frontend Calls API Module"""
+
     # pylint: disable=E1101
     def __init__(self):
         self.__defineRoutes()
@@ -31,16 +32,20 @@ class TopoCalls:
 
     def __urlParams(self):
         """Define URL Params for this class"""
-        urlParams = {'gettopology': {'allowedMethods': ['GET']}}
+        urlParams = {"gettopology": {"allowedMethods": ["GET"]}}
         self.urlParams.update(urlParams)
 
     def __defineRoutes(self):
         """Define Routes for this class"""
-        self.routeMap.connect("gettopology", "/json/topo/gettopology", action="gettopology")
+        self.routeMap.connect(
+            "gettopology", "/json/topo/gettopology", action="gettopology"
+        )
 
     def gettopology(self, environ, **kwargs):
         """Return all Switches information"""
         self.responseHeaders(environ, **kwargs)
-        topodir = os.path.join(self.config.get(kwargs['sitename'], "privatedir"), "Topology")
+        topodir = os.path.join(
+            self.config.get(kwargs["sitename"], "privatedir"), "Topology"
+        )
         topofname = os.path.join(topodir, "topology.json")
         return getFileContentAsJson(topofname)

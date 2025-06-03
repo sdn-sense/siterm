@@ -64,7 +64,9 @@ class Switch:
 
     def _getInventoryInfo(self, hosts=None, subitem=""):
         """Get Inventory Info. If hosts specified, only return for specific hosts"""
-        with open(self.config.get("ansible", "inventory" + subitem), "r", encoding="utf-8") as fd:
+        with open(
+            self.config.get("ansible", "inventory" + subitem), "r", encoding="utf-8"
+        ) as fd:
             out = yaml.safe_load(fd.read())
         if hosts:
             tmpOut = {}
@@ -81,7 +83,9 @@ class Switch:
         # This is a hack to make sure we have unique artifacts count.
         # And also that cleanup process is dony only by getfacts playbook.
         if playbook == "getfacts.yaml":
-            return self.config.get("ansible", "rotate_artifacts" + subitem) + random.randint(1, 50)
+            return self.config.get(
+                "ansible", "rotate_artifacts" + subitem
+            ) + random.randint(1, 50)
         # If we are not running getfacts playbook, we should not rotate artifacts.
         # Just in case - increase it 200 times.
         return self.config.get("ansible", "rotate_artifacts" + subitem) + 200
@@ -96,18 +100,17 @@ class Switch:
         """Log Ansible Output"""
         if ansOut and hasattr(ansOut, "stdout") and ansOut.stdout:
             for line in ansOut.stdout:
-                self.logger.debug(f'[STDOUT] {line}')
+                self.logger.debug(f"[STDOUT] {line}")
         else:
             self.logger.debug("No stdout available from ansible_runner.")
         if ansOut and hasattr(ansOut, "stderr") and ansOut.stderr:
             for line in ansOut.stderr:
-                self.logger.debug(f'[STDERR] {line}')
+                self.logger.debug(f"[STDERR] {line}")
         else:
             self.logger.debug("No stderr available from ansible_runner.")
         if ansOut and hasattr(ansOut, "stats") and ansOut.stats:
             for key, value in ansOut.stats.items():
-                self.logger.debug(f'[STATS] {key}: {value}')
-
+                self.logger.debug(f"[STATS] {key}: {value}")
 
     def _executeAnsible(self, playbook, hosts=None, subitem=""):
         """Execute Ansible playbook"""
@@ -120,7 +123,9 @@ class Switch:
             rotate_artifacts=self._getRotateArtifacts(playbook, hosts, subitem),
             debug=self.config.getboolean("ansible", "debug" + subitem),
             verbosity=self.__getVerbosity(subitem),
-            ignore_logging=self.config.getboolean("ansible", "ignore_logging" + subitem),
+            ignore_logging=self.config.getboolean(
+                "ansible", "ignore_logging" + subitem
+            ),
         )
         self.__logAnsibleOutput(ansOut)
         return ansOut
@@ -156,10 +161,13 @@ class Switch:
                 ansOut = self._executeAnsible(templateName, hosts, subitem)
             except ValueError as ex:
                 raise ConfigException(
-                    f"Got Value Error. Ansible configuration exception {ex}") from ex
+                    f"Got Value Error. Ansible configuration exception {ex}"
+                ) from ex
             failures = self.getAnsErrors(ansOut)
             if failures:
-                self.logger.warning(f"Ansible applyconfig failed. Retrying (out of {retries}) after 5sec sleep")
+                self.logger.warning(
+                    f"Ansible applyconfig failed. Retrying (out of {retries}) after 5sec sleep"
+                )
                 retries -= 1
                 time.sleep(5)
                 self.verbosity = 1000
@@ -188,7 +196,9 @@ class Switch:
                         "Unsupported NOS. There might be issues. Contact dev team"
                     )
                 out[host] = host_events
-                host_events.setdefault("event_data", {}).setdefault("res", {}).setdefault("ansible_facts", {})
+                host_events.setdefault("event_data", {}).setdefault(
+                    "res", {}
+                ).setdefault("ansible_facts", {})
         self.getAnsErrors(ansOut)
         return out, self.ansibleErrs
 
@@ -200,7 +210,8 @@ class Switch:
             .get("res", {})
             .get("ansible_facts", {})
             .get("ansible_net_interfaces", {})
-            .keys())
+            .keys()
+        )
 
     @staticmethod
     def getPortMembers(inData, port):
@@ -211,7 +222,8 @@ class Switch:
             .get("ansible_facts", {})
             .get("ansible_net_interfaces", {})
             .get(port, {})
-            .get("channel-member", []))
+            .get("channel-member", [])
+        )
 
     @staticmethod
     def getportdata(inData, port):
@@ -229,11 +241,15 @@ class Switch:
         swname = inData.get("event_data", {}).get("host", "")
         ports = self.getports(inData)
         tmpout = [vlan for vlan in ports if vlan.startswith("Vlan")]
-        if self.config.has_option(swname, "allvlans") and self.config.get(swname, "allvlans"):
+        if self.config.has_option(swname, "allvlans") and self.config.get(
+            swname, "allvlans"
+        ):
             return tmpout
         # If we reach here, means allvlans flag is false. It should include into model only SENSE Vlans.
         out = []
-        if self.config.has_option(swname, "all_vlan_range_list") and self.config.get(swname, "all_vlan_range_list"):
+        if self.config.has_option(swname, "all_vlan_range_list") and self.config.get(
+            swname, "all_vlan_range_list"
+        ):
             for item in tmpout:
                 vlanid = self.getVlanKey(item)
                 if isinstance(vlanid, int):

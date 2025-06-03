@@ -17,7 +17,6 @@ from SiteRMLibs.MainUtilities import getLoggingObject, getUTCnow
 from SiteRMLibs.timing import Timing
 
 
-
 class ConflictChecker(Timing):
     """Conflict Checker"""
 
@@ -45,9 +44,11 @@ class ConflictChecker(Timing):
         if hostname in polcls.hosts:
             updatedate = polcls.hosts[hostname]["updatedate"]
             if updatedate < getUTCnow() - 300:
-                raise OverlapException(f"Host {hostname} did not update in the last 5minutes. \
+                raise OverlapException(
+                    f"Host {hostname} did not update in the last 5minutes. \
                                        Cannot proceed with this request. Check Agent status for the host \
-                                       Last update: {updatedate}, CurrentTime: {getUTCnow()}")
+                                       Last update: {updatedate}, CurrentTime: {getUTCnow()}"
+                )
 
     def _checkVlanSwapping(self, vlans, hostname):
         """Check if vlan Swapping is allowed"""
@@ -62,8 +63,10 @@ class ConflictChecker(Timing):
             return
         # If we reach here, means swapping is not allowed.
         if len(vlans) > 1:
-            raise OverlapException(f"Vlan swapping is not allowed for {hostname}. \
-                                   Request is invalid. Current requested vlans: {vlans}")
+            raise OverlapException(
+                f"Vlan swapping is not allowed for {hostname}. \
+                                   Request is invalid. Current requested vlans: {vlans}"
+            )
 
     @staticmethod
     def _checkVlanInRange(polcls, vlan, hostname):
@@ -72,32 +75,46 @@ class ConflictChecker(Timing):
             return
         # If Agent, check in agent reported configuration
         if hostname in polcls.hosts:
-            interfaces = (polcls.hosts[hostname]
-                          .get("hostinfo", {})
-                          .get("NetInfo", {})
-                          .get("interfaces", {}))
+            interfaces = (
+                polcls.hosts[hostname]
+                .get("hostinfo", {})
+                .get("NetInfo", {})
+                .get("interfaces", {})
+            )
             if vlan["interface"] not in interfaces:
-                raise OverlapException(f"Interface not available for dtn {hostname} in configuration. \
-                                       Available interfaces: {interfaces}")
+                raise OverlapException(
+                    f"Interface not available for dtn {hostname} in configuration. \
+                                       Available interfaces: {interfaces}"
+                )
             vlanRange = interfaces.get(vlan["interface"], {}).get("vlan_range_list", {})
             if vlanRange and vlan["vlan"] not in vlanRange:
-                raise OverlapException(f"Vlan {vlan} not available for dtn {hostname} in configuration. \
-                                       Either used or not configured. Allowed Vlans: {vlanRange}")
+                raise OverlapException(
+                    f"Vlan {vlan} not available for dtn {hostname} in configuration. \
+                                       Either used or not configured. Allowed Vlans: {vlanRange}"
+                )
             return
         # If switch, check in Switch config
         rawConf = polcls.config.getraw("MAIN")
         if hostname in rawConf:
             # Get Global vlan range for device
             vlanRange = rawConf.get(hostname, {}).get("vlan_range_list", [])
-            portName = polcls.switch.getSwitchPortName(hostname, vlan['interface'])
+            portName = polcls.switch.getSwitchPortName(hostname, vlan["interface"])
             # If port has vlan range, use that. Means check is done at the port level.
-            vlanRange = rawConf.get(hostname, {}).get('ports', {})\
-                               .get(portName , {}).get("vlan_range_list", vlanRange)
+            vlanRange = (
+                rawConf.get(hostname, {})
+                .get("ports", {})
+                .get(portName, {})
+                .get("vlan_range_list", vlanRange)
+            )
             if vlanRange and vlan["vlan"] not in vlanRange:
-                raise OverlapException(f"Vlan {vlan} not available for switch {hostname} in configuration. \
-                                       Either used or not configured. Allowed Vlans: {vlanRange}")
+                raise OverlapException(
+                    f"Vlan {vlan} not available for switch {hostname} in configuration. \
+                                       Either used or not configured. Allowed Vlans: {vlanRange}"
+                )
         else:
-            raise OverlapException(f"(1) Hostname {hostname} not available in this Frontend.")
+            raise OverlapException(
+                f"(1) Hostname {hostname} not available in this Frontend."
+            )
 
     def _checkifIPInRange(self, polcls, ipval, iptype, hostname):
         """Check if IP in Allowed range"""
@@ -148,9 +165,11 @@ class ConflictChecker(Timing):
 
     def _checkIfVlanOverlap(self, vlan1, vlan2):
         """Check if Vlan equal. Raise error if True"""
-        v1, v2 = vlan1.get('vlan', None), vlan2.get('vlan', None)
+        v1, v2 = vlan1.get("vlan", None), vlan2.get("vlan", None)
         if not v1 or not v2:
-            self.logger.debug(f"Vlan not available for {self.newid} or {self.oldid}. Input: {vlan1}, {vlan2}")
+            self.logger.debug(
+                f"Vlan not available for {self.newid} or {self.oldid}. Input: {vlan1}, {vlan2}"
+            )
             return
         if v1 == v2:
             raise OverlapException(
@@ -294,12 +313,13 @@ class ConflictChecker(Timing):
         if self.checkIfEnded(connItems):
             self.logger.debug(f"End date is in past for {self.newid}")
             self.logger.debug(f"Connection Items: {connItems}")
-            raise OverlapException(f"End date is in past for {self.newid}. Cannot modify or add new resources.")
-
+            raise OverlapException(
+                f"End date is in past for {self.newid}. Cannot modify or add new resources."
+            )
 
     def _checkIPOverlaps(self, nStats, connItems, hostname, oldConfig):
         """Check if IP Overlaps"""
-        for svcitem in ['vsw', 'singleport', 'kube']:
+        for svcitem in ["vsw", "singleport", "kube"]:
             for oldID, oldItems in oldConfig.get(svcitem, {}).items():
                 # connID == oldID was checked in step3. Skipping it
                 if oldID == self.newid:
@@ -314,23 +334,33 @@ class ConflictChecker(Timing):
                             continue
                         oStats = self._getVlanIPs(oldHostItems)
                         self._checkIfVlanOverlap(nStats, oStats)
-                        self._checkIfIPOverlap(nStats.get("ipv6-address", ""),
-                                               oStats.get("ipv6-address", ""),
-                                               "ipv6")
-                        self._checkIfIPOverlap(nStats.get("ipv4-address", ""),
-                                               oStats.get("ipv4-address", ""),
-                                               "ipv4")
+                        self._checkIfIPOverlap(
+                            nStats.get("ipv6-address", ""),
+                            oStats.get("ipv6-address", ""),
+                            "ipv6",
+                        )
+                        self._checkIfIPOverlap(
+                            nStats.get("ipv4-address", ""),
+                            oStats.get("ipv4-address", ""),
+                            "ipv4",
+                        )
 
     @staticmethod
     def _checkSystemIPOverlap(nStats, hostname, oldConfig):
         """Check if overlaps with any IP set on the system"""
-        for iptype in ['ipv4', 'ipv6']:
+        for iptype in ["ipv4", "ipv6"]:
             ipaddr = nStats.get(f"{iptype}-address", "")
-            if ipaddr in oldConfig.get("usedIPs", {}).get('deltas', {}).get(hostname, {}).get(iptype, []):
+            if ipaddr in oldConfig.get("usedIPs", {}).get("deltas", {}).get(
+                hostname, {}
+            ).get(iptype, []):
                 continue
-            if ipaddr in oldConfig.get("usedIPs", {}).get('system', {}).get(hostname, {}).get(iptype, []):
-                raise OverlapException(f"IP {ipaddr} is already in use on the system (manually set \
-                                        or remains from undeleted request). Cannot proceed with this request.")
+            if ipaddr in oldConfig.get("usedIPs", {}).get("system", {}).get(
+                hostname, {}
+            ).get(iptype, []):
+                raise OverlapException(
+                    f"IP {ipaddr} is already in use on the system (manually set \
+                                        or remains from undeleted request). Cannot proceed with this request."
+                )
 
     def _isModify(self, oldConfig, connItems, newDelta):
         """Check if it is modify or new"""
@@ -338,11 +368,11 @@ class ConflictChecker(Timing):
         retstate = ""
         if self.newid in oldConfig.get(self.checkmethod, {}):
             if oldConfig[self.checkmethod][self.newid] != connItems:
-                self.logger.debug("="*50)
+                self.logger.debug("=" * 50)
                 self.logger.debug("MODIFY!!!")
                 self.logger.debug(oldConfig[self.checkmethod][self.newid])
                 self.logger.debug(connItems)
-                self.logger.debug("="*50)
+                self.logger.debug("=" * 50)
                 retstate = "modified"
             if oldConfig[self.checkmethod][self.newid] == connItems:
                 # No Changes - connID is same, ignoring it
@@ -366,18 +396,28 @@ class ConflictChecker(Timing):
     def _checkIsAlias(polcls, hostname, hostitems):
         """Check if isAlias match what is inside the configuration"""
         for intf, vals in hostitems.items():
-            if 'isAlias' in vals and vals['isAlias']:
+            if "isAlias" in vals and vals["isAlias"]:
                 # If isAlias is set, check if it is in the configuration
                 realPortName = polcls.switch.getSwitchPortName(hostname, intf)
-                if realPortName in polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}):
-                    confAlias = polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}).get(realPortName, {}).get("isAlias", None)
-                    if confAlias and not vals['isAlias'].startswith(confAlias):
-                        raise OverlapException(f"Alias mismatch for {hostname} on {intf}. \
-                                                Config: {confAlias}, Request: {vals['isAlias']}")
+                if realPortName in polcls.config.getraw("MAIN").get(hostname, {}).get(
+                    "ports", {}
+                ):
+                    confAlias = (
+                        polcls.config.getraw("MAIN")
+                        .get(hostname, {})
+                        .get("ports", {})
+                        .get(realPortName, {})
+                        .get("isAlias", None)
+                    )
+                    if confAlias and not vals["isAlias"].startswith(confAlias):
+                        raise OverlapException(
+                            f"Alias mismatch for {hostname} on {intf}. \
+                                                Config: {confAlias}, Request: {vals['isAlias']}"
+                        )
 
     def checkvsw(self, cls, svcitems, oldConfig, newDelta=False):
         """Check vsw Service"""
-        idstatetrack = {'modified': [], 'new': [], 'deleted': [], 'unchanged': []}
+        idstatetrack = {"modified": [], "new": [], "deleted": [], "unchanged": []}
         for connID, connItems in svcitems.items():
             if connID == "_params":
                 continue
@@ -406,12 +446,12 @@ class ConflictChecker(Timing):
                 self._checkIPOverlaps(nStats, connItems, hostname, oldConfig)
         for oldID in oldConfig.get(self.checkmethod, {}).keys():
             if oldID not in svcitems:
-                idstatetrack.setdefault('deleted', {}).append(oldID)
+                idstatetrack.setdefault("deleted", {}).append(oldID)
         self.__printSummary(idstatetrack)
         if not newDelta:
             return
         # In case of deleted, check if host is alive
-        for connID in idstatetrack['deleted']:
+        for connID in idstatetrack["deleted"]:
             for hostname, hostitems in oldConfig[self.checkmethod][connID].items():
                 if hostname == "_params":
                     continue
@@ -452,14 +492,18 @@ class ConflictChecker(Timing):
                 if oldItems.get(hostname, {}):
                     oStats = self._getRSTIPs(oldItems[hostname])
                     for key in ["ipv4", "ipv6"]:
-                        self._checkIfIPOverlap(nStats.get(key, {}).get("nextHop", ""),
-                                               oStats.get(key, {}).get("nextHop", ""),
-                                               key)
-                        self._checkRSTIPOverlap(nStats.get(key, {}), oStats.get(key, {}), key)
+                        self._checkIfIPOverlap(
+                            nStats.get(key, {}).get("nextHop", ""),
+                            oStats.get(key, {}).get("nextHop", ""),
+                            key,
+                        )
+                        self._checkRSTIPOverlap(
+                            nStats.get(key, {}), oStats.get(key, {}), key
+                        )
 
     def checkrst(self, cls, rstitems, oldConfig, newDelta=False):
         """Check rst Service"""
-        idstatetrack = {'modified': [], 'new': [], 'deleted': [], 'unchanged': []}
+        idstatetrack = {"modified": [], "new": [], "deleted": [], "unchanged": []}
         for connID, connItems in rstitems.items():
             if connID == "_params":
                 continue
@@ -507,8 +551,15 @@ class ConflictChecker(Timing):
                     cleaned.append(subnet)
                     newconf[key].pop(subnet, None)
                     for host in subnetdict.keys():
-                        if newconf.get("SubnetMapping", {}).get(host, {}).get("providesSubnet", {}).get(subnet, None):
-                            newconf["SubnetMapping"][host]["providesSubnet"].pop(subnet, None)
+                        if (
+                            newconf.get("SubnetMapping", {})
+                            .get(host, {})
+                            .get("providesSubnet", {})
+                            .get(subnet, None)
+                        ):
+                            newconf["SubnetMapping"][host]["providesSubnet"].pop(
+                                subnet, None
+                            )
         # RST Cleanup
         for rkey, rval in {
             "providesRoute": "RoutingMapping",

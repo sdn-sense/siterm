@@ -22,13 +22,27 @@ Date                    : 2023/01/03
 import os
 import time
 from SiteFE.PolicyService import stateMachine as stateM
-from SiteRMLibs.CustomExceptions import (BadRequestError, DeltaNotFound,
-                                         WrongDeltaStatusTransition)
-from SiteRMLibs.MainUtilities import (convertTSToDatetime, decodebase64,
-                                      encodebase64, evaldict, getModTime,
-                                      getUTCnow, httpdate, jsondumps)
-from SiteRMLibs.RESTInteractions import (get_json_post_form, get_post_form,
-                                         is_application_json, is_post_request)
+from SiteRMLibs.CustomExceptions import (
+    BadRequestError,
+    DeltaNotFound,
+    WrongDeltaStatusTransition,
+)
+from SiteRMLibs.MainUtilities import (
+    convertTSToDatetime,
+    decodebase64,
+    encodebase64,
+    evaldict,
+    getModTime,
+    getUTCnow,
+    httpdate,
+    jsondumps,
+)
+from SiteRMLibs.RESTInteractions import (
+    get_json_post_form,
+    get_post_form,
+    is_application_json,
+    is_post_request,
+)
 
 
 class DeltaCalls:
@@ -42,9 +56,15 @@ class DeltaCalls:
         self.policerdirs = {}
         for sitename in self.sites:
             if sitename != "MAIN":
-                self.policerdirs.setdefault(sitename, {'new': {}, 'finished': {}})
-                self.policerdirs[sitename]['new'] = os.path.join(self.config.get(sitename, "privatedir"), "PolicyService", "httpnew")
-                self.policerdirs[sitename]['finished'] = os.path.join(self.config.get(sitename, "privatedir"), "PolicyService", "httpfinished")
+                self.policerdirs.setdefault(sitename, {"new": {}, "finished": {}})
+                self.policerdirs[sitename]["new"] = os.path.join(
+                    self.config.get(sitename, "privatedir"), "PolicyService", "httpnew"
+                )
+                self.policerdirs[sitename]["finished"] = os.path.join(
+                    self.config.get(sitename, "privatedir"),
+                    "PolicyService",
+                    "httpfinished",
+                )
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -89,23 +109,42 @@ class DeltaCalls:
         """Define Routes for this class"""
         self.routeMap.connect("deltas", "/v1/deltas", action="deltas")
         self.routeMap.connect("deltasid", "/v1/deltas/:deltaid", action="deltasid")
-        self.routeMap.connect("deltasaction", "/v1/deltas/:deltaid/actions/:newaction", action="deltasaction")
+        self.routeMap.connect(
+            "deltasaction",
+            "/v1/deltas/:deltaid/actions/:newaction",
+            action="deltasaction",
+        )
         self.routeMap.connect("activedeltas", "/v1/activedeltas", action="activedeltas")
-        self.routeMap.connect("deltastates", "/v1/deltastates/:deltaid", action="deltastates")
-        self.routeMap.connect("deltatimestates", "/v1/deltatimestates", action="deltatimestates")
-        self.routeMap.connect("deltaforceapply", "/v1/deltaforceapply", action="deltaforceapply")
+        self.routeMap.connect(
+            "deltastates", "/v1/deltastates/:deltaid", action="deltastates"
+        )
+        self.routeMap.connect(
+            "deltatimestates", "/v1/deltatimestates", action="deltatimestates"
+        )
+        self.routeMap.connect(
+            "deltaforceapply", "/v1/deltaforceapply", action="deltaforceapply"
+        )
 
     def _logDeltaUserAction(self, deltaInfo, userAction, otherInfo, environ):
         """Log Delta User Action"""
         username = environ.get("USERINFO", {}).get("username", "UNKNOWN") + "-"
         username += environ.get("CERTINFO", {}).get("fullDN", "UNKNOWN") + "-"
-        username += environ.get('REMOTE_ADDR', 'UNKNOWN')
-        print([{"username": username, "insertdate": getUTCnow(), "deltaid": deltaInfo.get("uuid", "UNKNOWN"),
-                "useraction": userAction, "otherinfo": {'otherInfo': otherInfo, 'deltaInfo': deltaInfo}}])
+        username += environ.get("REMOTE_ADDR", "UNKNOWN")
+        print(
+            [
+                {
+                    "username": username,
+                    "insertdate": getUTCnow(),
+                    "deltaid": deltaInfo.get("uuid", "UNKNOWN"),
+                    "useraction": userAction,
+                    "otherinfo": {"otherInfo": otherInfo, "deltaInfo": deltaInfo},
+                }
+            ]
+        )
         # TODO: Review user tracking as it gets many updates from agenst to do set state.
         # Which is correct as agents keep informing FE that resource is activated and did not drift anyhow.
         # This can easily explode and grow database quickly. For now we save it in the log, and not inside database;
-        #self.dbI.insert("deltasusertracking", [{"username": username, "insertdate": getUTCnow(), "deltaid": deltaInfo.get("uuid", "UNKNOWN"), "useraction": userAction, "otherinfo": otherInfo}])
+        # self.dbI.insert("deltasusertracking", [{"username": username, "insertdate": getUTCnow(), "deltaid": deltaInfo.get("uuid", "UNKNOWN"), "useraction": userAction, "otherinfo": otherInfo}])
 
     @staticmethod
     def __intGetPostData(environ, **_kwargs):
@@ -131,7 +170,13 @@ class DeltaCalls:
         delta = self.dbI.get("deltas", search=[["uid", hashNum]], limit=1)
         if delta:
             # If delta is not in a final state, we delete it from db, and will add new one.
-            if delta[0]["state"] not in ["activated", "failed", "removed", "accepted", "accepting"]:
+            if delta[0]["state"] not in [
+                "activated",
+                "failed",
+                "removed",
+                "accepted",
+                "accepting",
+            ]:
                 self.dbI.delete("deltas", [["uid", delta[0]["uid"]]])
         self.getmodel(environ, uploadContent["modelId"], None, **kwargs)
         outContent = {
@@ -142,9 +187,13 @@ class DeltaCalls:
             "State": "accepting",
             "modelId": uploadContent["modelId"],
         }
-        fname = os.path.join(self.policerdirs[kwargs["sitename"]]['new'], f"{hashNum}.json")
+        fname = os.path.join(
+            self.policerdirs[kwargs["sitename"]]["new"], f"{hashNum}.json"
+        )
         self.siteDB.saveContent(fname, outContent)
-        finishedName = os.path.join(self.policerdirs[kwargs["sitename"]]['finished'], f"{hashNum}.json")
+        finishedName = os.path.join(
+            self.policerdirs[kwargs["sitename"]]["finished"], f"{hashNum}.json"
+        )
         out = {}
         # Loop for max 50seconds and check if we have file in finished directory.
         timer = 50
@@ -162,9 +211,13 @@ class DeltaCalls:
             outContent["Error"] = f"Failed to accept delta. Timeout reached. {hashNum}"
             return outContent
         if not out:
-            print(f"Failed to accept delta. Timeout not reached, but output is empty. {hashNum}")
+            print(
+                f"Failed to accept delta. Timeout not reached, but output is empty. {hashNum}"
+            )
             outContent["State"] = "failed"
-            outContent["Error"] = f"Failed to accept delta. Timeout not reached, but output is empty. {hashNum}"
+            outContent["Error"] = (
+                f"Failed to accept delta. Timeout not reached, but output is empty. {hashNum}"
+            )
             return outContent
         outContent["State"] = out["State"]
         outContent["id"] = hashNum
@@ -172,7 +225,9 @@ class DeltaCalls:
         outContent["href"] = f"{environ['APP_CALLBACK']}/{hashNum}"
         if outContent["State"] not in ["accepted"]:
             if "Error" not in out:
-                outContent["Error"] = f"Unknown Error. Dump all out content {jsondumps(out)}"
+                outContent["Error"] = (
+                    f"Unknown Error. Dump all out content {jsondumps(out)}"
+                )
             else:
                 outContent["Error"] = out["Error"]
 
@@ -181,7 +236,7 @@ class DeltaCalls:
     def __getdeltaINT(self, deltaID=None, **_kwargs):
         """Get delta from database."""
         if not deltaID:
-            return self.dbI.get("deltas", orderby=['insertdate', 'DESC'])
+            return self.dbI.get("deltas", orderby=["insertdate", "DESC"])
         out = self.dbI.get(
             "deltas", search=[["uid", deltaID]], orderby=["insertdate", "DESC"]
         )
@@ -191,7 +246,9 @@ class DeltaCalls:
 
     def __getdeltastatesINT(self, deltaID, **_kwargs):
         """Get delta states from database."""
-        out = self.dbI.get("states", search=[["deltaid", deltaID]], orderby=['insertdate', 'DESC'])
+        out = self.dbI.get(
+            "states", search=[["deltaid", deltaID]], orderby=["insertdate", "DESC"]
+        )
         if not out:
             raise DeltaNotFound(f"Delta with {deltaID} id was not found in the system")
         return out
@@ -199,11 +256,14 @@ class DeltaCalls:
     def __commitdelta(self, deltaID, _environ, **kwargs):
         """Change delta state."""
         delta = self.__getdeltaINT(deltaID, **kwargs)
-        if kwargs['newaction'] == "commit" and delta["state"] == "accepted":
+        if kwargs["newaction"] == "commit" and delta["state"] == "accepted":
             self.stateM.commit(self.dbI, {"uid": deltaID, "state": "committing"})
-        elif kwargs['newaction'] == "forcecommit" and delta["state"] in ["activated", "failed"]:
-            self.stateM.stateChangerDelta(self.dbI, 'committed', **delta)
-            self.stateM.modelstatechanger(self.dbI, 'add', **delta)
+        elif kwargs["newaction"] == "forcecommit" and delta["state"] in [
+            "activated",
+            "failed",
+        ]:
+            self.stateM.stateChangerDelta(self.dbI, "committed", **delta)
+            self.stateM.modelstatechanger(self.dbI, "add", **delta)
         else:
             msg = f"Delta state in the system is not in final state. State on the system: {delta['state']}. commit allows only for accepted state. forcecommit allows only for activated or failed states."
             raise WrongDeltaStatusTransition(msg)
@@ -211,7 +271,9 @@ class DeltaCalls:
 
     def getActiveDeltas(self, _environ, **_kwargs):
         """Get all Active Deltas"""
-        activeDeltas = self.dbI.get("activeDeltas", orderby=['insertdate', 'DESC'], limit=1)
+        activeDeltas = self.dbI.get(
+            "activeDeltas", orderby=["insertdate", "DESC"], limit=1
+        )
         if activeDeltas:
             activeDeltas = activeDeltas[0]
             activeDeltas["output"] = evaldict(activeDeltas["output"])
@@ -287,7 +349,7 @@ class DeltaCalls:
                 "You did POST method, but nor reduction, nor addition is present"
             )
         out = self.__addNewDeltaINT(newDelta, environ, **kwargs)
-        self._logDeltaUserAction(newDelta, 'add', out, environ)
+        self._logDeltaUserAction(newDelta, "add", out, environ)
         if out["State"] in ["accepted"]:
             self.httpresp.ret_201(
                 "application/json",
@@ -394,7 +456,7 @@ class DeltaCalls:
         Examples: https://server-host/sitefe/v1/deltas/([-_A-Za-z0-9]+)/actions/(commit)
         """
         msgOut = self.__commitdelta(kwargs["deltaid"], environ, **kwargs)
-        self._logDeltaUserAction(kwargs, 'commit', msgOut, environ)
+        self._logDeltaUserAction(kwargs, "commit", msgOut, environ)
         self.httpresp.ret_204("application/json", kwargs["start_response"], None)
         return []
 
@@ -426,7 +488,7 @@ class DeltaCalls:
             "uuidstate": out["uuidstate"],
         }
         dbansw = self.dbI.insert("deltatimestates", [dbout])
-        self._logDeltaUserAction(out, 'setstate', dbansw, environ)
+        self._logDeltaUserAction(out, "setstate", dbansw, environ)
         self.responseHeaders(environ, **kwargs)
         return {"status": "Recorded"}
 
@@ -434,6 +496,6 @@ class DeltaCalls:
         """Force apply based on delta UUID"""
         out = self.__intGetPostData(environ, **kwargs)
         dbansw = self.dbI.insert("forceapplyuuid", [{"uuid": out["uuid"]}])
-        self._logDeltaUserAction({"uuid": out["uuid"]}, 'setstate', dbansw, environ)
+        self._logDeltaUserAction({"uuid": out["uuid"]}, "setstate", dbansw, environ)
         self.responseHeaders(environ, **kwargs)
         return {"status": "OK"}

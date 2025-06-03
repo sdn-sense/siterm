@@ -23,6 +23,7 @@ from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson
 from SiteRMLibs.MainUtilities import getUTCnow, read_input_data
 from SiteRMLibs.CustomExceptions import NotFoundError
 
+
 class FrontendCalls:
     """Frontend Calls API Module"""
 
@@ -52,11 +53,27 @@ class FrontendCalls:
         )
         self.routeMap.connect("getdata", "/json/frontend/getdata", action="getdata")
         self.routeMap.connect("gethosts", "/json/frontend/gethosts", action="gethosts")
-        self.routeMap.connect("getswitchdata", "/json/frontend/getswitchdata", action="getswitchdata")
-        self.routeMap.connect("getactivedeltas", "/json/frontend/getactivedeltas", action="getactivedeltas")
-        self.routeMap.connect("getqosdata", "/json/frontend/getqosdata", action="getqosdata")
-        self.routeMap.connect("getservicestates", "/json/frontend/getservicestates", action="getservicestates")
-        self.routeMap.connect("setinstancestartend", "/json/frontend/setinstancestartend", action="setinstancestartend")
+        self.routeMap.connect(
+            "getswitchdata", "/json/frontend/getswitchdata", action="getswitchdata"
+        )
+        self.routeMap.connect(
+            "getactivedeltas",
+            "/json/frontend/getactivedeltas",
+            action="getactivedeltas",
+        )
+        self.routeMap.connect(
+            "getqosdata", "/json/frontend/getqosdata", action="getqosdata"
+        )
+        self.routeMap.connect(
+            "getservicestates",
+            "/json/frontend/getservicestates",
+            action="getservicestates",
+        )
+        self.routeMap.connect(
+            "setinstancestartend",
+            "/json/frontend/setinstancestartend",
+            action="setinstancestartend",
+        )
 
     def feconfig(self, environ, **kwargs):
         """Returns Frontend configuration"""
@@ -109,9 +126,13 @@ class FrontendCalls:
             if not tmpInf:
                 continue
             for _intf, intfDict in tmpInf.items():
-                maxThrg = (tmpH.get("Summary", {}).get("config", {})
-                              .get(intfDict["master_intf"], {}).get("bwParams", {})
-                              .get('maximumCapacity', None))
+                maxThrg = (
+                    tmpH.get("Summary", {})
+                    .get("config", {})
+                    .get(intfDict["master_intf"], {})
+                    .get("bwParams", {})
+                    .get("maximumCapacity", None)
+                )
                 if maxThrg:
                     for ipkey in ["ipv4", "ipv6"]:
                         tmpIP = intfDict.get(f"{ipkey}_range", None)
@@ -141,19 +162,23 @@ class FrontendCalls:
         if not instanceID:
             raise NotFoundError("Instance ID is not provided.")
         # Validate that these entries are known...
-        activeDeltas = self.dbI.get("activeDeltas", orderby=["updatedate", "DESC"], limit=1)
+        activeDeltas = self.dbI.get(
+            "activeDeltas", orderby=["updatedate", "DESC"], limit=1
+        )
         if not activeDeltas:
             raise NotFoundError("No Active Deltas found.")
 
         activeDeltas = activeDeltas[0]
         activeDeltas["output"] = evaldict(activeDeltas["output"])
         found = False
-        if instanceID in activeDeltas.get("output", {}).get('vsw', {}):
+        if instanceID in activeDeltas.get("output", {}).get("vsw", {}):
             found = True
-        if instanceID in activeDeltas.get("output", {}).get('rst', {}):
+        if instanceID in activeDeltas.get("output", {}).get("rst", {}):
             found = True
         if not found:
-            raise NotFoundError(f"Instance ID {instanceID} is not found in activeDeltas.")
+            raise NotFoundError(
+                f"Instance ID {instanceID} is not found in activeDeltas."
+            )
 
         # Insert start and end time in instancestartend table
         out = {

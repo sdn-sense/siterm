@@ -13,16 +13,17 @@ from SiteRMLibs.GitConfig import getGitConfig
 from SiteFE.PolicyService.policyService import PolicyService
 
 
-class DBWorker():
+class DBWorker:
     """Config Fetcher from Github."""
+
     def __init__(self, config, sitename):
         self.config = config
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service="DBWorker")
         self.dbI = getVal(getDBConn("DBWorker", self), **{"sitename": self.sitename})
         self.police = PolicyService(self.config, self.sitename)
-        self.runCounter = {'stateactions': 0, 'modelactions': 10}
-        self.runCounterDefaults =  {'stateactions': 0, 'modelactions': 100}
+        self.runCounter = {"stateactions": 0, "modelactions": 10}
+        self.runCounterDefaults = {"stateactions": 0, "modelactions": 100}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -32,12 +33,14 @@ class DBWorker():
     def stateActions(self):
         """Change states of the delta states."""
         self.logger.debug("Start state actions and change states")
-        for job in [["committing", self.police.stateMachine.committing],
-                    ["committed", self.police.stateMachine.committed],
-                    ["activating", self.police.stateMachine.activating],
-                    ["activated", self.police.stateMachine.activated],
-                    ["remove", self.police.stateMachine.remove],
-                    ["removed", self.police.stateMachine.removed]]:
+        for job in [
+            ["committing", self.police.stateMachine.committing],
+            ["committed", self.police.stateMachine.committed],
+            ["activating", self.police.stateMachine.activating],
+            ["activated", self.police.stateMachine.activated],
+            ["remove", self.police.stateMachine.remove],
+            ["removed", self.police.stateMachine.removed],
+        ]:
             self.logger.debug("Start %s", job[0])
             job[1](self.dbI)
 
@@ -51,26 +54,28 @@ class DBWorker():
                 try:
                     os.unlink(model["fileloc"])
                 except OSError as ex:
-                    self.logger.debug(f"Got OS Error removing this model {model['fileloc']}. Exc: {str(ex)}")
+                    self.logger.debug(
+                        f"Got OS Error removing this model {model['fileloc']}. Exc: {str(ex)}"
+                    )
                 self.dbI.delete("models", [["id", model["id"]]])
 
     def startwork(self):
         """Database thread worker - to change delta states"""
         # Run state actions
-        if self.runCounter['stateactions'] <= 0:
-            self.runCounter['stateactions'] = self.runCounterDefaults['stateactions']
+        if self.runCounter["stateactions"] <= 0:
+            self.runCounter["stateactions"] = self.runCounterDefaults["stateactions"]
             self.stateActions()
         # Run model actions
-        if self.runCounter['modelactions'] <= 0:
-            self.runCounter['modelactions'] = self.runCounterDefaults['modelactions']
+        if self.runCounter["modelactions"] <= 0:
+            self.runCounter["modelactions"] = self.runCounterDefaults["modelactions"]
             self.modelactions()
         # Decrease counters
-        self.runCounter['stateactions'] -= 1
-        self.runCounter['modelactions'] -= 1
+        self.runCounter["stateactions"] -= 1
+        self.runCounter["modelactions"] -= 1
 
 
 if __name__ == "__main__":
-    logObj = getLoggingObject(logType='StreamLogger', service='DBWorker')
+    logObj = getLoggingObject(logType="StreamLogger", service="DBWorker")
     gconfig = getGitConfig()
     for siteName in gconfig.get("general", "sites"):
         dbworker = DBWorker(gconfig, siteName)

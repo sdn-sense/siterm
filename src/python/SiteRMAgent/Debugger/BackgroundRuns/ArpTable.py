@@ -11,24 +11,26 @@ from SiteRMLibs.MainUtilities import getArpVals
 from SiteRMLibs.ipaddr import getInterfaces
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
+
 class ArpTable(BaseDebugAction):
     """Arp Table class. Return arp table for specific vlan."""
+
     def __init__(self, config, sitename, backgConfig):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.requestdict = backgConfig.get('requestdict', {})
+        self.requestdict = backgConfig.get("requestdict", {})
         self.service = "ArpTable"
         super().__init__()
 
     def main(self):
         """Main ArpTable work. Get all arp table from host."""
-        interface = self.requestdict.get('interface', None)
+        interface = self.requestdict.get("interface", None)
         if interface and interface not in getInterfaces():
             self.logMessage("Interface is not available on the node")
             return
         for arpval in getArpVals():
-            self.jsonout['output'].append(arpval)
+            self.jsonout["output"].append(arpval)
             resline = list(map(lambda x: x[0] + str(x[1]), arpval.items()))
             self.logMessage(" ".join(resline))
-        self.jsonout['exitCode'] = 0
+        self.jsonout["exitCode"] = 0

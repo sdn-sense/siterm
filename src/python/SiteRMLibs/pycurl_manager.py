@@ -52,52 +52,55 @@ import simplejson as json
 import pycurl
 # system modules
 from future import standard_library
+
 standard_library.install_aliases()
 
 
-class ResponseHeader():
+class ResponseHeader:
     """ResponseHeader parses HTTP response header."""
+
     def __init__(self, response):
         super(ResponseHeader, self).__init__()
         self.header = {}
-        self.reason = ''
+        self.reason = ""
         self.fromcache = False
         self.parse(response)
 
     def parse(self, response):
         """Parse response header and assign class member data."""
-        for row in response.decode("UTF-8").split('\r'):
-            row = row.replace('\n', '')
+        for row in response.decode("UTF-8").split("\r"):
+            row = row.replace("\n", "")
             if not row:
                 continue
-            if row.find('HTTP') != -1 and row.find('100') == -1:
+            if row.find("HTTP") != -1 and row.find("100") == -1:
                 # HTTP/1.1 100 found: real header is later
-                res = row.replace('HTTP/1.1', '')
-                res = res.replace('HTTP/1.0', '')
+                res = row.replace("HTTP/1.1", "")
+                res = res.replace("HTTP/1.0", "")
                 res = res.strip()
-                status, reason = res.split(' ', 1)
+                status, reason = res.split(" ", 1)
                 self.status = int(status)
                 self.reason = reason
                 continue
             try:
-                key, val = row.split(':', 1)
+                key, val = row.split(":", 1)
                 self.header[key.strip()] = val.strip()
             except:
                 pass
 
 
-class RequestHandler():
+class RequestHandler:
     """RequestHandler provides APIs to fetch single/multiple URL requests based
     on pycurl library."""
+
     def __init__(self, config=None):
         super(RequestHandler, self).__init__()
         if not config:
             config = {}
-        self.nosignal = config.get('nosignal', 1)
-        self.timeout = config.get('timeout', 30)
-        self.connecttimeout = config.get('connecttimeout', 30)
-        self.followlocation = config.get('followlocation', 1)
-        self.maxredirs = config.get('maxredirs', 5)
+        self.nosignal = config.get("nosignal", 1)
+        self.timeout = config.get("timeout", 30)
+        self.connecttimeout = config.get("connecttimeout", 30)
+        self.followlocation = config.get("followlocation", 1)
+        self.maxredirs = config.get("maxredirs", 5)
 
     @staticmethod
     def encode_params(params, verb, doseq):
@@ -112,11 +115,11 @@ class RequestHandler():
             return params
 
         # data is not encoded, we need to do that
-        if verb in ['GET', 'HEAD']:
+        if verb in ["GET", "HEAD"]:
             if params:
                 encoded_data = urllib.parse.urlencode(params, doseq=doseq)
             else:
-                return ''
+                return ""
         else:
             if params:
                 encoded_data = json.dumps(params)
@@ -125,12 +128,26 @@ class RequestHandler():
 
         return encoded_data
 
-    def set_opts(self, curl, url, params, headers,
-                 ckey=None, cert=None, capath=None, verbose=None,
-                 verb='GET', doseq=True, cainfo=None, cookie=None):
+    def set_opts(
+        self,
+        curl,
+        url,
+        params,
+        headers,
+        ckey=None,
+        cert=None,
+        capath=None,
+        verbose=None,
+        verb="GET",
+        doseq=True,
+        cainfo=None,
+        cookie=None,
+    ):
         """Set options for given curl object, params should be a dictionary."""
         if not (isinstance(params, (dict, basestring)) or params is None):
-            raise TypeError("pycurl parameters should be passed as dictionary or an (encoded) string")
+            raise TypeError(
+                "pycurl parameters should be passed as dictionary or an (encoded) string"
+            )
         curl.setopt(pycurl.NOSIGNAL, self.nosignal)
         curl.setopt(pycurl.TIMEOUT, self.timeout)
         curl.setopt(pycurl.CONNECTTIMEOUT, self.connecttimeout)
@@ -142,22 +159,22 @@ class RequestHandler():
 
         encoded_data = self.encode_params(params, verb, doseq)
 
-        if verb == 'GET':
+        if verb == "GET":
             if encoded_data:
-                url = url + '?' + encoded_data
-        elif verb == 'HEAD':
+                url = url + "?" + encoded_data
+        elif verb == "HEAD":
             if encoded_data:
-                url = url + '?' + encoded_data
+                url = url + "?" + encoded_data
             curl.setopt(pycurl.CUSTOMREQUEST, verb)
             curl.setopt(pycurl.HEADER, 1)
             curl.setopt(pycurl.NOBODY, True)
-        elif verb == 'POST':
+        elif verb == "POST":
             curl.setopt(pycurl.POST, 1)
             if encoded_data:
                 curl.setopt(pycurl.POSTFIELDS, encoded_data)
-        elif verb in ['DELETE', 'PUT']:
+        elif verb in ["DELETE", "PUT"]:
             curl.setopt(pycurl.CUSTOMREQUEST, verb)
-            curl.setopt(pycurl.HTTPHEADER, ['Transfer-Encoding: chunked'])
+            curl.setopt(pycurl.HTTPHEADER, ["Transfer-Encoding: chunked"])
             if encoded_data:
                 curl.setopt(pycurl.POSTFIELDS, encoded_data)
         else:
@@ -165,9 +182,10 @@ class RequestHandler():
 
         curl.setopt(pycurl.URL, str(url))
         if headers:
-            curl.setopt(pycurl.HTTPHEADER,
-                        [f"{k}: {v}" for k, v in list(headers.items())])
-        if sys.version.startswith('3.'):
+            curl.setopt(
+                pycurl.HTTPHEADER, [f"{k}: {v}" for k, v in list(headers.items())]
+            )
+        if sys.version.startswith("3."):
             bbuf = io.BytesIO()
             hbuf = io.BytesIO()
         else:
@@ -210,7 +228,7 @@ class RequestHandler():
                     return data
                 return json.loads(data)
             except (ValueError, json.JSONDecodeError) as exc:
-                msg = f'Unable to load JSON data, {str(exc)}, data type={type(data)}, pass as is'
+                msg = f"Unable to load JSON data, {str(exc)}, data type={type(data)}, pass as is"
                 logging.warning(msg)
                 return data
         return data
@@ -223,33 +241,57 @@ class RequestHandler():
         """
         return ResponseHeader(header)
 
-    def request(self, url, params, headers=None, verb='GET',
-                verbose=0, ckey=None, cert=None, capath=None,
-                doseq=True, decode=False, cainfo=None, cookie=None):
+    def request(
+        self,
+        url,
+        params,
+        headers=None,
+        verb="GET",
+        verbose=0,
+        ckey=None,
+        cert=None,
+        capath=None,
+        doseq=True,
+        decode=False,
+        cainfo=None,
+        cookie=None,
+    ):
         """Fetch data for given set of parameters."""
         curl = pycurl.Curl()
-        bbuf, hbuf = self.set_opts(curl, url, params, headers, ckey, cert,
-                                   capath, verbose, verb, doseq, cainfo, cookie)
+        bbuf, hbuf = self.set_opts(
+            curl,
+            url,
+            params,
+            headers,
+            ckey,
+            cert,
+            capath,
+            verbose,
+            verb,
+            doseq,
+            cainfo,
+            cookie,
+        )
         curl.perform()
         if verbose:
             print(verb, url, params, headers)
         header = self.parse_header(hbuf.getvalue())
         if header.status < 300:
-            if verb == 'HEAD':
-                data = ''
+            if verb == "HEAD":
+                data = ""
             else:
                 data = self.parse_body(bbuf.getvalue(), decode)
         else:
             data = bbuf.getvalue()
-            msg = f'url={url}, code={header.status}, reason={header.reason}, headers={header.header}'
+            msg = f"url={url}, code={header.status}, reason={header.reason}, headers={header.header}"
             exc = http.client.HTTPException(msg)
-            setattr(exc, 'req_data', params)
-            setattr(exc, 'req_headers', headers)
-            setattr(exc, 'url', url)
-            setattr(exc, 'result', data)
-            setattr(exc, 'status', header.status)
-            setattr(exc, 'reason', header.reason)
-            setattr(exc, 'headers', header.header)
+            setattr(exc, "req_data", params)
+            setattr(exc, "req_headers", headers)
+            setattr(exc, "url", url)
+            setattr(exc, "result", data)
+            setattr(exc, "status", header.status)
+            setattr(exc, "reason", header.reason)
+            setattr(exc, "headers", header.header)
             bbuf.flush()
             hbuf.flush()
             raise exc
@@ -258,28 +300,57 @@ class RequestHandler():
         hbuf.flush()
         return header, data
 
-    def getdata(self, url, params, headers=None, verb='GET',
-                verbose=0, ckey=None, cert=None, doseq=True, cookie=None):
+    def getdata(
+        self,
+        url,
+        params,
+        headers=None,
+        verb="GET",
+        verbose=0,
+        ckey=None,
+        cert=None,
+        doseq=True,
+        cookie=None,
+    ):
         """Fetch data for given set of parameters."""
-        _, data = self.request(url=url, params=params, headers=headers, verb=verb,
-                               verbose=verbose, ckey=ckey, cert=cert, doseq=doseq, cookie=cookie)
+        _, data = self.request(
+            url=url,
+            params=params,
+            headers=headers,
+            verb=verb,
+            verbose=verbose,
+            ckey=ckey,
+            cert=cert,
+            doseq=doseq,
+            cookie=cookie,
+        )
         return data
 
-    def getheader(self, url, params, headers=None, verb='GET',
-                  verbose=0, ckey=None, cert=None, doseq=True):
+    def getheader(
+        self,
+        url,
+        params,
+        headers=None,
+        verb="GET",
+        verbose=0,
+        ckey=None,
+        cert=None,
+        doseq=True,
+    ):
         """Fetch HTTP header."""
-        header, _ = self.request(url, params, headers, verb,
-                                 verbose, ckey, cert, doseq)
+        header, _ = self.request(url, params, headers, verb, verbose, ckey, cert, doseq)
         return header
 
-    def multirequest(self, url, parray, headers=None, ckey=None,
-                     cert=None, verbose=None, cookie=None):
+    def multirequest(
+        self, url, parray, headers=None, ckey=None, cert=None, verbose=None, cookie=None
+    ):
         """Fetch data for given set of parameters."""
         multi = pycurl.CurlMulti()
         for params in parray:
             curl = pycurl.Curl()
-            bbuf, hbuf = \
-                self.set_opts(curl, url, params, headers, ckey, cert, verbose, cookie=cookie)
+            bbuf, hbuf = self.set_opts(
+                curl, url, params, headers, ckey, cert, verbose, cookie=cookie
+            )
             multi.add_handle(curl)
             while True:
                 ret, num_handles = multi.perform()
@@ -305,12 +376,15 @@ class RequestHandler():
                             item.update(params)
                             yield item
                         else:
-                            err = f'Unsupported data format: data={item}, type={type(item)}'
+                            err = f"Unsupported data format: data={item}, type={type(item)}"
                             raise Exception(err)
                 bbuf.flush()
                 hbuf.flush()
 
-HTTP_PAT = re.compile("(https|http)://[-A-Za-z0-9_+&@#/%?=~|!:,.;]*[-A-Za-z0-9+&@#/%=~_|]")
+
+HTTP_PAT = re.compile(
+    "(https|http)://[-A-Za-z0-9_+&@#/%?=~|!:,.;]*[-A-Za-z0-9+&@#/%=~_|]"
+)
 
 
 def validate_url(url):
@@ -323,21 +397,23 @@ def validate_url(url):
 def pycurl_options():
     """Default set of options for pycurl."""
     opts = {
-        'FOLLOWLOCATION': 1,
-        'CONNECTTIMEOUT': 270,
-        'MAXREDIRS': 5,
-        'NOSIGNAL': 1,
-        'TIMEOUT': 270,
-        'SSL_VERIFYPEER': False,
-        'VERBOSE': 0
+        "FOLLOWLOCATION": 1,
+        "CONNECTTIMEOUT": 270,
+        "MAXREDIRS": 5,
+        "NOSIGNAL": 1,
+        "TIMEOUT": 270,
+        "SSL_VERIFYPEER": False,
+        "VERBOSE": 0,
     }
     return opts
 
 
 def cern_sso_cookie(url, fname, cert, ckey):
     """Obtain cern SSO cookie and store it in given file name."""
-    cmd = f'cern-get-sso-cookie -cert {cert} -key {ckey} -r -u {url} -o {fname}'
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, env=os.environ)
+    cmd = f"cern-get-sso-cookie -cert {cert} -key {ckey} -r -u {url} -o {fname}"
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, env=os.environ
+    )
     proc.wait()
 
 
@@ -367,8 +443,9 @@ def getdata(urls, ckey, cert, headers=None, options=None, num_conn=100, cookie=N
         curl.setopt(pycurl.SSLCERT, cert)
         mcurl.handles.append(curl)
         if headers:
-            curl.setopt(pycurl.HTTPHEADER,
-                        [f"{k}: {v}" for k, v in list(headers.items())])
+            curl.setopt(
+                pycurl.HTTPHEADER, [f"{k}: {v}" for k, v in list(headers.items())]
+            )
 
     # Main loop
     freelist = mcurl.handles[:]
@@ -379,11 +456,11 @@ def getdata(urls, ckey, cert, headers=None, options=None, num_conn=100, cookie=N
         while queue and freelist:
             url = queue.pop(0)
             curl = freelist.pop()
-            curl.setopt(pycurl.URL, url.encode('ascii', 'ignore'))
+            curl.setopt(pycurl.URL, url.encode("ascii", "ignore"))
             if cookie and url in cookie:
                 curl.setopt(pycurl.COOKIEFILE, cookie[url])
                 curl.setopt(pycurl.COOKIEJAR, cookie[url])
-            if sys.version.startswith('3.'):
+            if sys.version.startswith("3."):
                 bbuf = io.BytesIO()
                 hbuf = io.BytesIO()
             else:
@@ -406,9 +483,9 @@ def getdata(urls, ckey, cert, headers=None, options=None, num_conn=100, cookie=N
         while True:
             num_q, ok_list, err_list = mcurl.info_read()
             for curl in ok_list:
-                if sys.version.startswith('3.'):
-                    hdrs = curl.hbuf.getvalue().decode('utf-8')
-                    data = curl.bbuf.getvalue().decode('utf-8')
+                if sys.version.startswith("3."):
+                    hdrs = curl.hbuf.getvalue().decode("utf-8")
+                    data = curl.bbuf.getvalue().decode("utf-8")
                 else:
                     hdrs = curl.hbuf.getvalue()
                     data = curl.bbuf.getvalue()
@@ -420,7 +497,7 @@ def getdata(urls, ckey, cert, headers=None, options=None, num_conn=100, cookie=N
                 curl.bbuf = None
                 mcurl.remove_handle(curl)
                 freelist.append(curl)
-                yield {'url': url, 'data': data, 'headers': hdrs}
+                yield {"url": url, "data": data, "headers": hdrs}
             for curl, errno, errmsg in err_list:
                 hdrs = curl.hbuf.getvalue()
                 data = curl.bbuf.getvalue()
@@ -432,8 +509,13 @@ def getdata(urls, ckey, cert, headers=None, options=None, num_conn=100, cookie=N
                 curl.bbuf = None
                 mcurl.remove_handle(curl)
                 freelist.append(curl)
-                yield {'url': url, 'data': None, 'headers': hdrs,
-                       'error': errmsg, 'code': errno}
+                yield {
+                    "url": url,
+                    "data": None,
+                    "headers": hdrs,
+                    "error": errmsg,
+                    "code": errno,
+                }
             num_processed = num_processed + len(ok_list) + len(err_list)
             if num_q == 0:
                 break

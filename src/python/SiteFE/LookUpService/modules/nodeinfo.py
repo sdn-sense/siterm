@@ -52,15 +52,20 @@ class NodeInfo:
     def __recordHostUsedVlans(self, nodeDict):
         """Record all host used vlans"""
         # Record used vlans
-        for _intfKey, intfDict in list(nodeDict.get('hostinfo', {}).get("NetInfo", {}).get("interfaces", {}).items()):
+        for _intfKey, intfDict in list(
+            nodeDict.get("hostinfo", {})
+            .get("NetInfo", {})
+            .get("interfaces", {})
+            .items()
+        ):
             if "vlans" in intfDict and intfDict["vlans"]:
                 for _vlanName, vlanDict in list(intfDict["vlans"].items()):
                     vlanid = vlanDict.get("vlanid", None)
                     if vlanid is None:
                         continue
-                    self.usedVlans['system'].setdefault(nodeDict['hostname'], [])
-                    if vlanid not in self.usedVlans['system'][nodeDict['hostname']]:
-                        self.usedVlans['system'][nodeDict['hostname']].append(vlanid)
+                    self.usedVlans["system"].setdefault(nodeDict["hostname"], [])
+                    if vlanid not in self.usedVlans["system"][nodeDict["hostname"]]:
+                        self.usedVlans["system"][nodeDict["hostname"]].append(vlanid)
 
     def addNodeInfo(self):
         """Add Agent Node Information"""
@@ -84,27 +89,33 @@ class NodeInfo:
         """This will add all information about specific interface."""
         # We limit what to add, and right now add only mac-address
         # If there will be need in future to add more, we can extend it;
-        for item in inputDict.get('17', []):
-            if 'mac-address' not in item:
+        for item in inputDict.get("17", []):
+            if "mac-address" not in item:
                 continue
-            if item['mac-address']:
-                self._addNetworkAddress(prefixuri, 'mac-address', item['mac-address'])
+            if item["mac-address"]:
+                self._addNetworkAddress(prefixuri, "mac-address", item["mac-address"])
         # Add mtu and txqueuelen
-        for item in inputDict.get('2', []):
-            if 'MTU' in item:
-                self._addHasNetworkAttribute(prefixuri, 'MTU', 'mtu', item['MTU'])
-            if 'txqueuelen' in item:
-                self._addHasNetworkAttribute(prefixuri, 'txqueuelen', 'txqueuelen', item['txqueuelen'])
-            if item.get('ipv4-address'):
-                splt = item['ipv4-address'].split('/')
+        for item in inputDict.get("2", []):
+            if "MTU" in item:
+                self._addHasNetworkAttribute(prefixuri, "MTU", "mtu", item["MTU"])
+            if "txqueuelen" in item:
+                self._addHasNetworkAttribute(
+                    prefixuri, "txqueuelen", "txqueuelen", item["txqueuelen"]
+                )
+            if item.get("ipv4-address"):
+                splt = item["ipv4-address"].split("/")
                 if len(splt) == 2:
                     # Record IP Address as used
-                    self.recordSystemIPs(hostname, 'ipv4', [{'address': splt[0], 'masklen': splt[1]}])
-        for item in inputDict.get('10', []):
-            if item.get('ipv6-address'):
-                splt = item['ipv6-address'].split('/')
+                    self.recordSystemIPs(
+                        hostname, "ipv4", [{"address": splt[0], "masklen": splt[1]}]
+                    )
+        for item in inputDict.get("10", []):
+            if item.get("ipv6-address"):
+                splt = item["ipv6-address"].split("/")
                 if len(splt) == 2:
-                    self.recordSystemIPs(hostname, 'ipv6', [{'address': splt[0], 'masklen': splt[1]}])
+                    self.recordSystemIPs(
+                        hostname, "ipv6", [{"address": splt[0], "masklen": splt[1]}]
+                    )
 
     def defineNodeInformation(self, nodeDict):
         """Define node information."""
@@ -151,7 +162,6 @@ class NodeInfo:
             ["site", f"{uri}:sense-rtmon+realportname"], ["mrs", "value"], [intfKey]
         )
 
-
     def addAgentConfigtoMRML(self, intfDict, newuri, hostname, intf):
         """Agent Configuration params to Model."""
         # Add floating ip pool list for interface from the agent
@@ -172,7 +182,7 @@ class NodeInfo:
         # ==========================================================================================
         if "isAlias" in intfDict:
             isAlias = intfDict["isAlias"].lstrip(":")
-            if not isAlias.startswith('urn:ogf:network'):
+            if not isAlias.startswith("urn:ogf:network"):
                 isAlias = f"urn:ogf:network:{isAlias}"
             self._addIsAlias(uri=newuri, isAlias=isAlias)
         else:
@@ -183,20 +193,27 @@ class NodeInfo:
 
         # BANDWIDTH Service for INTERFACE
         # ==========================================================================================
-        if 'bwParams' in intfDict and intfDict['bwParams']:
+        if "bwParams" in intfDict and intfDict["bwParams"]:
             bws = self._addBandwidthService(hostname=hostname, portName=intf)
-            intfDict['bwParams']['bwuri'] = bws
-            self._addBandwidthServiceParams(**intfDict['bwParams'])
+            intfDict["bwParams"]["bwuri"] = bws
+            self._addBandwidthServiceParams(**intfDict["bwParams"])
             # ==========================================================================================
         if "capacity" in list(intfDict.keys()):
             self._mrsLiteral(bws, "capacity", intfDict["capacity"])
         if "vlan_range_list" in list(intfDict.keys()):
-            self.addVlanRange(**{'newuri': newuri, 'name': 'vlan-range',
-                                 'schema': '#vlan', 'values': intfDict['vlan_range_list']})
-            vlanRange = self.filterOutAvailbVlans(hostname, intfDict['vlan_range_list'])
+            self.addVlanRange(
+                **{
+                    "newuri": newuri,
+                    "name": "vlan-range",
+                    "schema": "#vlan",
+                    "values": intfDict["vlan_range_list"],
+                }
+            )
+            vlanRange = self.filterOutAvailbVlans(hostname, intfDict["vlan_range_list"])
             if not vlanRange:
-                self.addWarning(f"VLAN Range for {hostname}:{intf} is not available or remaining vlans is empty.")
-
+                self.addWarning(
+                    f"VLAN Range for {hostname}:{intf} is not available or remaining vlans is empty."
+                )
 
         self.shared = "notshared"
         if "shared" in intfDict and intfDict["shared"]:
@@ -266,22 +283,42 @@ class NodeInfo:
                     )
                     self._mrsLiteral(vlanuri, "type", self.shared)
 
-                    self.newGraph.add((
+                    self.newGraph.add(
+                        (
                             self.genUriRef("site", vlanuri),
                             self.genUriRef("nml", "hasLabel"),
-                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),))
-                    self.newGraph.add((
-                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),
+                            self.genUriRef(
+                                "site", f"{vlanuri}:label+{vlanDict['vlanid']}"
+                            ),
+                        )
+                    )
+                    self.newGraph.add(
+                        (
+                            self.genUriRef(
+                                "site", f"{vlanuri}:label+{vlanDict['vlanid']}"
+                            ),
                             self.genUriRef("rdf", "type"),
-                            self.genUriRef("nml", "Label"),))
-                    self.newGraph.add((
-                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),
+                            self.genUriRef("nml", "Label"),
+                        )
+                    )
+                    self.newGraph.add(
+                        (
+                            self.genUriRef(
+                                "site", f"{vlanuri}:label+{vlanDict['vlanid']}"
+                            ),
                             self.genUriRef("nml", "labeltype"),
-                            self.genUriRef("schema", "#vlan"),))
-                    self.newGraph.set((
-                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),
+                            self.genUriRef("schema", "#vlan"),
+                        )
+                    )
+                    self.newGraph.set(
+                        (
+                            self.genUriRef(
+                                "site", f"{vlanuri}:label+{vlanDict['vlanid']}"
+                            ),
                             self.genUriRef("nml", "value"),
-                            self.genLiteral(str(vlanDict["vlanid"])),))
+                            self.genLiteral(str(vlanDict["vlanid"])),
+                        )
+                    )
                     # Add hasNetworkAddress for vlan
                     self.addIntfInfo(nodeDict["hostname"], vlanDict, vlanuri)
                     # Now the mapping of the interface information:

@@ -27,8 +27,9 @@ from SiteRMLibs.MainUtilities import convertTSToDatetime
 from SiteRMLibs.CustomExceptions import ModelNotFound
 
 
-class ModelCalls():
+class ModelCalls:
     """Model Calls API Module"""
+
     # pylint: disable=E1101
     def __init__(self):
         self.__defineRoutes()
@@ -36,15 +37,30 @@ class ModelCalls():
 
     def __urlParams(self):
         """Define URL Params for this class"""
-        urlParams = {'models': {'allowedMethods': ['GET'],
-                                'urlParams': [{"key": "current", "default": False, "type": bool},
-                                              {"key": "summary", "default": True, "type": bool},
-                                              {"key": "oldview", "default": False, "type": bool},
-                                              {"key": "encode", "default": True, "type": bool},
-                                              {"key": "model", "default": "turtle", "type": str, "options": ['turtle']}]},
-                     'modelsid': {'allowedMethods': ['GET'],
-                                  'urlParams': [{"key": "encode", "default": False, "type": bool},
-                                                {"key": "summary", "default": False, "type": bool}]}}
+        urlParams = {
+            "models": {
+                "allowedMethods": ["GET"],
+                "urlParams": [
+                    {"key": "current", "default": False, "type": bool},
+                    {"key": "summary", "default": True, "type": bool},
+                    {"key": "oldview", "default": False, "type": bool},
+                    {"key": "encode", "default": True, "type": bool},
+                    {
+                        "key": "model",
+                        "default": "turtle",
+                        "type": str,
+                        "options": ["turtle"],
+                    },
+                ],
+            },
+            "modelsid": {
+                "allowedMethods": ["GET"],
+                "urlParams": [
+                    {"key": "encode", "default": False, "type": bool},
+                    {"key": "summary", "default": False, "type": bool},
+                ],
+            },
+        }
         self.urlParams.update(urlParams)
 
     def __defineRoutes(self):
@@ -55,12 +71,12 @@ class ModelCalls():
     def getmodel(self, environ, modelID=None, content=False, **kwargs):
         """Get all models."""
         if not modelID:
-            return self.dbI.get('models', orderby=['insertdate', 'DESC'])
-        model = self.dbI.get('models', limit=1, search=[['uid', modelID]])
+            return self.dbI.get("models", orderby=["insertdate", "DESC"])
+        model = self.dbI.get("models", limit=1, search=[["uid", modelID]])
         if not model:
             raise ModelNotFound(f"Model with {modelID} id was not found in the system")
         if content:
-            return getAllFileContent(model[0]['fileloc'])
+            return getAllFileContent(model[0]["fileloc"])
         return model[0]
 
     def models(self, environ, **kwargs):
@@ -70,43 +86,55 @@ class ModelCalls():
         Output: application/json
         Examples: https://server-host/sitefe/v1/models/ # Returns list of all models;
         """
-        modTime = getModTime(kwargs['headers'])
+        modTime = getModTime(kwargs["headers"])
         outmodels = self.getmodel(environ, None, False, **kwargs)
         if not outmodels:
-            raise ModelNotFound('LastModel does not exist in dictionary. First time run? See documentation')
+            raise ModelNotFound(
+                "LastModel does not exist in dictionary. First time run? See documentation"
+            )
         outmodels = [outmodels] if isinstance(outmodels, dict) else outmodels
-        current = {"id": outmodels[0]['uid'],
-                   "creationTime": convertTSToDatetime(outmodels[0]['insertdate']),
-                   "href": f"{environ['APP_CALLBACK']}/{outmodels[0]['uid']}"}
-        if outmodels[0]['insertdate'] < modTime:
-            self.httpresp.ret_304('application/json', kwargs["start_response"],
-                                  [('Last-Modified', httpdate(outmodels[0]['insertdate']))])
+        current = {
+            "id": outmodels[0]["uid"],
+            "creationTime": convertTSToDatetime(outmodels[0]["insertdate"]),
+            "href": f"{environ['APP_CALLBACK']}/{outmodels[0]['uid']}",
+        }
+        if outmodels[0]["insertdate"] < modTime:
+            self.httpresp.ret_304(
+                "application/json",
+                kwargs["start_response"],
+                [("Last-Modified", httpdate(outmodels[0]["insertdate"]))],
+            )
             return []
-        self.httpresp.ret_200('application/json', kwargs["start_response"],
-                              [('Last-Modified', httpdate(outmodels[0]['insertdate']))])
-        if kwargs['urlParams']['oldview']:
+        self.httpresp.ret_200(
+            "application/json",
+            kwargs["start_response"],
+            [("Last-Modified", httpdate(outmodels[0]["insertdate"]))],
+        )
+        if kwargs["urlParams"]["oldview"]:
             return outmodels
         outM = {"models": []}
-        if kwargs['urlParams']['current']:
-            if not kwargs['urlParams']['summary']:
-                current['model'] = encodebase64(self.getmodel(environ,
-                                                                outmodels[0]['uid'],
-                                                                content=True, **kwargs),
-                                                kwargs['urlParams']['encode'])
-            outM['models'].append(current)
+        if kwargs["urlParams"]["current"]:
+            if not kwargs["urlParams"]["summary"]:
+                current["model"] = encodebase64(
+                    self.getmodel(environ, outmodels[0]["uid"], content=True, **kwargs),
+                    kwargs["urlParams"]["encode"],
+                )
+            outM["models"].append(current)
             return [current]
-        if not kwargs['urlParams']['current']:
+        if not kwargs["urlParams"]["current"]:
             for model in outmodels:
-                tmpDict = {"id": model['uid'],
-                           "creationTime": convertTSToDatetime(model['insertdate']),
-                           "href": f"{environ['APP_CALLBACK']}/{model['uid']}"}
-                if not kwargs['urlParams']['summary']:
-                    tmpDict['model'] = encodebase64(self.getmodel(environ,
-                                                                    model['uid'],
-                                                                    content=True, **kwargs),
-                                                    kwargs['urlParams']['encode'])
-                outM['models'].append(tmpDict)
-            return outM['models']
+                tmpDict = {
+                    "id": model["uid"],
+                    "creationTime": convertTSToDatetime(model["insertdate"]),
+                    "href": f"{environ['APP_CALLBACK']}/{model['uid']}",
+                }
+                if not kwargs["urlParams"]["summary"]:
+                    tmpDict["model"] = encodebase64(
+                        self.getmodel(environ, model["uid"], content=True, **kwargs),
+                        kwargs["urlParams"]["encode"],
+                    )
+                outM["models"].append(tmpDict)
+            return outM["models"]
         return []
 
     def modelsid(self, environ, **kwargs):
@@ -115,21 +143,29 @@ class ModelCalls():
         Method: GET
         Output: application/json
         """
-        modTime = getModTime(kwargs['headers'])
-        outmodels = self.getmodel(environ, kwargs['modelid'], **kwargs)
+        modTime = getModTime(kwargs["headers"])
+        outmodels = self.getmodel(environ, kwargs["modelid"], **kwargs)
         model = outmodels if isinstance(outmodels, dict) else outmodels[0]
-        if modTime > model['insertdate']:
-            self.httpresp.ret_304('application/json', kwargs["start_response"],
-                                  [('Last-Modified', httpdate(model['insertdate']))])
+        if modTime > model["insertdate"]:
+            self.httpresp.ret_304(
+                "application/json",
+                kwargs["start_response"],
+                [("Last-Modified", httpdate(model["insertdate"]))],
+            )
             return []
-        current = {"id": model['uid'],
-                   "creationTime": convertTSToDatetime(model['insertdate']),
-                   "href": f"{environ['APP_CALLBACK']}/{model['uid']}"}
-        if not kwargs['urlParams']['summary']:
-            current['model'] = encodebase64(self.getmodel(environ,
-                                                            model['uid'],
-                                                            content=True, **kwargs),
-                                            kwargs['urlParams']['encode'])
-        self.httpresp.ret_200('application/json', kwargs["start_response"],
-                              [('Last-Modified', httpdate(model['insertdate']))])
+        current = {
+            "id": model["uid"],
+            "creationTime": convertTSToDatetime(model["insertdate"]),
+            "href": f"{environ['APP_CALLBACK']}/{model['uid']}",
+        }
+        if not kwargs["urlParams"]["summary"]:
+            current["model"] = encodebase64(
+                self.getmodel(environ, model["uid"], content=True, **kwargs),
+                kwargs["urlParams"]["encode"],
+            )
+        self.httpresp.ret_200(
+            "application/json",
+            kwargs["start_response"],
+            [("Last-Modified", httpdate(model["insertdate"]))],
+        )
         return current

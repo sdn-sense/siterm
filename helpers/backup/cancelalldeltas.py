@@ -10,19 +10,20 @@ from SiteFE.PolicyService.stateMachine import StateMachine
 
 
 CONFIG = getConfig()
-LOGGER = getLoggingObject(config=CONFIG, service='Helpers')
+LOGGER = getLoggingObject(config=CONFIG, service="Helpers")
 STATEMACHINE = StateMachine(CONFIG)
 
 
 def deleteAll(sitename, deltaUID=None):
     """delete all deltas."""
-    dbI = getDBConn('cancelalldeltas')
+    dbI = getDBConn("cancelalldeltas")
     dbobj = getVal(dbI, sitename=sitename)
-    for delta in dbobj.get('deltas'):
-        if deltaUID and delta['uid'] != deltaUID:
+    for delta in dbobj.get("deltas"):
+        if deltaUID and delta["uid"] != deltaUID:
             continue
-        print('Cancel %s' % delta['uid'])
-        STATEMACHINE.stateChangerDelta(dbobj, 'remove', **delta)
+        print("Cancel %s" % delta["uid"])
+        STATEMACHINE.stateChangerDelta(dbobj, "remove", **delta)
+
 
 if __name__ == "__main__":
     print(len(sys.argv))

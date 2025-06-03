@@ -13,11 +13,12 @@ Date: 2022/04/13
 """
 
 
-class FreeRTR():
+class FreeRTR:
     """Default class example for building new parsers"""
+
     def __init__(self, **kwargs):
-        self.factName = ['sense.freertr.freertr_facts']
-        self.defVlanNaming = '%(vlanname)%(vlanid)s'
+        self.factName = ["sense.freertr.freertr_facts"]
+        self.defVlanNaming = "%(vlanname)%(vlanid)s"
 
 
 MODULE = FreeRTR

@@ -83,7 +83,9 @@ class OIDCHandler:
             "email": email,
             "issuer": issuer,
             "permissions": permissions,
-            "claims": {k: v for k, v in environ.items() if k.startswith("HTTP_OIDC_CLAIM_")},
+            "claims": {
+                k: v for k, v in environ.items() if k.startswith("HTTP_OIDC_CLAIM_")
+            },
         }
 
 
@@ -133,7 +135,9 @@ class CertHandler:
             "HTTP_SSL_CLIENT_V_END",
         ]:
             if key not in environ or environ.get(key, None) in (None, "", "(null)"):
-                raise RequestWithoutCert("Unauthorized access. Request without certificate.")
+                raise RequestWithoutCert(
+                    "Unauthorized access. Request without certificate."
+                )
 
         out["subject"] = environ["HTTP_SSL_CLIENT_S_DN"]
         out["notAfter"] = int(

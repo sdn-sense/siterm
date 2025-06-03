@@ -12,8 +12,10 @@ from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.Backends.main import Switch
 
-class SwitchWorker():
+
+class SwitchWorker:
     """Config Fetcher from Github."""
+
     def __init__(self, config, sitename, device):
         self.config = config
         self.sitename = sitename
@@ -40,14 +42,17 @@ class SwitchWorker():
             except OSError as ex:
                 self.logger.error(f"Got OS Error removing {fname}. {ex}")
         if self.renewsNeeded:
-            self.logger.info(f"Renew needed for {self.device}. Renewing {self.renewsNeeded} times.")
+            self.logger.info(
+                f"Renew needed for {self.device}. Renewing {self.renewsNeeded} times."
+            )
             self.switch.getinfoNew(self.device)
             self.renewsNeeded -= 1
         else:
             self.logger.info(f"No renew needed for {self.device}")
 
+
 if __name__ == "__main__":
-    logObj = getLoggingObject(logType='StreamLogger', service='SwitchWorker')
+    logObj = getLoggingObject(logType="StreamLogger", service="SwitchWorker")
     config = getGitConfig()
     for siteName in config.get("general", "sites"):
         for dev in config.get(siteName, "switch"):

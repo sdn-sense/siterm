@@ -25,8 +25,9 @@ class CPUInfo:
 
     def __init__(self, config=None, logger=None):
         self.config = config if config else getGitConfig()
-        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
-
+        self.logger = (
+            logger if logger else getLoggingObject(config=self.config, service="Agent")
+        )
 
     def get(self, **_kwargs):
         """Get lscpu information"""
@@ -42,7 +43,9 @@ class CPUInfo:
                 cpuInfo["Core(s) per socket"]
             )
         except (ValueError, KeyError):
-            self.logger.warning(f"Failed to calculate num_cores from {cpuInfo}. will set to 1")
+            self.logger.warning(
+                f"Failed to calculate num_cores from {cpuInfo}. will set to 1"
+            )
             cpuInfo["num_cores"] = 1
         return cpuInfo
 

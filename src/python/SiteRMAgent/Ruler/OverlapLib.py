@@ -6,9 +6,13 @@ Authors:
 
 Date: 2022/08/29
 """
-from SiteRMLibs.ipaddr import (checkoverlap, getInterfaceIP,
-                               getMasterSlaveInterfaces, getNetmaskBits,
-                               getsubnet)
+from SiteRMLibs.ipaddr import (
+    checkoverlap,
+    getInterfaceIP,
+    getMasterSlaveInterfaces,
+    getNetmaskBits,
+    getsubnet,
+)
 
 
 class OverlapLib:
@@ -94,7 +98,13 @@ class OverlapLib:
 
     @staticmethod
     def mergeBWDicts(d1, d2):
-        int_keys = ['availableCapacity', 'granularity', 'maximumCapacity', 'priority', 'reservableCapacity']
+        int_keys = [
+            "availableCapacity",
+            "granularity",
+            "maximumCapacity",
+            "priority",
+            "reservableCapacity",
+        ]
         for key in int_keys:
             d1[key] = d1.get(key, 0) + d2.get(key, 0)
         return d1
@@ -149,7 +159,9 @@ class OverlapLib:
                                 )
                                 intServ[f"dst_{iptype}"] = iprange
                                 if intServ["rules"]:
-                                    intServ["rules"] = self.mergeBWDicts(intServ["rules"], routes["hasService"])
+                                    intServ["rules"] = self.mergeBWDicts(
+                                        intServ["rules"], routes["hasService"]
+                                    )
                                 else:
                                     intServ["rules"] = routes["hasService"]
         return overlapServices

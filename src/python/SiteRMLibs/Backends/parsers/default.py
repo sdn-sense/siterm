@@ -16,8 +16,9 @@ from SiteRMLibs.MainUtilities import getLoggingObject
 
 # Class Name, this is also used below MODULE= <ClassName>
 # Ansible module will preload all parsers by MODULE variable
-class Default():
+class Default:
     """Default class example for building new parsers"""
+
     def __init__(self, **kwargs):
         # Facts names is used to match with ansible command.
         # See ansible project template and it depends on which
@@ -26,9 +27,11 @@ class Default():
         #       for arista eos- arista.eos.eos_facts, arista.eos.eos_command
         # You can find more details here of other possible switches.
         # https://docs.w3cub.com/ansible/
-        self.factName = ['default_facts', 'default_command']
-        self.defVlanNaming = 'Vlan%(vlanid)s'
-        self.logger = getLoggingObject(config=kwargs['config'], service='SwitchBackends')
+        self.factName = ["default_facts", "default_command"]
+        self.defVlanNaming = "Vlan%(vlanid)s"
+        self.logger = getLoggingObject(
+            config=kwargs["config"], service="SwitchBackends"
+        )
 
     def getinfo(self, ansibleOut):
         """
@@ -42,7 +45,7 @@ class Default():
         EXAMPLE:
         {'mac': '4c:76:25:e8:44:c0'}
         """
-        raise NotImplementedError('Default getinfo call not implemented')
+        raise NotImplementedError("Default getinfo call not implemented")
 
     def getlldpneighbors(self, ansibleOut):
         """
@@ -67,7 +70,7 @@ class Default():
                'remote_chassis_id': '34:17:eb:4c:1e:80'},
         }
         """
-        raise NotImplementedError('Default getinfo call not implemented')
+        raise NotImplementedError("Default getinfo call not implemented")
 
     def getIPv4Routing(self, ansibleOut):
         """
@@ -81,8 +84,7 @@ class Default():
         [{'to': '0.0.0.0/0', 'from': '192.168.255.254'},
          {'vrf': 'lhcone', 'to': '0.0.0.0/0', 'from': '192.84.86.238'}]
         """
-        raise NotImplementedError('Default getIPv4Routing call not implemented')
-
+        raise NotImplementedError("Default getIPv4Routing call not implemented")
 
     def getIPv6Routing(self, ansibleOut):
         """
@@ -96,14 +98,14 @@ class Default():
         [{'vrf': 'lhcone', 'to': '::/0', 'from': '2605:d9c0:0:ff02::'},
          {'vrf': 'lhcone', 'to': '2605:d9c0:2::/48', 'intf': 'NULL 0'}]
         """
-        raise NotImplementedError('Default getIPv4Routing call not implemented')
+        raise NotImplementedError("Default getIPv4Routing call not implemented")
 
     def parser(self, ansibleOut):
         """Parse Ansible output and prepare it as other SENSE Services expect it"""
         # Out must be {'<interface_name>': {'key': 'value'}} OR
         #             {'<interface_name>': {'key': ['value1', 'value2']}
         # dict as value are not supported (not found use case yet for this)
-        raise NotImplementedError('Default parser call not implemented')
+        raise NotImplementedError("Default parser call not implemented")
 
 
 MODULE = Default

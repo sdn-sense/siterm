@@ -12,11 +12,12 @@ Date: 2021/12/01
 """
 
 
-class AristaEOS():
+class AristaEOS:
     """Arista EOS Ansible wrapper."""
+
     def __init__(self, **kwargs):
-        self.factName = ['sense.aristaeos.aristaeos_facts']
-        self.defVlanNaming = 'Vlan%(vlanid)s'
+        self.factName = ["sense.aristaeos.aristaeos_facts"]
+        self.defVlanNaming = "Vlan%(vlanid)s"
 
 
 MODULE = AristaEOS

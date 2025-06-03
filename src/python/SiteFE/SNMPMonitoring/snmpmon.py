@@ -37,18 +37,20 @@ from SiteRMLibs.MainUtilities import getActiveDeltas
 from SiteRMLibs.MainUtilities import isValFloat
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.GitConfig import getGitConfig
-from prometheus_client import (CollectorRegistry, Enum,
-                               Gauge, Info, generate_latest)
+from prometheus_client import (CollectorRegistry, Enum, Gauge, Info, generate_latest)
 
 
 class Topology:
     """Topology json preparation for visualization"""
+
     # pylint: disable=E1101
     def __init__(self, config, sitename):
         self.config = config
         self.sitename = sitename
-        self.logger = getLoggingObject(config=self.config, service='SNMPMonitoring')
-        self.dbI = getVal(getDBConn('SNMPMonitoring', self), **{'sitename': self.sitename})
+        self.logger = getLoggingObject(config=self.config, service="SNMPMonitoring")
+        self.dbI = getVal(
+            getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename}
+        )
         self.diragent = contentDB()
         self.topodir = os.path.join(self.config.get(sitename, "privatedir"), "Topology")
 
@@ -58,38 +60,54 @@ class Topology:
         if not remMac:
             return None
         for switch, switchdata in workdata.items():
-            if remMac in switchdata['macs']:
-                return {'switch': switch, 'id': switchdata['id']}
+            if remMac in switchdata["macs"]:
+                return {"switch": switch, "id": switchdata["id"]}
         return None
 
     @staticmethod
     def _getansdata(indata, keys):
         """Get Ansible data from ansible output"""
         if len(keys) == 1:
-            return indata.get('event_data', {}).get('res', {}).get(
-                              'ansible_facts', {}).get(keys[0], {})
+            return (
+                indata.get("event_data", {})
+                .get("res", {})
+                .get("ansible_facts", {})
+                .get(keys[0], {})
+            )
         if len(keys) == 2:
-            return indata.get('event_data', {}).get('res', {}).get(
-                              'ansible_facts', {}).get(keys[0], {}).get(keys[1], {})
+            return (
+                indata.get("event_data", {})
+                .get("res", {})
+                .get("ansible_facts", {})
+                .get(keys[0], {})
+                .get(keys[1], {})
+            )
         return {}
 
     def _getWANLinks(self, incr):
         """Get WAN Links for visualization"""
         wan_links = {}
-        for site in self.config['MAIN'].get('general', {}).get('sites', []):
-            for sw in self.config['MAIN'].get(site, {}).get('switch', []):
-                if not self.config['MAIN'].get(sw, {}):
+        for site in self.config["MAIN"].get("general", {}).get("sites", []):
+            for sw in self.config["MAIN"].get(site, {}).get("switch", []):
+                if not self.config["MAIN"].get(sw, {}):
                     continue
-                if not isinstance(self.config['MAIN'].get(sw, {}).get('ports', None), dict):
+                if not isinstance(
+                    self.config["MAIN"].get(sw, {}).get("ports", None), dict
+                ):
                     continue
-                for _, val in self.config['MAIN'].get(sw, {}).get('ports', {}).items():
-                    if 'wanlink' in val and val['wanlink'] and val.get('isAlias', None):
-                        wan_links.setdefault(f"wan{incr}", {"_id": incr,
-                                                            "topo": {},
-                                                            "DeviceInfo": {"type": "cloud",
-                                                                           "name": val['isAlias']}})
-                        wan_links[f"wan{incr}"]["topo"].setdefault(val['isAlias'].split(':')[-1],
-                                                                   {"device": sw, "port": val})
+                for _, val in self.config["MAIN"].get(sw, {}).get("ports", {}).items():
+                    if "wanlink" in val and val["wanlink"] and val.get("isAlias", None):
+                        wan_links.setdefault(
+                            f"wan{incr}",
+                            {
+                                "_id": incr,
+                                "topo": {},
+                                "DeviceInfo": {"type": "cloud", "name": val["isAlias"]},
+                            },
+                        )
+                        wan_links[f"wan{incr}"]["topo"].setdefault(
+                            val["isAlias"].split(":")[-1], {"device": sw, "port": val}
+                        )
                         incr += 1
         return wan_links
 
@@ -98,55 +116,79 @@ class Topology:
         workdata = {}
         incr = 0
         # Get all Switch information
-        for item in self.dbI.get('switch', orderby=['updatedate', 'DESC'], limit=100):
-            if 'output' not in item:
+        for item in self.dbI.get("switch", orderby=["updatedate", "DESC"], limit=100):
+            if "output" not in item:
                 continue
-            tmpdict = evaldict(item['output'])
-            workdata[item['device']] = {'id': incr, 'type': 'switch'}
+            tmpdict = evaldict(item["output"])
+            workdata[item["device"]] = {"id": incr, "type": "switch"}
             incr += 1
-            for dkey, keys in {'macs': ['ansible_net_info', 'macs'],
-                               'lldp': ['ansible_net_lldp'],
-                               'intstats': ['ansible_net_interfaces']}.items():
-                workdata[item['device']][dkey] = self._getansdata(tmpdict, keys)
+            for dkey, keys in {
+                "macs": ["ansible_net_info", "macs"],
+                "lldp": ["ansible_net_lldp"],
+                "intstats": ["ansible_net_interfaces"],
+            }.items():
+                workdata[item["device"]][dkey] = self._getansdata(tmpdict, keys)
         # Now that we have specific data; lets loop over it and get nodes/links
         out = {}
         for switch, switchdata in workdata.items():
-            swout = out.setdefault(switch, {'topo': {},
-                                            'DeviceInfo': {'type': 'switch', 'name': switch},
-                                            '_id': switchdata['id']})
-            for key, vals in switchdata['lldp'].items():
-                remSwitch = self._findConnection(workdata, vals.get('remote_chassis_id', ""))
-                remPort = vals.get('remote_port_id', "")
+            swout = out.setdefault(
+                switch,
+                {
+                    "topo": {},
+                    "DeviceInfo": {"type": "switch", "name": switch},
+                    "_id": switchdata["id"],
+                },
+            )
+            for key, vals in switchdata["lldp"].items():
+                remSwitch = self._findConnection(
+                    workdata, vals.get("remote_chassis_id", "")
+                )
+                remPort = vals.get("remote_port_id", "")
                 if remSwitch and remPort:
-                    swout['topo'].setdefault(key, {'device': remSwitch['switch'],
-                                                   'port': remPort})
+                    swout["topo"].setdefault(
+                        key, {"device": remSwitch["switch"], "port": remPort}
+                    )
         # Now lets get host information
-        for host in self.dbI.get('hosts', orderby=['updatedate', 'DESC'], limit=100):
-            parsedInfo = self.diragent.getFileContentAsJson(host.get('hostinfo', ""))
-            hostconfig = parsedInfo.get('Summary', {}).get('config', {})
-            hostname = hostconfig.get('agent', {}).get('hostname', '')
-            lldpInfo = parsedInfo.get('NetInfo', {}).get('lldp', {})
-            hout = out.setdefault(hostname, {'topo': {},
-                                             'DeviceInfo': {'type': 'server', 'name': hostname, },
-                                             '_id': incr})
+        for host in self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100):
+            parsedInfo = self.diragent.getFileContentAsJson(host.get("hostinfo", ""))
+            hostconfig = parsedInfo.get("Summary", {}).get("config", {})
+            hostname = hostconfig.get("agent", {}).get("hostname", "")
+            lldpInfo = parsedInfo.get("NetInfo", {}).get("lldp", {})
+            hout = out.setdefault(
+                hostname,
+                {
+                    "topo": {},
+                    "DeviceInfo": {
+                        "type": "server",
+                        "name": hostname,
+                    },
+                    "_id": incr,
+                },
+            )
             incr += 1
             if lldpInfo:
                 for intf, vals in lldpInfo.items():
-                    remSwitch = self._findConnection(workdata, vals.get('remote_chassis_id', ""))
-                    remPort = vals.get('remote_port_id', "")
+                    remSwitch = self._findConnection(
+                        workdata, vals.get("remote_chassis_id", "")
+                    )
+                    remPort = vals.get("remote_port_id", "")
                     if remSwitch and remPort:
-                        hout['topo'].setdefault(intf, {'device': remSwitch['switch'],
-                                                       'port': remPort})
+                        hout["topo"].setdefault(
+                            intf, {"device": remSwitch["switch"], "port": remPort}
+                        )
             else:
-                for intf in hostconfig.get('agent', {}).get('interfaces', []):
-                    swintf = hostconfig.get(intf, {}).get('port', '')
-                    switch = hostconfig.get(intf, {}).get('switch', '')
+                for intf in hostconfig.get("agent", {}).get("interfaces", []):
+                    swintf = hostconfig.get(intf, {}).get("port", "")
+                    switch = hostconfig.get(intf, {}).get("switch", "")
                     if switch and swintf:
-                        hout['topo'].setdefault(intf, {'device': switch, 'port': swintf})
+                        hout["topo"].setdefault(
+                            intf, {"device": switch, "port": swintf}
+                        )
         out.update(self._getWANLinks(incr))
         # Write new out to file
         fname = os.path.join(self.topodir, "topology.json")
         self.diragent.dumpFileContentAsJson(fname, out)
+
 
 class ActiveWrapper:
     """Active State and QoS Wrapper to report in prometheus format"""
@@ -215,20 +257,29 @@ class ActiveWrapper:
         self.__clean()
         return result
 
-class PromOut():
+
+class PromOut:
     """Prometheus Output Class"""
+
     def __init__(self, config, sitename):
         self.config = config
         self.sitename = sitename
-        self.logger = getLoggingObject(config=self.config, service='SNMPMonitoring')
-        self.dbI = getVal(getDBConn('SNMPMonitoring', self), **{'sitename': self.sitename})
+        self.logger = getLoggingObject(config=self.config, service="SNMPMonitoring")
+        self.dbI = getVal(
+            getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename}
+        )
         self.diragent = contentDB()
         self.timenow = int(getUTCnow())
         self.activeAPI = ActiveWrapper()
         self.memMonitor = {}
         self.diskMonitor = {}
-        self.arpLabels = {'Device': '', 'Flags': '', 'HWaddress': '',
-                          'IPaddress': '', 'Hostname': ''}
+        self.arpLabels = {
+            "Device": "",
+            "Flags": "",
+            "HWaddress": "",
+            "IPaddress": "",
+            "Hostname": "",
+        }
         self.snmpdir = os.path.join(self.config.get(sitename, "privatedir"), "SNMPData")
 
     @staticmethod
@@ -258,33 +309,34 @@ class PromOut():
 
     def __diskStats(self, registry):
         """Refresh all Disk Statistics in FE"""
-        diskGauge = Gauge("disk_usage",
-                          "Disk usage statistics for each filesystem",
-                          ["filesystem", "key"],
-                          registry=registry)
+        diskGauge = Gauge(
+            "disk_usage",
+            "Disk usage statistics for each filesystem",
+            ["filesystem", "key"],
+            registry=registry,
+        )
 
         for _, hostDict in self.diskMonitor.items():
             for fs, stats in hostDict.get("Values", {}).items():
                 tmpfs = fs
-                if 'Mounted_on' in stats and stats['Mounted_on']:
-                    tmpfs = stats['Mounted_on']
+                if "Mounted_on" in stats and stats["Mounted_on"]:
+                    tmpfs = stats["Mounted_on"]
                 for key, val in stats.items():
                     labels = {"filesystem": tmpfs, "key": key}
                     if isinstance(val, str):
-                        val = val.strip().rstrip('%')
+                        val = val.strip().rstrip("%")
                         try:
                             val = float(val)
                         except ValueError:
                             continue  # skip non-numeric fields
                     diskGauge.labels(**labels).set(val)
 
-    def _addHostArpInfo(self, arpState,  host, arpInfo):
+    def _addHostArpInfo(self, arpState, host, arpInfo):
         """Add Host Arp Info"""
         self.arpLabels["Hostname"] = host
         for arpEntry in arpInfo:
             self.arpLabels.update(arpEntry)
             arpState.labels(**self.arpLabels).set(1)
-
 
     def __getAgentData(self, registry):
         """Add Agent Data (Cert validity) to prometheus output"""
@@ -294,11 +346,16 @@ class PromOut():
             ["hostname", "Key"],
             registry=registry,
         )
-        arpState = Gauge('arp_state', 'ARP Address Table for Host',
-                         labelnames=self.arpLabels.keys(),
-                         registry=registry)
+        arpState = Gauge(
+            "arp_state",
+            "ARP Address Table for Host",
+            labelnames=self.arpLabels.keys(),
+            registry=registry,
+        )
         for host, hostDict in getAllHosts(self.dbI).items():
-            hostDict["hostinfo"] = self.diragent.getFileContentAsJson(hostDict["hostinfo"])
+            hostDict["hostinfo"] = self.diragent.getFileContentAsJson(
+                hostDict["hostinfo"]
+            )
             if int(self.timenow - hostDict["updatedate"]) > 300:
                 continue
             if "CertInfo" in hostDict.get("hostinfo", {}).keys():
@@ -307,8 +364,12 @@ class PromOut():
                     agentCertValid.labels(**keys).set(
                         hostDict["hostinfo"]["CertInfo"].get(key, 0)
                     )
-            if "ArpInfo" in hostDict.get("hostinfo", {}).keys() and hostDict["hostinfo"]["ArpInfo"].get('arpinfo'):
-                self._addHostArpInfo(arpState, host, hostDict["hostinfo"]["ArpInfo"]['arpinfo'])
+            if "ArpInfo" in hostDict.get("hostinfo", {}).keys() and hostDict[
+                "hostinfo"
+            ]["ArpInfo"].get("arpinfo"):
+                self._addHostArpInfo(
+                    arpState, host, hostDict["hostinfo"]["ArpInfo"]["arpinfo"]
+                )
 
     def __getSwitchErrors(self, registry):
         """Add Switch Errors to prometheus output"""
@@ -325,7 +386,7 @@ class PromOut():
             out = evaldict(item.get("error", {}))
             if out:
                 for errorkey, errors in out.items():
-                    labels = {"errortype": errorkey, "hostname": item['device']}
+                    labels = {"errortype": errorkey, "hostname": item["device"]}
                     switchErrorsGauge.labels(**labels).set(len(errors))
 
     def __getSNMPData(self, registry):
@@ -361,7 +422,11 @@ class PromOut():
                         for key1, macs in val["vlans"].items():
                             incr = 0
                             for macaddr in macs:
-                                labels = {"vlan": key1,"hostname": item["hostname"], "incr": str(incr)}
+                                labels = {
+                                    "vlan": key1,
+                                    "hostname": item["hostname"],
+                                    "incr": str(incr),
+                                }
                                 macState.labels(**labels).info({"macaddress": macaddr})
                                 incr += 1
                     continue
@@ -499,20 +564,23 @@ class PromOut():
         registry = self.__cleanRegistry()
         self.__getServiceStates(registry)
         data = generate_latest(registry)
-        del registry # Explicit dereference of Collector Registry
+        del registry  # Explicit dereference of Collector Registry
         fname = os.path.join(self.snmpdir, "snmpinfo.txt")
         self.diragent.dumpFileContent(fname, data)
 
 
-class SNMPMonitoring():
+class SNMPMonitoring:
     """SNMP Monitoring Class"""
+
     def __init__(self, config, sitename):
         super().__init__()
         self.config = config
-        self.logger = getLoggingObject(config=self.config, service='SNMPMonitoring')
+        self.logger = getLoggingObject(config=self.config, service="SNMPMonitoring")
         self.sitename = sitename
         self.switch = Switch(config, sitename)
-        self.dbI = getVal(getDBConn('SNMPMonitoring', self), **{'sitename': self.sitename})
+        self.dbI = getVal(
+            getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename}
+        )
         self.diragent = contentDB()
         self.switches = {}
         self.session = None
@@ -535,37 +603,44 @@ class SNMPMonitoring():
         self.session = None
         self.hostconf.setdefault(host, {})
         self.hostconf[host] = self.switch.plugin.getHostConfig(host)
-        if self.config.config['MAIN'].get(host, {}).get('external_snmp', ''):
-            snmphost = self.config.config['MAIN'][host]['external_snmp']
-            self.logger.info(f'SNMP Scan skipped for {host}. Remote endpoint defined: {snmphost}')
+        if self.config.config["MAIN"].get(host, {}).get("external_snmp", ""):
+            snmphost = self.config.config["MAIN"][host]["external_snmp"]
+            self.logger.info(
+                f"SNMP Scan skipped for {host}. Remote endpoint defined: {snmphost}"
+            )
             return
-        if 'snmp_monitoring' not in self.hostconf[host]:
-            self.logger.info(f'Ansible host: {host} config does not have snmp_monitoring parameters')
+        if "snmp_monitoring" not in self.hostconf[host]:
+            self.logger.info(
+                f"Ansible host: {host} config does not have snmp_monitoring parameters"
+            )
             return
-        if 'session_vars' not in self.hostconf[host]['snmp_monitoring']:
-            self.logger.info(f'Ansible host: {host} config does not have session_vars parameters')
+        if "session_vars" not in self.hostconf[host]["snmp_monitoring"]:
+            self.logger.info(
+                f"Ansible host: {host} config does not have session_vars parameters"
+            )
             return
         # easysnmp does not support ipv6 and will fail with ValueError (unable to unpack)
         # To avoid this, we will bypass ipv6 check if error is raised.
         try:
-            self.session = Session(**self.hostconf[host]['snmp_monitoring']['session_vars'])
+            self.session = Session(
+                **self.hostconf[host]["snmp_monitoring"]["session_vars"]
+            )
         except ValueError:
-            conf = self.hostconf[host]['snmp_monitoring']['session_vars']
-            hostname = conf.pop('hostname')
+            conf = self.hostconf[host]["snmp_monitoring"]["session_vars"]
+            hostname = conf.pop("hostname")
             self.session = Session(**conf)
             self.session.update_session(hostname=hostname)
-
 
     def _getSNMPVals(self, key, host=None):
         try:
             allvals = self.session.walk(key)
             return allvals
         except EasySNMPUnknownObjectIDError as ex:
-            ex = f'[{host}]: Got SNMP UnknownObjectID Exception for key {key}: {ex}'
+            ex = f"[{host}]: Got SNMP UnknownObjectID Exception for key {key}: {ex}"
             self.logger.warning(ex)
             self.err.append(ex)
         except EasySNMPTimeoutError as ex:
-            ex = f'[{host}]: Got SNMP Timeout Exception: {ex}'
+            ex = f"[{host}]: Got SNMP Timeout Exception: {ex}"
             self.logger.warning(ex)
             self.err.append(ex)
         return []
@@ -577,35 +652,43 @@ class SNMPMonitoring():
         # There might be some MIBs/oids which can be used to get this information
         # for now, we will use ansible to get mac addresses (as enabling more features
         # at sites - might be more complex)
-        updatedate = self.switch.switches.get('output', {}).get(host, {}).get('dbinfo', {}).get('updatedate', 0)
+        updatedate = (
+            self.switch.switches.get("output", {})
+            .get(host, {})
+            .get("dbinfo", {})
+            .get("updatedate", 0)
+        )
         if (getUTCnow() - updatedate) > 600:
-            self.logger.info(f'[{host}]: Forcing ansible to update device information')
+            self.logger.info(f"[{host}]: Forcing ansible to update device information")
             self.switch.deviceUpdate(self.sitename, host)
         self.switch.getinfo()
-        mactable = self.switch.output.get('mactable', {}).get(host, {})
-        macs.setdefault(host, {'vlans': {}})
+        mactable = self.switch.output.get("mactable", {}).get(host, {})
+        macs.setdefault(host, {"vlans": {}})
         for vlanid, allmacs in mactable.items():
             if not self._isVlanAllowed(host, vlanid):
                 continue
-            macs[host]['vlans'].setdefault(vlanid, [])
+            macs[host]["vlans"].setdefault(vlanid, [])
             for mac in allmacs:
-                macs[host]['vlans'][vlanid].append(mac)
-
+                macs[host]["vlans"][vlanid].append(mac)
 
     def _writeToDB(self, host, output):
         """Write SNMP Data to DB"""
-        out = {'insertdate': getUTCnow(), 'updatedate': getUTCnow(),
-               'hostname': host, 'output': jsondumps(output)}
-        dbOut = self.dbI.get('snmpmon', limit=1, search=[['hostname', host]])
+        out = {
+            "insertdate": getUTCnow(),
+            "updatedate": getUTCnow(),
+            "hostname": host,
+            "output": jsondumps(output),
+        }
+        dbOut = self.dbI.get("snmpmon", limit=1, search=[["hostname", host]])
         if dbOut:
-            out['id'] = dbOut[0]['id']
-            self.dbI.update('snmpmon', [out])
+            out["id"] = dbOut[0]["id"]
+            self.dbI.update("snmpmon", [out])
         else:
-            self.dbI.insert('snmpmon', [out])
+            self.dbI.insert("snmpmon", [out])
 
     def _isVlanAllowed(self, host, vlan):
         try:
-            if int(vlan) in self.config.get(host, 'vlan_range_list'):
+            if int(vlan) in self.config.get(host, "vlan_range_list"):
                 return True
         except Exception:
             return False
@@ -614,21 +697,24 @@ class SNMPMonitoring():
     def _getMacAddrSession(self, host, macs):
         if not self.session:
             return
-        if self.hostconf[host].get('ansible_network_os', 'undefined') == 'sense.junos.junos':
+        if (
+            self.hostconf[host].get("ansible_network_os", "undefined")
+            == "sense.junos.junos"
+        ):
             self._junosmac(host, macs)
             return
-        macs.setdefault(host, {'vlans': {}})
-        if 'mac_parser' in self.hostconf[host]['snmp_monitoring']:
-            oid = self.hostconf[host]['snmp_monitoring']['mac_parser']['oid']
-            mib = self.hostconf[host]['snmp_monitoring']['mac_parser']['mib']
+        macs.setdefault(host, {"vlans": {}})
+        if "mac_parser" in self.hostconf[host]["snmp_monitoring"]:
+            oid = self.hostconf[host]["snmp_monitoring"]["mac_parser"]["oid"]
+            mib = self.hostconf[host]["snmp_monitoring"]["mac_parser"]["mib"]
             allvals = self._getSNMPVals(oid, host)
             for item in allvals:
-                splt = item.oid[(len(mib)):].split('.')
+                splt = item.oid[(len(mib)) :].split(".")
                 vlan = splt.pop(0)
-                mac = [format(int(x), '02x') for x in splt]
+                mac = [format(int(x), "02x") for x in splt]
                 if self._isVlanAllowed(host, vlan):
-                    macs[host]['vlans'].setdefault(vlan, [])
-                    macs[host]['vlans'][vlan].append(":".join(mac))
+                    macs[host]["vlans"].setdefault(vlan, [])
+                    macs[host]["vlans"][vlan].append(":".join(mac))
 
     def _processStats(self, proc, services, lookupid):
         """Get Process Stats - memory"""
@@ -638,12 +724,21 @@ class SNMPMonitoring():
                 if procList[lookupid].endswith(serviceName):
                     self.memMonitor.setdefault(
                         serviceName,
-                        {"rss": 0, "vms": 0, "shared": 0, "text": 0,
-                         "lib": 0, "data": 0, "dirty": 0})
+                        {
+                            "rss": 0,
+                            "vms": 0,
+                            "shared": 0,
+                            "text": 0,
+                            "lib": 0,
+                            "data": 0,
+                            "dirty": 0,
+                        },
+                    )
                     for key in self.memMonitor[serviceName].keys():
                         if hasattr(proc.memory_info(), key):
                             self.memMonitor[serviceName][key] += getattr(
-                                proc.memory_info(), key)
+                                proc.memory_info(), key
+                            )
 
     def getMemStats(self):
         """Refresh all Memory Statistics in FE"""
@@ -660,17 +755,29 @@ class SNMPMonitoring():
         self.memMonitor = {}
         for proc in psutil.process_iter(attrs=None, ad_value=None):
             procWrapper(proc, ["mariadbd", "httpd"], 0)
-            procWrapper(proc, ["Config-Fetcher", "SNMPMonitoring-update",
-                               "ProvisioningService-update", "LookUpService-update",
-                               "siterm-debugger", "PolicyService-update",
-                               "DBWorker-update", "DBCleaner-service",
-                               "SwitchWorker", "gunicorn", "Validator-update"], 1)
+            procWrapper(
+                proc,
+                [
+                    "Config-Fetcher",
+                    "SNMPMonitoring-update",
+                    "ProvisioningService-update",
+                    "LookUpService-update",
+                    "siterm-debugger",
+                    "PolicyService-update",
+                    "DBWorker-update",
+                    "DBCleaner-service",
+                    "SwitchWorker",
+                    "gunicorn",
+                    "Validator-update",
+                ],
+                1,
+            )
         # Write to DB
-        self._writeToDB('hostnamemem-fe', self.memMonitor)
+        self._writeToDB("hostnamemem-fe", self.memMonitor)
 
     def getDiskStats(self):
         """Get Disk Statistics"""
-        self._writeToDB('hostnamedisk-fe', getStorageInfo())
+        self._writeToDB("hostnamedisk-fe", getStorageInfo())
 
     def startwork(self):
         """Scan all switches and get snmp data"""
@@ -683,27 +790,29 @@ class SNMPMonitoring():
                 continue
             out = {}
             self._getMacAddrSession(host, macs)
-            for key in self.config['MAIN']['snmp']['mibs']:
+            for key in self.config["MAIN"]["snmp"]["mibs"]:
                 allvals = self._getSNMPVals(key, host)
                 for item in allvals:
                     indx = item.oid_index
                     out.setdefault(indx, {})
-                    out[indx][key] = item.value.replace('\x00', '')
-            out['macs'] = macs[host]
+                    out[indx][key] = item.value.replace("\x00", "")
+            out["macs"] = macs[host]
             self._writeToDB(host, out)
-        self.logger.info(f'[{self.sitename}]: SNMP Monitoring finished for {len(self.switches)} switches')
+        self.logger.info(
+            f"[{self.sitename}]: SNMP Monitoring finished for {len(self.switches)} switches"
+        )
         self.getMemStats()
-        self.logger.info(f'[{self.sitename}]: Memory statistics written to DB')
+        self.logger.info(f"[{self.sitename}]: Memory statistics written to DB")
         self.getDiskStats()
-        self.logger.info(f'[{self.sitename}]: Disk statistics written to DB')
+        self.logger.info(f"[{self.sitename}]: Disk statistics written to DB")
         if self.err:
-            raise Exception(f'SNMP Monitoring Errors: {self.err}')
+            raise Exception(f"SNMP Monitoring Errors: {self.err}")
         # We could do delete and re-init everytime, or at refresh.
         # Need to track memory usage and see what is best
         self.prom.metrics()
         # Get Topology json
         self.topo.gettopology()
-        self.logger.info(f'[{self.sitename}]: Topology map written to DB')
+        self.logger.info(f"[{self.sitename}]: Topology map written to DB")
 
 
 def execute(config=None, args=None):
@@ -714,14 +823,18 @@ def execute(config=None, args=None):
         snmpmon = SNMPMonitoring(config, args[1])
         snmpmon.startwork()
     else:
-        for sitename in config.get('general', 'sites'):
+        for sitename in config.get("general", "sites"):
             snmpmon = SNMPMonitoring(config, sitename)
             snmpmon.startwork()
 
 
-if __name__ == '__main__':
-    print('WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:', len(sys.argv), 'arguments.')
-    print('1st argument has to be sitename which is configured in this frontend')
+if __name__ == "__main__":
+    print(
+        "WARNING: ONLY FOR DEVELOPMENT!!!!. Number of arguments:",
+        len(sys.argv),
+        "arguments.",
+    )
+    print("1st argument has to be sitename which is configured in this frontend")
     print(sys.argv)
-    getLoggingObject(logType='StreamLogger', service='SNMPMonitoring')
+    getLoggingObject(logType="StreamLogger", service="SNMPMonitoring")
     execute(args=sys.argv)

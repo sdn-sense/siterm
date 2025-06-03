@@ -1,4 +1,5 @@
 """Test Frontend"""
+
 import http.client
 import os
 import pathlib
@@ -8,6 +9,7 @@ import simplejson as json
 import yaml
 from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.MainUtilities import getUTCnow
+
 
 def makeRequest(cls, url, params):
     """Make HTTP Request"""
@@ -24,8 +26,12 @@ def debugActions(cls, dataIn, dataUpd):
     # SUBMIT
     urls = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/submitdebug/NEW"
     outs = makeRequest(cls, urls, {"verb": "POST", "data": dataIn})
-    cls.assertEqual(outs[1], 200, msg=f"Failed to POST {dataIn} to {urls}. Output: {outs}")
-    cls.assertEqual(outs[2], "OK", msg=f"Failed to POST {dataIn} to {urls}. Output: {outs}")
+    cls.assertEqual(
+        outs[1], 200, msg=f"Failed to POST {dataIn} to {urls}. Output: {outs}"
+    )
+    cls.assertEqual(
+        outs[2], "OK", msg=f"Failed to POST {dataIn} to {urls}. Output: {outs}"
+    )
     # GET
     urlg = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/getdebug/{outs[0]['ID']}"
     outg = makeRequest(cls, urlg, {"verb": "GET", "data": {}})
@@ -34,8 +40,12 @@ def debugActions(cls, dataIn, dataUpd):
     # UPDATE
     urlu = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/updatedebug/{outs[0]['ID']}"
     outu = makeRequest(cls, urlu, {"verb": "PUT", "data": dataUpd})
-    cls.assertEqual(outu[1], 200, msg=f"Failed to PUT {dataUpd} to {urlu}. Output: {outs}")
-    cls.assertEqual(outu[2], "OK", msg=f"Failed to PUT {dataUpd} to {urlu}. Output: {outs}")
+    cls.assertEqual(
+        outu[1], 200, msg=f"Failed to PUT {dataUpd} to {urlu}. Output: {outs}"
+    )
+    cls.assertEqual(
+        outu[2], "OK", msg=f"Failed to PUT {dataUpd} to {urlu}. Output: {outs}"
+    )
     # DELETE
     urld = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/deletedebug/{outs[0]['ID']}"
     outd = makeRequest(cls, urld, {"verb": "DELETE", "data": {}})
@@ -59,7 +69,9 @@ class TestUtils(unittest.TestCase):
         url = "/NoSite/sitefe/no/url/"
         for action in ["GET", "POST", "PUT", "DELETE"]:
             out = makeRequest(self, url, {"verb": action, "data": {}})
-            self.assertIn(out[1], [404, 405], msg=f"Failed to {action} on {url}. Output: {out}")
+            self.assertIn(
+                out[1], [404, 405], msg=f"Failed to {action} on {url}. Output: {out}"
+            )
 
     def test_config(self):
         """Test to get Config"""
@@ -69,7 +81,9 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
         for action in ["POST", "PUT", "DELETE"]:
             out = makeRequest(self, url, {"verb": action, "data": {}})
-            self.assertEqual(out[1], 405, msg=f"Failed to {action} on {url}. Output: {out}")
+            self.assertEqual(
+                out[1], 405, msg=f"Failed to {action} on {url}. Output: {out}"
+            )
 
     def test_metrics(self):
         """Test metrics API"""
@@ -79,8 +93,14 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
         for action in ["POST", "PUT", "DELETE"]:
             out = makeRequest(self, url, {"verb": action, "data": {}})
-            self.assertEqual(out[1], 405, msg=f"Failed to {action} on {url}. Output: {out}")
-            self.assertEqual(out[2], "Method Not Allowed", msg=f"Failed to {action} on {url}. Output: {out}")
+            self.assertEqual(
+                out[1], 405, msg=f"Failed to {action} on {url}. Output: {out}"
+            )
+            self.assertEqual(
+                out[2],
+                "Method Not Allowed",
+                msg=f"Failed to {action} on {url}. Output: {out}",
+            )
 
     def test_getdebug(self):
         """Test getdebug API"""
@@ -90,26 +110,42 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
         for action in ["POST", "PUT", "DELETE"]:
             out = makeRequest(self, url, {"verb": action, "data": {}})
-            self.assertIn(out[1], [400, 405], msg=f"Failed to {action} on {url}. Output: {out}")
-            self.assertIn(out[2], ["Bad Request", "Method Not Allowed"], msg=f"Failed to {action} on {url}. Output: {out}")
+            self.assertIn(
+                out[1], [400, 405], msg=f"Failed to {action} on {url}. Output: {out}"
+            )
+            self.assertIn(
+                out[2],
+                ["Bad Request", "Method Not Allowed"],
+                msg=f"Failed to {action} on {url}. Output: {out}",
+            )
 
     def test_getalldebughostname(self):
         """Test getalldebughostname API"""
-        for item in ['new', 'active', 'failed']:
+        for item in ["new", "active", "failed"]:
             url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getalldebughostname/dummyhostname/{item}"
             out = makeRequest(self, url, {"verb": "GET", "data": {}})
             self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
             self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
             for action in ["POST", "PUT", "DELETE"]:
                 out = makeRequest(self, url, {"verb": action, "data": {}})
-                self.assertIn(out[1], [400, 405], msg=f"Failed to {action} on {url}. Output: {out}")
-                self.assertIn(out[2], ["Bad Request", "Method Not Allowed"], msg=f"Failed to {action} on {url}. Output: {out}")
+                self.assertIn(
+                    out[1],
+                    [400, 405],
+                    msg=f"Failed to {action} on {url}. Output: {out}",
+                )
+                self.assertIn(
+                    out[2],
+                    ["Bad Request", "Method Not Allowed"],
+                    msg=f"Failed to {action} on {url}. Output: {out}",
+                )
 
     def test_debug_ping(self):
         """Test Debug ping API"""
         # rapidping, tcpdump, arptable, iperf, iperfserver
-        hostdata = [['sdn-dtn-1-7.ultralight.org', 'host', 'rapid-ping'],
-                    ['dellos9_s0', 'switch', 'rapid-ping']]
+        hostdata = [
+            ["sdn-dtn-1-7.ultralight.org", "host", "rapid-ping"],
+            ["dellos9_s0", "switch", "rapid-ping"],
+        ]
         for item in hostdata:
             data = {
                 "type": item[2],
@@ -121,14 +157,20 @@ class TestUtils(unittest.TestCase):
                 "interface": "dummyinterface",
                 "time": "60",
             }
-            outsuc = {"out": ["ping success", "from unittest"], "err": "", "exitCode": 0}
+            outsuc = {
+                "out": ["ping success", "from unittest"],
+                "err": "",
+                "exitCode": 0,
+            }
             dataupd = {"state": "success", "output": json.dumps(outsuc)}
         debugActions(self, data, dataupd)
 
     def test_debug_arptable(self):
         """Test Debug arptable API"""
-        hostdata = [['sdn-dtn-1-7.ultralight.org', 'host', 'arp-table'],
-                    ['dellos9_s0', 'switch', 'arp-table']]
+        hostdata = [
+            ["sdn-dtn-1-7.ultralight.org", "host", "arp-table"],
+            ["dellos9_s0", "switch", "arp-table"],
+        ]
         for item in hostdata:
             data = {
                 "type": item[2],
@@ -142,8 +184,10 @@ class TestUtils(unittest.TestCase):
 
     def test_debug_tcpdump(self):
         """Test Debug TCPDump API"""
-        hostdata = [['sdn-dtn-1-7.ultralight.org', 'host', 'tcpdump'],
-                    ['dellos9_s0', 'switch', 'tcpdump']]
+        hostdata = [
+            ["sdn-dtn-1-7.ultralight.org", "host", "tcpdump"],
+            ["dellos9_s0", "switch", "tcpdump"],
+        ]
         for item in hostdata:
             data = {
                 "type": item[2],
@@ -151,14 +195,20 @@ class TestUtils(unittest.TestCase):
                 "hostname": item[0],
                 "interface": "dummyinterface",
             }
-            outsuc = {"out": ["tcpdump success", "from unittest"], "err": "", "exitCode": 0}
+            outsuc = {
+                "out": ["tcpdump success", "from unittest"],
+                "err": "",
+                "exitCode": 0,
+            }
             dataupd = {"state": "success", "output": json.dumps(outsuc)}
             debugActions(self, data, dataupd)
 
     def test_debug_traceroute(self):
         """Test Debug Traceroute API"""
-        hostdata = [['sdn-dtn-1-7.ultralight.org', 'host', 'traceroute'],
-                    ['dellos9_s0', 'switch', 'traceroute']]
+        hostdata = [
+            ["sdn-dtn-1-7.ultralight.org", "host", "traceroute"],
+            ["dellos9_s0", "switch", "traceroute"],
+        ]
         for item in hostdata:
             data = {
                 "type": item[2],
@@ -166,16 +216,22 @@ class TestUtils(unittest.TestCase):
                 "hostname": item[0],
                 "from_interface": "dummyinterface",
                 "from_ip": "1.2.3.4",
-                "ip": "8.8.8.8"
+                "ip": "8.8.8.8",
             }
-            outsuc = {"out": ["traceroute success", "from unittest"], "err": "", "exitCode": 0}
+            outsuc = {
+                "out": ["traceroute success", "from unittest"],
+                "err": "",
+                "exitCode": 0,
+            }
             dataupd = {"state": "success", "output": json.dumps(outsuc)}
             debugActions(self, data, dataupd)
 
     def test_debug_iperf_client(self):
         """Test Debug Iperf API"""
-        hostdata = [['sdn-dtn-1-7.ultralight.org', 'host', 'iperf-client'],
-                ['dellos9_s0', 'switch', 'iperf-client']]
+        hostdata = [
+            ["sdn-dtn-1-7.ultralight.org", "host", "iperf-client"],
+            ["dellos9_s0", "switch", "iperf-client"],
+        ]
         for item in hostdata:
             data = {
                 "type": item[2],
@@ -186,14 +242,20 @@ class TestUtils(unittest.TestCase):
                 "port": "1234",
                 "time": "60",
             }
-            outsuc = {"out": ["iperf success", "from unittest"], "err": "", "exitCode": 0}
+            outsuc = {
+                "out": ["iperf success", "from unittest"],
+                "err": "",
+                "exitCode": 0,
+            }
             dataupd = {"state": "success", "output": json.dumps(outsuc)}
             debugActions(self, data, dataupd)
 
     def test_debug_iperf_server(self):
         """Test Debug IperfServer API"""
-        hostdata = [['sdn-dtn-1-7.ultralight.org', 'host', 'iperf-server'],
-                ['dellos9_s0', 'switch', 'iperf-server']]
+        hostdata = [
+            ["sdn-dtn-1-7.ultralight.org", "host", "iperf-server"],
+            ["dellos9_s0", "switch", "iperf-server"],
+        ]
         for item in hostdata:
             data = {
                 "type": item[2],
@@ -215,20 +277,26 @@ class TestUtils(unittest.TestCase):
 
     def test_debug_prometheus_push(self):
         """Test Prometheus Push Debug API"""
-        hostdata = [['sdn-dtn-1-7.ultralight.org', 'host', 'prometheus-push'],
-                ['sdn-dtn-1-7.ultralight.org', 'switch', 'arp-push'],
-                ['dellos9_s0', 'switch', 'prometheus-push'],
-                ['dellos9_s0', 'switch', 'arp-push']]
+        hostdata = [
+            ["sdn-dtn-1-7.ultralight.org", "host", "prometheus-push"],
+            ["sdn-dtn-1-7.ultralight.org", "switch", "arp-push"],
+            ["dellos9_s0", "switch", "prometheus-push"],
+            ["dellos9_s0", "switch", "arp-push"],
+        ]
         for item in hostdata:
             data = {
                 "hostname": item[0],  # hostname
                 "hosttype": item[1],  # switch or host
-                "type": item[2],  # type of action (prometheus-push - for switch/host, arp-push - for host)
+                "type": item[
+                    2
+                ],  # type of action (prometheus-push - for switch/host, arp-push - for host)
                 "metadata": {
                     "key": "value"
                 },  # Only supported for switch hosttype, Optional
                 "gateway": "http://localhost:3128",  # gateway url
-                "runtime": str(int(getUTCnow()) + 1200),  # runtime until time in seconds since the epoch
+                "runtime": str(
+                    int(getUTCnow()) + 1200
+                ),  # runtime until time in seconds since the epoch
                 "resolution": "5",
             }  # resolution time
             #'mibs': "list of mibs separated by comma"} # Optional parameter
@@ -240,7 +308,6 @@ class TestUtils(unittest.TestCase):
             out = makeRequest(self, url, {"verb": "GET", "data": {}})
             self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
             self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
-
 
     def test_fake_cert(self):
         """Test Fake Cert Failure"""
@@ -256,7 +323,9 @@ class TestUtils(unittest.TestCase):
         os.environ["X509_USER_KEY"] = x509_key
         os.environ["X509_USER_CERT"] = x509_cert
         self.assertEqual(out[1], 401, msg=f"Failed to GET on {url}. Output: {out}")
-        self.assertEqual(out[2], "Unauthorized", msg=f"Failed to GET on {url}. Output: {out}")
+        self.assertEqual(
+            out[2], "Unauthorized", msg=f"Failed to GET on {url}. Output: {out}"
+        )
 
     def test_getdata(self):
         """Test to get agentdata"""
@@ -277,14 +346,21 @@ class TestUtils(unittest.TestCase):
         # Add Host
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/addhost"
         out = makeRequest(self, url, {"verb": "PUT", "data": dic})
-        self.assertEqual(out[1], 200, msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
-        self.assertEqual(out[2], "OK", msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
+        self.assertEqual(
+            out[1], 200, msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}"
+        )
+        self.assertEqual(
+            out[2], "OK", msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}"
+        )
         # Delete Host
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/deletehost"
         out = makeRequest(self, url, {"verb": "POST", "data": dic})
-        self.assertEqual(out[1], 200, msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}")
-        self.assertEqual(out[2], "OK", msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}")
-
+        self.assertEqual(
+            out[1], 200, msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}"
+        )
+        self.assertEqual(
+            out[2], "OK", msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}"
+        )
 
     def test_updatehost(self):
         """Test updatehost"""
@@ -298,14 +374,22 @@ class TestUtils(unittest.TestCase):
         # Add Host
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/addhost"
         out = makeRequest(self, url, {"verb": "PUT", "data": dic})
-        self.assertEqual(out[1], 200, msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
-        self.assertEqual(out[2], "OK", msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
+        self.assertEqual(
+            out[1], 200, msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}"
+        )
+        self.assertEqual(
+            out[2], "OK", msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}"
+        )
         # Update Host
         dic["NetInfo"] = {"updateunittest": "updaterandomvalue"}
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/updatehost"
         out = makeRequest(self, url, {"verb": "PUT", "data": dic})
-        self.assertEqual(out[1], 200, msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
-        self.assertEqual(out[2], "OK", msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
+        self.assertEqual(
+            out[1], 200, msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}"
+        )
+        self.assertEqual(
+            out[2], "OK", msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}"
+        )
         # Get Host
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getdata"
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
@@ -314,9 +398,12 @@ class TestUtils(unittest.TestCase):
         # Delete Host
         url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/deletehost"
         out = makeRequest(self, url, {"verb": "POST", "data": dic})
-        self.assertEqual(out[1], 200, msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}")
-        self.assertEqual(out[2], "OK", msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}")
-
+        self.assertEqual(
+            out[1], 200, msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}"
+        )
+        self.assertEqual(
+            out[2], "OK", msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}"
+        )
 
     def test_getactivedeltas(self):
         """Test getactivedeltas"""
@@ -350,8 +437,12 @@ class TestUtils(unittest.TestCase):
         for option in options:
             tmpurl = url + f"?{option[0]}={option[1]}"
             out = makeRequest(self, tmpurl, {"verb": "GET", "data": {}})
-            self.assertEqual(out[1], option[2], msg=f"Failed to GET on {tmpurl}. Output: {out}")
-            self.assertEqual(out[2], option[3], msg=f"Failed to GET on {tmpurl}. Output: {out}")
+            self.assertEqual(
+                out[1], option[2], msg=f"Failed to GET on {tmpurl}. Output: {out}"
+            )
+            self.assertEqual(
+                out[2], option[3], msg=f"Failed to GET on {tmpurl}. Output: {out}"
+            )
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
         self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
@@ -366,12 +457,18 @@ class TestUtils(unittest.TestCase):
             hurl = model["href"][len(self.PARAMS["hostname"]) :]
             out = makeRequest(self, hurl, {"verb": "GET", "data": {}})
             self.assertEqual(out[1], 200, msg=f"Failed to GET on {hurl}. Output: {out}")
-            self.assertEqual(out[2], "OK", msg=f"Failed to GET on {hurl}. Output: {out}")
+            self.assertEqual(
+                out[2], "OK", msg=f"Failed to GET on {hurl}. Output: {out}"
+            )
             for option in modeloptions:
                 tmpurl = hurl + f"?{option[0]}={option[1]}"
                 out = makeRequest(self, tmpurl, {"verb": "GET", "data": {}})
-                self.assertEqual(out[1], option[2], msg=f"Failed to GET on {tmpurl}. Output: {out}")
-                self.assertEqual(out[2], option[3], msg=f"Failed to GET on {tmpurl}. Output: {out}")
+                self.assertEqual(
+                    out[1], option[2], msg=f"Failed to GET on {tmpurl}. Output: {out}"
+                )
+                self.assertEqual(
+                    out[2], option[3], msg=f"Failed to GET on {tmpurl}. Output: {out}"
+                )
 
     def test_deltas(self):
         """Test deltas"""
@@ -389,8 +486,12 @@ class TestUtils(unittest.TestCase):
         for option in options:
             tmpurl = url + f"?{option[0]}={option[1]}"
             out = makeRequest(self, tmpurl, {"verb": "GET", "data": {}})
-            self.assertEqual(out[1], option[2], msg=f"Failed to GET on {tmpurl}. Output: {out}")
-            self.assertEqual(out[2], option[3], msg=f"Failed to GET on {tmpurl}. Output: {out}")
+            self.assertEqual(
+                out[1], option[2], msg=f"Failed to GET on {tmpurl}. Output: {out}"
+            )
+            self.assertEqual(
+                out[2], option[3], msg=f"Failed to GET on {tmpurl}. Output: {out}"
+            )
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
         self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
@@ -405,12 +506,18 @@ class TestUtils(unittest.TestCase):
             hurl = delta["href"][len(self.PARAMS["hostname"]) :]
             out = makeRequest(self, hurl, {"verb": "GET", "data": {}})
             self.assertEqual(out[1], 200, msg=f"Failed to GET on {hurl}. Output: {out}")
-            self.assertEqual(out[2], "OK", msg=f"Failed to GET on {hurl}. Output: {out}")
+            self.assertEqual(
+                out[2], "OK", msg=f"Failed to GET on {hurl}. Output: {out}"
+            )
             for option in options:
                 tmpurl = hurl + f"?{option[0]}={option[1]}"
                 out = makeRequest(self, tmpurl, {"verb": "GET", "data": {}})
-                self.assertEqual(out[1], option[2], msg=f"Failed to GET on {tmpurl}. Output: {out}")
-                self.assertEqual(out[2], option[3], msg=f"Failed to GET on {tmpurl}. Output: {out}")
+                self.assertEqual(
+                    out[1], option[2], msg=f"Failed to GET on {tmpurl}. Output: {out}"
+                )
+                self.assertEqual(
+                    out[2], option[3], msg=f"Failed to GET on {tmpurl}. Output: {out}"
+                )
 
 
 if __name__ == "__main__":
@@ -421,4 +528,3 @@ if __name__ == "__main__":
         conf = yaml.safe_load(fd)
     TestUtils.PARAMS = conf
     unittest.main()
-

@@ -8,26 +8,29 @@ from SiteRMLibs.MainUtilities import getVal, evaldict, getUTCnow
 
 def cleanup(sitename):
     """Clean ALL Active Deltas"""
-    dbI = getVal(getDBConn('CleanUp'), **{'sitename': sitename})
-    activeDeltas = dbI.get('activeDeltas')
-    action = 'insert'
-    print('='*100)
-    print('    Will delete the following active deltas from %s RM' % sitename)
+    dbI = getVal(getDBConn("CleanUp"), **{"sitename": sitename})
+    activeDeltas = dbI.get("activeDeltas")
+    action = "insert"
+    print("=" * 100)
+    print("    Will delete the following active deltas from %s RM" % sitename)
     if activeDeltas:
         activeDeltas = activeDeltas[0]
-        activeDeltas['output'] = evaldict(activeDeltas['output'])
-        action = 'update'
+        activeDeltas["output"] = evaldict(activeDeltas["output"])
+        action = "update"
     if not activeDeltas:
-        action = 'insert'
+        action = "insert"
     pprint.pprint(activeDeltas)
-    activeDeltas = {'id': activeDeltas['id'],
-                    'insertdate': int(getUTCnow()),
-                    'updatedate': int(getUTCnow()),
-                    'output': '{}'}
-    if action == 'insert':
-        dbI.insert('activeDeltas', [activeDeltas])
-    elif action == 'update':
-        dbI.update('activeDeltas', [activeDeltas])
+    activeDeltas = {
+        "id": activeDeltas["id"],
+        "insertdate": int(getUTCnow()),
+        "updatedate": int(getUTCnow()),
+        "output": "{}",
+    }
+    if action == "insert":
+        dbI.insert("activeDeltas", [activeDeltas])
+    elif action == "update":
+        dbI.update("activeDeltas", [activeDeltas])
+
 
 if __name__ == "__main__":
     cleanup(sys.argv[1])

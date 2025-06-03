@@ -98,7 +98,7 @@ class HostSubCalls:
     def _host_deleteServiceAction(self, **kwargs):
         """Delete service action from DB."""
         dbOut = []
-        for key in ['id', 'hostname', 'servicename']:
+        for key in ["id", "hostname", "servicename"]:
             if key in kwargs:
                 dbOut.append([key, kwargs[key]])
         self.dbI.delete("serviceaction", dbOut)
