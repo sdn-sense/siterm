@@ -9,7 +9,6 @@ Date: 2021/01/20
 """
 import sys
 import base64
-import cgi
 import copy
 import datetime
 import email.utils as eut
@@ -30,6 +29,7 @@ import subprocess
 import time
 import uuid
 import urllib.parse
+from urllib.parse import parse_qs
 import re
 
 # Custom exceptions imports
@@ -649,40 +649,44 @@ def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):
 
 
 def getUrlParams(environ, paramsList):
-    """Get URL parameters and return them in dictionary."""
+    """Get URL query parameters and return them in a dictionary."""
     if not paramsList:
         return {}
+
     if environ["REQUEST_METHOD"].upper() in ["POST", "DELETE"]:
-        # POST, DELETE will handle by himself
         return {}
-    form = cgi.FieldStorage(fp=environ["wsgi.input"], environ=environ)
+
+    query_params = parse_qs(environ.get("QUERY_STRING", ""))
     outParams = {}
+
     for param in paramsList:
-        outVals = form.getlist(param["key"])
+        key = param["key"]
+        outVals = query_params.get(key, [])
+
         if len(outVals) > 1:
-            raise TooManyArgumentalValues(
-                f"Parameter {param['key']} has too many defined values"
-            )
+            raise TooManyArgumentalValues(f"Parameter {key} has too many defined values")
+
         if len(outVals) == 1:
+            val = outVals[0]
             if param["type"] == bool:
-                if outVals[0] in ["true", "True"]:
-                    outParams[param["key"]] = True
-                elif outVals[0] in ["false", "False"]:
-                    outParams[param["key"]] = False
+                if val.lower() == "true":
+                    outParams[key] = True
+                elif val.lower() == "false":
+                    outParams[key] = False
                 else:
                     raise NotSupportedArgument(
-                        f"Parameter {param['key']} value not acceptable. Allowed options: [tT]rue,[fF]alse"
+                        f"Parameter {key} value not acceptable. Allowed options: true, false"
                     )
             elif param["type"] == str and "options" in param:
-                if outVals[0] not in param["options"]:
+                if val not in param["options"]:
                     raise NotSupportedArgument(
-                        f"Server does not support parameter {param['key']}={outVals[0]}. Supported: {param['options']}"
+                        f"Server does not support parameter {key}={val}. Supported: {param['options']}"
                     )
-                outParams[param["key"]] = outVals[0]
+                outParams[key] = val
             else:
-                outParams[param["key"]] = outVals[0]
-        elif not outVals:
-            outParams[param["key"]] = param["default"]
+                outParams[key] = val
+        else:
+            outParams[key] = param.get("default")
     return outParams
 
 

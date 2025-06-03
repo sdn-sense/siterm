@@ -17,9 +17,11 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
-import cgi
+import io
+from urllib.parse import parse_qs
 import urllib.request
 import urllib.error
+from multipart import MultipartParser, parse_options_header
 from SiteRMLibs.CustomExceptions import NotFoundError
 from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.MainUtilities import evaldict
@@ -85,26 +87,48 @@ def get_json_post_form(environ):
 
 def get_post_form(environ):
     """Get content submitted through POST method."""
-    postEnv = environ.copy()
-    postEnv['QUERY_STRING'] = ''
-    inputP = environ['wsgi.input']
-    post_form = environ.get('wsgi.post_form')
-    if post_form is not None and post_form[0] is input:
-        return post_form[2]
-    fieldS = cgi.FieldStorage(fp=inputP,
-                              environ=postEnv,
-                              keep_blank_values=True)
-    new_input = InputProcessed()
-    post_form = (new_input, inputP, fieldS)
-    environ['wsgi.post_form'] = post_form
-    environ['wsgi.input'] = new_input
-    return fieldS
+    if environ.get('REQUEST_METHOD', '') != 'POST':
+        return {}
 
+    contentType = environ.get('CONTENT_TYPE', '')
+    contentLength = int(environ.get('CONTENT_LENGTH', 0))
+    inputStream = environ['wsgi.input'].read(contentLength)
+    environ['wsgi.input'] = InputProcessed()
 
-class InputProcessed():
-    """wsgi Input processing class."""
-    @staticmethod
-    def read(*args):
-        """Process wsgi Input reads"""
-        raise EOFError('The wsgi.input stream has already been consumed')
-    readline = readlines = __iter__ = read
+    ctype, options = parse_options_header(contentType)
+    if ctype == 'application/x-www-form-urlencoded':
+        return parse_qs(inputStream.decode('utf-8'))
+
+    if ctype == 'multipart/form-data':
+        boundary = options.get('boundary')
+        if not boundary:
+            raise ValueError('Missing boundary in multipart/form-data')
+        parser = MultipartParser(io.BytesIO(inputStream), boundary.encode('utf-8'))
+        result = {}
+        for part in parser.parts():
+            name = part.name
+            if name not in result:
+                result[name] = []
+            result[name].append(part.value)
+        return result
+    raise ValueError(f'Unsupported content type: {contentType}')
+
+class InputProcessed:
+    """Input stream that has been processed class"""
+    def read(self, *args, **kwargs):
+        """Double reads - raise EOFError."""
+        raise EOFError("The wsgi.input stream has already been consumed")
+
+    def readline(self, *args, **kwargs):
+        """Double reads - raise EOFError."""
+        return self.read(*args, **kwargs)
+
+    def readlines(self, *args, **kwargs):
+        """Double reads - raise EOFError."""
+        return self.read(*args, **kwargs)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        raise EOFError("The wsgi.input stream has already been consumed")
