@@ -12,7 +12,7 @@ from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson
 from SiteRMLibs.MainUtilities import getAllHosts
 
 
-class Node():
+class Node:
     """Add Node information from Database which was sent
     by the Agent running on it.
     """
@@ -23,29 +23,40 @@ class Node():
         if not output:
             output = self.output
         for _, nodeDict in list(nodesInfo.items()):
-            hostinfo = getFileContentAsJson(nodeDict['hostinfo'])
-            for intfKey, intfDict in list(hostinfo.get('NetInfo', {}).get("interfaces", {}).items()):
+            hostinfo = getFileContentAsJson(nodeDict["hostinfo"])
+            for intfKey, intfDict in list(
+                hostinfo.get("NetInfo", {}).get("interfaces", {}).items()
+            ):
                 breakLoop = False
-                for key in ['switch_port', 'switch', 'vlan_range_list', 'available_bandwidth']:
+                for key in [
+                    "switch_port",
+                    "switch",
+                    "vlan_range_list",
+                    "available_bandwidth",
+                ]:
                     if key not in list(intfDict.keys()):
                         breakLoop = True
                 if breakLoop:
                     continue
-                if intfDict['switch'] in list(output['ports'].keys()):
-                    if intfDict['switch_port'] not in list(output['ports'][intfDict['switch']].keys()):
-                        self.logger.debug('Frontend Config is not configured to use this Port %s',
-                                          intfDict['switch_port'])
+                if intfDict["switch"] in list(output["ports"].keys()):
+                    if intfDict["switch_port"] not in list(
+                        output["ports"][intfDict["switch"]].keys()
+                    ):
+                        self.logger.debug(
+                            "Frontend Config is not configured to use this Port %s",
+                            intfDict["switch_port"],
+                        )
                         continue
-                    switch = intfDict['switch']
-                    switchp = intfDict['switch_port']
-                    switchDict = self.output['ports'][switch].setdefault(switchp, {})
-                    switchDict['destport'] = intfKey
-                    switchDict['hostname'] = nodeDict['hostname']
-                    switchDict['vlan_range_list'] = intfDict['vlan_range_list']
-                    switchDict['capacity'] = intfDict['available_bandwidth']
-                    if 'isAlias' in list(intfDict.keys()):
-                        switchDict['isAlias'] = intfDict['isAlias']
+                    switch = intfDict["switch"]
+                    switchp = intfDict["switch_port"]
+                    switchDict = self.output["ports"][switch].setdefault(switchp, {})
+                    switchDict["destport"] = intfKey
+                    switchDict["hostname"] = nodeDict["hostname"]
+                    switchDict["vlan_range_list"] = intfDict["vlan_range_list"]
+                    switchDict["capacity"] = intfDict["available_bandwidth"]
+                    if "isAlias" in list(intfDict.keys()):
+                        switchDict["isAlias"] = intfDict["isAlias"]
         if self.config.has_option(self.site, "l3_routing_map"):
             routingMap = self.config.get(self.site, "l3_routing_map")
-            output['l3_routing'] = evaldict(routingMap)
+            output["l3_routing"] = evaldict(routingMap)
         return output

@@ -664,7 +664,9 @@ def getUrlParams(environ, paramsList):
         outVals = query_params.get(key, [])
 
         if len(outVals) > 1:
-            raise TooManyArgumentalValues(f"Parameter {key} has too many defined values")
+            raise TooManyArgumentalValues(
+                f"Parameter {key} has too many defined values"
+            )
 
         if len(outVals) == 1:
             val = outVals[0]
