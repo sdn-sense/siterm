@@ -21,7 +21,8 @@ import io
 from urllib.parse import parse_qs
 import urllib.request
 import urllib.error
-from multipart import MultipartParser, parse_options_header
+from multipart import MultipartParser
+from werkzeug.http import parse_options_header
 from SiteRMLibs.CustomExceptions import NotFoundError
 from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.MainUtilities import evaldict
