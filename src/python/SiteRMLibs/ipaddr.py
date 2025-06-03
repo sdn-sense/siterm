@@ -7,19 +7,26 @@ Authors:
 
 Date: 2022/04/08
 """
-from ipaddress import (AddressValueError, IPv4Network, IPv6Network, ip_address,
-                       ip_network)
+from ipaddress import (
+    AddressValueError,
+    IPv4Network,
+    IPv6Network,
+    ip_address,
+    ip_network,
+)
 import psutil
 import netifaces
 from SiteRMLibs.MainUtilities import externalCommand
 
+
 def makeUrl(baseUrl, *addons):
     """Format and return url"""
-    url = baseUrl.rstrip('/')
+    url = baseUrl.rstrip("/")
     for uri in addons:
-        _uri = uri.strip('/')
-        url = f'{url}/{_uri}' if _uri else url
+        _uri = uri.strip("/")
+        url = f"{url}/{_uri}" if _uri else url
     return url
+
 
 def getMasterSlaveInterfaces():
     """Get dictionary of slaveIntfName: MasterIntfName interfaces"""
@@ -40,10 +47,12 @@ def getInterfaces():
     """Get all interface names"""
     return netifaces.interfaces()
 
+
 def getInterfaceTxQueueLen(interface):
     """Get Interface Tx Queue Length"""
     txQueueLen = externalCommand(f"cat /sys/class/net/{interface}/tx_queue_len")
     return int(txQueueLen[0].strip())
+
 
 def getInterfaceSpeed(interface):
     """Get Interface Speed"""
@@ -51,23 +60,31 @@ def getInterfaceSpeed(interface):
         speed = externalCommand(f"cat /sys/class/net/{interface}/speed")
         return int(speed[0].strip())
     except Exception as ex:
-        print(f"Received an error trying to get interface speed. Error: {ex}. Return default 10gbps")
+        print(
+            f"Received an error trying to get interface speed. Error: {ex}. Return default 10gbps"
+        )
         return 10000
+
 
 def getIfInterfaceReady(interface):
     """Check if interface exists and is ready."""
     tmpifAddr, tmpifStats = getIfAddrStats()
     if interface not in tmpifAddr:
-        return False, f"Interface {interface} was not found on the system. Misconfiguration"
+        return (
+            False,
+            f"Interface {interface} was not found on the system. Misconfiguration",
+        )
     if not tmpifStats[interface].isup:
         return False, f"Interface {interface} is not up. Check why interface is down."
     return True, ""
+
 
 def getIfAddrStats():
     """Get Interface Address Stats"""
     tmpifAddr = psutil.net_if_addrs()
     tmpifStats = psutil.net_if_stats()
     return tmpifAddr, tmpifStats
+
 
 def getInterfaceIP(interface):
     """Get Interface IP"""
@@ -218,7 +235,7 @@ def checkOverlap(inrange, ipval, iptype):
     """Check if overlap"""
     overlap = False
     if not isinstance(inrange, list):
-        inrange = inrange.split(',')
+        inrange = inrange.split(",")
     for vrange in inrange:
         overlap = ipOverlap(vrange, ipval, iptype)
         if overlap:

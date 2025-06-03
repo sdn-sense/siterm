@@ -11,13 +11,15 @@ from SiteRMLibs.ipaddr import getInterfaces, ipVersion
 from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
+
 class IperfClient(BaseDebugAction):
     """Iperf Client class. Run Iperf client"""
+
     def __init__(self, config, sitename, backgConfig):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.requestdict = backgConfig.get('requestdict', {})
+        self.requestdict = backgConfig.get("requestdict", {})
         self.service = "IperfClient"
         super().__init__()
 
@@ -27,9 +29,13 @@ class IperfClient(BaseDebugAction):
             self.logMessage("Interface is not available on the node")
             return
         if ipVersion(self.requestdict["ip"]) == -1:
-            self.logMessage(f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6")
+            self.logMessage(
+                f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6"
+            )
             return
         command = f"iperf3 -c {self.requestdict['ip']} -P {self.requestdict['port']} -B {self.requestdict['interface']} -t {self.requestdict['time']}"
         self.logMessage(f"Running command: {command}")
-        externalCommandStdOutErr(command, self.outfiles['stdout'], self.outfiles['stderr'])
-        self.jsonout['exitCode'] = 0
+        externalCommandStdOutErr(
+            command, self.outfiles["stdout"], self.outfiles["stderr"]
+        )
+        self.jsonout["exitCode"] = 0

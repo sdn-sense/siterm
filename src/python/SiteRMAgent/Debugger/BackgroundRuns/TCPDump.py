@@ -12,8 +12,10 @@ import pyshark
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.ipaddr import getInterfaces
 
-class ParsePackets():
+
+class ParsePackets:
     """Packet Parser"""
+
     def __init__(self):
         self.out = []
         self.stored = 0
@@ -29,7 +31,7 @@ class ParsePackets():
     def sniff(self, inputDict):
         """Sniff packets on interface for 30 seconds."""
         self.stored = 0
-        capture = pyshark.LiveCapture(interface=inputDict['interface'])
+        capture = pyshark.LiveCapture(interface=inputDict["interface"])
         try:
             capture.apply_on_packets(self.packetProcess, timeout=30)
         except asyncio.exceptions.TimeoutError:
@@ -41,22 +43,23 @@ class ParsePackets():
 
 class TCPDump(BaseDebugAction):
     """TCP Dump class. Run TCP Dump."""
+
     def __init__(self, config, sitename, backgConfig):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
-        self.requestdict = backgConfig.get('requestdict', {})
+        self.requestdict = backgConfig.get("requestdict", {})
         self.service = "TCPDump"
         super().__init__()
 
     def main(self):
         """Do TCP Dump"""
-        if self.requestdict['interface'] not in getInterfaces():
+        if self.requestdict["interface"] not in getInterfaces():
             self.logMessage("Interface is not available on the node")
             return
         parser = ParsePackets()
         allPackets = parser.sniff(self.requestdict)
         if not allPackets:
             self.logMessage("No packets captured")
-        self.jsonout['output'] = allPackets
-        self.jsonout['exitCode'] = 0
+        self.jsonout["output"] = allPackets
+        self.jsonout["exitCode"] = 0

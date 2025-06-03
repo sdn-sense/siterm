@@ -190,18 +190,28 @@ get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
 get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, modadd FROM deltas"
 get_delta_connections = "SELECT id, deltaid, connectionid, state FROM delta_connections"
 get_states = "SELECT id, deltaid, state, insertdate FROM states"
-get_hoststates = "SELECT id, deltaid, state, insertdate, updatedate, hostname FROM hoststates"
-get_hoststateshistory = "SELECT id, deltaid, state, insertdate, hostname FROM hoststateshistory"
+get_hoststates = (
+    "SELECT id, deltaid, state, insertdate, updatedate, hostname FROM hoststates"
+)
+get_hoststateshistory = (
+    "SELECT id, deltaid, state, insertdate, hostname FROM hoststateshistory"
+)
 get_parsed = "SELECT id, deltaid, vals, insertdate FROM parsed"
 get_hosts = "SELECT id, ip, hostname, insertdate, updatedate, hostinfo FROM hosts"
 get_switch = "SELECT id, sitename, device, insertdate, updatedate, output FROM switch"
 get_activeDeltas = "SELECT id, insertdate, updatedate, output FROM activeDeltas"
 get_servicestates = "SELECT id, hostname, servicename, servicestate, runtime, version, updatedate, exc FROM servicestates"
-get_debugworkers = "SELECT id, hostname, hostinfo, insertdate, updatedate FROM debugworkers"
-get_debugrequests = "SELECT id, hostname, state, insertdate, updatedate FROM debugrequests"
+get_debugworkers = (
+    "SELECT id, hostname, hostinfo, insertdate, updatedate FROM debugworkers"
+)
+get_debugrequests = (
+    "SELECT id, hostname, state, insertdate, updatedate FROM debugrequests"
+)
 get_snmpmon = "SELECT id, hostname, insertdate, updatedate, output FROM snmpmon"
 get_deltatimestates = "SELECT id, insertdate, uuid, uuidtype, hostname, hostport, uuidstate FROM deltatimestates"
-get_serviceaction = "SELECT id, servicename, hostname, serviceaction, insertdate FROM serviceaction"
+get_serviceaction = (
+    "SELECT id, servicename, hostname, serviceaction, insertdate FROM serviceaction"
+)
 get_forceapplyuuid = "SELECT id, uuid FROM forceapplyuuid"
 get_instancestartend = "SELECT id, instanceid, insertdate, starttimestamp, endtimestamp FROM instancestartend"
 get_deltasusertracking = "SELECT id, username, insertdate, deltaid, useraction, otherinfo FROM deltasusertracking"
@@ -220,7 +230,9 @@ update_debugworkers = "UPDATE debugworkers SET updatedate = %(updatedate)s, host
 update_debugrequests = "UPDATE debugrequests SET state = %(state)s, updatedate = %(updatedate)s WHERE id = %(id)s"
 update_snmpmon = "UPDATE snmpmon SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s AND hostname = %(hostname)s"
 # update_deltatimestates - Update call is not needed for update delta timestates. It always write a new entry and update not needed.
-update_serviceaction = "UPDATE serviceaction SET serviceaction = %(serviceaction)s WHERE id = %(id)s"
+update_serviceaction = (
+    "UPDATE serviceaction SET serviceaction = %(serviceaction)s WHERE id = %(id)s"
+)
 update_forceapplyuuid = "UPDATE forceapplyuuid SET uuid = %(uuid)s WHERE id = %(id)s"
 # update_instancestartend - Update call is not needed for update instance start end. It always write a new entry and update not needed.
 # update_deltasusertracking - Update call is not needed for update deltas user tracking. It always write a new entry and update not needed.

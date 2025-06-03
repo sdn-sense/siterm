@@ -25,14 +25,25 @@ from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress, NotFoundError
 from SiteRMLibs.MainUtilities import (
-    contentDB, createDirs, decodebase64, dictSearch,
-    evaldict, getActiveDeltas, getAllHosts, getCurrentModel,
-    getDBConn, getLoggingObject, getVal, writeActiveDeltas,
-    getFileContentAsJson, getUTCnow
+    contentDB,
+    createDirs,
+    decodebase64,
+    dictSearch,
+    evaldict,
+    getActiveDeltas,
+    getAllHosts,
+    getCurrentModel,
+    getDBConn,
+    getLoggingObject,
+    getVal,
+    writeActiveDeltas,
+    getFileContentAsJson,
+    getUTCnow,
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.timing import Timing
 from SiteRMLibs.BWService import BWService
+
 
 def getError(ex):
     """Get Error from Exception."""
@@ -68,12 +79,16 @@ class PolicyService(RDFHelper, Timing, BWService):
         else:
             self.logger = getLoggingObject(config=self.config, service="PolicyService")
         self.siteDB = contentDB()
-        self.dbI = getVal(getDBConn("PolicyService", self), **{"sitename": self.sitename})
+        self.dbI = getVal(
+            getDBConn("PolicyService", self), **{"sitename": self.sitename}
+        )
         self.stateMachine = StateMachine(self.config)
         self.switch = Switch(config, sitename)
         self.hosts = {}
         for siteName in self.config.get("general", "sites"):
-            workDir = os.path.join(self.config.get(siteName, "privatedir"), "PolicyService/")
+            workDir = os.path.join(
+                self.config.get(siteName, "privatedir"), "PolicyService/"
+            )
             createDirs(workDir)
         self.getSavedPrefixes(self.hosts.keys())
         self.bidPorts = {}
@@ -86,11 +101,18 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.kube = False
         self.singleport = False
         self.startend = {}
-        defbw = self.convertForBWService(self.config[self.sitename]["default_params"]["bw"])
-        self.defaultBW = {"availableCapacity": defbw, "granularity": 100, "maximumCapacity": defbw,
-                          "priority": 0, "reservableCapacity": defbw, "type": "bestEffort", "unit": "mbps"}
-
-
+        defbw = self.convertForBWService(
+            self.config[self.sitename]["default_params"]["bw"]
+        )
+        self.defaultBW = {
+            "availableCapacity": defbw,
+            "granularity": 100,
+            "maximumCapacity": defbw,
+            "priority": 0,
+            "reservableCapacity": defbw,
+            "type": "bestEffort",
+            "unit": "mbps",
+        }
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -106,9 +128,18 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.kube = False
         self.singleport = False
         self.startend = {}
-        defbw = self.convertForBWService(self.config[self.sitename]["default_params"]["bw"])
-        self.defaultBW = {"availableCapacity": defbw, "granularity": 100, "maximumCapacity": defbw,
-                          "priority": 0, "reservableCapacity": defbw, "type": "bestEffort", "unit": "mbps"}
+        defbw = self.convertForBWService(
+            self.config[self.sitename]["default_params"]["bw"]
+        )
+        self.defaultBW = {
+            "availableCapacity": defbw,
+            "granularity": 100,
+            "maximumCapacity": defbw,
+            "priority": 0,
+            "reservableCapacity": defbw,
+            "type": "bestEffort",
+            "unit": "mbps",
+        }
 
     def _refreshHosts(self):
         """Refresh all hosts information"""
@@ -117,7 +148,9 @@ class PolicyService(RDFHelper, Timing, BWService):
             self.hosts.setdefault(host, hostDict)
             for key in hostDict:
                 if key == "hostinfo":
-                    self.hosts[host]["hostinfo"] = getFileContentAsJson(hostDict["hostinfo"])
+                    self.hosts[host]["hostinfo"] = getFileContentAsJson(
+                        hostDict["hostinfo"]
+                    )
                     continue
                 self.hosts[host][key] = hostDict[key]
         # Clean up hosts which are not in DB anymore
@@ -137,8 +170,10 @@ class PolicyService(RDFHelper, Timing, BWService):
     def __generateStartEnd(self):
         """Generate start and end time for existsDuring"""
         self.startend = {
-            "start": getUTCnow(**self.config[self.sitename]["default_params"]["starttime"]),
-            "end": getUTCnow(**self.config[self.sitename]["default_params"]["endtime"])
+            "start": getUTCnow(
+                **self.config[self.sitename]["default_params"]["starttime"]
+            ),
+            "end": getUTCnow(**self.config[self.sitename]["default_params"]["endtime"]),
         }
 
     def __setTime(self, existsDuring, uri):
@@ -151,11 +186,14 @@ class PolicyService(RDFHelper, Timing, BWService):
     def __getDefBandwidth(self, suburi, currentBW):
         """Get default bandwidth"""
         for key in self.defaultBW:
-            if not currentBW.get("type") or currentBW.get("type", "bestEffort") == "bestEffort":
+            if (
+                not currentBW.get("type")
+                or currentBW.get("type", "bestEffort") == "bestEffort"
+            ):
                 currentBW[key] = self.defaultBW[key]
             else:
                 currentBW.setdefault(key, self.defaultBW[key])
-        currentBW.setdefault('uri', f"{suburi}:service+bw")
+        currentBW.setdefault("uri", f"{suburi}:service+bw")
         return currentBW
 
     @staticmethod
@@ -166,7 +204,12 @@ class PolicyService(RDFHelper, Timing, BWService):
         uuid = uri.split(":")[-1].split("+")
         if len(uuid) == 2:
             uuid = uuid[1]
-            for item in out.get('SubnetMapping', {}).get(hostname, {}).get('providesSubnet', {}).keys():
+            for item in (
+                out.get("SubnetMapping", {})
+                .get(hostname, {})
+                .get("providesSubnet", {})
+                .keys()
+            ):
                 if uuid in item:
                     return item
         return None
@@ -189,16 +232,28 @@ class PolicyService(RDFHelper, Timing, BWService):
                     # If params exists, check and default timing
                     out[key][uri][key1][key2].setdefault("_params", {})
                     if key == "rst":
-                        suburi = self._findsuburi(out, out["rst"][uri][key1][key2].get("belongsToRoutingTable"), key1)
+                        suburi = self._findsuburi(
+                            out,
+                            out["rst"][uri][key1][key2].get("belongsToRoutingTable"),
+                            key1,
+                        )
                     else:
                         suburi = out[key][uri][key1][key2].get("uri")
                     # That should not happen, but just in case something breaks, leave resources active
                     if suburi:
-                        out[key][uri][key1][key2]["_params"].setdefault("existsDuring", {})
-                        newTime = self.__setTime(out[key][uri][key1][key2]["_params"]["existsDuring"], suburi)
+                        out[key][uri][key1][key2]["_params"].setdefault(
+                            "existsDuring", {}
+                        )
+                        newTime = self.__setTime(
+                            out[key][uri][key1][key2]["_params"]["existsDuring"], suburi
+                        )
                         out[key][uri][key1][key2]["_params"]["existsDuring"] = newTime
-                    # This one checks for Bandwidth service and add defaults.
-                        out[key][uri][key1][key2]['hasService'] = self.__getDefBandwidth(suburi, out[key][uri][key1][key2].get('hasService', {}))
+                        # This one checks for Bandwidth service and add defaults.
+                        out[key][uri][key1][key2]["hasService"] = (
+                            self.__getDefBandwidth(
+                                suburi, out[key][uri][key1][key2].get("hasService", {})
+                            )
+                        )
         return out
 
     def _addDefaultTimeBWWrap(self, out):
@@ -220,7 +275,7 @@ class PolicyService(RDFHelper, Timing, BWService):
 
     def hostsOnly(self, inport):
         """Scan only host isAliases"""
-        tmp = [f for f in str(inport)[len(self.prefixes["site"]):].split(":") if f]
+        tmp = [f for f in str(inport)[len(self.prefixes["site"]) :].split(":") if f]
         for item in tmp:
             if item in self.hosts:
                 return True
@@ -236,8 +291,10 @@ class PolicyService(RDFHelper, Timing, BWService):
     def getisAlias(self, gIn, bidPort):
         """Get isAlias from model"""
         out = self.queryGraph(
-            gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}isAlias"),
-            allowMultiple=True
+            gIn,
+            bidPort,
+            search=URIRef(f"{self.prefixes['nml']}isAlias"),
+            allowMultiple=True,
         )
         if len(out) > 1:
             raise Exception(f"Multiple isAlias found for {bidPort}")
@@ -320,7 +377,9 @@ class PolicyService(RDFHelper, Timing, BWService):
                 continue
             # Check if that entry is already in output and alert if it is
             if mainkey in out.get(key, {}):
-                self.logger.warning(f"Alias {mainkey} already exists in output. Will overwrite")
+                self.logger.warning(
+                    f"Alias {mainkey} already exists in output. Will overwrite"
+                )
                 self.logger.warning(f"Old: {out[key][mainkey]}")
                 self.logger.warning(f"New: {mainval}")
             out.setdefault(key, {})[mainkey] = mainval
@@ -348,13 +407,15 @@ class PolicyService(RDFHelper, Timing, BWService):
             if hostDict.get("hostinfo", {}).get("KubeInfo", {}).get("isAlias"):
                 self.logger.info(f"Parsing Kube requests from model for {host}")
                 for intf, _val in hostDict["hostinfo"]["KubeInfo"]["isAlias"].items():
-                    self.logger.info(f"Parsing Kube requests from model for {host} and {intf}")
+                    self.logger.info(
+                        f"Parsing Kube requests from model for {host} and {intf}"
+                    )
                     self.kube = True
                     connID = f"{self.prefixes['site']}:{host}:{intf}"
                     tmpOut = self.parseL2Ports(gIn, URIRef(connID), {}, True)
                     # Now here we check if we have for this specifich host and interface isAlias and add that to kube output
                     out.setdefault("kube", {})
-                    self._addCustomEntry(out, host, intf, tmpOut, 'kube')
+                    self._addCustomEntry(out, host, intf, tmpOut, "kube")
                     self.kube = False
         # Parse single port which are not connected to any service;
         self.singleport = True
@@ -366,7 +427,9 @@ class PolicyService(RDFHelper, Timing, BWService):
                 try:
                     out.setdefault("singleport", {})
                     tmpOut = self.parseL2Ports(gIn, URIRef(connID), {}, True)
-                    self._addCustomEntry(out, switchName, portName, tmpOut, 'singleport')
+                    self._addCustomEntry(
+                        out, switchName, portName, tmpOut, "singleport"
+                    )
                 except NotFoundError:
                     continue
         self.singleport = False
@@ -465,31 +528,53 @@ class PolicyService(RDFHelper, Timing, BWService):
                         # There is no such mapping in json, so we manually add this from providesRoutingTable
                         for rttmp in rettmp:
                             returnout["rst"].setdefault(str(rttmp), {}).setdefault(
-                                switchName, {}).setdefault(
-                                    iptype, {}).setdefault(
-                                        "belongsToRoutingTable", str(connectionID))
+                                switchName, {}
+                            ).setdefault(iptype, {}).setdefault(
+                                "belongsToRoutingTable", str(connectionID)
+                            )
 
     def _parseNetworkAttributes(self, gIn, bidPort, scanVals, attrkeys):
         """Query and parse all Network Attributes"""
         out = scanVals.setdefault("hasNetworkAttribute", {})
         for attrkey in attrkeys:
             attrout = out.setdefault(str(attrkey), {})
-            mtype = self.queryGraph(gIn, attrkey, search=URIRef(f"{self.prefixes['mrs']}type"), allowMultiple=True)
+            mtype = self.queryGraph(
+                gIn,
+                attrkey,
+                search=URIRef(f"{self.prefixes['mrs']}type"),
+                allowMultiple=True,
+            )
             if mtype:
                 attrout["type"] = str("|".join(mtype))
-            mvalue = self.queryGraph(gIn, attrkey, search=URIRef(f"{self.prefixes['mrs']}value"), allowMultiple=True)
+            mvalue = self.queryGraph(
+                gIn,
+                attrkey,
+                search=URIRef(f"{self.prefixes['mrs']}value"),
+                allowMultiple=True,
+            )
             if mvalue:
                 attrout["value"] = str("|".join(mvalue))
 
     def _hasTags(self, gIn, bidPort, returnout, portScan=False, vswParams=False):
         """Query Graph and get Tags"""
         scanVals = returnout.setdefault("_params", {})
-        keys =  {"tag": "mrs", "hasNetworkAttribute": "mrs"} if vswParams else {"tag": "mrs", "hasNetworkAttribute": "mrs",
-                                                                                "belongsTo": "nml", "encoding": "nml"}
+        keys = (
+            {"tag": "mrs", "hasNetworkAttribute": "mrs"}
+            if vswParams
+            else {
+                "tag": "mrs",
+                "hasNetworkAttribute": "mrs",
+                "belongsTo": "nml",
+                "encoding": "nml",
+            }
+        )
         for tag, pref in keys.items():
-            out = self.queryGraph(gIn, bidPort,
-                                  search=URIRef(f"{self.prefixes[pref]}{tag}"),
-                                  allowMultiple=True)
+            out = self.queryGraph(
+                gIn,
+                bidPort,
+                search=URIRef(f"{self.prefixes[pref]}{tag}"),
+                allowMultiple=True,
+            )
             if out and tag != "hasNetworkAttribute":
                 scanVals[tag] = str("|".join(out))
             elif out:
@@ -498,8 +583,10 @@ class PolicyService(RDFHelper, Timing, BWService):
         # We check if tag is found. If no tag found - raise NotFoundError
         if vswParams:
             return
-        if portScan and not scanVals.get('tag'):
-            raise NotFoundError('PortScan is true and tag not found. Will not add interface')
+        if portScan and not scanVals.get("tag"):
+            raise NotFoundError(
+                "PortScan is true and tag not found. Will not add interface"
+            )
         # Get network status if exists
         self.getHasNetworkStatus(gIn, bidPort, returnout)
 
@@ -557,11 +644,18 @@ class PolicyService(RDFHelper, Timing, BWService):
         if not vswParams:
             self._hasTags(gIn, bidPort, returnout)
         # Get all hasNetworkAddress items
-        out = self.queryGraph(gIn, bidPort, search=URIRef(f"{self.prefixes['mrs']}hasNetworkAddress"))
+        out = self.queryGraph(
+            gIn, bidPort, search=URIRef(f"{self.prefixes['mrs']}hasNetworkAddress")
+        )
         for item in out:
             scanVals = returnout.setdefault("hasNetworkAddress", {})
             # Get item type
-            out1 = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}type"), allowMultiple=True)
+            out1 = self.queryGraph(
+                gIn,
+                item,
+                search=URIRef(f"{self.prefixes['mrs']}type"),
+                allowMultiple=True,
+            )
             name = None
             if out1 and "ipv4-address" in str(out1):
                 name = "ipv4-address"
@@ -572,7 +666,9 @@ class PolicyService(RDFHelper, Timing, BWService):
             vals = scanVals.setdefault(name, {})
             vals["uri"] = str(item)
             vals["type"] = "|".join([str(item) for item in sorted(out1)])
-            out2 = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}value"))
+            out2 = self.queryGraph(
+                gIn, item, search=URIRef(f"{self.prefixes['mrs']}value")
+            )
             if out2:
                 vals["value"] = str(out2[0])
             self._hasTags(gIn, item, vals, False, vswParams)
@@ -587,8 +683,12 @@ class PolicyService(RDFHelper, Timing, BWService):
     def parsePorts(self, gIn, connectionID, hostsOnly=False):
         """Get all ports for any connection and scan all of them"""
         for key in ["hasBidirectionalPort", "isAlias"]:
-            tmpPorts = self.queryGraph(gIn, connectionID,
-                search=URIRef(f"{self.prefixes['nml']}{key}"), allowMultiple=True)
+            tmpPorts = self.queryGraph(
+                gIn,
+                connectionID,
+                search=URIRef(f"{self.prefixes['nml']}{key}"),
+                allowMultiple=True,
+            )
             for port in tmpPorts:
                 if hostsOnly and not self.hostsOnly(port):
                     continue
@@ -665,20 +765,29 @@ class PolicyService(RDFHelper, Timing, BWService):
 
     def parsel2Request(self, gIn, returnout, _switchName):
         """Parse L2 request."""
-        self.logger.info(f"Lets try to get connection ID subject for {self.prefixes['main']}")
-        cout = self.queryGraph(gIn, URIRef(self.prefixes["main"]),
-                               search=URIRef(f"{self.prefixes['mrs']}providesSubnet"))
+        self.logger.info(
+            f"Lets try to get connection ID subject for {self.prefixes['main']}"
+        )
+        cout = self.queryGraph(
+            gIn,
+            URIRef(self.prefixes["main"]),
+            search=URIRef(f"{self.prefixes['mrs']}providesSubnet"),
+        )
         for connectionID in cout:
-            self._recordMapping(connectionID, returnout, "SubnetMapping", "providesSubnet")
+            self._recordMapping(
+                connectionID, returnout, "SubnetMapping", "providesSubnet"
+            )
             returnout.setdefault("vsw", {})
             connOut = returnout["vsw"].setdefault(str(connectionID), {})
             self._hasTags(gIn, connectionID, connOut)
             self.logger.info(f"This is our connection ID: {connectionID}")
-            out = self.queryGraph(gIn, connectionID,
-                                  search=URIRef(f"{self.prefixes['nml']}labelSwapping"))
+            out = self.queryGraph(
+                gIn, connectionID, search=URIRef(f"{self.prefixes['nml']}labelSwapping")
+            )
             if out:
                 connOut.setdefault("_params", {}).setdefault(
-                    "labelSwapping", str(out[0]))
+                    "labelSwapping", str(out[0])
+                )
             # Parse hasNetworkAddress (debugip)
             paramsOut = connOut.setdefault("_params", {})
             self._hasNetwork(gIn, connectionID, paramsOut, True)
@@ -712,7 +821,7 @@ class PolicyService(RDFHelper, Timing, BWService):
                     continue
                 # TODO Ignore keys hasService should depend on switch configuration
                 # if QoS is enabled or not.
-                tmpstates = dictSearch("networkstatus", reqdict, [], ['hasService'])
+                tmpstates = dictSearch("networkstatus", reqdict, [], ["hasService"])
                 globst = self.identifyglobalstate(tmpstates)
                 if "_params" in vals:
                     self.newActive["output"]["vsw"][key]["_params"][
@@ -784,8 +893,8 @@ class PolicyService(RDFHelper, Timing, BWService):
             # And we should get again clean model for next delta check
             try:
                 self.conflictChecker.checkConflicts(
-                    self, self.newActive["output"],
-                    self.currentActive["output"], False)
+                    self, self.newActive["output"], self.currentActive["output"], False
+                )
                 self.stateMachine.modelstatechanger(self.dbI, "added", **delta)
                 changesApplied = True
             except (OverlapException, WrongIPAddress) as ex:
@@ -803,24 +912,32 @@ class PolicyService(RDFHelper, Timing, BWService):
             changesApplied = True
 
         # Check if there is any difference between old and current.
-        for diff in list(dictdiffer.diff(self.currentActive["output"],
-                                         self.newActive["output"],
-                                         ignore=set(["usedIPs", "usedVLANs"]))):
+        for diff in list(
+            dictdiffer.diff(
+                self.currentActive["output"],
+                self.newActive["output"],
+                ignore=set(["usedIPs", "usedVLANs"]),
+            )
+        ):
             self.logger.debug(f"New diff: {diff}")
         self.currentActive["output"] = copy.deepcopy(self.newActive["output"])
 
         # Check if there is any conflict with expired entities
         self.logger.info("Conflict Check of expired entities")
-        newconf, cleaned = self.conflictChecker.checkActiveConfig(self.currentActive["output"])
+        newconf, cleaned = self.conflictChecker.checkActiveConfig(
+            self.currentActive["output"]
+        )
         if cleaned:
             self.logger.info("IMPORTANT: State changed. Writing new config to DB.")
             self.currentActive["output"] = copy.deepcopy(newconf)
             changesApplied = True
 
         # Check if there are any forced cleanups (via API)
-        newconf, override =self._instanceoverride(self.currentActive["output"])
+        newconf, override = self._instanceoverride(self.currentActive["output"])
         if override:
-            self.logger.info("IMPORTANT: State changed due to forced DB timestamp change. Writing new config to DB.")
+            self.logger.info(
+                "IMPORTANT: State changed due to forced DB timestamp change. Writing new config to DB."
+            )
             self.currentActive["output"] = copy.deepcopy(newconf)
             changesApplied = True
         # Include used IPs and VLANs
@@ -829,30 +946,31 @@ class PolicyService(RDFHelper, Timing, BWService):
         # Write active deltas to DB (either changed or not changed).
         writeActiveDeltas(self, self.currentActive["output"])
         if changesApplied:
-            self.logger.info('-'*100)
-            self.logger.info('Here is new current Active output')
+            self.logger.info("-" * 100)
+            self.logger.info("Here is new current Active output")
             self.logger.info(pprint.pformat(self.currentActive["output"]))
         return changesApplied
 
     def _instanceoverride(self, currentActive):
         """Check if there are any forced cleanups (via API)."""
+
         def __setlifetime(initem, timestamps):
             """Set lifetime inside initem."""
-            lifetime = initem.setdefault('existsDuring', {})
+            lifetime = initem.setdefault("existsDuring", {})
             if timestamps[0] != 0:
-                lifetime['start'] = timestamps[0]
+                lifetime["start"] = timestamps[0]
             else:
-                del lifetime['start']
+                del lifetime["start"]
             if timestamps[1] != 0:
-                lifetime['end'] = timestamps[1]
+                lifetime["end"] = timestamps[1]
             else:
-                del lifetime['end']
+                del lifetime["end"]
 
         def __loopsubitems(indeltas, outdeltas, timestamps):
             """Loop subitems under instance and set lifetime."""
             for key, val in indeltas.items():
-                if key == '_params':
-                    workitem = outdeltas.setdefault('_params', {})
+                if key == "_params":
+                    workitem = outdeltas.setdefault("_params", {})
                     __setlifetime(workitem, timestamps)
                 elif isinstance(val, dict):
                     workitem = outdeltas.setdefault(key, {})
@@ -863,7 +981,10 @@ class PolicyService(RDFHelper, Timing, BWService):
         newconf = copy.deepcopy(currentActive)
         for override in self.dbI.get("instancestartend", limit=100):
             instanceid = override["instanceid"]
-            timestamps = (int(override["starttimestamp"]), int(override["endtimestamp"]))
+            timestamps = (
+                int(override["starttimestamp"]),
+                int(override["endtimestamp"]),
+            )
             # Identify if it vsw or rst
             if instanceid in newconf.get("vsw", {}):
                 args = ("vsw", instanceid)
@@ -872,12 +993,13 @@ class PolicyService(RDFHelper, Timing, BWService):
             else:
                 continue
             # Set lifetime for all subitems
-            __loopsubitems(currentActive[args[0]][args[1]], newconf[args[0]][args[1]], timestamps)
+            __loopsubitems(
+                currentActive[args[0]][args[1]], newconf[args[0]][args[1]], timestamps
+            )
             # Remove from database
             self.dbI.delete("instancestartend", [["id", override["id"]]])
             modified = True
         return newconf, modified
-
 
     def startworklookup(self, currentGraph, usedIPs, usedVlans):
         """Start Policy Service."""
@@ -892,8 +1014,14 @@ class PolicyService(RDFHelper, Timing, BWService):
         """Start Policy Service."""
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started")
-        fnewdir = os.path.join(self.config.get(self.sitename, "privatedir"), "PolicyService", "httpnew")
-        ffinishdir = os.path.join(self.config.get(self.sitename, "privatedir"), "PolicyService", "httpfinished")
+        fnewdir = os.path.join(
+            self.config.get(self.sitename, "privatedir"), "PolicyService", "httpnew"
+        )
+        ffinishdir = os.path.join(
+            self.config.get(self.sitename, "privatedir"),
+            "PolicyService",
+            "httpfinished",
+        )
         # Find all files in new directory (not ending with .tmp)
         for fname in os.listdir(fnewdir):
             if fname.endswith(".tmp"):
@@ -953,8 +1081,8 @@ class PolicyService(RDFHelper, Timing, BWService):
             self.newActive["output"] = self.parseModel(currentGraph)
             try:
                 self.conflictChecker.checkConflicts(
-                    self, self.newActive["output"],
-                    self.currentActive["output"], True)
+                    self, self.newActive["output"], self.currentActive["output"], True
+                )
             except (OverlapException, WrongIPAddress) as ex:
                 self.logger.info(f"There was failure accepting delta. Failure {ex}")
                 toDict["State"] = "failed"

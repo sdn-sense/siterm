@@ -5,12 +5,17 @@ Authors:
 
 Date: 2021/01/20
 """
+
 import re
 
-from SiteRMLibs.CustomExceptions import (FailedInterfaceCommand,
-                                         FailedRoutingCommand)
-from SiteRMLibs.MainUtilities import (execute, externalCommand, getFullUrl,
-                                      getLoggingObject, publishToSiteFE)
+from SiteRMLibs.CustomExceptions import (FailedInterfaceCommand, FailedRoutingCommand)
+from SiteRMLibs.MainUtilities import (
+    execute,
+    externalCommand,
+    getFullUrl,
+    getLoggingObject,
+    publishToSiteFE,
+)
 
 
 def publishState(modtype, uuid, hostname, state, fullURL):

@@ -21,6 +21,7 @@ Date                    : 2023/01/03
 import os
 from prometheus_client import CONTENT_TYPE_LATEST
 
+
 class PrometheusCalls:
     """Prometheus Calls API Module"""
 
@@ -42,8 +43,10 @@ class PrometheusCalls:
 
     def prometheus(self, _environ, **kwargs):
         """Return prometheus stats."""
-        snmpdir = os.path.join(self.config.get(kwargs['sitename'], "privatedir"), "SNMPData")
-        fname = os.path.join(snmpdir, 'snmpinfo.txt')
+        snmpdir = os.path.join(
+            self.config.get(kwargs["sitename"], "privatedir"), "SNMPData"
+        )
+        fname = os.path.join(snmpdir, "snmpinfo.txt")
         if not os.path.exists(fname):
             self.httpresp.ret_404("text/plain", kwargs["start_response"], None)
             return iter([b"# Metrics are not available\n"])

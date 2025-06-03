@@ -12,11 +12,12 @@ Date: 2025/02/13
 """
 
 
-class Junos():
+class Junos:
     """Junos Parser"""
+
     def __init__(self, **kwargs):
-        self.factName = ['sense.junos.junos_facts']
-        self.defVlanNaming = 'Vlan%(vlanid)s'
+        self.factName = ["sense.junos.junos_facts"]
+        self.defVlanNaming = "Vlan%(vlanid)s"
 
 
 MODULE = Junos

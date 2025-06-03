@@ -23,16 +23,25 @@ from SiteFE.ProvisioningService.provisioningService import ProvisioningService
 from SiteRMLibs.timing import Timing
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
-from SiteRMLibs.MainUtilities import (createDirs, generateHash,
-                                      getActiveDeltas, getCurrentModel,
-                                      getDBConn, getLoggingObject, getUTCnow, getVal,
-                                      externalCommand)
+from SiteRMLibs.MainUtilities import (
+    createDirs,
+    generateHash,
+    getActiveDeltas,
+    getCurrentModel,
+    getDBConn,
+    getLoggingObject,
+    getUTCnow,
+    getVal,
+    externalCommand,
+)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.ipaddr import normalizedip
 
-class MultiWorker():
+
+class MultiWorker:
     """SNMP Monitoring Class"""
+
     def __init__(self, config, sitename, logger):
         super().__init__()
         self.config = config
@@ -43,15 +52,15 @@ class MultiWorker():
 
     def _runCmd(self, action, device, foreground=False):
         """Start execution of new requests"""
-        retOut = {'stdout': [], 'stderr': [], 'exitCode': -1}
+        retOut = {"stdout": [], "stderr": [], "exitCode": -1}
         command = f"SwitchWorker --action {action} --devicename {device}"
         if foreground:
             command += " --foreground"
         cmdOut = externalCommand(command, False)
         out, err = cmdOut.communicate()
-        retOut['stdout'] += out.decode("utf-8").split('\n')
-        retOut['stderr'] += err.decode("utf-8").split('\n')
-        retOut['exitCode'] = cmdOut.returncode
+        retOut["stdout"] += out.decode("utf-8").split("\n")
+        retOut["stderr"] += err.decode("utf-8").split("\n")
+        retOut["exitCode"] = cmdOut.returncode
         return retOut
 
     def refreshthread(self):
@@ -66,38 +75,44 @@ class MultiWorker():
         for siteName in self.config.get("general", "sites"):
             for dev in self.config.get(siteName, "switch"):
                 # Check status
-                retOut = self._runCmd('status', dev)
+                retOut = self._runCmd("status", dev)
                 # If status failed, and first run, start it
-                if retOut['exitCode'] != 0 and self.firstRun:
+                if retOut["exitCode"] != 0 and self.firstRun:
                     self.logger.info(f"Starting SwitchWorker for {dev}")
-                    retOut = self._runCmd('start', dev, True)
+                    retOut = self._runCmd("start", dev, True)
                     self.logger.info(f"Starting SwitchWorker for {dev} - {retOut}")
                     restarted = True
                     continue
                 # If status failed, and not first run, restart it
-                if retOut['exitCode'] != 0 and not self.firstRun:
+                if retOut["exitCode"] != 0 and not self.firstRun:
                     self.logger.error(f"SwitchWorker for {dev} failed: {retOut}")
-                    retOut = self._runCmd('restart', dev, True)
+                    retOut = self._runCmd("restart", dev, True)
                     self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
                     restarted = True
                     continue
                 # If status is OK, and needRestart flag set - restart it
-                if retOut['exitCode'] == 0 and self.needRestart:
-                    self.logger.info(f"Restarting SwitchWorker for {dev} as it is instructed by config change")
-                    retOut = self._runCmd('restart', dev, True)
+                if retOut["exitCode"] == 0 and self.needRestart:
+                    self.logger.info(
+                        f"Restarting SwitchWorker for {dev} as it is instructed by config change"
+                    )
+                    retOut = self._runCmd("restart", dev, True)
                     self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
                     restarted = True
                     continue
                 # If status is OK, and needRestart flag set - restart it
-                if retOut['exitCode'] != 0 and self.needRestart:
-                    self.logger.info(f"Restarting Failed SwitchWorker for {dev} as it is instructed by config change")
-                    retOut = self._runCmd('restart', dev, True)
+                if retOut["exitCode"] != 0 and self.needRestart:
+                    self.logger.info(
+                        f"Restarting Failed SwitchWorker for {dev} as it is instructed by config change"
+                    )
+                    retOut = self._runCmd("restart", dev, True)
                     self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
                     restarted = True
                     continue
         # Mark as not first run, so if service stops, it uses restart
         if self.firstRun and restarted:
-            self.logger.info("First run is done. Marking as not first run. Also sleep 1 minute so that it get's all data from switches")
+            self.logger.info(
+                "First run is done. Marking as not first run. Also sleep 1 minute so that it get's all data from switches"
+            )
             time.sleep(60)
         self.firstRun = False
         self.needRestart = False
@@ -124,10 +139,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.modelVersion = ""
         self.activeDeltas = {}
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
-        self.URIs = {'vlans': {}, 'ips': {}}
-        self.usedVlans = {'deltas': {}, 'system': {}}
-        self.usedIPs = {'deltas': {}, 'system': {}}  # Reset used IPs.
-        for dirname in ['LookUpService', 'SwitchWorker']:
+        self.URIs = {"vlans": {}, "ips": {}}
+        self.usedVlans = {"deltas": {}, "system": {}}
+        self.usedIPs = {"deltas": {}, "system": {}}  # Reset used IPs.
+        for dirname in ["LookUpService", "SwitchWorker"]:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
         self.warnings = []
@@ -145,20 +160,27 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
     def _getIPURIs(self, indict, host, iptype):
         """Get All IP URIs if any"""
-        if 'hasNetworkAddress' in indict and f'{iptype}-address' in indict['hasNetworkAddress']:
-            uri = indict['hasNetworkAddress'][f'{iptype}-address'].get('uri', '')
-            ip = indict['hasNetworkAddress'][f'{iptype}-address'].get('value', '')
+        if (
+            "hasNetworkAddress" in indict
+            and f"{iptype}-address" in indict["hasNetworkAddress"]
+        ):
+            uri = indict["hasNetworkAddress"][f"{iptype}-address"].get("uri", "")
+            ip = indict["hasNetworkAddress"][f"{iptype}-address"].get("value", "")
             if ip:
                 ip = normalizedip(ip)
-                self.usedIPs['deltas'].setdefault(host, {'ipv4': [], 'ipv6': []})
-                if ip not in self.usedIPs['deltas'][host][iptype]:
-                    self.usedIPs['deltas'][host][iptype].append(ip)
+                self.usedIPs["deltas"].setdefault(host, {"ipv4": [], "ipv6": []})
+                if ip not in self.usedIPs["deltas"][host][iptype]:
+                    self.usedIPs["deltas"][host][iptype].append(ip)
             if uri and ip:
-                self.URIs['ips'].setdefault(normalizedip(ip), indict['hasNetworkAddress'][f'{iptype}-address'])
+                self.URIs["ips"].setdefault(
+                    normalizedip(ip), indict["hasNetworkAddress"][f"{iptype}-address"]
+                )
 
     def _getUniqueVlanURIs(self, qtype):
         """Get Unique URI for VLANs"""
-        for _subnet, hostDict in self.activeDeltas.get('output', {}).get(qtype, {}).items():
+        for _subnet, hostDict in (
+            self.activeDeltas.get("output", {}).get(qtype, {}).items()
+        ):
             if not self.checkIfStarted(hostDict):
                 continue
             for host, portDict in hostDict.items():
@@ -169,19 +191,23 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 for port, reqDict in portDict.items():
                     if not isinstance(reqDict, dict):
                         continue
-                    if 'uri' in reqDict and reqDict['uri'] and 'hasLabel' in reqDict and reqDict['hasLabel']:
-                        vlan = reqDict['hasLabel'].get('value', 0)
+                    if (
+                        "uri" in reqDict
+                        and reqDict["uri"]
+                        and "hasLabel" in reqDict
+                        and reqDict["hasLabel"]
+                    ):
+                        vlan = reqDict["hasLabel"].get("value", 0)
                         if vlan:
-                            self.URIs['vlans'].setdefault(host, {})
-                            self.URIs['vlans'][host].setdefault(port, {})
-                            self.URIs['vlans'][host][port][int(vlan)] = reqDict['uri']
+                            self.URIs["vlans"].setdefault(host, {})
+                            self.URIs["vlans"][host].setdefault(port, {})
+                            self.URIs["vlans"][host][port][int(vlan)] = reqDict["uri"]
                             # Add vlan into used vlans list
-                            self.usedVlans['deltas'].setdefault(host, [])
-                            if int(vlan) not in self.usedVlans['deltas'][host]:
-                                self.usedVlans['deltas'][host].append(int(vlan))
-                    self._getIPURIs(reqDict, host, 'ipv4')
-                    self._getIPURIs(reqDict, host, 'ipv6')
-
+                            self.usedVlans["deltas"].setdefault(host, [])
+                            if int(vlan) not in self.usedVlans["deltas"][host]:
+                                self.usedVlans["deltas"][host].append(int(vlan))
+                    self._getIPURIs(reqDict, host, "ipv4")
+                    self._getIPURIs(reqDict, host, "ipv6")
 
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
@@ -207,7 +233,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def getVersionFromCurrentModel(self):
         """Get Current Version from Model."""
         _, currentGraph = getCurrentModel(self, False)
-        out = self.police.queryGraph(currentGraph, URIRef(f"{self.prefixes['site']}:service+metadata:version"))
+        out = self.police.queryGraph(
+            currentGraph, URIRef(f"{self.prefixes['site']}:service+metadata:version")
+        )
         if out:
             self.modelVersion = str(out[3])
         else:
@@ -257,23 +285,25 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         """Record System IPs."""
         if key not in ["ipv4", "ipv6"]:
             return
-        self.usedIPs['system'].setdefault(switchName, {'ipv4': [], 'ipv6': []})
+        self.usedIPs["system"].setdefault(switchName, {"ipv4": [], "ipv6": []})
         for item in val:
-            if 'address' not in item or 'masklen' not in item:
+            if "address" not in item or "masklen" not in item:
                 continue
             ipaddr = f"{item.get('address', '')}/{item.get('masklen', '')}"
-            if ipaddr not in self.usedIPs['system'][switchName][key] and ipaddr not in self.usedIPs['deltas'].get(switchName, {}).get(key, []):
-                self.usedIPs['system'][switchName][key].append(ipaddr)
+            if ipaddr not in self.usedIPs["system"][switchName][
+                key
+            ] and ipaddr not in self.usedIPs["deltas"].get(switchName, {}).get(key, []):
+                self.usedIPs["system"][switchName][key].append(ipaddr)
 
     def filterOutAvailbVlans(self, hostname, vlanrange):
         """Filter out available vlans for a hostname."""
         tmprange = copy.deepcopy(vlanrange)
-        if hostname in self.usedVlans.get('deltas', {}):
-            for vlan in self.usedVlans['deltas'][hostname]:
+        if hostname in self.usedVlans.get("deltas", {}):
+            for vlan in self.usedVlans["deltas"][hostname]:
                 if vlan in tmprange:
                     tmprange.remove(vlan)
-        if hostname in self.usedVlans.get('system', {}):
-            for vlan in self.usedVlans['system'][hostname]:
+        if hostname in self.usedVlans.get("system", {}):
+            for vlan in self.usedVlans["system"][hostname]:
                 if vlan in tmprange:
                     tmprange.remove(vlan)
         return tmprange
@@ -300,14 +330,22 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         """Check and raise warnings in case some vlans are used/configured manually."""
         # Check that for all vlan range, if it is on system usedVlans - it should be on deltas too;
         # otherwise it means vlan is configured manually (or deletion did not happen)
-        for host, vlans in self.usedVlans['system'].items():
-            if host in self.config.config.get('MAIN', {}):
+        for host, vlans in self.usedVlans["system"].items():
+            if host in self.config.config.get("MAIN", {}):
                 # Means it is a switch (host check remains for Agents itself)
-                all_vlan_range_list = self.config.config.get('MAIN', {}).get(host, {}).get('all_vlan_range_list', [])
+                all_vlan_range_list = (
+                    self.config.config.get("MAIN", {})
+                    .get(host, {})
+                    .get("all_vlan_range_list", [])
+                )
                 for vlan in vlans:
-                    if vlan in all_vlan_range_list and vlan not in self.usedVlans['deltas'].get(host, []):
-                        self.addWarning(f"Vlan {vlan} is configured manually on {host}. It comes not from delta."
-                                         "Either deletion did not happen or was manually configured.")
+                    if vlan in all_vlan_range_list and vlan not in self.usedVlans[
+                        "deltas"
+                    ].get(host, []):
+                        self.addWarning(
+                            f"Vlan {vlan} is configured manually on {host}. It comes not from delta."
+                            "Either deletion did not happen or was manually configured."
+                        )
         # Add switchwarnings (in case any exists)
         self.warnings += self.switch.getWarnings()
         if self.warnings:
@@ -323,16 +361,20 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self._cleanWarningCounters()
         stateChangedFirstRun = False
         if self.firstRun:
-            self.logger.info("Because it is first run, we will start apply first to all devices individually")
-            self.logger.info("In case there are many resources, it might take a while. Check ProvisioningService logs for more information")
+            self.logger.info(
+                "Because it is first run, we will start apply first to all devices individually"
+            )
+            self.logger.info(
+                "In case there are many resources, it might take a while. Check ProvisioningService logs for more information"
+            )
             stateChangedFirstRun = self.provision.startwork(self.firstRun)
             self.firstRun = False
         self.multiworker.startwork()
         self.activeDeltas = getActiveDeltas(self)
-        self.URIs = {'vlans': {}, 'ips': {}} # Reset URIs
-        self.usedVlans = {'deltas': {}, 'system': {}} # Reset used vlans
-        self.usedIPs = {'deltas': {}, 'system': {}}  # Reset used IPs.
-        for key in ['vsw', 'kube', 'singleport']:
+        self.URIs = {"vlans": {}, "ips": {}}  # Reset URIs
+        self.usedVlans = {"deltas": {}, "system": {}}  # Reset used vlans
+        self.usedIPs = {"deltas": {}, "system": {}}  # Reset used IPs.
+        for key in ["vsw", "kube", "singleport"]:
             self._getUniqueVlanURIs(key)
         self.newGraph = Graph()
         # ==================================================================================
@@ -367,7 +409,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         # ==================================================================================
         # 8. Start Policy Service and apply any changes (if any)
         # ==================================================================================
-        changesApplied = self.police.startworklookup(self.newGraph, self.usedIPs, self.usedVlans)
+        changesApplied = self.police.startworklookup(
+            self.newGraph, self.usedIPs, self.usedVlans
+        )
         self.logger.info(f"Changes there recorded in db: {changesApplied}")
         self.activeDeltas = getActiveDeltas(self)
         self.addDeltaInfo()
@@ -417,11 +461,16 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             self.logger.info("Update is needed. Informing to renew all devices state")
             # If models are different, we need to update all devices information
             self.switch.deviceUpdate(self.sitename)
-        elif self.warningstart and self.warningstart <= getUTCnow() + 3600 : # If warnings raise an hour ago - refresh
+        elif (
+            self.warningstart and self.warningstart <= getUTCnow() + 3600
+        ):  # If warnings raise an hour ago - refresh
             self.warningstart = 0
-            self.logger.info("Warnings were raised more than 1hr ago. Informing to renew all devices state")
+            self.logger.info(
+                "Warnings were raised more than 1hr ago. Informing to renew all devices state"
+            )
             self.switch.deviceUpdate(self.sitename)
         self.checkAndRaiseWarnings()
+
 
 def execute(config=None):
     """Main Execute."""

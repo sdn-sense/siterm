@@ -15,9 +15,15 @@ from SiteRMAgent.Ruler.Components.VInterfaces import VInterfaces
 from SiteRMAgent.Ruler.OverlapLib import OverlapLib
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 from SiteRMLibs.ipaddr import checkOverlap
-from SiteRMLibs.MainUtilities import (contentDB, createDirs, evaldict,
-                                      getDataFromSiteFE, getFileContentAsJson,
-                                      getFullUrl, getLoggingObject)
+from SiteRMLibs.MainUtilities import (
+    contentDB,
+    createDirs,
+    evaldict,
+    getDataFromSiteFE,
+    getFileContentAsJson,
+    getFullUrl,
+    getLoggingObject,
+)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.timing import Timing
@@ -121,9 +127,11 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
                             == self.activeFromFE["output"][actKey][key][self.hostname]
                         ):
                             continue
-                        actCall.modify(vals[self.hostname],
-                                       self.activeFromFE["output"][actKey][key][self.hostname],
-                                       key)
+                        actCall.modify(
+                            vals[self.hostname],
+                            self.activeFromFE["output"][actKey][key][self.hostname],
+                            key,
+                        )
                     else:
                         actCall.terminate(vals[self.hostname], key)
         if actKey == "rst" and self.qosPolicy == "hostlevel":
@@ -180,7 +188,11 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
 
         if not self.config.getboolean("agent", "norules"):
             self.logger.info("Agent is configured to apply rules")
-            for actKey, actCall in {"vsw": self.layer2, "rst": self.layer3, "kube": self.layer2}.items():
+            for actKey, actCall in {
+                "vsw": self.layer2,
+                "rst": self.layer3,
+                "kube": self.layer2,
+            }.items():
                 if self.activeDeltas != self.activeFromFE:
                     self.activeComparison(actKey, actCall)
                 self.activeEnsure(actKey, actCall)

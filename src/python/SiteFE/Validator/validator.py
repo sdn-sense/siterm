@@ -14,13 +14,21 @@ import argparse
 
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.MainUtilities import (
-    contentDB, createDirs, getFileContentAsJson, getAllHosts,
-    getDBConn, getLoggingObject, getVal, getUTCnow, getActiveDeltas)
+    contentDB,
+    createDirs,
+    getFileContentAsJson,
+    getAllHosts,
+    getDBConn,
+    getLoggingObject,
+    getVal,
+    getUTCnow,
+    getActiveDeltas,
+)
 from SiteRMLibs.CustomExceptions import ServiceWarning
 from SiteRMLibs.GitConfig import getGitConfig
 
 
-class Validator():
+class Validator:
     """Validate Switch and Host configurations and link mappings."""
 
     def __init__(self, config, sitename):
@@ -32,7 +40,9 @@ class Validator():
         self.switch = Switch(config, sitename)
         self.hosts = {}
         for siteName in self.config.get("general", "sites"):
-            workDir = os.path.join(self.config.get(siteName, "privatedir"), "Validator/")
+            workDir = os.path.join(
+                self.config.get(siteName, "privatedir"), "Validator/"
+            )
             createDirs(workDir)
         self.switchInfo = {}
         self.activeDeltas = {}
@@ -54,9 +64,15 @@ class Validator():
     @staticmethod
     def _getMacAddress(nodeDict, interface):
         """Get MAC address from configuration."""
-        for entry in nodeDict.get("hostinfo", {}).get('NetInfo', {}).get('interfaces', {}).get(interface, {}).get('17', []):
-            if 'mac-address' in entry and entry['mac-address']:
-                return entry['mac-address']
+        for entry in (
+            nodeDict.get("hostinfo", {})
+            .get("NetInfo", {})
+            .get("interfaces", {})
+            .get(interface, {})
+            .get("17", [])
+        ):
+            if "mac-address" in entry and entry["mac-address"]:
+                return entry["mac-address"]
         return None
 
     @staticmethod
@@ -67,17 +83,35 @@ class Validator():
     @staticmethod
     def _getHostInterfaces(nodeDict):
         """Get Host Interfaces from configuration."""
-        return nodeDict.get("hostinfo", {}).get('Summary', {}).get('config', {}).get('agent', {}).get('interfaces', [])
+        return (
+            nodeDict.get("hostinfo", {})
+            .get("Summary", {})
+            .get("config", {})
+            .get("agent", {})
+            .get("interfaces", [])
+        )
 
     @staticmethod
     def _getSwitchInterface(nodeDict, interface):
         """Get Switch Interface from configuration."""
-        return nodeDict.get("hostinfo", {}).get('Summary', {}).get('config', {}).get(interface, {}).get('port', None)
+        return (
+            nodeDict.get("hostinfo", {})
+            .get("Summary", {})
+            .get("config", {})
+            .get(interface, {})
+            .get("port", None)
+        )
 
     @staticmethod
     def _getSwitchName(nodeDict, interface):
         """Get Switch Name from configuration."""
-        return nodeDict.get("hostinfo", {}).get('Summary', {}).get('config', {}).get(interface, {}).get('switch', None)
+        return (
+            nodeDict.get("hostinfo", {})
+            .get("Summary", {})
+            .get("config", {})
+            .get(interface, {})
+            .get("switch", None)
+        )
 
     def getAllHostIntfMacs(self):
         """Get all host and intf mac info"""
@@ -86,13 +120,13 @@ class Validator():
             nodeDict["hostinfo"] = getFileContentAsJson(nodeDict["hostinfo"])
             # Get all interfaces in configuration and their mac addresses
             for intf in self._getHostInterfaces(nodeDict):
-                hostcheck = {'hostname': nodeDict['hostname'], 'intf': intf}
+                hostcheck = {"hostname": nodeDict["hostname"], "intf": intf}
                 # Get mac address from configuration
-                hostcheck['mac-address'] = self._getMacAddress(nodeDict, intf)
+                hostcheck["mac-address"] = self._getMacAddress(nodeDict, intf)
                 # Get Switch
-                hostcheck['switch'] = self._getSwitchName(nodeDict, intf)
+                hostcheck["switch"] = self._getSwitchName(nodeDict, intf)
                 # Get Switch Port
-                hostcheck['port'] = self._getSwitchInterface(nodeDict, intf)
+                hostcheck["port"] = self._getSwitchInterface(nodeDict, intf)
                 # Check if none of the values are None
                 if self._allvaluesDefined(hostcheck):
                     yield hostcheck
@@ -101,15 +135,21 @@ class Validator():
         """Get Switch LLDP Info for switch and port"""
         # TODO: Raise warnings if switch not available or port not available.
         # LLDP info is not required to provide, but useful for our debugging.
-        return self.switchInfo.get('lldp', {}).get(hostcheck['switch'], {}).get(hostcheck['port'], {})
+        return (
+            self.switchInfo.get("lldp", {})
+            .get(hostcheck["switch"], {})
+            .get(hostcheck["port"], {})
+        )
 
     def _validateHostSwitchInfo(self, hostinfo, switchlldp):
         """Validate Host and Switch information"""
-        if hostinfo.get('mac-address') == switchlldp.get('remote_port_id'):
+        if hostinfo.get("mac-address") == switchlldp.get("remote_port_id"):
             return True
-        elif hostinfo.get('mac-address') == switchlldp.get('remote_chassis_id'):
+        elif hostinfo.get("mac-address") == switchlldp.get("remote_chassis_id"):
             return True
-        self.addWarning(f"Host {hostinfo['hostname']} does not match lldp information. Host Info: {hostinfo}, Switch LLDP Info: {switchlldp}")
+        self.addWarning(
+            f"Host {hostinfo['hostname']} does not match lldp information. Host Info: {hostinfo}, Switch LLDP Info: {switchlldp}"
+        )
         self._setwarningstart()
         return False
 
@@ -157,9 +197,13 @@ class Validator():
             if hostcheck and switchlldp:
                 self._validateHostSwitchInfo(hostcheck, switchlldp)
         # Raise warnings if any exists
-        if self.warningstart and self.warningstart <= getUTCnow() - 3600 :  # If warnings raise an hour ago - refresh
+        if (
+            self.warningstart and self.warningstart <= getUTCnow() - 3600
+        ):  # If warnings raise an hour ago - refresh
             self.warningstart = 0
-            self.logger.info("Warnings were raised more than 1hr ago. Informing to renew all devices state")
+            self.logger.info(
+                "Warnings were raised more than 1hr ago. Informing to renew all devices state"
+            )
             self.switch.deviceUpdate(self.sitename)
         self.checkAndRaiseWarnings()
 

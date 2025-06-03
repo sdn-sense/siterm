@@ -26,7 +26,7 @@ import sys
 # src/python/SiteFE/__init__.py
 # src/python/SiteRMAgent/__init__.py
 # src/python/SiteRMLibs/__init__.py
-VERSION = '1.5.32'
+VERSION = "1.5.32"
 
 
 def get_path_to_root(appendLocation=None):
@@ -48,7 +48,7 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
     if not packageDirs:
         packageDirs = []
     if not ignoreThese:
-        ignoreThese = set(['CVS', '.svn', 'svn', '.git', '', 'sitermagent.egg-info'])
+        ignoreThese = set(["CVS", ".svn", "svn", ".git", "", "sitermagent.egg-info"])
     else:
         ignoreThese = set(ignoreThese)
     packages = []
@@ -58,27 +58,29 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
         if recurse:
             # Recurse the sub-directories
             for dirpath, dummyDirnames, dummyFilenames in os.walk(aDir, topdown=True):
-                pathelements = dirpath.split('/')
+                pathelements = dirpath.split("/")
                 # If any part of pathelements is in the ignore_these set skip the path
                 if not list(set(pathelements) & ignoreThese):
                     relPath = os.path.relpath(dirpath, get_path_to_root())
-                    relPath = relPath.split('/')[2:]
+                    relPath = relPath.split("/")[2:]
                     if not pyFiles:
-                        packages.append('.'.join(relPath))
+                        packages.append(".".join(relPath))
                     else:
                         for fileName in dummyFilenames:
-                            if fileName.startswith('__init__.') or \
-                               fileName.endswith('.pyc') or \
-                               not fileName.endswith('.py'):
+                            if (
+                                fileName.startswith("__init__.")
+                                or fileName.endswith(".pyc")
+                                or not fileName.endswith(".py")
+                            ):
                                 continue
-                            relName = fileName.rsplit('.', 1)
+                            relName = fileName.rsplit(".", 1)
                             modules.append(f"{'.'.join(relPath)}.{relName[0]}")
                 else:
                     continue
         else:
             relPath = os.path.relpath(aDir, get_path_to_root())
-            relPath = relPath.split('/')[2:]
-            packages.append('.'.join(relPath))
+            relPath = relPath.split("/")[2:]
+            packages.append(".".join(relPath))
     if pyFiles:
         return modules
     return packages
@@ -87,6 +89,7 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
 def get_py_modules(modulesDirs):
     """Get py modules for setup.py."""
     return list_packages(modulesDirs, pyFiles=True)
+
 
 # Collect all files in packaging/release_mods recursively
 def collect_files(src_dir, target_dir):

@@ -87,7 +87,9 @@ class QOS:
         """Get vlan qos dict"""
         self.activeL2 = []
         for actkey in ["vsw", "kube", "singleport"]:
-            for _key, vals in self.activeDeltas.get("output", {}).get(actkey, {}).items():
+            for _key, vals in (
+                self.activeDeltas.get("output", {}).get(actkey, {}).items()
+            ):
                 if self.hostname not in vals:
                     continue
                 if not self._started(vals):
@@ -95,7 +97,9 @@ class QOS:
                     continue
                 for key, vals1 in vals[self.hostname].items():
                     if not vals1.get("hasLabel", {}).get("value", ""):
-                        self.logger.warning("This specific vlan request did not provided vlan id.Ignoring QOS Rules for it")
+                        self.logger.warning(
+                            "This specific vlan request did not provided vlan id.Ignoring QOS Rules for it"
+                        )
                         self.logger.warning(f"Resource: {vals1}")
                         continue
                     self.activeL2.append(
@@ -112,8 +116,14 @@ class QOS:
         self.params = {}
         for interface in self.config.get("agent", "interfaces"):
             params = self.params.setdefault(interface, {})
-            params["intf_max"] = int(self.config.get(interface, "bwParams").get("maximumCapacity", getInterfaceSpeed(interface)))
-            params["intf_reserve"] = int(self.config.get(interface, "bwParams").get("reservedCapacity", 1000))
+            params["intf_max"] = int(
+                self.config.get(interface, "bwParams").get(
+                    "maximumCapacity", getInterfaceSpeed(interface)
+                )
+            )
+            params["intf_reserve"] = int(
+                self.config.get(interface, "bwParams").get("reservedCapacity", 1000)
+            )
             # Take out reserved from intf_max
             self.params[interface]["intf_max"] -= self.params[interface]["intf_reserve"]
 
@@ -302,32 +312,50 @@ class QOS:
                 continue
             outrate, outtype = self.convertToRate(l2req["params"])
             if self.params[interface]["intf_max"] - outrate <= 0:
-                raise OverSubscribeException(f"Node is oversubscribed. Will not modify present QoS Rules. Max Rate: {self.params[interface]['intf_max']} Requested Rate: {outrate}")
+                raise OverSubscribeException(
+                    f"Node is oversubscribed. Will not modify present QoS Rules. Max Rate: {self.params[interface]['intf_max']} Requested Rate: {outrate}"
+                )
             self.params[interface]["intf_max"] -= outrate
             # Get params from request
             reqclass = l2req["params"].get("type", "undefined")
             uri = l2req["params"].get("uri", "undefined")
             outlines = []
-            outlines.append(f"# SENSE VLAN {l2req['vlan']} {l2req['destport']} {outrate}{outtype} Class: {reqclass}\n")
+            outlines.append(
+                f"# SENSE VLAN {l2req['vlan']} {l2req['destport']} {outrate}{outtype} Class: {reqclass}\n"
+            )
             outlines.append(f"# Request: {uri}\n")
-            outlines.append("# " + "-"*80 + "\n")
+            outlines.append("# " + "-" * 80 + "\n")
             # In case it is: guaranteedCapped,softCapped,bestEffort - we add diff class
             if reqclass == "guaranteedCapped":
-                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n")
+                outlines.append(
+                    f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n"
+                )
             elif reqclass == "softCapped":
-                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n")
+                outlines.append(
+                    f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n"
+                )
                 outlines.append(f"  class default rate {outrate}{outtype}\n")
                 # interface vlan.2074 bond0-2074 bidirectional rate 20gbit
                 #   class default commit 100mbit
             elif reqclass == "bestEffort":
-                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n")
+                outlines.append(
+                    f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n"
+                )
                 outlines.append(f"  class default rate {outrate}{outtype}\n")
             else:
-                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n")
+                outlines.append(
+                    f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n"
+                )
                 outlines.append(f"  class default rate {outrate}{outtype}\n")
-            outlines.append("# " + "-"*80 + "\n\n")
-            alllines[counter] = {"outlines": outlines, "outrate": outrate, "destport": interface,
-                                 "outtype": outtype, "uri": uri, "reqclass": reqclass}
+            outlines.append("# " + "-" * 80 + "\n\n")
+            alllines[counter] = {
+                "outlines": outlines,
+                "outrate": outrate,
+                "destport": interface,
+                "outtype": outtype,
+                "uri": uri,
+                "reqclass": reqclass,
+            }
             counter += 1
         # Write everything into file
         for counter, l2req in alllines.items():
@@ -339,13 +367,12 @@ class QOS:
             # Loop via range from 10 to 1
             if l2req["reqclass"] == "bestEffort":
                 for i in range(10, 0, -1):
-                    maxintf = max(maxintf//i, l2req["outrate"])
+                    maxintf = max(maxintf // i, l2req["outrate"])
                     if maxintf > l2req["outrate"]:
                         break
             for line in l2req["outlines"]:
                 line = line.replace("##REPLACEME##", str(maxintf))
                 tmpFD.writelines(line)
-
 
     def getAllQOSed(self):
         """Read all configs and prepare qos doc."""

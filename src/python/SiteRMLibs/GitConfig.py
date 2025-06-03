@@ -16,6 +16,7 @@ from yaml import safe_load as yload
 from SiteRMLibs.MainUtilities import generateMD5, getHostname
 from SiteRMLibs.CustomExceptions import NoSectionError, NoOptionError
 
+
 class GitConfig:
     """Git based configuration class."""
 
@@ -95,12 +96,16 @@ class GitConfig:
         """Add default site config parameters"""
         for sitename in self.config.get("MAIN", {}).get("general", {}).get("sites", []):
             if sitename not in self.config["MAIN"]:
-                raise Exception(f"Site {sitename} is not available in configuration. Will not start services")
+                raise Exception(
+                    f"Site {sitename} is not available in configuration. Will not start services"
+                )
             self.config["MAIN"][sitename].setdefault("default_params", {})
             for key1, val1 in defaults["default_params"].items():
                 self.config["MAIN"][sitename]["default_params"].setdefault(key1, {})
                 for key2, val2 in val1.items():
-                    self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, val2)
+                    self.config["MAIN"][sitename]["default_params"][key1].setdefault(
+                        key2, val2
+                    )
 
     def presetAgentDefaultConfigs(self):
         """Preset default config parameters for Agent"""
@@ -111,7 +116,11 @@ class GitConfig:
                     "logLevel": "INFO",
                     "privatedir": "/opt/siterm/config/",
                 },
-                "agent": {"norules": False, "rsts_enabled": "ipv4,ipv6", "noqos": False},
+                "agent": {
+                    "norules": False,
+                    "rsts_enabled": "ipv4,ipv6",
+                    "noqos": False,
+                },
                 "qos": {
                     "policy": "default-not-set",
                     "qos_params": "mtu 9000 mpu 9000 quantum 200000 burst 300000 cburst 300000 qdisc sfq balanced",
@@ -200,12 +209,12 @@ class GitConfig:
                     _addToAll(newvlanlist)
                 # Else we set default
                 else:
-                    self.config["MAIN"][key1][key2][portname][
-                        "vlan_range"
-                    ] = self.config["MAIN"][key1]["vlan_range"]
-                    self.config["MAIN"][key1][key2][portname][
-                        "vlan_range_list"
-                    ] = self.config["MAIN"][key1]["vlan_range_list"]
+                    self.config["MAIN"][key1][key2][portname]["vlan_range"] = (
+                        self.config["MAIN"][key1]["vlan_range"]
+                    )
+                    self.config["MAIN"][key1][key2][portname]["vlan_range_list"] = (
+                        self.config["MAIN"][key1]["vlan_range_list"]
+                    )
 
     def generateIPList(self, key1, key2, vals):
         """Split by command and return list"""
@@ -270,19 +279,56 @@ class GitConfig:
                     "debugip": "http://services.ogf.org/nsi/2019/08/descriptions/config-debug-ip",
                     "globalvlan": "http://services.ogf.org/nsi/2019/08/descriptions/global-vlan-exclusion",
                     "multipoint": "http://services.ogf.org/nsi/2018/06/descriptions/l2-mp-es",
-                    "l3bgpmp": "http://services.ogf.org/nsi/2019/08/descriptions/l3-bgp-mp"
+                    "l3bgpmp": "http://services.ogf.org/nsi/2019/08/descriptions/l3-bgp-mp",
                 },
                 "snmp": {
                     "mibs": [
-                        "ifDescr","ifType","ifMtu","ifAdminStatus","ifOperStatus",
-                        "ifHighSpeed","ifAlias","ifHCInOctets","ifHCOutOctets","ifInDiscards",
-                        "ifOutDiscards","ifInErrors","ifOutErrors","ifHCInUcastPkts","ifHCOutUcastPkts",
-                        "ifHCInMulticastPkts","ifHCOutMulticastPkts","ifHCInBroadcastPkts","ifHCOutBroadcastPkts",
-                    ]}}}
-        siteDefaults = {"default_params":
-                            {"starttime":{"seconds": 10,"minutes": 0,"hours": 0,"days": 0,"weeks": 0,"months": 0,"years": 0},
-                             "endtime":{"seconds": 0,"minutes": 0,"hours": 0,"days": 0,"weeks": 0,"months": 3,"years": 0},
-                             "bw":{"type":"bestEffort","unit":"mbps","minCapacity":"100"}}}
+                        "ifDescr",
+                        "ifType",
+                        "ifMtu",
+                        "ifAdminStatus",
+                        "ifOperStatus",
+                        "ifHighSpeed",
+                        "ifAlias",
+                        "ifHCInOctets",
+                        "ifHCOutOctets",
+                        "ifInDiscards",
+                        "ifOutDiscards",
+                        "ifInErrors",
+                        "ifOutErrors",
+                        "ifHCInUcastPkts",
+                        "ifHCOutUcastPkts",
+                        "ifHCInMulticastPkts",
+                        "ifHCOutMulticastPkts",
+                        "ifHCInBroadcastPkts",
+                        "ifHCOutBroadcastPkts",
+                    ]
+                },
+            }
+        }
+        siteDefaults = {
+            "default_params": {
+                "starttime": {
+                    "seconds": 10,
+                    "minutes": 0,
+                    "hours": 0,
+                    "days": 0,
+                    "weeks": 0,
+                    "months": 0,
+                    "years": 0,
+                },
+                "endtime": {
+                    "seconds": 0,
+                    "minutes": 0,
+                    "hours": 0,
+                    "days": 0,
+                    "weeks": 0,
+                    "months": 3,
+                    "years": 0,
+                },
+                "bw": {"type": "bestEffort", "unit": "mbps", "minCapacity": "100"},
+            }
+        }
         self.__addDefaults(defConfig)
         self.__addSiteDefaults(siteDefaults)
         # Generate list vals - not in a str format. Needed in delta checks
@@ -325,7 +371,9 @@ class GitConfig:
             if subkey not in self.config["MAIN"][key]:
                 if default:
                     return default
-                raise NoOptionError(f"{subkey} is not available under {key} section in configuration.")
+                raise NoOptionError(
+                    f"{subkey} is not available under {key} section in configuration."
+                )
             return self.config["MAIN"].get(key, {}).get(subkey, {})
         except AttributeError as ex:
             if default:
@@ -361,6 +409,7 @@ class GitConfig:
         if subkey in self.config["MAIN"][key]:
             return True
         return False
+
 
 def getGitConfig():
     """Wrapper before git config class. Returns dictionary."""

@@ -15,9 +15,12 @@ from SiteRMLibs.GitConfig import getGitConfig
 
 class StorageInfo:
     """Storage Info parser"""
+
     def __init__(self, config=None, logger=None):
         self.config = config if config else getGitConfig()
-        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
+        self.logger = (
+            logger if logger else getLoggingObject(config=self.config, service="Agent")
+        )
 
     def get(self, **_kwargs):
         """Get storage mount points information."""

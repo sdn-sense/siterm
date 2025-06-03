@@ -14,8 +14,9 @@ class ArpInfo:
 
     def __init__(self, config=None, logger=None):
         self.config = config if config else getGitConfig()
-        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
-
+        self.logger = (
+            logger if logger else getLoggingObject(config=self.config, service="Agent")
+        )
 
     def get(self, **_kwargs):
         """Get lscpu information"""
