@@ -77,8 +77,8 @@ class ServiceCalls(contentDB):
         out = {
             "hostname": inputDict["hostname"],
             "servicename": inputDict["servicename"],
-            "insertdate": inputDict["insertTime"],
-            "updatedate": inputDict["updateTime"],
+            "insertdate": inputDict.get("insertTime", getUTCnow()),
+            "updatedate": inputDict.get("updateTime", getUTCnow()),
             "serviceinfo": fname,
         }
         host = self.dbI.get("services", limit=1, search=self.__generateSearch(inputDict))
