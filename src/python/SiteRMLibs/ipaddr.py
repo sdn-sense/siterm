@@ -60,9 +60,7 @@ def getInterfaceSpeed(interface):
         speed = externalCommand(f"cat /sys/class/net/{interface}/speed")
         return int(speed[0].strip())
     except Exception as ex:
-        print(
-            f"Received an error trying to get interface speed. Error: {ex}. Return default 10gbps"
-        )
+        print(f"Received an error trying to get interface speed. Error: {ex}. Return default 10gbps")
         return 10000
 
 
@@ -148,7 +146,7 @@ def getsubnet(ipInput, strict=False):
 def checkoverlap(net1, net2):
     """Check if two networks overlap. Return True/False."""
     try:
-        return ip_network(net1).overlaps(ip_network(net2))
+        return ip_network(net1, strict=False).overlaps(ip_network(net2, strict=False))
     except ValueError:
         return False
 

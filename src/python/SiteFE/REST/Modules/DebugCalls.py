@@ -23,6 +23,7 @@ import os
 
 from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.MainUtilities import getUTCnow, jsondumps, read_input_data
+from SiteRMLibs.MainUtilities import generateRandomUUID
 from SiteRMLibs.ipaddr import ipVersion
 
 
@@ -45,8 +46,8 @@ class CallValidator:
         self.defparams = {
             "iperf-server": {"onetime": True},
             "iperf-client": {"onetime": True},
-            "fdt-client": {},
-            "fdt-server": {},
+            "fdt-client": {"onetime": True},
+            "fdt-server": {"onetime": True},
             "rapid-ping": {},
             "rapid-pingnet": {"onetime": True},
             "arp-table": {"onetime": True},
@@ -64,6 +65,9 @@ class CallValidator:
         # If runtime not added, we add current timestamp + 10minutes
         if "runtime" not in inputDict:
             inputDict["runtime"] = getUTCnow() + 600
+        # If hostname not added, we add undefined hostname. To be identified by backend.
+        if "hostname" not in inputDict:
+            inputDict["hostname"] = "undefined"
         return inputDict
 
     @staticmethod
@@ -80,6 +84,12 @@ class CallValidator:
             raise BadRequestError(
                 f"Action {inputDict['type']} not supported. Supported actions: {self.functions.keys()}"
             )
+        if inputDict["hostname"] == "undefined":
+            if not inputDict.get("dynamicfrom", None):
+                raise BadRequestError(
+                    "Hostname is undefined,and dynamicfrom is not defined either. "
+                    "Please provide either hostname or dynamicfrom."
+                )
         self.functions[inputDict["type"]](inputDict)
         self.validateRuntime(inputDict)
         return inputDict
@@ -92,26 +102,16 @@ class CallValidator:
         """Validate traceroute debug request."""
         self.__validateKeys(inputDict, ["ip"])
         if ipVersion(inputDict["ip"]) == -1:
-            raise BadRequestError(
-                f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6"
-            )
+            raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")
         # One of these must be present:
         optional = False
         for key in ["from_interface", "from_ip"]:
             if key in inputDict:
                 optional = True
-            if (
-                key == "from_ip"
-                and inputDict["from_ip"]
-                and ipVersion(inputDict["from_ip"]) == -1
-            ):
-                raise BadRequestError(
-                    f"Soure IP {inputDict['from_ip']} does not appear to be an IPv4 or IPv6"
-                )
+            if key == "from_ip" and inputDict["from_ip"] and ipVersion(inputDict["from_ip"]) == -1:
+                raise BadRequestError(f"Soure IP {inputDict['from_ip']} does not appear to be an IPv4 or IPv6")
         if not optional:
-            raise BadRequestError(
-                "One of these keys must be present: from_interface, from_ip"
-            )
+            raise BadRequestError("One of these keys must be present: from_interface, from_ip")
 
     def __validateArp(self, inputDict):
         """Validate aprdump debug request."""
@@ -122,68 +122,46 @@ class CallValidator:
         self.__validateKeys(inputDict, ["interface", "ip", "time", "port", "runtime"])
         # Do not allow time to be more than 5mins
         if int(inputDict["time"]) > 600:
-            raise BadRequestError(
-                "Requested Runtime for debug request is more than 10mins."
-            )
+            raise BadRequestError("Requested Runtime for debug request is more than 10mins.")
         if ipVersion(inputDict["ip"]) == -1:
-            raise BadRequestError(
-                f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6"
-            )
+            raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")
 
     def __validateIperfserver(self, inputDict):
         """Validate iperf server debug request."""
         self.__validateKeys(inputDict, ["port", "ip", "time", "runtime"])
         if ipVersion(inputDict["ip"]) == -1:
-            raise BadRequestError(
-                f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6"
-            )
+            raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")
 
     def __validateFdtClient(self, inputDict):
         """Validate fdtclient debug request."""
         self.__validateKeys(inputDict, ["ip", "runtime"])
         if ipVersion(inputDict["ip"]) == -1:
-            raise BadRequestError(
-                f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6"
-            )
+            raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")
         if int(inputDict["runtime"]) > 600:
-            raise BadRequestError(
-                "Requested Runtime for debug request is more than 10mins."
-            )
+            raise BadRequestError("Requested Runtime for debug request is more than 10mins.")
 
     @staticmethod
     def __validateFdtServer(inputDict):
         """Validate fdt server debug request."""
         if int(inputDict["runtime"]) > 600:
-            raise BadRequestError(
-                "Requested Runtime for debug request is more than 10mins."
-            )
+            raise BadRequestError("Requested Runtime for debug request is more than 10mins.")
 
     def __validateRapidpingnet(self, inputDict):
         """Validate rapid ping debug request for network device"""
         self.__validateKeys(inputDict, ["ip", "count", "timeout"])
         if int(inputDict["count"]) > 100:
-            raise BadRequestError(
-                "Count request is more than 100. Maximum allowed is 100"
-            )
+            raise BadRequestError("Count request is more than 100. Maximum allowed is 100")
         if int(inputDict["timeout"]) > 30:
-            raise BadRequestError(
-                "Timeout request is more than 30 seconds. Maximum allowed is 30"
-            )
+            raise BadRequestError("Timeout request is more than 30 seconds. Maximum allowed is 30")
         if ipVersion(inputDict["ip"]) == -1:
-            raise BadRequestError(
-                f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6"
-            )
+            raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")
 
     def __validateRapidping(self, inputDict):
         """Validate rapid ping debug request."""
-        self.__validateKeys(
-            inputDict, ["ip", "time", "packetsize", "interface", "runtime"]
-        )
+        self.__validateKeys(inputDict, ["ip", "time", "packetsize", "interface", "runtime"])
         # time not allow more than 60 minutes:
         if int(inputDict["time"]) > 3600:
-            raise BadRequestError(
-                "Requested Runtime for rapidping request is more than 5mins."
-            )
+            raise BadRequestError("Requested Runtime for rapidping request is more than 5mins.")
         # interval is optional - not allow lower than 0.2
         if "interval" in inputDict and float(inputDict["interval"]) < 0.2:
             raise BadRequestError(
@@ -194,9 +172,7 @@ class CallValidator:
                 "Requested Packet Size is bigger than 1500. That would be considered DDOS and is not allowed."
             )
         if ipVersion(inputDict["ip"]) == -1:
-            raise BadRequestError(
-                f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6"
-            )
+            raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")
 
     def __validateTcpdump(self, inputDict):
         """Validate tcpdump debug request."""
@@ -219,13 +195,6 @@ class DebugCalls:
         self.__defineRoutes()
         self.__urlParams()
         self.validator = CallValidator(self.config)
-        self.debugdirs = {}
-        for sitename in self.sites:
-            if sitename != "MAIN":
-                self.debugdirs.setdefault(sitename, "")
-                self.debugdirs[sitename] = os.path.join(
-                    self.config.get(sitename, "privatedir"), "DebugServices"
-                )
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -235,101 +204,31 @@ class DebugCalls:
             "submitdebug": {"allowedMethods": ["PUT", "POST"]},
             "updatedebug": {"allowedMethods": ["PUT", "POST"]},
             "deletedebug": {"allowedMethods": ["DELETE"]},
-            "adddebugservice": {"allowedMethods": ["PUT"]},
         }
         self.urlParams.update(urlParams)
 
     def __defineRoutes(self):
         """Define Routes for this class"""
-        self.routeMap.connect(
-            "getdebug", "/json/frontend/getdebug/:debugvar", action="getdebug"
-        )
+        self.routeMap.connect("getdebug", "/json/frontend/getdebug/:debugvar", action="getdebug")
         self.routeMap.connect(
             "getalldebughostname",
             "/json/frontend/getalldebughostname/:hostname/:state",
             action="getalldebughostname",
         )
-        self.routeMap.connect(
-            "submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug"
-        )
-        self.routeMap.connect(
-            "updatedebug", "/json/frontend/updatedebug/:debugvar", action="updatedebug"
-        )
-        self.routeMap.connect(
-            "deletedebug", "/json/frontend/deletedebug/:debugvar", action="deletedebug"
-        )
-        self.routeMap.connect(
-            "adddebugservice",
-            "/json/frontend/adddebugservice",
-            action="adddebugservice",
-        )
-
-    def adddebugservice(self, environ, **kwargs):
-        """Adding new debug service to DB."""
-        inputDict = read_input_data(environ)
-        if "hostname" not in inputDict:
-            raise BadRequestError("Key 'hostname' not specified in debug request.")
-        host = self.dbI.get(
-            "debugworkers", limit=1, search=[["hostname", inputDict["hostname"]]]
-        )
-        if not host:
-            fname = os.path.join(
-                self.debugdirs[kwargs["sitename"]],
-                inputDict["hostname"],
-                "hostinfo.json",
-            )
-            out = {
-                "hostname": inputDict["hostname"],
-                "insertdate": inputDict["insertTime"],
-                "updatedate": inputDict["updateTime"],
-                "hostinfo": fname,
-            }
-            self.dumpFileContentAsJson(fname, inputDict)
-            self.dbI.insert("hosts", [out])
-        else:
-            # Update existing host information
-            out = {
-                "hostname": inputDict["hostname"],
-                "updatedate": getUTCnow(),
-                "hostinfo": os.path.join(
-                    self.debugdirs[kwargs["sitename"]],
-                    inputDict["hostname"],
-                    "hostinfo.json",
-                ),
-            }
-            self.dumpFileContentAsJson(out["hostinfo"], inputDict)
-            updOut = self.dbI.update("debugworkers", [out])
-            if not updOut[0]:
-                raise BadRequestError(
-                    f"Failed to update debug service for {inputDict['hostname']}"
-                )
-        self.responseHeaders(environ, **kwargs)
-        return {"Status": "OK"}
+        self.routeMap.connect("submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug")
+        self.routeMap.connect("updatedebug", "/json/frontend/updatedebug/:debugvar", action="updatedebug")
+        self.routeMap.connect("deletedebug", "/json/frontend/deletedebug/:debugvar", action="deletedebug")
 
     def _getdebuginfo(self, _environ, **kwargs):
         """Get Debug action information."""
         search = [["id", kwargs["debugvar"]]]
-        out = self.dbI.get(
-            "debugrequests", orderby=["insertdate", "DESC"], search=search, limit=1
-        )
+        out = self.dbI.get("debugrequests", orderby=["insertdate", "DESC"], search=search, limit=1)
         if out is None:
-            raise BadRequestError(
-                f"Debug request with ID {kwargs['debugvar']} not found."
-            )
+            raise BadRequestError(f"Debug request with ID {kwargs['debugvar']} not found.")
         out = out[0]
-        debugdir = os.path.join(
-            self.config.get(kwargs["sitename"], "privatedir"), "DebugRequests"
-        )
-        # Get Request JSON
-        requestfname = os.path.join(
-            debugdir, out["hostname"], kwargs["debugvar"], "request.json"
-        )
-        out["requestdict"] = self.getFileContentAsJson(requestfname)
+        out["requestdict"] = self.getFileContentAsJson(out["debuginfo"])
         # Get Output JSON
-        outputfname = os.path.join(
-            debugdir, out["hostname"], kwargs["debugvar"], "output.json"
-        )
-        out["output"] = self.getFileContentAsJson(outputfname)
+        out["output"] = self.getFileContentAsJson(out["outputinfo"])
         return out
 
     def getdebug(self, environ, **kwargs):
@@ -337,17 +236,13 @@ class DebugCalls:
         self.responseHeaders(environ, **kwargs)
         if kwargs["debugvar"] != "ALL":
             return self._getdebuginfo(environ, **kwargs)
-        return self.dbI.get(
-            "debugrequests", orderby=["insertdate", "DESC"], search=None, limit=50
-        )
+        return self.dbI.get("debugrequests", orderby=["insertdate", "DESC"], search=None, limit=50)
 
     def getalldebughostname(self, environ, **kwargs):
         """Get all Debug Requests for hostname"""
         search = [["hostname", kwargs["hostname"]], ["state", kwargs["state"]]]
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get(
-            "debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50
-        )
+        return self.dbI.get("debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50)
 
     def submitdebug(self, environ, **kwargs):
         """Submit new debug action request."""
@@ -355,26 +250,23 @@ class DebugCalls:
         jsondump = jsondumps(inputDict)
         for symbol in [";", "&"]:
             if symbol in jsondump:
-                raise BadRequestError(
-                    "Unsupported symbol in input request. Contact Support"
-                )
+                raise BadRequestError("Unsupported symbol in input request. Contact Support")
         inputDict = self.validator.validate(inputDict)
-        # This submit a new request to the database, and then based on the ID/Hostanem
-        # write request to the file.
+        debugdir = os.path.join(self.config.get(kwargs["sitename"], "privatedir"), "DebugRequests")
+        randomuuid = generateRandomUUID()
+        requestfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "request.json")
+        outputfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "output.json")
+        self.dumpFileContentAsJson(requestfname, inputDict)
         out = {
             "hostname": inputDict.get("hostname", "undefined"),
             "state": "new",
             "insertdate": getUTCnow(),
             "updatedate": getUTCnow(),
+            "debuginfo": requestfname,
+            "outputinfo": outputfname,
         }
         insOut = self.dbI.insert("debugrequests", [out])
-        debugdir = os.path.join(
-            self.config.get(kwargs["sitename"], "privatedir"), "DebugRequests"
-        )
-        requestfname = os.path.join(
-            debugdir, inputDict["hostname"], str(insOut[2]), "request.json"
-        )
-        self.dumpFileContentAsJson(requestfname, inputDict)
+
         self.responseHeaders(environ, **kwargs)
         return {"Status": insOut[0], "ID": insOut[2]}
 
@@ -383,17 +275,9 @@ class DebugCalls:
         inputDict = read_input_data(environ)
         dbentry = self._getdebuginfo(environ, **kwargs)
         if not dbentry:
-            raise BadRequestError(
-                f"Debug request with ID {kwargs['debugvar']} not found."
-            )
+            raise BadRequestError(f"Debug request with ID {kwargs['debugvar']} not found.")
         # ==================================
-        debugdir = os.path.join(
-            self.config.get(kwargs["sitename"], "privatedir"), "DebugRequests"
-        )
-        requestfname = os.path.join(
-            debugdir, dbentry["hostname"], kwargs["debugvar"], "output.json"
-        )
-        self.dumpFileContentAsJson(requestfname, inputDict.get("output", {}))
+        self.dumpFileContentAsJson(dbentry["outputinfo"], inputDict.get("output", {}))
 
         # Update the state in database.
         out = {
@@ -407,11 +291,14 @@ class DebugCalls:
 
     def deletedebug(self, environ, **kwargs):
         """Delete debug action information."""
-        if not self._getdebuginfo(environ, **kwargs):
-            raise BadRequestError(
-                f"Debug request with ID {kwargs['debugvar']} not found."
-            )
+        out = self._getdebuginfo(environ, **kwargs)
         # ==================================
         updOut = self.dbI.delete("debugrequests", [["id", kwargs["debugvar"]]])
+        # Delete files if they exists
+        if os.path.isfile.exists(out["debuginfo"]):
+            os.remove(out["debuginfo"])
+        if os.path.isfile.exists(out["outputinfo"]):
+            os.remove(out["outputinfo"])
+        # ==================================
         self.responseHeaders(environ, **kwargs)
         return {"Status": updOut[0], "ID": updOut[2]}

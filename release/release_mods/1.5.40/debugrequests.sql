@@ -1,0 +1,3 @@
+CREATE TABLE debugrequests_old1540 AS SELECT * FROM debugrequests;
+ALTER TABLE debugrequests ADD COLUMN debuginfo VARCHAR(4096) NOT NULL DEFAULT '', ADD COLUMN outputinfo VARCHAR(4096) NOT NULL DEFAULT '';
+
