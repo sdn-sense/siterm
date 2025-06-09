@@ -31,11 +31,11 @@ class ServiceCalls(contentDB):
     def __init__(self):
         self.__defineRoutes()
         self.__urlParams()
-        self.hostdirs = {}
+        self.servicedirs = {}
         for sitename in self.sites:
             if sitename != "MAIN":
-                self.hostdirs.setdefault(sitename, "")
-                self.hostdirs[sitename] = os.path.join(self.config.get(sitename, "privatedir"), "ServiceData")
+                self.servicedirs.setdefault(sitename, "")
+                self.servicedirs[sitename] = os.path.join(self.config.get(sitename, "privatedir"), "ServiceData")
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -73,7 +73,7 @@ class ServiceCalls(contentDB):
         """Adding new service to DB."""
         status = "Undefined"
         inputDict = read_input_data(environ)
-        fname = os.path.join(self.hostdirs[kwargs["sitename"]], inputDict["hostname"], "serviceinfo.json")
+        fname = os.path.join(self.servicedirs[kwargs["sitename"]], inputDict["hostname"], "serviceinfo.json")
         out = {
             "hostname": inputDict["hostname"],
             "servicename": inputDict["servicename"],

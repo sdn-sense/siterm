@@ -90,7 +90,6 @@ class Debugger(DebugService):
             excMsg = " Could not publish to SiteFE Frontend."
             excMsg += f"Update to FE: Error: {outVals[2]} HTTP Code: {outVals[1]}"
             self.logger.error(excMsg)
-        if excMsg:
             raise PluginException(excMsg)
 
     def getData(self, url):
