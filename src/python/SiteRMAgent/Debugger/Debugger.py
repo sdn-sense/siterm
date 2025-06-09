@@ -84,7 +84,7 @@ class Debugger(DebugService):
         out["serviceinfo"] = getAllIps()
         self.logger.debug(f"Service report: {out}")
         self.logger.info("Will try to publish information to SiteFE")
-        outVals = publishToSiteFE(out, self.fullUrl, "/sitefe/json/frontend/updateservice")
+        outVals = publishToSiteFE(out, self.fullURL, "/sitefe/json/frontend/updateservice")
         self.logger.info("Update Service result %s", outVals)
         if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
             excMsg = " Could not publish to SiteFE Frontend."
