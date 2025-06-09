@@ -173,10 +173,14 @@ create_dbversion = """CREATE TABLE IF NOT EXISTS dbversion(
                                 version text NOT NULL,
                                 primary key(id))"""
 
-insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s, %(content)s)"
+insert_models = (
+    "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s, %(content)s)"
+)
 insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, modadd)
                    VALUES(%(uid)s, %(insertdate)s, %(updatedate)s, %(state)s, %(deltat)s, %(content)s, %(modelid)s, %(modadd)s)"""
-insert_delta_connections = """INSERT INTO delta_connections(deltaid, connectionid, state) VALUES(%(deltaid)s, %(connectionid)s, %(state)s)"""
+insert_delta_connections = (
+    """INSERT INTO delta_connections(deltaid, connectionid, state) VALUES(%(deltaid)s, %(connectionid)s, %(state)s)"""
+)
 insert_states = "INSERT INTO states(deltaid, state, insertdate) VALUES(%(deltaid)s, %(state)s, %(insertdate)s)"
 insert_hoststates = "INSERT INTO hoststates(deltaid, state, insertdate, updatedate, hostname) VALUES(%(deltaid)s, %(state)s, %(insertdate)s, %(updatedate)s, %(hostname)s)"
 insert_hoststateshistory = "INSERT INTO hoststateshistory(deltaid, state, insertdate, hostname) VALUES(%(deltaid)s, %(state)s, %(insertdate)s, %(hostname)s)"
@@ -185,7 +189,9 @@ insert_hosts = "INSERT INTO hosts(ip, hostname, insertdate, updatedate, hostinfo
 insert_services = "INSERT INTO services(hostname, servicename, insertdate, updatedate, serviceinfo) VALUES (%(hostname)s, %(servicename)s, %(insertdate)s, %(updatedate)s, %(serviceinfo)s)"
 insert_switch = "INSERT INTO switch(sitename, device, insertdate, updatedate, output, error) VALUES(%(sitename)s, %(device)s, %(insertdate)s, %(updatedate)s, %(output)s, %(error)s)"
 insert_switch_error = "INSERT INTO switch(sitename, device, insertdate, updatedate, output, error) VALUES(%(sitename)s, %(device)s, %(updatedate)s, %(updatedate)s, '{}', %(error)s)"
-insert_activeDeltas = "INSERT INTO activeDeltas(insertdate, updatedate, output) VALUES(%(insertdate)s, %(updatedate)s, %(output)s)"
+insert_activeDeltas = (
+    "INSERT INTO activeDeltas(insertdate, updatedate, output) VALUES(%(insertdate)s, %(updatedate)s, %(output)s)"
+)
 insert_servicestates = "INSERT INTO servicestates(hostname, servicename, servicestate, runtime, version, updatedate, exc) VALUES(%(hostname)s, %(servicename)s, %(servicestate)s, %(runtime)s, %(version)s, %(updatedate)s, %(exc)s)"
 insert_debugworkers = "INSERT INTO debugworkers(hostname, hostinfo, insertdate, updatedate) VALUES(%(hostname)s, %(hostinfo)s, %(insertdate)s, %(updatedate)s)"
 insert_debugrequests = "INSERT INTO debugrequests(hostname, state, debuginfo, outputinfo, insertdate, updatedate) VALUES(%(hostname)s, %(state)s, %(debuginfo)s, %(outputinfo)s, %(insertdate)s, %(updatedate)s)"
@@ -201,54 +207,54 @@ get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
 get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, modadd FROM deltas"
 get_delta_connections = "SELECT id, deltaid, connectionid, state FROM delta_connections"
 get_states = "SELECT id, deltaid, state, insertdate FROM states"
-get_hoststates = (
-    "SELECT id, deltaid, state, insertdate, updatedate, hostname FROM hoststates"
-)
-get_hoststateshistory = (
-    "SELECT id, deltaid, state, insertdate, hostname FROM hoststateshistory"
-)
+get_hoststates = "SELECT id, deltaid, state, insertdate, updatedate, hostname FROM hoststates"
+get_hoststateshistory = "SELECT id, deltaid, state, insertdate, hostname FROM hoststateshistory"
 get_parsed = "SELECT id, deltaid, vals, insertdate FROM parsed"
 get_hosts = "SELECT id, ip, hostname, insertdate, updatedate, hostinfo FROM hosts"
-get_services = (
-    "SELECT id, hostname, servicename, insertdate, updatedate, serviceinfo FROM services"
-)
+get_services = "SELECT id, hostname, servicename, insertdate, updatedate, serviceinfo FROM services"
 get_switch = "SELECT id, sitename, device, insertdate, updatedate, output FROM switch"
 get_activeDeltas = "SELECT id, insertdate, updatedate, output FROM activeDeltas"
-get_servicestates = "SELECT id, hostname, servicename, servicestate, runtime, version, updatedate, exc FROM servicestates"
-get_debugworkers = (
-    "SELECT id, hostname, hostinfo, insertdate, updatedate FROM debugworkers"
+get_servicestates = (
+    "SELECT id, hostname, servicename, servicestate, runtime, version, updatedate, exc FROM servicestates"
 )
-get_debugrequests = (
-    "SELECT id, hostname, state, debuginfo, insertdate, updatedate FROM debugrequests"
-)
+get_debugworkers = "SELECT id, hostname, hostinfo, insertdate, updatedate FROM debugworkers"
+get_debugrequests = "SELECT id, hostname, state, debuginfo, insertdate, updatedate FROM debugrequests"
 get_snmpmon = "SELECT id, hostname, insertdate, updatedate, output FROM snmpmon"
 get_deltatimestates = "SELECT id, insertdate, uuid, uuidtype, hostname, hostport, uuidstate FROM deltatimestates"
-get_serviceaction = (
-    "SELECT id, servicename, hostname, serviceaction, insertdate FROM serviceaction"
-)
+get_serviceaction = "SELECT id, servicename, hostname, serviceaction, insertdate FROM serviceaction"
 get_forceapplyuuid = "SELECT id, uuid FROM forceapplyuuid"
 get_instancestartend = "SELECT id, instanceid, insertdate, starttimestamp, endtimestamp FROM instancestartend"
 get_deltasusertracking = "SELECT id, username, insertdate, deltaid, useraction, otherinfo FROM deltasusertracking"
 get_dbversion = "SELECT id, version FROM dbversion"
 
 update_deltas = "UPDATE deltas SET updatedate = %(updatedate)s, state = %(state)s WHERE uid = %(uid)s"
-update_delta_connections = "UPDATE delta_connections SET state = %(state)s WHERE connectionid = %(connectionid)s AND deltaid = %(deltaid)s"
+update_delta_connections = (
+    "UPDATE delta_connections SET state = %(state)s WHERE connectionid = %(connectionid)s AND deltaid = %(deltaid)s"
+)
 update_deltasmod = "UPDATE deltas SET updatedate = %(updatedate)s, modadd = %(modadd)s WHERE uid = %(uid)s"
 update_hoststates = "UPDATE hoststates SET state = %(state)s, updatedate = %(updatedate)s WHERE id = %(id)s"
 update_hosts = "UPDATE hosts SET ip = %(ip)s, hostname = %(hostname)s, updatedate = %(updatedate)s, hostinfo = %(hostinfo)s WHERE id = %(id)s"
 update_services = "UPDATE services SET hostname = %(hostname)s, servicename = %(servicename)s, updatedate = %(updatedate)s, serviceinfo = %(serviceinfo)s WHERE id = %(id)s"
-update_switch = "UPDATE switch SET sitename = %(sitename)s, updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
-update_switch_error = "UPDATE switch SET sitename = %(sitename)s, updatedate = %(updatedate)s, error = %(error)s WHERE id = %(id)s"
+update_switch = (
+    "UPDATE switch SET sitename = %(sitename)s, updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
+)
+update_switch_error = (
+    "UPDATE switch SET sitename = %(sitename)s, updatedate = %(updatedate)s, error = %(error)s WHERE id = %(id)s"
+)
 update_activeDeltas = "UPDATE activeDeltas SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s"
 update_servicestates = "UPDATE servicestates SET servicestate = %(servicestate)s, updatedate = %(updatedate)s, runtime = %(runtime)s, version = %(version)s, exc = %(exc)s WHERE hostname = %(hostname)s AND servicename = %(servicename)s"
-update_debugworkers = "UPDATE debugworkers SET updatedate = %(updatedate)s, hostinfo = %(hostinfo)s, WHERE hostname = %(hostname)s"
-update_debugrequests = "UPDATE debugrequests SET state = %(state)s, updatedate = %(updatedate)s WHERE id = %(id)s"
-update_debugrequestsworker = "UPDATE debugrequests SET state = %(state)s, hostname = %(hostname)s, updatedate = %(updatedate)s WHERE id = %(id)s"
-update_snmpmon = "UPDATE snmpmon SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s AND hostname = %(hostname)s"
-# update_deltatimestates - Update call is not needed for update delta timestates. It always write a new entry and update not needed.
-update_serviceaction = (
-    "UPDATE serviceaction SET serviceaction = %(serviceaction)s WHERE id = %(id)s"
+update_debugworkers = (
+    "UPDATE debugworkers SET updatedate = %(updatedate)s, hostinfo = %(hostinfo)s, WHERE hostname = %(hostname)s"
 )
+update_debugrequests = "UPDATE debugrequests SET state = %(state)s, updatedate = %(updatedate)s WHERE id = %(id)s"
+update_debugrequestsworker = (
+    "UPDATE debugrequests SET state = %(state)s, hostname = %(hostname)s, updatedate = %(updatedate)s WHERE id = %(id)s"
+)
+update_snmpmon = (
+    "UPDATE snmpmon SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s AND hostname = %(hostname)s"
+)
+# update_deltatimestates - Update call is not needed for update delta timestates. It always write a new entry and update not needed.
+update_serviceaction = "UPDATE serviceaction SET serviceaction = %(serviceaction)s WHERE id = %(id)s"
 update_forceapplyuuid = "UPDATE forceapplyuuid SET uuid = %(uuid)s WHERE id = %(id)s"
 # update_instancestartend - Update call is not needed for update instance start end. It always write a new entry and update not needed.
 # update_deltasusertracking - Update call is not needed for update deltas user tracking. It always write a new entry and update not needed.

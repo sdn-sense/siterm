@@ -34,22 +34,23 @@ from SiteRMLibs.CustomExceptions import FailedGetDataFromFE, PluginException
 
 COMPONENT = "Debugger"
 
+
 def getAllIps():
     """Get all visible IPs of this host."""
     result = {}
-    output = subprocess.check_output(['ip', '-o', 'addr'], encoding='utf-8')
-    for line in output.strip().split('\n'):
+    output = subprocess.check_output(["ip", "-o", "addr"], encoding="utf-8")
+    for line in output.strip().split("\n"):
         parts = line.split()
         iface = parts[1]
         family = parts[2]
         ipCidr = parts[3]
 
         # Skip loopback interface and link-local addresses
-        if iface == 'lo':
+        if iface == "lo":
             continue
 
-        if family == 'inet6':
-            ip = ipCidr.split('/')[0]
+        if family == "inet6":
+            ip = ipCidr.split("/")[0]
             if ipaddress.IPv6Address(ip).is_link_local:
                 continue
 
@@ -79,8 +80,8 @@ class Debugger(DebugService):
 
     def registerService(self):
         """Register this service in SiteFE."""
-        out = {'hostname': self.hostname, 'servicename': COMPONENT}
-        out['serviceinfo'] = getAllIps()
+        out = {"hostname": self.hostname, "servicename": COMPONENT}
+        out["serviceinfo"] = getAllIps()
         self.logger.debug(f"Service report: {out}")
         self.logger.info("Will try to publish information to SiteFE")
         outVals = publishToSiteFE(out, self.fullUrl, "/sitefe/json/frontend/updateservice")
@@ -97,9 +98,7 @@ class Debugger(DebugService):
         self.logger.info(f"Query: {self.fullURL}{url}")
         out = getDataFromSiteFE({}, self.fullURL, url)
         if out[2] != "OK":
-            msg = (
-                f"Received a failure getting information from Site Frontend {str(out)}"
-            )
+            msg = f"Received a failure getting information from Site Frontend {str(out)}"
             self.logger.critical(msg)
             raise FailedGetDataFromFE(msg)
         return evaldict(out[0])
@@ -115,15 +114,11 @@ class Debugger(DebugService):
         """Start execution and get new requests from FE"""
         for wtype in ["new", "active"]:
             self.logger.info(f"Get all {wtype} requests")
-            data = self.getData(
-                f"/sitefe/json/frontend/getalldebughostname/{self.hostname}/{wtype}"
-            )
+            data = self.getData(f"/sitefe/json/frontend/getalldebughostname/{self.hostname}/{wtype}")
             for item in data:
                 # Do we need to get full data from FE? E.G. Request info?
                 if not self.backgroundProcessItemExists(item):
-                    self.logger.info(
-                        f"Background process item does not exist. ID: {item['id']}"
-                    )
+                    self.logger.info(f"Background process item does not exist. ID: {item['id']}")
                 try:
                     ditem = self.getData(f"/sitefe/json/frontend/getdebug/{item['id']}")
                     if ditem:

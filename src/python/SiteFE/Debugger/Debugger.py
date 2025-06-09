@@ -44,12 +44,8 @@ class Debugger(DebugService):
         self.switch = Switch(self.config, self.sitename)
         self.switches = {}
         self.diragent = contentDB()
-        self.debugdir = os.path.join(
-            self.config.get(self.sitename, "privatedir"), "DebugRequests"
-        )
-        self.dbI = getVal(
-            getDBConn("DebuggerService", self), **{"sitename": self.sitename}
-        )
+        self.debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
+        self.dbI = getVal(getDBConn("DebuggerService", self), **{"sitename": self.sitename})
         self.logger.info("====== Debugger Start Work. Sitename: %s", self.sitename)
 
     def refreshthread(self):
@@ -60,9 +56,7 @@ class Debugger(DebugService):
     def getData(self, hostname, state):
         """Get data from DB."""
         search = [["hostname", hostname], ["state", state]]
-        return self.dbI.get(
-            "debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50
-        )
+        return self.dbI.get("debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50)
 
     def updateDebugWorker(self, **kwargs):
         "Update hostname/workername for debug request"
@@ -76,12 +70,9 @@ class Debugger(DebugService):
         }
         self.dbI.update("debugrequestsworker", [out])
 
-
     def getFullData(self, hostname, item):
         """Get full data from DB."""
-        debugdir = os.path.join(
-            self.config.get(self.sitename, "privatedir"), "DebugRequests"
-        )
+        debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
         # Get Request JSON
         requestfname = os.path.join(debugdir, hostname, str(item["id"]), "request.json")
         item["requestdict"] = getFileContentAsJson(requestfname)
@@ -98,22 +89,20 @@ class Debugger(DebugService):
                     workers[service["hostname"]] = {
                         "hostname": service["hostname"],
                         "servicename": service["servicename"],
-                        "updatedate": service["updatedate"]
+                        "updatedate": service["updatedate"],
                     }
                     # Load service information from file
                     if service.get("serviceinfo"):
                         if os.path.exists(service["serviceinfo"]):
-                            workers[service["hostname"]]['serviceinfo'] = getFileContentAsJson(service["serviceinfo"])
+                            workers[service["hostname"]]["serviceinfo"] = getFileContentAsJson(service["serviceinfo"])
                         else:
-                            self.logger.warning(
-                                "Service info file does not exist: {service}"
-                            )
+                            self.logger.warning("Service info file does not exist: {service}")
         self.logger.debug("Loaded workers: %s", workers)
         return workers
 
     def _findRangeOverlap(self, item, workers):
         """Find range overlap for the item."""
-        dynamicfrom = item.get('requestdict', {}).get("dynamicfrom", None)
+        dynamicfrom = item.get("requestdict", {}).get("dynamicfrom", None)
         if not dynamicfrom:
             self.logger.warning(f"Input has no dynamicfrom value. Input: {item}")
             return None
@@ -121,7 +110,7 @@ class Debugger(DebugService):
         if iptype == "-1":
             self.logger.warning(f"Unable to identify ipVersion for {input}")
             return None
-        iptype = "inet" if iptype == '4' else "inet6"
+        iptype = "inet" if iptype == "4" else "inet6"
         for workername, workerd in workers.items():
             if iptype not in workerd:
                 self.logger.info(f"Worker {workername} has no {iptype}")
@@ -132,7 +121,6 @@ class Debugger(DebugService):
                     return workername
         return None
 
-
     def identifyWorker(self):
         """Identify worker for a third party service, e.g. hostname not defined"""
         data = self.getData("undefined", "new")
@@ -142,12 +130,12 @@ class Debugger(DebugService):
         for item in data:
             item = self.getFullData("undefined", item)
             # Load request information;
-            item["requestdict"] = getFileContentAsJson(item['debuginfo'])
+            item["requestdict"] = getFileContentAsJson(item["debuginfo"])
             workername = self._findRangeOverlap(item, workers)
             if workername:
-                self.updateDebugWorker(**{'id': item["id"], "state": "new", "hostname": workername})
+                self.updateDebugWorker(**{"id": item["id"], "state": "new", "hostname": workername})
             else:
-                self.updateDebugWorker(**{'id': item["id"], "state": "failed", "hostname": "notfound"})
+                self.updateDebugWorker(**{"id": item["id"], "state": "failed", "hostname": "notfound"})
 
     def startwork(self):
         """Start execution and get new requests from FE"""
@@ -159,9 +147,7 @@ class Debugger(DebugService):
                 data = self.getData(host, wtype)
                 for item in data:
                     if not self.backgroundProcessItemExists(item):
-                        self.logger.info(
-                            f"Background process item does not exist. ID: {item['id']}"
-                        )
+                        self.logger.info(f"Background process item does not exist. ID: {item['id']}")
                         item = self.getFullData(host, item)
                     self.checkBackgroundProcess(item)
 

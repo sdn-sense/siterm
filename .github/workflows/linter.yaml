@@ -36,6 +36,7 @@ jobs:
           VALIDATE_PYTHON_FLAKE8: false
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_PYTHON_ISORT: false
+          VALIDATE_PYTHON_PYINK: false
           VALIDATE_JSCPD: false
           # To report GitHub Actions status checks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

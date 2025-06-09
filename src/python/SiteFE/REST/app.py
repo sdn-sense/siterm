@@ -119,13 +119,9 @@ class Frontend(
     def checkIfMethodAllowed(self, environ, actionName):
         """Check if Method (GET/PUT/POST/HEAD) is allowed"""
         if not self.urlParams.get(actionName, {}).get("allowedMethods", []):
-            print(
-                f"Warning. Undefined behavior. Allowed Methods not defined for {actionName}"
-            )
+            print(f"Warning. Undefined behavior. Allowed Methods not defined for {actionName}")
             return
-        if environ["REQUEST_METHOD"].upper() not in self.urlParams[actionName].get(
-            "allowedMethods", []
-        ):
+        if environ["REQUEST_METHOD"].upper() not in self.urlParams[actionName].get("allowedMethods", []):
             raise MethodNotSupported(
                 f"Method {environ['REQUEST_METHOD'].upper()} not supported. Allowed methods {self.urlParams[actionName].get('allowedMethods', [])}"
             )
@@ -156,9 +152,7 @@ class Frontend(
                 kwargs.update({"headers": getHeaders(environ)})
                 returnDict = getattr(self, routeMatch["action"])(environ, **kwargs)
             if not routeMatch:
-                self.httpresp.ret_501(
-                    "application/json", kwargs["start_response"], None
-                )
+                self.httpresp.ret_501("application/json", kwargs["start_response"], None)
                 exception = f'No such API. {environ.get("APP_APIURL")} call.'
                 returnDict = getCustomOutMsg(errMsg=str(exception), errCode=501)
         except TimeoutError as ex:
@@ -170,9 +164,7 @@ class Frontend(
             self.httpresp.ret_404("application/json", kwargs["start_response"], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=404)
         except (ValueError, IOError, NotFoundError) as ex:
-            exception = (
-                f"Received Exception: {ex}. Full traceback {traceback.print_exc()}"
-            )
+            exception = f"Received Exception: {ex}. Full traceback {traceback.print_exc()}"
             self.httpresp.ret_500("application/json", kwargs["start_response"], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=500)
         except BadRequestError as ex:
@@ -214,16 +206,12 @@ class Frontend(
             environ["USERINFO"] = self.validateOIDCInfo(environ)
         except Exception as ex:
             self.httpresp.ret_401("application/json", start_response, None)
-            return [
-                bytes(jsondumps(getCustomOutMsg(errMsg=str(ex), errCode=401)), "UTF-8")
-            ]
+            return [bytes(jsondumps(getCustomOutMsg(errMsg=str(ex), errCode=401)), "UTF-8")]
         # Sitename must be configured on FE
         urlparts = cleanURL(environ.get("PATH_INFO", ""))
         environ["APP_SITENAME"] = urlparts[0]
         environ["APP_APIURL"] = "/" + "/".join(urlparts[2:])
-        environ["APP_CALLBACK"] = (
-            "https://" + environ.get("HTTP_HOST") + "/" + "/".join(urlparts)
-        )
+        environ["APP_CALLBACK"] = "https://" + environ.get("HTTP_HOST") + "/" + "/".join(urlparts)
         if environ["APP_SITENAME"] not in self.sites:
             self.httpresp.ret_404("application/json", start_response, None)
             return [

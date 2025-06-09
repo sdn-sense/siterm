@@ -35,9 +35,7 @@ class ServiceCalls(contentDB):
         for sitename in self.sites:
             if sitename != "MAIN":
                 self.hostdirs.setdefault(sitename, "")
-                self.hostdirs[sitename] = os.path.join(
-                    self.config.get(sitename, "privatedir"), "ServiceData"
-                )
+                self.hostdirs[sitename] = os.path.join(self.config.get(sitename, "privatedir"), "ServiceData")
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -49,28 +47,18 @@ class ServiceCalls(contentDB):
                 "allowedMethods": ["GET"],
                 "urlParams": [
                     {"key": "hostname", "default": "", "type": str},
-                    {
-                        "key": "servicename",
-                        "default": "",
-                        "type": str
-                    }
-                ]
-            }
+                    {"key": "servicename", "default": "", "type": str},
+                ],
+            },
         }
         self.urlParams.update(urlParams)
 
     def __defineRoutes(self):
         """Define Routes for this class"""
         self.routeMap.connect("addservice", "/json/frontend/addservice", action="addservice")
-        self.routeMap.connect(
-            "updateservice", "/json/frontend/updateservice", action="addservice"
-        )
-        self.routeMap.connect(
-            "deleteservice", "/json/frontend/deleteservice", action="deleteservice"
-        )
-        self.routeMap.connect(
-            "getservice", "/json/frontend/getservice", action="getservice"
-        )
+        self.routeMap.connect("updateservice", "/json/frontend/updateservice", action="addservice")
+        self.routeMap.connect("deleteservice", "/json/frontend/deleteservice", action="deleteservice")
+        self.routeMap.connect("getservice", "/json/frontend/getservice", action="getservice")
 
     def __generateSearch(self, inputDict):
         """Generate search query for service."""
@@ -85,9 +73,7 @@ class ServiceCalls(contentDB):
         """Adding new service to DB."""
         status = "Undefined"
         inputDict = read_input_data(environ)
-        fname = os.path.join(
-            self.hostdirs[kwargs["sitename"]], inputDict["hostname"], "serviceinfo.json"
-        )
+        fname = os.path.join(self.hostdirs[kwargs["sitename"]], inputDict["hostname"], "serviceinfo.json")
         out = {
             "hostname": inputDict["hostname"],
             "servicename": inputDict["servicename"],
@@ -121,7 +107,6 @@ class ServiceCalls(contentDB):
         self.dbI.delete("services", [["id", host[0]["id"]]])
         self.responseHeaders(environ, **kwargs)
         return {"Status": f"DELETED {host[0]['hostname']}"}
-
 
     def getservice(self, environ, **kwargs):
         """Get Service Action in DB for GET method."""
