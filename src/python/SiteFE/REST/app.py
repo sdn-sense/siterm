@@ -29,6 +29,7 @@ from SiteFE.REST.Modules.HostCalls import HostCalls
 from SiteFE.REST.Modules.ModelCalls import ModelCalls
 from SiteFE.REST.Modules.PrometheusCalls import PrometheusCalls
 from SiteFE.REST.Modules.TopoCalls import TopoCalls
+from SiteFE.REST.Modules.ServiceCalls import ServiceCalls
 from SiteRMLibs.CustomExceptions import (
     BadRequestError,
     DeltaNotFound,
@@ -87,6 +88,7 @@ class Frontend(
     FrontendCalls,
     PrometheusCalls,
     HostCalls,
+    ServiceCalls,
     DebugCalls,
     DeltaCalls,
     ModelCalls,
@@ -108,6 +110,7 @@ class Frontend(
         FrontendCalls.__init__(self)
         PrometheusCalls.__init__(self)
         HostCalls.__init__(self)
+        ServiceCalls.__init__(self)
         DebugCalls.__init__(self)
         DeltaCalls.__init__(self)
         ModelCalls.__init__(self)

@@ -633,6 +633,9 @@ def generateHash(inText):
     """Generate unique using uuid."""
     return str(uuid.uuid1(len(inText)))
 
+def generateRandomUUID():
+    """Generate random UUID."""
+    return str(uuid.uuid4())
 
 def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):
     """Create custom return dictionary."""

@@ -23,6 +23,7 @@ import os
 
 from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.MainUtilities import getUTCnow, jsondumps, read_input_data
+from SiteRMLibs.MainUtilities import generateRandomUUID
 from SiteRMLibs.ipaddr import ipVersion
 
 
@@ -45,8 +46,8 @@ class CallValidator:
         self.defparams = {
             "iperf-server": {"onetime": True},
             "iperf-client": {"onetime": True},
-            "fdt-client": {},
-            "fdt-server": {},
+            "fdt-client": {"onetime": True},
+            "fdt-server": {"onetime": True},
             "rapid-ping": {},
             "rapid-pingnet": {"onetime": True},
             "arp-table": {"onetime": True},
@@ -64,6 +65,9 @@ class CallValidator:
         # If runtime not added, we add current timestamp + 10minutes
         if "runtime" not in inputDict:
             inputDict["runtime"] = getUTCnow() + 600
+        # If hostname not added, we add undefined hostname. To be identified by backend.
+        if "hostname" not in inputDict:
+            inputDict["hostname"] = "undefined"
         return inputDict
 
     @staticmethod
@@ -80,6 +84,12 @@ class CallValidator:
             raise BadRequestError(
                 f"Action {inputDict['type']} not supported. Supported actions: {self.functions.keys()}"
             )
+        if inputDict["hostname"] == "undefined":
+            if not inputDict.get("dynamicfrom", None):
+                raise BadRequestError(
+                    "Hostname is undefined,and dynamicfrom is not defined either. "
+                    "Please provide either hostname or dynamicfrom."
+                )
         self.functions[inputDict["type"]](inputDict)
         self.validateRuntime(inputDict)
         return inputDict
@@ -219,13 +229,6 @@ class DebugCalls:
         self.__defineRoutes()
         self.__urlParams()
         self.validator = CallValidator(self.config)
-        self.debugdirs = {}
-        for sitename in self.sites:
-            if sitename != "MAIN":
-                self.debugdirs.setdefault(sitename, "")
-                self.debugdirs[sitename] = os.path.join(
-                    self.config.get(sitename, "privatedir"), "DebugServices"
-                )
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -234,8 +237,7 @@ class DebugCalls:
             "getalldebughostname": {"allowedMethods": ["GET"]},
             "submitdebug": {"allowedMethods": ["PUT", "POST"]},
             "updatedebug": {"allowedMethods": ["PUT", "POST"]},
-            "deletedebug": {"allowedMethods": ["DELETE"]},
-            "adddebugservice": {"allowedMethods": ["PUT"]},
+            "deletedebug": {"allowedMethods": ["DELETE"]}
         }
         self.urlParams.update(urlParams)
 
@@ -258,53 +260,6 @@ class DebugCalls:
         self.routeMap.connect(
             "deletedebug", "/json/frontend/deletedebug/:debugvar", action="deletedebug"
         )
-        self.routeMap.connect(
-            "adddebugservice",
-            "/json/frontend/adddebugservice",
-            action="adddebugservice",
-        )
-
-    def adddebugservice(self, environ, **kwargs):
-        """Adding new debug service to DB."""
-        inputDict = read_input_data(environ)
-        if "hostname" not in inputDict:
-            raise BadRequestError("Key 'hostname' not specified in debug request.")
-        host = self.dbI.get(
-            "debugworkers", limit=1, search=[["hostname", inputDict["hostname"]]]
-        )
-        if not host:
-            fname = os.path.join(
-                self.debugdirs[kwargs["sitename"]],
-                inputDict["hostname"],
-                "hostinfo.json",
-            )
-            out = {
-                "hostname": inputDict["hostname"],
-                "insertdate": inputDict["insertTime"],
-                "updatedate": inputDict["updateTime"],
-                "hostinfo": fname,
-            }
-            self.dumpFileContentAsJson(fname, inputDict)
-            self.dbI.insert("hosts", [out])
-        else:
-            # Update existing host information
-            out = {
-                "hostname": inputDict["hostname"],
-                "updatedate": getUTCnow(),
-                "hostinfo": os.path.join(
-                    self.debugdirs[kwargs["sitename"]],
-                    inputDict["hostname"],
-                    "hostinfo.json",
-                ),
-            }
-            self.dumpFileContentAsJson(out["hostinfo"], inputDict)
-            updOut = self.dbI.update("debugworkers", [out])
-            if not updOut[0]:
-                raise BadRequestError(
-                    f"Failed to update debug service for {inputDict['hostname']}"
-                )
-        self.responseHeaders(environ, **kwargs)
-        return {"Status": "OK"}
 
     def _getdebuginfo(self, _environ, **kwargs):
         """Get Debug action information."""
@@ -317,19 +272,9 @@ class DebugCalls:
                 f"Debug request with ID {kwargs['debugvar']} not found."
             )
         out = out[0]
-        debugdir = os.path.join(
-            self.config.get(kwargs["sitename"], "privatedir"), "DebugRequests"
-        )
-        # Get Request JSON
-        requestfname = os.path.join(
-            debugdir, out["hostname"], kwargs["debugvar"], "request.json"
-        )
-        out["requestdict"] = self.getFileContentAsJson(requestfname)
+        out["requestdict"] = self.getFileContentAsJson(out["debuginfo"])
         # Get Output JSON
-        outputfname = os.path.join(
-            debugdir, out["hostname"], kwargs["debugvar"], "output.json"
-        )
-        out["output"] = self.getFileContentAsJson(outputfname)
+        out["output"] = self.getFileContentAsJson(out["outputinfo"])
         return out
 
     def getdebug(self, environ, **kwargs):
@@ -359,22 +304,27 @@ class DebugCalls:
                     "Unsupported symbol in input request. Contact Support"
                 )
         inputDict = self.validator.validate(inputDict)
-        # This submit a new request to the database, and then based on the ID/Hostanem
-        # write request to the file.
+        debugdir = os.path.join(
+            self.config.get(kwargs["sitename"], "privatedir"), "DebugRequests"
+        )
+        randomuuid = generateRandomUUID()
+        requestfname = os.path.join(
+            debugdir, inputDict["hostname"], randomuuid, "request.json"
+        )
+        outputfname = os.path.join(
+            debugdir, inputDict["hostname"], randomuuid, "output.json"
+        )
+        self.dumpFileContentAsJson(requestfname, inputDict)
         out = {
             "hostname": inputDict.get("hostname", "undefined"),
             "state": "new",
             "insertdate": getUTCnow(),
             "updatedate": getUTCnow(),
+            "debuginfo": requestfname,
+            "outputinfo": outputfname,
         }
         insOut = self.dbI.insert("debugrequests", [out])
-        debugdir = os.path.join(
-            self.config.get(kwargs["sitename"], "privatedir"), "DebugRequests"
-        )
-        requestfname = os.path.join(
-            debugdir, inputDict["hostname"], str(insOut[2]), "request.json"
-        )
-        self.dumpFileContentAsJson(requestfname, inputDict)
+
         self.responseHeaders(environ, **kwargs)
         return {"Status": insOut[0], "ID": insOut[2]}
 
@@ -387,13 +337,7 @@ class DebugCalls:
                 f"Debug request with ID {kwargs['debugvar']} not found."
             )
         # ==================================
-        debugdir = os.path.join(
-            self.config.get(kwargs["sitename"], "privatedir"), "DebugRequests"
-        )
-        requestfname = os.path.join(
-            debugdir, dbentry["hostname"], kwargs["debugvar"], "output.json"
-        )
-        self.dumpFileContentAsJson(requestfname, inputDict.get("output", {}))
+        self.dumpFileContentAsJson(dbentry['outputinfo'], inputDict.get("output", {}))
 
         # Update the state in database.
         out = {
@@ -407,11 +351,14 @@ class DebugCalls:
 
     def deletedebug(self, environ, **kwargs):
         """Delete debug action information."""
-        if not self._getdebuginfo(environ, **kwargs):
-            raise BadRequestError(
-                f"Debug request with ID {kwargs['debugvar']} not found."
-            )
+        out = self._getdebuginfo(environ, **kwargs)
         # ==================================
         updOut = self.dbI.delete("debugrequests", [["id", kwargs["debugvar"]]])
+        # Delete files if they exists
+        if os.path.isfile.exists(out["debuginfo"]):
+            os.remove(out["debuginfo"])
+        if os.path.isfile.exists(out["outputinfo"]):
+            os.remove(out["outputinfo"])
+        # ==================================
         self.responseHeaders(environ, **kwargs)
         return {"Status": updOut[0], "ID": updOut[2]}

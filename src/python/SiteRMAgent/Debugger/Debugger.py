@@ -19,16 +19,43 @@ Date                    : 2021/03/12
 """
 import os
 import sys
+import socket
+import subprocess
+import ipaddress
 import argparse
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getDataFromSiteFE, evaldict
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import publishToSiteFE
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
+from SiteRMLibs.CustomExceptions import FailedGetDataFromFE, PluginException
 
 COMPONENT = "Debugger"
+
+def getAllIps():
+    """Get all visible IPs of this host."""
+    result = {}
+    output = subprocess.check_output(['ip', '-o', 'addr'], encoding='utf-8')
+    for line in output.strip().split('\n'):
+        parts = line.split()
+        iface = parts[1]
+        family = parts[2]
+        ipCidr = parts[3]
+
+        # Skip loopback interface and link-local addresses
+        if iface == 'lo':
+            continue
+
+        if family == 'inet6':
+            ip = ipCidr.split('/')[0]
+            if ipaddress.IPv6Address(ip).is_link_local:
+                continue
+
+        result.setdefault(family, {})
+        result[family].setdefault(ipCidr, iface)
+    return result
 
 
 class Debugger(DebugService):
@@ -40,7 +67,7 @@ class Debugger(DebugService):
         self.logger = getLoggingObject(config=self.config, service="Debugger")
         self.fullURL = getFullUrl(self.config, sitename)
         self.sitename = sitename
-        self.hostname = self.config.get("agent", "hostname")
+        self.hostname = socket.getfqdn()
         self.diragent = contentDB()
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
 
@@ -48,7 +75,22 @@ class Debugger(DebugService):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self.fullURL = getFullUrl(self.config, self.sitename)
-        self.hostname = self.config.get("agent", "hostname")
+        self.hostname = socket.getfqdn()
+
+    def registerService(self):
+        """Register this service in SiteFE."""
+        out = {'hostname': self.hostname, 'servicename': COMPONENT}
+        out['serviceinfo'] = getAllIps()
+        self.logger.debug(f"Service report: {out}")
+        self.logger.info("Will try to publish information to SiteFE")
+        outVals = publishToSiteFE(out, self.fullUrl, "/sitefe/json/frontend/updateservice")
+        self.logger.info("Update Service result %s", outVals)
+        if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
+            excMsg = " Could not publish to SiteFE Frontend."
+            excMsg += f"Update to FE: Error: {outVals[2]} HTTP Code: {outVals[1]}"
+            self.logger.error(excMsg)
+        if excMsg:
+            raise PluginException(excMsg)
 
     def getData(self, url):
         """Get data from FE."""
@@ -63,6 +105,13 @@ class Debugger(DebugService):
         return evaldict(out[0])
 
     def startwork(self):
+        """Main start work function."""
+        self.logger.info("Starting Debugger service")
+        self.registerService()
+        self.logger.info("Will get requests from FE")
+        self._startwork()
+
+    def _startwork(self):
         """Start execution and get new requests from FE"""
         for wtype in ["new", "active"]:
             self.logger.info(f"Get all {wtype} requests")

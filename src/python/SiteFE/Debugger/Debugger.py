@@ -24,6 +24,8 @@ from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import getDBConn, getVal
 from SiteRMLibs.MainUtilities import getFileContentAsJson
+from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.ipaddr import ipVersion, checkoverlap
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.Backends.main import Switch
@@ -42,6 +44,9 @@ class Debugger(DebugService):
         self.switch = Switch(self.config, self.sitename)
         self.switches = {}
         self.diragent = contentDB()
+        self.debugdir = os.path.join(
+            self.config.get(self.sitename, "privatedir"), "DebugRequests"
+        )
         self.dbI = getVal(
             getDBConn("DebuggerService", self), **{"sitename": self.sitename}
         )
@@ -59,6 +64,19 @@ class Debugger(DebugService):
             "debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50
         )
 
+    def updateDebugWorker(self, **kwargs):
+        "Update hostname/workername for debug request"
+        # Update the state in database.
+        # update_debugrequestsworker = "UPDATE debugrequests SET state = %(state)s, hostname = %(hostname)s, updatedate = %(updatedate)s WHERE id = %(id)s"
+        out = {
+            "id": kwargs["id"],
+            "state": kwargs["state"],
+            "hostname": kwargs["hostname"],
+            "updatedate": getUTCnow(),
+        }
+        self.dbI.update("debugrequestsworker", [out])
+
+
     def getFullData(self, hostname, item):
         """Get full data from DB."""
         debugdir = os.path.join(
@@ -68,6 +86,68 @@ class Debugger(DebugService):
         requestfname = os.path.join(debugdir, hostname, str(item["id"]), "request.json")
         item["requestdict"] = getFileContentAsJson(requestfname)
         return item
+
+    def loadAllWorkers(self):
+        """Load all workers from DB not older than 1 minute."""
+        services = self.dbI.get("services", orderby=["updatedate", "DESC"], limit=100)
+        workers = {}
+        for service in services:
+            if service["hostname"] not in workers:
+                # Check if service is not older than 2 minutes
+                if service.get("updatedate", 0) > getUTCnow() - 120:
+                    workers[service["hostname"]] = {
+                        "hostname": service["hostname"],
+                        "servicename": service["servicename"],
+                        "updatedate": service["updatedate"]
+                    }
+                    # Load service information from file
+                    if service.get("serviceinfo"):
+                        if os.path.exists(service["serviceinfo"]):
+                            workers[service["hostname"]]['serviceinfo'] = getFileContentAsJson(service["serviceinfo"])
+                        else:
+                            self.logger.warning(
+                                "Service info file does not exist: {service}"
+                            )
+        self.logger.debug("Loaded workers: %s", workers)
+        return workers
+
+    def _findRangeOverlap(self, item, workers):
+        """Find range overlap for the item."""
+        dynamicfrom = item.get('requestdict', {}).get("dynamicfrom", None)
+        if not dynamicfrom:
+            self.logger.warning(f"Input has no dynamicfrom value. Input: {item}")
+            return None
+        iptype = ipVersion(dynamicfrom)
+        if iptype == "-1":
+            self.logger.warning(f"Unable to identify ipVersion for {input}")
+            return None
+        iptype = "inet" if iptype == '4' else "inet6"
+        for workername, workerd in workers.items():
+            if iptype not in workerd:
+                self.logger.info(f"Worker {workername} has no {iptype}")
+                continue
+            for ipval in workerd.get(iptype):
+                if checkoverlap(dynamicfrom, ipval):
+                    self.logger.info(f"Found overlap for {item} with {workername}")
+                    return workername
+        return None
+
+
+    def identifyWorker(self):
+        """Identify worker for a third party service, e.g. hostname not defined"""
+        data = self.getData("undefined", "new")
+        if not data:
+            self.logger.info("No new requests for unknown worker")
+        workers = self.loadAllWorkers()
+        for item in data:
+            item = self.getFullData("undefined", item)
+            # Load request information;
+            item["requestdict"] = getFileContentAsJson(item['debuginfo'])
+            workername = self._findRangeOverlap(item, workers)
+            if workername:
+                self.updateDebugWorker(**{'id': item["id"], "state": "new", "hostname": workername})
+            else:
+                self.updateDebugWorker(**{'id': item["id"], "state": "failed", "hostname": "notfound"})
 
     def startwork(self):
         """Start execution and get new requests from FE"""

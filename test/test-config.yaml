@@ -1,5 +1,5 @@
 ---
-hostname: https://sense-caltech-dev.sdn-lb.ultralight.org
-sitename: T3_US_Caltech_Dev
+hostname: https://sense-dev-caltechprod.nrp-nautilus.io:443
+sitename: T2_US_Caltech_DEV
 cert: /etc/grid-security/hostcert.pem
 key: /etc/grid-security/hostkey.pem

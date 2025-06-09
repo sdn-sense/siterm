@@ -148,7 +148,7 @@ def getsubnet(ipInput, strict=False):
 def checkoverlap(net1, net2):
     """Check if two networks overlap. Return True/False."""
     try:
-        return ip_network(net1).overlaps(ip_network(net2))
+        return ip_network(net1, strict=False).overlaps(ip_network(net2, strict=False))
     except ValueError:
         return False
 

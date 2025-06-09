@@ -275,39 +275,6 @@ class TestUtils(unittest.TestCase):
             dataupd = {"state": "success", "output": json.dumps(outsuc)}
             debugActions(self, data, dataupd)
 
-    def test_debug_prometheus_push(self):
-        """Test Prometheus Push Debug API"""
-        hostdata = [
-            ["sdn-dtn-1-7.ultralight.org", "host", "prometheus-push"],
-            ["sdn-dtn-1-7.ultralight.org", "switch", "arp-push"],
-            ["dellos9_s0", "switch", "prometheus-push"],
-            ["dellos9_s0", "switch", "arp-push"],
-        ]
-        for item in hostdata:
-            data = {
-                "hostname": item[0],  # hostname
-                "hosttype": item[1],  # switch or host
-                "type": item[
-                    2
-                ],  # type of action (prometheus-push - for switch/host, arp-push - for host)
-                "metadata": {
-                    "key": "value"
-                },  # Only supported for switch hosttype, Optional
-                "gateway": "http://localhost:3128",  # gateway url
-                "runtime": str(
-                    int(getUTCnow()) + 1200
-                ),  # runtime until time in seconds since the epoch
-                "resolution": "5",
-            }  # resolution time
-            #'mibs': "list of mibs separated by comma"} # Optional parameter
-            outsuc = {"out": ["running"], "err": "", "exitCode": 0}
-            dataupd = {"state": "active", "output": json.dumps(outsuc)}
-            debugActions(self, data, dataupd)
-
-            url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getalldebughostname/{item[0]}/new"
-            out = makeRequest(self, url, {"verb": "GET", "data": {}})
-            self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
-            self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
 
     def test_fake_cert(self):
         """Test Fake Cert Failure"""
