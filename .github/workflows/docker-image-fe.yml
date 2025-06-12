@@ -15,6 +15,10 @@ on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branc
         description: "Branch to use of siterm/siterm code?"
         default: "master"
         type: "string"
+      startupbranch:
+        description: "Branch to use of siterm-startup (build base)?"
+        default: "master"
+        type: "string"
 
 permissions:
   contents: read
@@ -29,6 +33,7 @@ jobs:
       with:
         repository: sdn-sense/siterm-startup
         path: siterm-startup
+        ref: ${{ github.event.inputs.startupbranch }}
 
     - name: docker login
       env:
