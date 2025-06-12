@@ -1,3 +1,26 @@
+# SiteRM 1.5.33 BugFix Release
+
+## SiteRM Codebase Fixes
+
+- **Fix Debugger background process check**
+  - Debugger bug was preventing it to check background process status, and keeping all tasks active.
+
+## 🔧 Supported Architectures
+- **x86_64** ✅ (Stable)
+
+## 📥 Installation Details
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest`.
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
+
+### Docker Versions
+- **Agent:** `sdnsense/site-agent-sense:latest-20250611` *(or use `latest`)*
+- **Frontend:** `sdnsense/site-rm-sense:latest-20250611` *(or use `latest`)*
+
+### Helm versions
+- **Agent:** Chart version siterm-agent/siterm-agent 1.5.33
+- **Frontend:** Chart version siterm-fe/siterm-fe 1.5.33
+
 # SiteRM 1.5.32 BugFix Release
 
 ## SiteRM Codebase Fixes
