@@ -68,13 +68,13 @@ class Debugger(DebugService):
                 # Do we need to get full data from FE? E.G. Request info?
                 if not self.backgroundProcessItemExists(item):
                     self.logger.info(f"Background process item does not exist. ID: {item['id']}")
-                    try:
-                        ditem = self.getData(f"/sitefe/json/frontend/getdebug/{item['id']}")
-                        if ditem:
-                            self.checkBackgroundProcess(ditem)
-                    except FailedGetDataFromFE as ex:
-                        self.logger.error(f"Failed to get data from FE: {ex}")
-                        continue
+                try:
+                    ditem = self.getData(f"/sitefe/json/frontend/getdebug/{item['id']}")
+                    if ditem:
+                        self.checkBackgroundProcess(ditem)
+                except FailedGetDataFromFE as ex:
+                    self.logger.error(f"Failed to get data from FE: {ex}")
+                    continue
 
 
 def execute(config=None, sitename=None):
