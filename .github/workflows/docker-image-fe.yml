@@ -11,6 +11,10 @@ on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branc
         description: "Branch to use of siterm/ansible-collections code?"
         default: "master"
         type: "string"
+      sitermbranch:
+        description: "Branch to use of siterm/siterm code?"
+        default: "master"
+        type: "string"
 
 permissions:
   contents: read
@@ -48,7 +52,7 @@ jobs:
     - name: Build the FE Docker image
       run: | 
         cd siterm-startup/fe/container-build-files/
-        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --build-arg GITBR=${{ github.event.inputs.sitermbranch }} --build-arg GITBRANS=${{ github.event.inputs.branch }} --tag sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push FE Image with tag and date
       run: docker push sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
