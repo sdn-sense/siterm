@@ -149,6 +149,16 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.warningstart = 0
         self.runcount = 0
         self.warningscounters = {}
+        self._addedTriples = set()
+
+    def __clean(self):
+        """Clean params of LookUpService"""
+        self._addedTriples = set()
+        # Clean errors after 100 cycles
+        self.runcount += 1
+        if self.runcount >= 100:
+            self.warningscounters = {}
+            self.runcount = 0
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -308,13 +318,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                     tmprange.remove(vlan)
         return tmprange
 
-    def _cleanWarningCounters(self):
-        """Clean errors after 100 cycles"""
-        self.runcount += 1
-        if self.runcount >= 100:
-            self.warningscounters = {}
-            self.runcount = 0
-
     def countWarnings(self, warning):
         """Warning Counter"""
         self.warningscounters.setdefault(warning, 0)
@@ -358,7 +361,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def startwork(self):
         """Main start."""
         self.logger.info("Started LookupService work")
-        self._cleanWarningCounters()
+        self.__clean()
         stateChangedFirstRun = False
         if self.firstRun:
             self.logger.info(

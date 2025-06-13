@@ -319,6 +319,10 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                             self.logger.info(
                                 f"Comparing {acttype} for {uuid}. Difference: {diff}"
                             )
+                            # In case curAct is empty and diff is False
+                            if not curAct and not diff:
+                                del self.yamlconfuuid[acttype][uuid]
+                                continue
                             if diff:
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)

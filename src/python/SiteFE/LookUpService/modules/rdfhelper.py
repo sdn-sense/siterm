@@ -263,6 +263,15 @@ class RDFHelper:
             self.addToGraph(["site", labeluri], ["mrs", "type"], [typeval])
         self.setToGraph(["site", labeluri], ["mrs", "value"], [val])
 
+    # Main interaction with graph itself
+    # ============================================================
+    def addTriples(self, triples):
+        """Add a list of triples to the graph, deduplicating."""
+        for triple in triples:
+            if triple not in self._addedTriples:
+                self.newGraph.add(triple)
+                self._addedTriples.add(triple)
+
     def setToGraph(self, sub, pred, obj):
         """Set (Means remove old and then add new) to the graph
         Input:
@@ -287,40 +296,30 @@ class RDFHelper:
         pred (list) max len 2
         obj (list) max len 2 if 1 will use Literal value
         """
+        triples = []
         if len(obj) == 1 and len(sub) == 1:
-            self.newGraph.add(
-                (
+            triples.append((
                     self.genUriRef(sub[0]),
                     self.genUriRef(pred[0], pred[1]),
-                    self.genLiteral(obj[0]),
-                )
-            )
+                    self.genLiteral(obj[0])))
         elif len(obj) == 1 and len(sub) == 2:
-            self.newGraph.add(
-                (
+            triples.append((
                     self.genUriRef(sub[0], sub[1]),
                     self.genUriRef(pred[0], pred[1]),
-                    self.genLiteral(obj[0]),
-                )
-            )
+                    self.genLiteral(obj[0])))
         elif len(obj) == 2 and len(sub) == 1:
-            self.newGraph.add(
-                (
+            triples.append((
                     self.genUriRef(sub[0]),
                     self.genUriRef(pred[0], pred[1]),
-                    self.genUriRef(obj[0], obj[1]),
-                )
-            )
+                    self.genUriRef(obj[0], obj[1])))
         elif len(obj) == 2 and len(sub) == 2:
-            self.newGraph.add(
-                (
+            triples.append((
                     self.genUriRef(sub[0], sub[1]),
                     self.genUriRef(pred[0], pred[1]),
-                    self.genUriRef(obj[0], obj[1]),
-                )
-            )
+                    self.genUriRef(obj[0], obj[1])))
         else:
             raise Exception("Failing to add object to graph due to mismatch")
+        self.addTriples(triples)
 
     def defineMRMLPrefixes(self):
         """Define all known prefixes."""
@@ -332,38 +331,24 @@ class RDFHelper:
 
     def _addSite(self, **kwargs):
         """Add Site to Model"""
-        self.newGraph.add(
-            (
+        self.addTriples([(
                 self.genUriRef("site"),
                 self.genUriRef("rdf", "type"),
-                self.genUriRef("nml", "Topology"),
-            )
-        )
+                self.genUriRef("nml", "Topology"))])
 
     def _addMetadataService(self, uri=""):
         """Add Metadata Service"""
         metaService = f"{uri}:service+metadata"
-        self.newGraph.add(
-            (
-                self.genUriRef("site", uri),
-                self.genUriRef("nml", "hasService"),
-                self.genUriRef("site", metaService),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", metaService),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("mrs", "MetadataService"),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", metaService),
-                self.genUriRef("mrs", "type"),
-                self.genLiteral("sense-metadata"),
-            )
-        )
+        triples = [(self.genUriRef("site", uri),
+                    self.genUriRef("nml", "hasService"),
+                    self.genUriRef("site", metaService)),
+                   (self.genUriRef("site", metaService),
+                    self.genUriRef("rdf", "type"),
+                    self.genUriRef("mrs", "MetadataService")),
+                   (self.genUriRef("site", metaService),
+                    self.genUriRef("mrs", "type"),
+                    self.genLiteral("sense-metadata"))]
+        self.addTriples(triples)
         return metaService
 
     def _addMetadata(self, **kwargs):
@@ -436,27 +421,16 @@ class RDFHelper:
         """Add Node to Model"""
         if self.__checkifReqKeysMissing(["hostname"], kwargs):
             return ""
-        self.newGraph.add(
-            (
-                self.genUriRef("site"),
-                self.genUriRef("nml", "hasNode"),
-                self.genUriRef("site", f":{kwargs['hostname']}"),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", f":{kwargs['hostname']}"),
-                self.genUriRef("nml", "name"),
-                self.genLiteral(f"{self.sitename}:{kwargs['hostname']}"),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", f":{kwargs['hostname']}"),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("nml", "Node"),
-            )
-        )
+        triples = [(self.genUriRef("site"),
+                    self.genUriRef("nml", "hasNode"),
+                    self.genUriRef("site", f":{kwargs['hostname']}")),
+                   (self.genUriRef("site", f":{kwargs['hostname']}"),
+                    self.genUriRef("nml", "name"),
+                    self.genLiteral(f"{self.sitename}:{kwargs['hostname']}")),
+                   (self.genUriRef("site", f":{kwargs['hostname']}"),
+                    self.genUriRef("rdf", "type"),
+                    self.genUriRef("nml", "Node"))]
+        self.addTriples(triples)
         # Add mrs:NetworkAddress (nml:hostname is for legacy)
         self._addNetworkAddress(f":{kwargs['hostname']}", "fqdn", kwargs["hostname"])
         return f":{kwargs['hostname']}"
@@ -467,28 +441,18 @@ class RDFHelper:
         if self.__checkifReqKeysMissing(["hostname", "portName"], kwargs):
             return ""
         newuri = f":{kwargs['hostname']}:{self.switch.getSystemValidPortName(kwargs['portName'])}"
-        self.newGraph.add(
-            (
-                self.genUriRef("site", f":{kwargs['hostname']}"),
-                self.genUriRef("nml", "hasBidirectionalPort"),
-                self.genUriRef("site", newuri),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", newuri),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("nml", "BidirectionalPort"),
-            )
-        )
+        triples = [(self.genUriRef("site", f":{kwargs['hostname']}"),
+                    self.genUriRef("nml", "hasBidirectionalPort"),
+                    self.genUriRef("site", newuri)),
+                   (self.genUriRef("site", newuri),
+                    self.genUriRef("rdf", "type"),
+                    self.genUriRef("nml", "BidirectionalPort"))]
         if "parent" in kwargs and kwargs["parent"]:
-            self.newGraph.add(
-                (
+            triples.append((
                     self.genUriRef("site", f":{kwargs['hostname']}:{kwargs['parent']}"),
                     self.genUriRef("nml", "hasBidirectionalPort"),
-                    self.genUriRef("site", newuri),
-                )
-            )
+                    self.genUriRef("site", newuri)))
+        self.addTriples(triples)
         return newuri
 
     def _addSwitchingService(self, **kwargs):
@@ -501,27 +465,16 @@ class RDFHelper:
             )
             return ""
         svcService = f":{kwargs['hostname']}:service+vsw"
-        self.newGraph.add(
-            (
-                self.genUriRef("site", f":{kwargs['hostname']}"),
-                self.genUriRef("nml", "hasService"),
-                self.genUriRef("site", svcService),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", svcService),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("nml", "SwitchingService"),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", svcService),
-                self.genUriRef("nml", "encoding"),
-                self.genUriRef("schema"),
-            )
-        )
+        triples = [(self.genUriRef("site", f":{kwargs['hostname']}"),
+                    self.genUriRef("nml", "hasService"),
+                    self.genUriRef("site", svcService)),
+                   (self.genUriRef("site", svcService),
+                    self.genUriRef("rdf", "type"),
+                    self.genUriRef("nml", "SwitchingService")),
+                   (self.genUriRef("site", svcService),
+                    self.genUriRef("nml", "encoding"),
+                    self.genUriRef("schema"))]
+        self.addTriples(triples)
         kwargs["uri"] = svcService
         self._addMultiPointService(**kwargs)
         self._addDebugIPService(**kwargs)
@@ -530,29 +483,16 @@ class RDFHelper:
 
     def _addServiceDefinition(self, **kwargs):
         """Add Service definition to Model"""
-        self.newGraph.add(
-            (
-                self.genUriRef("site", kwargs["uri"]),
-                self.genUriRef("sd", "hasServiceDefinition"),
-                self.genUriRef("site", f":{kwargs['hostname']}:sd:{kwargs['sdkey']}"),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", f":{kwargs['hostname']}:sd:{kwargs['sdkey']}"),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("sd", "ServiceDefinition"),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", f":{kwargs['hostname']}:sd:{kwargs['sdkey']}"),
-                self.genUriRef("sd", "serviceType"),
-                self.genLiteral(
-                    self.config.get("servicedefinitions", kwargs["sdtype"])
-                ),
-            )
-        )
+        triples = [(self.genUriRef("site", kwargs["uri"]),
+                    self.genUriRef("sd", "hasServiceDefinition"),
+                    self.genUriRef("site", f":{kwargs['hostname']}:sd:{kwargs['sdkey']}")),
+                   (self.genUriRef("site", f":{kwargs['hostname']}:sd:{kwargs['sdkey']}"),
+                    self.genUriRef("rdf", "type"),
+                    self.genUriRef("sd", "ServiceDefinition")),
+                   (self.genUriRef("site", f":{kwargs['hostname']}:sd:{kwargs['sdkey']}"),
+                    self.genUriRef("sd", "serviceType"),
+                    self.genLiteral(self.config.get("servicedefinitions", kwargs["sdtype"])))]
+        self.addTriples(triples)
 
     def _addMultiPointService(self, **kwargs):
         """Add MultiPoint Service to Model"""
@@ -584,47 +524,27 @@ class RDFHelper:
         if self.__checkifReqKeysMissing(["subnet"], kwargs):
             return ""
         subnetUri = f"{svcService}{kwargs['subnet']}"
-        self.newGraph.add(
-            (
-                self.genUriRef("site", svcService),
-                self.genUriRef("mrs", "providesSubnet"),
-                self.genUriRef("site", subnetUri),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", subnetUri),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("mrs", "SwitchingSubnet"),
-            )
-        )
-
-        self.newGraph.add(
-            (
-                self.genUriRef("mrs", "SwitchingSubnet"),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("rdfs", "Class"),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("mrs", "SwitchingSubnet"),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("rdfs", "Resource"),
-            )
-        )
+        triples = [(self.genUriRef("site", svcService),
+                    self.genUriRef("mrs", "providesSubnet"),
+                    self.genUriRef("site", subnetUri)),
+                   (self.genUriRef("site", subnetUri),
+                    self.genUriRef("rdf", "type"),
+                    self.genUriRef("mrs", "SwitchingSubnet")),
+                   (self.genUriRef("mrs", "SwitchingSubnet"),
+                    self.genUriRef("rdf", "type"),
+                    self.genUriRef("rdfs", "Class")),
+                   (self.genUriRef("mrs", "SwitchingSubnet"),
+                    self.genUriRef("rdf", "type"),
+                    self.genUriRef("rdfs", "Resource"))]
+        self.addTriples(triples)
         return subnetUri
 
     def _addPortSwitchingSubnet(self, **kwargs):
         """Add Port into Switching Subnet"""
         puri = self._addVlanPort(**kwargs)
-        self.newGraph.add(
-            (
-                self.genUriRef("site", kwargs["subnet"]),
-                self.genUriRef("nml", "hasBidirectionalPort"),
-                self.genUriRef("site", puri),
-            )
-        )
+        self.addTriples([(self.genUriRef("site", kwargs["subnet"]),
+                          self.genUriRef("nml", "hasBidirectionalPort"),
+                          self.genUriRef("site", puri))])
         return puri
 
     # TODO: JOIN BandwidthService with RoutingService.
@@ -639,39 +559,24 @@ class RDFHelper:
         if not kwargs["uri"]:
             return ""
         bws = f"{kwargs['uri']}:service+{'bw'}"
-        self.newGraph.add(
-            (
-                self.genUriRef("site", kwargs["uri"]),
-                self.genUriRef("nml", "hasService"),
-                self.genUriRef("site", bws),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", bws),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("mrs", "BandwidthService"),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", bws),
-                self.genUriRef("mrs", "type"),
-                self.genLiteral("guaranteedCapped"),
-            )
-        )
+        triples = [(self.genUriRef("site", kwargs["uri"]),
+                    self.genUriRef("nml", "hasService"),
+                    self.genUriRef("site", bws)),
+                   (self.genUriRef("site", bws),
+                    self.genUriRef("rdf", "type"),
+                    self.genUriRef("mrs", "BandwidthService")),
+                   (self.genUriRef("site", bws),
+                    self.genUriRef("mrs", "type"),
+                    self.genLiteral("guaranteedCapped"))]
+        self.addTriples(triples)
         return bws
 
     def _addBandwidthServiceRoute(self, **kwargs):
         if self.__checkifReqKeysMissing(["routeuri", "uri"], kwargs):
             return
-        self.newGraph.add(
-            (
-                self.genUriRef("site", kwargs["routeuri"]),
-                self.genUriRef("nml", "hasService"),
-                self.genUriRef("site", kwargs["uri"]),
-            )
-        )
+        self.addTriples([(self.genUriRef("site", kwargs["routeuri"]),
+                          self.genUriRef("nml", "hasService"),
+                          self.genUriRef("site", kwargs["uri"]))])
 
     def _addBandwidthServiceParams(self, **kwargs):
         """Add Bandwitdh Service Parameters to Model"""
@@ -699,20 +604,12 @@ class RDFHelper:
         if not uri:
             return ""
         rst = f":{kwargs['hostname']}:service+{kwargs['rstname']}"
-        self.newGraph.add(
-            (
-                self.genUriRef("site", uri),
-                self.genUriRef("nml", "hasService"),
-                self.genUriRef("site", rst),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", rst),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("mrs", "RoutingService"),
-            )
-        )
+        self.addTriples([(self.genUriRef("site", uri),
+                          self.genUriRef("nml", "hasService"),
+                          self.genUriRef("site", rst)),
+                         (self.genUriRef("site", rst),
+                          self.genUriRef("rdf", "type"),
+                          self.genUriRef("mrs", "RoutingService"))])
         if "iptype" in kwargs:
             for keytype in ["%s-subnet-pool", "%s-address-pool"]:
                 name = keytype % kwargs["iptype"]
@@ -756,20 +653,12 @@ class RDFHelper:
             routingtable = kwargs["rtableuri"]
         else:
             return ""
-        self.newGraph.add(
-            (
-                self.genUriRef("site", uri),
-                self.genUriRef("mrs", "providesRoutingTable"),
-                self.genUriRef("site", routingtable),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", routingtable),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("mrs", "RoutingTable"),
-            )
-        )
+        self.addTriples([(self.genUriRef("site", uri),
+                          self.genUriRef("mrs", "providesRoutingTable"),
+                          self.genUriRef("site", routingtable)),
+                         (self.genUriRef("site", routingtable),
+                          self.genUriRef("rdf", "type"),
+                          self.genUriRef("mrs", "RoutingTable"))])
         return routingtable
 
     def _addRoute(self, **kwargs):
@@ -784,20 +673,12 @@ class RDFHelper:
             routeuri = f"{ruri}:route+{kwargs['routename']}"
         else:
             return ""
-        self.newGraph.add(
-            (
-                self.genUriRef("site", ruri),
-                self.genUriRef("mrs", "hasRoute"),
-                self.genUriRef("site", routeuri),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", routeuri),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("mrs", "Route"),
-            )
-        )
+        self.addTriples([(self.genUriRef("site", ruri),
+                          self.genUriRef("mrs", "hasRoute"),
+                          self.genUriRef("site", routeuri)),
+                         (self.genUriRef("site", routeuri),
+                          self.genUriRef("rdf", "type"),
+                          self.genUriRef("mrs", "Route"))])
         return routeuri
 
     def _addProvidesRoute(self, **kwargs):
@@ -805,13 +686,9 @@ class RDFHelper:
         suri = self._addRoutingService(**kwargs)
         if not suri or not kwargs["routeuri"]:
             return ""
-        self.newGraph.add(
-            (
-                self.genUriRef("site", suri),
-                self.genUriRef("mrs", "providesRoute"),
-                self.genUriRef("site", kwargs["routeuri"]),
-            )
-        )
+        self.addTriples([(self.genUriRef("site", suri),
+                          self.genUriRef("mrs", "providesRoute"),
+                          self.genUriRef("site", kwargs["routeuri"]))])
         return kwargs["routeuri"]
 
     def _addRouteEntry(self, **kwargs):
@@ -821,13 +698,9 @@ class RDFHelper:
             return ""
         if "uri" not in kwargs:
             kwargs["uri"] = f"{ruri}:net-address+{kwargs['routename']}"
-        self.newGraph.add(
-            (
-                self.genUriRef("site", ruri),
-                self.genUriRef("mrs", kwargs["routetype"]),
-                self.genUriRef("site", kwargs["uri"]),
-            )
-        )
+        self.addTriples([(self.genUriRef("site", ruri),
+                          self.genUriRef("mrs", kwargs["routetype"]),
+                          self.genUriRef("site", kwargs["uri"]))])
         self._addNetworkAddressEntry(**kwargs)
         return kwargs["uri"]
 
@@ -845,30 +718,17 @@ class RDFHelper:
         # kwargs name - vlan-range, vlan-range-filtered
         # kwargs schema - #vlan
         # kwargs values, list
-        self.newGraph.add(
-            (
-                self.genUriRef("site", kwargs["newuri"]),
-                self.genUriRef("nml", "hasLabelGroup"),
-                self.genUriRef("site", f"{kwargs['newuri']}:{kwargs['name']}"),
-            )
-        )
-
-        self.newGraph.add(
-            (
-                self.genUriRef("site", f"{kwargs['newuri']}:{kwargs['name']}"),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("nml", "LabelGroup"),
-            )
-        )
+        self.addTriples([(self.genUriRef("site", kwargs["newuri"]),
+                          self.genUriRef("nml", "hasLabelGroup"),
+                          self.genUriRef("site", f"{kwargs['newuri']}:{kwargs['name']}")),
+                         (self.genUriRef("site", f"{kwargs['newuri']}:{kwargs['name']}"),
+                          self.genUriRef("rdf", "type"),
+                          self.genUriRef("nml", "LabelGroup"))])
 
         if kwargs.get("schema"):
-            self.newGraph.add(
-                (
-                    self.genUriRef("site", f"{kwargs['newuri']}:{kwargs['name']}"),
-                    self.genUriRef("nml", "labeltype"),
-                    self.genUriRef("schema", kwargs["schema"]),
-                )
-            )
+            self.addTriples([(self.genUriRef("site", f"{kwargs['newuri']}:{kwargs['name']}"),
+                              self.genUriRef("nml", "labeltype"),
+                              self.genUriRef("schema", kwargs["schema"]))])
         self._nmlLiteral(
             f"{kwargs['newuri']}:{kwargs['name']}",
             "values",
@@ -881,13 +741,9 @@ class RDFHelper:
         vsw = self._addSwitchingService(**kwargs)
         if not uri or not vsw:
             return ""
-        self.newGraph.add(
-            (
-                self.genUriRef("site", vsw),
-                self.genUriRef("nml", "hasBidirectionalPort"),
-                self.genUriRef("site", uri),
-            )
-        )
+        self.addTriples([(self.genUriRef("site", vsw),
+                          self.genUriRef("nml", "hasBidirectionalPort"),
+                          self.genUriRef("site", uri))])
         return uri
 
     def _addRstPort(self, **kwargs):
@@ -912,15 +768,10 @@ class RDFHelper:
         for iptype in strtolist(iptypes, ","):
             if iptype not in ["ipv4", "ipv6"]:
                 continue
-            self.newGraph.add(
-                (
-                    self.genUriRef(
-                        "site", f":{kwargs['hostname']}:service+rst-{iptype}"
-                    ),
-                    self.genUriRef("nml", "hasBidirectionalPort"),
-                    self.genUriRef("site", uri),
-                )
-            )
+            self._addRoutingService(**{'hostname': kwargs['hostname'], 'rstname': iptype})
+            self.addTriples([(self.genUriRef("site", f":{kwargs['hostname']}:service+rst-{iptype}"),
+                              self.genUriRef("nml", "hasBidirectionalPort"),
+                              self.genUriRef("site", uri))])
         return uri
 
     def __getVlanURI(self, porturi, **kwargs):
@@ -951,13 +802,9 @@ class RDFHelper:
             return
         if vsw and globalvlan:
             svcService = f":{vsw}:service+vsw"
-            self.newGraph.add(
-                (
-                    self.genUriRef("site", svcService),
-                    self.genUriRef("nml", "hasLabel"),
-                    self.genUriRef("site", kwargs["labeluri"]),
-                )
-            )
+            self.addTriples([(self.genUriRef("site", svcService),
+                              self.genUriRef("nml", "hasLabel"),
+                              self.genUriRef("site", kwargs["labeluri"]))])
 
     def _addVlanPort(self, **kwargs):
         """Add Vlan Port to Model"""
@@ -967,20 +814,12 @@ class RDFHelper:
         vlanuri = self.__getVlanURI(uri, **kwargs)
         if not kwargs["portName"].startswith("Vlan_"):
             uri = self._addPort(**kwargs)
-            self.newGraph.add(
-                (
-                    self.genUriRef("site", uri),
-                    self.genUriRef("nml", "hasBidirectionalPort"),
-                    self.genUriRef("site", vlanuri),
-                )
-            )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", vlanuri),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("nml", "BidirectionalPort"),
-            )
-        )
+            self.addTriples([(self.genUriRef("site", uri),
+                              self.genUriRef("nml", "hasBidirectionalPort"),
+                              self.genUriRef("site", vlanuri))])
+        self.addTriples([(self.genUriRef("site", vlanuri),
+                          self.genUriRef("rdf", "type"),
+                          self.genUriRef("nml", "BidirectionalPort"))])
         return vlanuri
 
     def _addVlanLabel(self, **kwargs):
@@ -989,27 +828,15 @@ class RDFHelper:
         if not vlanuri:
             return ""
         labeluri = f"{vlanuri}:label+{kwargs['vlan']}"
-        self.newGraph.add(
-            (
-                self.genUriRef("site", vlanuri),
-                self.genUriRef("nml", "hasLabel"),
-                self.genUriRef("site", labeluri),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", labeluri),
-                self.genUriRef("rdf", "type"),
-                self.genUriRef("nml", "Label"),
-            )
-        )
-        self.newGraph.add(
-            (
-                self.genUriRef("site", labeluri),
-                self.genUriRef("nml", "labeltype"),
-                self.genUriRef("schema", "#vlan"),
-            )
-        )
+        self.addTriples([(self.genUriRef("site", vlanuri),
+                          self.genUriRef("nml", "hasLabel"),
+                          self.genUriRef("site", labeluri)),
+                         (self.genUriRef("site", labeluri),
+                          self.genUriRef("rdf", "type"),
+                          self.genUriRef("nml", "Label")),
+                         (self.genUriRef("site", labeluri),
+                          self.genUriRef("nml", "labeltype"),
+                          self.genUriRef("schema", "#vlan"))])
         self.newGraph.set(
             (
                 self.genUriRef("site", labeluri),
