@@ -101,6 +101,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.kube = False
         self.singleport = False
         self.startend = {}
+        self._addedTriples = set()
         defbw = self.convertForBWService(
             self.config[self.sitename]["default_params"]["bw"]
         )
@@ -166,6 +167,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.scannedPorts = {}
         self.scannedRoutes = []
         self.newActive = {}
+        self._addedTriples = set()
 
     def __generateStartEnd(self):
         """Generate start and end time for existsDuring"""

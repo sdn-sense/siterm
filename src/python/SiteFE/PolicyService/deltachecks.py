@@ -106,6 +106,8 @@ class ConflictChecker(Timing):
                 .get(portName, {})
                 .get("vlan_range_list", vlanRange)
             )
+            # TODO: Remove this logger. Only for debugging. Issue #871
+            polcls.logger.info(f"DEBUG: {portName} {vlanRange} {vlan}")
             if vlanRange and vlan["vlan"] not in vlanRange:
                 raise OverlapException(
                     f"Vlan {vlan} not available for switch {hostname} in configuration. \
