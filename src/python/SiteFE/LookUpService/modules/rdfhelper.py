@@ -768,7 +768,7 @@ class RDFHelper:
         for iptype in strtolist(iptypes, ","):
             if iptype not in ["ipv4", "ipv6"]:
                 continue
-            self._addRoutingService(**{'hostname': kwargs['hostname'], 'rstname': iptype})
+            self._addRoutingService(**{'hostname': kwargs['hostname'], 'rstname': f'rst-{iptype}'})
             self.addTriples([(self.genUriRef("site", f":{kwargs['hostname']}:service+rst-{iptype}"),
                               self.genUriRef("nml", "hasBidirectionalPort"),
                               self.genUriRef("site", uri))])
