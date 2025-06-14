@@ -218,7 +218,7 @@ get_servicestates = (
     "SELECT id, hostname, servicename, servicestate, runtime, version, updatedate, exc FROM servicestates"
 )
 get_debugworkers = "SELECT id, hostname, hostinfo, insertdate, updatedate FROM debugworkers"
-get_debugrequests = "SELECT id, hostname, state, debuginfo, insertdate, updatedate FROM debugrequests"
+get_debugrequests = "SELECT id, hostname, state, debuginfo, outputinfo, insertdate, updatedate FROM debugrequests"
 get_snmpmon = "SELECT id, hostname, insertdate, updatedate, output FROM snmpmon"
 get_deltatimestates = "SELECT id, insertdate, uuid, uuidtype, hostname, hostport, uuidstate FROM deltatimestates"
 get_serviceaction = "SELECT id, servicename, hostname, serviceaction, insertdate FROM serviceaction"
