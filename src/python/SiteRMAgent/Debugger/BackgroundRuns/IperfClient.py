@@ -31,12 +31,16 @@ class IperfClient(BaseDebugAction):
         command = f"iperf3 -c {self.requestdict['ip']} -p {self.requestdict['port']}"
         command += f" -t {self.requestdict['time']}"
         command += f" -P {self.requestdict['streams']}"
-        if self.requestdict.get('interface'):
+        if self.requestdict.get("interface"):
             if self.requestdict["interface"] not in getInterfaces():
-                self.logMessage(f"Interface {self.requestdict['interface']} is not available on the node.")
+                self.logMessage(
+                    f"Interface {self.requestdict['interface']} is not available on the node."
+                )
                 return
             command += f" -B {self.requestdict['interface']}"
 
         self.logMessage(f"Running command: {command}")
-        externalCommandStdOutErr(command, self.outfiles["stdout"], self.outfiles["stderr"])
+        externalCommandStdOutErr(
+            command, self.outfiles["stdout"], self.outfiles["stderr"]
+        )
         self.jsonout["exitCode"] = 0

@@ -26,6 +26,7 @@ from SiteRMLibs.MainUtilities import getUTCnow, jsondumps, read_input_data
 from SiteRMLibs.MainUtilities import generateRandomUUID
 from SiteRMLibs.Validator import Validator
 
+
 class DebugCalls:
     """Site Frontend calls."""
 
@@ -49,22 +50,34 @@ class DebugCalls:
 
     def __defineRoutes(self):
         """Define Routes for this class"""
-        self.routeMap.connect("getdebug", "/json/frontend/getdebug/:debugvar", action="getdebug")
+        self.routeMap.connect(
+            "getdebug", "/json/frontend/getdebug/:debugvar", action="getdebug"
+        )
         self.routeMap.connect(
             "getalldebughostname",
             "/json/frontend/getalldebughostname/:hostname/:state",
             action="getalldebughostname",
         )
-        self.routeMap.connect("submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug")
-        self.routeMap.connect("updatedebug", "/json/frontend/updatedebug/:debugvar", action="updatedebug")
-        self.routeMap.connect("deletedebug", "/json/frontend/deletedebug/:debugvar", action="deletedebug")
+        self.routeMap.connect(
+            "submitdebug", "/json/frontend/submitdebug/:debugvar", action="submitdebug"
+        )
+        self.routeMap.connect(
+            "updatedebug", "/json/frontend/updatedebug/:debugvar", action="updatedebug"
+        )
+        self.routeMap.connect(
+            "deletedebug", "/json/frontend/deletedebug/:debugvar", action="deletedebug"
+        )
 
     def _getdebuginfo(self, _environ, **kwargs):
         """Get Debug action information."""
         search = [["id", kwargs["debugvar"]]]
-        out = self.dbI.get("debugrequests", orderby=["insertdate", "DESC"], search=search, limit=1)
+        out = self.dbI.get(
+            "debugrequests", orderby=["insertdate", "DESC"], search=search, limit=1
+        )
         if out is None:
-            raise BadRequestError(f"Debug request with ID {kwargs['debugvar']} not found.")
+            raise BadRequestError(
+                f"Debug request with ID {kwargs['debugvar']} not found."
+            )
         out = out[0]
         out["requestdict"] = self.getFileContentAsJson(out["debuginfo"])
         out["output"] = self.getFileContentAsJson(out["outputinfo"])
@@ -75,13 +88,17 @@ class DebugCalls:
         self.responseHeaders(environ, **kwargs)
         if kwargs["debugvar"] != "ALL":
             return self._getdebuginfo(environ, **kwargs)
-        return self.dbI.get("debugrequests", orderby=["insertdate", "DESC"], search=None, limit=50)
+        return self.dbI.get(
+            "debugrequests", orderby=["insertdate", "DESC"], search=None, limit=50
+        )
 
     def getalldebughostname(self, environ, **kwargs):
         """Get all Debug Requests for hostname"""
         search = [["hostname", kwargs["hostname"]], ["state", kwargs["state"]]]
         self.responseHeaders(environ, **kwargs)
-        return self.dbI.get("debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50)
+        return self.dbI.get(
+            "debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50
+        )
 
     def submitdebug(self, environ, **kwargs):
         """Submit new debug action request."""
@@ -89,12 +106,20 @@ class DebugCalls:
         jsondump = jsondumps(inputDict)
         for symbol in [";", "&"]:
             if symbol in jsondump:
-                raise BadRequestError("Unsupported symbol in input request. Contact Support")
+                raise BadRequestError(
+                    "Unsupported symbol in input request. Contact Support"
+                )
         inputDict = self.validator.validate(inputDict)
-        debugdir = os.path.join(self.config.get(kwargs["sitename"], "privatedir"), "DebugRequests")
+        debugdir = os.path.join(
+            self.config.get(kwargs["sitename"], "privatedir"), "DebugRequests"
+        )
         randomuuid = generateRandomUUID()
-        requestfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "request.json")
-        outputfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "output.json")
+        requestfname = os.path.join(
+            debugdir, inputDict["hostname"], randomuuid, "request.json"
+        )
+        outputfname = os.path.join(
+            debugdir, inputDict["hostname"], randomuuid, "output.json"
+        )
         self.dumpFileContentAsJson(requestfname, inputDict)
         out = {
             "hostname": inputDict.get("hostname", "undefined"),
@@ -114,7 +139,9 @@ class DebugCalls:
         inputDict = read_input_data(environ)
         dbentry = self._getdebuginfo(environ, **kwargs)
         if not dbentry:
-            raise BadRequestError(f"Debug request with ID {kwargs['debugvar']} not found.")
+            raise BadRequestError(
+                f"Debug request with ID {kwargs['debugvar']} not found."
+            )
         # ==================================
         self.dumpFileContentAsJson(dbentry["outputinfo"], inputDict.get("output", {}))
 

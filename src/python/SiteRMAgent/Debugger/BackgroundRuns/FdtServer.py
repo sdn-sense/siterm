@@ -28,5 +28,7 @@ class FdtServer(BaseDebugAction):
         if self.requestdict["onetime"] == "True":
             command += " -S"
         self.logMessage(f"Running command: {command}")
-        externalCommandStdOutErr(command, self.outfiles["stdout"], self.outfiles["stderr"])
+        externalCommandStdOutErr(
+            command, self.outfiles["stdout"], self.outfiles["stderr"]
+        )
         self.jsonout["exitCode"] = 0

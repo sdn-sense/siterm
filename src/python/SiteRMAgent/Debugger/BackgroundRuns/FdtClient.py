@@ -10,6 +10,7 @@ Date                    : 2025/05/30
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 
+
 class FdtClient(BaseDebugAction):
     """FdtClient class"""
 
@@ -26,7 +27,9 @@ class FdtClient(BaseDebugAction):
         command = f'timeout {self.requestdict["time"]} java -jar /opt/fdt.jar -p {self.requestdict["port"]}'
         command += f' -c {self.requestdict["ip"]}'
         command += f' -P {self.requestdict["streams"]}'
-        command += ' -nettest'
+        command += " -nettest"
         self.logMessage(f"Running command: {command}")
-        externalCommandStdOutErr(command, self.outfiles["stdout"], self.outfiles["stderr"])
+        externalCommandStdOutErr(
+            command, self.outfiles["stdout"], self.outfiles["stderr"]
+        )
         self.jsonout["exitCode"] = 0

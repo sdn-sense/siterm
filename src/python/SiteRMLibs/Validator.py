@@ -23,6 +23,7 @@ from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.ipaddr import ipVersion
 
+
 class Validator:
     """Validator class for Debug Actions"""
 
@@ -43,12 +44,17 @@ class Validator:
 
     def _addDefaults(self, inputDict):
         """Add default params (not controlled by outside)"""
-        for key, val in self.config['MAIN']['debuggers'][inputDict["type"]].get('defaults', {}):
+        for key, val in self.config["MAIN"]["debuggers"][inputDict["type"]].get(
+            "defaults", {}
+        ):
             if key not in inputDict:
                 inputDict[key] = val
         # If runtime not added, we add current timestamp + 10minutes
         if "runtime" not in inputDict:
-            inputDict["runtime"] = getUTCnow() + self.config['MAIN']['debuggers'][inputDict["type"]]['defruntime']
+            inputDict["runtime"] = (
+                getUTCnow()
+                + self.config["MAIN"]["debuggers"][inputDict["type"]]["defruntime"]
+            )
         # If hostname not added, we add undefined hostname. To be identified by backend.
         if "hostname" not in inputDict:
             inputDict["hostname"] = "undefined"
@@ -64,17 +70,22 @@ class Validator:
     def __validateIP(self, inputDict):
         """Validate IP is IPv4/6"""
         if ipVersion(inputDict["ip"]) == -1:
-            raise BadRequestError(f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6")
+            raise BadRequestError(
+                f"IP {inputDict['ip']} does not appear to be an IPv4 or IPv6"
+            )
 
     def __validateStreams(self, inputDict):
         """Validate streams is within configuration"""
-        maxStreams = self.config['MAIN']['debuggers'][inputDict["type"]]['maxstreams']
-        minStreams = self.config['MAIN']['debuggers'][inputDict["type"]]['minstreams']
-        if inputDict['streams'] > maxStreams:
-            raise BadRequestError(f"Requested streams is higher than allowed by Site Configuration. Requests is {inputDict['streams']}. Max allowed: {maxStreams}")
-        if inputDict['streams'] < minStreams:
-            raise BadRequestError(f"Requested streams is low than allowed by Site Configuration. Requests is {inputDict['streams']}. Min allowed: {minStreams}")
-
+        maxStreams = self.config["MAIN"]["debuggers"][inputDict["type"]]["maxstreams"]
+        minStreams = self.config["MAIN"]["debuggers"][inputDict["type"]]["minstreams"]
+        if inputDict["streams"] > maxStreams:
+            raise BadRequestError(
+                f"Requested streams is higher than allowed by Site Configuration. Requests is {inputDict['streams']}. Max allowed: {maxStreams}"
+            )
+        if inputDict["streams"] < minStreams:
+            raise BadRequestError(
+                f"Requested streams is low than allowed by Site Configuration. Requests is {inputDict['streams']}. Min allowed: {minStreams}"
+            )
 
     def validate(self, inputDict):
         """Validate wrapper for debug action."""
@@ -108,10 +119,18 @@ class Validator:
         for key in ["from_interface", "from_ip"]:
             if key in inputDict:
                 optional = True
-            if key == "from_ip" and inputDict["from_ip"] and ipVersion(inputDict["from_ip"]) == -1:
-                raise BadRequestError(f"Soure IP {inputDict['from_ip']} does not appear to be an IPv4 or IPv6")
+            if (
+                key == "from_ip"
+                and inputDict["from_ip"]
+                and ipVersion(inputDict["from_ip"]) == -1
+            ):
+                raise BadRequestError(
+                    f"Soure IP {inputDict['from_ip']} does not appear to be an IPv4 or IPv6"
+                )
         if not optional:
-            raise BadRequestError("One of these keys must be present: from_interface, from_ip")
+            raise BadRequestError(
+                "One of these keys must be present: from_interface, from_ip"
+            )
 
     def __validateArp(self, inputDict):
         """Validate aprdump debug request."""
@@ -142,28 +161,36 @@ class Validator:
     def __validateRapidpingnet(self, inputDict):
         """Validate rapid ping debug request for network device"""
         self.__validateKeys(inputDict, ["ip", "count", "timeout"])
-        maxcount = self.config['MAIN']['debuggers'][inputDict["type"]]['maxcount']
+        maxcount = self.config["MAIN"]["debuggers"][inputDict["type"]]["maxcount"]
         if int(inputDict["count"]) > maxcount:
-            raise BadRequestError(f"Count request is more than {maxcount}. Requested {inputDict['count']}")
-        maxtimeout = self.config['MAIN']['debuggers'][inputDict["type"]]['maxtimeout']
+            raise BadRequestError(
+                f"Count request is more than {maxcount}. Requested {inputDict['count']}"
+            )
+        maxtimeout = self.config["MAIN"]["debuggers"][inputDict["type"]]["maxtimeout"]
         if int(inputDict["timeout"]) > maxtimeout:
-            raise BadRequestError(f"Timeout request is more than {maxtimeout} seconds. Reuqsted {inputDict['timeout']}")
+            raise BadRequestError(
+                f"Timeout request is more than {maxtimeout} seconds. Reuqsted {inputDict['timeout']}"
+            )
         self.__validateIP(inputDict)
 
     def __validateRapidping(self, inputDict):
         """Validate rapid ping debug request."""
-        self.__validateKeys(inputDict, ["ip", "time", "packetsize", "interface", "runtime"])
+        self.__validateKeys(
+            inputDict, ["ip", "time", "packetsize", "interface", "runtime"]
+        )
         # time reply wait <deadline> in seconds
-        maxtimeout = self.config['MAIN']['debuggers'][inputDict["type"]]['maxtimeout']
+        maxtimeout = self.config["MAIN"]["debuggers"][inputDict["type"]]["maxtimeout"]
         if int(inputDict["time"]) > maxtimeout:
-            raise BadRequestError(f"Requested Runtime for rapidping request is more than {maxtimeout} sec. Requested: {inputDict['time']}")
+            raise BadRequestError(
+                f"Requested Runtime for rapidping request is more than {maxtimeout} sec. Requested: {inputDict['time']}"
+            )
         # interval is optional - not allow lower than config
-        mininterval = self.config['MAIN']['debuggers'][inputDict["type"]]['mininterval']
+        mininterval = self.config["MAIN"]["debuggers"][inputDict["type"]]["mininterval"]
         if "interval" in inputDict and float(inputDict["interval"]) < mininterval:
             raise BadRequestError(
-               f"Requested Interval is lower than {mininterval}. That would be considered DDOS and is not allowed."
+                f"Requested Interval is lower than {mininterval}. That would be considered DDOS and is not allowed."
             )
-        maxmtu = self.config['MAIN']['debuggers'][inputDict["type"]]['maxmtu']
+        maxmtu = self.config["MAIN"]["debuggers"][inputDict["type"]]["maxmtu"]
         if "packetsize" in inputDict and int(inputDict["packetsize"]) > maxmtu:
             raise BadRequestError(
                 f"Requested Packet Size is bigger than {maxmtu}. That would be considered DDOS and is not allowed."
@@ -177,8 +204,8 @@ class Validator:
     def validateRuntime(self, inputDict):
         """Validate Runtime"""
         totalRuntime = int(int(inputDict["runtime"]) - getUTCnow())
-        defRuntime = self.config['MAIN']['debuggers'][inputDict["type"]]['mininterval']
-        maxRuntime = self.config['MAIN']['debuggers'][inputDict["type"]]['maxruntime']
+        defRuntime = self.config["MAIN"]["debuggers"][inputDict["type"]]["mininterval"]
+        maxRuntime = self.config["MAIN"]["debuggers"][inputDict["type"]]["maxruntime"]
         if totalRuntime < defRuntime or totalRuntime > maxRuntime:
             raise BadRequestError(
                 f"Total Runtime must be within range of {defRuntime} < x < {maxRuntime} seconds since epoch. You requested {totalRuntime}"

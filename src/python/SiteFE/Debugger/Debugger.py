@@ -34,6 +34,7 @@ from SiteRMLibs.CustomExceptions import BadRequestError
 
 COMPONENT = "Debugger"
 
+
 # pylint: disable=R0902,R1725
 # R0902 - too many instance attributes
 # R1725 - super with arguments
@@ -48,8 +49,12 @@ class Debugger(DebugService):
         self.switch = Switch(self.config, self.sitename)
         self.switches = {}
         self.diragent = contentDB()
-        self.debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
-        self.dbI = getVal(getDBConn("DebuggerService", self), **{"sitename": self.sitename})
+        self.debugdir = os.path.join(
+            self.config.get(self.sitename, "privatedir"), "DebugRequests"
+        )
+        self.dbI = getVal(
+            getDBConn("DebuggerService", self), **{"sitename": self.sitename}
+        )
         self.logger.info("====== Debugger Start Work. Sitename: %s", self.sitename)
         self.validator = Validator(self.config)
 
@@ -61,7 +66,9 @@ class Debugger(DebugService):
     def getData(self, hostname, state):
         """Get data from DB."""
         search = [["hostname", hostname], ["state", state]]
-        return self.dbI.get("debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50)
+        return self.dbI.get(
+            "debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50
+        )
 
     def updateDebugWorker(self, **kwargs):
         "Update hostname/workername for debug request"
@@ -75,7 +82,9 @@ class Debugger(DebugService):
 
     def getFullData(self, hostname, item):
         """Get full data from DB."""
-        debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
+        debugdir = os.path.join(
+            self.config.get(self.sitename, "privatedir"), "DebugRequests"
+        )
         # Get Request JSON
         requestfname = os.path.join(debugdir, hostname, str(item["id"]), "request.json")
         item["requestdict"] = getFileContentAsJson(requestfname)
@@ -97,9 +106,13 @@ class Debugger(DebugService):
                     # Load service information from file
                     if service.get("serviceinfo"):
                         if os.path.exists(service["serviceinfo"]):
-                            workers[service["hostname"]]["serviceinfo"] = getFileContentAsJson(service["serviceinfo"])
+                            workers[service["hostname"]]["serviceinfo"] = (
+                                getFileContentAsJson(service["serviceinfo"])
+                            )
                         else:
-                            self.logger.warning("Service info file does not exist: {service}")
+                            self.logger.warning(
+                                "Service info file does not exist: {service}"
+                            )
         self.logger.debug("Loaded workers: %s", workers)
         return workers
 
@@ -122,7 +135,6 @@ class Debugger(DebugService):
                     return workername, ipval, ""
         return None, None, f"After all checks, no worker found suitable for {item}"
 
-
     def identifyWorker(self):
         """Identify worker for a third party service, e.g. hostname not defined"""
         data = self.getData("undefined", "new")
@@ -135,12 +147,14 @@ class Debugger(DebugService):
             item["requestdict"] = getFileContentAsJson(item["debuginfo"])
             workername, ipf, errmsg = self._findRangeOverlap(item, workers)
             if not errmsg:
-                item['requestdict']['selectedip'] = ipf
-                item['requestdict']['hostname'] = workername
+                item["requestdict"]["selectedip"] = ipf
+                item["requestdict"]["hostname"] = workername
                 try:
-                    item['requestdict'] = self.validator.validate(item['requestdict'])
+                    item["requestdict"] = self.validator.validate(item["requestdict"])
                     self.dumpFileContentAsJson(item["debuginfo"], item["requestdict"])
-                    self.updateDebugWorker(**{"id": item["id"], "state": "new", "hostname": workername})
+                    self.updateDebugWorker(
+                        **{"id": item["id"], "state": "new", "hostname": workername}
+                    )
                 except BadRequestError as ex:
                     errmsg = f"Received error during validate: {str(ex)}"
             if errmsg:
@@ -149,12 +163,17 @@ class Debugger(DebugService):
                     "stdout": [],
                     "stderr": [errmsg],
                     "jsonout": {},
-                    "exitCode": -1}
+                    "exitCode": -1,
+                }
                 self.dumpFileContentAsJson(item["outputinfo"], retOut)
-                self.logger.error(f'Received an error to identify worker: {errmsg}')
-                self.updateDebugWorker(**{"id": item["id"],
-                                          "state": "failed",
-                                          "hostname": workername if workername else "notfound"})
+                self.logger.error(f"Received an error to identify worker: {errmsg}")
+                self.updateDebugWorker(
+                    **{
+                        "id": item["id"],
+                        "state": "failed",
+                        "hostname": workername if workername else "notfound",
+                    }
+                )
                 continue
 
     def startwork(self):
@@ -167,7 +186,9 @@ class Debugger(DebugService):
                 data = self.getData(host, wtype)
                 for item in data:
                     if not self.backgroundProcessItemExists(item):
-                        self.logger.info(f"Background process item does not exist. ID: {item['id']}")
+                        self.logger.info(
+                            f"Background process item does not exist. ID: {item['id']}"
+                        )
                         item = self.getFullData(host, item)
                     self.checkBackgroundProcess(item)
 
