@@ -7,10 +7,8 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
-from SiteRMLibs.ipaddr import ipVersion
 from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
-from SiteRMLibs.CustomExceptions import BackgroundException
 
 
 class IperfServer(BaseDebugAction):
@@ -26,19 +24,11 @@ class IperfServer(BaseDebugAction):
 
     def main(self):
         """Run IPerf Server"""
-        if ipVersion(self.requestdict["ip"]) == -1:
-            self.logMessage(
-                f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6"
-            )
-            return
-        command = "timeout %s iperf3 --server -p %s --bind %s %s" % (
-            self.requestdict["time"],
-            self.requestdict["port"],
-            self.requestdict["ip"],
-            "-1" if self.requestdict["onetime"] == "True" else "",
-        )
+        command = f'timeout {self.requestdict["time"]} iperf3 --server -p {self.requestdict["port"]}'
+        if 'ip' in self.requestdict:
+            command += f' --bind {self.requestdict["ip"]}'
+        if self.requestdict["onetime"] == "True":
+            command += " -1"
         self.logMessage(f"Running command: {command}")
-        externalCommandStdOutErr(
-            command, self.outfiles["stdout"], self.outfiles["stderr"]
-        )
+        externalCommandStdOutErr(command, self.outfiles["stdout"], self.outfiles["stderr"])
         self.jsonout["exitCode"] = 0

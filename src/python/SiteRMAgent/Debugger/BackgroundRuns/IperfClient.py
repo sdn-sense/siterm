@@ -7,7 +7,7 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
-from SiteRMLibs.ipaddr import getInterfaces, ipVersion
+from SiteRMLibs.ipaddr import getInterfaces
 from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 
@@ -28,14 +28,15 @@ class IperfClient(BaseDebugAction):
         if self.requestdict["interface"] not in getInterfaces():
             self.logMessage("Interface is not available on the node")
             return
-        if ipVersion(self.requestdict["ip"]) == -1:
-            self.logMessage(
-                f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6"
-            )
-            return
-        command = f"iperf3 -c {self.requestdict['ip']} -P {self.requestdict['port']} -B {self.requestdict['interface']} -t {self.requestdict['time']}"
+        command = f"iperf3 -c {self.requestdict['ip']} -p {self.requestdict['port']}"
+        command += f" -t {self.requestdict['time']}"
+        command += f" -P {self.requestdict['streams']}"
+        if self.requestdict.get('interface'):
+            if self.requestdict["interface"] not in getInterfaces():
+                self.logMessage(f"Interface {self.requestdict['interface']} is not available on the node.")
+                return
+            command += f" -B {self.requestdict['interface']}"
+
         self.logMessage(f"Running command: {command}")
-        externalCommandStdOutErr(
-            command, self.outfiles["stdout"], self.outfiles["stderr"]
-        )
+        externalCommandStdOutErr(command, self.outfiles["stdout"], self.outfiles["stderr"])
         self.jsonout["exitCode"] = 0

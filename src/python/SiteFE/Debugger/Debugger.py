@@ -29,10 +29,14 @@ from SiteRMLibs.ipaddr import ipVersion, checkoverlap
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.Backends.main import Switch
+from SiteRMLibs.Validator import Validator
+from SiteRMLibs.CustomExceptions import BadRequestError
 
 COMPONENT = "Debugger"
 
-
+# pylint: disable=R0902,R1725
+# R0902 - too many instance attributes
+# R1725 - super with arguments
 class Debugger(DebugService):
     """Debugger main process"""
 
@@ -47,6 +51,7 @@ class Debugger(DebugService):
         self.debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
         self.dbI = getVal(getDBConn("DebuggerService", self), **{"sitename": self.sitename})
         self.logger.info("====== Debugger Start Work. Sitename: %s", self.sitename)
+        self.validator = Validator(self.config)
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -60,8 +65,6 @@ class Debugger(DebugService):
 
     def updateDebugWorker(self, **kwargs):
         "Update hostname/workername for debug request"
-        # Update the state in database.
-        # update_debugrequestsworker = "UPDATE debugrequests SET state = %(state)s, hostname = %(hostname)s, updatedate = %(updatedate)s WHERE id = %(id)s"
         out = {
             "id": kwargs["id"],
             "state": kwargs["state"],
@@ -104,22 +107,21 @@ class Debugger(DebugService):
         """Find range overlap for the item."""
         dynamicfrom = item.get("requestdict", {}).get("dynamicfrom", None)
         if not dynamicfrom:
-            self.logger.warning(f"Input has no dynamicfrom value. Input: {item}")
-            return None
+            return None, None, f"Input has no dynamicfrom value. Input: {item}"
         iptype = ipVersion(dynamicfrom)
         if iptype == "-1":
-            self.logger.warning(f"Unable to identify ipVersion for {input}")
-            return None
+            return None, None, f"Unable to identify ipVersion for {input}"
         iptype = "inet" if iptype == "4" else "inet6"
         for workername, workerd in workers.items():
             if iptype not in workerd:
-                self.logger.info(f"Worker {workername} has no {iptype}")
+                self.logger.debug(f"Worker {workername} has no {iptype}")
                 continue
             for ipval in workerd.get(iptype):
                 if checkoverlap(dynamicfrom, ipval):
                     self.logger.info(f"Found overlap for {item} with {workername}")
-                    return workername
-        return None
+                    return workername, ipval, ""
+        return None, None, f"After all checks, no worker found suitable for {item}"
+
 
     def identifyWorker(self):
         """Identify worker for a third party service, e.g. hostname not defined"""
@@ -131,11 +133,29 @@ class Debugger(DebugService):
             item = self.getFullData("undefined", item)
             # Load request information;
             item["requestdict"] = getFileContentAsJson(item["debuginfo"])
-            workername = self._findRangeOverlap(item, workers)
-            if workername:
-                self.updateDebugWorker(**{"id": item["id"], "state": "new", "hostname": workername})
-            else:
-                self.updateDebugWorker(**{"id": item["id"], "state": "failed", "hostname": "notfound"})
+            workername, ipf, errmsg = self._findRangeOverlap(item, workers)
+            if not errmsg:
+                item['requestdict']['selectedip'] = ipf
+                item['requestdict']['hostname'] = workername
+                try:
+                    item['requestdict'] = self.validator.validate(item['requestdict'])
+                    self.dumpFileContentAsJson(item["debuginfo"], item["requestdict"])
+                    self.updateDebugWorker(**{"id": item["id"], "state": "new", "hostname": workername})
+                except BadRequestError as ex:
+                    errmsg = f"Received error during validate: {str(ex)}"
+            if errmsg:
+                retOut = {
+                    "processOut": [],
+                    "stdout": [],
+                    "stderr": [errmsg],
+                    "jsonout": {},
+                    "exitCode": -1}
+                self.dumpFileContentAsJson(item["outputinfo"], retOut)
+                self.logger.error(f'Received an error to identify worker: {errmsg}')
+                self.updateDebugWorker(**{"id": item["id"],
+                                          "state": "failed",
+                                          "hostname": workername if workername else "notfound"})
+                continue
 
     def startwork(self):
         """Start execution and get new requests from FE"""
