@@ -7,7 +7,6 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
-from SiteRMLibs.ipaddr import ipVersion
 from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.ipaddr import getInterfaces
@@ -28,11 +27,6 @@ class RapidPing(BaseDebugAction):
         """Return arptable for specific vlan"""
         if self.requestdict["interface"] not in getInterfaces():
             self.logMessage("Interface is not available on the node")
-            return
-        if ipVersion(self.requestdict["ip"]) == -1:
-            self.logMessage(
-                f"IP {self.requestdict['ip']} does not appear to be an IPv4 or IPv6"
-            )
             return
         ipaddr = self.requestdict["ip"].split("/")[0]
         command = f"ping -i {self.requestdict.get('interval', 1)} -w {self.requestdict['time']} {ipaddr} -s {self.requestdict['packetsize']} -I {self.requestdict['interface']}"

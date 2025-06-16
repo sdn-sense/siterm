@@ -8,7 +8,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/05/30
 """
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
-from SiteRMLibs.CustomExceptions import BackgroundException
+from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 
 
 class FdtServer(BaseDebugAction):
@@ -23,6 +23,12 @@ class FdtServer(BaseDebugAction):
         super().__init__()
 
     def main(self):
-        """Main FdtServer work. Run FDT client."""
-        self.logMessage(f"NOT IMPLEMENTED call {self.backgConfig}. TODO", "warning")
-        raise BackgroundException("NOT IMPLEMENTED! -1")
+        """Main FdtServer work. Run FDT Server."""
+        command = f'timeout {self.requestdict["time"]} java -jar /opt/fdt.jar -p {self.requestdict["port"]}'
+        if self.requestdict["onetime"] == "True":
+            command += " -S"
+        self.logMessage(f"Running command: {command}")
+        externalCommandStdOutErr(
+            command, self.outfiles["stdout"], self.outfiles["stderr"]
+        )
+        self.jsonout["exitCode"] = 0
