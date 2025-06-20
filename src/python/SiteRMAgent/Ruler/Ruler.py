@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=R0902, R0912
 """Ruler component pulls all actions from Site-FE and applies these rules on
 DTN.
 
@@ -143,7 +144,6 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
                         continue
                     if rvals != self.activeNew.get(key, {}).get(uuid, {}):
                         actCall.terminate(rvals, uuid)
-            return
 
     def activeEnsure(self, actKey, actCall):
         """Ensure all active resources are enabled, configured"""
@@ -169,7 +169,6 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
             for key, val in self.activeNew.items():
                 for uuid, rvals in val.items():
                     actCall.activate(rvals, uuid)
-            return
 
     def startwork(self):
         """Start execution and get new requests from FE."""

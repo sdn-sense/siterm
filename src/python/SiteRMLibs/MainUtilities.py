@@ -348,6 +348,7 @@ def publishToSiteFE(inputDict, host, url, verb="PUT"):
             if retries == 0:
                 return ex.args[1], ex.args[0], "FAILED", False
             time.sleep(1)
+    return "Failed after all retries", -1, "FAILED", False
 
 
 def getDataFromSiteFE(inputDict, host, url):
@@ -369,7 +370,7 @@ def getDataFromSiteFE(inputDict, host, url):
             if retries == 0:
                 return ex.args[1], ex.args[0], "FAILED", False
             time.sleep(1)
-
+    return "Failed after all retries", -1, "FAILED", False
 
 def getWebContentFromURL(url, raiseEx=True, params=None):
     """GET from URL"""
