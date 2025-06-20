@@ -19,6 +19,7 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2025 ESnet
 Date                    : 2025/06/14
 """
+import random
 from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.ipaddr import ipVersion
@@ -44,17 +45,20 @@ class Validator:
 
     def _addDefaults(self, inputDict):
         """Add default params (not controlled by outside)"""
-        for key, val in self.config["MAIN"]["debuggers"][inputDict["type"]].get(
-            "defaults", {}
+        for key, val in (
+            self.config["MAIN"]["debuggers"][inputDict["type"]]
+            .get("defaults", {})
+            .items()
         ):
             if key not in inputDict:
                 inputDict[key] = val
-        # If runtime not added, we add current timestamp + 10minutes
+        # If runtime not added, we add random between defruntime and maxruntime
         if "runtime" not in inputDict:
-            inputDict["runtime"] = (
-                getUTCnow()
-                + self.config["MAIN"]["debuggers"][inputDict["type"]]["defruntime"]
+            randtime = random.randint(
+                self.config["MAIN"]["debuggers"][inputDict["type"]]["defruntime"] + 60,
+                self.config["MAIN"]["debuggers"][inputDict["type"]]["maxruntime"],
             )
+            inputDict["runtime"] = getUTCnow() + randtime
         # If hostname not added, we add undefined hostname. To be identified by backend.
         if "hostname" not in inputDict:
             inputDict["hostname"] = "undefined"
@@ -204,7 +208,7 @@ class Validator:
     def validateRuntime(self, inputDict):
         """Validate Runtime"""
         totalRuntime = int(int(inputDict["runtime"]) - getUTCnow())
-        defRuntime = self.config["MAIN"]["debuggers"][inputDict["type"]]["mininterval"]
+        defRuntime = self.config["MAIN"]["debuggers"][inputDict["type"]]["defruntime"]
         maxRuntime = self.config["MAIN"]["debuggers"][inputDict["type"]]["maxruntime"]
         if totalRuntime < defRuntime or totalRuntime > maxRuntime:
             raise BadRequestError(

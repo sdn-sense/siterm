@@ -23,11 +23,8 @@ class IperfClient(BaseDebugAction):
         self.service = "IperfClient"
         super().__init__()
 
-    def main(self):
+    def runiperfclient(self):
         """Run TCP IPerf"""
-        if self.requestdict["interface"] not in getInterfaces():
-            self.logMessage("Interface is not available on the node")
-            return
         command = f"iperf3 -c {self.requestdict['ip']} -p {self.requestdict['port']}"
         command += f" -t {self.requestdict['time']}"
         command += f" -P {self.requestdict['streams']}"
@@ -38,9 +35,12 @@ class IperfClient(BaseDebugAction):
                 )
                 return
             command += f" -B {self.requestdict['interface']}"
-
         self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(
             command, self.outfiles["stdout"], self.outfiles["stderr"]
         )
         self.jsonout["exitCode"] = 0
+
+    def main(self):
+        """Run main to launch iperf3 server"""
+        self.runiperfclient()

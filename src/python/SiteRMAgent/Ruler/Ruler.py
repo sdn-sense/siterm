@@ -31,7 +31,7 @@ from SiteRMLibs.timing import Timing
 COMPONENT = "Ruler"
 
 
-class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
+class Ruler(QOS, OverlapLib, BWService, Timing):
     """Ruler class to create interfaces on the system."""
 
     def __init__(self, config, sitename):
@@ -40,6 +40,7 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
         self.workDir = self.config.get("general", "privatedir") + "/SiteRM/RulerAgent/"
         createDirs(self.workDir)
         self.sitename = sitename
+        self.siteDB = contentDB()
         self.fullURL = getFullUrl(self.config, self.sitename)
         self.hostname = self.config.get("agent", "hostname")
         self.logger.info("====== Ruler Start Work. Hostname: %s", self.hostname)
@@ -79,7 +80,7 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
         try:
             data = self.getData("/sitefe/v1/activedeltas/")
         except FailedGetDataFromFE as ex:
-            self.dumpFileContentAsJson(failurefile, {"exc": str(ex)})
+            self.siteDB.dumpFileContentAsJson(failurefile, {"exc": str(ex)})
             self.logger.critical("Failed to get data from FE: %s", str(ex))
             raise FailedGetDataFromFE from ex
         if os.path.isfile(failurefile):
@@ -184,7 +185,7 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
         self.activeFromFE = self.getActiveDeltas()
         self.activeNew = self.getAllOverlaps(self.activeFromFE)
         if self.activeDeltas != self.activeFromFE:
-            self.dumpFileContentAsJson(activeDeltasFile, self.activeFromFE)
+            self.siteDB.dumpFileContentAsJson(activeDeltasFile, self.activeFromFE)
 
         if not self.config.getboolean("agent", "norules"):
             self.logger.info("Agent is configured to apply rules")

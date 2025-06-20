@@ -79,8 +79,8 @@ class DebugCalls:
                 f"Debug request with ID {kwargs['debugvar']} not found."
             )
         out = out[0]
-        out["requestdict"] = self.getFileContentAsJson(out["debuginfo"])
-        out["output"] = self.getFileContentAsJson(out["outputinfo"])
+        out["requestdict"] = self.siteDB.getFileContentAsJson(out["debuginfo"])
+        out["output"] = self.siteDB.getFileContentAsJson(out["outputinfo"])
         return out
 
     def getdebug(self, environ, **kwargs):
@@ -120,7 +120,7 @@ class DebugCalls:
         outputfname = os.path.join(
             debugdir, inputDict["hostname"], randomuuid, "output.json"
         )
-        self.dumpFileContentAsJson(requestfname, inputDict)
+        self.siteDB.dumpFileContentAsJson(requestfname, inputDict)
         out = {
             "hostname": inputDict.get("hostname", "undefined"),
             "state": "new",
@@ -143,7 +143,9 @@ class DebugCalls:
                 f"Debug request with ID {kwargs['debugvar']} not found."
             )
         # ==================================
-        self.dumpFileContentAsJson(dbentry["outputinfo"], inputDict.get("output", {}))
+        self.siteDB.dumpFileContentAsJson(
+            dbentry["outputinfo"], inputDict.get("output", {})
+        )
 
         # Update the state in database.
         out = {
@@ -161,9 +163,9 @@ class DebugCalls:
         # ==================================
         updOut = self.dbI.delete("debugrequests", [["id", kwargs["debugvar"]]])
         # Delete files if they exists
-        if os.path.isfile.exists(out["debuginfo"]):
+        if os.path.isfile(out["debuginfo"]):
             os.remove(out["debuginfo"])
-        if os.path.isfile.exists(out["outputinfo"]):
+        if os.path.isfile(out["outputinfo"]):
             os.remove(out["outputinfo"])
         # ==================================
         self.responseHeaders(environ, **kwargs)

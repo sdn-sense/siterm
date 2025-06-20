@@ -134,7 +134,9 @@ def getVal(conDict, **kwargs):
     if "sitename" in kwargs:
         if kwargs["sitename"] in list(conDict.keys()):
             return conDict[kwargs["sitename"]]
-        raise Exception("This SiteName is not configured on the Frontend. Contact Support")
+        raise Exception(
+            "This SiteName is not configured on the Frontend. Contact Support"
+        )
     raise Exception("This Call Should not happen. Contact Support")
 
 
@@ -197,7 +199,9 @@ def getTimeRotLogger(**kwargs):
     handler = checkLoggingHandler(**kwargs)
     if "logFile" not in kwargs:
         if "config" in kwargs:
-            kwargs["logFile"] = f"{kwargs['config'].get('general', 'logDir')}/{kwargs.get('service', __name__)}/"
+            kwargs["logFile"] = (
+                f"{kwargs['config'].get('general', 'logDir')}/{kwargs.get('service', __name__)}/"
+            )
         else:
             print("No config passed, will log to StreamLogger... Code issue!")
             return getStreamLogger(**kwargs)
@@ -232,7 +236,9 @@ def evaldict(inputDict):
         try:
             inputDict = inputDict.decode("utf-8")
         except UnicodeDecodeError as ex:
-            raise WrongInputError(f"Input bytes could not be decoded. Error: {ex}") from ex
+            raise WrongInputError(
+                f"Input bytes could not be decoded. Error: {ex}"
+            ) from ex
     # At this stage, if not string, raise error.  list/dict is checked in previous if
     if not isinstance(inputDict, str):
         raise WrongInputError("Input must be a string or dict/list.")
@@ -241,7 +247,9 @@ def evaldict(inputDict):
     except (json.JSONDecodeError, TypeError, ValueError):
         pass  # fall back
     # Try to fix common issues:
-    print(f"Got dict which is not json loadable. Print for debugging: {inputDict[:100]}")
+    print(
+        f"Got dict which is not json loadable. Print for debugging: {inputDict[:100]}"
+    )
     if "'" in inputDict or ",}" in inputDict or ",]" in inputDict:
         inputDict = re.sub(r"'", r'"', inputDict)
         # Remove trailing commas (optional)
@@ -249,7 +257,9 @@ def evaldict(inputDict):
     try:
         return json.loads(inputDict)
     except (json.JSONDecodeError, TypeError, ValueError) as ex:
-        raise WrongInputError(f"Input looks like JSON but could not be parsed even after fixup. Error: {ex}") from ex
+        raise WrongInputError(
+            f"Input looks like JSON but could not be parsed even after fixup. Error: {ex}"
+        ) from ex
 
 
 def jsondumps(inputDict):
@@ -281,7 +291,9 @@ def externalCommand(command, communicate=True):
 def externalCommandStdOutErr(command, stdout, stderr):
     """Execute External Commands and return stdout and stderr."""
     command = shlex.split(str(command))
-    with open(stdout, "w", encoding="utf-8") as outFD, open(stderr, "w", encoding="utf-8") as errFD:
+    with open(stdout, "w", encoding="utf-8") as outFD, open(
+        stderr, "w", encoding="utf-8"
+    ) as errFD:
         with subprocess.Popen(command, stdout=outFD, stderr=errFD) as proc:
             return proc.communicate()
 
@@ -295,7 +307,9 @@ def execute(command, logger, raiseError=True):
     if cmdOut.returncode != 0 and raiseError:
         raise FailedInterfaceCommand(msg)
     if cmdOut.returncode != 0:
-        logger.debug(f"RaiseError is False, but command failed. Only logging Errmsg: {msg}")
+        logger.debug(
+            f"RaiseError is False, but command failed. Only logging Errmsg: {msg}"
+        )
         return False
     return True
 
@@ -370,7 +384,9 @@ def getWebContentFromURL(url, raiseEx=True, params=None):
                 out = requests.get(url, timeout=60)
             return out
         except requests.exceptions.RequestException as ex:
-            print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
+            print(
+                f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}"
+            )
             if raiseEx and retries == 0:
                 raise
             out = {}
@@ -391,7 +407,9 @@ def postWebContentToURL(url, **kwargs):
             out = requests.post(url, timeout=60, **kwargs)
             return out
         except requests.exceptions.RequestException as ex:
-            print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
+            print(
+                f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}"
+            )
             if raiseEx and retries == 0:
                 raise
             out = {}
@@ -444,7 +462,10 @@ def fileLock(func):
                         return func(outFile, *args, **kwargs)
                     finally:
                         fcntl.flock(lock_fd, fcntl.LOCK_UN)
-                        os.remove(lockfile)
+                        try:
+                            os.remove(lockfile)
+                        except FileNotFoundError:
+                            pass
             except BlockingIOError:
                 time.sleep(0.5)
         raise TimeoutError(f"Could not acquire lock for {outFile} after 10 seconds")
@@ -522,17 +543,23 @@ def delete(inputObj, delObj):
         try:
             tmpList.remove(delObj)
         except ValueError as ex:
-            print(f"Delete object {delObj} is not in inputObj {tmpList} list. Err: {ex}")
+            print(
+                f"Delete object {delObj} is not in inputObj {tmpList} list. Err: {ex}"
+            )
         return tmpList
     if isinstance(inputObj, dict):
         tmpDict = copy.deepcopy(inputObj)
         try:
             del tmpDict[delObj]
         except KeyError as ex:
-            print(f"Delete object {delObj} is not in inputObj {tmpList} dict. Err: {ex}")
+            print(
+                f"Delete object {delObj} is not in inputObj {tmpList} dict. Err: {ex}"
+            )
         return tmpDict
     # This should not happen
-    raise WrongInputError(f"Provided input type is not available for deletion. Type {type(inputObj)}")
+    raise WrongInputError(
+        f"Provided input type is not available for deletion. Type {type(inputObj)}"
+    )
 
 
 def parse_gui_form_post(inputVal):
@@ -540,7 +567,9 @@ def parse_gui_form_post(inputVal):
     out = {}
     for item in inputVal.split(b"&"):
         tmpItem = item.split(b"=")
-        out[tmpItem[0].decode("utf-8")] = urllib.parse.unquote(tmpItem[1].decode("utf-8"))
+        out[tmpItem[0].decode("utf-8")] = urllib.parse.unquote(
+            tmpItem[1].decode("utf-8")
+        )
     return out
 
 
@@ -643,7 +672,9 @@ def getUrlParams(environ, paramsList):
         outVals = query_params.get(key, [])
 
         if len(outVals) > 1:
-            raise TooManyArgumentalValues(f"Parameter {key} has too many defined values")
+            raise TooManyArgumentalValues(
+                f"Parameter {key} has too many defined values"
+            )
 
         if len(outVals) == 1:
             val = outVals[0]
@@ -653,7 +684,9 @@ def getUrlParams(environ, paramsList):
                 elif val.lower() == "false":
                     outParams[key] = False
                 else:
-                    raise NotSupportedArgument(f"Parameter {key} value not acceptable. Allowed options: true, false")
+                    raise NotSupportedArgument(
+                        f"Parameter {key} value not acceptable. Allowed options: true, false"
+                    )
             elif param["type"] == str and "options" in param:
                 if val not in param["options"]:
                     raise NotSupportedArgument(
@@ -770,7 +803,9 @@ def getCurrentModel(cls, raiseException=False):
             currentGraph.parse(currentModel[0]["fileloc"], format="turtle")
         except IOError as ex:
             if raiseException:
-                raise NotFoundError(f"Model failed to parse from DB. Error {ex}") from IOError
+                raise NotFoundError(
+                    f"Model failed to parse from DB. Error {ex}"
+                ) from IOError
             currentGraph = Graph()
     elif raiseException:
         raise NotFoundError("There is no model in DB. LookUpService is running?")
@@ -853,7 +888,9 @@ def timedhourcheck(lockname, hours=1):
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 fd.write(timestamp)
         except OSError as ex:
-            print(f"Error creating timestamp file: {ex}. Will return False for timedhourcheck")
+            print(
+                f"Error creating timestamp file: {ex}. Will return False for timedhourcheck"
+            )
             return False
     return True
 
@@ -882,7 +919,9 @@ def checkHTTPService(config):
                 returnvals.append(0)
         except Exception:
             excType, excValue = sys.exc_info()[:2]
-            print(f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
+            print(
+                f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
+            )
             returnvals.append(1)
     return 0 if not returnvals else any(returnvals)
 
