@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=R0902, R0912
 """Ruler component pulls all actions from Site-FE and applies these rules on
 DTN.
 
@@ -31,7 +32,7 @@ from SiteRMLibs.timing import Timing
 COMPONENT = "Ruler"
 
 
-class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
+class Ruler(QOS, OverlapLib, BWService, Timing):
     """Ruler class to create interfaces on the system."""
 
     def __init__(self, config, sitename):
@@ -40,6 +41,7 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
         self.workDir = self.config.get("general", "privatedir") + "/SiteRM/RulerAgent/"
         createDirs(self.workDir)
         self.sitename = sitename
+        self.siteDB = contentDB()
         self.fullURL = getFullUrl(self.config, self.sitename)
         self.hostname = self.config.get("agent", "hostname")
         self.logger.info("====== Ruler Start Work. Hostname: %s", self.hostname)
@@ -79,7 +81,7 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
         try:
             data = self.getData("/sitefe/v1/activedeltas/")
         except FailedGetDataFromFE as ex:
-            self.dumpFileContentAsJson(failurefile, {"exc": str(ex)})
+            self.siteDB.dumpFileContentAsJson(failurefile, {"exc": str(ex)})
             self.logger.critical("Failed to get data from FE: %s", str(ex))
             raise FailedGetDataFromFE from ex
         if os.path.isfile(failurefile):
@@ -142,7 +144,6 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
                         continue
                     if rvals != self.activeNew.get(key, {}).get(uuid, {}):
                         actCall.terminate(rvals, uuid)
-            return
 
     def activeEnsure(self, actKey, actCall):
         """Ensure all active resources are enabled, configured"""
@@ -168,7 +169,6 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
             for key, val in self.activeNew.items():
                 for uuid, rvals in val.items():
                     actCall.activate(rvals, uuid)
-            return
 
     def startwork(self):
         """Start execution and get new requests from FE."""
@@ -184,7 +184,7 @@ class Ruler(contentDB, QOS, OverlapLib, BWService, Timing):
         self.activeFromFE = self.getActiveDeltas()
         self.activeNew = self.getAllOverlaps(self.activeFromFE)
         if self.activeDeltas != self.activeFromFE:
-            self.dumpFileContentAsJson(activeDeltasFile, self.activeFromFE)
+            self.siteDB.dumpFileContentAsJson(activeDeltasFile, self.activeFromFE)
 
         if not self.config.getboolean("agent", "norules"):
             self.logger.info("Agent is configured to apply rules")

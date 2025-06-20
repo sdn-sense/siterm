@@ -22,8 +22,8 @@ class IperfServer(BaseDebugAction):
         self.service = "IperfServer"
         super().__init__()
 
-    def main(self):
-        """Run IPerf Server"""
+    def runiperf(self):
+        """Run Iperf3 server"""
         command = f'timeout {self.requestdict["time"]} iperf3 --server -p {self.requestdict["port"]}'
         if "ip" in self.requestdict:
             command += f' --bind {self.requestdict["ip"]}'
@@ -34,3 +34,9 @@ class IperfServer(BaseDebugAction):
             command, self.outfiles["stdout"], self.outfiles["stderr"]
         )
         self.jsonout["exitCode"] = 0
+
+    def main(self):
+        """Run main to launch iperf3 server"""
+        if self.requestdict.get("dynamicfrom") and self.requestdict.get("selectedip"):
+            self.requestdict["ip"] = self.requestdict["selectedip"]
+        self.runiperf()

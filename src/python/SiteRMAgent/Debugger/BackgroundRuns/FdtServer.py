@@ -32,3 +32,6 @@ class FdtServer(BaseDebugAction):
             command, self.outfiles["stdout"], self.outfiles["stderr"]
         )
         self.jsonout["exitCode"] = 0
+
+
+# -FDT_LISTEN

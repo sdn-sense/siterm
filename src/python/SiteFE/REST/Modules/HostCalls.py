@@ -22,10 +22,10 @@ Date                    : 2023/01/03
 import os
 from SiteFE.REST.Modules.Functions.Host import HostSubCalls
 from SiteRMLibs.CustomExceptions import BadRequestError, NotFoundError, OverlapException
-from SiteRMLibs.MainUtilities import getUTCnow, read_input_data, contentDB, HOSTSERVICES
+from SiteRMLibs.MainUtilities import getUTCnow, read_input_data, HOSTSERVICES
 
 
-class HostCalls(HostSubCalls, contentDB):
+class HostCalls(HostSubCalls):
     """Host Info/Add/Update Calls API Module"""
 
     # pylint: disable=E1101
@@ -106,7 +106,7 @@ class HostCalls(HostSubCalls, contentDB):
                 "updatedate": inputDict["updateTime"],
                 "hostinfo": fname,
             }
-            self.dumpFileContentAsJson(fname, inputDict)
+            self.siteDB.dumpFileContentAsJson(fname, inputDict)
             self.dbI.insert("hosts", [out])
         else:
             raise BadRequestError(
@@ -141,7 +141,7 @@ class HostCalls(HostSubCalls, contentDB):
             "updatedate": getUTCnow(),
             "hostinfo": fname,
         }
-        self.dumpFileContentAsJson(fname, inputDict)
+        self.siteDB.dumpFileContentAsJson(fname, inputDict)
         self.dbI.update("hosts", [out])
         self.responseHeaders(environ, **kwargs)
         return {"Status": "UPDATED"}

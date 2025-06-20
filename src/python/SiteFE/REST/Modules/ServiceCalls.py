@@ -21,10 +21,10 @@ Date                    : 2023/01/03
 """
 import os
 from SiteRMLibs.CustomExceptions import NotFoundError
-from SiteRMLibs.MainUtilities import getUTCnow, read_input_data, contentDB
+from SiteRMLibs.MainUtilities import getUTCnow, read_input_data
 
 
-class ServiceCalls(contentDB):
+class ServiceCalls:
     """Host Info/Add/Update Calls API Module"""
 
     # pylint: disable=E1101
@@ -35,7 +35,9 @@ class ServiceCalls(contentDB):
         for sitename in self.sites:
             if sitename != "MAIN":
                 self.servicedirs.setdefault(sitename, "")
-                self.servicedirs[sitename] = os.path.join(self.config.get(sitename, "privatedir"), "ServiceData")
+                self.servicedirs[sitename] = os.path.join(
+                    self.config.get(sitename, "privatedir"), "ServiceData"
+                )
 
     def __urlParams(self):
         """Define URL Params for this class"""
@@ -55,10 +57,18 @@ class ServiceCalls(contentDB):
 
     def __defineRoutes(self):
         """Define Routes for this class"""
-        self.routeMap.connect("addservice", "/json/frontend/addservice", action="addservice")
-        self.routeMap.connect("updateservice", "/json/frontend/updateservice", action="addservice")
-        self.routeMap.connect("deleteservice", "/json/frontend/deleteservice", action="deleteservice")
-        self.routeMap.connect("getservice", "/json/frontend/getservice", action="getservice")
+        self.routeMap.connect(
+            "addservice", "/json/frontend/addservice", action="addservice"
+        )
+        self.routeMap.connect(
+            "updateservice", "/json/frontend/updateservice", action="addservice"
+        )
+        self.routeMap.connect(
+            "deleteservice", "/json/frontend/deleteservice", action="deleteservice"
+        )
+        self.routeMap.connect(
+            "getservice", "/json/frontend/getservice", action="getservice"
+        )
 
     def __generateSearch(self, inputDict):
         """Generate search query for service."""
@@ -73,7 +83,11 @@ class ServiceCalls(contentDB):
         """Adding new service to DB."""
         status = "Undefined"
         inputDict = read_input_data(environ)
-        fname = os.path.join(self.servicedirs[kwargs["sitename"]], inputDict["hostname"], "serviceinfo.json")
+        fname = os.path.join(
+            self.servicedirs[kwargs["sitename"]],
+            inputDict["hostname"],
+            "serviceinfo.json",
+        )
         out = {
             "hostname": inputDict["hostname"],
             "servicename": inputDict["servicename"],
@@ -81,16 +95,18 @@ class ServiceCalls(contentDB):
             "updatedate": inputDict.get("updateTime", getUTCnow()),
             "serviceinfo": fname,
         }
-        host = self.dbI.get("services", limit=1, search=self.__generateSearch(inputDict))
+        host = self.dbI.get(
+            "services", limit=1, search=self.__generateSearch(inputDict)
+        )
         if not host:
-            self.dumpFileContentAsJson(fname, inputDict)
+            self.siteDB.dumpFileContentAsJson(fname, inputDict)
             self.dbI.insert("services", [out])
             status = "ADDED"
         else:
             out["id"] = host[0]["id"]
             del out["insertdate"]
             out["updatedate"] = getUTCnow()
-            self.dumpFileContentAsJson(fname, inputDict)
+            self.siteDB.dumpFileContentAsJson(fname, inputDict)
             self.dbI.update("services", [out])
             status = "UPDATED"
         self.responseHeaders(environ, **kwargs)
@@ -100,7 +116,9 @@ class ServiceCalls(contentDB):
         """Delete Service from DB."""
         inputDict = read_input_data(environ)
         # Validate that these entries are known...
-        host = self.dbI.get("services", limit=1, search=self.__generateSearch(inputDict))
+        host = self.dbI.get(
+            "services", limit=1, search=self.__generateSearch(inputDict)
+        )
         if not host:
             raise NotFoundError(f"This Input {inputDict} is not registered at all.")
         # Delete from services

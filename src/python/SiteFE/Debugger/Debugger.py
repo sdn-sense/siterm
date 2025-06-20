@@ -23,7 +23,6 @@ import argparse
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import getDBConn, getVal
-from SiteRMLibs.MainUtilities import getFileContentAsJson
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.ipaddr import ipVersion, checkoverlap
 from SiteRMLibs.DebugService import DebugService
@@ -48,7 +47,7 @@ class Debugger(DebugService):
         self.logger = getLoggingObject(config=self.config, service="Debugger")
         self.switch = Switch(self.config, self.sitename)
         self.switches = {}
-        self.diragent = contentDB()
+        self.siteDB = contentDB()
         self.debugdir = os.path.join(
             self.config.get(self.sitename, "privatedir"), "DebugRequests"
         )
@@ -87,7 +86,7 @@ class Debugger(DebugService):
         )
         # Get Request JSON
         requestfname = os.path.join(debugdir, hostname, str(item["id"]), "request.json")
-        item["requestdict"] = getFileContentAsJson(requestfname)
+        item["requestdict"] = self.siteDB.getFileContentAsJson(requestfname)
         return item
 
     def loadAllWorkers(self):
@@ -106,12 +105,16 @@ class Debugger(DebugService):
                     # Load service information from file
                     if service.get("serviceinfo"):
                         if os.path.exists(service["serviceinfo"]):
-                            workers[service["hostname"]]["serviceinfo"] = (
-                                getFileContentAsJson(service["serviceinfo"])
+                            allinfo = self.siteDB.getFileContentAsJson(
+                                service["serviceinfo"]
+                            )
+                            workers[service["hostname"]]["allinfo"] = allinfo
+                            workers[service["hostname"]]["serviceinfo"] = allinfo.get(
+                                "serviceinfo", {}
                             )
                         else:
                             self.logger.warning(
-                                "Service info file does not exist: {service}"
+                                f"Service info file does not exist: {service}"
                             )
         self.logger.debug("Loaded workers: %s", workers)
         return workers
@@ -126,10 +129,9 @@ class Debugger(DebugService):
             return None, None, f"Unable to identify ipVersion for {input}"
         iptype = "inet" if iptype == "4" else "inet6"
         for workername, workerd in workers.items():
-            if iptype not in workerd:
-                self.logger.debug(f"Worker {workername} has no {iptype}")
+            if iptype not in workerd.get("serviceinfo", {}):
                 continue
-            for ipval in workerd.get(iptype):
+            for ipval in workerd["serviceinfo"].get(iptype):
                 if checkoverlap(dynamicfrom, ipval):
                     self.logger.info(f"Found overlap for {item} with {workername}")
                     return workername, ipval, ""
@@ -144,14 +146,16 @@ class Debugger(DebugService):
         for item in data:
             item = self.getFullData("undefined", item)
             # Load request information;
-            item["requestdict"] = getFileContentAsJson(item["debuginfo"])
+            item["requestdict"] = self.siteDB.getFileContentAsJson(item["debuginfo"])
             workername, ipf, errmsg = self._findRangeOverlap(item, workers)
             if not errmsg:
                 item["requestdict"]["selectedip"] = ipf
                 item["requestdict"]["hostname"] = workername
                 try:
                     item["requestdict"] = self.validator.validate(item["requestdict"])
-                    self.dumpFileContentAsJson(item["debuginfo"], item["requestdict"])
+                    self.siteDB.dumpFileContentAsJson(
+                        item["debuginfo"], item["requestdict"]
+                    )
                     self.updateDebugWorker(
                         **{"id": item["id"], "state": "new", "hostname": workername}
                     )
@@ -165,7 +169,7 @@ class Debugger(DebugService):
                     "jsonout": {},
                     "exitCode": -1,
                 }
-                self.dumpFileContentAsJson(item["outputinfo"], retOut)
+                self.siteDB.dumpFileContentAsJson(item["outputinfo"], retOut)
                 self.logger.error(f"Received an error to identify worker: {errmsg}")
                 self.updateDebugWorker(
                     **{
@@ -191,6 +195,8 @@ class Debugger(DebugService):
                         )
                         item = self.getFullData(host, item)
                     self.checkBackgroundProcess(item)
+        # Find out workers for undefined - meaning dynamic
+        self.identifyWorker()
 
 
 def execute(config=None, sitename=None):
