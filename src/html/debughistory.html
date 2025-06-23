@@ -86,7 +86,7 @@
               tableAddKeyVal(myObject, ['Key', 'Value'], model);
               // Debug Output
               if (json['output']){
-                  var myObject = json['output'];
+                  var myObject = JSON.parse(json['output']);
                   if (myObject['exitCode']){
                       model.append('<div class="row"><b>Runtime Exit Code: <\/b>' + myObject['exitCode'] + '<\/div>');
                   }
