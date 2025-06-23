@@ -38,5 +38,5 @@ class IperfServer(BaseDebugAction):
     def main(self):
         """Run main to launch iperf3 server"""
         if self.requestdict.get("dynamicfrom") and self.requestdict.get("selectedip"):
-            self.requestdict["ip"] = self.requestdict["selectedip"]
+            self.requestdict["ip"] = self.requestdict["selectedip"].split('/')[0]
         self.runiperf()
