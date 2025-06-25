@@ -853,7 +853,8 @@ class PolicyService(RDFHelper, Timing, BWService):
                 actEntry.setdefault("_params", {})
                 actEntry["_params"]["networkstatus"] = dbout["uuidstate"]
                 if "hasService" in actEntry:
-                    actEntry["hasService"]["networkstatus"] = dbout["uuidstate"]
+                    actEntry["hasService"].setdefault('_params', {})
+                    actEntry["hasService"]["_params"]["networkstatus"] = dbout["uuidstate"]
             changed = True
             self.dbI.delete("deltatimestates", [["id", dbout["id"]]])
         self.topLevelDeltaState()
