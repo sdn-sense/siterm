@@ -22,7 +22,8 @@ from SiteFE.PolicyService.policyService import PolicyService
 from SiteFE.ProvisioningService.provisioningService import ProvisioningService
 from SiteRMLibs.timing import Timing
 from SiteRMLibs.Backends.main import Switch
-from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
+from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
+from SiteRMLibs.Warnings import Warnings
 from SiteRMLibs.MainUtilities import (
     createDirs,
     generateHash,
@@ -118,7 +119,7 @@ class MultiWorker:
         self.needRestart = False
 
 
-class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timing):
+class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timing, Warnings):
     """Lookup Service prepares MRML model about the system."""
 
     def __init__(self, config, sitename):
@@ -145,11 +146,11 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         for dirname in ["LookUpService", "SwitchWorker"]:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
+        self.runcount = 0
+        self._addedTriples = set()
         self.warnings = []
         self.warningstart = 0
-        self.runcount = 0
         self.warningscounters = {}
-        self._addedTriples = set()
 
     def __clean(self):
         """Clean params of LookUpService"""
@@ -318,18 +319,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                     tmprange.remove(vlan)
         return tmprange
 
-    def countWarnings(self, warning):
-        """Warning Counter"""
-        self.warningscounters.setdefault(warning, 0)
-        self.warningscounters[warning] += 1
 
-    def addWarning(self, warning):
-        """Record Alarm."""
-        self.countWarnings(warning)
-        if self.warningscounters[warning] >= 5:
-            self.warnings.append(warning)
-
-    def checkAndRaiseWarnings(self):
+    def checkVlansWarnings(self):
         """Check and raise warnings in case some vlans are used/configured manually."""
         # Check that for all vlan range, if it is on system usedVlans - it should be on deltas too;
         # otherwise it means vlan is configured manually (or deletion did not happen)
@@ -351,12 +342,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                         )
         # Add switchwarnings (in case any exists)
         self.warnings += self.switch.getWarnings()
-        if self.warnings:
-            self.warningstart = self.warningstart if self.warningstart else getUTCnow()
-            self.logger.warning("Warnings: %s", self.warnings)
-            warnings = "\n".join(self.warnings)
-            self.warnings = []
-            raise ServiceWarning(warnings)
 
     def startwork(self):
         """Main start."""
@@ -472,6 +457,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 "Warnings were raised more than 1hr ago. Informing to renew all devices state"
             )
             self.switch.deviceUpdate(self.sitename)
+        self.checkVlansWarnings()
         self.checkAndRaiseWarnings()
 
 

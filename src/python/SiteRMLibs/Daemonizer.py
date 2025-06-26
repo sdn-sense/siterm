@@ -18,14 +18,13 @@ import tracemalloc
 import psutil
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.MainUtilities import (
-    getDataFromSiteFE,
     getDBConn,
     getFullUrl,
     getHostname,
     getLoggingObject,
     getUTCnow,
     getVal,
-    publishToSiteFE,
+    callSiteFE,
     contentDB,
     createDirs,
     HOSTSERVICES,
@@ -183,7 +182,7 @@ class DBBackend:
                 "version": runningVersion,
                 "exc": kwargs.get("exc", "No Exception provided by service"),
             }
-            publishToSiteFE(dic, fullUrl, "/json/frontend/servicestate")
+            callSiteFE(dic, fullUrl, "/json/frontend/servicestate")
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(
@@ -216,12 +215,12 @@ class DBBackend:
             url = "/sitefe/json/frontend/serviceaction"
             kwargs["servicename"] = self.component
             kwargs["hostname"] = getHostname(self.config)
-            actions = getDataFromSiteFE(kwargs, hostname, url)
+            actions = callSiteFE(kwargs, hostname, url, "GET")
             # Config Fetcher is not allowed to delete other services refresh.
             if actions[0] and self.component == "ConfigFetcher":
                 return True
             for action in actions[0]:
-                publishToSiteFE(
+                callSiteFE(
                     {"id": action["id"], "servicename": self.component},
                     hostname,
                     url,

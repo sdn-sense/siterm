@@ -8,7 +8,7 @@ Date: 2021/01/20
 """
 import copy
 
-from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress
+from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress, ServiceNotReady
 from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.CustomExceptions import NoSectionError
 from SiteRMLibs.ipaddr import checkOverlap as incheckOverlap
@@ -43,12 +43,32 @@ class ConflictChecker(Timing):
         """Check if Host is alive"""
         if hostname in polcls.hosts:
             updatedate = polcls.hosts[hostname]["updatedate"]
-            if updatedate < getUTCnow() - 300:
+            if updatedate < getUTCnow() - 120:
                 raise OverlapException(
-                    f"Host {hostname} did not update in the last 5minutes. \
+                    f"Host {hostname} did not update in the last 2 minutes. \
                                        Cannot proceed with this request. Check Agent status for the host \
                                        Last update: {updatedate}, CurrentTime: {getUTCnow()}"
                 )
+            self._checkIfRulerAlive(polcls, hostname)
+
+    def _checkIfRulerAlive(self, polcls, hostname):
+        """Check if Ruler Service is alive on the host"""
+        dbitem = polcls.dbI.get("deltas", search=[["hostname", hostname], ["servicename", "Ruler"]], limit=1)
+        if not dbitem:
+            raise ServiceNotReady(f"Ruler service not found for {hostname}. Is Agent container running at the site?")
+
+        if dbitem[0]["updatedate"] < getUTCnow() - 120:
+            raise ServiceNotReady(
+                f"Ruler service did not update in the last 2 minutes for {hostname}. \
+                                       Cannot proceed with this request. Check Agent status for the host \
+                                       Last update: {dbitem[0]['updatedate']}, CurrentTime: {getUTCnow()}"
+            )
+        if dbitem[0]["servicestate"] != "OK":
+            raise ServiceNotReady(
+                f"Ruler service state is not OK for {hostname}. \
+                                       Cannot proceed with this request. Check Agent status for the host \
+                                       Service state: {dbitem[0]['servicestate']}, Last update: {dbitem[0]['updatedate']}, CurrentTime: {getUTCnow()}"
+            )
 
     def _checkVlanSwapping(self, vlans, hostname):
         """Check if vlan Swapping is allowed"""

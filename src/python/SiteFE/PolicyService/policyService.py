@@ -23,7 +23,7 @@ from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to ge
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteRMLibs.Backends.main import Switch
-from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress, NotFoundError
+from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress, NotFoundError, ServiceNotReady
 from SiteRMLibs.MainUtilities import (
     contentDB,
     createDirs,
@@ -900,7 +900,7 @@ class PolicyService(RDFHelper, Timing, BWService):
                 )
                 self.stateMachine.modelstatechanger(self.dbI, "added", **delta)
                 changesApplied = True
-            except (OverlapException, WrongIPAddress) as ex:
+            except (OverlapException, WrongIPAddress, ServiceNotReady) as ex:
                 self.stateMachine.modelstatechanger(self.dbI, "failed", **delta)
                 # If delta apply failed we return right away without writing new Active config
                 self.logger.debug(f"There was failure applying delta. Failure {ex}")

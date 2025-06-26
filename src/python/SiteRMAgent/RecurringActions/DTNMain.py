@@ -7,7 +7,7 @@ Authors:
 Date: 2022/01/29
 """
 import sys
-from SiteRMLibs.MainUtilities import publishToSiteFE, createDirs
+from SiteRMLibs.MainUtilities import callSiteFE, createDirs
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import contentDB
 from SiteRMLibs.MainUtilities import getUTCnow
@@ -149,10 +149,10 @@ class RecurringAction:
 
         self.logger.info("Will try to publish information to SiteFE")
         fullUrl += "/sitefe"
-        outVals = publishToSiteFE(dic, fullUrl, "/json/frontend/updatehost")
+        outVals = callSiteFE(dic, fullUrl, "/json/frontend/updatehost")
         self.logger.info("Update Host result %s", outVals)
         if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
-            outValsAdd = publishToSiteFE(dic, fullUrl, "/json/frontend/addhost")
+            outValsAdd = callSiteFE(dic, fullUrl, "/json/frontend/addhost")
             self.logger.info("Insert Host result %s", outVals)
             if outValsAdd[2] != "OK" or outValsAdd[1] != 200:
                 excMsg += " Could not publish to SiteFE Frontend."
