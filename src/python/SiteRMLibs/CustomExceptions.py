@@ -44,6 +44,7 @@ def exceptionCode(excName):
         FailedRoutingCommand: -30,
         TooManyArgumentalValues: -31,
         NotSupportedArgument: -32,
+        ServiceNotReady: -33
     }
     if excName in exCodes:
         return exCodes[excName]
@@ -198,6 +199,9 @@ class RequestWithoutCert(ExceptionTemplate):
 
 class IssuesWithAuth(ExceptionTemplate):
     """IssuesWithAuth Error."""
+
+class ServiceNotReady(ExceptionTemplate):
+    """Service Not Ready Error."""
 
 
 class HTTPResponses:

@@ -24,10 +24,10 @@ import subprocess
 import ipaddress
 import argparse
 from SiteRMLibs.MainUtilities import contentDB
-from SiteRMLibs.MainUtilities import getDataFromSiteFE, evaldict
+from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import publishToSiteFE
+from SiteRMLibs.MainUtilities import callSiteFE
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE, PluginException
@@ -84,7 +84,7 @@ class Debugger(DebugService):
         out["serviceinfo"] = getAllIps()
         self.logger.debug(f"Service report: {out}")
         self.logger.info("Will try to publish information to SiteFE")
-        outVals = publishToSiteFE(out, self.fullURL, "/sitefe/json/frontend/updateservice")
+        outVals = callSiteFE(out, self.fullURL, "/sitefe/json/frontend/updateservice")
         self.logger.info("Update Service result %s", outVals)
         if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
             excMsg = " Could not publish to SiteFE Frontend."
@@ -95,7 +95,7 @@ class Debugger(DebugService):
     def getData(self, url):
         """Get data from FE."""
         self.logger.info(f"Query: {self.fullURL}{url}")
-        out = getDataFromSiteFE({}, self.fullURL, url)
+        out = callSiteFE({}, self.fullURL, url, "GET")
         if out[2] != "OK":
             msg = f"Received a failure getting information from Site Frontend {str(out)}"
             self.logger.critical(msg)

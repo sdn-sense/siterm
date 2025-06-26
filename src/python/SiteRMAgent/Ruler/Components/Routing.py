@@ -14,7 +14,7 @@ from SiteRMLibs.MainUtilities import (
     externalCommand,
     getFullUrl,
     getLoggingObject,
-    publishToSiteFE,
+    callSiteFE,
 )
 
 
@@ -27,7 +27,7 @@ def publishState(modtype, uuid, hostname, state, fullURL):
         "hostport": modtype,
         "uuidstate": state,
     }
-    publishToSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", "POST")
+    callSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", "POST")
 
 
 class Rules:

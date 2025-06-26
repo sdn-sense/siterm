@@ -10,7 +10,7 @@ Date: 2022/01/20
 from pyroute2 import IPRoute
 from SiteRMLibs.MainUtilities import execute
 from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import publishToSiteFE
+from SiteRMLibs.MainUtilities import callSiteFE 
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import FailedInterfaceCommand
@@ -38,7 +38,7 @@ def publishState(vlan, inParams, uuid, hostname, state, fullURL):
             "hostport": vlan["destport"],
             "uuidstate": state,
         }
-        publishToSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", "POST")
+        callSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", "POST")
 
 
 def getDefaultMTU(config, intfKey):

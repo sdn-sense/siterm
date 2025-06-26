@@ -14,7 +14,7 @@ from SiteRMLibs.MainUtilities import createDirs
 from SiteRMLibs.MainUtilities import externalCommand
 from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import evaldict
-from SiteRMLibs.MainUtilities import publishToSiteFE
+from SiteRMLibs.MainUtilities import callSiteFE 
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import contentDB
@@ -45,7 +45,7 @@ class DebugService:
             }
             self.dbI.update("debugrequests", [out])
             return
-        publishToSiteFE(
+        callSiteFE(
             inDic, self.fullURL, f"/sitefe/json/frontend/updatedebug/{inDic['id']}"
         )
 

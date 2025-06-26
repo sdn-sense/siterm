@@ -8,12 +8,13 @@ Authors:
 Date: 2024/06/10
 """
 import os
+from SiteRMLibs.Warnings import Warnings
 from SiteRMLibs.MainUtilities import (getDBConn, getLoggingObject, getVal, getUTCnow)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteFE.PolicyService.policyService import PolicyService
 
 
-class DBWorker:
+class DBWorker(Warnings):
     """Config Fetcher from Github."""
 
     def __init__(self, config, sitename):
@@ -24,6 +25,9 @@ class DBWorker:
         self.police = PolicyService(self.config, self.sitename)
         self.runCounter = {"stateactions": 0, "modelactions": 10}
         self.runCounterDefaults = {"stateactions": 0, "modelactions": 100}
+        self.warnings = []
+        self.warningstart = 0
+        self.warningscounters = {}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -42,7 +46,9 @@ class DBWorker:
             ["removed", self.police.stateMachine.removed],
         ]:
             self.logger.debug("Start %s", job[0])
-            job[1](self.dbI)
+            errormsg = job[1](self.dbI)
+            if errormsg:
+                self.addWarning(errormsg)
 
     def modelactions(self):
         """Clean up process to remove old data"""
@@ -72,6 +78,7 @@ class DBWorker:
         # Decrease counters
         self.runCounter["stateactions"] -= 1
         self.runCounter["modelactions"] -= 1
+        self.checkAndRaiseWarnings()
 
 
 if __name__ == "__main__":

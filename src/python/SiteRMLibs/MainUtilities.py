@@ -329,14 +329,18 @@ def createDirs(fullDirPath):
     return
 
 
-def publishToSiteFE(inputDict, host, url, verb="PUT"):
+def callSiteFE(inputDict, host, url, verb="PUT"):
     """Put JSON to the Site FE."""
     retries = 3
+    if verb.upper() in ["POST", "PUT", "PATCH"]:
+        data = json.dumps(inputDict)
+    else:
+        data = inputDict
     while retries > 0:
         retries -= 1
         req = Requests(host, {})
         try:
-            out = req.makeRequest(url, verb=verb, data=json.dumps(inputDict))
+            out = req.makeRequest(url, verb=verb, data=data)
             return out
         except http.client.HTTPException as ex:
             print(f"Got HTTPException: {ex}. Will retry {retries} more times.")
@@ -350,27 +354,6 @@ def publishToSiteFE(inputDict, host, url, verb="PUT"):
             time.sleep(1)
     return "Failed after all retries", -1, "FAILED", False
 
-
-def getDataFromSiteFE(inputDict, host, url):
-    """Get data from Site FE. (Retries 3 times with 1 sec delay)"""
-    retries = 3
-    while retries > 0:
-        retries -= 1
-        req = Requests(host, {})
-        try:
-            out = req.makeRequest(url, verb="GET", data=inputDict)
-            return out
-        except http.client.HTTPException as ex:
-            print(f"Got HTTPException: {ex}. Will retry {retries} more times.")
-            if retries == 0:
-                return ex.reason, ex.status, "FAILED", True
-            time.sleep(1)
-        except pycurl.error as ex:
-            print(f"Got PyCurl HTTPException: {ex}. Will retry {retries} more times.")
-            if retries == 0:
-                return ex.args[1], ex.args[0], "FAILED", False
-            time.sleep(1)
-    return "Failed after all retries", -1, "FAILED", False
 
 def getWebContentFromURL(url, raiseEx=True, params=None):
     """GET from URL"""
@@ -909,7 +892,7 @@ def checkHTTPService(config):
         try:
             hostname = getFullUrl(config, sitename)
             url = "/sitefe/v1/models?current=true&summary=false&encode=false"
-            out = getDataFromSiteFE({}, hostname, url)
+            out = callSiteFE({}, hostname, url, "GET")
             # Need to check out that it received information back
             # otherwise print error and return 1
             if out[1] != 200 or out[2] != "OK":

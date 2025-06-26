@@ -194,10 +194,11 @@ class StateMachine:
         # it should change state only if there are no activating deltas right now
         # Otherwise print message that I have to wait
         for delta in dbObj.get("deltas", search=[["state", "activating"]]):
-            self.logger.info(
-                f"Delta {delta['uid']} is still in state activating. Will not commit anything until it is done"
-            )
-            return
+            if delta["updatedate"] < int(getUTCnow() - 180):
+                msg = f"Not able to accept new deltas. Delta {delta['uid']} is still in state activating after 3 minutes. Will not commit anything until it is done"
+                return msg
+            self.logger.info("There are deltas still in activating state. Will not commit anything until it is done")
+            return None
         for delta in dbObj.get("deltas", search=[["state", "committing"]]):
             self.stateChangerDelta(dbObj, "committed", **delta)
             self.modelstatechanger(dbObj, "add", **delta)

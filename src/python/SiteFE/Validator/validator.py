@@ -153,6 +153,15 @@ class Validator:
         self._setwarningstart()
         return False
 
+    def _checkLivenessReadiness(self):
+        """Check if liveness and readiness checks are disabled"""
+        for name, fname in {"Liveness": "/tmp/siterm-liveness-disable", "Readiness": "/tmp/siterm-readiness-disable"}.items():
+            if os.path.exists(fname):
+                msg = f"{name} check is disabled on Frontend. Please enable it to ensure proper operation."
+                self.logger.warning(msg)
+                self.addWarning(msg)
+                self._setwarningstart()
+
     def _setwarningstart(self):
         """Set warning start timestamp if not set"""
         if not self.warningstart:
@@ -197,13 +206,9 @@ class Validator:
             if hostcheck and switchlldp:
                 self._validateHostSwitchInfo(hostcheck, switchlldp)
         # Raise warnings if any exists
-        if (
-            self.warningstart and self.warningstart <= getUTCnow() - 3600
-        ):  # If warnings raise an hour ago - refresh
+        if (self.warningstart and self.warningstart <= getUTCnow() - 3600):  # If warnings raise an hour ago - refresh
             self.warningstart = 0
-            self.logger.info(
-                "Warnings were raised more than 1hr ago. Informing to renew all devices state"
-            )
+            self.logger.info("Warnings were raised more than 1hr ago. Informing to renew all devices state")
             self.switch.deviceUpdate(self.sitename)
         self.checkAndRaiseWarnings()
 

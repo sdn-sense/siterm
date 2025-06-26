@@ -20,7 +20,7 @@ from SiteRMLibs.MainUtilities import (
     contentDB,
     createDirs,
     evaldict,
-    getDataFromSiteFE,
+    callSiteFE,
     getFileContentAsJson,
     getFullUrl,
     getLoggingObject,
@@ -65,7 +65,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
 
     def getData(self, url):
         """Get data from FE."""
-        out = getDataFromSiteFE({}, self.fullURL, url)
+        out = callSiteFE({}, self.fullURL, url, "GET")
         if out[2] != "OK":
             msg = (
                 f"Received a failure getting information from Site Frontend {str(out)}"
