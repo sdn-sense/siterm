@@ -154,7 +154,7 @@ class ModelCalls:
         Output: application/json
         """
         modTime = getModTime(kwargs["headers"])
-        outmodels = self.getmodel(environ, kwargs["modelid"], content=True, **kwargs)
+        outmodels = self.getmodel(environ, kwargs["modelid"], content=False, **kwargs)
         model = outmodels if isinstance(outmodels, dict) else outmodels[0]
         if modTime > model["insertdate"]:
             self.httpresp.ret_304(

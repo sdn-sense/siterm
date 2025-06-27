@@ -19,7 +19,7 @@
 
        function loadModel(modelID, sitename)
        {
-          $.ajax({url: sitename + '/sitefe/v1/models/'+ modelID,
+          $.ajax({url: sitename + '/sitefe/v1/models/'+ modelID + '?model=json-ld',
             dataType: 'json',
             data: {},
             async: false,
