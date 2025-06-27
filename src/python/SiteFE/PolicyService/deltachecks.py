@@ -53,7 +53,7 @@ class ConflictChecker(Timing):
 
     def _checkIfRulerAlive(self, polcls, hostname):
         """Check if Ruler Service is alive on the host"""
-        dbitem = polcls.dbI.get("deltas", search=[["hostname", hostname], ["servicename", "Ruler"]], limit=1)
+        dbitem = polcls.dbI.get("servicestates", search=[["hostname", hostname], ["servicename", "Ruler"]], limit=1)
         if not dbitem:
             raise ServiceNotReady(f"Ruler service not found for {hostname}. Is Agent container running at the site?")
 
