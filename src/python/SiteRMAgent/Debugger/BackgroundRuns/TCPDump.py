@@ -54,6 +54,9 @@ class TCPDump(BaseDebugAction):
 
     def main(self):
         """Do TCP Dump"""
+        self.logMessage(
+            f"Running TCPDump background run. Input requestdict: {self.requestdict}"
+        )
         if self.requestdict["interface"] not in getInterfaces():
             self.logMessage("Interface is not available on the node")
             return
@@ -63,3 +66,4 @@ class TCPDump(BaseDebugAction):
             self.logMessage("No packets captured")
         self.jsonout["output"] = allPackets
         self.jsonout["exitCode"] = 0
+        self.logMessage("TCPDump background run finished successfully.")

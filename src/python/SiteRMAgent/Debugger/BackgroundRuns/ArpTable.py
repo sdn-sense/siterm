@@ -25,6 +25,7 @@ class ArpTable(BaseDebugAction):
 
     def main(self):
         """Main ArpTable work. Get all arp table from host."""
+        self.logMessage(f"Running ArpTable background run. Input requestdict: {self.requestdict}")
         interface = self.requestdict.get("interface", None)
         if interface and interface not in getInterfaces():
             self.logMessage("Interface is not available on the node")
@@ -34,3 +35,4 @@ class ArpTable(BaseDebugAction):
             resline = list(map(lambda x: x[0] + str(x[1]), arpval.items()))
             self.logMessage(" ".join(resline))
         self.jsonout["exitCode"] = 0
+        self.logMessage("ArpTable background run finished successfully.")

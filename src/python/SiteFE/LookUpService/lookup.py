@@ -34,6 +34,7 @@ from SiteRMLibs.MainUtilities import (
     getUTCnow,
     getVal,
     externalCommand,
+    firstRunCheck
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWService import BWService
@@ -346,6 +347,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def startwork(self):
         """Main start."""
         self.logger.info("Started LookupService work")
+        firstRunCheck(self.firstRun, "LookUpService")
         self.__clean()
         stateChangedFirstRun = False
         if self.firstRun:

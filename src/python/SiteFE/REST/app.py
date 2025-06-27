@@ -43,6 +43,7 @@ from SiteRMLibs.CustomExceptions import (
     WrongDeltaStatusTransition,
     TooManyArgumentalValues,
     RequestWithoutCert,
+    ServiceNotReady
 )
 from SiteRMLibs.MainUtilities import (
     contentDB,
@@ -187,6 +188,10 @@ class Frontend(
             exception = f"Received NotAcceptedHeader: {ex}"
             self.httpresp.ret_406("application/json", kwargs["start_response"], None)
             returnDict = getCustomOutMsg(errMsg=str(ex), errCode=406)
+        except ServiceNotReady as ex:
+            exception = f"Received ServiceNotReady: {ex}"
+            self.httpresp.ret_503("application/json", kwargs["start_response"], None)
+            returnDict = getCustomOutMsg(errMsg=str(ex), errCode=503)
         if exception:
             print(exception)
         return returnDump(returnDict) if returnDict else []

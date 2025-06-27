@@ -326,6 +326,6 @@ class HTTPResponses:
     def ret_503(self, content_type, start_response, head_append):
         """503 Service Unavailable."""
         status = "503 Service Unavailable"
-        headers = [("Content-type", content_type)]
+        headers = [("Content-type", content_type), ("Retry-After", "30")]
         headers = self._header_append(headers, head_append)
         start_response(status, headers)
