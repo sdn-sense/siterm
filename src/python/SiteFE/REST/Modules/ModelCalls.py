@@ -19,12 +19,12 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2023 California Institute of Technology
 Date                    : 2023/01/03
 """
-from SiteRMLibs.MainUtilities import getAllFileContent
 from SiteRMLibs.MainUtilities import getModTime
 from SiteRMLibs.MainUtilities import httpdate
 from SiteRMLibs.MainUtilities import encodebase64
 from SiteRMLibs.MainUtilities import convertTSToDatetime
 from SiteRMLibs.MainUtilities import firstRunFinished
+from SiteRMLibs.MainUtilities import retFEModelType
 from SiteRMLibs.CustomExceptions import ModelNotFound
 from SiteRMLibs.CustomExceptions import ServiceNotReady
 
@@ -52,7 +52,7 @@ class ModelCalls:
                         "key": "model",
                         "default": "turtle",
                         "type": str,
-                        "options": ["turtle"],
+                        "options": ["turtle", "json-ld", "ntriples"],
                     },
                 ],
             },
@@ -79,7 +79,8 @@ class ModelCalls:
         if not model:
             raise ModelNotFound(f"Model with {modelID} id was not found in the system")
         if content:
-            return getAllFileContent(model[0]["fileloc"])
+            rettype = kwargs.get("urlParams", {}).get("model", "turtle")
+            return retFEModelType(model[0]["fileloc"], rettype)
         return model[0]
 
     def models(self, environ, **kwargs):

@@ -34,7 +34,8 @@ from SiteRMLibs.MainUtilities import (
     getUTCnow,
     getVal,
     externalCommand,
-    firstRunCheck
+    firstRunCheck,
+    parseModelFile
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWService import BWService
@@ -224,8 +225,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
         currentModel, currentGraph = getCurrentModel(self, False)
-        newGraph = Graph()
-        newGraph.parse(saveName, format="turtle")
+        newGraph = parseModelFile(saveName)
         return isomorphic(currentGraph, newGraph), currentModel
 
     def getModelSavePath(self):
@@ -240,7 +240,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def saveModel(self, saveName):
         """Save Model."""
         with open(saveName, "w", encoding="utf-8") as fd:
-            fd.write(self.newGraph.serialize(format="turtle"))
+            fd.write(self.newGraph.serialize(format="ntriples"))
 
     def getVersionFromCurrentModel(self):
         """Get Current Version from Model."""
@@ -408,7 +408,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
         saveName = self.getModelSavePath()
         self.saveModel(saveName)
-        hashNum = generateHash(self.newGraph.serialize(format="turtle"))
+        serialized = self.newGraph.serialize(format="ntriples")
+        hashNum = generateHash(serialized)
 
         self.logger.info("Checking if new model is different from previous")
         modelsEqual, modelinDB = self.checkForModelDiff(saveName)
@@ -416,7 +417,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             "uid": hashNum,
             "insertdate": getUTCnow(),
             "fileloc": saveName,
-            "content": str(self.newGraph.serialize(format="turtle")),
+            "content": str(serialized),
         }
         updateNeeded = False
         if modelsEqual:

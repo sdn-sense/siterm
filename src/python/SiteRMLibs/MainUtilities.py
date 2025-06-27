@@ -801,23 +801,50 @@ def getDBConn(serviceName="", cls=None):
     return dbConnMain
 
 
+def parseModelFile(modelFile):
+    """Parse model file and return Graph."""
+    formats = ["ntriples", "turtle", "json-ld"]
+    exclist = []
+    if not os.path.isfile(modelFile):
+        raise NotFoundError("Model file is not present on the system.")
+    for fmt in formats:
+        try:
+            graph = Graph()
+            graph.parse(modelFile, format=fmt)
+            return graph
+        except Exception as ex:
+            exclist.append(f"Failed to parse with format: {fmt}. Error: {ex}")
+    raise NotFoundError(f"Model file {modelFile} could not be parsed with any format: {formats}. "
+                        f"Please check the file format or content. All exceptions: {exclist}")
+
+
 def getCurrentModel(cls, raiseException=False):
     """Get Current Model from DB."""
     currentModel = cls.dbI.get("models", orderby=["insertdate", "DESC"], limit=1)
-    currentGraph = Graph()
     if currentModel:
         try:
-            currentGraph.parse(currentModel[0]["fileloc"], format="turtle")
-        except IOError as ex:
+            currentGraph = parseModelFile(currentModel[0]["fileloc"])
+        except NotFoundError as ex:
             if raiseException:
                 raise NotFoundError(
-                    f"Model failed to parse from DB. Error {ex}"
-                ) from IOError
+                    f"Model failed to parse from DB. Error: {ex}"
+                ) from NotFoundError
             currentGraph = Graph()
     elif raiseException:
         raise NotFoundError("There is no model in DB. LookUpService is running?")
     return currentModel, currentGraph
 
+
+def retFEModelType(fname, retmodeltype):
+    """Load Model and return type as specified by the client."""
+    try:
+        graph = parseModelFile(fname)
+    except NotFoundError as ex:
+        raise NotFoundError(f"Model file could not be parsed. Error: {ex}") from ex
+    if retmodeltype in ["json-ld", "ntriples"]:
+        return graph.serialize(format=retmodeltype).decode("utf-8")
+    print(f"Returning ntriples as default format. Request was: {retmodeltype}")
+    return graph.serialize(format="turtle").decode("utf-8")
 
 def getAllHosts(dbI):
     """Get all hosts from database."""
