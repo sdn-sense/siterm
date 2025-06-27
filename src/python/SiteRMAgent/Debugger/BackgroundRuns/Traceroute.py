@@ -26,6 +26,9 @@ class Traceroute(BaseDebugAction):
     def main(self):
         """Main TraceRoute work. Run TraceRoute on host."""
         cmd = "traceroute "
+        self.logMessage(
+            f"Running Traceroute background run. Input requestdict: {self.requestdict}"
+        )
         # Add from interface section
         if "from_interface" in self.requestdict and self.requestdict["from_interface"]:
             if self.requestdict["from_interface"] not in getInterfaces():
@@ -51,3 +54,4 @@ class Traceroute(BaseDebugAction):
         self.logMessage(f"Running command: {cmd}")
         externalCommandStdOutErr(cmd, self.outfiles["stdout"], self.outfiles["stderr"])
         self.jsonout["exitCode"] = 0
+        self.logMessage("Traceroute background run finished successfully.")

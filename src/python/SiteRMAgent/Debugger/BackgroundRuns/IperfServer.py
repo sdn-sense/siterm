@@ -24,6 +24,9 @@ class IperfServer(BaseDebugAction):
 
     def runiperf(self):
         """Run Iperf3 server"""
+        self.logMessage(
+            f"Running IperfServer background run. Input requestdict: {self.requestdict}"
+        )
         command = f'timeout {self.requestdict["time"]} iperf3 --server -p {self.requestdict["port"]}'
         if "ip" in self.requestdict:
             command += f' --bind {self.requestdict["ip"]}'
@@ -34,6 +37,7 @@ class IperfServer(BaseDebugAction):
             command, self.outfiles["stdout"], self.outfiles["stderr"]
         )
         self.jsonout["exitCode"] = 0
+        self.logMessage("IperfServer background run finished successfully.")
 
     def main(self):
         """Run main to launch iperf3 server"""

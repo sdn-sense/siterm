@@ -24,7 +24,9 @@ from SiteRMLibs.MainUtilities import getModTime
 from SiteRMLibs.MainUtilities import httpdate
 from SiteRMLibs.MainUtilities import encodebase64
 from SiteRMLibs.MainUtilities import convertTSToDatetime
+from SiteRMLibs.MainUtilities import firstRunFinished
 from SiteRMLibs.CustomExceptions import ModelNotFound
+from SiteRMLibs.CustomExceptions import ServiceNotReady
 
 
 class ModelCalls:
@@ -45,6 +47,7 @@ class ModelCalls:
                     {"key": "summary", "default": True, "type": bool},
                     {"key": "oldview", "default": False, "type": bool},
                     {"key": "encode", "default": True, "type": bool},
+                    {"key": "checkignore", "default": False, "type": bool},
                     {
                         "key": "model",
                         "default": "turtle",
@@ -86,6 +89,12 @@ class ModelCalls:
         Output: application/json
         Examples: https://server-host/sitefe/v1/models/ # Returns list of all models;
         """
+        # Check if checkignore is set, if so, check if first run is finished
+        if kwargs.get("urlParams", {}).get("checkignore", True):
+            if not (firstRunFinished("LookUpService") or firstRunFinished("ProvisioningService")):
+                raise ServiceNotReady(
+                    "You cannot add force apply delta, because LookUpService or ProvisioningService is not finished with first run (Server restart?). Retry later."
+                )
         modTime = getModTime(kwargs["headers"])
         outmodels = self.getmodel(environ, None, False, **kwargs)
         if not outmodels:

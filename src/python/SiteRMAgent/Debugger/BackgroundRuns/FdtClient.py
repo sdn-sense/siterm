@@ -24,6 +24,7 @@ class FdtClient(BaseDebugAction):
 
     def main(self):
         """Main FdtClient work. Run FDT client."""
+        self.logMessage(f"Running FdtClient background run. Input requestdict: {self.requestdict}")
         command = f'timeout {self.requestdict["time"]} java -jar /opt/fdt.jar -p {self.requestdict["port"]}'
         command += f' -c {self.requestdict["ip"].split("/")[0]}'
         command += f' -P {self.requestdict["streams"]}'
@@ -33,3 +34,4 @@ class FdtClient(BaseDebugAction):
             command, self.outfiles["stdout"], self.outfiles["stderr"]
         )
         self.jsonout["exitCode"] = 0
+        self.logMessage("FdtClient background run finished successfully.")

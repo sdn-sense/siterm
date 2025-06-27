@@ -34,6 +34,7 @@ from SiteRMLibs.MainUtilities import (
     getLoggingObject,
     getUTCnow,
     getVal,
+    firstRunCheck
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWService import BWService
@@ -374,6 +375,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
     def startwork(self, firstrun=False):
         """Start Provisioning Service main worker."""
         self.firstrun = firstrun
+        firstRunCheck(self.firstrun, "ProvisioningService")
         # Get current active config;
         self.__cleanup()
         self._getActive()

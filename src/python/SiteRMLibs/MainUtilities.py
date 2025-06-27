@@ -29,6 +29,8 @@ import subprocess
 import time
 import uuid
 import urllib.parse
+from pathlib import Path
+import tempfile
 from urllib.parse import parse_qs
 import re
 
@@ -327,6 +329,27 @@ def createDirs(fullDirPath):
             if not os.path.isdir(dirname):
                 raise
     return
+
+
+def firstRunCheck(firstRun, servicename):
+    """Check if it is first run."""
+    if firstRun:
+        fname = Path(tempfile.gettempdir()) / "siterm" / f"{servicename.lower()}-first-run"
+        fname.parent.mkdir(parents=True, exist_ok=True)
+        if not fname.exists():
+            fname.write_text(f"This is first run of {servicename}. Do not remove this file.")
+    else:
+        fname = Path(tempfile.gettempdir()) / "siterm" / f"{servicename.lower()}-first-run"
+        if fname.exists():
+            fname.unlink()
+
+
+def firstRunFinished(servicename):
+    """Check if first Run finished for a service."""
+    fname = Path(tempfile.gettempdir()) / "siterm" / f"{servicename.lower()}-first-run"
+    if fname.exists():
+        return False
+    return True
 
 
 def callSiteFE(inputDict, host, url, verb="PUT"):

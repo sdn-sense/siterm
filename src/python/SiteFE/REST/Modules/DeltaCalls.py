@@ -26,6 +26,7 @@ from SiteRMLibs.CustomExceptions import (
     BadRequestError,
     DeltaNotFound,
     WrongDeltaStatusTransition,
+    ServiceNotReady
 )
 from SiteRMLibs.MainUtilities import (
     convertTSToDatetime,
@@ -36,6 +37,7 @@ from SiteRMLibs.MainUtilities import (
     getUTCnow,
     httpdate,
     jsondumps,
+    firstRunFinished
 )
 from SiteRMLibs.RESTInteractions import (
     get_json_post_form,
@@ -337,6 +339,10 @@ class DeltaCalls:
 
     def __deltas_post(self, environ, **kwargs):
         """Private Function for Delta POST API"""
+        if not (firstRunFinished("LookUpService") or firstRunFinished("ProvisioningService")):
+            raise ServiceNotReady(
+                "You cannot add new delta, because LookUpService or ProvisioningService is not finished with first run (Server restart?). Retry later."
+            )
         out = self.__intGetPostData(environ, **kwargs)
         newDelta = {}
         for key in list(out.keys()):
@@ -494,6 +500,10 @@ class DeltaCalls:
 
     def deltaforceapply(self, environ, **kwargs):
         """Force apply based on delta UUID"""
+        if not (firstRunFinished("LookUpService") or firstRunFinished("ProvisioningService")):
+            raise BadRequestError(
+                "You cannot force apply delta, because LookUpService or ProvisioningService is not finished with first run (Server restart?). Retry later."
+            )
         out = self.__intGetPostData(environ, **kwargs)
         dbansw = self.dbI.insert("forceapplyuuid", [{"uuid": out["uuid"]}])
         self._logDeltaUserAction({"uuid": out["uuid"]}, "setstate", dbansw, environ)

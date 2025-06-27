@@ -25,6 +25,9 @@ class IperfClient(BaseDebugAction):
 
     def runiperfclient(self):
         """Run TCP IPerf"""
+        self.logMessage(
+            f"Running IperfClient background run. Input requestdict: {self.requestdict}"
+        )
         command = f"iperf3 -c {self.requestdict['ip'].split('/')[0]} -p {self.requestdict['port']}"
         command += f" -t {self.requestdict['time']}"
         command += f" -P {self.requestdict['streams']}"
@@ -40,6 +43,7 @@ class IperfClient(BaseDebugAction):
             command, self.outfiles["stdout"], self.outfiles["stderr"]
         )
         self.jsonout["exitCode"] = 0
+        self.logMessage("IperfClient background run finished successfully.")
 
     def main(self):
         """Run main to launch iperf3 client"""
