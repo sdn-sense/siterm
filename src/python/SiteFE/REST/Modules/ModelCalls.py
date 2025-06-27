@@ -61,6 +61,12 @@ class ModelCalls:
                 "urlParams": [
                     {"key": "encode", "default": False, "type": bool},
                     {"key": "summary", "default": False, "type": bool},
+                    {
+                        "key": "model",
+                        "default": "turtle",
+                        "type": str,
+                        "options": ["turtle", "json-ld", "ntriples"],
+                    },
                 ],
             },
         }
