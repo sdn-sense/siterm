@@ -91,7 +91,7 @@ class ModelCalls:
         Examples: https://server-host/sitefe/v1/models/ # Returns list of all models;
         """
         # Check if checkignore is set, if so, check if first run is finished
-        if kwargs.get("urlParams", {}).get("checkignore", True):
+        if not kwargs.get("urlParams", {}).get("checkignore", False):
             if not (firstRunFinished("LookUpService") or firstRunFinished("ProvisioningService")):
                 raise ServiceNotReady(
                     "You cannot add force apply delta, because LookUpService or ProvisioningService is not finished with first run (Server restart?). Retry later."
@@ -154,7 +154,7 @@ class ModelCalls:
         Output: application/json
         """
         modTime = getModTime(kwargs["headers"])
-        outmodels = self.getmodel(environ, kwargs["modelid"], **kwargs)
+        outmodels = self.getmodel(environ, kwargs["modelid"], content=True, **kwargs)
         model = outmodels if isinstance(outmodels, dict) else outmodels[0]
         if modTime > model["insertdate"]:
             self.httpresp.ret_304(
