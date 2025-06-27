@@ -29,7 +29,7 @@ class RapidPing(BaseDebugAction):
             f"Running RapidPing background run. Input requestdict: {self.requestdict}"
         )
         ipaddr = self.requestdict["ip"].split("/")[0]
-        command = f"ping -i {self.requestdict.get('interval', 1)} -w {self.requestdict['time']} {ipaddr} -s {self.requestdict['packetsize']}
+        command = f"ping -i {self.requestdict.get('interval', 1)} -w {self.requestdict['time']} {ipaddr} -s {self.requestdict['packetsize']}"
         if self.requestdict.get("interface"):
             if self.requestdict["interface"] not in getInterfaces():
                 self.logMessage("Interface is not available on the node")
