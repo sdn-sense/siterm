@@ -841,10 +841,10 @@ def retFEModelType(fname, retmodeltype):
         graph = parseModelFile(fname)
     except NotFoundError as ex:
         raise NotFoundError(f"Model file could not be parsed. Error: {ex}") from ex
-    if retmodeltype in ["json-ld", "ntriples"]:
-        return graph.serialize(format=retmodeltype).decode("utf-8")
-    print(f"Returning ntriples as default format. Request was: {retmodeltype}")
-    return graph.serialize(format="turtle").decode("utf-8")
+    if retmodeltype in ["json-ld", "ntriples", "turtle"]:
+        return graph.serialize(format=retmodeltype)
+    print(f"Returning turtle as default format. Request was: {retmodeltype}")
+    return graph.serialize(format="turtle")
 
 def getAllHosts(dbI):
     """Get all hosts from database."""
