@@ -35,7 +35,7 @@ from SiteRMLibs.MainUtilities import (
     getVal,
     externalCommand,
     firstRunCheck,
-    parseModelFile
+    parseRDFFile
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.BWService import BWService
@@ -225,7 +225,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
         currentModel, currentGraph = getCurrentModel(self, False)
-        newGraph = parseModelFile(saveName)
+        newGraph = parseRDFFile(saveName)
         return isomorphic(currentGraph, newGraph), currentModel
 
     def getModelSavePath(self):

@@ -17,7 +17,7 @@ import tempfile
 import time
 import dictdiffer
 from dateutil import parser
-from rdflib import Graph, URIRef
+from rdflib import URIRef
 from rdflib.plugins.parsers.notation3 import BadSyntax
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to general
 from SiteFE.PolicyService.deltachecks import ConflictChecker
@@ -39,6 +39,7 @@ from SiteRMLibs.MainUtilities import (
     writeActiveDeltas,
     getFileContentAsJson,
     getUTCnow,
+    parseRDFFile
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.timing import Timing
@@ -1044,14 +1045,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             self._refreshHosts()
             self.getSavedPrefixes(self.hosts.keys())
         if deltaPath and action:
-            # TODO: Note, review if we can also re-use parseModelFile
-            # and in this case, we can make general parseRdfFile
-            # That means for sense-o we would allow to choose: turtle, json-ld, ntriples
-            # Preference is: (APIs, Systems): ntriples
-            # Web-UI, Representations: either turtle or json-ld
-            # ntriples is the fastest one (even in big models)
-            gIn = Graph()
-            gIn.parse(deltaPath, format="turtle")
+            gIn = parseRDFFile(deltaPath)
             if action == "reduction":
                 currentGraph -= gIn
             elif action == "addition":

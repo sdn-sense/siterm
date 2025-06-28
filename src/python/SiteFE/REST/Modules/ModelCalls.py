@@ -24,7 +24,7 @@ from SiteRMLibs.MainUtilities import httpdate
 from SiteRMLibs.MainUtilities import encodebase64
 from SiteRMLibs.MainUtilities import convertTSToDatetime
 from SiteRMLibs.MainUtilities import firstRunFinished
-from SiteRMLibs.MainUtilities import retFEModelType
+from SiteRMLibs.MainUtilities import serializeRDFFile
 from SiteRMLibs.CustomExceptions import ModelNotFound
 from SiteRMLibs.CustomExceptions import ServiceNotReady
 
@@ -86,7 +86,7 @@ class ModelCalls:
             raise ModelNotFound(f"Model with {modelID} id was not found in the system")
         if content:
             rettype = kwargs.get("urlParams", {}).get("model", "turtle")
-            return retFEModelType(model[0]["fileloc"], rettype)
+            return serializeRDFFile(model[0]["fileloc"], rettype)
         return model[0]
 
     def models(self, environ, **kwargs):
@@ -100,7 +100,7 @@ class ModelCalls:
         if not kwargs.get("urlParams", {}).get("checkignore", False):
             if not (firstRunFinished("LookUpService") or firstRunFinished("ProvisioningService")):
                 raise ServiceNotReady(
-                    "You cannot add force apply delta, because LookUpService or ProvisioningService is not finished with first run (Server restart?). Retry later."
+                    "You cannot request model information yet, because LookUpService or ProvisioningService is not finished with first run (Server restart?). Retry later."
                 )
         modTime = getModTime(kwargs["headers"])
         outmodels = self.getmodel(environ, None, False, **kwargs)

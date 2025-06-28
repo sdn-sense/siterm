@@ -801,7 +801,7 @@ def getDBConn(serviceName="", cls=None):
     return dbConnMain
 
 
-def parseModelFile(modelFile):
+def parseRDFFile(modelFile):
     """Parse model file and return Graph."""
     formats = ["ntriples", "turtle", "json-ld"]
     exclist = []
@@ -823,7 +823,7 @@ def getCurrentModel(cls, raiseException=False):
     currentModel = cls.dbI.get("models", orderby=["insertdate", "DESC"], limit=1)
     if currentModel:
         try:
-            currentGraph = parseModelFile(currentModel[0]["fileloc"])
+            currentGraph = parseRDFFile(currentModel[0]["fileloc"])
         except NotFoundError as ex:
             if raiseException:
                 raise NotFoundError(
@@ -835,10 +835,10 @@ def getCurrentModel(cls, raiseException=False):
     return currentModel, currentGraph
 
 
-def retFEModelType(fname, retmodeltype):
+def serializeRDFFile(fname, retmodeltype):
     """Load Model and return type as specified by the client."""
     try:
-        graph = parseModelFile(fname)
+        graph = parseRDFFile(fname)
     except NotFoundError as ex:
         raise NotFoundError(f"Model file could not be parsed. Error: {ex}") from ex
     if retmodeltype in ["json-ld", "ntriples", "turtle"]:
