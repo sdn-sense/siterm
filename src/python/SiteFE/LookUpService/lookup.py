@@ -237,12 +237,13 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         )
         return f"{saveDir}/{self.modelVersion}.mrml"
 
-    def saveModel(self, saveName):
+    def saveModel(self, saveName, onlymaster=False):
         """Save Model."""
-        for retmodeltype in ["json-ld", "ntriples", "turtle"]:
-            saveNameSub = f"{saveName}.{retmodeltype}"
-            with open(saveNameSub, "w", encoding="utf-8") as fd:
-                fd.write(self.newGraph.serialize(format=retmodeltype))
+        if not onlymaster:
+            for retmodeltype in ["json-ld", "ntriples", "turtle"]:
+                saveNameSub = f"{saveName}.{retmodeltype}"
+                with open(saveNameSub, "w", encoding="utf-8") as fd:
+                    fd.write(self.newGraph.serialize(format=retmodeltype))
         # Save original file too
         with open(saveName, "w", encoding="utf-8") as fd:
             fd.write(self.newGraph.serialize(format="ntriples"))
@@ -413,7 +414,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.addDeltaInfo()
 
         saveName = self.getModelSavePath()
-        self.saveModel(saveName)
+        self.saveModel(saveName, onlymaster=True)
         serialized = self.newGraph.serialize(format="ntriples")
         hashNum = generateHash(serialized)
 
