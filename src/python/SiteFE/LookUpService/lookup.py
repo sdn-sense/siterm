@@ -239,8 +239,14 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
     def saveModel(self, saveName):
         """Save Model."""
+        for retmodeltype in ["json-ld", "ntriples", "turtle"]:
+            saveNameSub = f"{saveName}.{retmodeltype}"
+            with open(saveNameSub, "w", encoding="utf-8") as fd:
+                fd.write(self.newGraph.serialize(format=retmodeltype))
+        # Save original file too
         with open(saveName, "w", encoding="utf-8") as fd:
             fd.write(self.newGraph.serialize(format="ntriples"))
+
 
     def getVersionFromCurrentModel(self):
         """Get Current Version from Model."""

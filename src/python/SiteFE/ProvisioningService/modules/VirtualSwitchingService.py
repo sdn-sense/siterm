@@ -20,6 +20,18 @@ UpdateDate              : 2022/05/09
 
 from SiteRMLibs.ipaddr import normalizedip
 
+def getValFromConfig(config, switch, port, key):
+    """Get value from config."""
+    if port:
+        tmpVal = config["MAIN"].get(switch, {}).get("ports", {}).get(port, {}).get(key, "")
+    else:
+        tmpVal = config["MAIN"].get(switch, {}).get(key, "")
+    try:
+        tmpVal = int(tmpVal)
+    except (ValueError, TypeError):
+        pass
+    return tmpVal
+
 
 def dictCompare(inDict, oldDict, key1):
     """Compare dict and set any remaining items
@@ -97,22 +109,58 @@ class VirtualSwitchingService:
             vlanDict.setdefault("mtu", tmpVlanMTU)
         return vlanDict
 
+    def __checkQoSEnabled(self, host, portData):
+        """Check if QoS is enabled for this port"""
+        # First check if this is enabled (either at port level, or globally at switch)
+        hostratelimit = self.getConfigValue(host, "rate_limit")
+        if hostratelimit != "":
+            if not bool(hostratelimit):
+                self.logger.debug(f"QoS is not enabled at switch level for {host}. ")
+                return False
+        portratelimit = portData.get("rate_limit", "NOTSET")
+        if portratelimit == "NOTSET":
+            # If not set, and switch level is set to true, then we assume it is enabled
+            return True
+        return bool(portratelimit)
+
+    def __getQoSPolicyNumber(self, host, portDict):
+        """Get QoS policy number from portDict"""
+        qosPolicy = portDict.get("hasService", {}).get("type", {})
+        qosPolicy = qosPolicy if qosPolicy else "default"
+        if qosPolicy not in self.getConfigValue(host, "qos_policy"):
+            self.logger.warning(
+                f"QoS policy {qosPolicy} is not defined in config. "
+                "Using default instead.")
+            qosPolicy = "default"
+            return 0
+        return self.getConfigValue(host, "qos_policy")[qosPolicy]
+
     def _addQoS(self, host, port, portDict, _params):
         """Add QoS to expected yaml conf"""
-        resvRate, resvUnit = self.convertToRate(portDict.get("hasService", {}))
-        if resvRate == 0:
-            return
         portName = self.switch.getSwitchPortName(host, port)
         portData = self.switch.getSwitchPort(host, portName)
-        if portData.get("rate_limit", False):
-            vlan = self.__getVlanID(host, port, portDict)
-            tmpD = self.__getdefaultIntf(host, "qos", "qos")
-            vlanD = tmpD.setdefault(f"{port}-{vlan}", {})
-            vlanD.setdefault("port", portName)
-            vlanD.setdefault("vlan", vlan)
-            vlanD.setdefault("rate", resvRate)
-            vlanD.setdefault("unit", resvUnit)
-            vlanD.setdefault("state", "present")
+        if not self.__checkQoSEnabled(host, portData):
+            # QoS is not enabled, so no need to add it
+            return
+        resvRate, resvUnit = self.convertToRate(portDict.get("hasService", {}))
+        if resvRate == 0:
+            self.logger.debug(
+                f"QoS is enabled for {host} {port} {portDict}. "
+                "Rate is 0, so not adding to ansible yaml"
+            )
+            # Should we still add this to 1?
+            return
+
+        vlan = self.__getVlanID(host, port, portDict)
+        tmpD = self.__getdefaultIntf(host, "qos", "qos")
+        vlanD = tmpD.setdefault(f"{port}-{vlan}", {})
+        vlanD.setdefault("port", portName)
+        vlanD.setdefault("vlan", vlan)
+        vlanD.setdefault("rate", resvRate)
+        vlanD.setdefault("unit", resvUnit)
+        vlanD.setdefault("qosnumber", self.__getQoSPolicyNumber(host, portDict))
+        vlanD.setdefault("qosname", portDict.get("hasService", {}).get("type", "default"))
+        vlanD.setdefault("state", "present")
 
     def _addTaggedInterfaces(self, host, port, portDict, _params):
         """Add Tagged Interfaces to expected yaml conf"""
@@ -217,6 +265,8 @@ class VirtualSwitchingService:
                         "unit": val["unit"],
                         "port": val["port"],
                         "vlan": val["vlan"],
+                        "qosnumber": val["qosnumber"],
+                        "qosname": val["qosname"],
                     },
                 )
             if val["state"] != "absent":

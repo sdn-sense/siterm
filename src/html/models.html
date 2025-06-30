@@ -17,23 +17,60 @@
             //setInterval(load_data, 300000);
         });
 
-       function loadModel(modelID, sitename)
-       {
-          $.ajax({url: sitename + '/sitefe/v1/models/'+ modelID + '?model=json-ld',
-            dataType: 'json',
-            data: {},
-            async: false,
-            success: function(json){
-              model = $('<div><\/div>');
-              model.append('<div class="row"><b>Creation Time: <\/b>' + json['creationTime'] + '<\/div>');
-              model.append('<div class="row"><b>Href: <\/b>' + json['href'] + '<\/div>');
-              model.append('<div class="row"><b>ID: <\/b>' + json['id'] + '<\/div>');
-              model.append('<div class="row"><b>Full Model:<\/b><\/div>');
-              mrmlSaver(json['model'], model);
-              $('#v-pills-' + modelID).empty();
-              $('#v-pills-' + modelID).append(model);
-          }});
-       }
+        function loadModel(modelID, sitename) {
+          const formats = ['json-ld', 'turtle', 'ntriples'];
+          const formatTitles = {
+            'json-ld': 'JSON-LD',
+            'turtle': 'Turtle',
+            'ntriples': 'N-Triples'
+          };
+
+          const model = $('<div></div>');
+          const tabNav = $('<ul class="nav nav-tabs" role="tablist"></ul>');
+          const tabContent = $('<div class="tab-content"></div>');
+          let metadataSet = false;
+
+          formats.forEach((fmt, index) => {
+            $.ajax({
+              url: `${sitename}/sitefe/v1/models/${modelID}?model=${fmt}`,
+              dataType: 'json',
+              async: false,
+              success: function (json) {
+                if (!metadataSet) {
+                  model.append(`<div class="row"><b>Creation Time: </b>${json['creationTime']}</div>`);
+                  model.append(`<div class="row"><b>Href: </b>${json['href']}</div>`);
+                  model.append(`<div class="row"><b>ID: </b>${json['id']}</div>`);
+                  model.append('<div class="row"><b>Full Model:</b></div>');
+                  metadataSet = true;
+                }
+
+                const tabId = `${fmt}-${modelID}`;
+                const isActive = index === 0 ? 'active' : '';
+
+                tabNav.append(`
+                  <li class="nav-item">
+                    <a class="nav-link ${isActive}" id="tab-${tabId}" data-toggle="tab" href="#${tabId}" role="tab">
+                      ${formatTitles[fmt]}
+                    </a>
+                  </li>
+                `);
+
+                const tabPane = $(`<div class="tab-pane fade ${isActive ? 'show active' : ''}" id="${tabId}" role="tabpanel"></div>`);
+                mrmlSaver(json['model'], tabPane);
+                tabContent.append(tabPane);
+              }
+            });
+          });
+
+          model.append(tabNav);
+          model.append(tabContent);
+          $('#v-pills-' + modelID).empty().append(model);
+
+          $(`#v-pills-${modelID} [data-toggle="tab"]`).on('click', function (e) {
+            e.preventDefault();
+            $(this).tab('show');
+          });
+        }
 
         function defineAllModels(data, sitename) {
           menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"><\/div>');

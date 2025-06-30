@@ -286,7 +286,6 @@ class Switch(Node):
             "capacity": "",
             "granularity": "",
             "availableCapacity": "",
-            "rate_limit": False,
         }.items():
             tmpval = getValFromConfig(self.config, switch, portName, key)
             if not tmpval:
