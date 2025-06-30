@@ -28,6 +28,7 @@ from SiteRMLibs.MainUtilities import evaldict
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.MainUtilities import callSiteFE
+from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE, PluginException
@@ -71,6 +72,7 @@ class Debugger(DebugService):
         self.hostname = socket.getfqdn()
         self.diragent = contentDB()
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
+        self.serviceUpdateTime = 0
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -80,6 +82,10 @@ class Debugger(DebugService):
 
     def registerService(self):
         """Register this service in SiteFE."""
+        if self.serviceUpdateTime > getUTCnow():
+            self.logger.info("Service already registered in last minute. No updating it again.")
+            return
+        self.serviceUpdateTime = getUTCnow() + 60
         out = {"hostname": self.hostname, "servicename": COMPONENT}
         out["serviceinfo"] = getAllIps()
         self.logger.debug(f"Service report: {out}")
