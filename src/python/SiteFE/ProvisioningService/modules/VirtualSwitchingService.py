@@ -132,7 +132,7 @@ class VirtualSwitchingService:
                 f"QoS policy {qosPolicy} is not defined in config. "
                 "Using default instead.")
             qosPolicy = "default"
-            return 0
+            return self.getConfigValue(host, "qos_policy").get(qosPolicy, 1)
         return self.getConfigValue(host, "qos_policy")[qosPolicy]
 
     def _addQoS(self, host, port, portDict, _params):
