@@ -107,6 +107,20 @@ class GitConfig:
                         key2, val2
                     )
 
+    def __addSwitchDefaults(self, defaults):
+        """Add default switch config parameters"""
+        for sitename in self.config.get("MAIN", {}).get("general", {}).get("sites", []):
+            for switch in self.config["MAIN"][sitename].get("switch", []):
+                for key1, val1 in defaults.items():
+                    self.config["MAIN"].setdefault(switch, {})
+                    self.config["MAIN"][switch].setdefault(key1, {})
+                    if isinstance(val1, dict):
+                        for key2, val2 in val1.items():
+                            self.config["MAIN"][switch][key1].setdefault(key2, val2)
+                    else:
+                        self.config["MAIN"][switch][key1] = val1
+
+
     def presetAgentDefaultConfigs(self):
         """Preset default config parameters for Agent"""
         defConfig = {
@@ -389,8 +403,13 @@ class GitConfig:
                 "bw": {"type": "bestEffort", "unit": "mbps", "minCapacity": "100"},
             }
         }
+        switchDefaults = {
+            "qos_policy": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7},
+            "rate_limit": False
+        }
         self.__addDefaults(defConfig)
         self.__addSiteDefaults(siteDefaults)
+        self.__addSwitchDefaults(switchDefaults)
         # Generate list vals - not in a str format. Needed in delta checks
         self.__generatevlaniplists()
 
