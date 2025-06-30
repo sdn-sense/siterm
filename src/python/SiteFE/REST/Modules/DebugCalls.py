@@ -103,6 +103,7 @@ class DebugCalls:
     def submitdebug(self, environ, **kwargs):
         """Submit new debug action request."""
         inputDict = read_input_data(environ)
+        # TODO: Move this check to backend.
         jsondump = jsondumps(inputDict)
         for symbol in [";", "&"]:
             if symbol in jsondump:

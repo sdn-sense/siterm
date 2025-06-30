@@ -24,7 +24,7 @@ from SiteRMLibs.MainUtilities import httpdate
 from SiteRMLibs.MainUtilities import encodebase64
 from SiteRMLibs.MainUtilities import convertTSToDatetime
 from SiteRMLibs.MainUtilities import firstRunFinished
-from SiteRMLibs.MainUtilities import serializeRDFFile
+from SiteRMLibs.MainUtilities import getAllFileContent
 from SiteRMLibs.CustomExceptions import ModelNotFound
 from SiteRMLibs.CustomExceptions import ServiceNotReady
 
@@ -86,7 +86,9 @@ class ModelCalls:
             raise ModelNotFound(f"Model with {modelID} id was not found in the system")
         if content:
             rettype = kwargs.get("urlParams", {}).get("model", "turtle")
-            return serializeRDFFile(model[0]["fileloc"], rettype)
+            if rettype not in ["json-ld", "ntriples", "turtle"]:
+                raise ModelNotFound(f"Model type {rettype} is not supported. Supported: json-ld, ntriples, turtle")
+            return getAllFileContent(f'{model[0]["fileloc"]}.{rettype}')
         return model[0]
 
     def models(self, environ, **kwargs):

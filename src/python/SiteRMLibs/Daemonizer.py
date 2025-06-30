@@ -75,14 +75,14 @@ def getParser(description):
     oparser.add_argument(
         "--sleeptimeok",
         dest="sleeptimeok",
-        default="5",
-        help="Sleep time in seconds when everything is ok. Default 5",
+        default="15",
+        help="Sleep time in seconds when everything is ok. Default 15",
     )
     oparser.add_argument(
         "--sleeptimefailure",
         dest="sleeptimefailure",
-        default="10",
-        help="Sleep time in seconds when there is a failure. Default 10",
+        default="20",
+        help="Sleep time in seconds when there is a failure. Default 20",
     )
     oparser.add_argument(
         "--devicename",
@@ -638,7 +638,7 @@ class Daemon(DBBackend):
                 self.logger.critical("Received KeyboardInterrupt: %s ", ex)
                 sys.exit(3)
             if hadFailure:
-                self.logger.info("Had Runtime Failure. Sleep for 30 seconds")
+                self.logger.info(f"Had Runtime Failure. Sleep for {self.sleepTimers['failure']} seconds")
                 if self.runLoop():
                     time.sleep(self.sleepTimers["failure"])
                 else:

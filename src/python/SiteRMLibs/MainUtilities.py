@@ -835,24 +835,6 @@ def getCurrentModel(cls, raiseException=False):
     return currentModel, currentGraph
 
 
-def serializeRDFFile(fname, retmodeltype):
-    """Load Model and return type as specified by the client."""
-    if retmodeltype not in ["json-ld", "ntriples", "turtle"]:
-        raise NotSupportedArgument(
-            f"Model type {retmodeltype} is not supported. Supported: json-ld, ntriples, turtle"
-        )
-    modelFile = f"{fname}.{retmodeltype}"
-    if not os.path.isfile(modelFile):
-        raise NotFoundError("Model file is not present on the system.")
-    try:
-        with open(modelFile, "r", encoding="utf-8") as fd:
-            data = fd.read()
-            return iter([data])
-    except IOError as ex:
-        raise NotFoundError(
-            f"Model file {modelFile} could not be read. Error: {ex}"
-        ) from ex
-
 def getAllHosts(dbI):
     """Get all hosts from database."""
     jOut = {}
