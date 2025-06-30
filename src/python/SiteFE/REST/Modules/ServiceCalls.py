@@ -99,14 +99,14 @@ class ServiceCalls:
             "services", limit=1, search=self.__generateSearch(inputDict)
         )
         if not host:
-            self.siteDB.dumpFileContentAsJson(fname, inputDict)
+            self.dumpFileContentAsJson(fname, inputDict)
             self.dbI.insert("services", [out])
             status = "ADDED"
         else:
             out["id"] = host[0]["id"]
             del out["insertdate"]
             out["updatedate"] = getUTCnow()
-            self.siteDB.dumpFileContentAsJson(fname, inputDict)
+            self.dumpFileContentAsJson(fname, inputDict)
             self.dbI.update("services", [out])
             status = "UPDATED"
         self.responseHeaders(environ, **kwargs)

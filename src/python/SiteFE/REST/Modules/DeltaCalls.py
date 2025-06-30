@@ -192,7 +192,7 @@ class DeltaCalls:
         fname = os.path.join(
             self.policerdirs[kwargs["sitename"]]["new"], f"{hashNum}.json"
         )
-        self.siteDB.saveContent(fname, outContent)
+        self.saveContent(fname, outContent)
         finishedName = os.path.join(
             self.policerdirs[kwargs["sitename"]]["finished"], f"{hashNum}.json"
         )
@@ -201,8 +201,8 @@ class DeltaCalls:
         timer = 50
         while timer > 0:
             if os.path.isfile(finishedName):
-                out = self.siteDB.getFileContentAsJson(finishedName)
-                self.siteDB.removeFile(finishedName)
+                out = self.getFileContentAsJson(finishedName)
+                self.removeFile(finishedName)
                 break
             timer -= 1
             time.sleep(1)

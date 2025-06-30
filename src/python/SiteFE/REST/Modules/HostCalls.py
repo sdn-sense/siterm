@@ -106,7 +106,7 @@ class HostCalls(HostSubCalls):
                 "updatedate": inputDict["updateTime"],
                 "hostinfo": fname,
             }
-            self.siteDB.dumpFileContentAsJson(fname, inputDict)
+            self.dumpFileContentAsJson(fname, inputDict)
             self.dbI.insert("hosts", [out])
         else:
             raise BadRequestError(
@@ -141,7 +141,7 @@ class HostCalls(HostSubCalls):
             "updatedate": getUTCnow(),
             "hostinfo": fname,
         }
-        self.siteDB.dumpFileContentAsJson(fname, inputDict)
+        self.dumpFileContentAsJson(fname, inputDict)
         self.dbI.update("hosts", [out])
         self.responseHeaders(environ, **kwargs)
         return {"Status": "UPDATED"}

@@ -79,8 +79,8 @@ class DebugCalls:
                 f"Debug request with ID {kwargs['debugvar']} not found."
             )
         out = out[0]
-        out["requestdict"] = self.siteDB.getFileContentAsJson(out["debuginfo"])
-        out["output"] = self.siteDB.getFileContentAsJson(out["outputinfo"])
+        out["requestdict"] = self.getFileContentAsJson(out["debuginfo"])
+        out["output"] = self.getFileContentAsJson(out["outputinfo"])
         return out
 
     def getdebug(self, environ, **kwargs):
@@ -121,7 +121,7 @@ class DebugCalls:
         outputfname = os.path.join(
             debugdir, inputDict["hostname"], randomuuid, "output.json"
         )
-        self.siteDB.dumpFileContentAsJson(requestfname, inputDict)
+        self.dumpFileContentAsJson(requestfname, inputDict)
         out = {
             "hostname": inputDict.get("hostname", "undefined"),
             "state": "new",
@@ -144,7 +144,7 @@ class DebugCalls:
                 f"Debug request with ID {kwargs['debugvar']} not found."
             )
         # ==================================
-        self.siteDB.dumpFileContentAsJson(
+        self.dumpFileContentAsJson(
             dbentry["outputinfo"], inputDict.get("output", {})
         )
 

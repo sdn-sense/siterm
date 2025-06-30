@@ -94,6 +94,7 @@ class Frontend(
     DeltaCalls,
     ModelCalls,
     TopoCalls,
+    contentDB
 ):
     """Main WSGI Frontend for accepting and authorizing calls to backend"""
 
@@ -101,7 +102,6 @@ class Frontend(
         self.config = getGitConfig()
         self.sites = ["MAIN"] + self.config["MAIN"]["general"]["sites"]
         self.httpresp = HTTPResponses()
-        self.siteDB = contentDB()
         self.dbobj = getDBConn("REST-Frontend", self)
         self.dbI = None
         self.urlParams = {}
