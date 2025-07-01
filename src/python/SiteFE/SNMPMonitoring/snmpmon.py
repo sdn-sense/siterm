@@ -589,7 +589,7 @@ class SNMPMonitoring:
         self.err = []
         self.hostconf = {}
         self.memMonitor = {}
-        self.snmperrorcount = 0
+        self.snmperrorcount = {}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -599,7 +599,7 @@ class SNMPMonitoring:
     def _start(self):
         self.switch.getinfo()
         self.switches = self.switch.getAllSwitches()
-        self.snmperrorcount = 0
+        self.snmperrorcount = {}
 
     def _getSNMPSession(self, host):
         self.session = None
@@ -641,12 +641,14 @@ class SNMPMonitoring:
             ex = f"[{host}]: Got SNMP UnknownObjectID Exception for key {key}: {ex}"
             self.logger.warning(ex)
             self.err.append(ex)
-            self.snmperrorcount += 1
+            self.snmperrorcount.setdefault(host, 0)
+            self.snmperrorcount[host] += 1
         except EasySNMPTimeoutError as ex:
             ex = f"[{host}]: Got SNMP Timeout Exception: {ex}"
             self.logger.warning(ex)
             self.err.append(ex)
-            self.snmperrorcount += 1
+            self.snmperrorcount.setdefault(host, 0)
+            self.snmperrorcount[host] += 1
         return []
 
     def _junosmac(self, host, macs):
@@ -796,7 +798,7 @@ class SNMPMonitoring:
             self._getMacAddrSession(host, macs)
             for key in self.config["MAIN"]["snmp"]["mibs"]:
                 allvals = self._getSNMPVals(key, host)
-                if self.snmperrorcount > 3:
+                if self.snmperrorcount.get(host, 0) > 3:
                     self.logger.error(
                         f"[{host}]: Too many SNMP errors ({self.snmperrorcount}), skipping further SNMP queries"
                     )
@@ -814,14 +816,13 @@ class SNMPMonitoring:
         self.logger.info(f"[{self.sitename}]: Memory statistics written to DB")
         self.getDiskStats()
         self.logger.info(f"[{self.sitename}]: Disk statistics written to DB")
-        if self.err:
-            raise Exception(f"SNMP Monitoring Errors: {self.err}")
         # We could do delete and re-init everytime, or at refresh.
-        # Need to track memory usage and see what is best
         self.prom.metrics()
         # Get Topology json
         self.topo.gettopology()
         self.logger.info(f"[{self.sitename}]: Topology map written to DB")
+        if self.err:
+            raise Exception(f"SNMP Monitoring Errors: {self.err}")
 
 
 def execute(config=None, args=None):
