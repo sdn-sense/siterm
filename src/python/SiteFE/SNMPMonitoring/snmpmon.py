@@ -589,6 +589,7 @@ class SNMPMonitoring:
         self.err = []
         self.hostconf = {}
         self.memMonitor = {}
+        self.snmperrorcount = 0
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -598,6 +599,7 @@ class SNMPMonitoring:
     def _start(self):
         self.switch.getinfo()
         self.switches = self.switch.getAllSwitches()
+        self.snmperrorcount = 0
 
     def _getSNMPSession(self, host):
         self.session = None
@@ -639,10 +641,12 @@ class SNMPMonitoring:
             ex = f"[{host}]: Got SNMP UnknownObjectID Exception for key {key}: {ex}"
             self.logger.warning(ex)
             self.err.append(ex)
+            self.snmperrorcount += 1
         except EasySNMPTimeoutError as ex:
             ex = f"[{host}]: Got SNMP Timeout Exception: {ex}"
             self.logger.warning(ex)
             self.err.append(ex)
+            self.snmperrorcount += 1
         return []
 
     def _junosmac(self, host, macs):
@@ -792,6 +796,11 @@ class SNMPMonitoring:
             self._getMacAddrSession(host, macs)
             for key in self.config["MAIN"]["snmp"]["mibs"]:
                 allvals = self._getSNMPVals(key, host)
+                if self.snmperrorcount > 3:
+                    self.logger.error(
+                        f"[{host}]: Too many SNMP errors ({self.snmperrorcount}), skipping further SNMP queries"
+                    )
+                    break
                 for item in allvals:
                     indx = item.oid_index
                     out.setdefault(indx, {})
