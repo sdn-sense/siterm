@@ -124,7 +124,7 @@ create_activeDeltas = """CREATE TABLE IF NOT EXISTS activeDeltas(
                           id int auto_increment,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
-                          output longtext NOT NULL,
+                          output json NOT NULL,
                           primary key(id))"""
 create_snmpmon = """CREATE TABLE IF NOT EXISTS snmpmon(
                           id int auto_increment,

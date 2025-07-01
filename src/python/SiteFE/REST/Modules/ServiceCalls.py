@@ -133,6 +133,5 @@ class ServiceCalls:
             search.append(["hostname", kwargs["urlParams"]["hostname"]])
         if kwargs["urlParams"].get("servicename", None):
             search.append(["servicename", kwargs["urlParams"]["servicename"]])
-        services = self.dbI.get("services", search=search)
         self.responseHeaders(environ, **kwargs)
-        return services
+        return self.dbI.get("services", search=search)

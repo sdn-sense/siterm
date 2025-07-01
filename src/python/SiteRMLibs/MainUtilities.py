@@ -14,7 +14,6 @@ import datetime
 import email.utils as eut
 import hashlib
 import http.client
-import io
 import logging
 import logging.handlers
 import os
@@ -246,23 +245,8 @@ def evaldict(inputDict):
         raise WrongInputError("Input must be a string or dict/list.")
     try:
         return json.loads(inputDict)
-    except (json.JSONDecodeError, TypeError, ValueError):
-        pass  # fall back
-    # Try to fix common issues:
-    print(
-        f"Got dict which is not json loadable. Print for debugging: {inputDict[:100]}"
-    )
-    if "'" in inputDict or ",}" in inputDict or ",]" in inputDict:
-        inputDict = re.sub(r"'", r'"', inputDict)
-        # Remove trailing commas (optional)
-        inputDict = re.sub(r",(\s*[}\]])", r"\1", inputDict)
-    try:
-        return json.loads(inputDict)
     except (json.JSONDecodeError, TypeError, ValueError) as ex:
-        raise WrongInputError(
-            f"Input looks like JSON but could not be parsed even after fixup. Error: {ex}"
-        ) from ex
-
+        raise WrongInputError(f"Input looks like JSON but could not be parsed. Error: {ex}") from ex
 
 def jsondumps(inputDict):
     """Dump JSON to string"""
@@ -585,14 +569,14 @@ def read_input_data(environ):
     length = int(environ.get("CONTENT_LENGTH", 0))
     if length == 0:
         raise WrongInputError("Content input length is 0.")
-    body = io.BytesIO(environ["wsgi.input"].read(length))
+    body = environ["wsgi.input"].read(length)
     outjson = {}
     try:
-        outjson = evaldict(body.getvalue())
+        outjson = evaldict(body)
     except (ValueError, WrongInputError) as ex:
-        outjson = parse_gui_form_post(body.getvalue())
+        outjson = parse_gui_form_post(body)
         if not outjson:
-            errMsg = f"Failed to parse json input: {body.getvalue()}, Err: {ex}."
+            errMsg = f"Failed to parse json input: {body}, Err: {ex}."
             print(errMsg)
             raise WrongInputError(errMsg) from ex
     return outjson
