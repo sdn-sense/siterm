@@ -15,6 +15,14 @@ on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branc
         description: "Branch to use of siterm-startup (build base)?"
         default: "master"
         type: "string"
+      elversion:
+        description: "OS Version to build for (el8, el9, el10)?"
+        required: true
+        type: choice
+        options:
+          - el8
+          - el9
+          - el10
 
 permissions:
   contents: read
@@ -37,42 +45,28 @@ jobs:
         DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
       run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
 
-    - name: Build the BASE Docker image
+    - name: Build the BASE Docker image {{ github.event.inputs.elversion }} version
       run: | 
         cd siterm-startup/helpers/base_images/agent/
-        docker build . --file Dockerfile --tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker build . --file Dockerfile-{{ github.event.inputs.elversion }} --tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }}-$(date +%Y%m%d)
 
-    - name: Docker Push BASE Image with tag and date
-      run: docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+    - name: Docker Push BASE Image with tag and date {{ github.event.inputs.elversion }} version
+      run: docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }}-$(date +%Y%m%d)
 
-    - name: Docker Push BASE Image with tag
+    - name: Docker Push BASE Image with tag {{ github.event.inputs.elversion }} version
       run: |
-        docker tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
+        docker tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }}-$(date +%Y%m%d) sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }}
+        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }}
 
-    - name: Build the AGENT Docker image
+    - name: Build the AGENT Docker image {{ github.event.inputs.elversion }} version
       run: | 
         cd siterm-startup/agent/container-build-files/
-        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker build . --file Dockerfile-{{ github.event.inputs.elversion }} --build-arg RELEASE=${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }} --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }}-$(date +%Y%m%d)
 
-    - name: Docker Push AGENT Image with tag and date
-      run: docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+    - name: Docker Push AGENT Image with tag and date {{ github.event.inputs.elversion }} version
+      run: docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }}-$(date +%Y%m%d)
 
-    - name: Docker Push AGENT Image with tag
+    - name: Docker Push AGENT Image with tag {{ github.event.inputs.elversion }} version
       run: |
-        docker tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
-
-    - name: Build the Debugger Service Docker image
-      run: |
-        cd siterm-startup/debugger/container-build-files/
-        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
-
-    - name: Docker Push Debugger Image with tag and date
-      run: docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
-
-    - name: Docker Push Debugger Image with tag
-      run: |
-        docker tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}
-
+        docker tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }}-$(date +%Y%m%d) sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }}
+        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-{{ github.event.inputs.elversion }}
