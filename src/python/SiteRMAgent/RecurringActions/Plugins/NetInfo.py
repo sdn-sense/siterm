@@ -312,6 +312,10 @@ class NetInfo(BWService):
         try:
             lldpOut = externalCommand("lldpcli show neighbors -f json")
             lldpObj = evaldict(lldpOut[0].decode("utf-8"))
+            if not lldpObj:
+                self.logger.debug("No LLDP information found. lldpcli show neighbors -f json returned empty.")
+                self.addError("LLDP information not found. lldpcli show neighbors -f json returned empty.")
+                return {}
             out = {}
             for item in lldpObj.get("lldp", {}).get("interface", []):
                 for intf, vals in item.items():
@@ -337,6 +341,7 @@ class NetInfo(BWService):
             self.logger.debug(
                 "Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?"
             )
+            self.addError(f"Failed to get lldp information. Exception: {str(ex)}")
             self.logger.debug(f"Exception: {ex}")
         return {}
 
