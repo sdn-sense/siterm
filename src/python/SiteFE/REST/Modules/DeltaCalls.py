@@ -180,7 +180,7 @@ class DeltaCalls:
                 "accepting",
             ]:
                 self.dbI.delete("deltas", [["uid", delta[0]["uid"]]])
-        self.getmodel(uploadContent["modelId"], None, **kwargs)
+        self.getmodel(uploadContent["modelId"], **kwargs)
         outContent = {
             "ID": hashNum,
             "InsertTime": getUTCnow(),
