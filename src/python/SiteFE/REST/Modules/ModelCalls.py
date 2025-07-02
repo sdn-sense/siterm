@@ -123,7 +123,7 @@ class ModelCalls:
                 return []
             self.httpresp.ret_200("application/json",
                                   kwargs["start_response"],
-                                  [("Last-Modified", httpdate(outmodels[0]["insertdate"]))])
+                                  [("Last-Modified", httpdate(outmodels["insertdate"]))])
 
             if not kwargs["urlParams"]["summary"]:
                 return [{"id": outmodels["uid"],
@@ -145,6 +145,7 @@ class ModelCalls:
                     self.getmodelcontent(model, **kwargs),
                     kwargs["urlParams"]["encode"])
             models.append(tmpDict)
+        self.httpresp.ret_200("application/json", kwargs["start_response"], None)
         return models
 
     def modelsid(self, environ, **kwargs):
