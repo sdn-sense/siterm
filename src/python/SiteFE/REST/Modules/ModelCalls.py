@@ -45,9 +45,9 @@ class ModelCalls:
                 "urlParams": [
                     {"key": "current", "default": False, "type": bool},
                     {"key": "summary", "default": True, "type": bool},
-                    {"key": "oldview", "default": False, "type": bool},
                     {"key": "encode", "default": True, "type": bool},
                     {"key": "checkignore", "default": False, "type": bool},
+                    {"key": "limit", "default": 10, "type": int},
                     {
                         "key": "model",
                         "default": "turtle",
@@ -77,18 +77,26 @@ class ModelCalls:
         self.routeMap.connect("models", "/v1/models", action="models")
         self.routeMap.connect("modelsid", "/v1/models/:modelid", action="modelsid")
 
-    def getmodel(self, environ, modelID=None, content=False, **kwargs):
+    @staticmethod
+    def getmodelcontent(dbentry, **kwargs):
+        """Get model content based on db entry."""
+        rettype = kwargs.get("urlParams", {}).get("model", "turtle")
+        if rettype not in ["json-ld", "ntriples", "turtle"]:
+            raise ModelNotFound(f"Model type {rettype} is not supported. Supported: json-ld, ntriples, turtle")
+        return getAllFileContent(f'{dbentry["fileloc"]}.{rettype}')
+
+    def getmodel(self, modelID=None, **kwargs):
         """Get all models."""
         if not modelID:
-            return self.dbI.get("models", orderby=["insertdate", "DESC"])
+            models = self.dbI.get("models",
+                                  limit=kwargs.get("urlParams", {}).get("limit", 10),
+                                  orderby=["insertdate", "DESC"])
+            if not models:
+                raise ModelNotFound("No models in database. First time run?")
+            return models
         model = self.dbI.get("models", limit=1, search=[["uid", modelID]])
         if not model:
             raise ModelNotFound(f"Model with {modelID} id was not found in the system")
-        if content:
-            rettype = kwargs.get("urlParams", {}).get("model", "turtle")
-            if rettype not in ["json-ld", "ntriples", "turtle"]:
-                raise ModelNotFound(f"Model type {rettype} is not supported. Supported: json-ld, ntriples, turtle")
-            return getAllFileContent(f'{model[0]["fileloc"]}.{rettype}')
         return model[0]
 
     def models(self, environ, **kwargs):
@@ -104,56 +112,40 @@ class ModelCalls:
                 raise ServiceNotReady(
                     "You cannot request model information yet, because LookUpService or ProvisioningService is not finished with first run (Server restart?). Retry later."
                 )
-        modTime = getModTime(kwargs["headers"])
-        outmodels = self.getmodel(environ, None, False, **kwargs)
-        if not outmodels:
-            raise ModelNotFound(
-                "LastModel does not exist in dictionary. First time run? See documentation"
-            )
-        outmodels = [outmodels] if isinstance(outmodels, dict) else outmodels
-        current = {
-            "id": outmodels[0]["uid"],
-            "creationTime": convertTSToDatetime(outmodels[0]["insertdate"]),
-            "href": f"{environ['APP_CALLBACK']}/{outmodels[0]['uid']}",
-        }
-        if outmodels[0]["insertdate"] < modTime:
-            self.httpresp.ret_304(
-                "application/json",
-                kwargs["start_response"],
-                [("Last-Modified", httpdate(outmodels[0]["insertdate"]))],
-            )
-            return []
-        self.httpresp.ret_200(
-            "application/json",
-            kwargs["start_response"],
-            [("Last-Modified", httpdate(outmodels[0]["insertdate"]))],
-        )
-        if kwargs["urlParams"]["oldview"]:
-            return outmodels
-        outM = {"models": []}
+        # Check if current is set, if so, it only asks for current model
         if kwargs["urlParams"]["current"]:
+            kwargs["urlParams"]["limit"] = 1
+            outmodels = self.getmodel(None, **kwargs)[0]
+            if outmodels["insertdate"] < getModTime(kwargs["headers"]):
+                self.httpresp.ret_304("application/json",
+                                      kwargs["start_response"],
+                                      [("Last-Modified", httpdate(outmodels["insertdate"]))])
+                return []
+            self.httpresp.ret_200("application/json",
+                                  kwargs["start_response"],
+                                  [("Last-Modified", httpdate(outmodels[0]["insertdate"]))])
+
             if not kwargs["urlParams"]["summary"]:
-                current["model"] = encodebase64(
-                    self.getmodel(environ, outmodels[0]["uid"], content=True, **kwargs),
-                    kwargs["urlParams"]["encode"],
-                )
-            outM["models"].append(current)
-            return [current]
-        if not kwargs["urlParams"]["current"]:
-            for model in outmodels:
-                tmpDict = {
-                    "id": model["uid"],
-                    "creationTime": convertTSToDatetime(model["insertdate"]),
-                    "href": f"{environ['APP_CALLBACK']}/{model['uid']}",
-                }
-                if not kwargs["urlParams"]["summary"]:
-                    tmpDict["model"] = encodebase64(
-                        self.getmodel(environ, model["uid"], content=True, **kwargs),
-                        kwargs["urlParams"]["encode"],
-                    )
-                outM["models"].append(tmpDict)
-            return outM["models"]
-        return []
+                return [{"id": outmodels["uid"],
+                         "creationTime": convertTSToDatetime(outmodels["insertdate"]),
+                         "href": f"{environ['APP_CALLBACK']}/{outmodels['uid']}",
+                         "model": encodebase64(self.getmodelcontent(outmodels, **kwargs), kwargs["urlParams"]["encode"])}]
+            return [{"id": outmodels["uid"],
+                     "creationTime": convertTSToDatetime(outmodels["insertdate"]),
+                     "href": f"{environ['APP_CALLBACK']}/{outmodels['uid']}"}]
+        # If current is not set, return all models (based on limit)
+        outmodels = self.getmodel(None, **kwargs)
+        models = []
+        for model in outmodels:
+            tmpDict = {"id": model["uid"],
+                       "creationTime": convertTSToDatetime(model["insertdate"]),
+                       "href": f"{environ['APP_CALLBACK']}/{model['uid']}"}
+            if not kwargs["urlParams"]["summary"]:
+                tmpDict["model"] = encodebase64(
+                    self.getmodelcontent(model, **kwargs),
+                    kwargs["urlParams"]["encode"])
+            models.append(tmpDict)
+        return models
 
     def modelsid(self, environ, **kwargs):
         """
@@ -162,14 +154,11 @@ class ModelCalls:
         Output: application/json
         """
         modTime = getModTime(kwargs["headers"])
-        outmodels = self.getmodel(environ, kwargs["modelid"], content=False, **kwargs)
-        model = outmodels if isinstance(outmodels, dict) else outmodels[0]
+        model = self.getmodel(kwargs["modelid"], content=False, **kwargs)
         if modTime > model["insertdate"]:
-            self.httpresp.ret_304(
-                "application/json",
-                kwargs["start_response"],
-                [("Last-Modified", httpdate(model["insertdate"]))],
-            )
+            self.httpresp.ret_304("application/json",
+                                  kwargs["start_response"],
+                                  [("Last-Modified", httpdate(model["insertdate"]))])
             return []
         current = {
             "id": model["uid"],
@@ -177,10 +166,7 @@ class ModelCalls:
             "href": f"{environ['APP_CALLBACK']}/{model['uid']}",
         }
         if not kwargs["urlParams"]["summary"]:
-            current["model"] = encodebase64(
-                self.getmodel(environ, model["uid"], content=True, **kwargs),
-                kwargs["urlParams"]["encode"],
-            )
+            current["model"] = encodebase64(self.getmodelcontent(model, **kwargs), kwargs["urlParams"]["encode"])
         self.httpresp.ret_200(
             "application/json",
             kwargs["start_response"],
