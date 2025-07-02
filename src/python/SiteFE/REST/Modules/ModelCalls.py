@@ -77,7 +77,8 @@ class ModelCalls:
         self.routeMap.connect("models", "/v1/models", action="models")
         self.routeMap.connect("modelsid", "/v1/models/:modelid", action="modelsid")
 
-    def getmodelcontent(self, dbentry, **kwargs):
+    @staticmethod
+    def getmodelcontent(dbentry, **kwargs):
         """Get model content based on db entry."""
         rettype = kwargs.get("urlParams", {}).get("model", "turtle")
         if rettype not in ["json-ld", "ntriples", "turtle"]:
@@ -87,7 +88,9 @@ class ModelCalls:
     def getmodel(self, modelID=None, **kwargs):
         """Get all models."""
         if not modelID:
-            models = self.dbI.get("models", limit=kwargs.get("urlParams", {}).get("limit", 10), orderby=["insertdate", "DESC"])
+            models = self.dbI.get("models",
+                                  limit=kwargs.get("urlParams", {}).get("limit", 10),
+                                  orderby=["insertdate", "DESC"])
             if not models:
                 raise ModelNotFound("No models in database. First time run?")
             return models
@@ -126,8 +129,7 @@ class ModelCalls:
                 return [{"id": outmodels["uid"],
                          "creationTime": convertTSToDatetime(outmodels["insertdate"]),
                          "href": f"{environ['APP_CALLBACK']}/{outmodels['uid']}",
-                         "model": encodebase64(self.getmodelcontent(outmodels, **kwargs), kwargs["urlParams"]["encode"])
-                       }]
+                         "model": encodebase64(self.getmodelcontent(outmodels, **kwargs), kwargs["urlParams"]["encode"])}]
             return [{"id": outmodels["uid"],
                      "creationTime": convertTSToDatetime(outmodels["insertdate"]),
                      "href": f"{environ['APP_CALLBACK']}/{outmodels['uid']}"}]
