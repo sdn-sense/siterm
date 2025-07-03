@@ -68,5 +68,5 @@ jobs:
 
     - name: Docker Push AGENT Image with tag ${{ github.event.inputs.elversion }} version
       run: |
-        docker tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}$(date +%Y%m%d)-${{ github.event.inputs.elversion }} sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${{ github.event.inputs.elversion }}
+        docker tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ github.event.inputs.elversion }} sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${{ github.event.inputs.elversion }}
         docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${{ github.event.inputs.elversion }}
