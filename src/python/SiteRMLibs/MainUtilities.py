@@ -620,6 +620,8 @@ def getHostname(config=None):
     # In case of FE, we need to return hostname as default
     if config and config.getraw("MAPPING").get("type", None) == "FE":
         return "default"
+    elif config and config.get("agent", "hostname"):
+        return config.get("agent", "hostname")
     return socket.gethostname()
 
 

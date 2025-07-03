@@ -1086,7 +1086,7 @@ class PolicyService(RDFHelper, Timing, BWService):
                 self.conflictChecker.checkConflicts(
                     self, self.newActive["output"], self.currentActive["output"], True
                 )
-            except (OverlapException, WrongIPAddress) as ex:
+            except (OverlapException, WrongIPAddress, ServiceNotReady) as ex:
                 self.logger.info(f"There was failure accepting delta. Failure {ex}")
                 toDict["State"] = "failed"
                 toDict["Error"] = getError(ex)
