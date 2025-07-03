@@ -40,26 +40,26 @@ jobs:
     - name: Build the BASE Docker image
       run: | 
         cd siterm-startup/helpers/base_images/agent/
-        docker build . --file Dockerfile-el10 --tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-el10-$(date +%Y%m%d)
+        docker build . --file Dockerfile-el10 --tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Docker Push BASE Image with tag and date
-      run: docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-el10-$(date +%Y%m%d)
+      run: docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Docker Push BASE Image with tag
       run: |
-        docker tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-el10-$(date +%Y%m%d) sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-el10
+        docker tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10 sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-el10
         docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-el10
 
     - name: Build the Debugger Service Docker image
       run: |
         cd siterm-startup/debugger/container-build-files/
-        docker build . --file Dockerfile-el10 --build-arg RELEASE=${{ github.event.inputs.buildtag }}-el10 --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-el10-$(date +%Y%m%d)
+        docker build . --file Dockerfile-el10 --build-arg RELEASE=${{ github.event.inputs.buildtag }}-el10 --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Docker Push Debugger Image with tag and date
-      run: docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-el10-$(date +%Y%m%d)
+      run: docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Docker Push Debugger Image with tag
       run: |
-        docker tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-el10-$(date +%Y%m%d) sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-el10
+        docker tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10 sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-el10
         docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-el10
 
