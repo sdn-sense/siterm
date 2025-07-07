@@ -8,7 +8,6 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2024/01/03
 """
 from SiteRMLibs import __version__ as runningVersion
-from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.MainUtilities import getUTCnow
 
 
@@ -25,7 +24,7 @@ class HostSubCalls:
 
     def _host_reportServiceStatus(self, **kwargs):
         """Report service state to DB."""
-        reported = True
+        reported = False
         try:
             dbOut = {
                 "hostname": kwargs.get("hostname", "default"),
@@ -38,19 +37,16 @@ class HostSubCalls:
             }
             services = self.dbI.get(
                 "servicestates",
-                search=[
-                    ["hostname", dbOut["hostname"]],
-                    ["servicename", dbOut["servicename"]],
-                ],
-            )
+                search=[["hostname", dbOut["hostname"]],
+                        ["servicename", dbOut["servicename"]],
+                        ])
             if services:
                 self.dbI.update("servicestates", [dbOut])
             else:
                 self.dbI.insert("servicestates", [dbOut])
-        except NoOptionError:
-            reported = False
+            reported = True
         except Exception as ex:
-            raise Exception("Error details in reportServiceStatus.") from ex
+            raise Exception(f"Error details in reportServiceStatus. Exc: {str(ex)}") from ex
         return reported
 
     def _host_recordServiceAction(self, **kwargs):

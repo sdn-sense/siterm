@@ -45,15 +45,15 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         self.fullURL = getFullUrl(self.config, self.sitename)
         self.hostname = self.config.get("agent", "hostname")
         self.logger.info("====== Ruler Start Work. Hostname: %s", self.hostname)
-        # L2,L3 move it to Class Imports at top.
-        self.layer2 = VInterfaces(self.config, self.sitename)
-        self.layer3 = Routing(self.config, self.sitename)
         self.activeDeltas = {}
         self.activeFromFE = {}
         self.activeNew = {}
         self.activeNow = {}
         QOS.__init__(self)
         OverlapLib.__init__(self)
+        # L2,L3 move it to Class Imports at top.
+        self.layer2 = VInterfaces(self.config, self.sitename)
+        self.layer3 = Routing(self.config, self.sitename, self)
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -61,7 +61,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         self.fullURL = getFullUrl(self.config, self.sitename)
         self.hostname = self.config.get("agent", "hostname")
         self.layer2 = VInterfaces(self.config, self.sitename)
-        self.layer3 = Routing(self.config, self.sitename)
+        self.layer3 = Routing(self.config, self.sitename, self)
 
     def getData(self, url):
         """Get data from FE."""
@@ -136,7 +136,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
                         )
                     else:
                         actCall.terminate(vals[self.hostname], key)
-        if actKey == "rst" and self.qosPolicy == "hostlevel":
+        if actKey == "rst":
             for key, val in self.activeNow.items():
                 for uuid, rvals in val.items():
                     if not self.activeNew.get(key, {}).get(uuid, {}):
@@ -165,7 +165,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
                         # So we are not doing anything to terminate it and termination
                         # will happen at activeComparison - once delta is removed in FE.
                         continue
-        if actKey == "rst" and self.qosPolicy == "hostlevel":
+        if actKey == "rst":
             for key, val in self.activeNew.items():
                 for uuid, rvals in val.items():
                     actCall.activate(rvals, uuid)
@@ -200,6 +200,8 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
             self.activeNow = self.activeNew
             if not self.config.getboolean("agent", "noqos"):
                 self.startqos()
+            else:
+                self.logger.info("QoS is not configured to be applied")
         else:
             self.logger.info("Agent is not configured to apply rules")
         self.logger.info("Ended function start")

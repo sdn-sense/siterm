@@ -72,7 +72,6 @@ class Debugger(DebugService):
         self.hostname = socket.getfqdn()
         self.diragent = contentDB()
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
-        self.serviceUpdateTime = 0
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -82,10 +81,6 @@ class Debugger(DebugService):
 
     def registerService(self):
         """Register this service in SiteFE."""
-        if self.serviceUpdateTime > getUTCnow():
-            self.logger.info("Service already registered in last minute. No updating it again.")
-            return
-        self.serviceUpdateTime = getUTCnow() + 60
         out = {"hostname": self.hostname, "servicename": COMPONENT}
         out["serviceinfo"] = getAllIps()
         self.logger.debug(f"Service report: {out}")

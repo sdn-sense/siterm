@@ -33,11 +33,13 @@ def publishState(modtype, uuid, hostname, state, fullURL):
 class Rules:
     """Rules Class"""
 
-    def __init__(self):
+    def __init__(self, rulercli):
+        self.rulercli = rulercli
         self.rule_id = []
         self.rule_from = []
         self.rule_to = []
         self.rule_lookup = []
+        self.rule_ip_table = []
 
     def clean(self):
         """Clean Rules class variables"""
@@ -45,23 +47,37 @@ class Rules:
         self.rule_from = []
         self.rule_to = []
         self.rule_lookup = []
+        self.rule_ip_table = []
+
+    def _add_iprange(self, rule_from):
+        """Add IP range to rule"""
+        # if it is all, then add None;
+        rule_from = rule_from.decode("utf-8") if isinstance(rule_from, bytes) else rule_from
+        if rule_from == "all":
+            self.rule_ip_table.append(None)
+        # if it is with / then it is already a range;
+        elif "/" in rule_from:
+            self.rule_ip_table.append(rule_from)
+        overlaprange, _ = self.rulercli.findOverlapsRange(rule_from, "ipv6")
+        if overlaprange:
+            self.rule_ip_table.append(overlaprange)
+        else:
+            # if it is not a range, then add it as /128;
+            self.rule_ip_table.append(None)
 
     def add_rule(self, rule_id, rule_from, rule_to, rule_lookup):
         """Add Rule to list"""
-        self.rule_id.append(
-            rule_id.decode("utf-8") if isinstance(rule_id, bytes) else rule_id
-        )
-        self.rule_from.append(
-            rule_from.decode("utf-8") if isinstance(rule_from, bytes) else rule_from
-        )
-        self.rule_to.append(
-            rule_to.decode("utf-8") if isinstance(rule_to, bytes) else rule_to
-        )
-        self.rule_lookup.append(
-            rule_lookup.decode("utf-8")
-            if isinstance(rule_lookup, bytes)
-            else rule_lookup
-        )
+        def __to_str(val):
+            """Convert value to string"""
+            return val.decode("utf-8") if isinstance(val, bytes) else val
+
+        self.rule_id.append(__to_str(rule_id))
+        self.rule_from.append(__to_str(rule_from))
+        self.rule_to.append(__to_str(rule_to))
+        self.rule_lookup.append(__to_str(rule_lookup))
+        # Identify from rule_from and IP range on the host;
+        self._add_iprange(rule_from)
+
 
     @staticmethod
     def indices(lst, element):
@@ -118,16 +134,24 @@ class Rules:
         lookup_indx = self.indices(self.rule_lookup, rule_lookup)
         return self.getvals(list(set(to_indx) & set(lookup_indx)))
 
+    def lookup_iprange(self, ip_find):
+        """Identify if ip_find is in any of the ranges"""
+        overlaprange, _ = self.rulercli.findOverlapsRange(ip_find, "ipv6")
+        if overlaprange:
+            return self.getvals(
+                self.indices(self.rule_ip_table, overlaprange)
+            )
+        return []
 
 class Routing:
     """Virtual interface class."""
 
-    def __init__(self, config, sitename):
+    def __init__(self, config, sitename, rulercli=None):
         self.config = config
         self.hostname = self.config.get("agent", "hostname")
         self.fullURL = getFullUrl(self.config, sitename)
         self.logger = getLoggingObject(config=self.config, service="Ruler")
-        self.rules = Rules()
+        self.rules = Rules(rulercli)
         self._refreshRuleList()
 
     def _refreshRuleList(self):
@@ -147,15 +171,32 @@ class Routing:
                 self.rules.add_rule(matched[0], matched[1], None, matched[2])
                 continue
             match = re.match(
-                rb"(\d+):[ \t]+from ([^ \t]+) to ([^ \t]+) lookup ([^ \t]+)", line
+                rb"(\d+):[ \t]+from ([^ \t]+) to ([^ \t]+) lookup ([^ \t]+)$", line
             )
             if match:
                 matched = match.groups()
                 self.rules.add_rule(matched[0], matched[1], matched[2], matched[3])
+            match = re.match(rb"(\d+):[ \t]+from ([^ \t]+) lookup ([^ \t]+)", line)
+            if match:
+                matched = match.groups()
+                self.rules.add_rule(matched[0], matched[1], None, matched[2])
 
-    def apply_rule(self, rule, raiseError=True):
+    def apply_rule(self, rule, deftable, findIp, raiseError=True):
         """Add specific rule."""
-        return execute(rule, self.logger, raiseError)
+        tmprule = rule + f" table {deftable}"
+        maineError = None
+        try:
+            return execute(tmprule, self.logger, raiseError)
+        except FailedInterfaceCommand as exc:
+            maineError = exc
+        if findIp:
+            # Identify table from rule lookup
+            ruleentry = self.rules.lookup_iprange(findIp)
+            if ruleentry:
+                tmprule = rule + f" table {ruleentry[0][3]}"
+                return execute(tmprule, self.logger, raiseError)
+        # If we reach here, it means we couldn't find a suitable table
+        raise maineError
 
     def terminate(self, route, uuid):
         """Terminate rules"""
@@ -168,23 +209,19 @@ class Routing:
                 and self.rules.lookup_to(route["dst_ipv6"])
             ):
                 initialized = True
-                self.apply_rule(
-                    f"ip -6 rule del to {route['dst_ipv6']} table {route['src_ipv6_intf']}"
-                )
+                self.apply_rule(f"ip -6 rule del to {route['dst_ipv6']}", route['src_ipv6_intf'], route['src_ipv6'])
             if route.get("src_ipv6", "") and route.get("src_ipv6_intf", ""):
-                if self.rules.lookup_from_lookup(
-                    f"{route['src_ipv6']}/128", route["src_ipv6_intf"]
-                ):
+                if self.rules.lookup_from_lookup(f"{route['src_ipv6']}/128", route["src_ipv6_intf"]):
                     initialized = True
                     self.apply_rule(
-                        f"ip -6 rule del from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}"
+                        f"ip -6 rule del from {route['src_ipv6']}/128", route['src_ipv6_intf'], route['src_ipv6']
                     )
                 if self.rules.lookup_to_lookup(
                     f"{route['src_ipv6']}/128", route["src_ipv6_intf"]
                 ):
                     initialized = True
                     self.apply_rule(
-                        f"ip -6 rule del to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}"
+                        f"ip -6 rule del to {route['src_ipv6']}/128", route['src_ipv6_intf'], route['src_ipv6']
                     )
             if initialized:
                 publishState("ipv6", uuid, self.hostname, "deactivated", self.fullURL)
@@ -207,7 +244,7 @@ class Routing:
                 if not rules:
                     initialized = True
                     self.apply_rule(
-                        f"ip -6 rule add to {route['dst_ipv6']} table {route['src_ipv6_intf']}"
+                        f"ip -6 rule add to {route['dst_ipv6']}", route['src_ipv6_intf'], route['src_ipv6']
                     )
 
             if route.get("src_ipv6", "") and route.get("src_ipv6_intf", ""):
@@ -217,7 +254,7 @@ class Routing:
                 if not rules:
                     initialized = True
                     self.apply_rule(
-                        f"ip -6 rule add from {route['src_ipv6']}/128 table {route['src_ipv6_intf']}"
+                        f"ip -6 rule add from {route['src_ipv6']}/128", route['src_ipv6_intf'], route['src_ipv6']
                     )
                 rules = self.rules.lookup_to_lookup(
                     route["src_ipv6"], route["src_ipv6_intf"]
@@ -225,7 +262,7 @@ class Routing:
                 if not rules:
                     initialized = True
                     self.apply_rule(
-                        f"ip -6 rule add to {route['src_ipv6']}/128 table {route['src_ipv6_intf']}"
+                        f"ip -6 rule add to {route['src_ipv6']}/128", route['src_ipv6_intf'], route['src_ipv6']
                     )
             if initialized:
                 publishState("ipv6", uuid, self.hostname, "activated", self.fullURL)

@@ -178,7 +178,7 @@ class DBBackend:
                 "servicestate": kwargs["servicestate"],
                 "sitename": kwargs["sitename"],
                 "runtime": kwargs["runtime"],
-                "hostname": getHostname(self.config),
+                "hostname": getHostname(self.config, self.component),
                 "version": runningVersion,
                 "exc": kwargs.get("exc", "No Exception provided by service"),
             }
@@ -214,7 +214,7 @@ class DBBackend:
             hostname = getFullUrl(self.config, kwargs["sitename"])
             url = "/sitefe/json/frontend/serviceaction"
             kwargs["servicename"] = self.component
-            kwargs["hostname"] = getHostname(self.config)
+            kwargs["hostname"] = getHostname(self.config, self.component)
             actions = callSiteFE(kwargs, hostname, url, "GET")
             # Config Fetcher is not allowed to delete other services refresh.
             if actions[0] and self.component == "ConfigFetcher":

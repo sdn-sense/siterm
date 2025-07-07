@@ -96,6 +96,13 @@ class OverlapLib:
                 return ipPresent.split("/")[0], self.allIPs[iptype][ipPresent]
         return None, None
 
+    def findOverlapsRange(self, iprange, iptype):
+        """Find all networks which overlap and add it to service list"""
+        for ipPresent in self.allIPs.get(iptype, []):
+            if self.networkOverlap(iprange, ipPresent):
+                return ipPresent, self.allIPs[iptype][ipPresent]
+        return None, None
+
     @staticmethod
     def mergeBWDicts(d1, d2):
         int_keys = [

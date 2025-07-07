@@ -615,12 +615,16 @@ def generateMD5(inText):
     return hashObj.hexdigest()
 
 
-def getHostname(config=None):
+def getHostname(config=None, service=None):
     """Return running server hostname"""
     # In case of FE, we need to return hostname as default
     if config and config.getraw("MAPPING").get("type", None) == "FE":
         return "default"
-    elif config and config.get("agent", "hostname"):
+    # If service is Debugger, we return socket.gethostname() (as Debugger can run on multiple hosts)
+    if service and service.lower() == "debugger":
+        return socket.gethostname()
+    # If config is provided, we return hostname from config
+    if config and config.get("agent", "hostname"):
         return config.get("agent", "hostname")
     return socket.gethostname()
 
