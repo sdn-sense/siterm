@@ -90,7 +90,7 @@ class Switch(Node):
             "info": {},
             "portMapping": {},
             "nametomac": {},
-            "mactable": {},
+            "mactable": {}
         }
 
     def deviceUpdate(self, site=None, device=None):
@@ -165,28 +165,18 @@ class Switch(Node):
                     realportname = switchDict.get(portKey, {}).get("realportname", None)
                     if not realportname:
                         continue
-                    if portKey.startswith("Vlan") and switchDict.get(portKey, {}).get(
-                        "value", {}
-                    ):
+                    if portKey.startswith("Vlan") and switchDict.get(portKey, {}).get("value", {}):
                         # This is mainly a hack to list all possible options
                         # For vlan to interface mapping. Why? Ansible switches
                         # Return very differently vlans, like Vlan XXXX, VlanXXXX or vlanXXXX
                         # And we need to map this back with correct name to ansible for provisioning
                         vlankey = switchDict[portKey]["value"]
-                        self.output["portMapping"][switch][
-                            f"Vlan {vlankey}"
-                        ] = realportname
-                        self.output["portMapping"][switch][
-                            f"Vlan{vlankey}"
-                        ] = realportname
-                        self.output["portMapping"][switch][
-                            f"vlan{vlankey}"
-                        ] = realportname
+                        self.output["portMapping"][switch][f"Vlan {vlankey}"] = realportname
+                        self.output["portMapping"][switch][f"Vlan{vlankey}"] = realportname
+                        self.output["portMapping"][switch][f"vlan{vlankey}"] = realportname
                     else:
                         self.output["portMapping"][switch][portKey] = realportname
-                        self.output["portMapping"][switch][
-                            self.getSystemValidPortName(realportname)
-                        ] = realportname
+                        self.output["portMapping"][switch][self.getSystemValidPortName(realportname)] = realportname
 
     def getSwitchPort(self, switchName, portName):
         """Get Switch Port data"""
