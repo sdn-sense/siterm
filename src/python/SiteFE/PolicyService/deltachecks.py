@@ -7,6 +7,7 @@ Authors:
 Date: 2021/01/20
 """
 import copy
+import itertools
 
 from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress, ServiceNotReady
 from SiteRMLibs.CustomExceptions import NoOptionError
@@ -118,16 +119,24 @@ class ConflictChecker(Timing):
         if hostname in rawConf:
             # Get Global vlan range for device
             vlanRange = rawConf.get(hostname, {}).get("vlan_range_list", [])
-            portName = polcls.switch.getSwitchPortName(hostname, vlan["interface"])
-            # If port has vlan range, use that. Means check is done at the port level.
-            vlanRange = (
-                rawConf.get(hostname, {})
-                .get("ports", {})
-                .get(portName, {})
-                .get("vlan_range_list", vlanRange)
-            )
-            # TODO: Remove this logger. Only for debugging. Issue #871
-            polcls.logger.info(f"DEBUG: {portName} {vlanRange} {vlan}")
+            if rawConf[hostname].get('ports', {}).get(vlan["interface"], {}).get('realportname', ''):
+                # If port is a fake and it points to a real port, we check only fake port vlan range
+                vlanRange = (
+                    rawConf.get(hostname, {})
+                    .get("ports", {})
+                    .get(vlan["interface"], {})
+                    .get("vlan_range_list", vlanRange)
+                )
+            else:
+                portName = polcls.switch.getSwitchPortName(hostname, vlan["interface"])
+                # If port has vlan range, use that. Means check is done at the port level.
+                vlanRange = (
+                    rawConf.get(hostname, {})
+                    .get("ports", {})
+                    .get(portName, {})
+                    .get("vlan_range_list", vlanRange)
+                )
+
             if vlanRange and vlan["vlan"] not in vlanRange:
                 raise OverlapException(
                     f"Vlan {vlan} not available for switch {hostname} in configuration. \
@@ -208,6 +217,16 @@ class ConflictChecker(Timing):
                   {iptype} IP {ip1} already used by {self.oldid}. New Request {self.newid} not allowed"
             )
 
+    def _checkIfIPOverlapDevice(self, ip1, ip2, iptype):
+        """Check if IP Overlap. Raise error if True"""
+        overlap = self._ipOverlap(ip1, ip2, iptype)
+        if overlap:
+            raise OverlapException(
+                f"New Request {iptype} requests duplicate IPs on the same device. \
+                  Requested: {ip1} and {ip2} are overlapping. "
+            )
+
+
     def _checkIfIPRouteAll(self, polcls, ipval, iptype, hostname):
         """Check if IP Range is in allowed configuration"""
         # If switch, check in Switch config
@@ -261,8 +280,9 @@ class ConflictChecker(Timing):
     @staticmethod
     def _getVlanIPs(dataIn):
         """Get Vlan IPs"""
-        out = {}
+        allIPs = []
         for intf, val in dataIn.items():
+            out = {}
             out.setdefault("interface", intf)
             for key1, val1 in val.items():
                 if key1 == "hasLabel":
@@ -272,7 +292,12 @@ class ConflictChecker(Timing):
                     out.setdefault("ipv6-address", val1["ipv6-address"]["value"])
                 if key1 == "hasNetworkAddress" and "ipv4-address" in val1:
                     out.setdefault("ipv4-address", val1["ipv4-address"]["value"])
-        return out
+                # After all checks, we check if it has all required key/values
+            if 'interface' in out and 'vlan' in out:
+                # If either ipv4 or ipv6 is set, we add it to allIPs
+                if out.get("ipv4-address", "") or out.get("ipv6-address", ""):
+                    allIPs.append(out)
+        return allIPs
 
     @staticmethod
     def _getRSTIPs(dataIn):
@@ -354,18 +379,18 @@ class ConflictChecker(Timing):
                     for oldHost, oldHostItems in oldItems.items():
                         if hostname != oldHost:
                             continue
-                        oStats = self._getVlanIPs(oldHostItems)
-                        self._checkIfVlanOverlap(nStats, oStats)
-                        self._checkIfIPOverlap(
-                            nStats.get("ipv6-address", ""),
-                            oStats.get("ipv6-address", ""),
-                            "ipv6",
-                        )
-                        self._checkIfIPOverlap(
-                            nStats.get("ipv4-address", ""),
-                            oStats.get("ipv4-address", ""),
-                            "ipv4",
-                        )
+                        for item in self._getVlanIPs(oldHostItems):
+                            self._checkIfVlanOverlap(nStats, item)
+                            self._checkIfIPOverlap(
+                                nStats.get("ipv6-address", ""),
+                                item.get("ipv6-address", ""),
+                                "ipv6",
+                            )
+                            self._checkIfIPOverlap(
+                                nStats.get("ipv4-address", ""),
+                                item.get("ipv4-address", ""),
+                                "ipv4",
+                            )
 
     @staticmethod
     def _checkSystemIPOverlap(nStats, hostname, oldConfig):
@@ -437,6 +462,25 @@ class ConflictChecker(Timing):
                                                 Config: {confAlias}, Request: {vals['isAlias']}"
                         )
 
+    def _checkDuplicateIPs(self, nStats):
+        """Check if duplicate IPs in request overlap"""
+        if not nStats:
+            return
+        if len(nStats) < 2:
+            return
+        ips = {'ipv4': [], 'ipv6': []}
+        for item in nStats:
+            if item.get("ipv4-address", ""):
+                ips['ipv4'].append(item["ipv4-address"])
+            if item.get("ipv6-address", ""):
+                ips['ipv6'].append(item["ipv6-address"])
+        # Check for overlaps in the collected IPs
+        for iptype, iplist in ips.items():
+            if len(iplist) > 1:
+                pairs = list(itertools.combinations(iplist, 2))
+                for ip1, ip2 in pairs:
+                    self._checkIfIPOverlapDevice(ip1, ip2, iptype)
+
     def checkvsw(self, cls, svcitems, oldConfig, newDelta=False):
         """Check vsw Service"""
         idstatetrack = {"modified": [], "new": [], "deleted": [], "unchanged": []}
@@ -454,18 +498,21 @@ class ConflictChecker(Timing):
                 if hostname == "_params":
                     continue
                 nStats = self._getVlanIPs(hostitems)
+                self._checkDuplicateIPs(nStats)
+                for item in nStats:
+                    if newDelta:
+                        self._checkSystemIPOverlap(item, hostname, oldConfig)
+                    # Check if vlan is in allowed list;
+                    self._checkVlanInRange(cls, item, hostname)
+                    # check if ip address with-in available ranges
+                    self._checkifIPInRange(cls, item, "ipv4", hostname)
+                    self._checkifIPInRange(cls, item, "ipv6", hostname)
+                    self._checkIPOverlaps(item, connItems, hostname, oldConfig)
                 # Check if host updated frontend in the last 5minutes
                 if newDelta:
                     self._checkIfHostAlive(cls, hostname)
-                    self._checkSystemIPOverlap(nStats, hostname, oldConfig)
                     self._checkVlanSwapping(self._getVlans(hostitems), hostname)
                     self._checkIsAlias(cls, hostname, hostitems)
-                # Check if vlan is in allowed list;
-                self._checkVlanInRange(cls, nStats, hostname)
-                # check if ip address with-in available ranges
-                self._checkifIPInRange(cls, nStats, "ipv4", hostname)
-                self._checkifIPInRange(cls, nStats, "ipv6", hostname)
-                self._checkIPOverlaps(nStats, connItems, hostname, oldConfig)
         for oldID in oldConfig.get(self.checkmethod, {}).keys():
             if oldID not in svcitems:
                 idstatetrack.setdefault("deleted", {}).append(oldID)
