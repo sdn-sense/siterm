@@ -7,7 +7,7 @@
 # 2. Ensure the old activeDeltas table exists.
 #   mysql -u root
 # 3. Inside mysql shell:
-#   USE siterm;
+#   USE sitefe;
 #   CREATE TABLE activeDeltas_old1540 AS SELECT * FROM activeDeltas;
 #   DROP TABLE IF EXISTS activeDeltas;
 #   CREATE TABLE activeDeltas (id INT AUTO_INCREMENT, insertdate INT NOT NULL, updatedate INT NOT NULL, output JSON NOT NULL, PRIMARY KEY (id));
@@ -61,13 +61,15 @@ class DBStarter:
             sleep(1)
         # Get all from backup
         out = self.db.db.execute_get("SELECT insertdate, updatedate, output FROM activeDeltas_old1540")
-
-        for insertdate, updatedate, output in out:
+        if out and out[0] != 'OK':
+            print(out)
+            raise Exception("Migration failed. Database output is not correct")
+        for insertdate, updatedate, output in out[2]:
             try:
                 parsed_output = evaldict(output)
                 cleaned_output = json.dumps(parsed_output)
                 self.db.db.execute(
-                    f"INSERT INTO activeDeltas_new (insertdate, updatedate, output) VALUES ({insertdate}, {updatedate}, '{cleaned_output}')"
+                    f"INSERT INTO activeDeltas (insertdate, updatedate, output) VALUES ({insertdate}, {updatedate}, '{cleaned_output}')"
                 )
             except Exception as ex:
                 print(f"Skipping row due to parse error: {ex}")
