@@ -1,3 +1,5 @@
+# Stable release: 1.5.40
+
 #### Docker Image Build Status
 [![Docker Image Build For SiteRM FE](https://github.com/sdn-sense/siterm/actions/workflows/docker-image-fe.yml/badge.svg)](https://github.com/sdn-sense/siterm/actions/workflows/docker-image-fe.yml)
 [![Docker Image Build For SiteRM Agent](https://github.com/sdn-sense/siterm/actions/workflows/docker-image-agent.yml/badge.svg)](https://github.com/sdn-sense/siterm/actions/workflows/docker-image-agent.yml)
