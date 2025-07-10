@@ -104,7 +104,7 @@ jobs:
 
     - name: Tag BASE image with multiple tags
       run: |
-        docker tag sdnsense/sitermdebugbase:temp-tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}
+        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
         docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el10
         docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
