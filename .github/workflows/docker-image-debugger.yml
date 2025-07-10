@@ -44,17 +44,15 @@ jobs:
 
     - name: Tag BASE image with multiple tags
       run: |
-        DATE=$(date +%Y%m%d)
         docker tag sdnsense/sitermdebugbase:temp-tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}
-        docker tag sdnsense/sitermdebugbase:temp-tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-${DATE}
-        docker tag sdnsense/sitermdebugbase:temp-tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-${DATE}-el10
+        docker tag sdnsense/sitermdebugbase:temp-tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker tag sdnsense/sitermdebugbase:temp-tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Push BASE image with multiple tags
       run: |
-        DATE=$(date +%Y%m%d)
         docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-${DATE}
-        docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-${DATE}-el10
+        docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Build the Debugger Service Docker image
       run: |
@@ -63,14 +61,12 @@ jobs:
 
     - name: Tag Debugger image with multiple tags
       run: |
-        DATE=$(date +%Y%m%d)
         docker tag sdnsense/siterm-debugger:temp-tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}
-        docker tag sdnsense/siterm-debugger:temp-tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-${DATE}
-        docker tag sdnsense/siterm-debugger:temp-tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-${DATE}-el10
+        docker tag sdnsense/siterm-debugger:temp-tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker tag sdnsense/siterm-debugger:temp-tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Push Debugger image with multiple tags
       run: |
-        DATE=$(date +%Y%m%d)
         docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-${DATE}
-        docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-${DATE}-el10
+        docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10

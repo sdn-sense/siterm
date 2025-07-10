@@ -44,14 +44,13 @@ jobs:
 
     - name: Tag BASE image with multiple tags
       run: |
-        DATE=$(date +%Y%m%d)
         docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el8
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${DATE}-el8
+        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el8
 
     - name: Docker Push BASE Image with tag el8 version
       run: |
         docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el8
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${DATE}-el8
+        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el8
 
     - name: Build the AGENT Docker image el8 version
       run: | 
@@ -60,14 +59,12 @@ jobs:
 
     - name: Tag AGENT image with multiple tags el8 version
       run: |
-        DATE=$(date +%Y%m%d)
         docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el8
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${DATE}-el8
+        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el8
 
     - name: Docker Push AGENT Image with tag and date el8 version
       run: |
-        DATE=$(date +%Y%m%d)
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${DATE}-el8
+        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el8
         docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el8
 
     - name: Build the BASE Docker image el9 version
@@ -77,14 +74,13 @@ jobs:
 
     - name: Tag BASE image with multiple tags
       run: |
-        DATE=$(date +%Y%m%d)
         docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el9
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${DATE}-el9
+        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el9
 
     - name: Docker Push BASE Image with tag el9 version
       run: |
         docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el9
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${DATE}-el9
+        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el9
 
     - name: Build the AGENT Docker image el9 version
       run: | 
@@ -93,14 +89,12 @@ jobs:
 
     - name: Tag AGENT image with multiple tags el9 version
       run: |
-        DATE=$(date +%Y%m%d)
         docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el9
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${DATE}-el9
+        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el9
 
     - name: Docker Push AGENT Image with tag and date el9 version
       run: |
-        DATE=$(date +%Y%m%d)
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${DATE}-el9
+        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el9
         docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el9
 
     - name: Build the BASE Docker image el10 version
@@ -110,17 +104,15 @@ jobs:
 
     - name: Tag BASE image with multiple tags
       run: |
-        DATE=$(date +%Y%m%d)
         docker tag sdnsense/sitermdebugbase:temp-tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}
         docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el10
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${DATE}-el10
+        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Docker Push BASE Image with tag el10 version
       run: |
-        DATE=$(date +%Y%m%d)
         docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
         docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el10
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${DATE}-el10
+        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Build the AGENT Docker image el10 version
       run: | 
@@ -129,14 +121,12 @@ jobs:
 
     - name: Tag AGENT image with multiple tags el8 version
       run: |
-        DATE=$(date +%Y%m%d)
         docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
         docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el10
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${DATE}-el10
+        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Docker Push AGENT Image with tag and date el10 version
       run: |
-        DATE=$(date +%Y%m%d)
         docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${DATE}-el10
+        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
         docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el10
