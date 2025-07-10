@@ -4,7 +4,7 @@
 # Requirements before running:
 # 1. Ensure the database is running and accessible and lock it for new writes, reads.
 #    touch /tmp/siterm-mariadb-init
-# 2. Ensure the old activeDeltas table exists.
+# 2. Enter mysql interface
 #   mysql -u root
 # 3. Inside mysql shell:
 #   USE sitefe;
@@ -13,7 +13,8 @@
 #   CREATE TABLE activeDeltas (id INT AUTO_INCREMENT, insertdate INT NOT NULL, updatedate INT NOT NULL, output JSON NOT NULL, PRIMARY KEY (id));
 #   commit;
 #   exit;
-# Run this script to migrate the data:
+# 4. Run this script to migrate the data:
+# 5. Remove /tmp/siterm-mariadb-init file
 
 from time import sleep
 import json
