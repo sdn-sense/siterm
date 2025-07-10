@@ -1,3 +1,75 @@
+# SiteRM 1.5.40 Staging Release
+
+## SiteRM fixes and improvements
+
+- **Frontend**
+  - Support 3 RDF types for delta and model: turtle, json-ld, n-triples. In the backend, SiteRM moved from turtle to n-triples, which gives 10x improvement for model serialization #218
+  - Support iPerf, FDT, Traceroute, Ping from L3 actions #860
+  - Agents will not accept delta if the Ruler service is disabled #777
+  - Liveness and Readiness status reported in Prometheus and raise warnings #792
+  - Policy Service and LookupService will not accept deltas while the first run not finished. This allows SiteRM to ensure that the SiteRM has up to date model based on the real-time network information #793, #795
+  - Check that the Delta request does not allow overlapping IP Requests #890
+  - Allow control of Traffic classes for network devices via configuration. Defaults are: 1 - bestEffort; 4 - softCapepd, 7 - guaranteedCapped. #440
+  - Frontend migrated to EL9 as the default image
+  - Install and export Apache stats in Prometheus format
+
+- **Agent**
+  - Agent and Debugger processes are split into separate containers. Debugger can be deployed on any Host or Public IP Range to allow L3 actions #860
+  - Debugger support for iPerf and FDT actions under L2/L3 Addresses. #860
+  - Missing Routing service information in the model for hosts # 870
+  - Identify the routing table ID dynamically in case no routing table file is available #877
+  - Junos devices issue rollback 0 in case of apply failures #721
+  - Allow to use LLDP Daemon socket or enable running the LLDP Daemon inside the container #881
+  - SiteRM Agent releases EL8, EL9, EL10 containers. This is required to select the proper release if the LLDP Daemon socket is used. #881
+
+- **Ansible improvements**
+  - Junos devices issue rollback 0 in case of apply failures #721
+  - Junos identifies switchport and raises a warning if the interface state is incorrect #869
+
+## Deployment (Docker, Kubernetes) fixes and improvements
+
+- **Helm**
+  - Support of StatefulSet for deployment type
+  - Helm charts migrated to a single repository: https://github.com/sdn-sense/helm-charts This includes 3 charts now: agent, debugger, fe
+  - Allow control LLDP socket, rt_tables file location
+  - Remove the need to mount network namespaces inside a container
+  - Improve helm checks before deployment: Volume name, claims, deployment type
+  - Allow control of hostPID and hostNetwork flags
+  - Allow choosing the EL release tag for deployment
+
+- **Docker**
+  - Remove the requirement to have a privileged container.
+  - Build automatically EL8, EL9, EL10 images for Agent; Debugger - EL10; Frontend - EL9;
+  - Enhance Docker startup and satisfy requirements for file mount if SELinux is enabled.
+  - Default all images to Python 3.12
+
+## 🔧 Supported OS Releases
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL8
+  - EL9
+  - EL10 **Default for release**
+- **Debugger (x86_64)**
+  - EL10
+
+
+## 📥 Installation Details
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest`.
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
+- This particular release is `stage-<el8|el9|el10>` version (`1.5.40`) as candidate for production release.
+
+### Docker Versions
+- **Agent:** `sdnsense/siterm-agent:stage-20250710-<el8|el9|el10>` *(or use `stage`)*, optionally, can specify os version *`stage-<el8|el9|el10>`*
+- **Debugger:** `sdnsense/siterm-debugger:stage-20250710-el10` *(or use `stage`)*
+- **Frontend:** `sdnsense/siterm-fe:stage-20250512` *(or use `stage`)*
+
+### Helm versions
+- **Agent:** Chart version siterm/siterm-agent 1.5.40
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.40
+- **Frontend:** Chart version siterm/siterm-fe 1.5.40
+
 # SiteRM 1.5.32 BugFix Release
 
 ## SiteRM Codebase Fixes
