@@ -1,5 +1,5 @@
+# pylint: disable=unknown-option-value,line-too-long,too-many-lines
 #!/usr/bin/env python3
-# pylint: disable=line-too-long
 """Everything goes here when they do not fit anywhere else.
 
 Authors:
@@ -39,7 +39,6 @@ import requests
 import simplejson as json
 from past.builtins import basestring
 from rdflib import Graph
-from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import FailedInterfaceCommand, WrongInputError
 from SiteRMLibs.CustomExceptions import NotFoundError, NotSupportedArgument, TooManyArgumentalValues
 from SiteRMLibs.DBBackend import dbinterface
@@ -78,7 +77,7 @@ def loadEnvFile(filepath="/etc/environment"):
                     continue
                 key, value = line.split("=", 1)
                 os.environ[key.strip()] = value.strip()
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         print(f"Failed to load environment file {filepath}. Error: {ex}")
 
 
@@ -132,6 +131,7 @@ def getUTCnow(**kwargs):
 
 def getVal(conDict, **kwargs):
     """Get value from configuration."""
+    # pylint: disable=broad-exception-raised
     if "sitename" in kwargs:
         if kwargs["sitename"] in list(conDict.keys()):
             return conDict[kwargs["sitename"]]
@@ -267,6 +267,7 @@ def readFile(fileName):
 
 def externalCommand(command, communicate=True):
     """Execute External Commands and return stdout and stderr."""
+    # pylint: disable=consider-using-with
     command = shlex.split(str(command))
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if communicate:
@@ -517,6 +518,7 @@ class contentDB:
 
     def moveFile(self, sourcefile, destdir):
         """Move file from sourcefile to dest dir"""
+        # pylint: disable=broad-exception-raised
         if not os.path.isfile(sourcefile):
             raise Exception(f"File {sourcefile} does not exist")
         if sourcefile.startswith(destdir):
@@ -654,6 +656,7 @@ def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):
 
 
 def getUrlParams(environ, paramsList):
+    # pylint: disable=too-many-branches
     """Get URL query parameters and return them in a dictionary."""
     if not paramsList:
         return {}
@@ -675,7 +678,7 @@ def getUrlParams(environ, paramsList):
 
         if len(outVals) == 1:
             val = outVals[0]
-            if param["type"] == bool:
+            if param["type"] is bool:
                 if val.lower() == "true":
                     outParams[key] = True
                 elif val.lower() == "false":
@@ -684,7 +687,7 @@ def getUrlParams(environ, paramsList):
                     raise NotSupportedArgument(
                         f"Parameter {key} value not acceptable. Allowed options: true, false"
                     )
-            elif param["type"] == str and "options" in param:
+            elif param["type"] is str and "options" in param:
                 if val not in param["options"]:
                     raise NotSupportedArgument(
                         f"Server does not support parameter {key}={val}. Supported: {param['options']}"
@@ -715,6 +718,7 @@ def convertTSToDatetime(inputTS):
 def httpdate(timestamp):
     """Return a string representation of a date according to RFC 1123
     (HTTP/1.1)."""
+    # pylint: disable=consider-using-f-string
     dat = datetime.datetime.fromtimestamp(int(timestamp))
     weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][dat.weekday()]
     month = [
@@ -802,7 +806,7 @@ def parseRDFFile(modelFile):
             graph = Graph()
             graph.parse(modelFile, format=fmt)
             return graph
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             exclist.append(f"Failed to parse with format: {fmt}. Error: {ex}")
     raise NotFoundError(f"Model file {modelFile} could not be parsed with any format: {formats}. "
                         f"Please check the file format or content. All exceptions: {exclist}")
@@ -811,6 +815,7 @@ def parseRDFFile(modelFile):
 def getCurrentModel(cls, raiseException=False):
     """Get Current Model from DB."""
     currentModel = cls.dbI.get("models", orderby=["insertdate", "DESC"], limit=1)
+    currentGraph = None
     if currentModel:
         try:
             currentGraph = parseRDFFile(currentModel[0]["fileloc"])
@@ -930,7 +935,7 @@ def checkHTTPService(config):
                 returnvals.append(1)
             else:
                 returnvals.append(0)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             excType, excValue = sys.exc_info()[:2]
             print(
                 f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"

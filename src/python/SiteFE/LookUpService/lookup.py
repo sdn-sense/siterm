@@ -121,6 +121,7 @@ class MultiWorker:
         self.needRestart = False
 
 
+# pylint: disable=too-many-instance-attributes
 class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timing, Warnings):
     """Lookup Service prepares MRML model about the system."""
 
@@ -191,6 +192,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
     def _getUniqueVlanURIs(self, qtype):
         """Get Unique URI for VLANs"""
+        # pylint: disable=too-many-nested-blocks
         for _subnet, hostDict in (
             self.activeDeltas.get("output", {}).get(qtype, {}).items()
         ):
@@ -225,6 +227,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
         currentModel, currentGraph = getCurrentModel(self, False)
+        if not currentModel or not currentGraph:
+            self.logger.error("Current model or graph is empty. Cannot compare.")
+            return False, None
         newGraph = parseRDFFile(saveName)
         return isomorphic(currentGraph, newGraph), currentModel
 
@@ -252,12 +257,16 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def getVersionFromCurrentModel(self):
         """Get Current Version from Model."""
         _, currentGraph = getCurrentModel(self, False)
-        out = self.police.queryGraph(
-            currentGraph, URIRef(f"{self.prefixes['site']}:service+metadata:version")
-        )
-        if out:
-            self.modelVersion = str(out[3])
+        if currentGraph:
+            out = self.police.queryGraph(
+                currentGraph, URIRef(f"{self.prefixes['site']}:service+metadata:version")
+            )
+            if out:
+                self.modelVersion = str(out[0])
+            else:
+                self.getModelSavePath()
         else:
+            self.logger.error("Current Graph is empty. Cannot get version.")
             self.getModelSavePath()
 
     def _addTopTology(self):
@@ -353,6 +362,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
     def startwork(self):
         """Main start."""
+        # pylint: disable=too-many-statements
         self.logger.info("Started LookupService work")
         firstRunCheck(self.firstRun, "LookUpService")
         self.__clean()
