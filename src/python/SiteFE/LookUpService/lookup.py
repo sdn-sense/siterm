@@ -225,6 +225,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def checkForModelDiff(self, saveName):
         """Check if models are different."""
         currentModel, currentGraph = getCurrentModel(self, False)
+        if not currentModel or not currentGraph:
+            self.logger.error("Current model or graph is empty. Cannot compare.")
+            return False, None
         newGraph = parseRDFFile(saveName)
         return isomorphic(currentGraph, newGraph), currentModel
 
@@ -252,12 +255,16 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def getVersionFromCurrentModel(self):
         """Get Current Version from Model."""
         _, currentGraph = getCurrentModel(self, False)
-        out = self.police.queryGraph(
-            currentGraph, URIRef(f"{self.prefixes['site']}:service+metadata:version")
-        )
-        if out:
-            self.modelVersion = str(out[3])
+        if currentGraph:
+            out = self.police.queryGraph(
+                currentGraph, URIRef(f"{self.prefixes['site']}:service+metadata:version")
+            )
+            if out:
+                self.modelVersion = str(out[0])
+            else:
+                self.getModelSavePath()
         else:
+            self.logger.error("Current Graph is empty. Cannot get version.")
             self.getModelSavePath()
 
     def _addTopTology(self):

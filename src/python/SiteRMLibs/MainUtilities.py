@@ -811,6 +811,7 @@ def parseRDFFile(modelFile):
 def getCurrentModel(cls, raiseException=False):
     """Get Current Model from DB."""
     currentModel = cls.dbI.get("models", orderby=["insertdate", "DESC"], limit=1)
+    currentGraph = None
     if currentModel:
         try:
             currentGraph = parseRDFFile(currentModel[0]["fileloc"])
