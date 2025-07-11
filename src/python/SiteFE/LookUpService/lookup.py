@@ -121,6 +121,7 @@ class MultiWorker:
         self.needRestart = False
 
 
+# pylint: disable=too-many-instance-attributes
 class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timing, Warnings):
     """Lookup Service prepares MRML model about the system."""
 
@@ -191,6 +192,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
     def _getUniqueVlanURIs(self, qtype):
         """Get Unique URI for VLANs"""
+        # pylint: disable=too-many-nested-blocks
         for _subnet, hostDict in (
             self.activeDeltas.get("output", {}).get(qtype, {}).items()
         ):
@@ -360,6 +362,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
     def startwork(self):
         """Main start."""
+        # pylint: disable=too-many-statements
         self.logger.info("Started LookupService work")
         firstRunCheck(self.firstRun, "LookUpService")
         self.__clean()
