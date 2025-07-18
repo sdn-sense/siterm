@@ -6,4 +6,4 @@
 # src/python/SiteFE/__init__.py
 # src/python/SiteRMAgent/__init__.py
 # src/python/SiteRMLibs/__init__.py
-__version__ = '1.5.41'
+__version__ = '1.5.50-dev'
