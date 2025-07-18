@@ -1,3 +1,34 @@
+# SiteRM 1.5.41 Production release
+
+Production release after 1.5.40 pre-release validation
+
+## 🔧  Supported OS Releases
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL8
+  - EL9
+  - EL10 **Default for release**
+- **Debugger (x86_64)**
+  - EL10
+
+
+## 📥  Installation Details
+- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest`.
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
+- This particular release is `latest-<el8|el9|el10>` version (`1.5.41`) as candidate for production release.
+
+### Docker Versions
+- **Agent:** `sdnsense/siterm-agent:latest-20250718-<el8|el9|el10>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10>`*
+- **Debugger:** `sdnsense/siterm-debugger:latest-20250718-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:latest-20250718` *(or use `latest`)*
+
+### Helm versions
+- **Agent:** Chart version siterm/siterm-agent 1.5.41
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.41
+- **Frontend:** Chart version siterm/siterm-fe 1.5.41
+
 # SiteRM 1.5.40 Staging Release
 
 ## SiteRM fixes and improvements
