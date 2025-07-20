@@ -23,8 +23,6 @@ class DBWorker(Warnings):
         self.logger = getLoggingObject(config=self.config, service="DBWorker")
         self.dbI = getVal(getDBConn("DBWorker", self), **{"sitename": self.sitename})
         self.police = PolicyService(self.config, self.sitename)
-        self.runCounter = {"stateactions": 0, "modelactions": 10}
-        self.runCounterDefaults = {"stateactions": 0, "modelactions": 100}
         self.warnings = []
         self.warningstart = 0
         self.warningscounters = {}
@@ -54,7 +52,7 @@ class DBWorker(Warnings):
         """Clean up process to remove old data"""
         # Clean Up old models (older than 24h.)
         self.logger.debug("Start model actions and clean up old models")
-        for model in self.dbI.get("models", limit=500, orderby=["insertdate", "ASC"]):
+        for model in self.dbI.get("models", limit=10, orderby=["insertdate", "ASC"]):
             if model["insertdate"] < int(getUTCnow() - 86400):
                 self.logger.debug("delete %s", model["fileloc"])
                 try:
@@ -68,16 +66,10 @@ class DBWorker(Warnings):
     def startwork(self):
         """Database thread worker - to change delta states"""
         # Run state actions
-        if self.runCounter["stateactions"] <= 0:
-            self.runCounter["stateactions"] = self.runCounterDefaults["stateactions"]
-            self.stateActions()
+        self.stateActions()
         # Run model actions
-        if self.runCounter["modelactions"] <= 0:
-            self.runCounter["modelactions"] = self.runCounterDefaults["modelactions"]
-            self.modelactions()
+        self.modelactions()
         # Decrease counters
-        self.runCounter["stateactions"] -= 1
-        self.runCounter["modelactions"] -= 1
         self.checkAndRaiseWarnings()
 
 
