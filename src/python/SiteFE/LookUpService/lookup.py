@@ -12,7 +12,7 @@ import os
 import time
 import copy
 
-from rdflib import Graph, URIRef
+from rdflib import Graph
 from rdflib.compare import isomorphic
 from SiteFE.LookUpService.modules.deltainfo import DeltaInfo
 from SiteFE.LookUpService.modules.nodeinfo import NodeInfo
@@ -140,7 +140,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.police = PolicyService(self.config, self.sitename, self.logger)
         self.provision = ProvisioningService(self.config, self.sitename, self.logger)
         self.tmpout = {}
-        self.modelVersion = ""
         self.activeDeltas = {}
         self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {"vlans": {}, "ips": {}}
@@ -237,10 +236,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         """Get Model Save Location."""
         now = datetime.now(timezone.utc)
         saveDir = f"{self.config.get(self.sitename, 'privatedir')}/LookUpService/"
-        self.modelVersion = (
-            f"{now.year}-{now.month}-{now.day}:{now.hour}:{now.minute}:{now.second}"
-        )
-        return f"{saveDir}/{self.modelVersion}.mrml"
+        version = f"{now.year}-{now.month}-{now.day}:{now.hour}:{now.minute}:{now.second}"
+        return f"{saveDir}/{version}.mrml"
 
     def saveModel(self, saveName, onlymaster=False):
         """Save Model."""
@@ -253,29 +250,12 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         with open(saveName, "w", encoding="utf-8") as fd:
             fd.write(self.newGraph.serialize(format="ntriples"))
 
-
-    def getVersionFromCurrentModel(self):
-        """Get Current Version from Model."""
-        _, currentGraph = getCurrentModel(self, False)
-        if currentGraph:
-            out = self.police.queryGraph(
-                currentGraph, URIRef(f"{self.prefixes['site']}:service+metadata:version")
-            )
-            if out:
-                self.modelVersion = str(out[0])
-            else:
-                self.getModelSavePath()
-        else:
-            self.logger.error("Current Graph is empty. Cannot get version.")
-            self.getModelSavePath()
-
     def _addTopTology(self):
         """Add Main Topology definition to Model."""
         out = {
             "sitename": self.sitename,
             "labelswapping": "false",
             "name": self.prefixes["site"],
-            "version": self.modelVersion,
         }
         if self.config.has_option("general", "webdomain"):
             out["webdomain"] = self.config.get("general", "webdomain")
@@ -385,36 +365,33 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             self._getUniqueVlanURIs(key)
         self.newGraph = Graph()
         # ==================================================================================
-        # 1. Define Basic MRML Prefixes
+        # Define Basic MRML Prefixes
         # ==================================================================================
         self.defineMRMLPrefixes()
-        # 2. Get old model and version number
         # ==================================================================================
-        self.getVersionFromCurrentModel()
-        # ==================================================================================
-        # 3. Define Topology Site
+        # Define Topology Site
         # ==================================================================================
         self.defineTopology()
         self.hosts = {}
         # ==================================================================================
-        # 4. Define Node inside yaml
+        # Define Node inside yaml
         # ==================================================================================
         self.addNodeInfo()
         # ==================================================================================
-        # 5. Define Switch information from Switch Lookup Plugin
+        # Define Switch information from Switch Lookup Plugin
         # ==================================================================================
         self.addSwitchInfo()
         # ==================================================================================
-        # 6. Add all active running config
+        # Add all active running config
         # ==================================================================================
         self.addDeltaInfo()
         # ==================================================================================
-        # 7. Print used IPs and vlans
+        # Print used IPs and vlans
         # ==================================================================================
         self.logger.info(f"Used IPs: {self.usedIPs}")
         self.logger.info(f"Used vlans: {self.usedVlans}")
         # ==================================================================================
-        # 8. Start Policy Service and apply any changes (if any)
+        # Start Policy Service and apply any changes (if any)
         # ==================================================================================
         changesApplied = self.police.startworklookup(
             self.newGraph, self.usedIPs, self.usedVlans
@@ -441,10 +418,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             if modelinDB[0]["insertdate"] < int(getUTCnow() - 3600):
                 # Force to update model every hour, Even there is no update;
                 self.logger.info("Forcefully update model in db as it is older than 1h")
-                # Force version update
-                self._updateVersion(
-                    **{"version": self.modelVersion}
-                )  # This will force to update Version to new value
                 self.saveModel(saveName)
                 self.dbI.insert("models", [lastKnownModel])
             else:
@@ -454,9 +427,6 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         else:
             updateNeeded = True
             self.logger.info("Models are different. Update DB")
-            self._updateVersion(
-                **{"version": self.modelVersion}
-            )  # This will force to update Version to new value
             self.saveModel(saveName)
             self.dbI.insert("models", [lastKnownModel])
 

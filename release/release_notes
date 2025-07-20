@@ -1,6 +1,9 @@
-# SiteRM 1.5.41 Production release
+# SiteRM 1.5.42 Bug fix Production release
 
-Production release after 1.5.40 pre-release validation
+## SiteRM fixes and improvements
+- Fix docker startup to use correct image 
+- Remove version update inside the model.
+- Clean up models in batch of 10 (many updates at once overload memory usage)
 
 ## 🔧 Supported OS Releases
 - **Frontend (x86_64)**
@@ -17,14 +20,14 @@ Production release after 1.5.40 pre-release validation
 - 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
 - **Recommended Version:** Always use `latest`. 
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
-- This particular release is `latest-<el8|el9|el10>` version (`1.5.41`) as candidate for production release.
+- This particular release is `latest-<el8|el9|el10>` version (`1.5.42`) as candidate for production release.
 
 ### Docker Versions
-- **Agent:** `sdnsense/siterm-agent:latest-20250718-<el8|el9|el10>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10>`*
-- **Debugger:** `sdnsense/siterm-debugger:latest-20250718-el10` *(or use `latest`)*
-- **Frontend:** `sdnsense/siterm-fe:latest-20250718` *(or use `latest`)*
+- **Agent:** `sdnsense/siterm-agent:latest-20250720-<el8|el9|el10>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10>`*
+- **Debugger:** `sdnsense/siterm-debugger:latest-20250720-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:latest-20250720` *(or use `latest`)*
 
 ### Helm versions
-- **Agent:** Chart version siterm/siterm-agent 1.5.41
-- **Debugger:** Chart version siterm/siterm-debugger 1.5.41
-- **Frontend:** Chart version siterm/siterm-fe 1.5.41
+- **Agent:** Chart version siterm/siterm-agent 1.5.42
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.42
+- **Frontend:** Chart version siterm/siterm-fe 1.5.42

@@ -355,10 +355,6 @@ class RDFHelper:
         """Add Frontend Metadata to Model"""
         metaService = self._addMetadataService()
         # Add hasNetworkAddress and hasNetworkAttribute
-        if "version" in kwargs and kwargs["version"]:
-            self._addHasNetworkAttribute(
-                metaService, "version", "/version", kwargs["version"]
-            )
         if "webdomain" in kwargs and kwargs["webdomain"]:
             self._addNetworkAddress(
                 metaService,
@@ -406,16 +402,6 @@ class RDFHelper:
         for key, vals in conf.get("general", {}).get("metadata", {}).items():
             metaService = self._addMetadataService(uri=f":{kwargs['hostname']}")
             self._addHasNetworkAttribute(metaService, key, f"/{key}", json.dumps(vals))
-
-    def _updateVersion(self, **kwargs):
-        """Update Version in model"""
-        self.newGraph.set(
-            (
-                self.genUriRef("site", ":service+metadata:version"),
-                self.genUriRef("mrs", "value"),
-                self.genLiteral(kwargs["version"]),
-            )
-        )
 
     def _addNode(self, **kwargs):
         """Add Node to Model"""
