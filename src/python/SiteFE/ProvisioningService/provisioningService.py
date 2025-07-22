@@ -125,6 +125,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
 
     def __insertDeltaStateDB(self, **kwargs):
         """Write new state to DB"""
+        if not kwargs.get("uuidstate"):
+            return None
         dbOut = {
             "insertdate": getUTCnow(),
             "uuid": kwargs["uuid"],
@@ -135,15 +137,17 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         }
         self.dbI.insert("deltatimestates", [dbOut])
 
-    @staticmethod
-    def __identifyReportState(items, **kwargs):
+    def __identifyReportState(self, items, **kwargs):
         """Identify report state. Default unknown, and will be one of:
         activated, activate-error, deactivated, deactive-error
         """
-        nstate = "unknown"
-        if items.get("state", None) not in ["present", "error"] or kwargs.get(
-            "uuidstate", None
-        ) not in ["ok", "error"]:
+        self.logger.info(f"Identify report state for {kwargs['acttype']}")
+        if not items:
+            return None
+        nstate = None
+        if items.get("state", None) not in ["present", "error"] or kwargs.get("uuidstate", None) not in ["ok", "error"]:
+            self.logger.info("State is not present or error, or uuidstate is not ok or error. Will return unknown.")
+            self.logger.info(f"Items: {items}, kwargs: {kwargs}")
             nstate = "unknown"
         elif items["state"] == "present" and kwargs["uuidstate"] == "ok":
             # This means it was activated;
@@ -157,6 +161,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         elif items["state"] == "absent" and kwargs["uuidstate"] == "error":
             # this means it was deactivate-error
             nstate = "deactivate-error"
+        else:
+            self.logger.info("State is not present or error, or uuidstate is not ok or error. Will return None, as it is unknown.")
+            self.logger.info(f"Items: {items}, kwargs: {kwargs}")
         return nstate
 
     def __reportDeltaState(self, **kwargs):
@@ -169,9 +176,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                     tmpkwargs["hostport"] = self.switch.getSystemValidPortName(intf)
                     self.__insertDeltaStateDB(**tmpkwargs)
         if kwargs["acttype"] == "rst" and kwargs.get("applied", None):
-            kwargs["uuidstate"] = self.__identifyReportState(
-                kwargs["applied"], **kwargs
-            )
+            kwargs["uuidstate"] = self.__identifyReportState(kwargs["applied"], **kwargs)
             for key, _items in kwargs["applied"].get("neighbor", {}).items():
                 kwargs["hostport"] = key
                 self.__insertDeltaStateDB(**kwargs)
