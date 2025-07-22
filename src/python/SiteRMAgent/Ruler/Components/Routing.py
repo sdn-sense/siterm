@@ -148,6 +148,7 @@ class Routing:
 
     def __init__(self, config, sitename, rulercli=None):
         self.config = config
+        self.routingpolicy = self.config.get("qos", "policy")
         self.hostname = self.config.get("agent", "hostname")
         self.fullURL = getFullUrl(self.config, sitename)
         self.logger = getLoggingObject(config=self.config, service="Ruler")
@@ -200,6 +201,11 @@ class Routing:
 
     def terminate(self, route, uuid):
         """Terminate rules"""
+        if self.routingpolicy != "hostlevel":
+            self.logger.info(
+                "Routing policy is not host level. Will not apply routing rules."
+            )
+            return []
         self._refreshRuleList()
         initialized = False
         try:
@@ -234,6 +240,11 @@ class Routing:
 
     def activate(self, route, uuid):
         """Activate routes"""
+        if self.routingpolicy != "hostlevel":
+            self.logger.info(
+                "Routing policy is not host level. Will not apply routing rules."
+            )
+            return []
         self._refreshRuleList()
         initialized = False
         try:
