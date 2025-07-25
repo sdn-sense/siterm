@@ -458,7 +458,6 @@ class GitConfig:
             if default:
                 return default
             raise ex
-        return default
 
     def getraw(self, key):
         """Get RAW DICT of key"""

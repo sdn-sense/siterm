@@ -35,6 +35,7 @@ class CustomWriter:
         self.newline = newline
         self.closefd = closefd
         self.opener = opener
+        # pylint: disable=consider-using-with
         self.fd = open(
             self.filename,
             self.mode,
@@ -49,6 +50,7 @@ class CustomWriter:
     def open(self):
         """Open the file if it is closed"""
         if self.fd.closed:
+            # pylint: disable=consider-using-with
             self.fd = open(
                 self.filename,
                 self.mode,
@@ -75,6 +77,7 @@ class CustomWriter:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.wn(f"Closing CustomWriter. Exit info: {exc_type}, {exc_value}, {traceback}")
         self.fd.close()
 
 

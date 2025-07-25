@@ -33,7 +33,7 @@ class Default:
             config=kwargs["config"], service="SwitchBackends"
         )
 
-    def getinfo(self, ansibleOut):
+    def getinfo(self, _ansibleOut):
         """
         This call is used to get system MAC, which will be used
         for generating topology together with lldp information.
@@ -47,7 +47,7 @@ class Default:
         """
         raise NotImplementedError("Default getinfo call not implemented")
 
-    def getlldpneighbors(self, ansibleOut):
+    def getlldpneighbors(self, _ansibleOut):
         """
         This call is used to get all lldp neighbors, which are used
         for generating topology.
@@ -72,7 +72,7 @@ class Default:
         """
         raise NotImplementedError("Default getinfo call not implemented")
 
-    def getIPv4Routing(self, ansibleOut):
+    def getIPv4Routing(self, _ansibleOut):
         """
         This call is used to get all IPv4 routing information
         INPUT:
@@ -86,7 +86,7 @@ class Default:
         """
         raise NotImplementedError("Default getIPv4Routing call not implemented")
 
-    def getIPv6Routing(self, ansibleOut):
+    def getIPv6Routing(self, _ansibleOut):
         """
         This call is used to get all IPv6 routing information
         INPUT:
@@ -100,7 +100,7 @@ class Default:
         """
         raise NotImplementedError("Default getIPv4Routing call not implemented")
 
-    def parser(self, ansibleOut):
+    def parser(self, _ansibleOut):
         """Parse Ansible output and prepare it as other SENSE Services expect it"""
         # Out must be {'<interface_name>': {'key': 'value'}} OR
         #             {'<interface_name>': {'key': ['value1', 'value2']}

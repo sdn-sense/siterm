@@ -167,7 +167,7 @@ async def submitDelta(
         if delta["state"] not in ["activated", "failed", "removed", "accepted", "accepting"]:
             deps["dbI"].delete("deltas", [["uid", delta["uid"]]])
         try:
-            depGetModel(deps["dbI"], modelID=item.get("modelId"))
+            depGetModel(deps["dbI"], modelID=item.modelId)
         except ModelNotFound as ex:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found in the database. First time run?") from ex
         outContent = {"ID": item.id, "InsertTime": getUTCnow(), "UpdateTime": getUTCnow(), "Content": item.dict(), "State": "accepting", "modelId": item.modelId}

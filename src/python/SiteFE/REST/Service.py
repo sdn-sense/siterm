@@ -79,8 +79,8 @@ class ServiceItem(BaseModel):
     servicename: str
     # Optional fields
     serviceinfo: dict = {}
-    insertTime: str = None
-    updateTime: str = None
+    insertTime: int = None
+    updateTime: int = None
 
 
 # GET
