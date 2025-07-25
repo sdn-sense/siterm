@@ -11,6 +11,7 @@ from SiteRMLibs.HTTPLibrary import Requests
 
 def makeRequest(cls, url, params):
     """Make HTTP Request"""
+    # pylint: disable=no-member
     req = Requests(cls.PARAMS["hostname"], {})
     try:
         out = req.makeRequest(url, **params)
@@ -30,13 +31,13 @@ def debugActions(cls):
             "ip": "0.0.0.0",
             "port": "12345", # Random between high ones
             "time": "300"}
-    urls = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/submitdebug/NEW"
+    urls = f"/api/{cls.PARAMS['sitename']}/debug"
     outs = makeRequest(cls, urls, {"verb": "POST", "data": data})
     cls.assertEqual(outs[1], 200, msg=f"Failed to POST {data} to {urls}. Output: {outs}")
     cls.assertEqual(outs[2], "OK", msg=f"Failed to POST {data} to {urls}. Output: {outs}")
     # GET (and wait for selectedip parameter)
     while True:
-        urlg = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/getdebug/{outs[0]['ID']}"
+        urlg = f"/api/{cls.PARAMS['sitename']}/debug/{outs[0]['ID']}"
         outg = makeRequest(cls, urlg, {"verb": "GET", "data": {}})
         cls.assertEqual(outg[1], 200, msg=f"Failed to GET {urlg}. Output: {outs}")
         cls.assertEqual(outg[2], "OK", msg=f"Failed to GET {urlg}. Output: {outs}")
@@ -54,12 +55,12 @@ def debugActions(cls):
             "ip": selectedip,
             "port": "12345", # Random between high ones
             "time": "300"}
-    urls = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/submitdebug/NEW"
+    urls = f"/api/{cls.PARAMS['sitename']}/debug"
     outs = makeRequest(cls, urls, {"verb": "POST", "data": data})
     cls.assertEqual(outs[1], 200, msg=f"Failed to POST {data} to {urls}. Output: {outs}")
     cls.assertEqual(outs[2], "OK", msg=f"Failed to POST {data} to {urls}. Output: {outs}")
     time.sleep(5)
-    urlg = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/getdebug/{outs[0]['ID']}"
+    urlg = f"/api/{cls.PARAMS['sitename']}/debug/{outs[0]['ID']}"
     outg = makeRequest(cls, urlg, {"verb": "GET", "data": {}})
     cls.assertEqual(outg[1], 200, msg=f"Failed to GET {urlg}. Output: {outs}")
     cls.assertEqual(outg[2], "OK", msg=f"Failed to GET {urlg}. Output: {outs}")

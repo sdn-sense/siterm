@@ -19,7 +19,6 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2019/05/01
 """
 import os
-import copy
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import pymysql
@@ -225,7 +224,8 @@ class DBBackend:
 class dbinterface:
     """Database interface."""
 
-    def __init__(self, serviceName, config, sitename):
+    def __init__(self, serviceName="", config="", sitename=""):
+        # TOOD: All the rest should remove use of those params
         self.config = config
         self.sitename = sitename
         self.serviceName = serviceName
@@ -236,15 +236,6 @@ class dbinterface:
     def createdb(self):
         """Create Database."""
         self.db.createdb()
-
-    def _setStartCallTime(self, calltype):
-        """Set Call Start timer."""
-        del calltype
-        self.callStart = float(getUTCnow())
-
-    def _setEndCallTime(self, _calltype, _callExit):
-        """Set Call End timer."""
-        self.callEnd = float(getUTCnow())
 
     @staticmethod
     def getcall(callaction, calltype):
@@ -273,7 +264,11 @@ class dbinterface:
                     first = False
                 else:
                     query += "AND "
-                query += f'{item[0]} = "{item[1]}" '
+                # if item len == 2, then it is =
+                if len(item) == 2:
+                    query += f'{item[0]} = "{item[1]}" '
+                elif len(item) == 3:
+                    query += f'{item[0]} {item[1]} "{item[2]}" '
         if orderby:
             query += f"ORDER BY {orderby[0]} {orderby[1]} "
         if limit:
@@ -283,22 +278,16 @@ class dbinterface:
 
     def get(self, calltype, limit=None, search=None, orderby=None, mapping=True):
         """GET Call for APPs."""
-        self._setStartCallTime(calltype)
-        callExit, colname, dbout = self._caller(
+        #pylint: disable=too-many-arguments
+        _callExit, colname, dbout = self._caller(
             self.getcall("get", calltype), limit, orderby, search
         )
-        self._setEndCallTime(calltype, callExit)
         out = []
         if mapping:
             for item in dbout:
                 out.append(dict(list(zip(colname, list(item)))))
-        else:
-            out = copy.deepcopy(dbout)
-        # Memory cleaning
-        del dbout
-        del colname
-        del callExit
-        return out
+            return out
+        return dbout
 
     # =====================================================
     #  HERE GOES INSERT CALLS
@@ -306,12 +295,7 @@ class dbinterface:
 
     def insert(self, calltype, values):
         """INSERT call for APPs."""
-        self._setStartCallTime(calltype)
-        retout = self.db.execute_ins(self.getcall("insert", calltype), values)
-        self._setEndCallTime(calltype, retout[0])
-        out = copy.deepcopy(retout)
-        del retout
-        return out
+        return self.db.execute_ins(self.getcall("insert", calltype), values)
 
     # =====================================================
     #  HERE GOES UPDATE CALLS
@@ -319,12 +303,7 @@ class dbinterface:
 
     def update(self, calltype, values):
         """UPDATE Call for APPs."""
-        self._setStartCallTime(calltype)
-        retout = self.db.execute_ins(self.getcall("update", calltype), values)
-        self._setEndCallTime(calltype, retout[0])
-        out = copy.deepcopy(retout)
-        del retout
-        return out
+        return self.db.execute_ins(self.getcall("update", calltype), values)
 
     # =====================================================
     #  HERE GOES DELETE CALLS
@@ -343,12 +322,7 @@ class dbinterface:
                 first = False
                 query += f'{item[0]} = "{item[1]}" '
         fullquery = f"{self.getcall('delete', calltype)} {query}"
-        self._setStartCallTime(calltype)
-        retout = self.db.execute_del(fullquery, None)
-        self._setEndCallTime(calltype, retout[0])
-        out = copy.deepcopy(retout)
-        del retout
-        return out
+        return self.db.execute_del(fullquery, None)
 
     # =====================================================
     #  HERE GOES CLEAN CALLS

@@ -7,6 +7,7 @@ Date: 2021/01/20
 """
 
 import re
+from dataclasses import dataclass
 
 from SiteRMLibs.CustomExceptions import (FailedInterfaceCommand, FailedRoutingCommand)
 from SiteRMLibs.MainUtilities import (
@@ -17,17 +18,27 @@ from SiteRMLibs.MainUtilities import (
     callSiteFE,
 )
 
+@dataclass
+class PublishStateInput:
+    """Data class for publish state input parameters."""
+    modtype: str
+    uuid: str
+    hostname: str
+    state: str
+    fullURL: str
+    sitename: str
 
-def publishState(modtype, uuid, hostname, state, fullURL):
+
+def publishState(item: PublishStateInput):
     """Publish Agent apply state to Frontend."""
     out = {
         "uuidtype": "vsw",
-        "uuid": uuid,
-        "hostname": hostname,
-        "hostport": modtype,
-        "uuidstate": state,
+        "uuid": item.uuid,
+        "hostname": item.hostname,
+        "hostport": item.modtype,
+        "uuidstate": item.state,
     }
-    callSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", "POST")
+    callSiteFE(out, item.fullURL, f"/api/{item.sitename}/deltas/{item.uuid}/timestates", "POST")
 
 
 class Rules:
@@ -224,12 +235,10 @@ class Routing:
                         f"ip -6 rule del to {route['src_ipv6']}/128", route['src_ipv6_intf'], route['src_ipv6']
                     )
             if initialized:
-                publishState("ipv6", uuid, self.hostname, "deactivated", self.fullURL)
+                publishState(PublishStateInput("ipv6", uuid, self.hostname, "deactivated", self.fullURL, self.sitename))
         except FailedInterfaceCommand:
             if initialized:
-                publishState(
-                    "ipv6", uuid, self.hostname, "deactivate-error", self.fullURL
-                )
+                publishState(PublishStateInput("ipv6", uuid, self.hostname, "deactivate-error", self.fullURL, self.sitename))
         return []
 
     def activate(self, route, uuid):
@@ -265,10 +274,8 @@ class Routing:
                         f"ip -6 rule add to {route['src_ipv6']}/128", route['src_ipv6_intf'], route['src_ipv6']
                     )
             if initialized:
-                publishState("ipv6", uuid, self.hostname, "activated", self.fullURL)
+                publishState(PublishStateInput("ipv6", uuid, self.hostname, "activated", self.fullURL, self.sitename))
         except FailedInterfaceCommand:
             if initialized:
-                publishState(
-                    "ipv6", uuid, self.hostname, "activate-error", self.fullURL
-                )
+                publishState(PublishStateInput("ipv6", uuid, self.hostname, "activate-error", self.fullURL, self.sitename))
         return []

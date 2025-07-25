@@ -124,72 +124,56 @@ class CertHandler:
                     ]
 
     @staticmethod
-    def getCertInfo(environ):
+    def getCertInfo(request):
         """Get certificate info."""
         out = {}
-        for key in [
-            "HTTP_SSL_CLIENT_V_REMAIN",
-            "HTTP_SSL_CLIENT_S_DN",
-            "HTTP_SSL_CLIENT_I_DN",
-            "HTTP_SSL_CLIENT_V_START",
-            "HTTP_SSL_CLIENT_V_END",
+        for key in ["ssl_client_v_remain",
+                    "ssl_client_s_dn",
+                    "ssl_client_i_dn",
+                    "ssl_client_v_start",
+                    "ssl_client_v_end",
         ]:
-            if key not in environ or environ.get(key, None) in (None, "", "(null)"):
-                raise RequestWithoutCert(
-                    "Unauthorized access. Request without certificate."
-                )
+            if key not in request.headers or request.headers.get(key, None) in (None, "", "(null)"):
+                print(f"Missing required certificate info: {key}")
+                raise RequestWithoutCert("Unauthorized access. Request without certificate.")
 
-        out["subject"] = environ["HTTP_SSL_CLIENT_S_DN"]
-        out["notAfter"] = int(
-            datetime.strptime(
-                environ["HTTP_SSL_CLIENT_V_END"], "%b %d %H:%M:%S %Y %Z"
-            ).timestamp()
-        )
-        out["notBefore"] = int(
-            datetime.strptime(
-                environ["HTTP_SSL_CLIENT_V_START"], "%b %d %H:%M:%S %Y %Z"
-            ).timestamp()
-        )
-        out["issuer"] = environ["HTTP_SSL_CLIENT_I_DN"]
+        out["subject"] = request.headers["ssl_client_s_dn"]
+        out["notAfter"] = int(datetime.strptime(request.headers["ssl_client_v_end"], "%b %d %H:%M:%S %Y %Z").timestamp())
+        out["notBefore"] = int(datetime.strptime(request.headers["ssl_client_v_start"], "%b %d %H:%M:%S %Y %Z").timestamp())
+        out["issuer"] = request.headers["ssl_client_i_dn"]
         out["fullDN"] = f"{out['issuer']}{out['subject']}"
         return out
 
-    def checkAuthorized(self, environ):
+    def checkAuthorized(self, certinfo):
         """Check if user is authorized."""
-        if environ["CERTINFO"]["fullDN"] in self.allowedCerts:
-            return self.allowedCerts[environ["CERTINFO"]["fullDN"]]
+        if certinfo["fullDN"] in self.allowedCerts:
+            return self.allowedCerts[certinfo["fullDN"]]
         for wildcarddn, userinfo in self.allowedWCerts.items():
-            if re.match(wildcarddn, environ["CERTINFO"]["fullDN"]):
+            if re.match(wildcarddn, certinfo["fullDN"]):
                 return userinfo
         print(
-            f"User DN {environ['CERTINFO']['fullDN']} is not in authorized list. Full info: {environ['CERTINFO']}"
+            f"User DN {certinfo['fullDN']} is not in authorized list. Full info: {certinfo}"
         )
         raise IssuesWithAuth("Issues with permissions. Check backend logs.")
 
-    def validateCertificate(self, environ):
-        """Validate certification validity."""
+    def validateCertificate(self, request):
+        """Validate certificate validity."""
+        certinfo = self.getCertInfo(request)
         timestamp = int(datetime.now(timezone.utc).timestamp())
-        if "CERTINFO" not in environ:
-            raise RequestWithoutCert(
-                "Unauthorized access. Request without certificate."
-            )
         for key in ["subject", "notAfter", "notBefore", "issuer", "fullDN"]:
-            if key not in list(environ["CERTINFO"].keys()):
+            if key not in list(certinfo.keys()):
                 print(f"{key} not available in certificate retrieval")
                 raise IssuesWithAuth("Issues with permissions. Check backend logs.")
         # Check time before
-        if environ["CERTINFO"]["notBefore"] > timestamp:
-            print(
-                f"Certificate Invalid. Current Time: {timestamp} NotBefore: {environ['CERTINFO']['notBefore']}"
-            )
+        if certinfo["notBefore"] > timestamp:
+            print(f"Certificate Invalid. Current Time: {timestamp} NotBefore: {certinfo['notBefore']}")
             raise IssuesWithAuth("Issues with permissions. Check backend logs.")
         # Check time after
-        if environ["CERTINFO"]["notAfter"] < timestamp:
-            print(
-                f"Certificate Invalid. Current Time: {timestamp} NotAfter: {environ['CERTINFO']['notAfter']}"
-            )
+        if certinfo["notAfter"] < timestamp:
+            print(f"Certificate Invalid. Current Time: {timestamp} NotAfter: {certinfo['notAfter']}")
             raise IssuesWithAuth("Issues with permissions. Check backend logs.")
         # Check if reload of auth list is needed.
         self.loadAuthorized()
         # Check DN in authorized list
-        return self.checkAuthorized(environ)
+        self.checkAuthorized(certinfo)
+        return certinfo

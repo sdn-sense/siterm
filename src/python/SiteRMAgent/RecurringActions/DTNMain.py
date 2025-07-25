@@ -148,18 +148,15 @@ class RecurringAction:
         self.agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
 
         self.logger.info("Will try to publish information to SiteFE")
-        fullUrl += "/sitefe"
-        outVals = callSiteFE(dic, fullUrl, "/json/frontend/updatehost")
+        outVals = callSiteFE(dic, fullUrl, f"/api/{self.sitename}/hosts")
         self.logger.info("Update Host result %s", outVals)
         if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
-            outValsAdd = callSiteFE(dic, fullUrl, "/json/frontend/addhost")
+            outValsAdd = callSiteFE(dic, fullUrl, f"/api/{self.sitename}/hosts")
             self.logger.info("Insert Host result %s", outVals)
             if outValsAdd[2] != "OK" or outValsAdd[1] != 200:
                 excMsg += " Could not publish to SiteFE Frontend."
                 excMsg += f"Update to FE: Error: {outVals[2]} HTTP Code: {outVals[1]}"
-                excMsg += (
-                    f"Add tp FE: Error: {outValsAdd[2]} HTTP Code: {outValsAdd[1]}"
-                )
+                excMsg += (f"Add tp FE: Error: {outValsAdd[2]} HTTP Code: {outValsAdd[1]}")
                 self.logger.error(excMsg)
         if excMsg and raiseError:
             raise PluginException(excMsg)

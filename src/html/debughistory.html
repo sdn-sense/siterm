@@ -69,7 +69,7 @@
 
        function loadDebug(debugID, sitename)
        {
-          $.ajax({url: sitename + '/sitefe/json/frontend/getdebug/'+ debugID,
+          $.ajax({url: '/api/' + sitename + '/debug/' + debugID,
             dataType: 'json',
             data: {},
             async: false,
@@ -128,12 +128,12 @@
         }
 
         function load_data() {
-            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
+            $.get('/api/frontend/configuration', function(data){
               defineSites(data, false);
               data['debug'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
                  sitename = data['general']['sites'][i];
-                 $.ajax({url: sitename + '/sitefe/json/frontend/getdebug/ALL',
+                 $.ajax({url: '/api/' + sitename + '/debug',
                    dataType: 'json',
                    data: {},
                    async: false,

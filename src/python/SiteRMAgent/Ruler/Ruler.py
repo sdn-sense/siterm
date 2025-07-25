@@ -79,7 +79,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         failurefile = f"{self.workDir}/fefailure.json"
         data = {}
         try:
-            data = self.getData("/sitefe/v1/activedeltas/")
+            data = self.getData(f"/api/{self.sitename}/frontend/activedeltas")
         except FailedGetDataFromFE as ex:
             self.siteDB.dumpFileContentAsJson(failurefile, {"exc": str(ex)})
             self.logger.critical("Failed to get data from FE: %s", str(ex))

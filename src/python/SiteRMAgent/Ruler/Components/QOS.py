@@ -81,7 +81,7 @@ class QOS:
 
     def getQoSTotals(self):
         """Get Delta information."""
-        self.qosTotals = self.getData("/sitefe/json/frontend/getqosdata/")
+        self.qosTotals = self.getData(f"/api/{self.sitename}/qosdata")
 
     def _getvlanlistqos(self):
         """Get vlan qos dict"""

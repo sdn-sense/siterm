@@ -32,7 +32,7 @@
 
           formats.forEach((fmt, index) => {
             $.ajax({
-              url: `${sitename}/sitefe/v1/models/${modelID}?model=${fmt}`,
+              url: `/api/${sitename}/models/${modelID}?rdfformat=${fmt}`,
               dataType: 'json',
               async: false,
               success: function (json) {
@@ -97,12 +97,12 @@
         }
 
         function load_data() {
-            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
+            $.get('/api/frontend/configuration', function(data){
               defineSites(data, false);
               data['models'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
                  sitename = data['general']['sites'][i];
-                 $.ajax({url: sitename + '/sitefe/v1/models',
+                 $.ajax({url: '/api/' + sitename + '/models',
                    dataType: 'json',
                    data: {},
                    async: false,

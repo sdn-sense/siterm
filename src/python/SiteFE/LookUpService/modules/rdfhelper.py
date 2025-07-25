@@ -367,7 +367,7 @@ class RDFHelper:
                 )
                 nodeExporter = makeUrl(
                     kwargs["webdomain"],
-                    f"{kwargs['sitename']}/sitefe/json/frontend/metrics",
+                    f"/api/{kwargs['sitename']}/prometheus/metrics",
                 )
                 self._addHasNetworkAttribute(
                     metaService, "nodeExporter", "metadata:/nodeExporter", nodeExporter

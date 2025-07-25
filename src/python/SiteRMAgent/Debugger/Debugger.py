@@ -85,7 +85,7 @@ class Debugger(DebugService):
         out["serviceinfo"] = getAllIps()
         self.logger.debug(f"Service report: {out}")
         self.logger.info("Will try to publish information to SiteFE")
-        outVals = callSiteFE(out, self.fullURL, "/sitefe/json/frontend/updateservice")
+        outVals = callSiteFE(out, self.fullURL, f"/api/{self.sitename}/services")
         self.logger.info("Update Service result %s", outVals)
         if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
             excMsg = " Could not publish to SiteFE Frontend."
@@ -114,13 +114,13 @@ class Debugger(DebugService):
         """Start execution and get new requests from FE"""
         for wtype in ["new", "active"]:
             self.logger.info(f"Get all {wtype} requests")
-            data = self.getData(f"/sitefe/json/frontend/getalldebughostname/{self.hostname}/{wtype}")
+            data = self.getData(f"/api/{self.sitename}/debug?hostname={self.hostname}&state={wtype}")
             for item in data:
                 # Do we need to get full data from FE? E.G. Request info?
                 if not self.backgroundProcessItemExists(item):
                     self.logger.info(f"Background process item does not exist. ID: {item['id']}")
                 try:
-                    ditem = self.getData(f"/sitefe/json/frontend/getdebug/{item['id']}")
+                    ditem = self.getData(f"/api/{self.sitename}/debug/{item['id']}?details=True")
                     if ditem:
                         self.checkBackgroundProcess(ditem)
                 except FailedGetDataFromFE as ex:

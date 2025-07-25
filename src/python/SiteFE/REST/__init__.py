@@ -1,5 +1,7 @@
-#!/usr/bin/env python3
-# pylint: disable=W0611
-# W0611 - Unused import (We skip this, because we want to have submodules inside module1)
-"""DTN RM Site FE REST init."""
-__all__ = ["app", "FEApis", "AppCalls", "Models"]
+"""DTN RM Site Frontend to list all API Call files."""
+
+import os
+import glob
+
+MODULES = glob.glob(os.path.join(os.path.dirname(__file__), "*.py"))
+__all__ = [os.path.basename(f)[:-3] for f in MODULES if not f.endswith("__init__.py")]

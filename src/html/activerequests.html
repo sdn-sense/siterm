@@ -19,7 +19,7 @@
 
        function loadModel(sitename)
        {
-          $.ajax({url: sitename + '/sitefe/v1/activedeltas/',
+          $.ajax({url: '/api/' + sitename + '/frontend/activedeltas',
             dataType: 'json',
             data: {},
             async: false,
@@ -46,7 +46,7 @@
         }
 
         function load_data() {
-            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
+            $.get('/api/frontend/configuration', function(data){
               defineSites(data, false);
               defineAllModels(sitename);
             })};

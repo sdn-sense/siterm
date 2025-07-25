@@ -439,6 +439,15 @@ def getUsername():
     return pwd.getpwuid(os.getuid())[0]
 
 
+def removeFile(fileLoc):
+    """Remove file."""
+    if os.path.isfile(fileLoc):
+        os.unlink(fileLoc)
+        return True
+    return False
+
+
+
 def fileLock(func):
     """Decorator to create a lock file and wait if another process holds it."""
 
@@ -464,6 +473,17 @@ def fileLock(func):
 
     return wrapper
 
+def dumpFileContentAsJson(outFile, content):
+    """Dump File content with locks."""
+    tmpoutFile = outFile + ".tmp"
+    with open(tmpoutFile, "w+", encoding="utf-8") as fd:
+        json.dump(content, fd)
+    shutil.move(tmpoutFile, outFile)
+    return True
+
+def saveContent(destFileName, outputDict):
+    """Saves all content to a file."""
+    return dumpFileContentAsJson(destFileName, outputDict)
 
 class contentDB:
     """File Saver, loader class."""
@@ -488,11 +508,7 @@ class contentDB:
     @fileLock
     def dumpFileContentAsJson(outFile, content):
         """Dump File content with locks."""
-        tmpoutFile = outFile + ".tmp"
-        with open(tmpoutFile, "w+", encoding="utf-8") as fd:
-            json.dump(content, fd)
-        shutil.move(tmpoutFile, outFile)
-        return True
+        dumpFileContentAsJson(outFile, content)
 
     @staticmethod
     @fileLock
@@ -511,10 +527,7 @@ class contentDB:
     @staticmethod
     def removeFile(fileLoc):
         """Remove file."""
-        if os.path.isfile(fileLoc):
-            os.unlink(fileLoc)
-            return True
-        return False
+        removeFile(fileLoc)
 
     def moveFile(self, sourcefile, destdir):
         """Move file from sourcefile to dest dir"""
@@ -755,8 +768,8 @@ def httptimestamp(inhttpdate):
 def getModTime(headers):
     """Get modification time from the headers."""
     modTime = 0
-    if "IF_MODIFIED_SINCE" in headers:
-        modTime = httptimestamp(headers["IF_MODIFIED_SINCE"])
+    if "if-modified-since" in headers:
+        modTime = httptimestamp(headers["if-modified-since"])
     return modTime
 
 
@@ -794,6 +807,10 @@ def getDBConn(serviceName="", cls=None):
 
     return dbConnMain
 
+def getDBConnObj():
+    """Get database connection object (no class)"""
+    # TOOD: All the rest should remove use of those params
+    return dbinterface()
 
 def parseRDFFile(modelFile):
     """Parse model file and return Graph."""
@@ -925,7 +942,7 @@ def checkHTTPService(config):
     for sitename in config.get("general", "sites"):
         try:
             hostname = getFullUrl(config, sitename)
-            url = "/sitefe/v1/models?current=true&summary=false&encode=false"
+            url = f"/api/{sitename}/models?current=true&summary=false&encode=false"
             out = callSiteFE({}, hostname, url, "GET")
             # Need to check out that it received information back
             # otherwise print error and return 1

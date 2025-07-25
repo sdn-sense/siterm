@@ -114,6 +114,7 @@ def validateArgs(inargs):
 
 
 class DBBackend:
+    # pylint: disable=too-few-public-methods
     """DB Backend class."""
 
     # pylint: disable=E1101,E0203,W0201
@@ -172,7 +173,6 @@ class DBBackend:
             return
         try:
             fullUrl = getFullUrl(self.config, kwargs["sitename"])
-            fullUrl += "/sitefe"
             dic = {
                 "servicename": kwargs["servicename"],
                 "servicestate": kwargs["servicestate"],
@@ -182,7 +182,7 @@ class DBBackend:
                 "version": runningVersion,
                 "exc": kwargs.get("exc", "No Exception provided by service"),
             }
-            callSiteFE(dic, fullUrl, "/json/frontend/servicestate")
+            callSiteFE(dic, fullUrl, f"/api/{self.sitename}/services")
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(
@@ -212,9 +212,10 @@ class DBBackend:
         refresh = False
         try:
             hostname = getFullUrl(self.config, kwargs["sitename"])
-            url = "/sitefe/json/frontend/serviceaction"
             kwargs["servicename"] = self.component
             kwargs["hostname"] = getHostname(self.config, self.component)
+            url = f"/api/{self.sitename}/serviceaction?hostname={kwargs['hostname']}&servicename={self.component}"
+
             actions = callSiteFE(kwargs, hostname, url, "GET")
             # Config Fetcher is not allowed to delete other services refresh.
             if actions[0] and self.component == "ConfigFetcher":
@@ -598,7 +599,7 @@ class Daemon(DBBackend):
 
     def run(self):
         """Run main execution"""
-        # pylint: disable=W0702
+        # pylint: disable=W0702,too-many-branches
         self.refreshThreads()
         while self.runLoop():
             self.runCount += 1

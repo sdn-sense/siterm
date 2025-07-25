@@ -45,9 +45,7 @@ class DebugService:
             }
             self.dbI.update("debugrequests", [out])
             return
-        callSiteFE(
-            inDic, self.fullURL, f"/sitefe/json/frontend/updatedebug/{inDic['id']}"
-        )
+        callSiteFE(inDic, self.fullURL, f"/api/{self.sitename}/debug/{inDic['id']}")
 
     def backgroundProcessItemExists(self, item):
         """Check if background process item exists"""

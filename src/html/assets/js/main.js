@@ -136,7 +136,7 @@ function escapeHtml (string) {
 
         function doSiteUpdate(ids) {
         strSite = document.getElementById(ids + "sitename").value;
-        $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
+        $.ajax({url: '/api/frontend/gethosts',
             dataType: 'json', data: "", async: false,
             success: function(json){
                 for (j=0; j < json.length; j++){
@@ -149,7 +149,7 @@ function escapeHtml (string) {
         function doDTNUpdate(ids) {
         strDTN = document.getElementById(ids + "dtn").value;
         strSite = document.getElementById(ids + "sitename").value;
-        $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
+        $.ajax({url: '/api/frontend/gethosts',
             dataType: 'json', data: "", async: false,
             success: function(json){
                 for (j=0; j < json.length; j++){

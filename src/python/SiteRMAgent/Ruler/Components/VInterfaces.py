@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """Virtual interfaces component, which creates or tierdowns virtual interface.
 This is called from a Ruler component.
 
@@ -7,10 +8,11 @@ Authors:
 
 Date: 2022/01/20
 """
+from dataclasses import dataclass
 from pyroute2 import IPRoute
 from SiteRMLibs.MainUtilities import execute
 from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import callSiteFE 
+from SiteRMLibs.MainUtilities import callSiteFE
 from SiteRMLibs.MainUtilities import getFullUrl
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import FailedInterfaceCommand
@@ -23,22 +25,35 @@ from SiteRMLibs.ipaddr import getInterfaceTxQueueLen
 from SiteRMLibs.ipaddr import getIfAddrStats
 
 
-def publishState(vlan, inParams, uuid, hostname, state, fullURL):
+@dataclass
+class PublishStateInput:
+    """Data class for publish state input parameters."""
+    vlan: dict
+    inParams: dict
+    uuid: str
+    hostname: str
+    state: str
+    fullURL: str
+    sitename: str
+
+
+
+def publishState(item: PublishStateInput):
     """Publish Agent apply state to Frontend."""
     oldState = (
-        inParams.get(vlan["destport"], {})
+        item.inParams.get(item.vlan["destport"], {})
         .get("_params", {})
         .get("networkstatus", "unknown")
     )
-    if state != oldState:
+    if item.state != oldState:
         out = {
             "uuidtype": "vsw",
-            "uuid": uuid,
-            "hostname": hostname,
-            "hostport": vlan["destport"],
-            "uuidstate": state,
+            "uuid": item.uuid,
+            "hostname": item.hostname,
+            "hostport": item.vlan["destport"],
+            "uuidstate": item.state,
         }
-        callSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", "POST")
+        callSiteFE(out, item.fullURL, f"/api/{item.sitename}/deltas/{item.uuid}/timestates", "POST")
 
 
 def getDefaultMTU(config, intfKey):
@@ -92,6 +107,7 @@ class VInterfaces:
 
     def __init__(self, config, sitename):
         self.config = config if config else getGitConfig()
+        self.sitename = sitename
         self.hostname = self.config.get("agent", "hostname")
         self.fullURL = getFullUrl(self.config, sitename)
         self.logger = getLoggingObject(config=self.config, service="Ruler")
@@ -244,13 +260,9 @@ class VInterfaces:
                     self._setup(vlan, True)
                 if not intfUp(f"vlan.{vlan['vlan']}"):
                     self._start(vlan, True)
-                publishState(
-                    vlan, inParams, uuid, self.hostname, "activated", self.fullURL
-                )
+                publishState(PublishStateInput(vlan, inParams, uuid, self.hostname, "activated", self.fullURL, self.sitename))
             except FailedInterfaceCommand:
-                publishState(
-                    vlan, inParams, uuid, self.hostname, "activate-error", self.fullURL
-                )
+                publishState(PublishStateInput(vlan, inParams, uuid, self.hostname, "activate-error", self.fullURL, self.sitename))
         return vlans
 
     def terminate(self, inParams, uuid):
@@ -261,18 +273,9 @@ class VInterfaces:
                 if self._statusvlan(vlan, False):
                     self._stop(vlan, False)
                     self._remove(vlan, False)
-                publishState(
-                    vlan, inParams, uuid, self.hostname, "deactivated", self.fullURL
-                )
+                publishState(PublishStateInput(vlan, inParams, uuid, self.hostname, "deactivated", self.fullURL, self.sitename))
             except FailedInterfaceCommand:
-                publishState(
-                    vlan,
-                    inParams,
-                    uuid,
-                    self.hostname,
-                    "deactivate-error",
-                    self.fullURL,
-                )
+                publishState(PublishStateInput(vlan, inParams, uuid, self.hostname, "deactivate-error", self.fullURL, self.sitename))
         return vlans
 
     def modify(self, oldParams, newParams, uuid):
