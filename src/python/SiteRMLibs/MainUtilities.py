@@ -33,8 +33,9 @@ import uuid
 from pathlib import Path
 from urllib.parse import parse_qs
 
+import httpx
+
 # Custom exceptions imports
-import pycurl
 import requests
 import simplejson as json
 from past.builtins import basestring
@@ -336,23 +337,19 @@ def firstRunFinished(servicename):
 def callSiteFE(inputDict, host, url, verb="PUT"):
     """Put JSON to the Site FE."""
     retries = 3
-    if verb.upper() in ["POST", "PUT", "PATCH"]:
-        data = json.dumps(inputDict)
-    else:
-        data = inputDict
     while retries > 0:
         retries -= 1
         req = Requests(host, {})
         try:
-            out = req.makeRequest(url, verb=verb, data=data)
+            out = req.makeRequest(url, verb=verb, data=inputDict)
             return out
         except http.client.HTTPException as ex:
             print(f"Got HTTPException: {ex}. Will retry {retries} more times.")
             if retries == 0:
                 return ex.reason, ex.status, "FAILED", True
             time.sleep(1)
-        except pycurl.error as ex:
-            print(f"Got PyCurl HTTPException: {ex}. Will retry {retries} more times.")
+        except httpx.HTTPError as ex:
+            print(f"Got HTTPX HTTPError: {ex}. Will retry {retries} more times.")
             if retries == 0:
                 return ex.args[1], ex.args[0], "FAILED", False
             time.sleep(1)

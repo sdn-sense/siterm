@@ -8,9 +8,8 @@ Authors:
 
 Date: 2023/03/22
 """
-from SiteRMLibs.MainUtilities import contentDB
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.CustomExceptions import BackgroundException
+from SiteRMLibs.MainUtilities import contentDB, getLoggingObject
 
 
 class CustomWriter:
@@ -35,6 +34,7 @@ class CustomWriter:
         self.newline = newline
         self.closefd = closefd
         self.opener = opener
+        # pylint: disable=consider-using-with
         self.fd = open(
             self.filename,
             self.mode,
@@ -49,6 +49,7 @@ class CustomWriter:
     def open(self):
         """Open the file if it is closed"""
         if self.fd.closed:
+            # pylint: disable=consider-using-with
             self.fd = open(
                 self.filename,
                 self.mode,
@@ -75,6 +76,7 @@ class CustomWriter:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.wn(f"Closing CustomWriter. Exit info: {exc_type}, {exc_value}, {traceback}")
         self.fd.close()
 
 
@@ -91,23 +93,15 @@ class BaseDebugAction:
             service=self.service,
             logOutName=f"api-{self.backgConfig.get('id', 0)}.log",
         )
-        self.logger.info(
-            f"====== {self.service} Start Work. Config: {self.backgConfig}"
-        )
+        self.logger.info(f"====== {self.service} Start Work. Config: {self.backgConfig}")
         self.workDir = self.config.get("general", "privatedir") + "/SiteRM/background/"
         self.outfiles = {
-            "stdout": self.workDir
-            + f"/background-process-{self.backgConfig['id']}.stdout",
-            "stderr": self.workDir
-            + f"/background-process-{self.backgConfig['id']}.stderr",
-            "processout": self.workDir
-            + f"/background-process-{self.backgConfig['id']}.process",
-            "jsonout": self.workDir
-            + f"/background-process-{self.backgConfig['id']}.jsonout",
+            "stdout": self.workDir + f"/background-process-{self.backgConfig['id']}.stdout",
+            "stderr": self.workDir + f"/background-process-{self.backgConfig['id']}.stderr",
+            "processout": self.workDir + f"/background-process-{self.backgConfig['id']}.process",
+            "jsonout": self.workDir + f"/background-process-{self.backgConfig['id']}.jsonout",
         }
-        self.processout = CustomWriter(
-            self.outfiles["processout"], "w", encoding="utf-8"
-        )
+        self.processout = CustomWriter(self.outfiles["processout"], "w", encoding="utf-8")
         self.jsonout = {"exitCode": -1, "output": []}
         self.diragent = contentDB()
         self.flightcheck()
@@ -125,18 +119,12 @@ class BaseDebugAction:
     def flightcheck(self):
         """Check if all required parameters are present"""
         if not self.requestdict:
-            self.processout.wn(
-                f"No request dictionary found in request {self.backgConfig}"
-            )
-            raise BackgroundException(
-                f"No requestdict found in request {self.backgConfig}"
-            )
+            self.processout.wn(f"No request dictionary found in request {self.backgConfig}")
+            raise BackgroundException(f"No requestdict found in request {self.backgConfig}")
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
-        self.logger.warning(
-            f"NOT IMPLEMENTED call {self.backgConfig} to refresh thread"
-        )
+        self.logger.warning(f"NOT IMPLEMENTED call {self.backgConfig} to refresh thread")
 
     def startwork(self):
         """Main work function"""
@@ -151,10 +139,6 @@ class BaseDebugAction:
             self.processout.wn(str(ex))
             self.diragent.dumpFileContentAsJson(self.outfiles["jsonout"], self.jsonout)
         finally:
-            self.processout.wn(
-                f"====== {self.service} Finish Work. Config: {self.backgConfig}"
-            )
+            self.processout.wn(f"====== {self.service} Finish Work. Config: {self.backgConfig}")
             self.processout.close()
-            self.logger.info(
-                f"====== {self.service} Finish Work. Config: {self.backgConfig}"
-            )
+            self.logger.info(f"====== {self.service} Finish Work. Config: {self.backgConfig}")

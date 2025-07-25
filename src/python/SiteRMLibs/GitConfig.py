@@ -7,14 +7,16 @@ Authors:
 
 Date: 2021/01/20
 """
-import time
 import copy
 import os
 import os.path
-from yaml import safe_load as yload
+import time
+
+from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
+
 # Custom exceptions imports
 from SiteRMLibs.MainUtilities import generateMD5, getHostname
-from SiteRMLibs.CustomExceptions import NoSectionError, NoOptionError
+from yaml import safe_load as yload
 
 
 class GitConfig:
@@ -78,9 +80,7 @@ class GitConfig:
                         "Configuration /etc/siterm.yaml missing non optional config parameter %s",
                         key,
                     )
-                    raise Exception(
-                        f"Configuration /etc/siterm.yaml missing non optional config parameter {key}"
-                    )
+                    raise Exception(f"Configuration /etc/siterm.yaml missing non optional config parameter {key}")
                 self.config[key] = requirement["default"]
 
     def __addDefaults(self, defaults):
@@ -96,16 +96,12 @@ class GitConfig:
         """Add default site config parameters"""
         for sitename in self.config.get("MAIN", {}).get("general", {}).get("sites", []):
             if sitename not in self.config["MAIN"]:
-                raise Exception(
-                    f"Site {sitename} is not available in configuration. Will not start services"
-                )
+                raise Exception(f"Site {sitename} is not available in configuration. Will not start services")
             self.config["MAIN"][sitename].setdefault("default_params", {})
             for key1, val1 in defaults["default_params"].items():
                 self.config["MAIN"][sitename]["default_params"].setdefault(key1, {})
                 for key2, val2 in val1.items():
-                    self.config["MAIN"][sitename]["default_params"][key1].setdefault(
-                        key2, val2
-                    )
+                    self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, val2)
 
     def __addSwitchDefaults(self, defaults):
         """Add default switch config parameters"""
@@ -119,7 +115,6 @@ class GitConfig:
                             self.config["MAIN"][switch][key1].setdefault(key2, val2)
                     else:
                         self.config["MAIN"][switch][key1] = val1
-
 
     def presetAgentDefaultConfigs(self):
         """Preset default config parameters for Agent"""
@@ -170,9 +165,7 @@ class GitConfig:
             # Need to loop as it is range;
             # In case second val is bigger than 1st - raise Exception
             if int(tmpvals[0]) >= int(tmpvals[1]):
-                raise Exception(
-                    f"Configuration Error. Vlan Range equal or lower. Vals: {tmpvals}"
-                )
+                raise Exception(f"Configuration Error. Vlan Range equal or lower. Vals: {tmpvals}")
             for i in range(int(tmpvals[0]), int(tmpvals[1]) + 1):
                 retVals.append(i)
         else:
@@ -199,12 +192,8 @@ class GitConfig:
             """Add to all vlan list"""
             self.config["MAIN"][key1].setdefault("all_vlan_range_list", [])
             for vlanid in vlanlist:
-                if vlanid not in self.config["MAIN"][key1].get(
-                    "all_vlan_range_list", []
-                ):
-                    self.config["MAIN"][key1].setdefault(
-                        "all_vlan_range_list", []
-                    ).append(vlanid)
+                if vlanid not in self.config["MAIN"][key1].get("all_vlan_range_list", []):
+                    self.config["MAIN"][key1].setdefault("all_vlan_range_list", []).append(vlanid)
 
         # Default list is a must! Will be done checked at config preparation/validation
         if "vlan_range" not in self.config["MAIN"][key1]:
@@ -217,18 +206,12 @@ class GitConfig:
             for portname, portvals in self.config["MAIN"][key1][key2].items():
                 if "vlan_range" in portvals:
                     newvlanlist = self.__genVlansRange(portvals["vlan_range"])
-                    self.config["MAIN"][key1][key2][portname][
-                        "vlan_range_list"
-                    ] = newvlanlist
+                    self.config["MAIN"][key1][key2][portname]["vlan_range_list"] = newvlanlist
                     _addToAll(newvlanlist)
                 # Else we set default
                 else:
-                    self.config["MAIN"][key1][key2][portname]["vlan_range"] = (
-                        self.config["MAIN"][key1]["vlan_range"]
-                    )
-                    self.config["MAIN"][key1][key2][portname]["vlan_range_list"] = (
-                        self.config["MAIN"][key1]["vlan_range_list"]
-                    )
+                    self.config["MAIN"][key1][key2][portname]["vlan_range"] = self.config["MAIN"][key1]["vlan_range"]
+                    self.config["MAIN"][key1][key2][portname]["vlan_range_list"] = self.config["MAIN"][key1]["vlan_range_list"]
 
     def generateIPList(self, key1, key2, vals):
         """Split by command and return list"""
@@ -403,10 +386,7 @@ class GitConfig:
                 "bw": {"type": "bestEffort", "unit": "mbps", "minCapacity": "100"},
             }
         }
-        switchDefaults = {
-            "qos_policy": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7},
-            "rate_limit": False
-        }
+        switchDefaults = {"qos_policy": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7}, "rate_limit": False}
         self.__addDefaults(defConfig)
         self.__addSiteDefaults(siteDefaults)
         self.__addSwitchDefaults(switchDefaults)
@@ -450,15 +430,12 @@ class GitConfig:
             if subkey not in self.config["MAIN"][key]:
                 if default:
                     return default
-                raise NoOptionError(
-                    f"{subkey} is not available under {key} section in configuration."
-                )
+                raise NoOptionError(f"{subkey} is not available under {key} section in configuration.")
             return self.config["MAIN"].get(key, {}).get(subkey, {})
         except AttributeError as ex:
             if default:
                 return default
             raise ex
-        return default
 
     def getraw(self, key):
         """Get RAW DICT of key"""

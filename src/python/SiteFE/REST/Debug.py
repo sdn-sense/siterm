@@ -171,8 +171,8 @@ class DebugItem(BaseModel):
     # Optional fields
     request: dict = {}
     output: dict = {}
-    insertTime: str = None
-    updateTime: str = None
+    insertTime: int = None
+    updateTime: int = None
 
 
 # TODO few more debug calls to add

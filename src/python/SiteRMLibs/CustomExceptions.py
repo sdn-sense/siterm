@@ -44,7 +44,7 @@ def exceptionCode(excName):
         FailedRoutingCommand: -30,
         TooManyArgumentalValues: -31,
         NotSupportedArgument: -32,
-        ServiceNotReady: -33
+        ServiceNotReady: -33,
     }
     if excName in exCodes:
         return exCodes[excName]
@@ -200,132 +200,6 @@ class RequestWithoutCert(ExceptionTemplate):
 class IssuesWithAuth(ExceptionTemplate):
     """IssuesWithAuth Error."""
 
+
 class ServiceNotReady(ExceptionTemplate):
     """Service Not Ready Error."""
-
-
-class HTTPResponses:
-    """Frontend HTTP Responses."""
-
-    def __init__(self):
-        self.cacheHeaders = [
-            ("Cache-Control", "no-cache, no-store, must-revalidate"),
-            ("Pragma", "no-cache"),
-            ("Expires", "0"),
-        ]
-
-    def _header_append(self, headers, head_append, nocache=True):
-        outheaders = []
-        if head_append:
-            outheaders += head_append
-        if nocache:
-            outheaders = self.cacheHeaders
-        if outheaders:
-            for item in outheaders:
-                headers.append((item[0], item[1]))
-        return headers
-
-    def ret_200(self, content_type, start_response, head_append):
-        """200 OK."""
-        status = "200 OK"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_201(self, content_type, start_response, head_append):
-        """The request has been fulfilled, resulting in the creation of a new
-        resource."""
-        status = "201 Created"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_204(self, content_type, start_response, head_append):
-        """The server successfully processed the request and is not returning
-        any content."""
-        status = "204 No Content"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_304(self, content_type, start_response, head_append):
-        """Indicates that the resource has not been modified since the version
-        specified by the request headers If-Modified-Since or If-None-Match.
-
-        In such case, there is no need to retransmit the resource since
-        the client still has a previously-downloaded copy.
-        """
-        status = "304 Not Modified"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_400(self, content_type, start_response, head_append):
-        """400 Bad Request."""
-        status = "400 Bad Request"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_401(self, content_type, start_response, head_append):
-        """401 Unauthorized."""
-        status = "401 Unauthorized"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_403(self, content_type, start_response, head_append):
-        """403 Forbidden."""
-        status = "403 Forbidden"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_404(self, content_type, start_response, head_append):
-        """404 Not Found."""
-        status = "404 Not Found"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_405(self, content_type, start_response, head_append):
-        """405 Method Not Allowed."""
-        status = "405 Method Not Allowed"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_406(self, content_type, start_response, head_append):
-        """405 Not Acceptable."""
-        status = "406 Not Acceptable"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_409(self, content_type, start_response, head_append):
-        """409 Conflict."""
-        status = "409 Conflict"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_500(self, content_type, start_response, head_append):
-        """500 Internal Server Error."""
-        status = "500 Internal Server Error"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_501(self, content_type, start_response, head_append):
-        """501 Not Implemented."""
-        status = "501 Not Implemented"
-        headers = [("Content-type", content_type)]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)
-
-    def ret_503(self, content_type, start_response, head_append):
-        """503 Service Unavailable."""
-        status = "503 Service Unavailable"
-        headers = [("Content-type", content_type), ("Retry-After", "30")]
-        headers = self._header_append(headers, head_append)
-        start_response(status, headers)

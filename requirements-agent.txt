@@ -16,5 +16,3 @@ pymysql
 setuptools
 prometheus-client
 kubernetes
-python-multipart
-werkzeug

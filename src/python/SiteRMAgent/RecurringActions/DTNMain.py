@@ -67,7 +67,7 @@ class RecurringAction:
     def prepareJsonOut(self):
         """Executes all plugins and prepares json output to FE."""
         excMsg = ""
-        outputDict = {"Summary": {}}
+        outputDict = {"Config": {"Summary": {}}}
         tmpName = None
         raiseError = False
         for tmpName, method in self.classes.items():
@@ -77,9 +77,9 @@ class RecurringAction:
                     msg = f"Returned output from {tmpName} method is not a dictionary. Type: {type(tmp)}"
                     self.logger.error(msg)
                     raise ValueError(msg)
-                outputDict[tmpName] = tmp
+                outputDict["Config"][tmpName] = tmp
             except NotFoundError as ex:
-                outputDict[tmpName] = {
+                outputDict["Config"][tmpName] = {
                     "errorType": "NotFoundError",
                     "errorNo": -5,
                     "errMsg": str(ex),
@@ -96,7 +96,7 @@ class RecurringAction:
                 raiseError = True
             except Exception as ex:
                 excType, excValue = sys.exc_info()[:2]
-                outputDict[tmpName] = {
+                outputDict["Config"][tmpName] = {
                     "errorType": str(excType.__name__),
                     "errorNo": -6,
                     "errMsg": str(excValue),
@@ -106,8 +106,8 @@ class RecurringAction:
                 self.logger.critical(
                     "%s received %s. Exception details: %s",
                     tmpName,
-                    outputDict[tmpName]["errorType"],
-                    outputDict[tmpName],
+                    outputDict["Config"][tmpName]["errorType"],
+                    outputDict["Config"][tmpName],
                 )
         # Post processing of output (allows any class to modify output based on other Plugins output)
         for tmpName, method in self.classes.items():
@@ -136,8 +136,8 @@ class RecurringAction:
         dic["ip"] = self.config.get("general", "ip")
         dic["insertTime"] = getUTCnow()
         dic["updateTime"] = getUTCnow()
-        dic["Summary"].setdefault("config", {})
-        dic["Summary"]["config"] = self.config.getraw("MAIN")
+        dic["Config"]["Summary"].setdefault("config", {})
+        dic["Config"]["Summary"]["config"] = self.config.getraw("MAIN")
         return dic
 
     def startwork(self):
