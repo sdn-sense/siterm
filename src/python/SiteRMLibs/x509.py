@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """User/Application authentication using Cert or OIDC.
 
 Copyright 2017 California Institute of Technology
@@ -17,13 +18,14 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2019/10/01
 """
+import json
 import os
 import re
-import json
 from datetime import datetime, timezone
+
+from SiteRMLibs.CustomExceptions import IssuesWithAuth, RequestWithoutCert
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import loadEnvFile
-from SiteRMLibs.CustomExceptions import RequestWithoutCert, IssuesWithAuth
 
 
 class OIDCHandler:
@@ -32,12 +34,8 @@ class OIDCHandler:
     def __init__(self):
         """Init OIDC Handler"""
         loadEnvFile()
-        self.required_issuer = os.environ.get(
-            "OIDC_REQUIRED_ISSUER", "https://login.sdn-sense.net/"
-        )
-        self.permission_claim_prefix = "HTTP_" + os.environ.get(
-            "OIDC_PERMISSIONS_CLAIM", "OIDC_CLAIM_HTTPS___SDN_SENSE.NET_PERMISSIONS"
-        )
+        self.required_issuer = os.environ.get("OIDC_REQUIRED_ISSUER", "https://login.sdn-sense.net/")
+        self.permission_claim_prefix = "HTTP_" + os.environ.get("OIDC_PERMISSIONS_CLAIM", "OIDC_CLAIM_HTTPS___SDN_SENSE.NET_PERMISSIONS")
 
     @staticmethod
     def _getEnv(environ, key):
@@ -55,12 +53,8 @@ class OIDCHandler:
                     return json.loads(value)
                 except json.JSONDecodeError as ex:
                     print(f"Invalid JSON in permissions claim: {value}")
-                    raise IssuesWithAuth(
-                        "Issues with permissions. Check backend logs."
-                    ) from ex
-        print(
-            f"Permissions claim with prefix '{self.permission_claim_prefix}' not found"
-        )
+                    raise IssuesWithAuth("Issues with permissions. Check backend logs.") from ex
+        print(f"Permissions claim with prefix '{self.permission_claim_prefix}' not found")
         raise IssuesWithAuth("Issues with permissions. Check backend logs.")
 
     def validateOIDCInfo(self, environ):
@@ -83,9 +77,7 @@ class OIDCHandler:
             "email": email,
             "issuer": issuer,
             "permissions": permissions,
-            "claims": {
-                k: v for k, v in environ.items() if k.startswith("HTTP_OIDC_CLAIM_")
-            },
+            "claims": {k: v for k, v in environ.items() if k.startswith("HTTP_OIDC_CLAIM_")},
         }
 
 
@@ -110,34 +102,30 @@ class CertHandler:
                 for user, userinfo in list(self.gitConf.config.get("AUTH", {}).items()):
                     self.allowedCerts.setdefault(userinfo["full_dn"], {})
                     self.allowedCerts[userinfo["full_dn"]]["username"] = user
-                    self.allowedCerts[userinfo["full_dn"]]["permissions"] = userinfo[
-                        "permissions"
-                    ]
+                    self.allowedCerts[userinfo["full_dn"]]["permissions"] = userinfo["permissions"]
             if self.gitConf.config.get("AUTH_RE", {}):
-                for user, userinfo in list(
-                    self.gitConf.config.get("AUTH_RE", {}).items()
-                ):
+                for user, userinfo in list(self.gitConf.config.get("AUTH_RE", {}).items()):
                     self.allowedWCerts.setdefault(userinfo["full_dn"], {})
                     self.allowedWCerts[userinfo["full_dn"]]["username"] = user
-                    self.allowedWCerts[userinfo["full_dn"]]["permissions"] = userinfo[
-                        "permissions"
-                    ]
+                    self.allowedWCerts[userinfo["full_dn"]]["permissions"] = userinfo["permissions"]
 
     @staticmethod
     def getCertInfo(request):
         """Get certificate info."""
         out = {}
-        for key in ["ssl_client_v_remain",
-                    "ssl_client_s_dn",
-                    "ssl_client_i_dn",
-                    "ssl_client_v_start",
-                    "ssl_client_v_end",
+        for key in [
+            "ssl_client_v_remain",
+            "ssl_client_s_dn",
+            "ssl_client_i_dn",
+            "ssl_client_v_start",
+            "ssl_client_v_end",
         ]:
             if key not in request.headers or request.headers.get(key, None) in (None, "", "(null)"):
                 print(f"Missing required certificate info: {key}")
                 raise RequestWithoutCert("Unauthorized access. Request without certificate.")
 
         out["subject"] = request.headers["ssl_client_s_dn"]
+        # pylint: disable=line-too-long
         out["notAfter"] = int(datetime.strptime(request.headers["ssl_client_v_end"], "%b %d %H:%M:%S %Y %Z").timestamp())
         out["notBefore"] = int(datetime.strptime(request.headers["ssl_client_v_start"], "%b %d %H:%M:%S %Y %Z").timestamp())
         out["issuer"] = request.headers["ssl_client_i_dn"]
@@ -151,9 +139,7 @@ class CertHandler:
         for wildcarddn, userinfo in self.allowedWCerts.items():
             if re.match(wildcarddn, certinfo["fullDN"]):
                 return userinfo
-        print(
-            f"User DN {certinfo['fullDN']} is not in authorized list. Full info: {certinfo}"
-        )
+        print(f"User DN {certinfo['fullDN']} is not in authorized list. Full info: {certinfo}")
         raise IssuesWithAuth("Issues with permissions. Check backend logs.")
 
     def validateCertificate(self, request):
@@ -161,7 +147,7 @@ class CertHandler:
         certinfo = self.getCertInfo(request)
         timestamp = int(datetime.now(timezone.utc).timestamp())
         for key in ["subject", "notAfter", "notBefore", "issuer", "fullDN"]:
-            if key not in list(certinfo.keys()):
+            if key not in certinfo:
                 print(f"{key} not available in certificate retrieval")
                 raise IssuesWithAuth("Issues with permissions. Check backend logs.")
         # Check time before

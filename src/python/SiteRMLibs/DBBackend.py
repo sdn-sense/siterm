@@ -21,6 +21,7 @@ Date                    : 2019/05/01
 import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
+
 import pymysql
 from SiteRMLibs import dbcalls
 
@@ -74,9 +75,7 @@ class DBBackend:
         cursor.execute("SELECT 1")
         result = cursor.fetchone()
         if not result or result[0] != 1:
-            raise pymysql.MySQLError(
-                "Failed to establish a connection to the database."
-            )
+            raise pymysql.MySQLError("Failed to establish a connection to the database.")
 
     @contextmanager
     def get_connection(self):
@@ -278,10 +277,8 @@ class dbinterface:
 
     def get(self, calltype, limit=None, search=None, orderby=None, mapping=True):
         """GET Call for APPs."""
-        #pylint: disable=too-many-arguments
-        _callExit, colname, dbout = self._caller(
-            self.getcall("get", calltype), limit, orderby, search
-        )
+        # pylint: disable=too-many-arguments
+        _callExit, colname, dbout = self._caller(self.getcall("get", calltype), limit, orderby, search)
         out = []
         if mapping:
             for item in dbout:

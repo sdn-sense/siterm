@@ -2,8 +2,8 @@
 
 import http.client
 import os
-import unittest
 import time
+import unittest
 
 import yaml
 from SiteRMLibs.HTTPLibrary import Requests
@@ -23,14 +23,16 @@ def makeRequest(cls, url, params):
 def debugActions(cls):
     """Test Debug Actions: submit, get update"""
     # SUBMIT
-    data = {"dynamicfrom": "2001:48d0:3001:114::/64",
-            "type": "iperf-server",
-            "sitename": "",
-            "hostname": "undefined",
-            "onetime": "True",
-            "ip": "0.0.0.0",
-            "port": "12345", # Random between high ones
-            "time": "300"}
+    data = {
+        "dynamicfrom": "2001:48d0:3001:114::/64",
+        "type": "iperf-server",
+        "sitename": "",
+        "hostname": "undefined",
+        "onetime": "True",
+        "ip": "0.0.0.0",
+        "port": "12345",
+        "time": "300",
+    }  # Random between high ones
     urls = f"/api/{cls.PARAMS['sitename']}/debug"
     outs = makeRequest(cls, urls, {"verb": "POST", "data": data})
     cls.assertEqual(outs[1], 200, msg=f"Failed to POST {data} to {urls}. Output: {outs}")
@@ -42,19 +44,21 @@ def debugActions(cls):
         cls.assertEqual(outg[1], 200, msg=f"Failed to GET {urlg}. Output: {outs}")
         cls.assertEqual(outg[2], "OK", msg=f"Failed to GET {urlg}. Output: {outs}")
         print(outg)
-        if outg[0].get('requestdict', {}).get('selectedip', ""):
-            selectedip = outg[0]['requestdict']['selectedip']
+        if outg[0].get("requestdict", {}).get("selectedip", ""):
+            selectedip = outg[0]["requestdict"]["selectedip"]
             break
         time.sleep(5)
     # Now here we have selected IP, need to submit iperf-client
-    data = {"dynamicfrom": "2001:48d0:3001:11a::/64",
-            "type": "iperf-client",
-            "sitename": "",
-            "hostname": "undefined",
-            "onetime": "True",
-            "ip": selectedip,
-            "port": "12345", # Random between high ones
-            "time": "300"}
+    data = {
+        "dynamicfrom": "2001:48d0:3001:11a::/64",
+        "type": "iperf-client",
+        "sitename": "",
+        "hostname": "undefined",
+        "onetime": "True",
+        "ip": selectedip,
+        "port": "12345",
+        "time": "300",
+    }  # Random between high ones
     urls = f"/api/{cls.PARAMS['sitename']}/debug"
     outs = makeRequest(cls, urls, {"verb": "POST", "data": data})
     cls.assertEqual(outs[1], 200, msg=f"Failed to POST {data} to {urls}. Output: {outs}")
@@ -66,6 +70,7 @@ def debugActions(cls):
     cls.assertEqual(outg[2], "OK", msg=f"Failed to GET {urlg}. Output: {outs}")
     print(outg)
 
+
 class TestUtils(unittest.TestCase):
     """UnitTest"""
 
@@ -76,7 +81,6 @@ class TestUtils(unittest.TestCase):
         """Set Up Class. Set CERT/KEY env params"""
         os.environ["X509_USER_KEY"] = cls.PARAMS["key"]
         os.environ["X509_USER_CERT"] = cls.PARAMS["cert"]
-
 
     def test_dynamic_debug_iperf_server(self):
         """Test Debug IperfServer API"""

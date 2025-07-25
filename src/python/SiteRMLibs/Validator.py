@@ -20,16 +20,17 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/06/14
 """
 import random
+
 from SiteRMLibs.CustomExceptions import BadRequestError
-from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.ipaddr import ipVersion
+from SiteRMLibs.MainUtilities import getUTCnow
 
 
 def validateAddDefaults(config, inputDict):
     """Add default params (not controlled by outside)"""
     if inputDict["type"] not in config["MAIN"]["debuggers"]:
         raise BadRequestError(f"Debug type {inputDict['type']} not supported. Supported types: {config['MAIN']['debuggers'].keys()}")
-    for key, val in (config["MAIN"]["debuggers"][inputDict["type"]].get("defaults", {}).items()):
+    for key, val in config["MAIN"]["debuggers"][inputDict["type"]].get("defaults", {}).items():
         if key not in inputDict:
             inputDict[key] = val
     # If runtime not added, we add random between defruntime and maxruntime
@@ -87,7 +88,7 @@ def validateTraceRoute(config, inputDict):
     for key in ["from_interface", "from_ip"]:
         if key in inputDict:
             optional = True
-        if (key == "from_ip" and inputDict["from_ip"] and ipVersion(inputDict["from_ip"]) == -1):
+        if key == "from_ip" and inputDict["from_ip"] and ipVersion(inputDict["from_ip"]) == -1:
             raise BadRequestError(f"Soure IP {inputDict['from_ip']} does not appear to be an IPv4 or IPv6")
     if not optional:
         raise BadRequestError("One of these keys must be present: from_interface, from_ip")

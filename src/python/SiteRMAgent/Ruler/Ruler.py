@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=R0902, R0912
+# pylint: disable=R0902, R0912, line-too-long
 """Ruler component pulls all actions from Site-FE and applies these rules on
 DTN.
 
@@ -14,19 +14,19 @@ from SiteRMAgent.Ruler.Components.QOS import QOS
 from SiteRMAgent.Ruler.Components.Routing import Routing
 from SiteRMAgent.Ruler.Components.VInterfaces import VInterfaces
 from SiteRMAgent.Ruler.OverlapLib import OverlapLib
+from SiteRMLibs.BWService import BWService
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import checkOverlap
 from SiteRMLibs.MainUtilities import (
+    callSiteFE,
     contentDB,
     createDirs,
     evaldict,
-    callSiteFE,
     getFileContentAsJson,
     getFullUrl,
     getLoggingObject,
 )
-from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.BWService import BWService
 from SiteRMLibs.timing import Timing
 
 COMPONENT = "Ruler"
@@ -67,9 +67,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         """Get data from FE."""
         out = callSiteFE({}, self.fullURL, url, "GET")
         if out[2] != "OK":
-            msg = (
-                f"Received a failure getting information from Site Frontend {str(out)}"
-            )
+            msg = f"Received a failure getting information from Site Frontend {str(out)}"
             self.logger.critical(msg)
             raise FailedGetDataFromFE(msg)
         return evaldict(out[0])
@@ -98,9 +96,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         for mintf in self.config["MAIN"]["agent"]["interfaces"]:
             if vlan in self.config["MAIN"][mintf].get("all_vlan_range_list", []):
                 if f"{iptype}-address-pool" in self.config["MAIN"][mintf]:
-                    overlap = checkOverlap(
-                        self.config["MAIN"][mintf][f"{iptype}-address-pool"], ip, iptype
-                    )
+                    overlap = checkOverlap(self.config["MAIN"][mintf][f"{iptype}-address-pool"], ip, iptype)
                     if overlap:
                         break
         return overlap
@@ -109,25 +105,15 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         """Compare active vs file on node config"""
         self.logger.info(f"Active Comparison for {actKey}")
         if actKey in ["vsw", "kube"]:
-            for key, vals in (
-                self.activeDeltas.get("output", {}).get(actKey, {}).items()
-            ):
+            for key, vals in self.activeDeltas.get("output", {}).get(actKey, {}).items():
                 if not isinstance(vals, dict):
                     continue
                 if self.hostname in vals:
                     if not self._started(vals):
                         # This resource has not started yet. Continue.
                         continue
-                    if (
-                        key
-                        in self.activeFromFE.get("output", {}).get(actKey, {}).keys()
-                        and self.hostname
-                        in self.activeFromFE["output"][actKey][key].keys()
-                    ):
-                        if (
-                            vals[self.hostname]
-                            == self.activeFromFE["output"][actKey][key][self.hostname]
-                        ):
+                    if key in self.activeFromFE.get("output", {}).get(actKey, {}).keys() and self.hostname in self.activeFromFE["output"][actKey][key].keys():
+                        if vals[self.hostname] == self.activeFromFE["output"][actKey][key][self.hostname]:
                             continue
                         actCall.modify(
                             vals[self.hostname],
@@ -149,9 +135,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         """Ensure all active resources are enabled, configured"""
         self.logger.info(f"Active Ensure for {actKey}")
         if actKey in ["vsw", "kube"]:
-            for key, vals in (
-                self.activeFromFE.get("output", {}).get(actKey, {}).items()
-            ):
+            for key, vals in self.activeFromFE.get("output", {}).get(actKey, {}).items():
                 if not isinstance(vals, dict):
                     continue
                 if self.hostname in vals:

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# pylint: disable=line-too-long
 """Routing interface component. Applys route rules on DTN
 
 Authors:
@@ -9,18 +11,20 @@ Date: 2021/01/20
 import re
 from dataclasses import dataclass
 
-from SiteRMLibs.CustomExceptions import (FailedInterfaceCommand, FailedRoutingCommand)
+from SiteRMLibs.CustomExceptions import FailedInterfaceCommand, FailedRoutingCommand
 from SiteRMLibs.MainUtilities import (
+    callSiteFE,
     execute,
     externalCommand,
     getFullUrl,
     getLoggingObject,
-    callSiteFE,
 )
+
 
 @dataclass
 class PublishStateInput:
     """Data class for publish state input parameters."""
+
     modtype: str
     uuid: str
     hostname: str
@@ -78,6 +82,7 @@ class Rules:
 
     def add_rule(self, rule_id, rule_from, rule_to, rule_lookup):
         """Add Rule to list"""
+
         def __to_str(val):
             """Convert value to string"""
             return val.decode("utf-8") if isinstance(val, bytes) else val
@@ -88,7 +93,6 @@ class Rules:
         self.rule_lookup.append(__to_str(rule_lookup))
         # Identify from rule_from and IP range on the host;
         self._add_iprange(rule_from)
-
 
     @staticmethod
     def indices(lst, element):
@@ -149,10 +153,9 @@ class Rules:
         """Identify if ip_find is in any of the ranges"""
         overlaprange, _ = self.rulercli.findOverlapsRange(ip_find, "ipv6")
         if overlaprange:
-            return self.getvals(
-                self.indices(self.rule_ip_table, overlaprange)
-            )
+            return self.getvals(self.indices(self.rule_ip_table, overlaprange))
         return []
+
 
 class Routing:
     """Virtual interface class."""
@@ -172,18 +175,14 @@ class Routing:
         cmdOut = externalCommand(command, False)
         out, err = cmdOut.communicate()
         if cmdOut.returncode != 0:
-            raise FailedRoutingCommand(
-                f"Failed to get rule list. Out: {out}, Err: {err}"
-            )
+            raise FailedRoutingCommand(f"Failed to get rule list. Out: {out}, Err: {err}")
         for line in out.split(b"\n"):
             match = re.match(rb"(\d+):[ \t]+from ([^ \t]+) lookup ([^ \t]+)$", line)
             if match:
                 matched = match.groups()
                 self.rules.add_rule(matched[0], matched[1], None, matched[2])
                 continue
-            match = re.match(
-                rb"(\d+):[ \t]+from ([^ \t]+) to ([^ \t]+) lookup ([^ \t]+)$", line
-            )
+            match = re.match(rb"(\d+):[ \t]+from ([^ \t]+) to ([^ \t]+) lookup ([^ \t]+)$", line)
             if match:
                 matched = match.groups()
                 self.rules.add_rule(matched[0], matched[1], matched[2], matched[3])
@@ -214,26 +213,16 @@ class Routing:
         self._refreshRuleList()
         initialized = False
         try:
-            if (
-                route.get("src_ipv6_intf", "")
-                and route.get("dst_ipv6", "")
-                and self.rules.lookup_to(route["dst_ipv6"])
-            ):
+            if route.get("src_ipv6_intf", "") and route.get("dst_ipv6", "") and self.rules.lookup_to(route["dst_ipv6"]):
                 initialized = True
-                self.apply_rule(f"ip -6 rule del to {route['dst_ipv6']}", route['src_ipv6_intf'], route['src_ipv6'])
+                self.apply_rule(f"ip -6 rule del to {route['dst_ipv6']}", route["src_ipv6_intf"], route["src_ipv6"])
             if route.get("src_ipv6", "") and route.get("src_ipv6_intf", ""):
                 if self.rules.lookup_from_lookup(f"{route['src_ipv6']}/128", route["src_ipv6_intf"]):
                     initialized = True
-                    self.apply_rule(
-                        f"ip -6 rule del from {route['src_ipv6']}/128", route['src_ipv6_intf'], route['src_ipv6']
-                    )
-                if self.rules.lookup_to_lookup(
-                    f"{route['src_ipv6']}/128", route["src_ipv6_intf"]
-                ):
+                    self.apply_rule(f"ip -6 rule del from {route['src_ipv6']}/128", route["src_ipv6_intf"], route["src_ipv6"])
+                if self.rules.lookup_to_lookup(f"{route['src_ipv6']}/128", route["src_ipv6_intf"]):
                     initialized = True
-                    self.apply_rule(
-                        f"ip -6 rule del to {route['src_ipv6']}/128", route['src_ipv6_intf'], route['src_ipv6']
-                    )
+                    self.apply_rule(f"ip -6 rule del to {route['src_ipv6']}/128", route["src_ipv6_intf"], route["src_ipv6"])
             if initialized:
                 publishState(PublishStateInput("ipv6", uuid, self.hostname, "deactivated", self.fullURL, self.sitename))
         except FailedInterfaceCommand:
@@ -247,32 +236,20 @@ class Routing:
         initialized = False
         try:
             if route.get("src_ipv6_intf", "") and route.get("dst_ipv6", ""):
-                rules = self.rules.lookup_to_lookup(
-                    route["dst_ipv6"], route["src_ipv6_intf"]
-                )
+                rules = self.rules.lookup_to_lookup(route["dst_ipv6"], route["src_ipv6_intf"])
                 if not rules:
                     initialized = True
-                    self.apply_rule(
-                        f"ip -6 rule add to {route['dst_ipv6']}", route['src_ipv6_intf'], route['src_ipv6']
-                    )
+                    self.apply_rule(f"ip -6 rule add to {route['dst_ipv6']}", route["src_ipv6_intf"], route["src_ipv6"])
 
             if route.get("src_ipv6", "") and route.get("src_ipv6_intf", ""):
-                rules = self.rules.lookup_from_lookup(
-                    route["src_ipv6"], route["src_ipv6_intf"]
-                )
+                rules = self.rules.lookup_from_lookup(route["src_ipv6"], route["src_ipv6_intf"])
                 if not rules:
                     initialized = True
-                    self.apply_rule(
-                        f"ip -6 rule add from {route['src_ipv6']}/128", route['src_ipv6_intf'], route['src_ipv6']
-                    )
-                rules = self.rules.lookup_to_lookup(
-                    route["src_ipv6"], route["src_ipv6_intf"]
-                )
+                    self.apply_rule(f"ip -6 rule add from {route['src_ipv6']}/128", route["src_ipv6_intf"], route["src_ipv6"])
+                rules = self.rules.lookup_to_lookup(route["src_ipv6"], route["src_ipv6_intf"])
                 if not rules:
                     initialized = True
-                    self.apply_rule(
-                        f"ip -6 rule add to {route['src_ipv6']}/128", route['src_ipv6_intf'], route['src_ipv6']
-                    )
+                    self.apply_rule(f"ip -6 rule add to {route['src_ipv6']}/128", route["src_ipv6_intf"], route["src_ipv6"])
             if initialized:
                 publishState(PublishStateInput("ipv6", uuid, self.hostname, "activated", self.fullURL, self.sitename))
         except FailedInterfaceCommand:

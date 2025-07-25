@@ -17,28 +17,26 @@ import tracemalloc
 
 import psutil
 from SiteRMLibs import __version__ as runningVersion
+from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
+from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
+    HOSTSERVICES,
+    callSiteFE,
+    contentDB,
+    createDirs,
     getDBConn,
     getFullUrl,
     getHostname,
     getLoggingObject,
     getUTCnow,
     getVal,
-    callSiteFE,
-    contentDB,
-    createDirs,
-    HOSTSERVICES,
     loadEnvFile,
 )
-from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
-from SiteRMLibs.GitConfig import getGitConfig
 
 
 def getParser(description):
     """Returns the argparse parser."""
-    oparser = argparse.ArgumentParser(
-        description=description, prog=os.path.basename(sys.argv[0]), add_help=True
-    )
+    oparser = argparse.ArgumentParser(description=description, prog=os.path.basename(sys.argv[0]), add_help=True)
     oparser.add_argument(
         "--action",
         dest="action",
@@ -97,9 +95,7 @@ def getParser(description):
         default=False,
     )
     # Add config param for debug level
-    oparser.add_argument(
-        "--loglevel", dest="loglevel", default=None, help="Log level. Default None"
-    )
+    oparser.add_argument("--loglevel", dest="loglevel", default=None, help="Log level. Default None")
     oparser.set_defaults(logtostdout=False)
     return oparser
 
@@ -108,9 +104,7 @@ def validateArgs(inargs):
     """Validate arguments."""
     # Check port
     if inargs.action not in ["start", "stop", "status", "restart"]:
-        raise Exception(
-            f"Action '{inargs.action}' not supported. Supported actions: start, stop, status, restart"
-        )
+        raise Exception(f"Action '{inargs.action}' not supported. Supported actions: start, stop, status, restart")
 
 
 class DBBackend:
@@ -142,9 +136,7 @@ class DBBackend:
                 "runtime": kwargs.get("runtime", -1),
                 "version": kwargs.get("version", runningVersion),
                 "updatedate": getUTCnow(),
-                "exc": str(kwargs.get("exc", "No Exception provided by service"))[
-                    :4095
-                ],
+                "exc": str(kwargs.get("exc", "No Exception provided by service"))[:4095],
             }
             dbobj = getVal(self.dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
             services = dbobj.get(
@@ -160,9 +152,7 @@ class DBBackend:
                 dbobj.update("servicestates", [dbOut])
         except Exception:
             excType, excValue = sys.exc_info()[:2]
-            print(
-                f"Error details in reportServiceStatus. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
-            )
+            print(f"Error details in reportServiceStatus. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
             reported = False
         return reported
 
@@ -185,9 +175,7 @@ class DBBackend:
             callSiteFE(dic, fullUrl, f"/api/{self.sitename}/services")
         except Exception:
             excType, excValue = sys.exc_info()[:2]
-            print(
-                f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
-            )
+            print(f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
 
     def _autoRefreshDB(self, **kwargs):
         """Auto Refresh if there is a DB request to do so."""
@@ -230,9 +218,7 @@ class DBBackend:
                 refresh = True
         except Exception:
             excType, excValue = sys.exc_info()[:2]
-            print(
-                f"Error details in _autoRefreshAPI. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
-            )
+            print(f"Error details in _autoRefreshAPI. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
         return refresh
 
 
@@ -308,14 +294,10 @@ class Daemon(DBBackend):
                     self.logger.info(fd.read())
             except IOError:
                 pass
-            self.logger.info(
-                "Database not ready. See details above. If continous, check the mariadb and mariadb_init process."
-            )
+            self.logger.info("Database not ready. See details above. If continous, check the mariadb and mariadb_init process.")
             retval = False
         if not os.path.exists("/tmp/config-fetcher-ready") and not self.firstInitDone:
-            self.logger.info(
-                "Config Fetcher not ready. See details above. If continous, check the config-fetcher process."
-            )
+            self.logger.info("Config Fetcher not ready. See details above. If continous, check the config-fetcher process.")
             retval = False
         return retval
 
@@ -459,9 +441,7 @@ class Daemon(DBBackend):
                 psutil.Process(pid)
                 print(f"Application info: PID {pid}")
         except psutil.NoSuchProcess:
-            print(
-                f"PID lock present, but process not running. Remove lock file {self.pidfile}"
-            )
+            print(f"PID lock present, but process not running. Remove lock file {self.pidfile}")
             sys.exit(1)
         except IOError:
             print(f"Is application running? No Lock file {self.pidfile}")
@@ -501,9 +481,7 @@ class Daemon(DBBackend):
             createDirs("/tmp/siterm-states/")
             fname = f"/tmp/siterm-states/{self.component}.json"
             if self.inargs.devicename:
-                fname = (
-                    f"/tmp/siterm-states/{self.component}-{self.inargs.devicename}.json"
-                )
+                fname = f"/tmp/siterm-states/{self.component}-{self.inargs.devicename}.json"
             self.contentDB.dumpFileContentAsJson(
                 fname,
                 {
@@ -533,9 +511,7 @@ class Daemon(DBBackend):
                 refresh = self._autoRefreshAPI(**kwargs)
         except Exception:
             excType, excValue = sys.exc_info()[:2]
-            print(
-                f"Error details in autoRefreshDB. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
-            )
+            print(f"Error details in autoRefreshDB. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
             return refresh
         return refresh
 
@@ -567,9 +543,7 @@ class Daemon(DBBackend):
                 sys.exit(1)
             except (NoOptionError, NoSectionError) as ex:
                 exc = traceback.format_exc()
-                self.logger.critical(
-                    f"Exception!!! Traceback details: {exc}, Catched Exception: {ex}"
-                )
+                self.logger.critical(f"Exception!!! Traceback details: {exc}, Catched Exception: {ex}")
                 time.sleep(self.sleepTimers["failure"])
                 self._refreshConfigAfterFailure()
             except:
@@ -592,9 +566,7 @@ class Daemon(DBBackend):
                 self.logger.debug("Snapshot taken after rthread startwork attempt")
                 for stat in snapshot.statistics("lineno")[:10]:
                     self.logger.debug("MEM_STAT: %s", stat)
-                self.logger.debug(
-                    "Final Memory usage: %s", tracemalloc.get_traced_memory()
-                )
+                self.logger.debug("Final Memory usage: %s", tracemalloc.get_traced_memory())
                 self.logger.debug("=" * 50)
 
     def run(self):
@@ -619,12 +591,8 @@ class Daemon(DBBackend):
                         exc = traceback.format_exc()
                         self.reporter("WARNING", sitename, stwork, str(ex))
                         self.logger.warning("Service Warning!!! Error details:  %s", ex)
-                        self.logger.warning(
-                            "Service Warning!!! Traceback details:  %s", exc
-                        )
-                        self.logger.warning(
-                            "It is not fatal error. Continue to run normally."
-                        )
+                        self.logger.warning("Service Warning!!! Traceback details:  %s", exc)
+                        self.logger.warning("It is not fatal error. Continue to run normally.")
                     except:
                         hadFailure = True
                         exc = traceback.format_exc()
@@ -648,9 +616,7 @@ class Daemon(DBBackend):
                 self.logger.info("Total Runtime expired. Stopping Service")
                 sys.exit(0)
             if refresh:
-                self.logger.info(
-                    "Re-initiating Service with new configuration from GIT. Forced by DB"
-                )
+                self.logger.info("Re-initiating Service with new configuration from GIT. Forced by DB")
                 self.cleaner()
                 self._refreshConfig()
                 self.refreshThreads()

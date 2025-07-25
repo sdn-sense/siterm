@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
+# pylint: disable=no-name-in-module
 """FastAPI application for SiteFE REST API."""
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
-from SiteFE.REST.Topo import router as topo_router
-from SiteFE.REST.Frontend import router as fe_router
-from SiteFE.REST.Delta import router as delta_router
-from SiteFE.REST.Host import router as host_router
-from SiteFE.REST.Prometheus import router as prometheus_router
 from SiteFE.REST.Debug import router as debug_router
+from SiteFE.REST.Delta import router as delta_router
+from SiteFE.REST.Frontend import router as fe_router
+from SiteFE.REST.Host import router as host_router
 from SiteFE.REST.Model import router as model_router
+from SiteFE.REST.Prometheus import router as prometheus_router
 from SiteFE.REST.Service import router as service_router
+from SiteFE.REST.Topo import router as topo_router
 
 app = FastAPI()
 

@@ -10,32 +10,30 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
-from fastapi import APIRouter, Depends, HTTPException, Response, status, Path
 
+from fastapi import APIRouter, Depends, HTTPException, Path, Response, status
 from prometheus_client import CONTENT_TYPE_LATEST
-
-from SiteFE.REST.dependencies import allAPIDeps, checkSite
-from SiteFE.REST.dependencies import DEFAULT_RESPONSES
+from SiteFE.REST.dependencies import DEFAULT_RESPONSES, allAPIDeps
 
 router = APIRouter()
+
 
 # =========================================================
 # /api/{sitename}/prometheus/metrics
 # =========================================================
-@router.get("/{sitename}/prometheus/metrics",
-            summary="Get Service Metrics",
-            description=("Retrieves service metrics from Prometheus."),
-            tags=["Service Metrics"],
-            responses={**{
-                200: {
-                    "description": "TODO",
-                    "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}
-                    },
-                },
-            **DEFAULT_RESPONSES})
-async def getprommetrics(
-    sitename: str = Path(..., description="The site name to retrieve the service metrics for."),
-    deps=Depends(allAPIDeps)):
+@router.get(
+    "/{sitename}/prometheus/metrics",
+    summary="Get Service Metrics",
+    description=("Retrieves service metrics from Prometheus."),
+    tags=["Service Metrics"],
+    responses={
+        **{
+            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def getprommetrics(sitename: str = Path(..., description="The site name to retrieve the service metrics for."), deps=Depends(allAPIDeps)):
     """
     Get service metrics from Prometheus.
     """
@@ -52,25 +50,28 @@ async def getprommetrics(
     except Exception as ex:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unable to retrieve metrics") from ex
 
+
 # =========================================================
 # /prometheus/passthrough
 # =========================================================
 # TODO: Implement a passthrough endpoint for Prometheus queries
-@router.get("/{sitename}/prometheus/passthrough/{hostname}",
-            summary="Prometheus Passthrough",
-            description=("This endpoint is a passthrough of host-level Prometheus output."),
-            tags=["Service Metrics"],
-            responses={**{
-                200: {
-                    "description": "TODO",
-                    "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}
-                    },
-                },
-            **DEFAULT_RESPONSES})
+@router.get(
+    "/{sitename}/prometheus/passthrough/{hostname}",
+    summary="Prometheus Passthrough",
+    description=("This endpoint is a passthrough of host-level Prometheus output."),
+    tags=["Service Metrics"],
+    responses={
+        **{
+            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
 async def prometheuspassthrough(
     _sitename: str = Path(..., description="The site name to retrieve the Prometheus passthrough for."),
     hostname: str = Path(..., description="The hostname to retrieve the Prometheus passthrough for."),
-    deps=Depends(allAPIDeps)):
+    deps=Depends(allAPIDeps),
+):
     """
     This endpoint is a passthrough of host-level Prometheus output.
     """

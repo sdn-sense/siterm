@@ -7,31 +7,31 @@ Authors:
 
 Date: 2021/01/20
 """
-import sys
 import base64
 import copy
 import datetime
 import email.utils as eut
+import fcntl
+import functools
 import hashlib
 import http.client
 import logging
 import logging.handlers
 import os
 import os.path
-import fcntl
-import functools
 import pwd
+import re
 import shlex
 import shutil
 import socket
 import subprocess
-import time
-import uuid
-import urllib.parse
-from pathlib import Path
+import sys
 import tempfile
+import time
+import urllib.parse
+import uuid
+from pathlib import Path
 from urllib.parse import parse_qs
-import re
 
 # Custom exceptions imports
 import pycurl
@@ -39,11 +39,15 @@ import requests
 import simplejson as json
 from past.builtins import basestring
 from rdflib import Graph
-from SiteRMLibs.CustomExceptions import FailedInterfaceCommand, WrongInputError
-from SiteRMLibs.CustomExceptions import NotFoundError, NotSupportedArgument, TooManyArgumentalValues
+from SiteRMLibs.CustomExceptions import (
+    FailedInterfaceCommand,
+    NotFoundError,
+    NotSupportedArgument,
+    TooManyArgumentalValues,
+    WrongInputError,
+)
 from SiteRMLibs.DBBackend import dbinterface
 from SiteRMLibs.HTTPLibrary import Requests
-
 
 HOSTSERVICES = [
     "Agent",
@@ -135,9 +139,7 @@ def getVal(conDict, **kwargs):
     if "sitename" in kwargs:
         if kwargs["sitename"] in list(conDict.keys()):
             return conDict[kwargs["sitename"]]
-        raise Exception(
-            "This SiteName is not configured on the Frontend. Contact Support"
-        )
+        raise Exception("This SiteName is not configured on the Frontend. Contact Support")
     raise Exception("This Call Should not happen. Contact Support")
 
 
@@ -200,9 +202,7 @@ def getTimeRotLogger(**kwargs):
     handler = checkLoggingHandler(**kwargs)
     if "logFile" not in kwargs:
         if "config" in kwargs:
-            kwargs["logFile"] = (
-                f"{kwargs['config'].get('general', 'logDir')}/{kwargs.get('service', __name__)}/"
-            )
+            kwargs["logFile"] = f"{kwargs['config'].get('general', 'logDir')}/{kwargs.get('service', __name__)}/"
         else:
             print("No config passed, will log to StreamLogger... Code issue!")
             return getStreamLogger(**kwargs)
@@ -237,9 +237,7 @@ def evaldict(inputDict):
         try:
             inputDict = inputDict.decode("utf-8")
         except UnicodeDecodeError as ex:
-            raise WrongInputError(
-                f"Input bytes could not be decoded. Error: {ex}"
-            ) from ex
+            raise WrongInputError(f"Input bytes could not be decoded. Error: {ex}") from ex
     # At this stage, if not string, raise error.  list/dict is checked in previous if
     if not isinstance(inputDict, str):
         raise WrongInputError("Input must be a string or dict/list.")
@@ -247,6 +245,7 @@ def evaldict(inputDict):
         return json.loads(inputDict)
     except (json.JSONDecodeError, TypeError, ValueError) as ex:
         raise WrongInputError(f"Input looks like JSON but could not be parsed. Error: {ex}") from ex
+
 
 def jsondumps(inputDict):
     """Dump JSON to string"""
@@ -278,9 +277,7 @@ def externalCommand(command, communicate=True):
 def externalCommandStdOutErr(command, stdout, stderr):
     """Execute External Commands and return stdout and stderr."""
     command = shlex.split(str(command))
-    with open(stdout, "w", encoding="utf-8") as outFD, open(
-        stderr, "w", encoding="utf-8"
-    ) as errFD:
+    with open(stdout, "w", encoding="utf-8") as outFD, open(stderr, "w", encoding="utf-8") as errFD:
         with subprocess.Popen(command, stdout=outFD, stderr=errFD) as proc:
             return proc.communicate()
 
@@ -294,9 +291,7 @@ def execute(command, logger, raiseError=True):
     if cmdOut.returncode != 0 and raiseError:
         raise FailedInterfaceCommand(msg)
     if cmdOut.returncode != 0:
-        logger.debug(
-            f"RaiseError is False, but command failed. Only logging Errmsg: {msg}"
-        )
+        logger.debug(f"RaiseError is False, but command failed. Only logging Errmsg: {msg}")
         return False
     return True
 
@@ -376,9 +371,7 @@ def getWebContentFromURL(url, raiseEx=True, params=None):
                 out = requests.get(url, timeout=60)
             return out
         except requests.exceptions.RequestException as ex:
-            print(
-                f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}"
-            )
+            print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
             if raiseEx and retries == 0:
                 raise
             out = {}
@@ -399,9 +392,7 @@ def postWebContentToURL(url, **kwargs):
             out = requests.post(url, timeout=60, **kwargs)
             return out
         except requests.exceptions.RequestException as ex:
-            print(
-                f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}"
-            )
+            print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
             if raiseEx and retries == 0:
                 raise
             out = {}
@@ -447,7 +438,6 @@ def removeFile(fileLoc):
     return False
 
 
-
 def fileLock(func):
     """Decorator to create a lock file and wait if another process holds it."""
 
@@ -473,6 +463,7 @@ def fileLock(func):
 
     return wrapper
 
+
 def dumpFileContentAsJson(outFile, content):
     """Dump File content with locks."""
     tmpoutFile = outFile + ".tmp"
@@ -481,9 +472,11 @@ def dumpFileContentAsJson(outFile, content):
     shutil.move(tmpoutFile, outFile)
     return True
 
+
 def saveContent(destFileName, outputDict):
     """Saves all content to a file."""
     return dumpFileContentAsJson(destFileName, outputDict)
+
 
 class contentDB:
     """File Saver, loader class."""
@@ -549,23 +542,17 @@ def delete(inputObj, delObj):
         try:
             tmpList.remove(delObj)
         except ValueError as ex:
-            print(
-                f"Delete object {delObj} is not in inputObj {tmpList} list. Err: {ex}"
-            )
+            print(f"Delete object {delObj} is not in inputObj {tmpList} list. Err: {ex}")
         return tmpList
     if isinstance(inputObj, dict):
         tmpDict = copy.deepcopy(inputObj)
         try:
             del tmpDict[delObj]
         except KeyError as ex:
-            print(
-                f"Delete object {delObj} is not in inputObj {tmpList} dict. Err: {ex}"
-            )
+            print(f"Delete object {delObj} is not in inputObj {tmpList} dict. Err: {ex}")
         return tmpDict
     # This should not happen
-    raise WrongInputError(
-        f"Provided input type is not available for deletion. Type {type(inputObj)}"
-    )
+    raise WrongInputError(f"Provided input type is not available for deletion. Type {type(inputObj)}")
 
 
 def parse_gui_form_post(inputVal):
@@ -573,9 +560,7 @@ def parse_gui_form_post(inputVal):
     out = {}
     for item in inputVal.split(b"&"):
         tmpItem = item.split(b"=")
-        out[tmpItem[0].decode("utf-8")] = urllib.parse.unquote(
-            tmpItem[1].decode("utf-8")
-        )
+        out[tmpItem[0].decode("utf-8")] = urllib.parse.unquote(tmpItem[1].decode("utf-8"))
     return out
 
 
@@ -685,9 +670,7 @@ def getUrlParams(environ, paramsList):
         outVals = query_params.get(key, [])
 
         if len(outVals) > 1:
-            raise TooManyArgumentalValues(
-                f"Parameter {key} has too many defined values"
-            )
+            raise TooManyArgumentalValues(f"Parameter {key} has too many defined values")
 
         if len(outVals) == 1:
             val = outVals[0]
@@ -697,14 +680,10 @@ def getUrlParams(environ, paramsList):
                 elif val.lower() == "false":
                     outParams[key] = False
                 else:
-                    raise NotSupportedArgument(
-                        f"Parameter {key} value not acceptable. Allowed options: true, false"
-                    )
+                    raise NotSupportedArgument(f"Parameter {key} value not acceptable. Allowed options: true, false")
             elif param["type"] is str and "options" in param:
                 if val not in param["options"]:
-                    raise NotSupportedArgument(
-                        f"Server does not support parameter {key}={val}. Supported: {param['options']}"
-                    )
+                    raise NotSupportedArgument(f"Server does not support parameter {key}={val}. Supported: {param['options']}")
                 outParams[key] = val
             else:
                 outParams[key] = val
@@ -807,10 +786,12 @@ def getDBConn(serviceName="", cls=None):
 
     return dbConnMain
 
+
 def getDBConnObj():
     """Get database connection object (no class)"""
     # TOOD: All the rest should remove use of those params
     return dbinterface()
+
 
 def parseRDFFile(modelFile):
     """Parse model file and return Graph."""
@@ -825,8 +806,7 @@ def parseRDFFile(modelFile):
             return graph
         except Exception as ex:  # pylint: disable=broad-except
             exclist.append(f"Failed to parse with format: {fmt}. Error: {ex}")
-    raise NotFoundError(f"Model file {modelFile} could not be parsed with any format: {formats}. "
-                        f"Please check the file format or content. All exceptions: {exclist}")
+    raise NotFoundError(f"Model file {modelFile} could not be parsed with any format: {formats}. " f"Please check the file format or content. All exceptions: {exclist}")
 
 
 def getCurrentModel(cls, raiseException=False):
@@ -838,9 +818,7 @@ def getCurrentModel(cls, raiseException=False):
             currentGraph = parseRDFFile(currentModel[0]["fileloc"])
         except NotFoundError as ex:
             if raiseException:
-                raise NotFoundError(
-                    f"Model failed to parse from DB. Error: {ex}"
-                ) from NotFoundError
+                raise NotFoundError(f"Model failed to parse from DB. Error: {ex}") from NotFoundError
             currentGraph = Graph()
     elif raiseException:
         raise NotFoundError("There is no model in DB. LookUpService is running?")
@@ -923,9 +901,7 @@ def timedhourcheck(lockname, hours=1):
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 fd.write(timestamp)
         except OSError as ex:
-            print(
-                f"Error creating timestamp file: {ex}. Will return False for timedhourcheck"
-            )
+            print(f"Error creating timestamp file: {ex}. Will return False for timedhourcheck")
             return False
     return True
 
@@ -954,9 +930,7 @@ def checkHTTPService(config):
                 returnvals.append(0)
         except Exception:  # pylint: disable=broad-except
             excType, excValue = sys.exc_info()[:2]
-            print(
-                f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}"
-            )
+            print(f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
             returnvals.append(1)
     return 0 if not returnvals else any(returnvals)
 
