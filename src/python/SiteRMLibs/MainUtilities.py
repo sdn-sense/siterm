@@ -14,7 +14,6 @@ import email.utils as eut
 import fcntl
 import functools
 import hashlib
-import httpx
 import http.client
 import logging
 import logging.handlers
@@ -33,6 +32,8 @@ import urllib.parse
 import uuid
 from pathlib import Path
 from urllib.parse import parse_qs
+
+import httpx
 
 # Custom exceptions imports
 import requests

@@ -11,6 +11,7 @@ Date                    : 2025/07/14
 """
 import os
 from dataclasses import dataclass
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel
 from SiteFE.REST.dependencies import DEFAULT_RESPONSES, allAPIDeps, checkSite
@@ -30,12 +31,14 @@ router = APIRouter()
 @dataclass
 class HostItem(BaseModel):
     """Service Item Model."""
+
     # pylint: disable=too-few-public-methods
     hostname: str
     ip: str
     # Optional fields
     insertTime: int = None
     updateTime: int = None
+
     class Config:
         # pylint: disable=missing-class-docstring
         # Allow extra fields

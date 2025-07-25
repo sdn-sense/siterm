@@ -22,6 +22,7 @@ Date                    : 2017/09/26
 import os
 import socket
 import urllib.parse
+
 import httpx
 from SiteRMLibs.CustomExceptions import ValidityFailure
 
@@ -48,12 +49,10 @@ def check_server_url(url):
 
 
 def sanitizeURL(url):
-    """Take the url return sanitized url object
-        or password."""
+    """Take the url return sanitized clean URL."""
     endpoint = urllib.parse.urlparse(url)
     netloc = f"{endpoint.hostname}:{endpoint.port}" if endpoint.port else endpoint.hostname
-    cleanUrl = urllib.parse.urlunparse([endpoint.scheme, netloc, endpoint.path,
-                                        endpoint.params, endpoint.query, endpoint.fragment])
+    cleanUrl = urllib.parse.urlunparse([endpoint.scheme, netloc, endpoint.path, endpoint.params, endpoint.query, endpoint.fragment])
     return cleanUrl
 
 
@@ -88,23 +87,17 @@ def getCAPathFromEnv():
 
 class Requests:
     """Main Requests class to handle HTTP requests."""
+
     def __init__(self, url="http://localhost", inputdict=None, config=None):
         inputdict = inputdict or {}
         self.config = config
-        self.default_headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "User-Agent": f"SiteRM + {socket.gethostname()}"
-        }
+        self.default_headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": f"SiteRM + {socket.gethostname()}"}
         self.additional_headers = {}
 
         self.host = sanitizeURL(url)
         check_server_url(self.host)
 
-        self.session = httpx.Client(cert=self.getCertKeyTuple(),
-                                    verify=self.getCAPath(),
-                                    timeout=30.0
-        )
+        self.session = httpx.Client(cert=self.getCertKeyTuple(), verify=self.getCAPath(), timeout=30.0)
         self.__dict__.update(inputdict)
 
     def getCertKeyTuple(self):

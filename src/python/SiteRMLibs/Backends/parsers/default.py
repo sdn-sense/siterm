@@ -29,9 +29,7 @@ class Default:
         # https://docs.w3cub.com/ansible/
         self.factName = ["default_facts", "default_command"]
         self.defVlanNaming = "Vlan%(vlanid)s"
-        self.logger = getLoggingObject(
-            config=kwargs["config"], service="SwitchBackends"
-        )
+        self.logger = getLoggingObject(config=kwargs["config"], service="SwitchBackends")
 
     def getinfo(self, _ansibleOut):
         """
