@@ -16,3 +16,4 @@ pymysql
 setuptools
 prometheus-client
 kubernetes
+httpx
