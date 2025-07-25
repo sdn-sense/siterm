@@ -265,9 +265,9 @@ class dbinterface:
                     query += "AND "
                 # if item len == 2, then it is =
                 if len(item) == 2:
-                    query += f'{item[0]} = "{item[1]}" '
+                    query += f'{item[0]} = "{str(item[1])}" '
                 elif len(item) == 3:
-                    query += f'{item[0]} {item[1]} "{item[2]}" '
+                    query += f'{item[0]} {item[1]} "{str(item[2])}" '
         if orderby:
             query += f"ORDER BY {orderby[0]} {orderby[1]} "
         if limit:
@@ -317,7 +317,7 @@ class dbinterface:
                 else:
                     query += "AND "
                 first = False
-                query += f'{item[0]} = "{item[1]}" '
+                query += f'{item[0]} = "{str(item[1])}" '
         fullquery = f"{self.getcall('delete', calltype)} {query}"
         return self.db.execute_del(fullquery, None)
 

@@ -146,11 +146,12 @@ def getVal(conDict, **kwargs):
 def getFullUrl(config, sitename=None):
     """Prepare full URL from Config."""
     webdomain = config.get("general", "webdomain")
+    # TODO, Remove everywhere sitename, as it is not used anymore
     if not sitename:
         sitename = config.get("general", "sitename")
     if not webdomain.startswith("http"):
         webdomain = "http://" + webdomain
-    return f"{webdomain}/{sitename}"
+    return f"{webdomain}/"
 
 
 def checkLoggingHandler(**kwargs):
