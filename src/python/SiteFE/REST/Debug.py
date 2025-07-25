@@ -47,7 +47,7 @@ def getDebugEntry(deps, debugvar=None, hostname=None, state=None, details=False,
         search.append(["state", state])
     out = deps["dbI"].get("debugrequests", orderby=["insertdate", "DESC"], search=search, limit=limit)
     if out is None or len(out) == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Debug request with ID {debugvar} not found.")
+        return []
     if details and debugvar != "ALL":
         return _getdebuginfo(out[0])
     if details and debugvar == "ALL":
