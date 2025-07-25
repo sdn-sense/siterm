@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """
 Throughput fairshare calculation:
 In SENSE, there can be multiple QoS Requests:
@@ -54,8 +55,8 @@ import shutil
 import tempfile
 
 from SiteRMLibs.CustomExceptions import ConfigException, OverSubscribeException
-from SiteRMLibs.MainUtilities import execute as executeCmd
 from SiteRMLibs.ipaddr import getInterfaceSpeed
+from SiteRMLibs.MainUtilities import execute as executeCmd
 
 COMPONENT = "QOS"
 
@@ -81,15 +82,13 @@ class QOS:
 
     def getQoSTotals(self):
         """Get Delta information."""
-        self.qosTotals = self.getData("/sitefe/json/frontend/getqosdata/")
+        self.qosTotals = self.getData(f"/api/{self.sitename}/qosdata")
 
     def _getvlanlistqos(self):
         """Get vlan qos dict"""
         self.activeL2 = []
         for actkey in ["vsw", "kube", "singleport"]:
-            for _key, vals in (
-                self.activeDeltas.get("output", {}).get(actkey, {}).items()
-            ):
+            for _key, vals in self.activeDeltas.get("output", {}).get(actkey, {}).items():
                 if self.hostname not in vals:
                     continue
                 if not self._started(vals):
@@ -97,9 +96,7 @@ class QOS:
                     continue
                 for key, vals1 in vals[self.hostname].items():
                     if not vals1.get("hasLabel", {}).get("value", ""):
-                        self.logger.warning(
-                            "This specific vlan request did not provided vlan id.Ignoring QOS Rules for it"
-                        )
+                        self.logger.warning("This specific vlan request did not provided vlan id.Ignoring QOS Rules for it")
                         self.logger.warning(f"Resource: {vals1}")
                         continue
                     self.activeL2.append(
@@ -116,14 +113,8 @@ class QOS:
         self.params = {}
         for interface in self.config.get("agent", "interfaces"):
             params = self.params.setdefault(interface, {})
-            params["intf_max"] = int(
-                self.config.get(interface, "bwParams").get(
-                    "maximumCapacity", getInterfaceSpeed(interface)
-                )
-            )
-            params["intf_reserve"] = int(
-                self.config.get(interface, "bwParams").get("reservedCapacity", 1000)
-            )
+            params["intf_max"] = int(self.config.get(interface, "bwParams").get("maximumCapacity", getInterfaceSpeed(interface)))
+            params["intf_reserve"] = int(self.config.get(interface, "bwParams").get("reservedCapacity", 1000))
             # Take out reserved from intf_max
             self.params[interface]["intf_max"] -= self.params[interface]["intf_reserve"]
 
@@ -190,16 +181,8 @@ class QOS:
     def _calcTotalMax(self, item, masterIntf, slaveIntf):
         """Calculate total Max based on flags in config"""
         if self.classmax:
-            total = int(
-                (
-                    self.params[masterIntf]["intf_max"]
-                    * self.params[masterIntf][slaveIntf]
-                )
-            )
-            total = (
-                int(total / self.params[masterIntf]["total_allocated"])
-                + item["reserved"]
-            )
+            total = int((self.params[masterIntf]["intf_max"] * self.params[masterIntf][slaveIntf]))
+            total = int(total / self.params[masterIntf]["total_allocated"]) + item["reserved"]
             totalAll = item["reqRate"] + item["reserved"]
             return max(total, totalAll)
         return item["reqRate"] + item["reserved"]
@@ -225,18 +208,10 @@ class QOS:
                     if intf not in added or added[intf][qosType] == 0:
                         added.setdefault(intf, {"input": 0, "output": 0})
                         tmpFD.write("\n# SENSE L3 Routing Private NS Request\n")
-                        tmpFD.write(
-                            f"interface46 {intf} {intf}-{qosType} {qosType} rate {items['total']}mbit {self.qosparams}\n"
-                        )
-                    tmpFD.write(
-                        f"  # priority{added[intf][qosType]} belongs to {item['uri']} service\n"
-                    )
-                    totalRate = self._overcommitCheck(
-                        items["master_intf"], item["reqRate"], items["total"]
-                    )
-                    tmpFD.write(
-                        f"  class priority{added[intf][qosType]} commit {item['reqRate']}mbit max {totalRate}mbit\n"
-                    )
+                        tmpFD.write(f"interface46 {intf} {intf}-{qosType} {qosType} rate {items['total']}mbit {self.qosparams}\n")
+                    tmpFD.write(f"  # priority{added[intf][qosType]} belongs to {item['uri']} service\n")
+                    totalRate = self._overcommitCheck(items["master_intf"], item["reqRate"], items["total"])
+                    tmpFD.write(f"  class priority{added[intf][qosType]} commit {item['reqRate']}mbit max {totalRate}mbit\n")
                     added[intf][qosType] += 1
                     for key, match in {
                         "dst_ipv4": "match",
@@ -248,12 +223,8 @@ class QOS:
                         elif tmpVals and isinstance(tmpVals, list):
                             for ipval in tmpVals:
                                 self.addMatchEntry(tmpFD, match, mtype, ipval)
-                tmpFD.write(
-                    "  # Default - all remaining traffic gets mapped to default class\n"
-                )
-                tmpFD.write(
-                    f"  class default commit {items['reserved']}mbit max {items['total']}mbit\n"
-                )
+                tmpFD.write("  # Default - all remaining traffic gets mapped to default class\n")
+                tmpFD.write(f"  class default commit {items['reserved']}mbit max {items['total']}mbit\n")
                 tmpFD.write("    match all\n")
 
     def _calculateQoS(self, tmpFD, useMasterIntf=False):
@@ -290,9 +261,7 @@ class QOS:
         elif self.qosPolicy == "hostlevel":
             self._calculateQoS(tmpFD)
         elif self.qosPolicy == "default-not-set":
-            self.logger.info(
-                "QoS Policy not set in configuration. set one of privatens or hostlevel."
-            )
+            self.logger.info("QoS Policy not set in configuration. set one of privatens or hostlevel.")
         else:
             raise ConfigException(f"QoS Policy {self.qosPolicy} is not supported.")
 
@@ -312,40 +281,28 @@ class QOS:
                 continue
             outrate, outtype = self.convertToRate(l2req["params"])
             if self.params[interface]["intf_max"] - outrate <= 0:
-                raise OverSubscribeException(
-                    f"Node is oversubscribed. Will not modify present QoS Rules. Max Rate: {self.params[interface]['intf_max']} Requested Rate: {outrate}"
-                )
+                raise OverSubscribeException(f"Node is oversubscribed. Will not modify present QoS Rules. Max Rate: {self.params[interface]['intf_max']} Requested Rate: {outrate}")
             self.params[interface]["intf_max"] -= outrate
             # Get params from request
             reqclass = l2req["params"].get("type", "undefined")
             uri = l2req["params"].get("uri", "undefined")
             outlines = []
-            outlines.append(
-                f"# SENSE VLAN {l2req['vlan']} {l2req['destport']} {outrate}{outtype} Class: {reqclass}\n"
-            )
+            outlines.append(f"# SENSE VLAN {l2req['vlan']} {l2req['destport']} {outrate}{outtype} Class: {reqclass}\n")
             outlines.append(f"# Request: {uri}\n")
             outlines.append("# " + "-" * 80 + "\n")
             # In case it is: guaranteedCapped,softCapped,bestEffort - we add diff class
             if reqclass == "guaranteedCapped":
-                outlines.append(
-                    f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n"
-                )
+                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n")
             elif reqclass == "softCapped":
-                outlines.append(
-                    f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n"
-                )
+                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n")
                 outlines.append(f"  class default rate {outrate}{outtype}\n")
                 # interface vlan.2074 bond0-2074 bidirectional rate 20gbit
                 #   class default commit 100mbit
             elif reqclass == "bestEffort":
-                outlines.append(
-                    f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n"
-                )
+                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n")
                 outlines.append(f"  class default rate {outrate}{outtype}\n")
             else:
-                outlines.append(
-                    f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n"
-                )
+                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n")
                 outlines.append(f"  class default rate {outrate}{outtype}\n")
             outlines.append("# " + "-" * 80 + "\n\n")
             alllines[counter] = {

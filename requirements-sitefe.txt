@@ -34,3 +34,4 @@ urllib3
 zipp
 python-multipart
 werkzeug
+fastapi

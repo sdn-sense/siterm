@@ -7,20 +7,29 @@ Authors:
 Date: 2022/01/29
 """
 import sys
-from SiteRMLibs.MainUtilities import callSiteFE, createDirs
-from SiteRMLibs.MainUtilities import getFullUrl
-from SiteRMLibs.MainUtilities import contentDB
-from SiteRMLibs.MainUtilities import getUTCnow
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.CustomExceptions import PluginException, NotFoundError, PluginFatalException, ServiceWarning
+
+from SiteRMAgent.RecurringActions.Plugins.ArpInfo import ArpInfo
 from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
 from SiteRMAgent.RecurringActions.Plugins.CPUInfo import CPUInfo
-from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
 from SiteRMAgent.RecurringActions.Plugins.KubeInfo import KubeInfo
+from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
 from SiteRMAgent.RecurringActions.Plugins.NetInfo import NetInfo
 from SiteRMAgent.RecurringActions.Plugins.StorageInfo import StorageInfo
-from SiteRMAgent.RecurringActions.Plugins.ArpInfo import ArpInfo
+from SiteRMLibs.CustomExceptions import (
+    NotFoundError,
+    PluginException,
+    PluginFatalException,
+    ServiceWarning,
+)
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import (
+    callSiteFE,
+    contentDB,
+    createDirs,
+    getFullUrl,
+    getLoggingObject,
+    getUTCnow,
+)
 
 COMPONENT = "RecurringAction"
 
@@ -83,9 +92,7 @@ class RecurringAction:
                     outputDict[tmpName]["errorType"],
                     outputDict[tmpName],
                 )
-                self.logger.error(
-                    "This error is fatal. Will not continue to report back to FE."
-                )
+                self.logger.error("This error is fatal. Will not continue to report back to FE.")
                 raiseError = True
             except Exception as ex:
                 excType, excValue = sys.exc_info()[:2]
@@ -110,16 +117,12 @@ class RecurringAction:
                 if postMethod:
                     outputDict, warnings = postMethod(outputDict)
             except PluginFatalException as ex:
-                self.logger.error(
-                    f"Plugin {tmpName} raised fatal exception. Will not continue to report back to FE."
-                )
+                self.logger.error(f"Plugin {tmpName} raised fatal exception. Will not continue to report back to FE.")
                 self.logger.error(f"Exception details: {str(ex)}")
                 excMsg += f" {str(ex)}"
                 raiseError = True
             if warnings:
-                self.logger.warning(
-                    f"Plugin {tmpName} raised warning. Will continue to report back to FE."
-                )
+                self.logger.warning(f"Plugin {tmpName} raised warning. Will continue to report back to FE.")
                 self.logger.warning(f"Exception details: {str(warnings)}")
                 excMsg += f" {str(warnings)}"
                 warnings = ""
@@ -148,18 +151,15 @@ class RecurringAction:
         self.agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
 
         self.logger.info("Will try to publish information to SiteFE")
-        fullUrl += "/sitefe"
-        outVals = callSiteFE(dic, fullUrl, "/json/frontend/updatehost")
+        outVals = callSiteFE(dic, fullUrl, f"/api/{self.sitename}/hosts")
         self.logger.info("Update Host result %s", outVals)
         if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
-            outValsAdd = callSiteFE(dic, fullUrl, "/json/frontend/addhost")
+            outValsAdd = callSiteFE(dic, fullUrl, f"/api/{self.sitename}/hosts")
             self.logger.info("Insert Host result %s", outVals)
             if outValsAdd[2] != "OK" or outValsAdd[1] != 200:
                 excMsg += " Could not publish to SiteFE Frontend."
                 excMsg += f"Update to FE: Error: {outVals[2]} HTTP Code: {outVals[1]}"
-                excMsg += (
-                    f"Add tp FE: Error: {outValsAdd[2]} HTTP Code: {outValsAdd[1]}"
-                )
+                excMsg += f"Add tp FE: Error: {outValsAdd[2]} HTTP Code: {outValsAdd[1]}"
                 self.logger.error(excMsg)
         if excMsg and raiseError:
             raise PluginException(excMsg)

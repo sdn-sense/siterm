@@ -1,63 +1,32 @@
-""" Main WSGI application """
+#!/usr/bin/env python3
+# pylint: disable=no-name-in-module
+"""FastAPI application for SiteFE REST API."""
+from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
+from SiteFE.REST.Debug import router as debug_router
+from SiteFE.REST.Delta import router as delta_router
+from SiteFE.REST.Frontend import router as fe_router
+from SiteFE.REST.Host import router as host_router
+from SiteFE.REST.Model import router as model_router
+from SiteFE.REST.Prometheus import router as prometheus_router
+from SiteFE.REST.Service import router as service_router
+from SiteFE.REST.Topo import router as topo_router
 
-import os
-import tracemalloc
-import threading
-import traceback
-import time
-from uvicorn.middleware.wsgi import WSGIMiddleware
-from SiteFE.REST.app import Frontend
+app = FastAPI()
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-class Application:
-    """Application class for WSGI"""
+app.include_router(fe_router, prefix="/api")
+app.include_router(host_router, prefix="/api")
+app.include_router(model_router, prefix="/api")
+app.include_router(delta_router, prefix="/api")
+app.include_router(debug_router, prefix="/api")
+app.include_router(topo_router, prefix="/api")
+app.include_router(prometheus_router, prefix="/api")
+app.include_router(service_router, prefix="/api")
 
-    def __init__(self):
-        self.threadcalls = {}
-        # Start tracemalloc if debug is set.
-        if os.getenv("SITERM_MEMORY_DEBUG"):
-            tracemalloc.start()
-            threading.Thread(target=self.memLogger, daemon=True).start()
+app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="ui")
 
-    def memLogger(self):
-        """Background thread to log memory snapshots periodically"""
-        while True:
-            snapshot = tracemalloc.take_snapshot()
-            top_stats = snapshot.statistics("lineno")[:20]
-
-            with open(
-                f"/var/log/httpd/memory_snapshot_{os.getpid()}.log",
-                "a",
-                encoding="utf-8",
-            ) as fd:
-                fd.write(f"Memory usage: {tracemalloc.get_traced_memory()}\n")
-                fd.write(
-                    f"=== Memory snapshot at {time.ctime()} PID {os.getpid()} ===\n"
-                )
-                for stat in top_stats:
-                    fd.write(str(stat) + "\n")
-                fd.write("\n\n")
-                fd.write("=== End of snapshot ===\n")
-                fd.write("======\n\n")
-            time.sleep(60)
-
-    def __getwrapper(self, environ):
-        """Get the wrapper for the current thread"""
-        thread_id = environ.get("mod_wsgi.thread_id", 0)
-        os_pid = os.getpid()
-        req_id = f"{thread_id}-{os_pid}"
-        if req_id not in self.threadcalls:
-            self.threadcalls[req_id] = Frontend()
-        return self.threadcalls[req_id]
-
-    def __call__(self, environ, start_fn):
-        """WSGI call"""
-        try:
-            wrapper = self.__getwrapper(environ)
-            return wrapper.mainCall(environ, start_fn)
-        except:
-            print(traceback.print_exc())
-            raise
-
-
-application = WSGIMiddleware(Application())
+for route in app.routes:
+    print(f"{route.path} - {route.name}")

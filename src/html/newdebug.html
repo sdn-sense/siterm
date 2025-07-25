@@ -28,7 +28,7 @@
       }
       $.ajax({
         type: "POST",
-        url: "/" + params['sitename'] + "/sitefe/json/frontend/submitdebug/NEW",
+        url: "/api/" + params['sitename'] + "/debug",
         data: params,
         success: function (result) {
           newAlert("New debug action submit state: " + JSON.stringify(result), params);
@@ -40,7 +40,7 @@
     }
         function doSiteUpdate(ids) {
         strSite = document.getElementById(ids + "sitename").value;
-        $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
+        $.ajax({url: '/api/' + strSite + '/hosts',
             dataType: 'json', data: {}, async: false,
             success: function(json){
                 for (j=0; j < json.length; j++){
@@ -49,7 +49,7 @@
 
         function doSiteUpdateN(ids) {
             strSite = document.getElementById(ids + "sitename").value;
-            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
+            $.get('/api/frontend/configuration', function(data){
               for (i=0; i < data['general']['sites'].length; i++){
                 sitename = data['general']['sites'][i];
                 if (strSite === sitename) {
@@ -61,7 +61,7 @@
         function doDTNUpdate(ids, ipkeys, intkeys) {
         strDTN = document.getElementById(ids + "hostname").value;
         strSite = document.getElementById(ids + "sitename").value;
-        $.ajax({url: strSite + '/sitefe/json/frontend/getdata',
+        $.ajax({url: '/api/' + strSite + '/hosts',
             dataType: 'json', data: {}, async: false,
             success: function(json){
                 for (j=0; j < json.length; j++){
@@ -89,7 +89,7 @@
         }
 
         function load_data() {
-          $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
+          $.get('/api/frontend/configuration', function(data){
             for (i=0; i < data['general']['sites'].length; i++){
               sitename = data['general']['sites'][i];
               addDropDown(sitename, $("#f1_sitename"));

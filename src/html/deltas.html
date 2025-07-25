@@ -41,7 +41,7 @@
           saveObj.append(tableTag);
        }
        function deltaStates(deltaID, sitename, saveObj){
-          $.ajax({url: sitename + '/sitefe/v1/deltastates/'+ deltaID,
+          $.ajax({url: '/api/' + sitename + '/deltastates/'+ deltaID,
             dataType: 'json', data: {}, async: false,
             success: function(json){
                 tableAdd(json, ['id', 'deltaid', 'insertdate', 'state'], saveObj);
@@ -49,7 +49,7 @@
          });
        }
        function forceCommit(deltaID, sitename){
-            $.ajax({url: sitename + '/sitefe/v1/deltas/'+ deltaID + '/actions/forcecommit',
+            $.ajax({url: '/api/' + sitename + '/deltas/'+ deltaID + '/actions/forcecommit',
               dataType: 'json',
               data: {},
               async: false,
@@ -61,7 +61,7 @@
 
        function loadDelta(deltaID, sitename)
        {
-          $.ajax({url: sitename + '/sitefe/v1/deltas/'+ deltaID + '?encode=false&summary=false&oldview=true',
+          $.ajax({url: '/api/' + sitename + '/deltas/'+ deltaID + '?encode=false&summary=false',
             dataType: 'json',
             data: {},
             async: false,
@@ -91,7 +91,7 @@
               deltaStates(deltaID, sitename, model);
               $('#v-pills-' + deltaID).empty();
               $('#v-pills-' + deltaID).append(model);
-              // Add button which will call PUT /<sitename>/sitefe/v1/deltas/<deltaid>/actions/forcecommit
+              // Add button which will call PUT /api/<sitename>/deltas/<deltaid>/actions/forcecommit
               model.append('<div class="row"><button type="button" class="btn btn-primary" onclick="forceCommit(\''+deltaID+'\', \''+sitename+'\')">Force Commit<\/button><\/div>');
           }});
        }
@@ -116,12 +116,12 @@
         }
 
         function load_data() {
-            $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
+            $.get('/api/frontend/configuration', function(data){
               defineSites(data, false);
               data['deltas'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
                  sitename = data['general']['sites'][i];
-                 $.ajax({url: sitename + '/sitefe/v1/deltas',
+                 $.ajax({url: '/api/' + sitename + '/deltas',
                    dataType: 'json',
                    data: {},
                    async: false,

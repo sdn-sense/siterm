@@ -24,22 +24,22 @@ def makeRequest(cls, url, params):
 def debugActions(cls, dataIn, dataUpd):
     """Test Debug Actions: submit, get update"""
     # SUBMIT
-    urls = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/submitdebug/NEW"
+    urls = f"/api/{cls.PARAMS['sitename']}/debug"
     outs = makeRequest(cls, urls, {"verb": "POST", "data": dataIn})
     cls.assertEqual(outs[1], 200, msg=f"Failed to POST {dataIn} to {urls}. Output: {outs}")
     cls.assertEqual(outs[2], "OK", msg=f"Failed to POST {dataIn} to {urls}. Output: {outs}")
     # GET
-    urlg = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/getdebug/{outs[0]['ID']}"
+    urlg = f"/api/{cls.PARAMS['sitename']}/debug/{outs[0]['ID']}"
     outg = makeRequest(cls, urlg, {"verb": "GET", "data": {}})
     cls.assertEqual(outg[1], 200, msg=f"Failed to GET {urlg}. Output: {outs}")
     cls.assertEqual(outg[2], "OK", msg=f"Failed to GET {urlg}. Output: {outs}")
     # UPDATE
-    urlu = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/updatedebug/{outs[0]['ID']}"
+    urlu = f"/api/{cls.PARAMS['sitename']}/debug/{outs[0]['ID']}"
     outu = makeRequest(cls, urlu, {"verb": "PUT", "data": dataUpd})
     cls.assertEqual(outu[1], 200, msg=f"Failed to PUT {dataUpd} to {urlu}. Output: {outs}")
     cls.assertEqual(outu[2], "OK", msg=f"Failed to PUT {dataUpd} to {urlu}. Output: {outs}")
     # DELETE
-    urld = f"/{cls.PARAMS['sitename']}/sitefe/json/frontend/deletedebug/{outs[0]['ID']}"
+    urld = f"/api/{cls.PARAMS['sitename']}/debug/{outs[0]['ID']}"
     outd = makeRequest(cls, urld, {"verb": "DELETE", "data": {}})
     cls.assertEqual(outd[1], 200, msg=f"Failed to DELETE on {urld}. Output: {outs}")
     cls.assertEqual(outd[2], "OK", msg=f"Failed to DELETE on {urld}. Output: {outs}")
@@ -58,14 +58,14 @@ class TestUtils(unittest.TestCase):
 
     def test_fake_url(self):
         """Test Fake Url"""
-        url = "/NoSite/sitefe/no/url/"
+        url = "/api/NoSiteName/no/url/"
         for action in ["GET", "POST", "PUT", "DELETE"]:
             out = makeRequest(self, url, {"verb": action, "data": {}})
             self.assertIn(out[1], [404, 405], msg=f"Failed to {action} on {url}. Output: {out}")
 
     def test_config(self):
         """Test to get Config"""
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/configuration"
+        url = "/frontend/configuration"
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
         self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
@@ -75,7 +75,7 @@ class TestUtils(unittest.TestCase):
 
     def test_metrics(self):
         """Test metrics API"""
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/metrics"
+        url = f"/api/{self.PARAMS['sitename']}/prometheus/metrics"
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
         self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
@@ -90,7 +90,7 @@ class TestUtils(unittest.TestCase):
 
     def test_getdebug(self):
         """Test getdebug API"""
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getdebug/dummyhostname"
+        url = f"/api/{self.PARAMS['sitename']}/debug"
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
         self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
@@ -106,7 +106,7 @@ class TestUtils(unittest.TestCase):
     def test_getalldebughostname(self):
         """Test getalldebughostname API"""
         for item in ["new", "active", "failed"]:
-            url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getalldebughostname/dummyhostname/{item}"
+            url = f"/api/{self.PARAMS['sitename']}/debug?hostname=dummyhostname&state={item}"
             out = makeRequest(self, url, {"verb": "GET", "data": {}})
             self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
             self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
@@ -268,7 +268,7 @@ class TestUtils(unittest.TestCase):
         work_dir = pathlib.Path(__file__).parent.resolve()
         os.environ["X509_USER_KEY"] = f"{work_dir}/certs/host.key"
         os.environ["X509_USER_CERT"] = f"{work_dir}/certs/host.cert"
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/configuration"
+        url = "/api/frontend/configuration"
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
         os.environ["X509_USER_KEY"] = x509_key
         os.environ["X509_USER_CERT"] = x509_cert
@@ -277,7 +277,7 @@ class TestUtils(unittest.TestCase):
 
     def test_getdata(self):
         """Test to get agentdata"""
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getdata"
+        url = f"/api/{self.PARAMS['sitename']}/hosts"
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
         self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
@@ -292,12 +292,12 @@ class TestUtils(unittest.TestCase):
             "NetInfo": {"unittest": "randomvalue"},
         }
         # Add Host
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/addhost"
+        url = f"/api/{self.PARAMS['sitename']}/hosts"
         out = makeRequest(self, url, {"verb": "PUT", "data": dic})
         self.assertEqual(out[1], 200, msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
         # Delete Host
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/deletehost"
+        url = f"/api/{self.PARAMS['sitename']}/hosts"
         out = makeRequest(self, url, {"verb": "POST", "data": dic})
         self.assertEqual(out[1], 200, msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}")
@@ -312,37 +312,37 @@ class TestUtils(unittest.TestCase):
             "NetInfo": {"unittest": "randomvalue"},
         }
         # Add Host
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/addhost"
+        url = f"/api/{self.PARAMS['sitename']}/hosts"
         out = makeRequest(self, url, {"verb": "PUT", "data": dic})
         self.assertEqual(out[1], 200, msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
         # Update Host
         dic["NetInfo"] = {"updateunittest": "updaterandomvalue"}
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/updatehost"
+        url = f"/api/{self.PARAMS['sitename']}/hosts"
         out = makeRequest(self, url, {"verb": "PUT", "data": dic})
         self.assertEqual(out[1], 200, msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to PUT on {url}. DataIn: {dic}. Output: {out}")
         # Get Host
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getdata"
+        url = f"/api/{self.PARAMS['sitename']}/hosts"
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
         self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
         # Delete Host
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/deletehost"
+        url = f"/api/{self.PARAMS['sitename']}/hosts"
         out = makeRequest(self, url, {"verb": "POST", "data": dic})
         self.assertEqual(out[1], 200, msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to POST on {url}. DataIn: {dic}. Output: {out}")
 
     def test_getactivedeltas(self):
         """Test getactivedeltas"""
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getactivedeltas"
+        url = f"/api/{self.PARAMS['sitename']}/frontend/activedeltas"
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
         self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
 
     def test_getswitchdata(self):
         """Test getswitchdata"""
-        url = f"/{self.PARAMS['sitename']}/sitefe/json/frontend/getswitchdata"
+        url = f"/api/{self.PARAMS['sitename']}/frontend/getswitchdata"
         out = makeRequest(self, url, {"verb": "GET", "data": {}})
         self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
         self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")
@@ -363,7 +363,7 @@ class TestUtils(unittest.TestCase):
             ["encode", False, 200, "OK"],
             ["model", "dummyRandom", 400, "Bad Request"],
         ]
-        url = f"/{self.PARAMS['sitename']}/sitefe/v1/models"
+        url = f"/api/{self.PARAMS['sitename']}/models"
         for option in options:
             tmpurl = url + f"?{option[0]}={option[1]}"
             out = makeRequest(self, tmpurl, {"verb": "GET", "data": {}})
@@ -404,7 +404,7 @@ class TestUtils(unittest.TestCase):
             ["encode", False, 200, "OK"],
             ["model", "dummyRandom", 400, "Bad Request"],
         ]
-        url = f"/{self.PARAMS['sitename']}/sitefe/v1/deltas"
+        url = f"/api/{self.PARAMS['sitename']}/deltas"
         for option in options:
             tmpurl = url + f"?{option[0]}={option[1]}"
             out = makeRequest(self, tmpurl, {"verb": "GET", "data": {}})
@@ -416,7 +416,7 @@ class TestUtils(unittest.TestCase):
         if len(out) >= 1 and len(out[0]) >= 1:
             delta = out[0][0]
             # Delta states
-            url = f"/{self.PARAMS['sitename']}/sitefe/v1/deltastates/{delta['id']}/"
+            url = f"/api/{self.PARAMS['sitename']}/deltas/{delta['id']}/"
             out = makeRequest(self, url, {"verb": "GET", "data": {}})
             self.assertEqual(out[1], 200, msg=f"Failed to GET on {url}. Output: {out}")
             self.assertEqual(out[2], "OK", msg=f"Failed to GET on {url}. Output: {out}")

@@ -9,16 +9,19 @@ Date: 2023/03/22
 """
 import os
 import traceback
-from SiteRMLibs.MainUtilities import jsondumps
-from SiteRMLibs.MainUtilities import createDirs
-from SiteRMLibs.MainUtilities import externalCommand
-from SiteRMLibs.MainUtilities import getUTCnow
-from SiteRMLibs.MainUtilities import evaldict
-from SiteRMLibs.MainUtilities import callSiteFE 
-from SiteRMLibs.MainUtilities import getFullUrl
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import contentDB
+
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import (
+    callSiteFE,
+    contentDB,
+    createDirs,
+    evaldict,
+    externalCommand,
+    getFullUrl,
+    getLoggingObject,
+    getUTCnow,
+    jsondumps,
+)
 
 
 class DebugService:
@@ -45,9 +48,7 @@ class DebugService:
             }
             self.dbI.update("debugrequests", [out])
             return
-        callSiteFE(
-            inDic, self.fullURL, f"/sitefe/json/frontend/updatedebug/{inDic['id']}"
-        )
+        callSiteFE(inDic, self.fullURL, f"/api/{self.sitename}/debug/{inDic['id']}")
 
     def backgroundProcessItemExists(self, item):
         """Check if background process item exists"""
@@ -58,9 +59,7 @@ class DebugService:
             out = self.diragent.getFileContentAsJson(fname)
             if out.get("id", -1) == item["id"]:
                 return True
-            self.logger.warning(
-                f"Background process item {item['id']} does not match with file: {fname}"
-            )
+            self.logger.warning(f"Background process item {item['id']} does not match with file: {fname}")
             self.logger.warning(f"File content: {out}")
             self.logger.warning(f"Item content: {item}")
         except Exception as ex:
@@ -93,9 +92,7 @@ class DebugService:
             out["stderr"].append(traceback.format_exc())
             exitCode = 501
             newstate = "failed"
-        self.logger.debug(
-            f"Finish check of process on debug action {item['id']}. ExitCode: {exitCode} NewState: {newstate}"
-        )
+        self.logger.debug(f"Finish check of process on debug action {item['id']}. ExitCode: {exitCode} NewState: {newstate}")
         if exitCode == -1 and newstate == "unknown":
             # We skip this as it is up to the process to decide what to do.
             return
@@ -145,12 +142,8 @@ class DebugService:
         self.logger.debug(f"Running command: {command}")
         cmdOut = externalCommand(command, False)
         out, err = cmdOut.communicate()
-        retOut["stdout"] += out.decode("utf-8").split("\n") + self._getOut(
-            inputDict["id"], "stdout"
-        )
-        retOut["stderr"] += err.decode("utf-8").split("\n") + self._getOut(
-            inputDict["id"], "stderr"
-        )
+        retOut["stdout"] += out.decode("utf-8").split("\n") + self._getOut(inputDict["id"], "stdout")
+        retOut["stderr"] += err.decode("utf-8").split("\n") + self._getOut(inputDict["id"], "stderr")
         retOut["processOut"] += self._getOut(inputDict["id"], "process")
         retOut["jsonout"] = self._getOutjson(inputDict["id"], "jsonout")
         retOut["exitCode"] = cmdOut.returncode
@@ -158,21 +151,11 @@ class DebugService:
 
     def _clean(self, inputDict):
         """Clean up after process is finished"""
-        self.diragent.removeFile(
-            self.workDir + f"/background-process-{inputDict['id']}.json"
-        )
-        self.diragent.removeFile(
-            self.workDir + f"/background-process-{inputDict['id']}.stdout"
-        )
-        self.diragent.removeFile(
-            self.workDir + f"/background-process-{inputDict['id']}.stderr"
-        )
-        self.diragent.removeFile(
-            self.workDir + f"/background-process-{inputDict['id']}.process"
-        )
-        self.diragent.removeFile(
-            self.workDir + f"/background-process-{inputDict['id']}.jsonout"
-        )
+        self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.json")
+        self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.stdout")
+        self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.stderr")
+        self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.process")
+        self.diragent.removeFile(self.workDir + f"/background-process-{inputDict['id']}.jsonout")
 
     def run(self, inputDict):
         """Run a specific debug service in a separate thread"""
@@ -185,17 +168,13 @@ class DebugService:
         if retOut["exitCode"] != 0 and inputDict["state"] == "new":
             self.logger.info(f"Starting background process: {inputDict['id']}")
             retOut = self._runCmd(inputDict, "start", True)
-            retOut["processOut"].append(
-                f"Starting background process: {inputDict['id']}"
-            )
+            retOut["processOut"].append(f"Starting background process: {inputDict['id']}")
             return retOut, 0, "active"
 
         # If it is active, and process is active, then get output from it.
         if retOut["exitCode"] == 0 and inputDict["state"] == "active":
             self.logger.info(f"Checking background process: {inputDict['id']}")
-            retOut["processOut"].append(
-                f"Checking background process: {inputDict['id']}"
-            )
+            retOut["processOut"].append(f"Checking background process: {inputDict['id']}")
             return retOut, 0, "active"
 
         # If it is active, but process exited, then it failed.
@@ -203,12 +182,8 @@ class DebugService:
             onetime = inputDict["requestdict"].get("onetime", False)
             # Check that it should run only once.
             if onetime:
-                self.logger.info(
-                    f"One time run and process finished: {inputDict['id']}"
-                )
-                retOut["processOut"].append(
-                    f"One time run process finished for: {inputDict['id']}"
-                )
+                self.logger.info(f"One time run and process finished: {inputDict['id']}")
+                retOut["processOut"].append(f"One time run process finished for: {inputDict['id']}")
                 if retOut["jsonout"].get("exitCode", -1) == 0:
                     self._clean(inputDict)
                     return retOut, 2, "finished"
@@ -220,17 +195,11 @@ class DebugService:
             if rununtil > utcNow:
                 self.logger.info(f"Restarting background process: {inputDict['id']}")
                 retOut = self._runCmd(inputDict, "restart", True)
-                retOut["processOut"].append(
-                    f"Restarting background process: {inputDict['id']}"
-                )
+                retOut["processOut"].append(f"Restarting background process: {inputDict['id']}")
                 return retOut, 0, "active"
-            self.logger.info(
-                f"Force stoping background process (time finished): {inputDict['id']}"
-            )
+            self.logger.info(f"Force stoping background process (time finished): {inputDict['id']}")
             retOut = self._runCmd(inputDict, "stop", True)
-            retOut["processOut"].append(
-                f"Force stoping background process: {inputDict['id']}"
-            )
+            retOut["processOut"].append(f"Force stoping background process: {inputDict['id']}")
             if retOut["jsonout"].get("exitCode", -1) == 0:
                 self._clean(inputDict)
                 return retOut, 2, "finished"

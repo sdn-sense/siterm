@@ -112,7 +112,7 @@
 
       // Function to prefill the site dropdown
       function prefillSites() {
-        $.get('/MAIN/sitefe/json/frontend/configuration', function(data){
+        $.get('/api/frontend/configuration', function(data){
           const dropdown = document.getElementById("f0_sitename");
           for (i=0; i < data['general']['sites'].length; i++){
             sitename = data['general']['sites'][i];
@@ -133,7 +133,7 @@
         // Function to load active deltas and populate the instance dropdown
         function loadModel(sitename) {
           $.ajax({
-            url: sitename + '/sitefe/v1/activedeltas/',
+            url: '/api/' + sitename + '/frontend/activedeltas',
             dataType: 'json',
             async: false,
             success: function (json) {
@@ -170,7 +170,7 @@
                 }}}
             $.ajax({
               type: "POST",
-              url: "/" + params['sitename'] + "/sitefe/json/frontend/setinstancestartend",
+              url: "/api/" + params['sitename'] + "/setinstancestartend",
               data: params,
               success: function (result) {
                 params['type'] = 'main';

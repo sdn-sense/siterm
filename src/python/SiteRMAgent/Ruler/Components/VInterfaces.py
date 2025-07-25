@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=line-too-long
 """Virtual interfaces component, which creates or tierdowns virtual interface.
 This is called from a Ruler component.
 
@@ -7,38 +8,48 @@ Authors:
 
 Date: 2022/01/20
 """
+from dataclasses import dataclass
+
 from pyroute2 import IPRoute
-from SiteRMLibs.MainUtilities import execute
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import callSiteFE 
-from SiteRMLibs.MainUtilities import getFullUrl
-from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.CustomExceptions import FailedInterfaceCommand
-from SiteRMLibs.ipaddr import getBroadCast
-from SiteRMLibs.ipaddr import normalizedip
-from SiteRMLibs.ipaddr import getInterfaces
-from SiteRMLibs.ipaddr import getInterfaceIP
-from SiteRMLibs.ipaddr import normalizedipwithnet
-from SiteRMLibs.ipaddr import getInterfaceTxQueueLen
-from SiteRMLibs.ipaddr import getIfAddrStats
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.ipaddr import (
+    getBroadCast,
+    getIfAddrStats,
+    getInterfaceIP,
+    getInterfaces,
+    getInterfaceTxQueueLen,
+    normalizedip,
+    normalizedipwithnet,
+)
+from SiteRMLibs.MainUtilities import callSiteFE, execute, getFullUrl, getLoggingObject
 
 
-def publishState(vlan, inParams, uuid, hostname, state, fullURL):
+@dataclass
+class PublishStateInput:
+    """Data class for publish state input parameters."""
+
+    vlan: dict
+    inParams: dict
+    uuid: str
+    hostname: str
+    state: str
+    fullURL: str
+    sitename: str
+
+
+def publishState(item: PublishStateInput):
     """Publish Agent apply state to Frontend."""
-    oldState = (
-        inParams.get(vlan["destport"], {})
-        .get("_params", {})
-        .get("networkstatus", "unknown")
-    )
-    if state != oldState:
+    oldState = item.inParams.get(item.vlan["destport"], {}).get("_params", {}).get("networkstatus", "unknown")
+    if item.state != oldState:
         out = {
             "uuidtype": "vsw",
-            "uuid": uuid,
-            "hostname": hostname,
-            "hostport": vlan["destport"],
-            "uuidstate": state,
+            "uuid": item.uuid,
+            "hostname": item.hostname,
+            "hostport": item.vlan["destport"],
+            "uuidstate": item.state,
         }
-        callSiteFE(out, fullURL, "/sitefe/v1/deltatimestates", "POST")
+        callSiteFE(out, item.fullURL, f"/api/{item.sitename}/deltas/{item.uuid}/timestates", "POST")
 
 
 def getDefaultMTU(config, intfKey):
@@ -81,9 +92,7 @@ def intfUp(intf):
     """Check if Interface is up"""
     state = "DOWN"
     with IPRoute() as ipObj:
-        state = ipObj.get_links(ipObj.link_lookup(ifname=intf)[0])[0].get_attr(
-            "IFLA_OPERSTATE"
-        )
+        state = ipObj.get_links(ipObj.link_lookup(ifname=intf)[0])[0].get_attr("IFLA_OPERSTATE")
     return state == "UP"
 
 
@@ -92,6 +101,7 @@ class VInterfaces:
 
     def __init__(self, config, sitename):
         self.config = config if config else getGitConfig()
+        self.sitename = sitename
         self.hostname = self.config.get("agent", "hostname")
         self.fullURL = getFullUrl(self.config, sitename)
         self.logger = getLoggingObject(config=self.config, service="Ruler")
@@ -113,18 +123,14 @@ class VInterfaces:
             command = f"ip addr add {vlan['ipv6']} broadcast {getBroadCast(vlan['ipv6'])} dev vlan.{vlan['vlan']}"
             execute(command, self.logger, raiseError)
         else:
-            self.logger.info(
-                f"Called VInterface setup for {str(vlan)}, but ip/ipv6 keys are not present."
-            )
+            self.logger.info(f"Called VInterface setup for {str(vlan)}, but ip/ipv6 keys are not present.")
             self.logger.info("Continue as nothing happened")
         # Set MTU and Txqueuelen
         if "mtu" in vlan.keys() and vlan["mtu"]:
             command = f"ip link set dev vlan.{vlan['vlan']} mtu {vlan['mtu']}"
             execute(command, self.logger, raiseError)
         if "txqueuelen" in vlan.keys() and vlan["txqueuelen"]:
-            command = (
-                f"ip link set dev vlan.{vlan['vlan']} txqueuelen {vlan['txqueuelen']}"
-            )
+            command = f"ip link set dev vlan.{vlan['vlan']} txqueuelen {vlan['txqueuelen']}"
             execute(command, self.logger, raiseError)
 
     def _removeIP(self, vlan, raiseError=False):
@@ -138,9 +144,7 @@ class VInterfaces:
             command = f"ip addr del {vlan['ipv6']} broadcast {getBroadCast(vlan['ipv6'])} dev vlan.{vlan['vlan']}"
             execute(command, self.logger, raiseError)
         else:
-            self.logger.info(
-                f"Called VInterface remove ip for {str(vlan)}, but ip/ipv6 keys are not present."
-            )
+            self.logger.info(f"Called VInterface remove ip for {str(vlan)}, but ip/ipv6 keys are not present.")
             self.logger.info("Continue as nothing happened")
 
     def _start(self, vlan, raiseError=False):
@@ -192,9 +196,7 @@ class VInterfaces:
         if "ipv6" in vlan and vlan["ipv6"]:
             vlan["ipv6"] = normalizedip(vlan["ipv6"])
             for ipv6m in allIPs.get(10, {}):
-                if vlan["ipv6"] == normalizedipwithnet(
-                    ipv6m.get("addr", ""), ipv6m.get("netmask", "")
-                ):
+                if vlan["ipv6"] == normalizedipwithnet(ipv6m.get("addr", ""), ipv6m.get("netmask", "")):
                     ip6Exists = True
         else:
             # IPv6 IP was not requested.
@@ -214,17 +216,11 @@ class VInterfaces:
                 "vlan": vals.get("hasLabel", {}).get("value", ""),
                 "ip": netInfo.get("ipv4-address", {}).get("value", ""),
                 "ipv6": netInfo.get("ipv6-address", {}).get("value", ""),
-                "mtu": netInfo.get("mtu", {}).get(
-                    "value", getDefaultMTU(self.config, key)
-                ),
-                "txqueuelen": netInfo.get("txqueuelen", {}).get(
-                    "value", getDefaultTXQ(self.config, key)
-                ),
+                "mtu": netInfo.get("mtu", {}).get("value", getDefaultMTU(self.config, key)),
+                "txqueuelen": netInfo.get("txqueuelen", {}).get("value", getDefaultTXQ(self.config, key)),
             }
             if not vlan["vlan"]:
-                self.logger.error(
-                    f"VLAN ID is not set for {key}. Skipping this interface. All info: {inParams}"
-                )
+                self.logger.error(f"VLAN ID is not set for {key}. Skipping this interface. All info: {inParams}")
                 continue
             if uri.endswith(f'{self.hostname}:{key}:vlanport+{vlan["vlan"]}'):
                 continue
@@ -244,13 +240,9 @@ class VInterfaces:
                     self._setup(vlan, True)
                 if not intfUp(f"vlan.{vlan['vlan']}"):
                     self._start(vlan, True)
-                publishState(
-                    vlan, inParams, uuid, self.hostname, "activated", self.fullURL
-                )
+                publishState(PublishStateInput(vlan, inParams, uuid, self.hostname, "activated", self.fullURL, self.sitename))
             except FailedInterfaceCommand:
-                publishState(
-                    vlan, inParams, uuid, self.hostname, "activate-error", self.fullURL
-                )
+                publishState(PublishStateInput(vlan, inParams, uuid, self.hostname, "activate-error", self.fullURL, self.sitename))
         return vlans
 
     def terminate(self, inParams, uuid):
@@ -261,18 +253,9 @@ class VInterfaces:
                 if self._statusvlan(vlan, False):
                     self._stop(vlan, False)
                     self._remove(vlan, False)
-                publishState(
-                    vlan, inParams, uuid, self.hostname, "deactivated", self.fullURL
-                )
+                publishState(PublishStateInput(vlan, inParams, uuid, self.hostname, "deactivated", self.fullURL, self.sitename))
             except FailedInterfaceCommand:
-                publishState(
-                    vlan,
-                    inParams,
-                    uuid,
-                    self.hostname,
-                    "deactivate-error",
-                    self.fullURL,
-                )
+                publishState(PublishStateInput(vlan, inParams, uuid, self.hostname, "deactivate-error", self.fullURL, self.sitename))
         return vlans
 
     def modify(self, oldParams, newParams, uuid):

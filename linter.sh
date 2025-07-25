@@ -1,11 +1,11 @@
 #!/bin/bash
-for fname in $(git diff --name-only HEAD HEAD~1); do
+for fname in $(git diff --diff-filter=AM --name-only HEAD~1 HEAD); do
     if [[ $fname == *.py ]]
     then
         echo "Checking $fname with python linters"
-        isort --profile black "$fname"
+        isort  --settings-path src/python --profile black "$fname"
         pylint "$fname" --rcfile standarts/pylintrc
-        pyink -l 120 "$fname"
+        pyink -l 200 "$fname"
     fi
     if [[ $fname == *.yaml || $fname == *.yml ]]
     then
