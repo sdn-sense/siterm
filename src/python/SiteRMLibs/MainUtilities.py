@@ -382,6 +382,7 @@ def fileLock(func):
 def dumpFileContentAsJson(outFile, content):
     """Dump File content with locks."""
     tmpoutFile = outFile + ".tmp"
+    createDirs(tmpoutFile)
     with open(tmpoutFile, "w+", encoding="utf-8") as fd:
         json.dump(content, fd)
     shutil.move(tmpoutFile, outFile)
