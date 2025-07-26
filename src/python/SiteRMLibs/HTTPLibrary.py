@@ -21,6 +21,7 @@ Date                    : 2017/09/26
 
 import os
 import socket
+import time
 import urllib.parse
 
 import httpx
@@ -42,7 +43,7 @@ def argValidity(arg, aType):
     return {} if aType == dict else []
 
 
-def check_server_url(url):
+def checkServerUrl(url):
     """Check if given url starts with http tag."""
     if not (url.startswith("http://") or url.startswith("https://")):
         raise ValueError(f"You must include http(s):// in the server address: {url}")
@@ -88,53 +89,99 @@ def getCAPathFromEnv():
 class Requests:
     """Main Requests class to handle HTTP requests."""
 
-    def __init__(self, url="http://localhost", inputdict=None, config=None):
-        inputdict = inputdict or {}
-        self.config = config
-        self.default_headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": f"SiteRM + {socket.gethostname()}"}
-        self.additional_headers = {}
-
+    def __init__(self, url="http://localhost", logger=None):
+        """Initialize the Requests class with a URL and optional logger."""
+        self.logger = logger
+        self.useragent = f"SiteRM-{socket.gethostname()}"
+        self.default_headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": self.useragent}
         self.host = sanitizeURL(url)
-        check_server_url(self.host)
+        checkServerUrl(self.host)
 
-        self.session = httpx.Client(cert=self.getCertKeyTuple(), verify=self.getCAPath(), timeout=30.0)
-        self.__dict__.update(inputdict)
+        self.session = httpx.Client(cert=self.__http_getCertKeyTuple(), verify=self.__http_getCAPath(), timeout=60.0, follow_redirects=True)
+        self.notFEsession = httpx.Client(timeout=60.0, follow_redirects=True)
 
-    def getCertKeyTuple(self):
+    def close(self):
+        """Close the HTTP sessions."""
+        self.session.close()
+        self.notFEsession.close()
+
+    def setHost(self, url):
+        """Set the host URL for the Requests class."""
+        self.host = sanitizeURL(url)
+        checkServerUrl(self.host)
+
+    def http_extendUserAgent(self, useragent):
+        """Extend the User-Agent header with additional information."""
+        self.default_headers["User-Agent"] += f" {useragent}"
+
+    def __http_resetUserAgent(self):
+        """Reset the User-Agent header to the default value."""
+        self.default_headers["User-Agent"] = self.useragent
+
+    def __http_getCertKeyTuple(self):
         """Get Certificate and Key Tuple."""
         cert, key = getKeyCertFromEnv()
         if cert and key:
             return (cert, key)
         return None
 
-    def getCAPath(self):
+    def __http_getCAPath(self):
         """Get CA Path."""
         return getCAPathFromEnv() or True
 
-    def makeRequest(self, uri, verb, data=None, headers=None, json=True):
+    def _stripHostFromUrl(self, uri):
+        """Get the full URL for the given URI."""
+        parsed = urllib.parse.urlparse(uri)
+        uri = urllib.parse.urlunparse(("", "", parsed.path, parsed.params, parsed.query, parsed.fragment))
+        if parsed.scheme in ["http", "https"]:
+            url = uri
+        else:
+            url = urllib.parse.urljoin(self.host, uri)
+        return url
+
+    def __http_makeRequest(self, verb, uri, **kwargs):
         """Make an HTTP request with the given parameters."""
-        headers = {**self.default_headers, **self.additional_headers, **argValidity(headers, dict)}
-        url = self.host + uri
+        kwargs.setdefault("data", None)
+        kwargs.setdefault("headers", None)
+        kwargs.setdefault("json", True)
+        kwargs.setdefault("SiteRMHTTPCall", True)
+        if kwargs.get("useragent"):
+            self.http_extendUserAgent(kwargs["useragent"])
+        headers = {**self.default_headers, **argValidity(kwargs["headers"], dict)}
+        url = urllib.parse.urljoin(self.host, self._stripHostFromUrl(uri))
         try:
-            response = self.session.request(method=verb, url=url, headers=headers, json=data if json else None, data=None if json else data)
-            return response.json(), response.status_code, response.reason_phrase, False
+            if kwargs["SiteRMHTTPCall"]:
+                response = self.session.request(method=verb, url=url, headers=headers, json=kwargs["data"] if kwargs["json"] else None, data=None if kwargs["json"] else kwargs["data"])
+                return response.json(), response.status_code, response.reason_phrase, False
+            # The only implementation of nonFESession is to fetch github config files
+            # We are not passing headers or json data here
+            response = self.notFEsession.request(method=verb, url=url)
+            return response.text, response.status_code, response.reason_phrase, False
         except httpx.HTTPStatusError as e:
             return e.response.text, e.response.status_code, e.response.reason_phrase, False
         except Exception as e:
             return {"error": str(e)}, 500, "Internal Error", False
+        finally:
+            self.__http_resetUserAgent()
 
-    def get(self, uri, data=None, headers=None):
-        """Make a GET request."""
-        return self.makeRequest("GET", uri, data=data, headers=headers)
-
-    def post(self, uri, data=None, headers=None):
-        """Make a POST request."""
-        return self.makeRequest("POST", uri, data=data, headers=headers)
-
-    def put(self, uri, data=None, headers=None):
-        """Make a PUT request."""
-        return self.makeRequest("PUT", uri, data=data, headers=headers)
-
-    def delete(self, uri, data=None, headers=None):
-        """Make a DELETE request."""
-        return self.makeRequest("DELETE", uri, data=data, headers=headers)
+    def makeHttpCall(self, verb, url, **kwargs):
+        """Put JSON to the Site FE."""
+        kwargs.setdefault("retries", 3)
+        kwargs.setdefault("raiseEx", True)
+        kwargs.setdefault("sleep", 1)
+        exc = []
+        if verb not in ["GET", "POST", "PUT", "DELETE"]:
+            raise ValueError(f"Invalid HTTP verb: {verb}. Must be one of GET, POST, PUT, DELETE.")
+        while kwargs["retries"] > 0:
+            kwargs["retries"] -= 1
+            try:
+                return self.__http_makeRequest(verb, url, **kwargs)
+            except Exception as ex:
+                self.logger.debug(f"Got Exception: {ex}. Will retry {kwargs['retries']} more times.")
+                exc.append(str(ex))
+                if kwargs["retries"] == 0 and kwargs["raiseEx"]:
+                    self.logger.debug("No more retries left. Raising exception.")
+                    raise Exception(f"Failed to make HTTP call after retries: {exc}") from ex
+                if kwargs["retries"] != 0:
+                    time.sleep(kwargs["sleep"])
+        return "Failed after all retries", -1, "Failed after all retries", False

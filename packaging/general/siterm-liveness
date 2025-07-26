@@ -7,7 +7,7 @@ import sys
 import argparse
 import subprocess
 from datetime import datetime
-from SiteRMLibs.MainUtilities import timedhourcheck, checkHTTPService
+from SiteRMLibs.MainUtilities import timedhourcheck
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.hostcert import HostCertHandler
 

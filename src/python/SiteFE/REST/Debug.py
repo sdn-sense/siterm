@@ -68,6 +68,19 @@ def getdefaults(config, service):
     return config["MAIN"]["debuggers"][service]
 
 
+def defaultkeys():
+    """Get default keys for debug calls."""
+    return {
+        "hostname": {"description": "Hostname to use. In case not set or undefined, requires to have a dynamicfrom set.", "default": None, "required": False},
+        "runtime": {
+            "description": "Runtime duration in seconds. Instructs process to finish task after <seconds>. If not set, defaults between default and max runtime (random int).",
+            "default": 600,
+            "required": False,
+        },
+        "dynamicfrom": {"description": "Dynamic IP selection range. This is required if hostname not set or undefined. Otherwise this is skipped.", "default": None, "required": False},
+    }
+
+
 def getactionkeys(config, action):
     """Get action keys for debug calls."""
     defaults = getdefaults(config, action)
@@ -126,41 +139,7 @@ def getactionkeys(config, action):
     }
     if action not in actionkeys:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Action '{action}' not found in debug actions.")
-    return actionkeys[action]
-
-
-def getResponses(service):
-    """Get responses for the debug calls."""
-    return {
-        **{
-            200: {"description": f"{service} debug information", "content": {"application/json": {"example": {"TODO": "Add example response here"}}}},
-            404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system." " - Service not configured in the system.",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
-                            "service_not_found": {"detail": f"{service} is not configured in the system."},
-                        }
-                    }
-                },
-            },
-        },
-        **DEFAULT_RESPONSES,
-    }
-
-
-def defaultkeys():
-    """Get default keys for debug calls."""
-    return {
-        "hostname": {"description": "Hostname to use. In case not set or undefined, requires to have a dynamicfrom set.", "default": None, "required": False},
-        "runtime": {
-            "description": "Runtime duration in seconds. Instructs process to finish task after <seconds>. If not set, defaults between default and max runtime (random int).",
-            "default": 600,
-            "required": False,
-        },
-        "dynamicfrom": {"description": "Dynamic IP selection range. This is required if hostname not set or undefined. Otherwise this is skipped.", "default": None, "required": False},
-    }
+    return {**actionkeys[action], **defaultkeys()}
 
 
 class DebugItem(BaseModel):
@@ -242,7 +221,7 @@ async def getDebugActionInfo(
     actions = getactions(deps["config"])
     if action not in actions:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Debug action '{action}' not found for site '{sitename}'.")
-    defaults = getdefaults(deps["config"], action)
+    defaults = getactionkeys(deps["config"], action)
     out = {"action": action, "defaults": defaults, "keys": "TODO", "version": runningVersion}
     return out
 

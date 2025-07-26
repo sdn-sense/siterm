@@ -1,5 +1,9 @@
 #!/bin/bash
-for fname in $(git diff --diff-filter=AM --name-only HEAD~1 HEAD); do
+for fname in $(git diff --name-only); do
+    if [[ ! -f "$fname" ]]; then
+        echo "Skipping $fname (deleted or not a file)"
+        continue
+    fi
     if [[ $fname == *.py ]]
     then
         echo "Checking $fname with python linters"

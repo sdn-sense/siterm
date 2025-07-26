@@ -275,7 +275,8 @@ async def addservicestate(item: ServiceStateItem, sitename: str = Path(..., desc
             "servicename": item.servicename,
             "runtime": item.runtime,
             "version": item.version,
-            "updatedate": getUTCnow(),
+            "insertdate": item.insertTime or getUTCnow(),
+            "updatedate": item.updateTime or getUTCnow(),
             "exc": str(item.exc)[:4095],
         }
         services = deps["dbI"].get("servicestates", search=[["hostname", item.hostname], ["servicename", item.servicename]])

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Database cleaner"""
 import pymysql
-from SiteRMLibs.MainUtilities import (getDBConn, getLoggingObject, getVal, getUTCnow)
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import getDBConn, getLoggingObject, getUTCnow, getVal
 
 
 class DBCleaner:
@@ -22,31 +22,29 @@ class DBCleaner:
 
     def clean(self, dbtable, olderthan):
         """Clean the database"""
-        print(f"Cleaning {dbtable} for {self.sitename}")
+        self.logger.info(f"Cleaning {dbtable} for {self.sitename}")
         try:
-            data = self.dbI.get(dbtable, limit=100, orderby=["insertdate", "ASC"])
+            data = self.dbI.get(dbtable, limit=10, orderby=["insertdate", "ASC"])
         except pymysql.OperationalError:
-            data = self.dbI.get(dbtable, limit=100, orderby=["updatedate", "ASC"])
+            data = self.dbI.get(dbtable, limit=10, orderby=["updatedate", "ASC"])
         for item in data:
             if "updatedate" in item:
                 if item["updatedate"] < int(getUTCnow() - olderthan):
-                    print(f"Deleting {item['id']} from {dbtable}")
+                    self.logger.info(f"Deleting {item['id']} from {dbtable}")
                     self.dbI.delete(dbtable, [["id", item["id"]]])
             elif "insertdate" in item:
                 if item["insertdate"] < int(getUTCnow() - olderthan):
-                    print(f"Deleting {item['id']} from {dbtable}")
+                    self.logger.info(f"Deleting {item['id']} from {dbtable}")
                     self.dbI.delete(dbtable, [["id", item["id"]]])
             else:
-                print(
-                    f"Item {item['id']} from {dbtable} does not have timestamp. Ignoring"
-                )
+                self.logger.info(f"Item {item['id']} from {dbtable} does not have timestamp. Ignoring")
 
     def startwork(self):
         """Start the cleaner"""
         if self.nextRun > getUTCnow():
             return
-        self.nextRun = int(getUTCnow() + 7200)  # Run every 2 hours
-        print("Starting cleaner")
+        self.nextRun = int(getUTCnow() + 360)  # Run every 5 minutes
+        self.logger.info("Starting cleaner")
         for table in [
             "debugrequests",
             "deltas",
@@ -65,9 +63,12 @@ class DBCleaner:
             "instancestartend",
             "deltasusertracking",
         ]:
-            print(f"Cleaning {table}")
-            self.clean(table, 7 * 86400)
-        print("Cleaner finished")
+            self.logger.info(f"Cleaning {table}")
+            try:
+                self.clean(table, 7 * 86400)
+            except Exception as e:
+                self.logger.error(f"Error cleaning {table}: {e}")
+        self.logger.info("Cleaner finished")
 
 
 if __name__ == "__main__":

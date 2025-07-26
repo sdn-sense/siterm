@@ -14,8 +14,9 @@ from ipaddress import (
     ip_address,
     ip_network,
 )
-import psutil
+
 import netifaces
+import psutil
 from SiteRMLibs.MainUtilities import externalCommand
 
 
@@ -92,11 +93,6 @@ def getInterfaceIP(interface):
     except ValueError:
         pass
     return out
-
-
-def getNetmaskBits(netmask):
-    """Get Netmask Bits"""
-    return sum([bin(int(x)).count("1") for x in netmask.split(".")])
 
 
 def normalizedipwithnet(ipInput, netmask):

@@ -19,9 +19,9 @@ import psutil
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.MainUtilities import (
     HOSTSERVICES,
-    callSiteFE,
     contentDB,
     createDirs,
     getDBConn,
@@ -129,12 +129,14 @@ class DBBackend:
             return False
         reported = True
         try:
+            # TODO: Report psutil process information from MainUtilities, back to FE/DB
             dbOut = {
                 "hostname": kwargs.get("hostname", "default"),
                 "servicestate": kwargs.get("servicestate", "UNSET"),
                 "servicename": kwargs.get("servicename", "UNSET"),
                 "runtime": kwargs.get("runtime", -1),
                 "version": kwargs.get("version", runningVersion),
+                "insertdate": getUTCnow(),
                 "updatedate": getUTCnow(),
                 "exc": str(kwargs.get("exc", "No Exception provided by service"))[:4095],
             }
@@ -162,7 +164,6 @@ class DBBackend:
         if self._reportServiceStatus(**kwargs):
             return
         try:
-            fullUrl = getFullUrl(self.config, kwargs["sitename"])
             dic = {
                 "servicename": kwargs["servicename"],
                 "servicestate": kwargs["servicestate"],
@@ -172,7 +173,7 @@ class DBBackend:
                 "version": runningVersion,
                 "exc": kwargs.get("exc", "No Exception provided by service"),
             }
-            callSiteFE(dic, fullUrl, f"/api/{self.sitename}/services")
+            self.handlers[kwargs["sitename"]].makeHttpCall("PUT", f"/api/{self.sitename}/services", json=dic, useragent="Daemonizer")
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
@@ -199,22 +200,16 @@ class DBBackend:
         # pylint: disable=W0703
         refresh = False
         try:
-            hostname = getFullUrl(self.config, kwargs["sitename"])
             kwargs["servicename"] = self.component
             kwargs["hostname"] = getHostname(self.config, self.component)
             url = f"/api/{self.sitename}/serviceaction?hostname={kwargs['hostname']}&servicename={self.component}"
 
-            actions = callSiteFE(kwargs, hostname, url, "GET")
+            actions = self.handlers[kwargs["sitename"]].makeHttpCall("GET", url, useragent="Daemonizer")
             # Config Fetcher is not allowed to delete other services refresh.
             if actions[0] and self.component == "ConfigFetcher":
                 return True
             for action in actions[0]:
-                callSiteFE(
-                    {"id": action["id"], "servicename": self.component},
-                    hostname,
-                    url,
-                    verb="DELETE",
-                )
+                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, json={"id": action["id"], "servicename": self.component}, useragent="Daemonizer")
                 refresh = True
         except Exception:
             excType, excValue = sys.exc_info()[:2]
@@ -275,6 +270,11 @@ class Daemon(DBBackend):
         self.memdebug = False
         if os.getenv("SITERM_MEMORY_DEBUG"):
             self.memdebug = True
+        self.handlers = {}
+        if self.getGitConf:
+            for sitename in self.config.get("general", "sites"):
+                fullURL = getFullUrl(self.config, sitename)
+                self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
 
     def _getLogLevel(self):
         """Get log level."""

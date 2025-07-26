@@ -27,13 +27,8 @@ import sys
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE, PluginException
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.MainUtilities import (
-    callSiteFE,
-    contentDB,
-    evaldict,
-    getFullUrl,
-    getLoggingObject,
-)
+from SiteRMLibs.HTTPLibrary import Requests
+from SiteRMLibs.MainUtilities import contentDB, evaldict, getFullUrl, getLoggingObject
 
 COMPONENT = "Debugger"
 
@@ -69,7 +64,8 @@ class Debugger(DebugService):
         super(Debugger, self).__init__(config, sitename)
         self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service="Debugger")
-        self.fullURL = getFullUrl(self.config, sitename)
+        fullURL = getFullUrl(self.config, sitename)
+        self.reqHandler = Requests(url=fullURL, logger=self.logger)
         self.sitename = sitename
         self.hostname = socket.getfqdn()
         self.diragent = contentDB()
@@ -78,7 +74,9 @@ class Debugger(DebugService):
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
-        self.fullURL = getFullUrl(self.config, self.sitename)
+        fullURL = getFullUrl(self.config, self.sitename)
+        self.reqHandler.close()
+        self.reqHandler = Requests(url=fullURL, logger=self.logger)
         self.hostname = socket.getfqdn()
 
     def registerService(self):
@@ -87,7 +85,7 @@ class Debugger(DebugService):
         out["serviceinfo"] = getAllIps()
         self.logger.debug(f"Service report: {out}")
         self.logger.info("Will try to publish information to SiteFE")
-        outVals = callSiteFE(out, self.fullURL, f"/api/{self.sitename}/services")
+        outVals = self.reqHandler.makeHttpCall("POST", f"/api/{self.sitename}/services", json=out, useragent="Debugger")
         self.logger.info("Update Service result %s", outVals)
         if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
             excMsg = " Could not publish to SiteFE Frontend."
@@ -98,8 +96,8 @@ class Debugger(DebugService):
     def getData(self, url):
         """Get data from FE."""
         self.logger.info(f"Query: {self.fullURL}{url}")
-        out = callSiteFE({}, self.fullURL, url, "GET")
-        if out[2] != "OK":
+        out = self.reqHandler.makeHttpCall("GET", url, useragent="Debugger")
+        if out[2] != 200:
             msg = f"Received a failure getting information from Site Frontend {str(out)}"
             self.logger.critical(msg)
             raise FailedGetDataFromFE(msg)

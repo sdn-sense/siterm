@@ -96,7 +96,7 @@ class DeltaTimeState(BaseModel):
         **DEFAULT_RESPONSES,
     },
 )
-async def getServiceDeltas(
+async def getDeltas(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the service deltas for."),
     summary: bool = Query(False, description="Whether to return a summary of the deltas. Defaults to False."),
@@ -104,10 +104,15 @@ async def getServiceDeltas(
     limit: int = Query(10, description="The maximum number of results to return. Defaults to 10."),
     _rdfformat: Literal["turtle", "json-ld", "ntriples"] = Query("turtle", description="Model format: turtle, json-ld, ntriples."),
     deps=Depends(allAPIDeps),
-):  # TODO: Implement this
+):
     """
     Get service deltas from the specified site.
     """
+    # TODO Remove this print statement in production
+    accept_header = request.headers.get("accept")
+    accept_encoding = request.headers.get("accept-encoding")
+    print(f"Accept: {accept_header}")
+    print(f"Accept-Encoding: {accept_encoding}")
     retvals = {"deltas": []}
     modTime = getModTime(request.headers)
     deltas = _getdeltas(deps["dbI"], limit=limit, updatedate=modTime)
@@ -152,6 +157,11 @@ async def submitDelta(
     """
     Create a new service delta for the specified site.
     """
+    # TODO Remove this print statement in production
+    accept_header = request.headers.get("accept")
+    accept_encoding = request.headers.get("accept-encoding")
+    print(f"Accept: {accept_header}")
+    print(f"Accept-Encoding: {accept_encoding}")
     # Check if checkignore is set, if so, check if first run is finished
     if checkReadyState(checkignore):
         # If first run is not finished, raise an exception
@@ -233,6 +243,11 @@ async def getDeltaByID(
     """
     Get delta information by its ID for the given site name.
     """
+    # TODO Remove this print statement in production
+    accept_header = request.headers.get("accept")
+    accept_encoding = request.headers.get("accept-encoding")
+    print(f"Accept: {accept_header}")
+    print(f"Accept-Encoding: {accept_encoding}")
     modTime = getModTime(request.headers)
     delta = _getdeltas(deps["dbI"], deltaID=delta_id)
     if not delta:
@@ -275,6 +290,7 @@ async def getDeltaByID(
     },
 )
 async def performActionOnDelta(
+    request: Request,
     _sitename: str = Path(..., description="The site name to perform the action on the delta for."),
     delta_id: str = Path(..., description="The ID of the delta to perform the action on."),
     action: Literal["commit", "forcecommit", "forceapply"] = Path(..., description="The action to perform on the delta."),
@@ -284,6 +300,11 @@ async def performActionOnDelta(
     """
     Perform a specified action on a delta by its ID for the given site name.
     """
+    # TODO Remove this print statement in production
+    accept_header = request.headers.get("accept")
+    accept_encoding = request.headers.get("accept-encoding")
+    print(f"Accept: {accept_header}")
+    print(f"Accept-Encoding: {accept_encoding}")
     # actions are commit, forceapply
     # Check if checkignore is set, if so, check if first run is finished
     if checkReadyState(checkignore):

@@ -20,6 +20,7 @@ UpdateDate              : 2022/05/09
 
 from SiteRMLibs.ipaddr import normalizedip
 
+
 def getValFromConfig(config, switch, port, key):
     """Get value from config."""
     if port:
@@ -76,11 +77,7 @@ class VirtualSwitchingService:
     @staticmethod
     def __getIP(iptype, inval):
         """Get IP from input"""
-        ipval = (
-            inval.get("hasNetworkAddress", {})
-            .get(f"{iptype}-address", {})
-            .get("value", "")
-        )
+        ipval = inval.get("hasNetworkAddress", {}).get(f"{iptype}-address", {}).get("value", "")
         if ipval:
             return normalizedip(ipval)
         return None
@@ -88,9 +85,7 @@ class VirtualSwitchingService:
     def __getVlanID(self, host, port, portDict):
         """Get vlan id from portDict"""
         if "hasLabel" not in portDict or "value" not in portDict["hasLabel"]:
-            raise Exception(
-                f"Bad running config. Missing vlan entry: {host} {port} {portDict}"
-            )
+            raise Exception(f"Bad running config. Missing vlan entry: {host} {port} {portDict}")
         return portDict["hasLabel"]["value"]
 
     def __getdefaultVlan(self, host, port, portDict):
@@ -128,9 +123,7 @@ class VirtualSwitchingService:
         qosPolicy = portDict.get("hasService", {}).get("type", {})
         qosPolicy = qosPolicy if qosPolicy else "default"
         if qosPolicy not in self.getConfigValue(host, "qos_policy"):
-            self.logger.warning(
-                f"QoS policy {qosPolicy} is not defined in config. "
-                "Using default instead.")
+            self.logger.warning(f"QoS policy {qosPolicy} is not defined in config. " "Using default instead.")
             qosPolicy = "default"
             return self.getConfigValue(host, "qos_policy").get(qosPolicy, 1)
         return self.getConfigValue(host, "qos_policy")[qosPolicy]
@@ -144,10 +137,7 @@ class VirtualSwitchingService:
             return
         resvRate, resvUnit = self.convertToRate(portDict.get("hasService", {}))
         if resvRate == 0:
-            self.logger.debug(
-                f"QoS is enabled for {host} {port} {portDict}. "
-                "Rate is 0, so not adding to ansible yaml"
-            )
+            self.logger.debug(f"QoS is enabled for {host} {port} {portDict}. " "Rate is 0, so not adding to ansible yaml")
             # Should we still add this to 1?
             return
 
@@ -198,12 +188,8 @@ class VirtualSwitchingService:
 
     def _presetDefaultParams(self, host, port, portDict, _params):
         vlanDict = self.__getdefaultVlan(host, port, portDict)
-        vlanDict["description"] = portDict.get("_params", {}).get(
-            "tag", "SENSE-VLAN-Without-Tag"
-        )
-        vlanDict["belongsTo"] = portDict.get("_params", {}).get(
-            "belongsTo", "SENSE-VLAN-Without-belongsTo"
-        )
+        vlanDict["description"] = portDict.get("_params", {}).get("tag", "SENSE-VLAN-Without-Tag")
+        vlanDict["belongsTo"] = portDict.get("_params", {}).get("belongsTo", "SENSE-VLAN-Without-belongsTo")
         vlanDict["state"] = "present"
 
     def _addparamsVsw(self, connDict, switches):
@@ -226,15 +212,10 @@ class VirtualSwitchingService:
             for connID, connDict in activeConfig[self.acttype].items():
                 self.connID = connID
                 if not self.checkIfStarted(connDict):
-                    self.logger.info(
-                        f"{connID} has not started yet. Not adding to apply list"
-                    )
+                    self.logger.info(f"{connID} has not started yet. Not adding to apply list")
                     continue
                 self._addparamsVsw(connDict, switches)
-                if (
-                    connDict.get("_params", {}).get("networkstatus", "")
-                    == "deactivated"
-                ):
+                if connDict.get("_params", {}).get("networkstatus", "") == "deactivated":
                     # This happens during modify, force apply;
                     self.forceapply.append(connID)
                 # If first run, we also force apply
@@ -243,11 +224,8 @@ class VirtualSwitchingService:
 
     def compareQoS(self, switch, runningConf, uuid=""):
         """Compare expected and running conf"""
-        tmpD = (
-            self.yamlconfuuid.setdefault("qos", {})
-            .setdefault(uuid, {})
-            .setdefault(switch, {})
-        )
+        # TODO: This currently is not used anywhere, and should be used for QoS on network devices;
+        tmpD = self.yamlconfuuid.setdefault("qos", {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault("qos", {})
         if tmpD == runningConf:
             return False
@@ -278,11 +256,7 @@ class VirtualSwitchingService:
     def compareVsw(self, switch, runningConf, uuid):
         """Compare expected and running conf"""
         different = False
-        tmpD = (
-            self.yamlconfuuid.setdefault(self.acttype, {})
-            .setdefault(uuid, {})
-            .setdefault(switch, {})
-        )
+        tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault("interface", {})
         # If equal - return no difference
         if tmpD == runningConf:
@@ -296,9 +270,7 @@ class VirtualSwitchingService:
                 # set vlan to state: 'absent'. In case it is absent already
                 # we dont need to set it again. Switch is unhappy to apply
                 # same command if service is not present.
-                tmpD.setdefault(
-                    key, {"state": "absent", "vlanid": val["vlanid"], "name": key}
-                )
+                tmpD.setdefault(key, {"state": "absent", "vlanid": val["vlanid"], "name": key})
                 different = True
             if val["state"] != "absent":
                 for key1, val1 in val.items():
