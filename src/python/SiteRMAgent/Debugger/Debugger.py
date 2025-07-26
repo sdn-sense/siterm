@@ -95,7 +95,6 @@ class Debugger(DebugService):
 
     def getData(self, url):
         """Get data from FE."""
-        self.logger.info(f"Query: {self.fullURL}{url}")
         out = self.reqHandler.makeHttpCall("GET", url, useragent="Debugger")
         if out[2] != 200:
             msg = f"Received a failure getting information from Site Frontend {str(out)}"
