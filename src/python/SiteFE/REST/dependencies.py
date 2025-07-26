@@ -60,7 +60,6 @@ async def depAuthenticate(request: Request):
     cert_handler = CertHandler()
     oidc_handler = OIDCHandler()
     try:
-        print("Authenticating user via certificate")
         certInfo = cert_handler.getCertInfo(request)
         userInfo = cert_handler.validateCertificate(request)
         return {"cert_info": certInfo, "user_info": userInfo}
