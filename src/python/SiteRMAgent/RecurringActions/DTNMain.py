@@ -155,10 +155,10 @@ class RecurringAction:
         self.agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
 
         self.logger.info("Will try to publish information to SiteFE")
-        outVals = self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/hosts", json=dic, retries=1, raiseEx=False, useragent="Agent")
+        outVals = self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/hosts", data=dic, retries=1, raiseEx=False, useragent="Agent")
         self.logger.info("Update Host result %s", outVals)
         if outVals[1] != 200 and outVals[3]:
-            outValsAdd = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/hosts", json=dic, retries=1, raiseEx=False, useragent="Agent")
+            outValsAdd = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/hosts", data=dic, retries=1, raiseEx=False, useragent="Agent")
             self.logger.info("Insert Host result %s", outValsAdd)
             if outValsAdd[1] != 200:
                 excMsg += " Could not publish to SiteFE Frontend."

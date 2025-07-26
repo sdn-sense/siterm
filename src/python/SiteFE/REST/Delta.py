@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long, too-many-arguments
 """
 Delta API Calls
 Title                   : siterm
@@ -11,7 +11,7 @@ Date                    : 2025/07/14
 """
 import os
 from time import sleep
-from typing import Literal
+from typing import Literal, Optional
 
 from fastapi import (
     APIRouter,
@@ -26,6 +26,7 @@ from fastapi import (
 from pydantic import BaseModel
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
+    APIResponse,
     allAPIDeps,
     checkReadyState,
     depGetModel,
@@ -66,8 +67,8 @@ class DeltaItem(BaseModel):
     modelId: str
     id: str
     # Optional fields
-    reduction: str = None
-    addition: str = None
+    reduction: Optional[str] = None
+    addition: Optional[str] = None
 
 
 class DeltaTimeState(BaseModel):
@@ -108,11 +109,6 @@ async def getDeltas(
     """
     Get service deltas from the specified site.
     """
-    # TODO Remove this print statement in production
-    accept_header = request.headers.get("accept")
-    accept_encoding = request.headers.get("accept-encoding")
-    print(f"Accept: {accept_header}")
-    print(f"Accept-Encoding: {accept_encoding}")
     retvals = {"deltas": []}
     modTime = getModTime(request.headers)
     deltas = _getdeltas(deps["dbI"], limit=limit, updatedate=modTime)
@@ -132,7 +128,7 @@ async def getDeltas(
             current["addition"] = decodebase64(delta["addition"], not encode)
             current["reduction"] = decodebase64(delta["reduction"], not encode)
         retvals["deltas"].append(current)
-    return [retvals]
+    return APIResponse.genResponse(request, [retvals])
 
 
 @router.post(
@@ -148,8 +144,8 @@ async def getDeltas(
     },
 )
 async def submitDelta(
-    item: DeltaItem,
     request: Request,
+    item: DeltaItem,
     sitename: str = Path(..., description="The site name to create the service delta for."),
     checkignore: bool = Query(False, description="Whether to bypass ignore checks (Frontend not ready yet state)"),
     deps=Depends(allAPIDeps),
@@ -157,11 +153,6 @@ async def submitDelta(
     """
     Create a new service delta for the specified site.
     """
-    # TODO Remove this print statement in production
-    accept_header = request.headers.get("accept")
-    accept_encoding = request.headers.get("accept-encoding")
-    print(f"Accept: {accept_header}")
-    print(f"Accept-Encoding: {accept_encoding}")
     # Check if checkignore is set, if so, check if first run is finished
     if checkReadyState(checkignore):
         # If first run is not finished, raise an exception
@@ -212,7 +203,7 @@ async def submitDelta(
             else:
                 outContent["Error"] = out["Error"]
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to accept delta. Error Message: {outContent['Error']}. Full dump: {jsondumps(out)}")
-        return outContent
+        return APIResponse.genResponse(request, outContent)
 
 
 # =========================================================
@@ -243,11 +234,6 @@ async def getDeltaByID(
     """
     Get delta information by its ID for the given site name.
     """
-    # TODO Remove this print statement in production
-    accept_header = request.headers.get("accept")
-    accept_encoding = request.headers.get("accept-encoding")
-    print(f"Accept: {accept_header}")
-    print(f"Accept-Encoding: {accept_encoding}")
     modTime = getModTime(request.headers)
     delta = _getdeltas(deps["dbI"], deltaID=delta_id)
     if not delta:
@@ -267,7 +253,7 @@ async def getDeltaByID(
     if not summary:
         response["addition"] = decodebase64(delta["addition"], not encode)
         response["reduction"] = decodebase64(delta["reduction"], not encode)
-    return Response(content=response, media_type="application/json", headers=headers)
+    return APIResponse.genResponse(request, response, headers=headers)
 
 
 # =========================================================
@@ -300,11 +286,6 @@ async def performActionOnDelta(
     """
     Perform a specified action on a delta by its ID for the given site name.
     """
-    # TODO Remove this print statement in production
-    accept_header = request.headers.get("accept")
-    accept_encoding = request.headers.get("accept-encoding")
-    print(f"Accept: {accept_header}")
-    print(f"Accept-Encoding: {accept_encoding}")
     # actions are commit, forceapply
     # Check if checkignore is set, if so, check if first run is finished
     if checkReadyState(checkignore):
@@ -330,11 +311,11 @@ async def performActionOnDelta(
         # Commit or force commit the delta
         deps["stateMachine"].stateChangerDelta(deps["dbI"], "committed", **delta)
         deps["stateMachine"].modelstatechanger(deps["dbI"], "add", **delta)
-        return {"result": "Action completed successfully"}
+        return APIResponse.genResponse(request, {"result": "Action completed successfully"})
     if action == "forceapply":
         # Force apply the delta
         deps["dpI"].insert("forceapplyuuid", [{"uuid": delta_id}])
-        return {"result": "Force apply action completed successfully"}
+        return APIResponse.genResponse(request, {"result": "Force apply action completed successfully"})
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid action '{action}' specified. Valid actions are 'commit', 'forcecommit', 'forceapply'.")
 
 
@@ -355,6 +336,7 @@ async def performActionOnDelta(
     },
 )
 async def getTimeStatesForDelta(
+    request: Request,
     _sitename: str = Path(..., description="The site name to retrieve the time states for the delta."),
     delta_id: str = Path(..., description="The ID of the delta to retrieve the time states for."),
     limit: int = Query(10, description="The maximum number of results to return. Defaults to 10."),
@@ -371,7 +353,7 @@ async def getTimeStatesForDelta(
     timestates = deps["dbI"].get("deltatimestates", search=[["uuid", delta_id]], orderby=["insertdate", "DESC"], limit=limit)
     if not timestates:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No time states found for the specified delta ID.")
-    return {"time_states": timestates}
+    return APIResponse.genResponse(request, {"time_states": timestates})
 
 
 @router.post(
@@ -389,6 +371,7 @@ async def getTimeStatesForDelta(
     },
 )
 async def createTimeStateForDelta(
+    request: Request,
     item: DeltaTimeState,
     _sitename: str = Path(..., description="The site name to create the time state for the delta."),
     delta_id: str = Path(..., description="The ID of the delta to create the time state for."),
@@ -404,4 +387,4 @@ async def createTimeStateForDelta(
     deps["dbI"].insert(
         "deltatimestates", [{"insertdate": getUTCnow(), "uuid": item.uuid, "uuidtype": item.uuidtype, "hostname": item.hostname, "hostport": item.hostport, "uuidstate": item.uuidstate}]
     )
-    return Response(content={"status": "Time state created successfully", "delta_id": delta_id, "time_state": item.dict()}, media_type="application/json", status_code=status.HTTP_201_CREATED)
+    return APIResponse.genResponse(request, {"status": "Time state created successfully", "delta_id": delta_id, "time_state": item.dict()}, status_code=status.HTTP_201_CREATED)

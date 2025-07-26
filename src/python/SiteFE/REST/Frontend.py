@@ -9,8 +9,13 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from SiteFE.REST.dependencies import DEFAULT_RESPONSES, allAPIDeps, checkSite
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from SiteFE.REST.dependencies import (
+    DEFAULT_RESPONSES,
+    APIResponse,
+    allAPIDeps,
+    checkSite,
+)
 from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson
 
 router = APIRouter()
@@ -31,7 +36,7 @@ router = APIRouter()
         **DEFAULT_RESPONSES,
     },
 )
-async def getAllSites(deps=Depends(allAPIDeps)):
+async def getAllSites(request: Request, deps=Depends(allAPIDeps)):
     """
     Get a list of all sites configured in the system.
     - Returns a list of site names.
@@ -41,7 +46,7 @@ async def getAllSites(deps=Depends(allAPIDeps)):
     out = deps["config"]["MAIN"].get("general", {}).get("sites", [])
     if not out:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No sites configured in the system.")
-    return out
+    return APIResponse.genResponse(request, out)
 
 
 # =========================================================
@@ -172,14 +177,14 @@ async def getAllSites(deps=Depends(allAPIDeps)):
         **DEFAULT_RESPONSES,
     },
 )
-async def getfeconfig(deps=Depends(allAPIDeps)):
+async def getfeconfig(request: Request, deps=Depends(allAPIDeps)):
     """
     Get frontend configuration in JSON format for the given site.
     - Returns frontend configuration as JSON if found, else 404 if file is missing.
     """
     if not deps.get("config", {}).getraw("MAIN"):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Frontend configuration file not found for site")
-    return deps["config"]["MAIN"]
+    return APIResponse.genResponse(request, deps["config"]["MAIN"])
 
 
 # =========================================================
@@ -235,6 +240,7 @@ async def getfeconfig(deps=Depends(allAPIDeps)):
     },
 )
 async def getswitchdata(
+    request: Request,
     sitename: str = Path(..., description="The site name to retrieve the switch data for."),
     limit: int = Query(10, description="The maximum number of results to return. Defaults to 10.", ge=1, le=100),
     deps=Depends(allAPIDeps),
@@ -244,7 +250,7 @@ async def getswitchdata(
     - Returns a list of switches with their information.
     """
     checkSite(deps, sitename)
-    return deps["dbI"].get("switch", orderby=["updatedate", "DESC"], limit=limit)
+    return APIResponse.genResponse(request, deps["dbI"].get("switch", orderby=["updatedate", "DESC"], limit=limit))
 
 
 # =========================================================
@@ -276,7 +282,7 @@ async def getswitchdata(
         **DEFAULT_RESPONSES,
     },
 )
-async def getactivedeltas(sitename: str = Path(..., description="The site name to retrieve the active deltas for."), deps=Depends(allAPIDeps)):
+async def getactivedeltas(request: Request, sitename: str = Path(..., description="The site name to retrieve the active deltas for."), deps=Depends(allAPIDeps)):
     """
     Get active delta data from the database.
     - Returns a list of active deltas with their information.
@@ -288,7 +294,7 @@ async def getactivedeltas(sitename: str = Path(..., description="The site name t
         activeDeltas["output"] = evaldict(activeDeltas["output"])
     else:
         activeDeltas = {"output": {}}
-    return activeDeltas
+    return APIResponse.genResponse(request, activeDeltas)
 
 
 # =========================================================
@@ -313,6 +319,7 @@ async def getactivedeltas(sitename: str = Path(..., description="The site name t
     },
 )
 async def getqosdata(
+    request: Request,
     sitename: str = Path(..., description="The site name to retrieve the QoS data for."),
     limit: int = Query(100, description="The maximum number of hosts to lookup. Defaults to 100.", ge=1, le=100),
     deps=Depends(allAPIDeps),
@@ -344,4 +351,4 @@ async def getqosdata(
                         out[tmpIP] += maxThrg
             else:
                 print(f"QoS Configure for {intfDict['master_intf']}, but it is not defined in agent config. Misconfig.")
-    return [out]
+    return APIResponse.genResponse(request, [out])

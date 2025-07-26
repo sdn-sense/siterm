@@ -173,7 +173,7 @@ class DBBackend:
                 "version": runningVersion,
                 "exc": kwargs.get("exc", "No Exception provided by service"),
             }
-            self.handlers[kwargs["sitename"]].makeHttpCall("PUT", f"/api/{self.sitename}/services", json=dic, useragent="Daemonizer")
+            self.handlers[kwargs["sitename"]].makeHttpCall("PUT", f"/api/{self.sitename}/services", data=dic, useragent="Daemonizer")
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
@@ -209,7 +209,7 @@ class DBBackend:
             if actions[0] and self.component == "ConfigFetcher":
                 return True
             for action in actions[0]:
-                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, json={"id": action["id"], "servicename": self.component}, useragent="Daemonizer")
+                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component}, useragent="Daemonizer")
                 refresh = True
         except Exception:
             excType, excValue = sys.exc_info()[:2]

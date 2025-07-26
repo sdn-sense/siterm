@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long, too-many-arguments
 """
 Model API Calls
 Title                   : siterm
@@ -21,9 +21,9 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import JSONResponse
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
+    APIResponse,
     allAPIDeps,
     checkSite,
     depGetModel,
@@ -68,11 +68,6 @@ async def getModelInfo(
     """
     # Check if current is set, if so, it only asks for current model
     checkSite(deps, sitename)
-    # TODO Remove this print statement in production
-    accept_header = request.headers.get("accept")
-    accept_encoding = request.headers.get("accept-encoding")
-    print(f"Accept: {accept_header}")
-    print(f"Accept-Encoding: {accept_encoding}")
     try:
         if current:
             outmodels = depGetModel(deps["dbI"], limit=1, orderby=["insertdate", "DESC"])
@@ -83,20 +78,13 @@ async def getModelInfo(
             headers = {"Last-Modified": httpdate(outmodels["insertdate"])}
             if not summary:
                 modContent = depGetModelContent(outmodels, rdfformat=rdfformat, encode=encode)
-                return JSONResponse(
-                    content={
-                        "id": outmodels["uid"],
-                        "creationTime": convertTSToDatetime(outmodels["insertdate"]),
-                        "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}",
-                        "model": modContent,
-                    },
-                    media_type="application/json",
+                return APIResponse.genResponse(
+                    request,
+                    {"id": outmodels["uid"], "creationTime": convertTSToDatetime(outmodels["insertdate"]), "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}", "model": modContent},
                     headers=headers,
                 )
-            return JSONResponse(
-                content={"id": outmodels["uid"], "creationTime": convertTSToDatetime(outmodels["insertdate"]), "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}"},
-                media_type="application/json",
-                headers=headers,
+            return APIResponse.genResponse(
+                request, {"id": outmodels["uid"], "creationTime": convertTSToDatetime(outmodels["insertdate"]), "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}"}, headers=headers
             )
         # If current is not set, return all models (based on limit)
         outmodels = depGetModel(deps["dbI"], limit=limit, orderby=["insertdate", "DESC"])
@@ -106,7 +94,7 @@ async def getModelInfo(
             if not summary:
                 tmpDict["model"] = depGetModelContent(model, rdfformat=rdfformat, encode=encode)
             models.append(tmpDict)
-        return JSONResponse(content=models, media_type="application/json")
+        return APIResponse.genResponse(request, models)
     except ModelNotFound as ex:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found in the database. First time run?") from ex
 
@@ -141,11 +129,6 @@ async def getModelByID(
     """
     Get model information by its ID for the given site name.
     """
-    # TODO Remove this print statement in production
-    accept_header = request.headers.get("accept")
-    accept_encoding = request.headers.get("accept-encoding")
-    print(f"Accept: {accept_header}")
-    print(f"Accept-Encoding: {accept_encoding}")
     # Get model by ID
     try:
         model = depGetModel(deps["dbI"], modelID=modelID, limit=1)
@@ -156,14 +139,14 @@ async def getModelByID(
         headers = {"Last-Modified": httpdate(model["insertdate"])}
         if not summary:
             modContent = depGetModelContent(model, rdfformat=rdfformat, encode=encode)
-            return JSONResponse(
-                content={"id": model["uid"], "creationTime": convertTSToDatetime(model["insertdate"]), "href": f"{request.base_url}api/{sitename}/models/{model['uid']}", "model": modContent},
-                media_type="application/json",
+            return APIResponse.genResponse(
+                request,
+                {"id": model["uid"], "creationTime": convertTSToDatetime(model["insertdate"]), "href": f"{request.base_url}api/{sitename}/models/{model['uid']}", "model": modContent},
                 headers=headers,
             )
-        return JSONResponse(
-            content={"id": model["uid"], "creationTime": convertTSToDatetime(model["insertdate"]), "href": f"{request.base_url}api/{sitename}/models/{model['uid']}"},
-            media_type="application/json",
+        return APIResponse.genResponse(
+            request,
+            {"id": model["uid"], "creationTime": convertTSToDatetime(model["insertdate"]), "href": f"{request.base_url}api/{sitename}/models/{model['uid']}"},
             headers=headers,
         )
     except ModelNotFound as ex:

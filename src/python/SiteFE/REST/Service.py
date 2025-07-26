@@ -10,10 +10,11 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
+from typing import Optional, Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel
-from SiteFE.REST.dependencies import DEFAULT_RESPONSES, allAPIDeps, checkSite
+from SiteFE.REST.dependencies import DEFAULT_RESPONSES, allAPIDeps, checkSite, APIResponse
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.MainUtilities import (
     HOSTSERVICES,
@@ -78,9 +79,9 @@ class ServiceItem(BaseModel):
     hostname: str
     servicename: str
     # Optional fields
-    serviceinfo: dict = {}
-    insertTime: int = None
-    updateTime: int = None
+    serviceinfo: Optional[Dict[str, Any]] = {}
+    insertTime: Optional[int] = None
+    updateTime: Optional[int] = None
 
 
 # GET
@@ -98,6 +99,7 @@ class ServiceItem(BaseModel):
     },
 )
 async def getservice(
+    request: Request,
     _sitename: str = Path(..., description="The site name to retrieve the service for."),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: str = Query(default=None, description="Service name to filter by"),
@@ -112,7 +114,7 @@ async def getservice(
         search.append(["hostname", hostname])
     if servicename:
         search.append(["servicename", servicename])
-    return deps["dbI"].get("services", search=search)
+    return APIResponse.genResponse(request, deps["dbI"].get("services", search=search))
 
 
 # POST
@@ -129,12 +131,12 @@ async def getservice(
         **DEFAULT_RESPONSES,
     },
 )
-async def createservice(item: ServiceItem, sitename: str = Path(..., description="The site name to create the service for."), deps=Depends(allAPIDeps)):
+async def createservice(request: Request, item: ServiceItem, sitename: str = Path(..., description="The site name to create the service for."), deps=Depends(allAPIDeps)):
     """
     Create a new service state in the database.
     """
     checkSite(deps, sitename)
-    return __updateServiceData(item, sitename, deps["dbI"], deps["config"])
+    return APIResponse.genResponse(request, __updateServiceData(item, sitename, deps["dbI"], deps["config"]))
 
 
 # PUT
@@ -151,12 +153,12 @@ async def createservice(item: ServiceItem, sitename: str = Path(..., description
         **DEFAULT_RESPONSES,
     },
 )
-async def updateservice(item: ServiceItem, sitename: str = Path(..., description="The site name to update the service for."), deps=Depends(allAPIDeps)):
+async def updateservice(request: Request, item: ServiceItem, sitename: str = Path(..., description="The site name to update the service for."), deps=Depends(allAPIDeps)):
     """
     Update an existing service state in the database.
     """
     checkSite(deps, sitename)
-    return __updateServiceData(item, sitename, deps["dbI"], deps["config"])
+    return APIResponse.genResponse(request, __updateServiceData(item, sitename, deps["dbI"], deps["config"]))
 
 
 # DELETE
@@ -178,7 +180,7 @@ async def updateservice(item: ServiceItem, sitename: str = Path(..., description
     },
 )
 async def deleteservice(
-    item: ServiceItem = Query(..., description="Service item to delete"), sitename: str = Path(..., description="The site name to delete the service for."), deps=Depends(allAPIDeps)
+    request: Request, item: ServiceItem = Query(..., description="Service item to delete"), sitename: str = Path(..., description="The site name to delete the service for."), deps=Depends(allAPIDeps)
 ):
     """
     Delete an existing service state from the database.
@@ -199,7 +201,7 @@ async def deleteservice(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service with hostname '{item.hostname}' and servicename '{item.servicename}' not found.")
     # Delete from services
     deps["dbI"].delete("services", [["id", host[0]["id"]]])
-    return {"Status": f"DELETED {host[0]['hostname']}"}
+    return APIResponse.genResponse(request, {"Status": f"DELETED {host[0]['hostname']}"})
 
 
 # =========================================================
@@ -214,12 +216,12 @@ class ServiceStateItem(BaseModel):
     hostname: str
     servicename: str
     servicestate: str
-    runtime: int = -1  # Runtime in seconds, default is -1
-    version: str = runningVersion  # Version of the service, default is "UNSET"
-    exc: str = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
     # Optional fields
-    insertTime: str = None
-    updateTime: str = None
+    runtime: Optional[int] = -1  # Runtime in seconds, default is -1
+    version: Optional[str] = runningVersion  # Version of the service, default is "UNSET"
+    exc: Optional[str] = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
+    insertTime: Optional[str] = None
+    updateTime: Optional[str] = None
 
 
 # GET
@@ -236,13 +238,13 @@ class ServiceStateItem(BaseModel):
         **DEFAULT_RESPONSES,
     },
 )
-async def getservicestates(sitename: str = Path(..., description="The site name to retrieve the service states for."), deps=Depends(allAPIDeps)):
+async def getservicestates(request: Request, sitename: str = Path(..., description="The site name to retrieve the service states for."), deps=Depends(allAPIDeps)):
     """
     Get service state data from the database.
     - Returns a list of service states with their information.
     """
     checkSite(deps, sitename)
-    return deps["dbI"].get("servicestates", orderby=["updatedate", "DESC"], limit=100)
+    return APIResponse.genResponse(request, deps["dbI"].get("servicestates", orderby=["updatedate", "DESC"], limit=100))
 
 
 # add/update (POST)
@@ -261,7 +263,7 @@ async def getservicestates(sitename: str = Path(..., description="The site name 
         **DEFAULT_RESPONSES,
     },
 )
-async def addservicestate(item: ServiceStateItem, sitename: str = Path(..., description="The site name to add/update the service state for."), deps=Depends(allAPIDeps)):
+async def addservicestate(request: Request, item: ServiceStateItem, sitename: str = Path(..., description="The site name to add/update the service state for."), deps=Depends(allAPIDeps)):
     """
     Add a new service state or update an existing one.
     """
@@ -286,7 +288,7 @@ async def addservicestate(item: ServiceStateItem, sitename: str = Path(..., desc
             deps["dbI"].insert("servicestates", [dbOut])
     except Exception as ex:
         raise Exception(f"Error details in reportServiceStatus. Exc: {str(ex)}") from ex
-    return {"Status": "Updated"}
+    return APIResponse.genResponse(request, {"Status": "Updated"})
 
 
 # =========================================================
@@ -317,6 +319,7 @@ class ServiceActionItem(BaseModel):
     },
 )
 async def getserviceaction(
+    request: Request,
     sitename: str = Path(..., description="The site name to retrieve the service action for."),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: str = Query(default=None, description="Service name to filter by"),
@@ -332,7 +335,7 @@ async def getserviceaction(
     actions = deps["dbI"].get("serviceaction", search=search)
     if not actions:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No service actions found for the given parameters.")
-    return actions
+    return APIResponse.genResponse(request, actions)
 
 
 # POST
@@ -353,7 +356,7 @@ async def getserviceaction(
         **DEFAULT_RESPONSES,
     },
 )
-async def serviceaction(item: ServiceActionItem, sitename: str = Path(..., description="The site name to record the service action for."), deps=Depends(allAPIDeps)):
+async def serviceaction(request: Request, item: ServiceActionItem, sitename: str = Path(..., description="The site name to record the service action for."), deps=Depends(allAPIDeps)):
     """
     Record a service action in the database.
     """
@@ -387,7 +390,7 @@ async def serviceaction(item: ServiceActionItem, sitename: str = Path(..., descr
             dbOuts.append(dbOut)
     if not dbOuts:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"No Services identified for params: {item}")
-    return {"Status": "Recorded", "DB": dbOuts}
+    return APIResponse.genResponse(request, {"Status": "Recorded", "DB": dbOuts})
 
 
 # DELETE
@@ -405,7 +408,7 @@ async def serviceaction(item: ServiceActionItem, sitename: str = Path(..., descr
         **DEFAULT_RESPONSES,
     },
 )
-async def deleteserviceaction(item: ServiceActionItem, _sitename: str = Path(..., description="The site name to delete the service action for."), deps=Depends(allAPIDeps)):
+async def deleteserviceaction(request: Request, item: ServiceActionItem, _sitename: str = Path(..., description="The site name to delete the service action for."), deps=Depends(allAPIDeps)):
     """Delete a service action from the database."""
     checkSite(deps, _sitename)
     if not _host_supportedService(item.servicename):
@@ -421,7 +424,7 @@ async def deleteserviceaction(item: ServiceActionItem, _sitename: str = Path(...
     if not actions:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service action not found for the given parameters.")
     deps["dbI"].delete("serviceaction", search)
-    return {"Status": f"Deleted {item.hostname} {item.servicename} {item.action}"}
+    return APIResponse.genResponse(request, {"Status": f"Deleted {item.hostname} {item.servicename} {item.action}"})
 
 
 # TODO: Move to its own file
@@ -466,7 +469,9 @@ class InstanceStartEndItem(BaseModel):
         **DEFAULT_RESPONSES,
     },
 )
-async def setinstancestartend(item: InstanceStartEndItem, sitename: str = Path(..., description="The site name to retrieve the instance start and end time for."), deps=Depends(allAPIDeps)):
+async def setinstancestartend(
+    request: Request, item: InstanceStartEndItem, sitename: str = Path(..., description="The site name to retrieve the instance start and end time for."), deps=Depends(allAPIDeps)
+):
     """
     Set the start and end time for a specific instance.
     - Requires instance ID in the input data.
@@ -494,4 +499,4 @@ async def setinstancestartend(item: InstanceStartEndItem, sitename: str = Path(.
         "starttimestamp": item.starttimestamp,
     }
     insOut = deps["dbI"].insert("instancestartend", [out])
-    return {"Status": insOut[0], "ID": insOut[2]}
+    return APIResponse.genResponse(request, {"Status": insOut[0], "ID": insOut[2]})

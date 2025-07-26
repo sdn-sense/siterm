@@ -49,7 +49,7 @@ class DebugService:
             }
             self.dbI.update("debugrequests", [out])
             return
-        self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/debug/{inDic['id']}", json=inDic, useragent="DebugService")
+        self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/debug/{inDic['id']}", data=inDic, useragent="DebugService")
 
     def backgroundProcessItemExists(self, item):
         """Check if background process item exists"""

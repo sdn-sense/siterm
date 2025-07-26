@@ -11,8 +11,13 @@ Date                    : 2025/07/14
 """
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
-from SiteFE.REST.dependencies import DEFAULT_RESPONSES, allAPIDeps, checkSite
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
+from SiteFE.REST.dependencies import (
+    DEFAULT_RESPONSES,
+    APIResponse,
+    allAPIDeps,
+    checkSite,
+)
 from SiteRMLibs.MainUtilities import getFileContentAsJson
 
 router = APIRouter()
@@ -76,7 +81,7 @@ router = APIRouter()
         **DEFAULT_RESPONSES,
     },
 )
-async def gettopology(sitename: str = Path(..., description="The site name whose topology is requested.", example="T0_US_ESnet"), deps=Depends(allAPIDeps)):
+async def gettopology(request: Request, sitename: str = Path(..., description="The site name whose topology is requested.", example="T0_US_ESnet"), deps=Depends(allAPIDeps)):
     """
     Get topology in JSON format for the given site.
 
@@ -89,4 +94,4 @@ async def gettopology(sitename: str = Path(..., description="The site name whose
     if not os.path.isfile(topofname):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Topology file not found for site '{sitename}'")
     topo_data = getFileContentAsJson(topofname)
-    return topo_data
+    return APIResponse.genResponse(request, topo_data)
