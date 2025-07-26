@@ -199,7 +199,7 @@ async def deletehost(request: Request, item: HostItem, sitename: str = Path(...,
         fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "HostData")
         fname = os.path.join(fpath, item.hostname, "hostinfo.json")
         os.remove(fname)
-        deps["dbI"].delete("hosts", [host[0]["id"]])
+        deps["dbI"].delete("hosts", ["id", host[0]["id"]])
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This host is not in db. Why to delete non-existing host?")
     return APIResponse.genResponse(request, {"Status": "DELETED"})

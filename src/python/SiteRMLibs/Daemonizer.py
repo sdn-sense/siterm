@@ -173,7 +173,7 @@ class DBBackend:
                 "version": runningVersion,
                 "exc": kwargs.get("exc", "No Exception provided by service"),
             }
-            self.handlers[kwargs["sitename"]].makeHttpCall("PUT", f"/api/{self.sitename}/services", data=dic, useragent="Daemonizer")
+            self.handlers[kwargs["sitename"]].makeHttpCall("PUT", f"/api/{kwargs['sitename']}/services", data=dic, useragent="Daemonizer")
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
@@ -202,7 +202,7 @@ class DBBackend:
         try:
             kwargs["servicename"] = self.component
             kwargs["hostname"] = getHostname(self.config, self.component)
-            url = f"/api/{self.sitename}/serviceaction?hostname={kwargs['hostname']}&servicename={self.component}"
+            url = f"/api/{kwargs['sitename']}/serviceaction?hostname={kwargs['hostname']}&servicename={self.component}"
 
             actions = self.handlers[kwargs["sitename"]].makeHttpCall("GET", url, useragent="Daemonizer")
             # Config Fetcher is not allowed to delete other services refresh.
@@ -271,8 +271,19 @@ class Daemon(DBBackend):
         if os.getenv("SITERM_MEMORY_DEBUG"):
             self.memdebug = True
         self.handlers = {}
-        if self.getGitConf:
+        self.__getHandlers()
+
+    def __getHandlers(self):
+        """Get handlers for all sites."""
+        # TODO: Need to normalize sitename and site between FE and Agent.
+        if not self.getGitConf:
+            return
+        try:
             for sitename in self.config.get("general", "sites"):
+                fullURL = getFullUrl(self.config, sitename)
+                self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
+        except (NoOptionError, NoSectionError):
+            for sitename in self.config.get("general", "sitename"):
                 fullURL = getFullUrl(self.config, sitename)
                 self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
 
