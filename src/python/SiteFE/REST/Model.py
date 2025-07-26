@@ -78,14 +78,17 @@ async def getModelInfo(
             headers = {"Last-Modified": httpdate(outmodels["insertdate"])}
             if not summary:
                 modContent = depGetModelContent(outmodels, rdfformat=rdfformat, encode=encode)
-                return APIResponse.genResponse(
-                    request,
-                    {"id": outmodels["uid"], "creationTime": convertTSToDatetime(outmodels["insertdate"]), "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}", "model": modContent},
+                return APIResponse.genResponse(request,
+                                               [{"id": outmodels["uid"],
+                                                 "creationTime": convertTSToDatetime(outmodels["insertdate"]),
+                                                 "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}",
+                                                 "model": modContent}],
                     headers=headers,
                 )
-            return APIResponse.genResponse(
-                request, {"id": outmodels["uid"], "creationTime": convertTSToDatetime(outmodels["insertdate"]), "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}"}, headers=headers
-            )
+            return APIResponse.genResponse(request, [{"id": outmodels["uid"],
+                                                      "creationTime": convertTSToDatetime(outmodels["insertdate"]),
+                                                      "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}"}],
+                                           headers=headers)
         # If current is not set, return all models (based on limit)
         outmodels = depGetModel(deps["dbI"], limit=limit, orderby=["insertdate", "DESC"])
         models = []
