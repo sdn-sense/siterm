@@ -11,8 +11,8 @@ import os
 import traceback
 
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.MainUtilities import (
-    callSiteFE,
     contentDB,
     createDirs,
     evaldict,
@@ -29,12 +29,13 @@ class DebugService:
 
     def __init__(self, config, sitename):
         self.config = config if config else getGitConfig()
-        self.fullURL = getFullUrl(self.config, sitename)
         self.sitename = sitename
         self.diragent = contentDB()
         self.logger = getLoggingObject(config=self.config, service="DebugService")
         self.workDir = self.config.get("general", "privatedir") + "/SiteRM/background/"
         createDirs(self.workDir)
+        fullURL = getFullUrl(self.config, sitename)
+        self.requestHandler = Requests(url=fullURL, logger=self.logger)
 
     def publishToFE(self, inDic):
         """Publish debug runtime to FE"""
@@ -48,7 +49,7 @@ class DebugService:
             }
             self.dbI.update("debugrequests", [out])
             return
-        callSiteFE(inDic, self.fullURL, f"/api/{self.sitename}/debug/{inDic['id']}")
+        self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/debug/{inDic['id']}", json=inDic, useragent="DebugService")
 
     def backgroundProcessItemExists(self, item):
         """Check if background process item exists"""

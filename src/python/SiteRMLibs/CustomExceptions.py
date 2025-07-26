@@ -177,18 +177,6 @@ class FailedGetDataFromFE(ExceptionTemplate):
     """Failed to Get Data from FE"""
 
 
-class MethodNotSupported(ExceptionTemplate):
-    """Method Not Supported"""
-
-
-class NotAcceptedHeader(ExceptionTemplate):
-    """Not Accepted Header"""
-
-
-class ConflictEntries(ExceptionTemplate):
-    """Conflict Entries"""
-
-
 class SwitchException(ExceptionTemplate):
     """Switch communication exception"""
 

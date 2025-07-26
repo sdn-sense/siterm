@@ -12,13 +12,7 @@ import re
 from dataclasses import dataclass
 
 from SiteRMLibs.CustomExceptions import FailedInterfaceCommand, FailedRoutingCommand
-from SiteRMLibs.MainUtilities import (
-    callSiteFE,
-    execute,
-    externalCommand,
-    getFullUrl,
-    getLoggingObject,
-)
+from SiteRMLibs.MainUtilities import execute, externalCommand
 
 
 @dataclass
@@ -29,11 +23,10 @@ class PublishStateInput:
     uuid: str
     hostname: str
     state: str
-    fullURL: str
     sitename: str
 
 
-def publishState(item: PublishStateInput):
+def publishState(reqHandler, item: PublishStateInput):
     """Publish Agent apply state to Frontend."""
     out = {
         "uuidtype": "vsw",
@@ -42,7 +35,7 @@ def publishState(item: PublishStateInput):
         "hostport": item.modtype,
         "uuidstate": item.state,
     }
-    callSiteFE(out, item.fullURL, f"/api/{item.sitename}/deltas/{item.uuid}/timestates", "POST")
+    reqHandler.makeHttpCall("POST", f"/api/{item.sitename}/deltas/{item.uuid}/timestates", json=out, retries=1, raiseEx=False, useragent="Ruler")
 
 
 class Rules:
@@ -121,21 +114,9 @@ class Rules:
                 )
         return result
 
-    def lookup_id(self, val):
-        """Lookup and get all values for id key"""
-        return self.getvals(self.indices(self.rule_id, val))
-
-    def lookup_from(self, val):
-        """Lookup and get all values for from key"""
-        return self.getvals(self.indices(self.rule_from, val))
-
     def lookup_to(self, val):
         """Lookup and get all values for to key"""
         return self.getvals(self.indices(self.rule_to, val))
-
-    def lookup_lookup(self, val):
-        """Lookup and get all values for lookup key"""
-        return self.getvals(self.indices(self.rule_lookup, val))
 
     def lookup_from_lookup(self, rule_from, rule_lookup):
         """Lookup for from and lookup keys and get all values"""
@@ -160,12 +141,13 @@ class Rules:
 class Routing:
     """Virtual interface class."""
 
-    def __init__(self, config, sitename, rulercli=None):
+    def __init__(self, config, sitename, logger, rulercli):
         self.config = config
+        self.sitename = sitename
         self.routingpolicy = self.config.get("qos", "policy")
         self.hostname = self.config.get("agent", "hostname")
-        self.fullURL = getFullUrl(self.config, sitename)
-        self.logger = getLoggingObject(config=self.config, service="Ruler")
+        self.logger = logger
+        self.requestHandler = rulercli.requestHandler
         self.rules = Rules(rulercli)
         self._refreshRuleList()
 
@@ -212,9 +194,7 @@ class Routing:
     def terminate(self, route, uuid):
         """Terminate rules"""
         if self.routingpolicy != "hostlevel":
-            self.logger.info(
-                "Routing policy is not host level. Will not apply routing rules."
-            )
+            self.logger.info("Routing policy is not host level. Will not apply routing rules.")
             return []
         self._refreshRuleList()
         initialized = False
@@ -230,18 +210,16 @@ class Routing:
                     initialized = True
                     self.apply_rule(f"ip -6 rule del to {route['src_ipv6']}/128", route["src_ipv6_intf"], route["src_ipv6"])
             if initialized:
-                publishState(PublishStateInput("ipv6", uuid, self.hostname, "deactivated", self.fullURL, self.sitename))
+                publishState(self.requestHandler, PublishStateInput("ipv6", uuid, self.hostname, "deactivated", self.sitename))
         except FailedInterfaceCommand:
             if initialized:
-                publishState(PublishStateInput("ipv6", uuid, self.hostname, "deactivate-error", self.fullURL, self.sitename))
+                publishState(self.requestHandler, PublishStateInput("ipv6", uuid, self.hostname, "deactivate-error", self.sitename))
         return []
 
     def activate(self, route, uuid):
         """Activate routes"""
         if self.routingpolicy != "hostlevel":
-            self.logger.info(
-                "Routing policy is not host level. Will not apply routing rules."
-            )
+            self.logger.info("Routing policy is not host level. Will not apply routing rules.")
             return []
         self._refreshRuleList()
         initialized = False
@@ -262,8 +240,8 @@ class Routing:
                     initialized = True
                     self.apply_rule(f"ip -6 rule add to {route['src_ipv6']}/128", route["src_ipv6_intf"], route["src_ipv6"])
             if initialized:
-                publishState(PublishStateInput("ipv6", uuid, self.hostname, "activated", self.fullURL, self.sitename))
+                publishState(self.requestHandler, PublishStateInput("ipv6", uuid, self.hostname, "activated", self.sitename))
         except FailedInterfaceCommand:
             if initialized:
-                publishState(PublishStateInput("ipv6", uuid, self.hostname, "activate-error", self.fullURL, self.sitename))
+                publishState(self.requestHandler, PublishStateInput("ipv6", uuid, self.hostname, "activate-error", self.sitename))
         return []

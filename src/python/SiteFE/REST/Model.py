@@ -68,6 +68,11 @@ async def getModelInfo(
     """
     # Check if current is set, if so, it only asks for current model
     checkSite(deps, sitename)
+    # TODO Remove this print statement in production
+    accept_header = request.headers.get("accept")
+    accept_encoding = request.headers.get("accept-encoding")
+    print(f"Accept: {accept_header}")
+    print(f"Accept-Encoding: {accept_encoding}")
     try:
         if current:
             outmodels = depGetModel(deps["dbI"], limit=1, orderby=["insertdate", "DESC"])
@@ -136,7 +141,11 @@ async def getModelByID(
     """
     Get model information by its ID for the given site name.
     """
-    checkSite(deps, sitename)
+    # TODO Remove this print statement in production
+    accept_header = request.headers.get("accept")
+    accept_encoding = request.headers.get("accept-encoding")
+    print(f"Accept: {accept_header}")
+    print(f"Accept-Encoding: {accept_encoding}")
     # Get model by ID
     try:
         model = depGetModel(deps["dbI"], modelID=modelID, limit=1)

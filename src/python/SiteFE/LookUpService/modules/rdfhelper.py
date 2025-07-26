@@ -125,7 +125,7 @@ class RDFHelper:
         self.logger.debug(f"Generate Keys return empty. Unexpected. Input: {inval} {inkey}")
         return ""
 
-    def getSavedPrefixes(self, **kwargs):
+    def getSavedPrefixes(self):
         """Get Saved prefixes from a configuration file."""
         prefixes = {}
         for key in ["mrs", "nml", "owl", "rdf", "xml", "xsd", "rdfs", "schema", "sd"]:

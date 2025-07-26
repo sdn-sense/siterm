@@ -88,8 +88,8 @@ class DBBackend:
                 password=self.mpass,
                 host=self.mhost,
                 port=self.mport,
-                database="sitefe",
-                autocommit=self.mdb,
+                database=self.mdb,
+                autocommit=self.autocommit,
                 charset=self.charset,
                 cursorclass=pymysql.cursors.Cursor,
             )
@@ -229,8 +229,6 @@ class dbinterface:
         self.sitename = sitename
         self.serviceName = serviceName
         self.db = DBBackend()
-        self.callStart = None
-        self.callEnd = None
 
     def createdb(self):
         """Create Database."""

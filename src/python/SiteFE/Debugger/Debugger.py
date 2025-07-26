@@ -17,19 +17,23 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2021 California Institute of Technology
 Date                    : 2021/03/12
 """
+import argparse
 import os
 import sys
-import argparse
-from SiteRMLibs.MainUtilities import contentDB
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import getDBConn, getVal
-from SiteRMLibs.MainUtilities import getUTCnow
-from SiteRMLibs.ipaddr import ipVersion, checkoverlap
+
+from SiteRMLibs.Backends.main import Switch
+from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.Backends.main import Switch
-from SiteRMLibs.Validator import Validator
-from SiteRMLibs.CustomExceptions import BadRequestError
+from SiteRMLibs.ipaddr import checkoverlap, ipVersion
+from SiteRMLibs.MainUtilities import (
+    contentDB,
+    getDBConn,
+    getLoggingObject,
+    getUTCnow,
+    getVal,
+)
+from SiteRMLibs.Validator import validator
 
 COMPONENT = "Debugger"
 
@@ -48,14 +52,9 @@ class Debugger(DebugService):
         self.switch = Switch(self.config, self.sitename)
         self.switches = {}
         self.siteDB = contentDB()
-        self.debugdir = os.path.join(
-            self.config.get(self.sitename, "privatedir"), "DebugRequests"
-        )
-        self.dbI = getVal(
-            getDBConn("DebuggerService", self), **{"sitename": self.sitename}
-        )
+        self.debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
+        self.dbI = getVal(getDBConn("DebuggerService", self), **{"sitename": self.sitename})
         self.logger.info("====== Debugger Start Work. Sitename: %s", self.sitename)
-        self.validator = Validator(self.config)
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -65,9 +64,7 @@ class Debugger(DebugService):
     def getData(self, hostname, state):
         """Get data from DB."""
         search = [["hostname", hostname], ["state", state]]
-        return self.dbI.get(
-            "debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50
-        )
+        return self.dbI.get("debugrequests", orderby=["updatedate", "DESC"], search=search, limit=50)
 
     def updateDebugWorker(self, **kwargs):
         "Update hostname/workername for debug request"
@@ -81,9 +78,7 @@ class Debugger(DebugService):
 
     def getFullData(self, hostname, item):
         """Get full data from DB."""
-        debugdir = os.path.join(
-            self.config.get(self.sitename, "privatedir"), "DebugRequests"
-        )
+        debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
         # Get Request JSON
         requestfname = os.path.join(debugdir, hostname, str(item["id"]), "request.json")
         item["requestdict"] = self.siteDB.getFileContentAsJson(requestfname)
@@ -105,17 +100,11 @@ class Debugger(DebugService):
                     # Load service information from file
                     if service.get("serviceinfo"):
                         if os.path.exists(service["serviceinfo"]):
-                            allinfo = self.siteDB.getFileContentAsJson(
-                                service["serviceinfo"]
-                            )
+                            allinfo = self.siteDB.getFileContentAsJson(service["serviceinfo"])
                             workers[service["hostname"]]["allinfo"] = allinfo
-                            workers[service["hostname"]]["serviceinfo"] = allinfo.get(
-                                "serviceinfo", {}
-                            )
+                            workers[service["hostname"]]["serviceinfo"] = allinfo.get("serviceinfo", {})
                         else:
-                            self.logger.warning(
-                                f"Service info file does not exist: {service}"
-                            )
+                            self.logger.warning(f"Service info file does not exist: {service}")
         self.logger.debug("Loaded workers: %s", workers)
         return workers
 
@@ -152,13 +141,9 @@ class Debugger(DebugService):
                 item["requestdict"]["selectedip"] = ipf
                 item["requestdict"]["hostname"] = workername
                 try:
-                    item["requestdict"] = self.validator.validate(item["requestdict"])
-                    self.siteDB.dumpFileContentAsJson(
-                        item["debuginfo"], item["requestdict"]
-                    )
-                    self.updateDebugWorker(
-                        **{"id": item["id"], "state": "new", "hostname": workername}
-                    )
+                    item["requestdict"] = validator(item["requestdict"])
+                    self.siteDB.dumpFileContentAsJson(item["debuginfo"], item["requestdict"])
+                    self.updateDebugWorker(**{"id": item["id"], "state": "new", "hostname": workername})
                 except BadRequestError as ex:
                     errmsg = f"Received error during validate: {str(ex)}"
             if errmsg:
@@ -190,9 +175,7 @@ class Debugger(DebugService):
                 data = self.getData(host, wtype)
                 for item in data:
                     if not self.backgroundProcessItemExists(item):
-                        self.logger.info(
-                            f"Background process item does not exist. ID: {item['id']}"
-                        )
+                        self.logger.info(f"Background process item does not exist. ID: {item['id']}")
                         item = self.getFullData(host, item)
                     self.checkBackgroundProcess(item)
         # Find out workers for undefined - meaning dynamic

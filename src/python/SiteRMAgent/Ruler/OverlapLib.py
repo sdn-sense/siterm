@@ -10,7 +10,6 @@ from SiteRMLibs.ipaddr import (
     checkoverlap,
     getInterfaceIP,
     getMasterSlaveInterfaces,
-    getNetmaskBits,
     getsubnet,
 )
 
@@ -32,18 +31,12 @@ class OverlapLib:
                     for ipv4 in intDict:
                         address = f"{ipv4.get('addr')}/{ipv4.get('netmask')}"
                         self.allIPs["ipv4"].setdefault(address, [])
-                        self.allIPs["ipv4"][address].append(
-                            {"intf": intf, "master": masterIntf if masterIntf else intf}
-                        )
+                        self.allIPs["ipv4"][address].append({"intf": intf, "master": masterIntf if masterIntf else intf})
                 elif int(intType) == 10:
                     for ipv6 in intDict:
-                        address = (
-                            f"{ipv6.get('addr')}/{ipv6.get('netmask').split('/')[1]}"
-                        )
+                        address = f"{ipv6.get('addr')}/{ipv6.get('netmask').split('/')[1]}"
                         self.allIPs["ipv6"].setdefault(address, [])
-                        self.allIPs["ipv6"][address].append(
-                            {"intf": intf, "master": masterIntf if masterIntf else intf}
-                        )
+                        self.allIPs["ipv6"][address].append({"intf": intf, "master": masterIntf if masterIntf else intf})
 
     def __getAllIPsNetNS(self):
         """Mapping for Private NS comes from Agent configuration"""
@@ -57,19 +50,10 @@ class OverlapLib:
                 if isinstance(iprange, list):
                     for ipval in iprange:
                         self.allIPs[key].setdefault(ipval, [])
-                        self.allIPs[key][ipval].append(
-                            {"master": params["master_intf"], "intf": intf}
-                        )
+                        self.allIPs[key][ipval].append({"master": params["master_intf"], "intf": intf})
                 elif iprange:
                     self.allIPs[key].setdefault(iprange, [])
-                    self.allIPs[key][iprange].append(
-                        {"master": params["master_intf"], "intf": intf}
-                    )
-
-    @staticmethod
-    def _getNetmaskBit(ipinput):
-        """Get Netmask Bits"""
-        return getNetmaskBits(ipinput)
+                    self.allIPs[key][iprange].append({"master": params["master_intf"], "intf": intf})
 
     def getAllIPs(self):
         """Get all IPs"""
@@ -105,6 +89,7 @@ class OverlapLib:
 
     @staticmethod
     def mergeBWDicts(d1, d2):
+        """Merge 2 bandwidth dictionaries"""
         int_keys = [
             "availableCapacity",
             "granularity",
@@ -128,17 +113,11 @@ class OverlapLib:
                         continue
                     uri = routes["hasService"]["uri"]
                     for _, routeInfo in routes.get("hasRoute").items():
-                        iprange = (
-                            routeInfo.get("routeFrom", {})
-                            .get(f"{iptype}-prefix-list", {})
-                            .get("value", None)
-                        )
+                        iprange = routeInfo.get("routeFrom", {}).get(f"{iptype}-prefix-list", {}).get("value", None)
                         ipVal, intfArray = self.findOverlaps(iprange, iptype)
                         if ipVal and intfArray:
                             for intfName in intfArray:
-                                service = overlapServices.setdefault(
-                                    intfName["intf"], {}
-                                )
+                                service = overlapServices.setdefault(intfName["intf"], {})
                                 intServ = service.setdefault(
                                     uri,
                                     {
@@ -159,16 +138,10 @@ class OverlapLib:
                                 self.totalrequests.setdefault(intfName["master"], 0)
                                 self.totalrequests[intfName["master"]] += resvRate
                                 # Add dest IPs to overlap info
-                                iprange = (
-                                    routeInfo.get("routeTo", {})
-                                    .get(f"{iptype}-prefix-list", {})
-                                    .get("value", None)
-                                )
+                                iprange = routeInfo.get("routeTo", {}).get(f"{iptype}-prefix-list", {}).get("value", None)
                                 intServ[f"dst_{iptype}"] = iprange
                                 if intServ["rules"]:
-                                    intServ["rules"] = self.mergeBWDicts(
-                                        intServ["rules"], routes["hasService"]
-                                    )
+                                    intServ["rules"] = self.mergeBWDicts(intServ["rules"], routes["hasService"])
                                 else:
                                     intServ["rules"] = routes["hasService"]
         return overlapServices

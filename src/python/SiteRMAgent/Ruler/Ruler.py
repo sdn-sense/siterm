@@ -17,9 +17,9 @@ from SiteRMAgent.Ruler.OverlapLib import OverlapLib
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.ipaddr import checkOverlap
 from SiteRMLibs.MainUtilities import (
-    callSiteFE,
     contentDB,
     createDirs,
     evaldict,
@@ -42,7 +42,8 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         createDirs(self.workDir)
         self.sitename = sitename
         self.siteDB = contentDB()
-        self.fullURL = getFullUrl(self.config, self.sitename)
+        fullUrl = getFullUrl(self.config, self.sitename)
+        self.requestHandler = Requests(fullUrl, logger=self.logger)
         self.hostname = self.config.get("agent", "hostname")
         self.logger.info("====== Ruler Start Work. Hostname: %s", self.hostname)
         self.activeDeltas = {}
@@ -52,21 +53,23 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         QOS.__init__(self)
         OverlapLib.__init__(self)
         # L2,L3 move it to Class Imports at top.
-        self.layer2 = VInterfaces(self.config, self.sitename)
+        self.layer2 = VInterfaces(self.config, self.sitename, self.logger)
         self.layer3 = Routing(self.config, self.sitename, self)
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
-        self.fullURL = getFullUrl(self.config, self.sitename)
+        fullUrl = getFullUrl(self.config, self.sitename)
         self.hostname = self.config.get("agent", "hostname")
         self.layer2 = VInterfaces(self.config, self.sitename)
         self.layer3 = Routing(self.config, self.sitename, self)
+        self.requestHandler.close()
+        self.requestHandler = Requests(fullUrl, logger=self.logger)
 
     def getData(self, url):
         """Get data from FE."""
-        out = callSiteFE({}, self.fullURL, url, "GET")
-        if out[2] != "OK":
+        out = self.requestHandler.makeHttpCall("GET", url, useragent="Ruler")
+        if out[1] != 200:
             msg = f"Received a failure getting information from Site Frontend {str(out)}"
             self.logger.critical(msg)
             raise FailedGetDataFromFE(msg)
@@ -85,21 +88,6 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         if os.path.isfile(failurefile):
             os.remove(failurefile)
         return data
-
-    def checkIfOverlap(self, ip, intf, iptype):
-        """Check if IPs overlap with what is set in configuration"""
-        print(ip, intf, iptype)
-        vlan = intf.split(".")
-        if len(vlan) == 2:
-            vlan = int(vlan[1])
-        overlap = False
-        for mintf in self.config["MAIN"]["agent"]["interfaces"]:
-            if vlan in self.config["MAIN"][mintf].get("all_vlan_range_list", []):
-                if f"{iptype}-address-pool" in self.config["MAIN"][mintf]:
-                    overlap = checkOverlap(self.config["MAIN"][mintf][f"{iptype}-address-pool"], ip, iptype)
-                    if overlap:
-                        break
-        return overlap
 
     def activeComparison(self, actKey, actCall):
         """Compare active vs file on node config"""

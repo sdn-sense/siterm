@@ -19,9 +19,8 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2018/11/26
 """
 import json
-from SiteRMLibs.MainUtilities import evaldict
-from SiteRMLibs.MainUtilities import getUTCnow
-from SiteRMLibs.MainUtilities import getLoggingObject
+
+from SiteRMLibs.MainUtilities import evaldict, getLoggingObject, getUTCnow
 
 
 class ConnectionMachine:
@@ -108,9 +107,7 @@ class StateMachine:
         """Delta State change."""
         tNow = getUTCnow()
         self.logger.info(f"Changing delta {kwargs['uid']} to {newState}")
-        dbObj.update(
-            "deltas", [{"uid": kwargs["uid"], "state": newState, "updatedate": tNow}]
-        )
+        dbObj.update("deltas", [{"uid": kwargs["uid"], "state": newState, "updatedate": tNow}])
         dbObj.insert(
             "states",
             [{"deltaid": kwargs["uid"], "state": newState, "insertdate": tNow}],
@@ -132,25 +129,6 @@ class StateMachine:
         elif kwargs["modadd"] in ["add", "added"]:
             self.modelstatechanger(dbObj, "remove", **kwargs)
 
-    def stateChangerHost(self, dbObj, hid, **kwargs):
-        """Change state for host."""
-        tNow = getUTCnow()
-        self.logger.info(
-            f"Changing delta {kwargs['deltaid']} hoststate {kwargs['hostname']} to {kwargs['state']}"
-        )
-        dbObj.update(
-            "hoststates",
-            [
-                {
-                    "deltaid": kwargs["deltaid"],
-                    "state": kwargs["state"],
-                    "updatedate": tNow,
-                    "id": hid,
-                }
-            ],
-        )
-        dbObj.insert("hoststateshistory", [kwargs])
-
     def _newdelta(self, dbObj, delta, state):
         """Add new delta to db."""
         dbOut = {
@@ -169,14 +147,6 @@ class StateMachine:
         dbOut["state"] = delta["State"]
         self.stateChangerDelta(dbObj, delta["State"], **dbOut)
 
-    @staticmethod
-    def _newhoststate(dbObj, **kwargs):
-        """Private to add new host states."""
-        tNow = getUTCnow()
-        kwargs["insertdate"] = tNow
-        kwargs["updatedate"] = tNow
-        dbObj.insert("hoststates", [kwargs])
-
     def accepted(self, dbObj, delta):
         """Marks delta as accepting."""
         self._newdelta(dbObj, delta, "accepting")
@@ -184,10 +154,6 @@ class StateMachine:
     def commit(self, dbObj, delta):
         """Marks delta as committing."""
         self.stateChangerDelta(dbObj, "committing", **delta)
-
-    def stateChange(self, dbObj, delta):
-        """Set new state for delta."""
-        self.stateChangerDelta(dbObj, delta["state"], **delta)
 
     def committing(self, dbObj):
         """Committing state Check."""

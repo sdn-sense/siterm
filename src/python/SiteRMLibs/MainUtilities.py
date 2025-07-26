@@ -14,41 +14,29 @@ import email.utils as eut
 import fcntl
 import functools
 import hashlib
-import http.client
 import logging
 import logging.handlers
 import os
 import os.path
-import pwd
 import re
 import shlex
 import shutil
 import socket
 import subprocess
-import sys
 import tempfile
 import time
-import urllib.parse
 import uuid
 from pathlib import Path
-from urllib.parse import parse_qs
 
-import httpx
-
-# Custom exceptions imports
-import requests
+import psutil
 import simplejson as json
-from past.builtins import basestring
 from rdflib import Graph
 from SiteRMLibs.CustomExceptions import (
     FailedInterfaceCommand,
     NotFoundError,
-    NotSupportedArgument,
-    TooManyArgumentalValues,
     WrongInputError,
 )
 from SiteRMLibs.DBBackend import dbinterface
-from SiteRMLibs.HTTPLibrary import Requests
 
 HOSTSERVICES = [
     "Agent",
@@ -334,72 +322,6 @@ def firstRunFinished(servicename):
     return True
 
 
-def callSiteFE(inputDict, host, url, verb="PUT"):
-    """Put JSON to the Site FE."""
-    retries = 3
-    while retries > 0:
-        retries -= 1
-        req = Requests(host, {})
-        try:
-            out = req.makeRequest(url, verb=verb, data=inputDict)
-            return out
-        except http.client.HTTPException as ex:
-            print(f"Got HTTPException: {ex}. Will retry {retries} more times.")
-            if retries == 0:
-                return ex.reason, ex.status, "FAILED", True
-            time.sleep(1)
-        except httpx.HTTPError as ex:
-            print(f"Got HTTPX HTTPError: {ex}. Will retry {retries} more times.")
-            if retries == 0:
-                return ex.args[1], ex.args[0], "FAILED", False
-            time.sleep(1)
-    return "Failed after all retries", -1, "FAILED", False
-
-
-def getWebContentFromURL(url, raiseEx=True, params=None):
-    """GET from URL"""
-    retries = 3
-    out = {}
-    while retries > 0:
-        retries -= 1
-        try:
-            if params:
-                out = requests.get(url, params=params, timeout=60)
-            else:
-                out = requests.get(url, timeout=60)
-            return out
-        except requests.exceptions.RequestException as ex:
-            print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
-            if raiseEx and retries == 0:
-                raise
-            out = {}
-            out["error"] = str(ex)
-            out["status_code"] = -1
-            time.sleep(1)
-    return out
-
-
-def postWebContentToURL(url, **kwargs):
-    """POST to URL"""
-    raiseEx = bool(kwargs.get("raiseEx", True))
-    retries = 3
-    out = {}
-    while retries > 0:
-        retries -= 1
-        try:
-            out = requests.post(url, timeout=60, **kwargs)
-            return out
-        except requests.exceptions.RequestException as ex:
-            print(f"Got requests.exceptions.RequestException: {ex}. Retries left: {retries}")
-            if raiseEx and retries == 0:
-                raise
-            out = {}
-            out["error"] = str(ex)
-            out["status_code"] = -1
-            time.sleep(1)
-    return out
-
-
 def getFileContentAsJson(inputFile):
     """Get file content as json."""
     out = {}
@@ -421,11 +343,6 @@ def getAllFileContent(inputFile):
         with open(inputFile, "r", encoding="utf-8") as fd:
             return fd.read()
     raise NotFoundError(f"File {inputFile} was not found on the system.")
-
-
-def getUsername():
-    """Return current username."""
-    return pwd.getpwuid(os.getuid())[0]
 
 
 def removeFile(fileLoc):
@@ -490,12 +407,6 @@ class contentDB:
         return readFile(inputFile)
 
     @staticmethod
-    def getHash(inputText):
-        """Get UUID4 hash."""
-        newuuid4 = str(uuid.uuid4())
-        return str(newuuid4 + inputText)
-
-    @staticmethod
     @fileLock
     def dumpFileContentAsJson(outFile, content):
         """Dump File content with locks."""
@@ -520,18 +431,6 @@ class contentDB:
         """Remove file."""
         removeFile(fileLoc)
 
-    def moveFile(self, sourcefile, destdir):
-        """Move file from sourcefile to dest dir"""
-        # pylint: disable=broad-exception-raised
-        if not os.path.isfile(sourcefile):
-            raise Exception(f"File {sourcefile} does not exist")
-        if sourcefile.startswith(destdir):
-            # We dont want to move if already in dest dir
-            return sourcefile
-        destFile = os.path.join(destdir, self.getHash(".json"))
-        shutil.move(sourcefile, destFile)
-        return destFile
-
 
 def delete(inputObj, delObj):
     """Delete function which covers exceptions."""
@@ -551,60 +450,6 @@ def delete(inputObj, delObj):
         return tmpDict
     # This should not happen
     raise WrongInputError(f"Provided input type is not available for deletion. Type {type(inputObj)}")
-
-
-def parse_gui_form_post(inputVal):
-    """Parse GUI Form Post and return dict."""
-    out = {}
-    for item in inputVal.split(b"&"):
-        tmpItem = item.split(b"=")
-        out[tmpItem[0].decode("utf-8")] = urllib.parse.unquote(tmpItem[1].decode("utf-8"))
-    return out
-
-
-def read_input_data(environ):
-    """Read input data from environ, which can be used for PUT or POST."""
-    length = int(environ.get("CONTENT_LENGTH", 0))
-    if length == 0:
-        raise WrongInputError("Content input length is 0.")
-    body = environ["wsgi.input"].read(length)
-    outjson = {}
-    try:
-        outjson = evaldict(body)
-    except (ValueError, WrongInputError) as ex:
-        outjson = parse_gui_form_post(body)
-        if not outjson:
-            errMsg = f"Failed to parse json input: {body}, Err: {ex}."
-            print(errMsg)
-            raise WrongInputError(errMsg) from ex
-    return outjson
-
-
-VALIDATION = {
-    "addhost": [
-        {"key": "hostname", "type": basestring},
-        {"key": "ip", "type": basestring},
-        {"key": "port", "type": int},
-        {"key": "insertTime", "type": int},
-        {"key": "updateTime", "type": int},
-        {
-            "key": "status",
-            "type": basestring,
-            "values": ["benchmark", "maintenance", "operational"],
-        },
-        {"key": "desc", "type": basestring},
-    ],
-    "updatehost": [
-        {"key": "ip", "type": basestring},
-        {"key": "port", "type": int},
-        {"key": "updateTime", "type": int},
-        {
-            "key": "status",
-            "type": basestring,
-            "values": ["benchmark", "maintenance", "operational"],
-        },
-    ],
-}
 
 
 def generateMD5(inText):
@@ -635,68 +480,6 @@ def generateHash(inText):
 def generateRandomUUID():
     """Generate random UUID."""
     return str(uuid.uuid4())
-
-
-def getCustomOutMsg(errMsg=None, errCode=None, msg=None, exitCode=None):
-    """Create custom return dictionary."""
-    newOut = {}
-    if errMsg:
-        newOut["error_description"] = errMsg
-    if errCode:
-        newOut["error"] = errCode
-    if msg:
-        newOut["msg"] = msg
-    if exitCode:
-        newOut["exitCode"] = exitCode
-    return newOut
-
-
-def getUrlParams(environ, paramsList):
-    # pylint: disable=too-many-branches
-    """Get URL query parameters and return them in a dictionary."""
-    if not paramsList:
-        return {}
-
-    if environ["REQUEST_METHOD"].upper() in ["POST", "DELETE"]:
-        return {}
-
-    query_params = parse_qs(environ.get("QUERY_STRING", ""))
-    outParams = {}
-
-    for param in paramsList:
-        key = param["key"]
-        outVals = query_params.get(key, [])
-
-        if len(outVals) > 1:
-            raise TooManyArgumentalValues(f"Parameter {key} has too many defined values")
-
-        if len(outVals) == 1:
-            val = outVals[0]
-            if param["type"] is bool:
-                if val.lower() == "true":
-                    outParams[key] = True
-                elif val.lower() == "false":
-                    outParams[key] = False
-                else:
-                    raise NotSupportedArgument(f"Parameter {key} value not acceptable. Allowed options: true, false")
-            elif param["type"] is str and "options" in param:
-                if val not in param["options"]:
-                    raise NotSupportedArgument(f"Server does not support parameter {key}={val}. Supported: {param['options']}")
-                outParams[key] = val
-            else:
-                outParams[key] = val
-        else:
-            outParams[key] = param.get("default")
-    return outParams
-
-
-def getHeaders(environ):
-    """Get all Headers and return them back as dictionary."""
-    headers = {}
-    for key in list(environ.keys()):
-        if key.startswith("HTTP_"):
-            headers[key[5:]] = environ.get(key)
-    return headers
 
 
 def convertTSToDatetime(inputTS):
@@ -904,35 +687,6 @@ def timedhourcheck(lockname, hours=1):
     return True
 
 
-def checkHTTPService(config):
-    """Auto Refresh via API check"""
-    # If config not present, continue normally (that fails at other checks)
-    if not config:
-        return 0
-    # This is only done on FE:
-    if config.getraw("MAPPING").get("type", None) != "FE":
-        return 0
-    returnvals = []
-    for sitename in config.get("general", "sites"):
-        try:
-            hostname = getFullUrl(config, sitename)
-            url = f"/api/{sitename}/models?current=true&summary=false&encode=false"
-            out = callSiteFE({}, hostname, url, "GET")
-            # Need to check out that it received information back
-            # otherwise print error and return 1
-            if out[1] != 200 or out[2] != "OK":
-                print("Was not able to receive 200 http exit code.")
-                print(f"Output: {out}")
-                returnvals.append(1)
-            else:
-                returnvals.append(0)
-        except Exception:  # pylint: disable=broad-except
-            excType, excValue = sys.exc_info()[:2]
-            print(f"Error details in checkHTTPService. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
-            returnvals.append(1)
-    return 0 if not returnvals else any(returnvals)
-
-
 def tryConvertToNumeric(value):
     """Convert str to float or int.
 
@@ -1004,3 +758,37 @@ def getStorageInfo():
     outStorage["total_gb"] = totalSum
     storageInfo["FileSystems"] = outStorage
     return storageInfo
+
+
+def getProcInfo(procID):
+    """Get Process informationa about specific process."""
+    procOutInfo = {}
+    procS = psutil.Process(int(procID))
+    procOutInfo["CreateTime"] = procS.create_time()
+    ioCounters = procS.io_counters()
+    procOutInfo["IOCounters"] = {}
+    procOutInfo["IOCounters"]["ReadCount"] = ioCounters.read_count
+    procOutInfo["IOCounters"]["WriteCount"] = ioCounters.write_count
+    procOutInfo["IOCounters"]["ReadBytes"] = ioCounters.read_bytes
+    procOutInfo["IOCounters"]["WriteBytes"] = ioCounters.write_bytes
+    procOutInfo["IOCounters"]["ReadChars"] = ioCounters.read_chars
+    procOutInfo["IOCounters"]["WriteChars"] = ioCounters.write_chars
+    procOutInfo["IOCounters"]["NumFds"] = procS.num_fds()
+    memInfo = procS.memory_full_info()
+    procOutInfo["MemUseInfo"] = {}
+    procOutInfo["MemUseInfo"]["Rss"] = memInfo.rss
+    procOutInfo["MemUseInfo"]["Vms"] = memInfo.vms
+    procOutInfo["MemUseInfo"]["Shared"] = memInfo.shared
+    procOutInfo["MemUseInfo"]["Text"] = memInfo.text
+    procOutInfo["MemUseInfo"]["Lib"] = memInfo.lib
+    procOutInfo["MemUseInfo"]["Data"] = memInfo.data
+    procOutInfo["MemUseInfo"]["Dirty"] = memInfo.dirty
+    procOutInfo["MemUseInfo"]["Uss"] = memInfo.uss
+    procOutInfo["MemUseInfo"]["Pss"] = memInfo.pss
+    procOutInfo["MemUseInfo"]["Swap"] = memInfo.swap
+    procOutInfo["Connections"] = {}
+    for item in procS.connections():
+        if item.status not in list(procOutInfo["Connections"].keys()):
+            procOutInfo["Connections"][item.status] = 0
+        procOutInfo["Connections"][item.status] += 1
+    return procOutInfo

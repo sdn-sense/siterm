@@ -19,7 +19,7 @@
 
         function defineAllStates(data, sitename) {
           cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
-          cntDiv.append('<table class="table table-striped table-bordered table-hover" id="data-table-states"><thead class="thead-light"><tr><th>ID</th><th>Hostname</th><th>Service Name</th><th>Service State</th><th>Runtime</th><th>Version</th></tr></thead><tbody></tbody></table>');
+          cntDiv.append('<table class="table table-striped table-bordered table-hover" id="data-table-states"><thead class="thead-light"><tr><th>ID</th><th>Hostname</th><th>Service Name</th><th>Service State</th><th>Runtime</th><th>Version</th><th>Insert Date</th><th>Update Date</th><th>Exception</th></tr></thead><tbody></tbody></table>');
           nRow = $('<div class="row">');
           nRow.append(cntDiv);
           $('#view_fe_'+sitename).append(nRow);
@@ -36,6 +36,9 @@
                  row += '<td>' + data['states'][sitename][key]['servicestate'] + '</td>';
                  row += '<td>' + data['states'][sitename][key]['runtime'] + '</td>';
                  row += '<td>' + data['states'][sitename][key]['version'] + '</td>';
+                 row += '<td>' + new Date(data['states'][sitename][key]['insertdate'] * 1000).toLocaleString() + '</td>';
+                 row += '<td>' + new Date(data['states'][sitename][key]['updatedate'] * 1000).toLocaleString() + '</td>';
+                 row += '<td>' + data['states'][sitename][key]['exc'] + '</td>';
                  row += '</tr>';
                  console.log(row);
                  $('#data-table-states tbody').append(row);

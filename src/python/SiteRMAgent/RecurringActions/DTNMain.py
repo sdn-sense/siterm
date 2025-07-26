@@ -22,8 +22,8 @@ from SiteRMLibs.CustomExceptions import (
     ServiceWarning,
 )
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.MainUtilities import (
-    callSiteFE,
     contentDB,
     createDirs,
     getFullUrl,
@@ -45,6 +45,8 @@ class RecurringAction:
         self.classes = {}
         self._loadClasses()
         self.agent = contentDB()
+        fullUrl = getFullUrl(self.config, self.sitename)
+        self.requestHandler = Requests(url=fullUrl, logger=self.logger)
 
     def _loadClasses(self):
         """Load all classes"""
@@ -63,6 +65,9 @@ class RecurringAction:
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self._loadClasses()
+        fullUrl = getFullUrl(self.config, self.sitename)
+        self.requestHandler.close()
+        self.requestHandler = Requests(url=fullUrl, logger=self.logger)
 
     def prepareJsonOut(self):
         """Executes all plugins and prepares json output to FE."""
@@ -145,18 +150,17 @@ class RecurringAction:
         workDir = self.config.get("general", "privatedir") + "/SiteRM/"
         createDirs(workDir)
         dic, excMsg, raiseError = self.prepareJsonOut()
-        fullUrl = getFullUrl(self.config, self.sitename)
         dic = self.appendConfig(dic)
 
         self.agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
 
         self.logger.info("Will try to publish information to SiteFE")
-        outVals = callSiteFE(dic, fullUrl, f"/api/{self.sitename}/hosts")
+        outVals = self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/hosts", json=dic, retries=1, raiseEx=False, useragent="Agent")
         self.logger.info("Update Host result %s", outVals)
-        if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
-            outValsAdd = callSiteFE(dic, fullUrl, f"/api/{self.sitename}/hosts")
-            self.logger.info("Insert Host result %s", outVals)
-            if outValsAdd[2] != "OK" or outValsAdd[1] != 200:
+        if outVals[1] != 200 and outVals[3]:
+            outValsAdd = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/hosts", json=dic, retries=1, raiseEx=False, useragent="Agent")
+            self.logger.info("Insert Host result %s", outValsAdd)
+            if outValsAdd[1] != 200:
                 excMsg += " Could not publish to SiteFE Frontend."
                 excMsg += f"Update to FE: Error: {outVals[2]} HTTP Code: {outVals[1]}"
                 excMsg += f"Add tp FE: Error: {outValsAdd[2]} HTTP Code: {outValsAdd[1]}"
