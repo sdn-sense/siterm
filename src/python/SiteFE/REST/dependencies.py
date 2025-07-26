@@ -9,7 +9,10 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
-from fastapi import Depends, HTTPException, Request, status
+from typing import Any, Dict, List, Union
+
+from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 from SiteFE.PolicyService import stateMachine as ST
 from SiteRMLibs.CustomExceptions import (
     IssuesWithAuth,
@@ -111,3 +114,25 @@ def checkSite(deps, sitename: str):
 def allAPIDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
     return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
+
+
+# pylint: disable=too-few-public-methods
+class APIResponse:
+    """API Response class to handle API responses."""
+
+    @staticmethod
+    def genResponse(request: Request, data: Union[Dict[str, Any], List[Any]], headers: Dict[str, str] = None):
+        """Generate a response based on the request and data."""
+        if not isinstance(data, (dict, list)):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Data must be a dictionary or a list. Received: {type(data)}")
+        accept_header = request.headers.get("accept", "application/json").lower()
+        headers = headers or {}
+        if "application/json" in accept_header or "*/*" in accept_header:
+            return JSONResponse(content=data, headers=headers)
+        if "text/plain" in accept_header:
+            # Handle plain text response if needed
+            return Response(content=str(data), media_type="text/plain", headers=headers)
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            detail=f"Unsupported Accept header: {accept_header}. Supported: application/json, text/plain, */*",
+        )

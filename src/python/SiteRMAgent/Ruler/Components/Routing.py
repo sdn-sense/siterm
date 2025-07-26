@@ -35,7 +35,7 @@ def publishState(reqHandler, item: PublishStateInput):
         "hostport": item.modtype,
         "uuidstate": item.state,
     }
-    reqHandler.makeHttpCall("POST", f"/api/{item.sitename}/deltas/{item.uuid}/timestates", json=out, retries=1, raiseEx=False, useragent="Ruler")
+    reqHandler.makeHttpCall("POST", f"/api/{item.sitename}/deltas/{item.uuid}/timestates", data=out, retries=1, raiseEx=False, useragent="Ruler")
 
 
 class Rules:

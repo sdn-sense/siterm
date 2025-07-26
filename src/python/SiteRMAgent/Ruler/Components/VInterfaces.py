@@ -48,7 +48,7 @@ def publishState(reqHandler, item: PublishStateInput):
             "hostport": item.vlan["destport"],
             "uuidstate": item.state,
         }
-        reqHandler.makeHttpCall("POST", f"/api/{item.sitename}/deltas/{item.uuid}/timestates", json=out, retries=1, raiseEx=False, useragent="Ruler")
+        reqHandler.makeHttpCall("POST", f"/api/{item.sitename}/deltas/{item.uuid}/timestates", data=out, retries=1, raiseEx=False, useragent="Ruler")
 
 
 def getDefaultMTU(config, intfKey):

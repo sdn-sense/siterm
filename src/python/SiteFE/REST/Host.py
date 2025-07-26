@@ -10,11 +10,16 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
-from dataclasses import dataclass
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel
-from SiteFE.REST.dependencies import DEFAULT_RESPONSES, allAPIDeps, checkSite
+from SiteFE.REST.dependencies import (
+    DEFAULT_RESPONSES,
+    APIResponse,
+    allAPIDeps,
+    checkSite,
+)
 from SiteRMLibs.MainUtilities import (
     dumpFileContentAsJson,
     getFileContentAsJson,
@@ -23,21 +28,19 @@ from SiteRMLibs.MainUtilities import (
 
 router = APIRouter()
 
+
 # =========================================================
 # /api/{sitename}/hosts
 # =========================================================
-
-
-@dataclass
 class HostItem(BaseModel):
-    """Service Item Model."""
+    """Host Item Model."""
 
     # pylint: disable=too-few-public-methods
     hostname: str
     ip: str
     # Optional fields
-    insertTime: int = None
-    updateTime: int = None
+    insertTime: Optional[int] = None
+    updateTime: Optional[int] = None
 
     class Config:
         # pylint: disable=missing-class-docstring
@@ -63,6 +66,7 @@ class HostItem(BaseModel):
     },
 )
 async def gethosts(
+    request: Request,
     sitename: str = Path(..., description="The site name to retrieve the hosts for."),
     limit: int = Query(100, description="The maximum number of results to return. Defaults to 100.", ge=1, le=100),
     deps=Depends(allAPIDeps),
@@ -77,7 +81,7 @@ async def gethosts(
     for host in hosts:
         host["hostinfo"] = getFileContentAsJson(host.get("hostinfo", ""))
         out.append(host)
-    return out
+    return APIResponse.genResponse(request, out)
 
 
 # add (POST)
@@ -99,7 +103,7 @@ async def gethosts(
         **DEFAULT_RESPONSES,
     },
 )
-async def addhost(item: HostItem, sitename: str = Path(..., description="The site name to add or update the host for."), deps=Depends(allAPIDeps)):
+async def addhost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to add or update the host for."), deps=Depends(allAPIDeps)):
     """
     Add or update a host in the database.
     - If the host does not exist, it will be added.
@@ -115,7 +119,7 @@ async def addhost(item: HostItem, sitename: str = Path(..., description="The sit
         deps["dbI"].insert("hosts", [out])
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This host is already in db. Use PUT to update existing host.")
-    return {"Status": "ADDED"}
+    return APIResponse.genResponse(request, {"Status": "ADDED"})
 
 
 # update (PUT)
@@ -141,7 +145,7 @@ async def addhost(item: HostItem, sitename: str = Path(..., description="The sit
         **DEFAULT_RESPONSES,
     },
 )
-async def updatehost(item: HostItem, sitename: str = Path(..., description="The site name to update the host for."), deps=Depends(allAPIDeps)):
+async def updatehost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to update the host for."), deps=Depends(allAPIDeps)):
     """
     Update an existing host in the database.
     - If the host does not exist, it will raise an exception.
@@ -156,7 +160,7 @@ async def updatehost(item: HostItem, sitename: str = Path(..., description="The 
         deps["dbI"].update("hosts", [out])
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This host is not in db. Use POST to add new host.")
-    return {"Status": "UPDATED"}
+    return APIResponse.genResponse(request, {"Status": "UPDATED"})
 
 
 # delete (DELETE)
@@ -184,7 +188,7 @@ async def updatehost(item: HostItem, sitename: str = Path(..., description="The 
         **DEFAULT_RESPONSES,
     },
 )
-async def deletehost(item: HostItem, sitename: str = Path(..., description="The site name to delete the host for."), deps=Depends(allAPIDeps)):
+async def deletehost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to delete the host for."), deps=Depends(allAPIDeps)):
     """
     Delete an existing host from the database.
     - If the host does not exist, it will raise an exception.
@@ -198,4 +202,4 @@ async def deletehost(item: HostItem, sitename: str = Path(..., description="The 
         deps["dbI"].delete("hosts", [host[0]["id"]])
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This host is not in db. Why to delete non-existing host?")
-    return {"Status": "DELETED"}
+    return APIResponse.genResponse(request, {"Status": "DELETED"})

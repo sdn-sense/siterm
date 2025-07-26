@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long, too-many-arguments
 """
 Debug API Calls
 Title                   : siterm
@@ -10,11 +10,16 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel
-from SiteFE.REST.dependencies import DEFAULT_RESPONSES, allAPIDeps, checkSite
+from SiteFE.REST.dependencies import (
+    DEFAULT_RESPONSES,
+    APIResponse,
+    allAPIDeps,
+    checkSite,
+)
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.MainUtilities import (
     dumpFileContentAsJson,
@@ -148,10 +153,10 @@ class DebugItem(BaseModel):
     # pylint: disable=too-few-public-methods
     hostname: str
     # Optional fields
-    request: dict = {}
-    output: dict = {}
-    insertTime: int = None
-    updateTime: int = None
+    request: Optional[Dict[str, Any]] = {}
+    output: Optional[Dict[str, Any]] = {}
+    insertTime: Optional[int] = None
+    updateTime: Optional[int] = None
 
 
 # TODO few more debug calls to add
@@ -179,14 +184,14 @@ class DebugItem(BaseModel):
         **DEFAULT_RESPONSES,
     },
 )
-async def getDebugActionsList(sitename: str = Path(..., description="The site name to retrieve the debug actions list for."), deps=Depends(allAPIDeps)):
+async def getDebugActionsList(request: Request, sitename: str = Path(..., description="The site name to retrieve the debug actions list for."), deps=Depends(allAPIDeps)):
     """
     Get a list of all possible debug actions for the given site name.
     - Returns a list of debug actions.
     """
     checkSite(deps, sitename)
     out = {"actions": getactions(deps["config"]), "version": runningVersion}
-    return out
+    return APIResponse.genResponse(request, out)
 
 
 # =========================================================
@@ -209,6 +214,7 @@ async def getDebugActionsList(sitename: str = Path(..., description="The site na
     },
 )
 async def getDebugActionInfo(
+    request: Request,
     sitename: str = Path(..., description="The site name to retrieve the debug action information for."),
     action: str = Query(..., description="The debug action to retrieve information for."),
     deps=Depends(allAPIDeps),
@@ -223,7 +229,7 @@ async def getDebugActionInfo(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Debug action '{action}' not found for site '{sitename}'.")
     defaults = getactionkeys(deps["config"], action)
     out = {"action": action, "defaults": defaults, "keys": "TODO", "version": runningVersion}
-    return out
+    return APIResponse.genResponse(request, out)
 
 
 # =========================================================
@@ -246,6 +252,7 @@ async def getDebugActionInfo(
     },
 )
 async def getDebugActions(
+    request: Request,
     sitename: str = Path(..., description="The site name to get the debug action information for."),
     debugvar: Optional[str] = Query(None, description="The debug action ID to retrieve information for."),
     limit: int = Query(100, description="Limit the number of debug requests returned. Only applicable for 'ALL'.", ge=1, le=100),
@@ -259,7 +266,8 @@ async def getDebugActions(
     - Returns a list of debug actions.
     """
     checkSite(deps, sitename)
-    return getDebugEntry(deps, debugvar=debugvar, hostname=hostname, state=state, details=details, limit=limit)
+    out = getDebugEntry(deps, debugvar=debugvar, hostname=hostname, state=state, details=details, limit=limit)
+    return APIResponse.genResponse(request, out)
 
 
 # =========================================================
@@ -283,6 +291,7 @@ def _getdebuginfo(out):
     },
 )
 async def getDebugInfo(
+    request: Request,
     sitename: str = Path(..., description="The site name to get the debug action information for."),
     debugvar: str = Path(..., description="The debug action ID to retrieve information for."),
     details: bool = Query(False, description="If set, returns detailed information for the debug request."),
@@ -297,7 +306,8 @@ async def getDebugInfo(
     - Returns the debug action information for the given debug ID.
     """
     checkSite(deps, sitename)
-    return getDebugEntry(deps, debugvar=debugvar, hostname=hostname, state=state, details=details)
+    out = getDebugEntry(deps, debugvar=debugvar, hostname=hostname, state=state, details=details)
+    return APIResponse.genResponse(request, out)
 
 
 @router.put(
@@ -311,6 +321,7 @@ async def getDebugInfo(
     },
 )
 async def updatedebug(
+    request: Request,
     item: DebugItem,
     sitename: str = Path(..., description="The site name to get the debug action information for."),
     debugvar: str = Path(..., description="The debug action ID to update information for."),
@@ -329,7 +340,7 @@ async def updatedebug(
     # Update the state in database.
     out = {"id": debugvar, "state": item.state, "updatedate": getUTCnow()}
     updOut = deps["dbI"].update("debugrequests", [out])
-    return {"Status": updOut[0], "ID": updOut[2]}
+    return APIResponse.genResponse(request, {"Status": updOut[0], "ID": updOut[2]})
 
 
 @router.delete(
@@ -343,6 +354,7 @@ async def updatedebug(
     },
 )
 async def deletedebug(
+    request: Request,
     sitename: str = Path(..., description="The site name to get the debug action information for."),
     debugvar: str = Path(..., description="The debug action ID to delete information for."),
     deps=Depends(allAPIDeps),
@@ -362,7 +374,7 @@ async def deletedebug(
         os.remove(dbentry[0]["outputinfo"])
     # ==================================
     # Return the status and ID of the deleted debug request
-    return {"Status": updOut[0], "ID": updOut[2]}
+    return APIResponse.genResponse(request, {"Status": updOut[0], "ID": updOut[2]})
 
 
 # =========================================================
@@ -380,7 +392,7 @@ async def deletedebug(
         400: {"description": "Bad request", "content": {"application/json": {"example": {"detail": "Unsupported symbol in input request. Contact Support"}}}},
     },
 )
-async def submitdebug(item: DebugItem, sitename: str = Path(..., description="The site name to get the debug action information for."), deps=Depends(allAPIDeps)):
+async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..., description="The site name to get the debug action information for."), deps=Depends(allAPIDeps)):
     """Submit new debug action request.
     - Submits a new debug action request for the given site name.
     """
@@ -395,4 +407,4 @@ async def submitdebug(item: DebugItem, sitename: str = Path(..., description="Th
     dumpFileContentAsJson(requestfname, inputDict)
     out = {"hostname": inputDict.get("hostname", "undefined"), "state": "new", "insertdate": getUTCnow(), "updatedate": getUTCnow(), "debuginfo": requestfname, "outputinfo": outputfname}
     insOut = deps["dbI"].insert("debugrequests", [out])
-    return {"Status": insOut[0], "ID": insOut[2]}
+    return APIResponse.genResponse(request, {"Status": insOut[0], "ID": insOut[2]})

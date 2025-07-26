@@ -85,7 +85,7 @@ class Debugger(DebugService):
         out["serviceinfo"] = getAllIps()
         self.logger.debug(f"Service report: {out}")
         self.logger.info("Will try to publish information to SiteFE")
-        outVals = self.reqHandler.makeHttpCall("POST", f"/api/{self.sitename}/services", json=out, useragent="Debugger")
+        outVals = self.reqHandler.makeHttpCall("POST", f"/api/{self.sitename}/services", data=out, useragent="Debugger")
         self.logger.info("Update Service result %s", outVals)
         if outVals[2] != "OK" or outVals[1] != 200 and outVals[3]:
             excMsg = " Could not publish to SiteFE Frontend."
