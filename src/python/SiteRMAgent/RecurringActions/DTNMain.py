@@ -6,6 +6,7 @@ Authors:
 
 Date: 2022/01/29
 """
+import socket
 import sys
 
 from SiteRMAgent.RecurringActions.Plugins.ArpInfo import ArpInfo
@@ -30,6 +31,7 @@ from SiteRMLibs.MainUtilities import (
     getLoggingObject,
     getUTCnow,
 )
+from SiteRMLibs.MemDiskStats import MemDiskStats
 
 COMPONENT = "RecurringAction"
 
@@ -44,9 +46,11 @@ class RecurringAction:
         self.sitename = sitename
         self.classes = {}
         self._loadClasses()
+        self.hostname = socket.getfqdn()
         self.agent = contentDB()
         fullUrl = getFullUrl(self.config, self.sitename)
         self.requestHandler = Requests(url=fullUrl, logger=self.logger)
+        self.memDiskStats = MemDiskStats()
 
     def _loadClasses(self):
         """Load all classes"""
@@ -68,6 +72,19 @@ class RecurringAction:
         fullUrl = getFullUrl(self.config, self.sitename)
         self.requestHandler.close()
         self.requestHandler = Requests(url=fullUrl, logger=self.logger)
+
+    def reportMemDiskStats(self):
+        """Report memory and disk statistics."""
+        self.logger.info("Reporting memory and disk statistics")
+        self.memDiskStats.reset()
+        self.memDiskStats.updateStorageInfo()
+        self.memDiskStats.updateMemStats(["sitermagent-update", "siterm-ruler", "Config-Fetcher"], 1)
+        out = {"hostname": f"hostnamemem-{self.hostname}-Agent", "output": self.memDiskStats.getMemMonitor()}
+        self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Agent")
+        out["hostname"] = f"hostnamedisk-{self.hostname}-Agent"
+        out["output"] = self.memDiskStats.getStorageInfo()
+        self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Agent")
+        self.logger.info("Memory and disk statistics reported successfully.")
 
     def prepareJsonOut(self):
         """Executes all plugins and prepares json output to FE."""
@@ -139,8 +156,8 @@ class RecurringAction:
         """Append to dic values from config and also dates."""
         dic["hostname"] = self.config.get("agent", "hostname")
         dic["ip"] = self.config.get("general", "ip")
-        dic["insertTime"] = getUTCnow()
-        dic["updateTime"] = getUTCnow()
+        dic["insertdate"] = getUTCnow()
+        dic["updatedate"] = getUTCnow()
         dic["Summary"].setdefault("config", {})
         dic["Summary"]["config"] = self.config.getraw("MAIN")
         return dic

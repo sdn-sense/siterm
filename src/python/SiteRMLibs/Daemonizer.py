@@ -129,7 +129,6 @@ class DBBackend:
             return False
         reported = True
         try:
-            # TODO: Report psutil process information from MainUtilities, back to FE/DB
             dbOut = {
                 "hostname": kwargs.get("hostname", "default"),
                 "servicestate": kwargs.get("servicestate", "UNSET"),
@@ -171,9 +170,9 @@ class DBBackend:
                 "runtime": kwargs["runtime"],
                 "hostname": getHostname(self.config, self.component),
                 "version": runningVersion,
-                "exc": kwargs.get("exc", "No Exception provided by service"),
+                "exc": kwargs.get("exc", "No Exception provided by service")[:4095],
             }
-            self.handlers[kwargs["sitename"]].makeHttpCall("PUT", f"/api/{kwargs['sitename']}/servicestates", data=dic, useragent="Daemonizer")
+            self.handlers[kwargs["sitename"]].makeHttpCall("POST", f"/api/{kwargs['sitename']}/servicestates", data=dic, useragent="Daemonizer")
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
@@ -282,7 +281,7 @@ class Daemon(DBBackend):
             for sitename in self.config.get("general", "sites"):
                 fullURL = getFullUrl(self.config, sitename)
                 self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
-        except (NoOptionError, NoSectionError):
+        except:
             for sitename in self.config.get("general", "sitename"):
                 fullURL = getFullUrl(self.config, sitename)
                 self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)

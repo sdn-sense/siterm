@@ -29,6 +29,7 @@ from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.MainUtilities import contentDB, evaldict, getFullUrl, getLoggingObject
+from SiteRMLibs.MemDiskStats import MemDiskStats
 
 COMPONENT = "Debugger"
 
@@ -69,6 +70,7 @@ class Debugger(DebugService):
         self.sitename = sitename
         self.hostname = socket.getfqdn()
         self.diragent = contentDB()
+        self.memdisk = MemDiskStats()
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
 
     def refreshthread(self):
@@ -78,6 +80,19 @@ class Debugger(DebugService):
         self.reqHandler.close()
         self.reqHandler = Requests(url=fullURL, logger=self.logger)
         self.hostname = socket.getfqdn()
+
+    def reportMemDiskStats(self):
+        """Report memory and disk statistics."""
+        self.logger.info("Reporting memory and disk statistics")
+        self.memDiskStats.reset()
+        self.memDiskStats.updateStorageInfo()
+        self.memDiskStats.updateMemStats(["Config-Fetcher", "siterm-debugger"], 1)
+        out = {"hostname": f"hostnamemem-{self.hostname}-Debugger", "output": self.memDiskStats.getMemMonitor()}
+        self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Debugger")
+        out["hostname"] = f"hostnamedisk-{self.hostname}-Debugger"
+        out["output"] = self.memDiskStats.getStorageInfo()
+        self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Debugger")
+        self.logger.info("Memory and disk statistics reported successfully.")
 
     def registerService(self):
         """Register this service in SiteFE."""

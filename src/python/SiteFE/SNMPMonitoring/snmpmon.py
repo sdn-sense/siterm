@@ -17,27 +17,28 @@ Authors:
 
 Date: 2022/11/21
 """
+import copy
 import os
 import sys
-import copy
-import psutil
+
 from easysnmp import Session
-from easysnmp.exceptions import EasySNMPUnknownObjectIDError
-from easysnmp.exceptions import EasySNMPTimeoutError
-from SiteRMLibs.MainUtilities import getVal
-from SiteRMLibs.MainUtilities import getDBConn
-from SiteRMLibs.MainUtilities import getUTCnow
-from SiteRMLibs.MainUtilities import contentDB
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import jsondumps
-from SiteRMLibs.MainUtilities import getStorageInfo
-from SiteRMLibs.MainUtilities import evaldict
-from SiteRMLibs.MainUtilities import getAllHosts
-from SiteRMLibs.MainUtilities import getActiveDeltas
-from SiteRMLibs.MainUtilities import isValFloat
+from easysnmp.exceptions import EasySNMPTimeoutError, EasySNMPUnknownObjectIDError
+from prometheus_client import CollectorRegistry, Enum, Gauge, Info, generate_latest
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.GitConfig import getGitConfig
-from prometheus_client import (CollectorRegistry, Enum, Gauge, Info, generate_latest)
+from SiteRMLibs.MainUtilities import (
+    contentDB,
+    evaldict,
+    getActiveDeltas,
+    getAllHosts,
+    getDBConn,
+    getLoggingObject,
+    getUTCnow,
+    getVal,
+    isValFloat,
+    jsondumps,
+)
+from SiteRMLibs.MemDiskStats import MemDiskStats
 
 
 class Topology:
@@ -48,9 +49,7 @@ class Topology:
         self.config = config
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service="SNMPMonitoring")
-        self.dbI = getVal(
-            getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename}
-        )
+        self.dbI = getVal(getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename})
         self.diragent = contentDB()
         self.topodir = os.path.join(self.config.get(sitename, "privatedir"), "Topology")
 
@@ -68,20 +67,9 @@ class Topology:
     def _getansdata(indata, keys):
         """Get Ansible data from ansible output"""
         if len(keys) == 1:
-            return (
-                indata.get("event_data", {})
-                .get("res", {})
-                .get("ansible_facts", {})
-                .get(keys[0], {})
-            )
+            return indata.get("event_data", {}).get("res", {}).get("ansible_facts", {}).get(keys[0], {})
         if len(keys) == 2:
-            return (
-                indata.get("event_data", {})
-                .get("res", {})
-                .get("ansible_facts", {})
-                .get(keys[0], {})
-                .get(keys[1], {})
-            )
+            return indata.get("event_data", {}).get("res", {}).get("ansible_facts", {}).get(keys[0], {}).get(keys[1], {})
         return {}
 
     def _getWANLinks(self, incr):
@@ -91,9 +79,7 @@ class Topology:
             for sw in self.config["MAIN"].get(site, {}).get("switch", []):
                 if not self.config["MAIN"].get(sw, {}):
                     continue
-                if not isinstance(
-                    self.config["MAIN"].get(sw, {}).get("ports", None), dict
-                ):
+                if not isinstance(self.config["MAIN"].get(sw, {}).get("ports", None), dict):
                     continue
                 for _, val in self.config["MAIN"].get(sw, {}).get("ports", {}).items():
                     if "wanlink" in val and val["wanlink"] and val.get("isAlias", None):
@@ -105,9 +91,7 @@ class Topology:
                                 "DeviceInfo": {"type": "cloud", "name": val["isAlias"]},
                             },
                         )
-                        wan_links[f"wan{incr}"]["topo"].setdefault(
-                            val["isAlias"].split(":")[-1], {"device": sw, "port": val}
-                        )
+                        wan_links[f"wan{incr}"]["topo"].setdefault(val["isAlias"].split(":")[-1], {"device": sw, "port": val})
                         incr += 1
         return wan_links
 
@@ -140,14 +124,10 @@ class Topology:
                 },
             )
             for key, vals in switchdata["lldp"].items():
-                remSwitch = self._findConnection(
-                    workdata, vals.get("remote_chassis_id", "")
-                )
+                remSwitch = self._findConnection(workdata, vals.get("remote_chassis_id", ""))
                 remPort = vals.get("remote_port_id", "")
                 if remSwitch and remPort:
-                    swout["topo"].setdefault(
-                        key, {"device": remSwitch["switch"], "port": remPort}
-                    )
+                    swout["topo"].setdefault(key, {"device": remSwitch["switch"], "port": remPort})
         # Now lets get host information
         for host in self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100):
             parsedInfo = self.diragent.getFileContentAsJson(host.get("hostinfo", ""))
@@ -168,22 +148,16 @@ class Topology:
             incr += 1
             if lldpInfo:
                 for intf, vals in lldpInfo.items():
-                    remSwitch = self._findConnection(
-                        workdata, vals.get("remote_chassis_id", "")
-                    )
+                    remSwitch = self._findConnection(workdata, vals.get("remote_chassis_id", ""))
                     remPort = vals.get("remote_port_id", "")
                     if remSwitch and remPort:
-                        hout["topo"].setdefault(
-                            intf, {"device": remSwitch["switch"], "port": remPort}
-                        )
+                        hout["topo"].setdefault(intf, {"device": remSwitch["switch"], "port": remPort})
             else:
                 for intf in hostconfig.get("agent", {}).get("interfaces", []):
                     swintf = hostconfig.get(intf, {}).get("port", "")
                     switch = hostconfig.get(intf, {}).get("switch", "")
                     if switch and swintf:
-                        hout["topo"].setdefault(
-                            intf, {"device": switch, "port": swintf}
-                        )
+                        hout["topo"].setdefault(intf, {"device": switch, "port": swintf})
         out.update(self._getWANLinks(incr))
         # Write new out to file
         fname = os.path.join(self.topodir, "topology.json")
@@ -211,9 +185,7 @@ class ActiveWrapper:
         if "hasService" in indict and indict["hasService"].get("uri", ""):
             tmpargs = copy.deepcopy(kwargs)
             tmpargs["uri"] = indict["hasService"]["uri"]
-            tmpargs["networkstatus"] = (
-                indict["hasService"].get("_params", {}).get("networkstatus", "")
-            )
+            tmpargs["networkstatus"] = indict["hasService"].get("_params", {}).get("networkstatus", "")
             for key in [
                 "availableCapacity",
                 "granularity",
@@ -265,14 +237,12 @@ class PromOut:
         self.config = config
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service="SNMPMonitoring")
-        self.dbI = getVal(
-            getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename}
-        )
+        self.dbI = getVal(getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename})
         self.diragent = contentDB()
         self.timenow = int(getUTCnow())
         self.activeAPI = ActiveWrapper()
-        self.memMonitor = {}
         self.diskMonitor = {}
+        self.memMonitor = {}
         self.arpLabels = {
             "Device": "",
             "Flags": "",
@@ -297,14 +267,13 @@ class PromOut:
         memInfo = Gauge(
             "memory_usage",
             "Memory Usage for Service",
-            ["servicename", "key"],
+            ["servicename", "key", "hostname"],
             registry=registry,
         )
-        # TODO: In future pass agent memory mon usage also, and record it
-        for _, hostDict in self.memMonitor.items():
+        for hostname, hostDict in self.memMonitor.items():
             for serviceName, vals in hostDict.items():
                 for key, val in vals.items():
-                    labels = {"servicename": serviceName, "key": key}
+                    labels = {"servicename": serviceName, "key": key, "hostname": hostname}
                     memInfo.labels(**labels).set(val)
 
     def __diskStats(self, registry):
@@ -353,23 +322,15 @@ class PromOut:
             registry=registry,
         )
         for host, hostDict in getAllHosts(self.dbI).items():
-            hostDict["hostinfo"] = self.diragent.getFileContentAsJson(
-                hostDict["hostinfo"]
-            )
+            hostDict["hostinfo"] = self.diragent.getFileContentAsJson(hostDict["hostinfo"])
             if int(self.timenow - hostDict["updatedate"]) > 300:
                 continue
             if "CertInfo" in hostDict.get("hostinfo", {}).keys():
                 for key in ["notAfter", "notBefore"]:
                     keys = {"hostname": host, "Key": key}
-                    agentCertValid.labels(**keys).set(
-                        hostDict["hostinfo"]["CertInfo"].get(key, 0)
-                    )
-            if "ArpInfo" in hostDict.get("hostinfo", {}).keys() and hostDict[
-                "hostinfo"
-            ]["ArpInfo"].get("arpinfo"):
-                self._addHostArpInfo(
-                    arpState, host, hostDict["hostinfo"]["ArpInfo"]["arpinfo"]
-                )
+                    agentCertValid.labels(**keys).set(hostDict["hostinfo"]["CertInfo"].get(key, 0))
+            if "ArpInfo" in hostDict.get("hostinfo", {}).keys() and hostDict["hostinfo"]["ArpInfo"].get("arpinfo"):
+                self._addHostArpInfo(arpState, host, hostDict["hostinfo"]["ArpInfo"]["arpinfo"])
 
     def __getSwitchErrors(self, registry):
         """Add Switch Errors to prometheus output"""
@@ -485,9 +446,7 @@ class PromOut:
             ],
             registry=registry,
         )
-        qosGauge = Gauge(
-            "qos_status", "QoS Requests Status", labelqos, registry=registry
-        )
+        qosGauge = Gauge("qos_status", "QoS Requests Status", labelqos, registry=registry)
 
         currentActive = getActiveDeltas(self)
         for item in self.activeAPI.generateReport(currentActive):
@@ -533,11 +492,7 @@ class PromOut:
         for service in services:
             state = "UNKNOWN"
             runtime = -1
-            if (
-                service["servicename"]
-                in ["SNMPMonitoring", "ProvisioningService", "LookUpService"]
-                and service.get("hostname", "UNSET") != "default"
-            ):
+            if service["servicename"] in ["SNMPMonitoring", "ProvisioningService", "LookUpService"] and service.get("hostname", "UNSET") != "default":
                 continue
             if int(self.timenow - service["updatedate"]) < 600:
                 # If we are not getting service state for 10 mins, set state as unknown
@@ -578,9 +533,7 @@ class SNMPMonitoring:
         self.logger = getLoggingObject(config=self.config, service="SNMPMonitoring")
         self.sitename = sitename
         self.switch = Switch(config, sitename)
-        self.dbI = getVal(
-            getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename}
-        )
+        self.dbI = getVal(getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename})
         self.diragent = contentDB()
         self.switches = {}
         self.session = None
@@ -588,7 +541,7 @@ class SNMPMonitoring:
         self.topo = Topology(config, sitename)
         self.err = []
         self.hostconf = {}
-        self.memMonitor = {}
+        self.memdisk = MemDiskStats()
         self.snmperrorcount = {}
 
     def refreshthread(self):
@@ -607,26 +560,18 @@ class SNMPMonitoring:
         self.hostconf[host] = self.switch.plugin.getHostConfig(host)
         if self.config.config["MAIN"].get(host, {}).get("external_snmp", ""):
             snmphost = self.config.config["MAIN"][host]["external_snmp"]
-            self.logger.info(
-                f"SNMP Scan skipped for {host}. Remote endpoint defined: {snmphost}"
-            )
+            self.logger.info(f"SNMP Scan skipped for {host}. Remote endpoint defined: {snmphost}")
             return
         if "snmp_monitoring" not in self.hostconf[host]:
-            self.logger.info(
-                f"Ansible host: {host} config does not have snmp_monitoring parameters"
-            )
+            self.logger.info(f"Ansible host: {host} config does not have snmp_monitoring parameters")
             return
         if "session_vars" not in self.hostconf[host]["snmp_monitoring"]:
-            self.logger.info(
-                f"Ansible host: {host} config does not have session_vars parameters"
-            )
+            self.logger.info(f"Ansible host: {host} config does not have session_vars parameters")
             return
         # easysnmp does not support ipv6 and will fail with ValueError (unable to unpack)
         # To avoid this, we will bypass ipv6 check if error is raised.
         try:
-            self.session = Session(
-                **self.hostconf[host]["snmp_monitoring"]["session_vars"]
-            )
+            self.session = Session(**self.hostconf[host]["snmp_monitoring"]["session_vars"])
         except ValueError:
             conf = self.hostconf[host]["snmp_monitoring"]["session_vars"]
             hostname = conf.pop("hostname")
@@ -658,13 +603,8 @@ class SNMPMonitoring:
         # There might be some MIBs/oids which can be used to get this information
         # for now, we will use ansible to get mac addresses (as enabling more features
         # at sites - might be more complex)
-        updatedate = (
-            self.switch.switches.get("output", {})
-            .get(host, {})
-            .get("dbinfo", {})
-            .get("updatedate", 0)
-        )
-        if (getUTCnow() - updatedate) > 600:
+        updatedate = self.switch.switches.get("output", {}).get(host, {}).get("dbinfo", {}).get("updatedate", 0)
+        if (getUTCnow() - updatedate) > 1200:
             self.logger.info(f"[{host}]: Forcing ansible to update device information")
             self.switch.deviceUpdate(self.sitename, host)
         self.switch.getinfo()
@@ -703,10 +643,7 @@ class SNMPMonitoring:
     def _getMacAddrSession(self, host, macs):
         if not self.session:
             return
-        if (
-            self.hostconf[host].get("ansible_network_os", "undefined")
-            == "sense.junos.junos"
-        ):
+        if self.hostconf[host].get("ansible_network_os", "undefined") == "sense.junos.junos":
             self._junosmac(host, macs)
             return
         macs.setdefault(host, {"vlans": {}})
@@ -722,68 +659,33 @@ class SNMPMonitoring:
                     macs[host]["vlans"].setdefault(vlan, [])
                     macs[host]["vlans"][vlan].append(":".join(mac))
 
-    def _processStats(self, proc, services, lookupid):
-        """Get Process Stats - memory"""
-        procList = proc.cmdline()
-        if len(procList) > lookupid:
-            for serviceName in services:
-                if procList[lookupid].endswith(serviceName):
-                    self.memMonitor.setdefault(
-                        serviceName,
-                        {
-                            "rss": 0,
-                            "vms": 0,
-                            "shared": 0,
-                            "text": 0,
-                            "lib": 0,
-                            "data": 0,
-                            "dirty": 0,
-                        },
-                    )
-                    for key in self.memMonitor[serviceName].keys():
-                        if hasattr(proc.memory_info(), key):
-                            self.memMonitor[serviceName][key] += getattr(
-                                proc.memory_info(), key
-                            )
-
     def getMemStats(self):
         """Refresh all Memory Statistics in FE"""
-
-        def procWrapper(proc, services, lookupid):
-            """Process Wrapper to catch exited process or zombie process"""
-            try:
-                self._processStats(proc, services, lookupid)
-            except psutil.NoSuchProcess:
-                pass
-            except psutil.ZombieProcess:
-                pass
-
-        self.memMonitor = {}
-        for proc in psutil.process_iter(attrs=None, ad_value=None):
-            procWrapper(proc, ["mariadbd", "httpd"], 0)
-            procWrapper(
-                proc,
-                [
-                    "Config-Fetcher",
-                    "SNMPMonitoring-update",
-                    "ProvisioningService-update",
-                    "LookUpService-update",
-                    "siterm-debugger",
-                    "PolicyService-update",
-                    "DBWorker-update",
-                    "DBCleaner-service",
-                    "SwitchWorker",
-                    "gunicorn",
-                    "Validator-update",
-                ],
-                1,
-            )
-        # Write to DB
-        self._writeToDB("hostnamemem-fe", self.memMonitor)
+        self.memdisk.reset()
+        self.memdisk.updateMemStats(["mariadbd", "httpd"], 0)
+        self.memdisk.updateMemStats(
+            [
+                "Config-Fetcher",
+                "SNMPMonitoring-update",
+                "ProvisioningService-update",
+                "LookUpService-update",
+                "siterm-debugger",
+                "PolicyService-update",
+                "DBWorker-update",
+                "DBCleaner-service",
+                "SwitchWorker",
+                "gunicorn",
+                "Validator-update",
+            ],
+            1,
+        )
+        self._writeToDB("hostnamemem-fe", self.memdisk.getMemMonitor())
 
     def getDiskStats(self):
         """Get Disk Statistics"""
-        self._writeToDB("hostnamedisk-fe", getStorageInfo())
+        self.memdisk.reset()
+        self.memdisk.updateStorageInfo()
+        self._writeToDB("hostnamedisk-fe", self.memdisk.getStorageInfo())
 
     def startwork(self):
         """Scan all switches and get snmp data"""
@@ -799,9 +701,7 @@ class SNMPMonitoring:
             for key in self.config["MAIN"]["snmp"]["mibs"]:
                 allvals = self._getSNMPVals(key, host)
                 if self.snmperrorcount.get(host, 0) > 3:
-                    self.logger.error(
-                        f"[{host}]: Too many SNMP errors ({self.snmperrorcount}), skipping further SNMP queries"
-                    )
+                    self.logger.error(f"[{host}]: Too many SNMP errors ({self.snmperrorcount}), skipping further SNMP queries")
                     break
                 for item in allvals:
                     indx = item.oid_index
@@ -809,16 +709,15 @@ class SNMPMonitoring:
                     out[indx][key] = item.value.replace("\x00", "")
             out["macs"] = macs[host]
             self._writeToDB(host, out)
-        self.logger.info(
-            f"[{self.sitename}]: SNMP Monitoring finished for {len(self.switches)} switches"
-        )
+        self.logger.info(f"[{self.sitename}]: SNMP Monitoring finished for {len(self.switches)} switches")
+        # Get Memory and Disk Statistics
         self.getMemStats()
         self.logger.info(f"[{self.sitename}]: Memory statistics written to DB")
         self.getDiskStats()
         self.logger.info(f"[{self.sitename}]: Disk statistics written to DB")
-        # We could do delete and re-init everytime, or at refresh.
+        # Set Prometheus output
         self.prom.metrics()
-        # Get Topology json
+        # Set Topology json
         self.topo.gettopology()
         self.logger.info(f"[{self.sitename}]: Topology map written to DB")
         if self.err:

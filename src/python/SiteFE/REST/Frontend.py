@@ -16,6 +16,7 @@ from SiteFE.REST.dependencies import (
     allAPIDeps,
     checkSite,
 )
+from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson
 
 router = APIRouter()
@@ -242,7 +243,7 @@ async def getfeconfig(request: Request, deps=Depends(allAPIDeps)):
 async def getswitchdata(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the switch data for."),
-    limit: int = Query(10, description="The maximum number of results to return. Defaults to 10.", ge=1, le=100),
+    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(allAPIDeps),
 ):
     """
@@ -321,7 +322,7 @@ async def getactivedeltas(request: Request, sitename: str = Path(..., descriptio
 async def getqosdata(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the QoS data for."),
-    limit: int = Query(100, description="The maximum number of hosts to lookup. Defaults to 100.", ge=1, le=100),
+    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of hosts to lookup. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(allAPIDeps),
 ):
     """

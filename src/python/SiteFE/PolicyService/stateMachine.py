@@ -133,8 +133,8 @@ class StateMachine:
         """Add new delta to db."""
         dbOut = {
             "uid": delta["ID"],
-            "insertdate": int(delta["InsertTime"]),
-            "updatedate": int(delta["UpdateTime"]),
+            "insertdate": int(delta["Insertdate"]),
+            "updatedate": int(delta["Updatedate"]),
             "state": str(state),
             "deltat": str(delta["Type"]),
             "content": json.dumps(delta["Content"]),

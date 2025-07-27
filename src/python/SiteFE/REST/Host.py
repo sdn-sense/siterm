@@ -10,7 +10,6 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel
@@ -20,6 +19,7 @@ from SiteFE.REST.dependencies import (
     allAPIDeps,
     checkSite,
 )
+from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
     dumpFileContentAsJson,
     getFileContentAsJson,
@@ -38,9 +38,6 @@ class HostItem(BaseModel):
     # pylint: disable=too-few-public-methods
     hostname: str
     ip: str
-    # Optional fields
-    insertTime: Optional[int] = None
-    updateTime: Optional[int] = None
 
     class Config:
         # pylint: disable=missing-class-docstring
@@ -68,7 +65,7 @@ class HostItem(BaseModel):
 async def gethosts(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the hosts for."),
-    limit: int = Query(100, description="The maximum number of results to return. Defaults to 100.", ge=1, le=100),
+    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(allAPIDeps),
 ):
     """
@@ -114,7 +111,7 @@ async def addhost(request: Request, item: HostItem, sitename: str = Path(..., de
     if not host:
         fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "HostData")
         fname = os.path.join(fpath, item.hostname, "hostinfo.json")
-        out = {"hostname": item.hostname, "ip": item.ip, "insertdate": item.insertTime or getUTCnow(), "updatedate": item.updateTime or getUTCnow(), "hostinfo": fname}
+        out = {"hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": fname}
         dumpFileContentAsJson(fname, item.dict())
         deps["dbI"].insert("hosts", [out])
     else:
@@ -155,7 +152,7 @@ async def updatehost(request: Request, item: HostItem, sitename: str = Path(...,
     if host:
         fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "HostData")
         fname = os.path.join(fpath, item.hostname, "hostinfo.json")
-        out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": item.insertTime or getUTCnow(), "updatedate": item.updateTime or getUTCnow(), "hostinfo": fname}
+        out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": fname}
         dumpFileContentAsJson(fname, item.dict())
         deps["dbI"].update("hosts", [out])
     else:

@@ -21,6 +21,7 @@ from SiteFE.REST.dependencies import (
     checkSite,
 )
 from SiteRMLibs import __version__ as runningVersion
+from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
     dumpFileContentAsJson,
     generateRandomUUID,
@@ -40,9 +41,11 @@ def _checkactionrequest(config, action=None):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{action} not configured for this FE")
 
 
-def getDebugEntry(deps, debugvar=None, hostname=None, state=None, details=False, limit=100):
+def getDebugEntry(deps, debugvar=None, hostname=None, state=None, details=False, limit=LIMIT_DEFAULT):
     """Get Debug entry."""
     search = []
+    if debugvar == "ALL":
+        debugvar = None
     if debugvar:
         search.append(["id", debugvar])
         limit = 1
@@ -155,8 +158,6 @@ class DebugItem(BaseModel):
     # Optional fields
     request: Optional[Dict[str, Any]] = {}
     output: Optional[Dict[str, Any]] = {}
-    insertTime: Optional[int] = None
-    updateTime: Optional[int] = None
 
 
 # TODO few more debug calls to add
@@ -255,7 +256,7 @@ async def getDebugActions(
     request: Request,
     sitename: str = Path(..., description="The site name to get the debug action information for."),
     debugvar: Optional[str] = Query(None, description="The debug action ID to retrieve information for."),
-    limit: int = Query(100, description="Limit the number of debug requests returned. Only applicable for 'ALL'.", ge=1, le=100),
+    limit: int = Query(LIMIT_DEFAULT, description="Limit the number of debug requests returned. Only applicable for 'ALL'.", ge=LIMIT_MIN, le=LIMIT_MAX),
     details: bool = Query(False, description="If set, returns detailed information for the debug request."),
     hostname: str = Query(None, description="Hostname to filter the debug requests by. If not set, all debug requests are returned."),
     state: str = Query(None, description="State to filter the debug requests by. If not set, all debug requests are returned."),
@@ -294,6 +295,7 @@ async def getDebugInfo(
     request: Request,
     sitename: str = Path(..., description="The site name to get the debug action information for."),
     debugvar: str = Path(..., description="The debug action ID to retrieve information for."),
+    limit: int = Query(LIMIT_DEFAULT, description="Limit the number of debug requests returned. Only applicable for 'ALL'.", ge=LIMIT_MIN, le=LIMIT_MAX),
     details: bool = Query(False, description="If set, returns detailed information for the debug request."),
     hostname: str = Query(None, description="Hostname to filter the debug requests by. If not set, all debug requests are returned."),
     state: str = Query(None, description="State to filter the debug requests by. If not set, all debug requests are returned."),
@@ -306,7 +308,7 @@ async def getDebugInfo(
     - Returns the debug action information for the given debug ID.
     """
     checkSite(deps, sitename)
-    out = getDebugEntry(deps, debugvar=debugvar, hostname=hostname, state=state, details=details)
+    out = getDebugEntry(deps, debugvar=debugvar, hostname=hostname, state=state, details=details, limit=limit)
     return APIResponse.genResponse(request, out)
 
 

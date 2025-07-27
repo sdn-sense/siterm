@@ -32,6 +32,7 @@ from SiteFE.REST.dependencies import (
     depGetModel,
 )
 from SiteRMLibs.CustomExceptions import ModelNotFound
+from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
     convertTSToDatetime,
     decodebase64,
@@ -54,7 +55,7 @@ def _getdeltas(dbI, **kwargs):
         search.append(["uid", kwargs.get("deltaID")])
     if kwargs.get("updatedate"):
         search.append(["updatedate", ">", kwargs.get("updatedate")])
-    out = dbI.get("deltas", search=search, limit=kwargs.get("limit", 10), orderby=["insertdate", "DESC"])
+    out = dbI.get("deltas", search=search, limit=kwargs.get("limit", LIMIT_DEFAULT), orderby=["insertdate", "DESC"])
     if out and kwargs.get("deltaID"):
         return out[0]
     return out
@@ -102,7 +103,7 @@ async def getDeltas(
     sitename: str = Path(..., description="The site name to retrieve the service deltas for."),
     summary: bool = Query(False, description="Whether to return a summary of the deltas. Defaults to False."),
     encode: bool = Query(True, description="Whether to encode the deltas. Defaults to True."),
-    limit: int = Query(10, description="The maximum number of results to return. Defaults to 10."),
+    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     _rdfformat: Literal["turtle", "json-ld", "ntriples"] = Query("turtle", description="Model format: turtle, json-ld, ntriples."),
     deps=Depends(allAPIDeps),
 ):
@@ -171,7 +172,7 @@ async def submitDelta(
         depGetModel(deps["dbI"], modelID=item.modelId)
     except ModelNotFound as ex:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found in the database. First time run?") from ex
-    outContent = {"ID": item.id, "InsertTime": getUTCnow(), "UpdateTime": getUTCnow(), "Content": item.dict(), "State": "accepting", "modelId": item.modelId}
+    outContent = {"ID": item.id, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "Content": item.dict(), "State": "accepting", "modelId": item.modelId}
     # Save item to disk
     fname = os.path.join(deps["config"].get(sitename, "privatedir"), "PolicyService", "httpnew", f"{item.id}.json")
     finishedName = os.path.join(deps["config"].get(sitename, "privatedir"), "PolicyService", "httpfinished", f"{item.id}.json")
@@ -195,7 +196,7 @@ async def submitDelta(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to accept delta. Output is empty.")
     outContent["State"] = out["State"]
     outContent["id"] = item.id
-    outContent["lastModified"] = convertTSToDatetime(outContent["UpdateTime"])
+    outContent["lastModified"] = convertTSToDatetime(outContent["updatedate"])
     outContent["href"] = f"{request.base_url}api/{sitename}/deltas/{item.id}"
     if outContent["State"] not in ["accepted"]:
         if "Error" not in out:
@@ -339,7 +340,7 @@ async def getTimeStatesForDelta(
     request: Request,
     _sitename: str = Path(..., description="The site name to retrieve the time states for the delta."),
     delta_id: str = Path(..., description="The ID of the delta to retrieve the time states for."),
-    limit: int = Query(10, description="The maximum number of results to return. Defaults to 10."),
+    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(allAPIDeps),
 ):
     """

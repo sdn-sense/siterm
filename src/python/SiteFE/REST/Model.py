@@ -30,6 +30,7 @@ from SiteFE.REST.dependencies import (
     depGetModelContent,
 )
 from SiteRMLibs.CustomExceptions import ModelNotFound
+from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import convertTSToDatetime, getModTime, httpdate
 
 router = APIRouter()
@@ -59,7 +60,7 @@ async def getModelInfo(
     current: bool = Query(False, description="Whether to return the current model. Defaults to False."),
     summary: bool = Query(True, description="Whether to return a summary of the model. Defaults to True."),
     encode: bool = Query(True, description="Whether to encode the model. Defaults to True."),
-    limit: int = Query(100, description="The maximum number of results to return. Defaults to 10. Only applies if current is False."),
+    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}. Only applies if current is False.", ge=LIMIT_MIN, le=LIMIT_MAX),
     rdfformat: Literal["turtle", "json-ld", "ntriples"] = Query("turtle", description="Model format: turtle, json-ld, ntriples."),
     deps=Depends(allAPIDeps),
 ):
@@ -78,17 +79,23 @@ async def getModelInfo(
             headers = {"Last-Modified": httpdate(outmodels["insertdate"])}
             if not summary:
                 modContent = depGetModelContent(outmodels, rdfformat=rdfformat, encode=encode)
-                return APIResponse.genResponse(request,
-                                               [{"id": outmodels["uid"],
-                                                 "creationTime": convertTSToDatetime(outmodels["insertdate"]),
-                                                 "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}",
-                                                 "model": modContent}],
+                return APIResponse.genResponse(
+                    request,
+                    [
+                        {
+                            "id": outmodels["uid"],
+                            "creationTime": convertTSToDatetime(outmodels["insertdate"]),
+                            "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}",
+                            "model": modContent,
+                        }
+                    ],
                     headers=headers,
                 )
-            return APIResponse.genResponse(request, [{"id": outmodels["uid"],
-                                                      "creationTime": convertTSToDatetime(outmodels["insertdate"]),
-                                                      "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}"}],
-                                           headers=headers)
+            return APIResponse.genResponse(
+                request,
+                [{"id": outmodels["uid"], "creationTime": convertTSToDatetime(outmodels["insertdate"]), "href": f"{request.base_url}api/{sitename}/models/{outmodels['uid']}"}],
+                headers=headers,
+            )
         # If current is not set, return all models (based on limit)
         outmodels = depGetModel(deps["dbI"], limit=limit, orderby=["insertdate", "DESC"])
         models = []
