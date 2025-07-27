@@ -49,14 +49,14 @@ def logdetails(request: Request, status_code: int, message: str = ""):
 async def custom_404_handler(request: Request, exc: HTTPException):
     """Custom 404 error handler."""
     logdetails(request, 404, exc)
-    return JSONResponse(status_code=404, content={"detail": "Not Found"})
+    return JSONResponse(status_code=exc.status_code, content={"detail": "Not Found"})
 
 
 @app.exception_handler(500)
 async def custom_500_handler(request: Request, exc: HTTPException):
     """Custom 500 error handler."""
     logdetails(request, 500, str(exc))
-    return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+    return JSONResponse(status_code=exc.status_code, content={"detail": "Internal Server Error"})
 
 for route in app.routes:
     print(f"{route.path} - {route.name}")

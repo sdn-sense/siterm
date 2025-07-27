@@ -120,17 +120,17 @@ class APIResponse:
     """API Response class to handle API responses."""
 
     @staticmethod
-    def genResponse(request: Request, data: Union[Dict[str, Any], List[Any]], headers: Dict[str, str] = None):
+    def genResponse(request: Request, data: Union[Dict[str, Any], List[Any]], headers: Dict[str, str] = None, status_code: int = 200):
         """Generate a response based on the request and data."""
         if not isinstance(data, (dict, list)):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Data must be a dictionary or a list. Received: {type(data)}")
         accept_header = request.headers.get("accept", "application/json").lower()
         headers = headers or {}
         if "application/json" in accept_header or "*/*" in accept_header:
-            return JSONResponse(content=data, headers=headers)
+            return JSONResponse(content=data, headers=headers, status_code=status_code)
         if "text/plain" in accept_header:
             # Handle plain text response if needed
-            return Response(content=str(data), media_type="text/plain", headers=headers)
+            return Response(content=str(data), media_type="text/plain", headers=headers, status_code=status_code)
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
             detail=f"Unsupported Accept header: {accept_header}. Supported: application/json, text/plain, */*",

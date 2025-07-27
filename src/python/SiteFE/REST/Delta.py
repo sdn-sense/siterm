@@ -154,7 +154,7 @@ async def submitDelta(
     Create a new service delta for the specified site.
     """
     # Check if checkignore is set, if so, check if first run is finished
-    if checkReadyState(checkignore):
+    if not checkReadyState(checkignore):
         # If first run is not finished, raise an exception
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -167,43 +167,43 @@ async def submitDelta(
         # If delta is not in a final state, we delete it from db, and will add new one.
         if delta["state"] not in ["activated", "failed", "removed", "accepted", "accepting"]:
             deps["dbI"].delete("deltas", [["uid", delta["uid"]]])
-        try:
-            depGetModel(deps["dbI"], modelID=item.modelId)
-        except ModelNotFound as ex:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found in the database. First time run?") from ex
-        outContent = {"ID": item.id, "InsertTime": getUTCnow(), "UpdateTime": getUTCnow(), "Content": item.dict(), "State": "accepting", "modelId": item.modelId}
-        # Save item to disk
-        fname = os.path.join(deps["config"].get(sitename, "privatedir"), "PolicyService", "httpnew", f"{item.id}.json")
-        finishedName = os.path.join(deps["config"].get(sitename, "privatedir"), "PolicyService", "httpfinished", f"{item.id}.json")
-        saveContent(fname, outContent)
+    try:
+        depGetModel(deps["dbI"], modelID=item.modelId)
+    except ModelNotFound as ex:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found in the database. First time run?") from ex
+    outContent = {"ID": item.id, "InsertTime": getUTCnow(), "UpdateTime": getUTCnow(), "Content": item.dict(), "State": "accepting", "modelId": item.modelId}
+    # Save item to disk
+    fname = os.path.join(deps["config"].get(sitename, "privatedir"), "PolicyService", "httpnew", f"{item.id}.json")
+    finishedName = os.path.join(deps["config"].get(sitename, "privatedir"), "PolicyService", "httpfinished", f"{item.id}.json")
+    saveContent(fname, outContent)
 
-        # Loop for max 50seconds and check if we have file in finished directory.
-        out = {}
-        timer = 50
-        while timer > 0:
-            if os.path.isfile(finishedName):
-                out = getFileContentAsJson(finishedName)
-                removeFile(finishedName)
-                break
-            timer -= 1
-            sleep(1)
-        # If timer reached 0, we will not have file in finished directory
-        if timer == 0 and not out:
-            # Return failed http code
-            raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Failed to accept delta. Timeout reached and output to accept delta is empty.")
-        if not out:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to accept delta. Output is empty.")
-        outContent["State"] = out["State"]
-        outContent["id"] = item.id
-        outContent["lastModified"] = convertTSToDatetime(outContent["UpdateTime"])
-        outContent["href"] = f"{request.base_url}api/{sitename}/deltas/{item.id}"
-        if outContent["State"] not in ["accepted"]:
-            if "Error" not in out:
-                outContent["Error"] = f"Unknown Error. Error Message: None. Full dump: {jsondumps(out)}"
-            else:
-                outContent["Error"] = out["Error"]
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to accept delta. Error Message: {outContent['Error']}. Full dump: {jsondumps(out)}")
-        return APIResponse.genResponse(request, outContent)
+    # Loop for max 50seconds and check if we have file in finished directory.
+    out = {}
+    timer = 50
+    while timer > 0:
+        if os.path.isfile(finishedName):
+            out = getFileContentAsJson(finishedName)
+            removeFile(finishedName)
+            break
+        timer -= 1
+        sleep(1)
+    # If timer reached 0, we will not have file in finished directory
+    if timer == 0 and not out:
+        # Return failed http code
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Failed to accept delta. Timeout reached and output to accept delta is empty.")
+    if not out:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to accept delta. Output is empty.")
+    outContent["State"] = out["State"]
+    outContent["id"] = item.id
+    outContent["lastModified"] = convertTSToDatetime(outContent["UpdateTime"])
+    outContent["href"] = f"{request.base_url}api/{sitename}/deltas/{item.id}"
+    if outContent["State"] not in ["accepted"]:
+        if "Error" not in out:
+            outContent["Error"] = f"Unknown Error. Error Message: None. Full dump: {jsondumps(out)}"
+        else:
+            outContent["Error"] = out["Error"]
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to accept delta. Error Message: {outContent['Error']}. Full dump: {jsondumps(out)}")
+    return APIResponse.genResponse(request, outContent, status_code=status.HTTP_201_CREATED)
 
 
 # =========================================================
@@ -288,7 +288,7 @@ async def performActionOnDelta(
     """
     # actions are commit, forceapply
     # Check if checkignore is set, if so, check if first run is finished
-    if checkReadyState(checkignore):
+    if not checkReadyState(checkignore):
         # If first run is not finished, raise an exception
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

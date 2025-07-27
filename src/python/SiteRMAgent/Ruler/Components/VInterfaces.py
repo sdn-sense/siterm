@@ -104,7 +104,7 @@ class VInterfaces:
         self.hostname = self.config.get("agent", "hostname")
         self.logger = logger
         fullURL = getFullUrl(self.config, sitename)
-        self.requestHandler = Requests(fullURL=fullURL, logger=self.logger)
+        self.requestHandler = Requests(fullURL, logger=self.logger)
 
     def _add(self, vlan, raiseError=False):
         """Add specific vlan."""
