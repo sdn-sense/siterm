@@ -29,13 +29,14 @@ from SiteFE.REST.dependencies import (
     APIResponse,
     allAPIDeps,
     checkReadyState,
+    checkSite,
     depGetModel,
 )
 from SiteRMLibs.CustomExceptions import ModelNotFound
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
     convertTSToDatetime,
-    decodebase64,
+    evaldict,
     getFileContentAsJson,
     getModTime,
     getUTCnow,
@@ -102,7 +103,6 @@ async def getDeltas(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the service deltas for."),
     summary: bool = Query(False, description="Whether to return a summary of the deltas. Defaults to False."),
-    encode: bool = Query(True, description="Whether to encode the deltas. Defaults to True."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     _rdfformat: Literal["turtle", "json-ld", "ntriples"] = Query("turtle", description="Model format: turtle, json-ld, ntriples."),
     deps=Depends(allAPIDeps),
@@ -110,7 +110,8 @@ async def getDeltas(
     """
     Get service deltas from the specified site.
     """
-    retvals = {"deltas": []}
+    checkSite(deps, sitename)
+    retvals = []
     modTime = getModTime(request.headers)
     deltas = _getdeltas(deps["dbI"], limit=limit, updatedate=modTime)
     if not deltas:
@@ -126,10 +127,11 @@ async def getDeltas(
             "modelId": delta["modelid"],
         }
         if not summary:
-            current["addition"] = decodebase64(delta["addition"], not encode)
-            current["reduction"] = decodebase64(delta["reduction"], not encode)
-        retvals["deltas"].append(current)
-    return APIResponse.genResponse(request, [retvals])
+            content = evaldict(delta.get("content", {}))
+            current["addition"] = content.get("addition")
+            current["reduction"] = content.get("reduction")
+        retvals.append(current)
+    return APIResponse.genResponse(request, retvals)
 
 
 @router.post(
@@ -154,6 +156,7 @@ async def submitDelta(
     """
     Create a new service delta for the specified site.
     """
+    checkSite(deps, sitename)
     # Check if checkignore is set, if so, check if first run is finished
     if not checkReadyState(checkignore):
         # If first run is not finished, raise an exception
@@ -229,12 +232,12 @@ async def getDeltaByID(
     sitename: str = Path(..., description="The site name to retrieve the delta information for."),
     delta_id: str = Path(..., description="The ID of the delta to retrieve."),
     summary: bool = Query(False, description="Whether to return a summary of the deltas. Defaults to False."),
-    encode: bool = Query(True, description="Whether to encode the deltas. Defaults to True."),
     deps=Depends(allAPIDeps),
 ):
     """
     Get delta information by its ID for the given site name.
     """
+    checkSite(deps, sitename)
     modTime = getModTime(request.headers)
     delta = _getdeltas(deps["dbI"], deltaID=delta_id)
     if not delta:
@@ -244,17 +247,16 @@ async def getDeltaByID(
         return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers={"Last-Modified": httpdate(delta["updatedate"])})
     # Return 200 OK with delta content
     headers = {"Last-Modified": httpdate(delta["updatedate"])}
-    response = {
-        "id": delta["uid"],
-        "lastModified": convertTSToDatetime(delta["updatedate"]),
-        "state": delta["state"],
-        "href": f"{request.base_url}api/{sitename}/deltas/{delta['uid']}",
-        "modelId": delta["modelid"],
-    }
+    delta["insertdate"] = convertTSToDatetime(delta["insertdate"])
+    delta["updatedate"] = convertTSToDatetime(delta["updatedate"])
+    delta["lastModified"] = delta["updatedate"]
     if not summary:
-        response["addition"] = decodebase64(delta["addition"], not encode)
-        response["reduction"] = decodebase64(delta["reduction"], not encode)
-    return APIResponse.genResponse(request, response, headers=headers)
+        content = evaldict(delta.get("content", {}))
+        delta["addition"] = content.get("addition", {})
+        delta["reduction"] = content.get("reduction", {})
+    else:
+        del delta["content"]
+    return APIResponse.genResponse(request, [delta], headers=headers)
 
 
 # =========================================================
@@ -278,7 +280,7 @@ async def getDeltaByID(
 )
 async def performActionOnDelta(
     request: Request,
-    _sitename: str = Path(..., description="The site name to perform the action on the delta for."),
+    sitename: str = Path(..., description="The site name to perform the action on the delta for."),
     delta_id: str = Path(..., description="The ID of the delta to perform the action on."),
     action: Literal["commit", "forcecommit", "forceapply"] = Path(..., description="The action to perform on the delta."),
     checkignore: bool = Query(False, description="Whether to bypass ignore checks (Frontend not ready yet state)"),
@@ -287,6 +289,7 @@ async def performActionOnDelta(
     """
     Perform a specified action on a delta by its ID for the given site name.
     """
+    checkSite(deps, sitename)
     # actions are commit, forceapply
     # Check if checkignore is set, if so, check if first run is finished
     if not checkReadyState(checkignore):
@@ -338,7 +341,7 @@ async def performActionOnDelta(
 )
 async def getTimeStatesForDelta(
     request: Request,
-    _sitename: str = Path(..., description="The site name to retrieve the time states for the delta."),
+    sitename: str = Path(..., description="The site name to retrieve the time states for the delta."),
     delta_id: str = Path(..., description="The ID of the delta to retrieve the time states for."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(allAPIDeps),
@@ -346,12 +349,13 @@ async def getTimeStatesForDelta(
     """
     Get time states for the specified delta ID.
     """
+    checkSite(deps, sitename)
     delta = _getdeltas(deps["dbI"], deltaID=delta_id)
     if not delta:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delta not found in the database.")
 
     # Retrieve time states from the database
-    timestates = deps["dbI"].get("deltatimestates", search=[["uuid", delta_id]], orderby=["insertdate", "DESC"], limit=limit)
+    timestates = deps["dbI"].get("states", search=[["uuid", delta_id]], orderby=["insertdate", "DESC"], limit=limit)
     if not timestates:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No time states found for the specified delta ID.")
     return APIResponse.genResponse(request, {"time_states": timestates})
@@ -374,13 +378,14 @@ async def getTimeStatesForDelta(
 async def createTimeStateForDelta(
     request: Request,
     item: DeltaTimeState,
-    _sitename: str = Path(..., description="The site name to create the time state for the delta."),
+    sitename: str = Path(..., description="The site name to create the time state for the delta."),
     delta_id: str = Path(..., description="The ID of the delta to create the time state for."),
     deps=Depends(allAPIDeps),
 ):
     """
     Create a new time state for the specified delta ID.
     """
+    checkSite(deps, sitename)
     delta = _getdeltas(deps["dbI"], deltaID=delta_id)
     if not delta:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delta not found in the database.")

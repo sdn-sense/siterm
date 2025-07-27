@@ -12,12 +12,26 @@ Date                    : 2025/07/14
 import os
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Response, status, Query, Request
-from pydantic import BaseModel
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    Response,
+    status,
+)
 from prometheus_client import CONTENT_TYPE_LATEST
-from SiteFE.REST.dependencies import DEFAULT_RESPONSES, allAPIDeps, checkSite, APIResponse
-from SiteRMLibs.MainUtilities import getUTCnow
-from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MIN, LIMIT_MAX
+from pydantic import BaseModel
+from SiteFE.REST.dependencies import (
+    DEFAULT_RESPONSES,
+    APIResponse,
+    allAPIDeps,
+    checkSite,
+)
+from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
+from SiteRMLibs.MainUtilities import getUTCnow, jsondumps
 
 router = APIRouter()
 
@@ -85,6 +99,7 @@ async def prometheuspassthrough(
     # This should check if the hostname is valid and then forward the request to the appropriate Prometheus endpoint
     raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Prometheus passthrough not implemented yet")
 
+
 # =========================================================
 # /{sitename}/monitoring/stats
 # =========================================================
@@ -111,7 +126,9 @@ class MonStats(BaseModel):
 async def getmonitoringstats(
     request: Request,
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
-    sitename: str = Path(..., description="The site name to retrieve the monitoring statistics for."), deps=Depends(allAPIDeps)):
+    sitename: str = Path(..., description="The site name to retrieve the monitoring statistics for."),
+    deps=Depends(allAPIDeps),
+):
     """
     Get monitoring statistics for a specific site.
     """
@@ -144,10 +161,10 @@ async def postmonitoringstats(
     host = deps["dbI"].get("snmpmon", limit=1, search=[["hostname", item.hostname]])
     updatestate = "UPDATED"
     if host:
-        out = {"id": host[0]["id"], "hostname": item.hostname, "updatedate": getUTCnow(), "output": item.output}
+        out = {"id": host[0]["id"], "hostname": item.hostname, "updatedate": getUTCnow(), "output": jsondumps(item.output)}
         deps["dbI"].update("snmpmon", [out])
     else:
-        out = {"hostname": item.hostname, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "output": item.output}
+        out = {"hostname": item.hostname, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "output": jsondumps(item.output)}
         updatestate = "INSERTED"
         deps["dbI"].insert("snmpmon", [out])
     return APIResponse.genResponse(request, {"Status": updatestate})
