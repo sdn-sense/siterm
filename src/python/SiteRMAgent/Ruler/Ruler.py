@@ -61,7 +61,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         self.config = getGitConfig()
         fullUrl = getFullUrl(self.config, self.sitename)
         self.hostname = self.config.get("agent", "hostname")
-        self.layer2 = VInterfaces(self.config, self.sitename)
+        self.layer2 = VInterfaces(self.config, self.sitename, self.logger)
         self.layer3 = Routing(self.config, self.sitename, self.logger, self)
         self.requestHandler.close()
         self.requestHandler = Requests(fullUrl, logger=self.logger)

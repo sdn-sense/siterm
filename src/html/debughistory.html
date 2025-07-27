@@ -74,6 +74,7 @@
             data: {},
             async: false,
             success: function(json){
+              json = json[0];
               model = $('<div><\/div>');
               model.append('<div class="row"><b>Debug ID: <\/b>' + json['id'] + '<\/div>');
               model.append('<div class="row"><b>Debug Hostname: <\/b>' + json['hostname'] + '<\/div>');

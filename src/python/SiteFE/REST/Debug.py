@@ -58,7 +58,7 @@ def getDebugEntry(deps, debugvar=None, hostname=None, state=None, details=False,
     if out is None or len(out) == 0:
         return []
     if details and debugvar != "ALL":
-        return _getdebuginfo(out[0])
+        return [_getdebuginfo(out[0])]
     if details and debugvar == "ALL":
         for i, item in enumerate(out):
             out[i] = _getdebuginfo(item)
