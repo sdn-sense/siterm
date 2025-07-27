@@ -122,7 +122,7 @@ async def getDeltas(
             "id": delta["uid"],
             "lastModified": delta["updatedate"],
             "state": delta["state"],
-            "href": f"{deps['config'].get(sitename, 'app_callback')}/{delta['uid']}",
+            "href": f"{request.base_url}api/{sitename}/deltas/{delta['uid']}",
             "modelId": delta["modelid"],
         }
         if not summary:

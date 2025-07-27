@@ -182,6 +182,8 @@ class RecurringAction:
                 excMsg += f"Update to FE: Error: {outVals[2]} HTTP Code: {outVals[1]}"
                 excMsg += f"Add tp FE: Error: {outValsAdd[2]} HTTP Code: {outValsAdd[1]}"
                 self.logger.error(excMsg)
+        # Once we are done, we report memory and disk statistics
+        self.reportMemDiskStats()
         if excMsg and raiseError:
             raise PluginException(excMsg)
         if excMsg:

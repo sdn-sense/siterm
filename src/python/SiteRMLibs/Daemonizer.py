@@ -18,6 +18,7 @@ import tracemalloc
 import psutil
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
+from SiteRMLibs.DefaultParams import GIT_CONFIG_REFRESH_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.MainUtilities import (
@@ -508,7 +509,7 @@ class Daemon(DBBackend):
         """Auto Refresh if there is a DB request to do so."""
         # pylint: disable=W0703
         # Minimize queries to this and do this only every 5 minutes
-        if self.lastRefresh + 300 > int(getUTCnow()):
+        if self.lastRefresh + GIT_CONFIG_REFRESH_TIMEOUT > int(getUTCnow()):
             return False
         self.lastRefresh = int(getUTCnow())
         refresh = False

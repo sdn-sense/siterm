@@ -140,6 +140,8 @@ class Debugger(DebugService):
                 except FailedGetDataFromFE as ex:
                     self.logger.error(f"Failed to get data from FE: {ex}")
                     continue
+        # Once we are done, we report memory and disk statistics
+        self.reportMemDiskStats()
 
 
 def execute(config=None, sitename=None):

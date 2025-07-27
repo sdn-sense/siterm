@@ -21,7 +21,14 @@ from SiteFE.REST.dependencies import (
     checkSite,
 )
 from SiteRMLibs import __version__ as runningVersion
-from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
+from SiteRMLibs.DefaultParams import (
+    LIMIT_DEFAULT,
+    LIMIT_MAX,
+    LIMIT_MIN,
+    LIMIT_SERVICE_DEFAULT,
+    LIMIT_SERVICE_MAX,
+    LIMIT_SERVICE_MIN,
+)
 from SiteRMLibs.MainUtilities import (
     HOSTSERVICES,
     dumpFileContentAsJson,
@@ -240,7 +247,7 @@ class ServiceStateItem(BaseModel):
 )
 async def getservicestates(
     request: Request,
-    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
+    limit: int = Query(LIMIT_SERVICE_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_SERVICE_DEFAULT}.", ge=LIMIT_SERVICE_MIN, le=LIMIT_SERVICE_MAX),
     sitename: str = Path(..., description="The site name to retrieve the service states for."),
     deps=Depends(allAPIDeps),
 ):

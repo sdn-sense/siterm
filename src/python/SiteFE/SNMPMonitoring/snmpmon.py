@@ -25,6 +25,7 @@ from easysnmp import Session
 from easysnmp.exceptions import EasySNMPTimeoutError, EasySNMPUnknownObjectIDError
 from prometheus_client import CollectorRegistry, Enum, Gauge, Info, generate_latest
 from SiteRMLibs.Backends.main import Switch
+from SiteRMLibs.DefaultParams import SERVICE_DEAD_TIMEOUT, SERVICE_DOWN_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     contentDB,
@@ -323,7 +324,8 @@ class PromOut:
         )
         for host, hostDict in getAllHosts(self.dbI).items():
             hostDict["hostinfo"] = self.diragent.getFileContentAsJson(hostDict["hostinfo"])
-            if int(self.timenow - hostDict["updatedate"]) > 300:
+            if int(self.timenow - hostDict["updatedate"]) > SERVICE_DOWN_TIMEOUT:
+                self.logger.warning(f"Host {host} did not update in the last {SERVICE_DOWN_TIMEOUT // 60} minutes. Skipping.")
                 continue
             if "CertInfo" in hostDict.get("hostinfo", {}).keys():
                 for key in ["notAfter", "notBefore"]:
@@ -342,7 +344,8 @@ class PromOut:
             registry=registry,
         )
         for item in dbOut:
-            if int(self.timenow - item["updatedate"]) > 300:
+            if int(self.timenow - item["updatedate"]) > SERVICE_DOWN_TIMEOUT:
+                self.logger.warning(f"Switch {item['device']} did not update in the last {SERVICE_DOWN_TIMEOUT // 60} minutes. Skipping.")
                 continue
             out = evaldict(item.get("error", {}))
             if out:
@@ -367,7 +370,8 @@ class PromOut:
             registry=registry,
         )
         for item in snmpData:
-            if int(self.timenow - item["updatedate"]) > 300:
+            if int(self.timenow - item["updatedate"]) > SERVICE_DOWN_TIMEOUT:
+                self.logger.warning(f"SNMP {item['hostname']} did not update in the last {SERVICE_DOWN_TIMEOUT // 60} minutes. Skipping.")
                 continue
             out = evaldict(item.get("output", {}))
             # Skip hostnamemem- and hostnamedisk- devices. This is covered in __memStats/__diskStats
@@ -494,8 +498,8 @@ class PromOut:
             runtime = -1
             if service["servicename"] in ["SNMPMonitoring", "ProvisioningService", "LookUpService"] and service.get("hostname", "UNSET") != "default":
                 continue
-            if int(self.timenow - service["updatedate"]) < 600:
-                # If we are not getting service state for 10 mins, set state as unknown
+            if int(self.timenow - service["updatedate"]) < SERVICE_DEAD_TIMEOUT:
+                # If we are not getting service state for SERVICE_DEAD_TIMEOUT mins, set state as unknown
                 state = service["servicestate"]
                 runtime = service["runtime"]
             labels = {
