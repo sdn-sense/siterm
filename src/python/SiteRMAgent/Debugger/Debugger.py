@@ -70,7 +70,7 @@ class Debugger(DebugService):
         self.sitename = sitename
         self.hostname = socket.getfqdn()
         self.diragent = contentDB()
-        self.memdisk = MemDiskStats()
+        self.memDiskStats = MemDiskStats()
         self.logger.info("====== Debugger Start Work. Hostname: %s", self.hostname)
 
     def refreshthread(self):

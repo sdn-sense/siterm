@@ -61,6 +61,11 @@ async def custom_500_handler(request: Request, exc: HTTPException):
     logdetails(request, 500, str(exc))
     return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
+@app.exception_handler(405)
+async def custom_405_handler(request: Request, exc: HTTPException):
+    """Custom 405 error handler."""
+    logdetails(request, 405, str(exc))
+    return JSONResponse(status_code=405, content={"detail": "Method Not Allowed"})
 
 for route in app.routes:
     print(f"{route.path} - {route.name}")
