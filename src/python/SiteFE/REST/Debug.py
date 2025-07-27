@@ -28,6 +28,7 @@ from SiteRMLibs.MainUtilities import (
     getFileContentAsJson,
     getUTCnow,
 )
+from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.Validator import validator
 
 router = APIRouter()
@@ -154,7 +155,7 @@ class DebugItem(BaseModel):
     """Service Item Model."""
 
     # pylint: disable=too-few-public-methods
-    hostname: str
+    hostname: Optional[str] = "undefined"  # Hostname to use. In case not set or undefined, requires to have a dynamicfrom set.
     # Optional fields
     request: Optional[Dict[str, Any]] = {}
     output: Optional[Dict[str, Any]] = {}
@@ -178,8 +179,9 @@ class DebugItem(BaseModel):
         **{
             200: {"description": "Debug actions list retrieved successfully", "content": {"application/json": {"example": {"debug_actions_list": "example_debug_actions_list"}}}},
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.",
-                "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
+                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Action <action> not found in debug actions.",
+                "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
+                                                             "no_action": {"detail": "Action <action> not found in debug actions."}}}},
             },
         },
         **DEFAULT_RESPONSES,
@@ -207,8 +209,9 @@ async def getDebugActionsList(request: Request, sitename: str = Path(..., descri
         **{
             200: {"description": "Debug action information retrieved successfully", "content": {"application/json": {"example": {"debug_action_info": "example_debug_action_info"}}}},
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.",
-                "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
+                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug action <action> not found for site <sitename>.",
+                "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
+                                                             "no_action": {"detail": "Debug action <action> not found for site <sitename>."}}}},
             },
         },
         **DEFAULT_RESPONSES,
@@ -229,7 +232,7 @@ async def getDebugActionInfo(
     if action not in actions:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Debug action '{action}' not found for site '{sitename}'.")
     defaults = getactionkeys(deps["config"], action)
-    out = {"action": action, "defaults": defaults, "keys": "TODO", "version": runningVersion}
+    out = {"action": action, "defaults": defaults, "keys": getactionkeys(deps["config"], action), "version": runningVersion}
     return APIResponse.genResponse(request, out)
 
 
@@ -238,15 +241,14 @@ async def getDebugActionInfo(
 # =========================================================
 @router.get(
     "/{sitename}/debug",
-    summary="Get Debug Actions",
+    summary="Get Debug Action",
     description=("Returns the debug actions for the given site name."),
     tags=["Debug"],
     responses={
         **{
-            200: {"description": "Debug actions retrieved successfully", "content": {"application/json": {"example": {"debug_actions": "example_debug_actions"}}}},
-            404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.",
-                "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
+            200: {"description": "Debug actions retrieved successfully. No action found returns empty array.", "content": {"application/json": {"example": {"debug_actions": "example_debug_actions"}}}},
+            404: {"description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.",
+                  "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
             },
         },
         **DEFAULT_RESPONSES,
@@ -256,7 +258,7 @@ async def getDebugActions(
     request: Request,
     sitename: str = Path(..., description="The site name to get the debug action information for."),
     debugvar: Optional[str] = Query(None, description="The debug action ID to retrieve information for."),
-    limit: int = Query(LIMIT_DEFAULT, description="Limit the number of debug requests returned. Only applicable for 'ALL'.", ge=LIMIT_MIN, le=LIMIT_MAX),
+    limit: int = Query(LIMIT_DEFAULT, description="Limit the number of debug requests returned. Only applicable for debugvar 'ALL'.", ge=LIMIT_MIN, le=LIMIT_MAX),
     details: bool = Query(False, description="If set, returns detailed information for the debug request."),
     hostname: str = Query(None, description="Hostname to filter the debug requests by. If not set, all debug requests are returned."),
     state: str = Query(None, description="State to filter the debug requests by. If not set, all debug requests are returned."),
@@ -295,7 +297,7 @@ async def getDebugInfo(
     request: Request,
     sitename: str = Path(..., description="The site name to get the debug action information for."),
     debugvar: str = Path(..., description="The debug action ID to retrieve information for."),
-    limit: int = Query(LIMIT_DEFAULT, description="Limit the number of debug requests returned. Only applicable for 'ALL'.", ge=LIMIT_MIN, le=LIMIT_MAX),
+    limit: int = Query(LIMIT_DEFAULT, description="Limit the number of debug requests returned. Only applicable for debugvar 'ALL'.", ge=LIMIT_MIN, le=LIMIT_MAX),
     details: bool = Query(False, description="If set, returns detailed information for the debug request."),
     hostname: str = Query(None, description="Hostname to filter the debug requests by. If not set, all debug requests are returned."),
     state: str = Query(None, description="State to filter the debug requests by. If not set, all debug requests are returned."),
@@ -309,17 +311,21 @@ async def getDebugInfo(
     """
     checkSite(deps, sitename)
     out = getDebugEntry(deps, debugvar=debugvar, hostname=hostname, state=state, details=details, limit=limit)
+    if not out:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Debug request with ID {debugvar} not found.")
     return APIResponse.genResponse(request, out)
 
 
 @router.put(
     "/{sitename}/debug/{debugvar}",
-    summary="Update Debug Action Information",
+    summary="Update Debug Action",
     description=("Updates the debug action information for the given debug ID."),
     tags=["Debug"],
     responses={
         200: {"description": "Debug action information updated successfully", "content": {"application/json": {"example": {"Status": "success", "ID": "<debug_id>"}}}},
-        404: {"description": "Debug request not found", "content": {"application/json": {"example": {"detail": "Debug request with ID <debugvar> not found."}}}},
+        404: {"description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug request with ID <debugvar> not found.",
+              "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
+                                                           "debug_not_found": {"detail": "Debug request with ID <debugvar> not found."}}}}},
     },
 )
 async def updatedebug(
@@ -352,7 +358,9 @@ async def updatedebug(
     tags=["Debug"],
     responses={
         200: {"description": "Debug action information deleted successfully", "content": {"application/json": {"example": {"Status": "success", "ID": "<debug_id>"}}}},
-        404: {"description": "Debug request not found", "content": {"application/json": {"example": {"detail": "Debug request with ID <debugvar> not found."}}}},
+        404: {"description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug request with ID <debugvar> not found.",
+              "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
+                                                           "debug_not_found": {"detail": "Debug request with ID <debugvar> not found."}}}}},
     },
 )
 async def deletedebug(
@@ -391,7 +399,9 @@ async def deletedebug(
     tags=["Debug"],
     responses={
         200: {"description": "Debug action request submitted successfully", "content": {"application/json": {"example": {"Status": "success", "ID": "<debug_id>"}}}},
-        400: {"description": "Bad request", "content": {"application/json": {"example": {"detail": "Unsupported symbol in input request. Contact Support"}}}},
+        404: {"description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug request with ID <debugvar> not found.",
+              "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}}},
+        400: {"description": "Bad request", "content": {"application/json": {"example": {"detail": "Bad Request. Possible reasons: Wrong value, parameter, input validation failed."}}}},
     },
 )
 async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..., description="The site name to get the debug action information for."), deps=Depends(allAPIDeps)):
@@ -401,7 +411,10 @@ async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..
     checkSite(deps, sitename)
     # Check if action is supported;
     # Check if hostname is alive;
-    inputDict = validator(deps["config"], item.dict())
+    try:
+        inputDict = validator(deps["config"], item.request)
+    except BadRequestError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     debugdir = os.path.join(deps["config"].get(sitename, "privatedir"), "DebugRequests")
     randomuuid = generateRandomUUID()
     requestfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "request.json")

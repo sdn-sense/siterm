@@ -16,28 +16,35 @@
             load_data();
         });
 
-    function collectInputs(tagName) {
-      docObj = document.getElementById(tagName);
-      var params = {};
-      for (var i = 0; i < docObj.elements.length; i++) {
-        var fieldName = docObj.elements[i].name;
-        var fieldValue = docObj.elements[i].value;
-        if (fieldName) {
-          params[fieldName] = fieldValue;
+        function collectInputs(tagName) {
+          docObj = document.getElementById(tagName);
+          var params = {};
+          for (var i = 0; i < docObj.elements.length; i++) {
+            var fieldName = docObj.elements[i].name;
+            var fieldValue = docObj.elements[i].value;
+            if (fieldName) {
+              params[fieldName] = fieldValue;
+            }
+          }
+          var payload = {
+            hostname: params['hostname'],
+            request: params
+          };
+
+          $.ajax({
+            type: "POST",
+            url: "/api/" + params['sitename'] + "/debug",
+            contentType: "application/json",
+            data: JSON.stringify(payload),
+            success: function (result) {
+              newAlert("New debug action submit state: " + JSON.stringify(result), params);
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+              newAlert("Error: " + textStatus + " - " + errorThrown + " - Status: " + jqXHR.status + " - Response: " + jqXHR.responseText, params, "alert-danger");
+            }
+          });
         }
-      }
-      $.ajax({
-        type: "POST",
-        url: "/api/" + params['sitename'] + "/debug",
-        data: params,
-        success: function (result) {
-          newAlert("New debug action submit state: " + JSON.stringify(result), params);
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-          newAlert("Error: " + textStatus + " - " + errorThrown + " - Status: " + jqXHR.status + " - Response: " + jqXHR.responseText, params, "alert-danger");
-        }
-      });
-    }
+
         function doSiteUpdate(ids) {
         strSite = document.getElementById(ids + "sitename").value;
         $.ajax({url: '/api/' + strSite + '/hosts',
