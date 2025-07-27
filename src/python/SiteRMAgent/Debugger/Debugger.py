@@ -83,15 +83,27 @@ class Debugger(DebugService):
 
     def reportMemDiskStats(self):
         """Report memory and disk statistics."""
+        warnings = []
         self.logger.info("Reporting memory and disk statistics")
         self.memDiskStats.reset()
         self.memDiskStats.updateStorageInfo()
         self.memDiskStats.updateMemStats(["Config-Fetcher", "siterm-debugger"], 1)
         out = {"hostname": f"hostnamemem-{self.hostname}-Debugger", "output": self.memDiskStats.getMemMonitor()}
-        self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Debugger")
+        postout = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Debugger")
+        if postout[1] != 200:
+            warnings.append(f"Failed to report memory statistics: {postout[2]} HTTP Code: {postout[1]}")
+            self.logger.warning("Failed to report memory statistics: %s", warnings[-1])
         out["hostname"] = f"hostnamedisk-{self.hostname}-Debugger"
         out["output"] = self.memDiskStats.getStorageInfo()
-        self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Debugger")
+        postout = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Debugger")
+        if postout[1] != 200:
+            warnings.append(f"Failed to report disk statistics: {postout[2]} HTTP Code: {postout[1]}")
+            self.logger.warning("Failed to report disk statistics: %s", warnings[-1])
+        if warnings:
+            excMsg = "There were warnings while reporting memory and disk statistics."
+            excMsg += " ".join(warnings)
+            self.logger.error(excMsg)
+            raise PluginException(excMsg)
         self.logger.info("Memory and disk statistics reported successfully.")
 
     def registerService(self):

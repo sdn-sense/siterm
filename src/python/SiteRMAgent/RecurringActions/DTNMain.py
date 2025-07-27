@@ -174,7 +174,7 @@ class RecurringAction:
         self.logger.info("Will try to publish information to SiteFE")
         outVals = self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/hosts", data=dic, retries=1, raiseEx=False, useragent="Agent")
         self.logger.info("Update Host result %s", outVals)
-        if outVals[1] != 200 and outVals[3]:
+        if outVals[1] != 200:
             outValsAdd = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/hosts", data=dic, retries=1, raiseEx=False, useragent="Agent")
             self.logger.info("Insert Host result %s", outValsAdd)
             if outValsAdd[1] != 200:
