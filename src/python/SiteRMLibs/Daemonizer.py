@@ -204,9 +204,15 @@ class DBBackend:
             kwargs["hostname"] = getHostname(self.config, self.component)
             url = f"/api/{kwargs['sitename']}/serviceaction?hostname={kwargs['hostname']}&servicename={self.component}"
 
-            actions = self.handlers[kwargs["sitename"]].makeHttpCall("GET", url, useragent="Daemonizer")
+            actions = self.handlers[kwargs["sitename"]].makeHttpCall("GET", url, raiseEx=False, useragent="Daemonizer")
             # Config Fetcher is not allowed to delete other services refresh.
-            if actions[0] and self.component == "ConfigFetcher":
+            if actions[1] == 404:
+                self.logger.debug("No service actions found for %s", kwargs["sitename"])
+                return False
+            if actions[1] != 200:
+                self.logger.error("Failed to get service actions for %s: %s", kwargs["sitename"], actions[0])
+                return False
+            if self.component == "ConfigFetcher":
                 return True
             for action in actions[0]:
                 self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component}, useragent="Daemonizer")
