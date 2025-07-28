@@ -9,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import re
+
 import psutil
 from SiteRMLibs.MainUtilities import externalCommand, tryConvertToNumeric
 
@@ -20,7 +21,7 @@ def parseStorageInfo(tmpOut, storageInfo):
     for item in tmpOut:
         if not item:
             continue
-        for line in item.decode("UTF-8").split("\n"):
+        for line in item.split("\n"):
             if "unrecognized option" in line:
                 return storageInfo, False
             line = re.sub(" +", " ", line)
@@ -106,9 +107,7 @@ class MemDiskStats:
                     )
                     for key in self.memMonitor[serviceName].keys():
                         if hasattr(proc.memory_info(), key):
-                            self.memMonitor[serviceName][key] += getattr(
-                                proc.memory_info(), key
-                            )
+                            self.memMonitor[serviceName][key] += getattr(proc.memory_info(), key)
 
     def updateMemStats(self, services, lookupid):
         """Refresh all Memory Statistics in FE"""
@@ -121,5 +120,6 @@ class MemDiskStats:
                 pass
             except psutil.ZombieProcess:
                 pass
+
         for proc in psutil.process_iter(attrs=None, ad_value=None):
             procWrapper(proc, services, lookupid)

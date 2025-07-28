@@ -60,7 +60,7 @@ class Rules:
     def _add_iprange(self, rule_from):
         """Add IP range to rule"""
         # if it is all, then add None;
-        rule_from = rule_from.decode("utf-8") if isinstance(rule_from, bytes) else rule_from
+        rule_from = rule_from if isinstance(rule_from, bytes) else rule_from
         if rule_from == "all":
             self.rule_ip_table.append(None)
         # if it is with / then it is already a range;
@@ -78,7 +78,7 @@ class Rules:
 
         def __to_str(val):
             """Convert value to string"""
-            return val.decode("utf-8") if isinstance(val, bytes) else val
+            return val if isinstance(val, bytes) else val
 
         self.rule_id.append(__to_str(rule_id))
         self.rule_from.append(__to_str(rule_from))
@@ -159,17 +159,17 @@ class Routing:
         out, err = cmdOut.communicate()
         if cmdOut.returncode != 0:
             raise FailedRoutingCommand(f"Failed to get rule list. Out: {out}, Err: {err}")
-        for line in out.split(b"\n"):
-            match = re.match(rb"(\d+):[ \t]+from ([^ \t]+) lookup ([^ \t]+)$", line)
+        for line in out.split("\n"):
+            match = re.match(r"(\d+):[ \t]+from ([^ \t]+) lookup ([^ \t]+)$", line)
             if match:
                 matched = match.groups()
                 self.rules.add_rule(matched[0], matched[1], None, matched[2])
                 continue
-            match = re.match(rb"(\d+):[ \t]+from ([^ \t]+) to ([^ \t]+) lookup ([^ \t]+)$", line)
+            match = re.match(r"(\d+):[ \t]+from ([^ \t]+) to ([^ \t]+) lookup ([^ \t]+)$", line)
             if match:
                 matched = match.groups()
                 self.rules.add_rule(matched[0], matched[1], matched[2], matched[3])
-            match = re.match(rb"(\d+):[ \t]+from ([^ \t]+) lookup ([^ \t]+)", line)
+            match = re.match(r"(\d+):[ \t]+from ([^ \t]+) lookup ([^ \t]+)", line)
             if match:
                 matched = match.groups()
                 self.rules.add_rule(matched[0], matched[1], None, matched[2])

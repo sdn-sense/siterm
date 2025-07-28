@@ -40,11 +40,7 @@ class DebugService:
         """Publish debug runtime to FE"""
         # If dbI is defined, than we publish to DB directly.
         if hasattr(self, "dbI"):
-            out = {
-                "id": inDic["id"],
-                "state": inDic["state"],
-                "output": inDic["output"]
-            }
+            out = {"id": inDic["id"], "state": inDic["state"], "output": inDic["output"]}
             self.dbI.update("debugrequests", [out])
             return
         self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/debug/{inDic['id']}", data=inDic, useragent="DebugService")
@@ -141,8 +137,8 @@ class DebugService:
         self.logger.debug(f"Running command: {command}")
         cmdOut = externalCommand(command, False)
         out, err = cmdOut.communicate()
-        retOut["stdout"] += out.decode("utf-8").split("\n") + self._getOut(inputDict["id"], "stdout")
-        retOut["stderr"] += err.decode("utf-8").split("\n") + self._getOut(inputDict["id"], "stderr")
+        retOut["stdout"] += out.split("\n") + self._getOut(inputDict["id"], "stdout")
+        retOut["stderr"] += err.split("\n") + self._getOut(inputDict["id"], "stderr")
         retOut["processOut"] += self._getOut(inputDict["id"], "process")
         retOut["jsonout"] = self._getOutjson(inputDict["id"], "jsonout")
         retOut["exitCode"] = cmdOut.returncode

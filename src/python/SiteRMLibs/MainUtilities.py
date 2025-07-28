@@ -257,7 +257,7 @@ def externalCommand(command, communicate=True):
     """Execute External Commands and return stdout and stderr."""
     # pylint: disable=consider-using-with
     command = shlex.split(str(command))
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if communicate:
         return proc.communicate()
     return proc
@@ -267,7 +267,7 @@ def externalCommandStdOutErr(command, stdout, stderr):
     """Execute External Commands and return stdout and stderr."""
     command = shlex.split(str(command))
     with open(stdout, "w", encoding="utf-8") as outFD, open(stderr, "w", encoding="utf-8") as errFD:
-        with subprocess.Popen(command, stdout=outFD, stderr=errFD) as proc:
+        with subprocess.Popen(command, stdout=outFD, stderr=errFD, text=True) as proc:
             return proc.communicate()
 
 
@@ -652,7 +652,7 @@ def strtolist(intext, splitter):
 def getArpVals():
     """Get Arp Values from /proc/net/arp. Return generator."""
     neighs = externalCommand("ip neigh")
-    for arpline in neighs[0].decode("UTF-8").splitlines():
+    for arpline in neighs[0].splitlines():
         parts = arpline.split()
         if len(parts) < 5:
             continue
