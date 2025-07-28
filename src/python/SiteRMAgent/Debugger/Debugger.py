@@ -148,7 +148,7 @@ class Debugger(DebugService):
                 try:
                     ditem = self.getData(f"/api/{self.sitename}/debug/{item['id']}?details=True")
                     if ditem:
-                        self.checkBackgroundProcess(ditem)
+                        self.checkBackgroundProcess(ditem[0])
                 except FailedGetDataFromFE as ex:
                     self.logger.error(f"Failed to get data from FE: {ex}")
                     continue

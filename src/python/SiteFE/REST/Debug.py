@@ -155,11 +155,11 @@ class DebugItem(BaseModel):
     """Service Item Model."""
 
     # pylint: disable=too-few-public-methods
+    id: Optional[int] = None
     hostname: Optional[str] = "undefined"  # Hostname to use. In case not set or undefined, requires to have a dynamicfrom set.
-    # Optional fields
+    state: Optional[str] = "new"
     request: Optional[Dict[str, Any]] = {}
     output: Optional[Dict[str, Any]] = {}
-
 
 # TODO few more debug calls to add
 # 2. Get a list of hostnames (split by hostname: type)

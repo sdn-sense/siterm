@@ -20,7 +20,6 @@ from SiteRMLibs.MainUtilities import (
     getFullUrl,
     getLoggingObject,
     getUTCnow,
-    jsondumps,
 )
 
 
@@ -44,8 +43,7 @@ class DebugService:
             out = {
                 "id": inDic["id"],
                 "state": inDic["state"],
-                "output": inDic["output"],
-                "updatedate": getUTCnow(),
+                "output": inDic["output"]
             }
             self.dbI.update("debugrequests", [out])
             return
@@ -101,7 +99,7 @@ class DebugService:
         out = {
             "id": item["id"],
             "state": newstate,
-            "output": jsondumps(out),
+            "output": out,
             "updatedate": getUTCnow(),
         }
         self.logger.debug(f"Updating state of debug: {out['id']} to {newstate}")

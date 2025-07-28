@@ -156,6 +156,12 @@ class Requests:
             # The only implementation of nonFESession is to fetch github config files
             # We are not passing headers or json data here
             response = self.notFEsession.request(method=verb, url=url)
+            if response.status_code not in [200, 201, 202, 204, 304]:
+                if self.logger:
+                    self.logger.error(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
+                if kwargs["raiseEx"]:
+                    raise httpx.HTTPStatusError(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
+                return response.text, response.status_code, response.reason_phrase, False
             return response.text, response.status_code, response.reason_phrase, False
         except httpx.HTTPStatusError as e:
             return e.response.text, e.response.status_code, e.response.reason_phrase, False
