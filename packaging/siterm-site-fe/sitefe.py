@@ -32,19 +32,29 @@ app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="ui")
 
 def logdetails(request: Request, status_code: int, message: str = ""):
     """Helper function to log detailed request information"""
-    log_data = {
-        "timestamp": request.headers.get("date", ""),
-        "status_code": status_code,
-        "method": request.method,
-        "full_url": str(request.url),
-        "path": request.url.path,
-        "query_string": str(request.url.query),
-        "query_params": dict(request.query_params),
-        "path_params": request.path_params,
-        "client_info": {"ip": request.client.host, "port": request.client.port},
-        "headers": dict(request.headers),
-        "message": message,
-    }
+    try:
+        log_data = {
+            "timestamp": request.headers.get("date", ""),
+            "status_code": status_code,
+            "method": request.method,
+            "full_url": str(request.url),
+            "path": request.url.path,
+            "query_string": str(request.url.query),
+            "query_params": dict(request.query_params),
+            "path_params": request.path_params,
+            "client_info": {"ip": request.client.host, "port": request.client.port},
+            "headers": dict(request.headers),
+            "message": message,
+        }
+    except Exception as ex:
+        log_data = {
+            "request": str(request),
+            "error": "Failed to log request details",
+            "exception": str(ex),
+            "status_code": status_code,
+            "method": request.method,
+            "full_url": str(request.url),
+        }
     print(f"Request Log[{status_code}]:", log_data)
 
 
