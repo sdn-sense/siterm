@@ -404,9 +404,6 @@ async def createTimeStateForDelta(
     Create a new time state for the specified delta ID.
     """
     checkSite(deps, sitename)
-    delta = _getdeltas(deps["dbI"], deltaID=delta_id)
-    if not delta:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delta not found in the database.")
     # Check if the delta is in a state that allows creating a time state
     deps["dbI"].insert( "deltatimestates", [{"insertdate": getUTCnow(), "uuid": item.uuid, "uuidtype": item.uuidtype, "hostname": item.hostname, "hostport": item.hostport, "uuidstate": item.uuidstate}])
     return APIResponse.genResponse(request, {"status": "Time state created successfully", "delta_id": delta_id, "time_state": item.dict()}, status_code=status.HTTP_201_CREATED)
