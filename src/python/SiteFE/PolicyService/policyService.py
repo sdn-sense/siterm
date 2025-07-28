@@ -717,15 +717,13 @@ class PolicyService(RDFHelper, Timing, BWService):
     def topLevelDeltaState(self):
         """Identify and set top level delta state"""
         for key, vals in self.newActive["output"].get("vsw", {}).items():
-            for reqkey, reqdict in vals.items():
-                if reqkey == "_params":
-                    continue
-                # TODO Ignore keys hasService should depend on switch configuration
-                # if QoS is enabled or not.
-                tmpstates = dictSearch("networkstatus", reqdict, [], ["hasService"])
+            if "_params" in vals:
+                tmpcopy = copy.deepcopy(vals)
+                del tmpcopy["_params"]
+                tmpstates = dictSearch("networkstatus", tmpcopy, [], ["hasService"])
                 globst = self.identifyglobalstate(tmpstates)
-                if "_params" in vals:
-                    self.newActive["output"]["vsw"][key]["_params"]["networkstatus"] = globst
+                self.logger.debug(f"Identified global state for {key} as {globst}. All states: {tmpstates}")
+                self.newActive["output"]["vsw"][key]["_params"]["networkstatus"] = globst
 
     def recordDeltaStates(self):
         """Record delta states in activeDeltas output"""

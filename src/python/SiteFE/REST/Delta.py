@@ -372,10 +372,10 @@ async def getTimeStatesForDelta(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delta not found in the database.")
 
     # Retrieve time states from the database
-    timestates = deps["dbI"].get("states", search=[["uuid", delta_id]], orderby=["insertdate", "DESC"], limit=limit)
+    timestates = deps["dbI"].get("states", search=[["deltaid", delta_id]], orderby=["insertdate", "DESC"], limit=limit)
     if not timestates:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No time states found for the specified delta ID.")
-    return APIResponse.genResponse(request, {"time_states": timestates})
+    return APIResponse.genResponse(request, timestates)
 
 
 @router.post(
