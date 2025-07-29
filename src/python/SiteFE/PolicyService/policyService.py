@@ -883,6 +883,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         """Start Policy Service."""
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started")
+        speedup = False
         fnewdir = os.path.join(self.config.get(self.sitename, "privatedir"), "PolicyService", "httpnew")
         ffinishdir = os.path.join(
             self.config.get(self.sitename, "privatedir"),
@@ -899,7 +900,9 @@ class PolicyService(RDFHelper, Timing, BWService):
             # Write output to a new file in finished directory
             self.siteDB.saveContent(os.path.join(ffinishdir, fname), out)
             self.siteDB.removeFile(fullpath)
+            speedup = True
         self.logger.info("Component PolicyService Finished")
+        return speedup
 
     def deltaToModel(self, currentGraph, deltaPath, action):
         """Add delta to current Model. If no delta provided, returns current Model"""
