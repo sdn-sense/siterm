@@ -930,6 +930,8 @@ class PolicyService(RDFHelper, Timing, BWService):
         for key, value in deltaContent.items():
             if not value:
                 continue
+            if key not in ["reduction", "addition"]:
+                continue
             self.logger.debug(f"Adding Content {value} for key {key}")
             with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
                 tmpFile = fd.name

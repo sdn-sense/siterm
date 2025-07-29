@@ -215,7 +215,7 @@ class DBBackend:
             if self.component == "ConfigFetcher":
                 return True
             for action in actions[0]:
-                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component}, useragent="Daemonizer")
+                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component, "action": action["action"]}, useragent="Daemonizer")
                 refresh = True
         except Exception:
             excType, excValue = sys.exc_info()[:2]
