@@ -34,8 +34,7 @@ app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="ui")
 def logdetails(request: Request, status_code: int, message: str = ""):
     """Helper function to log detailed request information"""
     # Log only if GU_LOG_LEVEL is set to DEBUG
-    # TODO: Change this as default to INFO
-    if os.getenv("GU_LOG_LEVEL", "DEBUG").upper() != "DEBUG":
+    if os.getenv("GU_LOG_LEVEL", "INFO").upper() != "DEBUG":
         return
     try:
         log_data = {

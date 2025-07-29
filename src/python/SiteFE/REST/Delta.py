@@ -71,7 +71,7 @@ class DeltaItem(BaseModel):
     """Service Item Model."""
 
     # pylint: disable=too-few-public-methods
-    modelId: str
+    modelId: Optional[str] = None
     id: str
     # Optional fields
     reduction: Optional[str] = None
@@ -238,8 +238,10 @@ async def submitDelta(
         # Get latest model, and check if modelId is same as latest
         # If not, raise an Error, as model was updated, and things have changed.
         latestModel = depGetModel(deps["dbI"], limit=1, orderby=["insertdate", "DESC"])[0]
+        item.modelId = latestModel["uid"] if not item.modelId else item.modelId # Set it to the latest, if not provided.
         if latestModel["uid"] != item.modelId:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Model ID does not match latest model. Please submit new one with correct and latest model ID.")
+            # Model ID does not match latest model, and latest model is the one with all committed changes. We will bypass the request and use the latest model ID.
+            print(f"WARNING! Bypassing requested modelID {item.modelId}. Using latest model for comparison: {latestModel['uid']}")
     except ModelNotFound as ex:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found in the database. First time run?") from ex
     outContent = {"ID": item.id, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "content": item.dict(), "State": "accepting", "modelId": item.modelId}
