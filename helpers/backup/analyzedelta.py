@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """Print delta information."""
-import sys
-import tempfile
 import ast
 import pprint
-from SiteRMLibs.MainUtilities import getAllHosts
-from SiteRMLibs.MainUtilities import getVal
-from SiteRMLibs.MainUtilities import evaldict
-from SiteRMLibs.MainUtilities import decodebase64
-from SiteRMLibs.MainUtilities import getConfig, getStreamLogger
-from SiteRMLibs.MainUtilities import getDBConn
-from SiteFE.PolicyService.stateMachine import StateMachine
+import sys
+import tempfile
+
 from SiteFE.PolicyService import policyService as polS
+from SiteFE.PolicyService.stateMachine import StateMachine
+from SiteRMLibs.MainUtilities import (
+    decodebase64,
+    evaldict,
+    getAllHosts,
+    getConfig,
+    getDBConn,
+    getStreamLogger,
+    getVal,
+)
 
 CONFIG = getConfig()
 LOGGER = getStreamLogger()
@@ -42,9 +46,7 @@ def getdeltaAll(sitename, deltaUID):
         pprint.pprint(delta)
         print("Delta times")
         for deltatimes in dbobj.get("states", search=[["deltaid", delta["uid"]]]):
-            print(
-                "State: %s Date: %s" % (deltatimes["state"], deltatimes["insertdate"])
-            )
+            print("State: %s Date: %s" % (deltatimes["state"], deltatimes["insertdate"]))
         if delta["deltat"] in ["reduction", "addition"]:
             for hostname in list(delta[delta["deltat"]]["hosts"].keys()):
                 print("-" * 20)
@@ -54,20 +56,14 @@ def getdeltaAll(sitename, deltaUID):
                     search=[["deltaid", delta["uid"]], ["hostname", hostname]],
                 ):
                     print("Host %s State %s" % (hostname, hoststate["state"]))
-                    print(
-                        "Insertdate %s UpdateDate %s"
-                        % (hoststate["insertdate"], hoststate["updatedate"])
-                    )
+                    print("Insertdate %s UpdateDate %s" % (hoststate["insertdate"], hoststate["updatedate"]))
                     print("-" * 20)
                     print("Host State History")
                     for hstatehistory in dbobj.get(
                         "hoststateshistory",
                         search=[["deltaid", delta["uid"]], ["hostname", hostname]],
                     ):
-                        print(
-                            "State: %s, Date: %s"
-                            % (hstatehistory["state"], hstatehistory["insertdate"])
-                        )
+                        print("State: %s, Date: %s" % (hstatehistory["state"], hstatehistory["insertdate"]))
         toDict = ast.literal_eval(str(delta["content"]))
         jOut = getAllHosts(dbI)
         for key in ["reduction", "addition"]:
@@ -82,7 +78,7 @@ def getdeltaAll(sitename, deltaUID):
                         "Received ValueError. More details %s. Try to write normally with decode",
                         ex,
                     )
-                    tmpFile.write(decodebase64(toDict["Content"][key]))
+                    tmpFile.write(decodebase64(toDict["content"][key]))
                 tmpFile.close()
                 print("For %s this is delta location %s" % (key, tmpFile.name))
             out = policer.parseDeltaRequest(tmpFile.name, jOut)

@@ -215,18 +215,23 @@ def getTimeRotLogger(**kwargs):
     return logger
 
 
+def bytestoStr(inputBytes):
+    """Convert bytes object to string."""
+    if isinstance(inputBytes, bytes):
+        try:
+            return inputBytes.decode("utf-8")
+        except UnicodeDecodeError as ex:
+            raise WrongInputError(f"Input bytes could not be decoded. Error: {ex}") from ex
+    return inputBytes
+
+
 def evaldict(inputDict):
     """Safely evaluate input to dict/list."""
     if not inputDict:
         return {}
     if isinstance(inputDict, (list, dict)):
         return inputDict
-    # Decode if it is bytes
-    if isinstance(inputDict, bytes):
-        try:
-            inputDict = inputDict.decode("utf-8")
-        except UnicodeDecodeError as ex:
-            raise WrongInputError(f"Input bytes could not be decoded. Error: {ex}") from ex
+    inputDict = bytestoStr(inputDict)
     # At this stage, if not string, raise error.  list/dict is checked in previous if
     if not isinstance(inputDict, str):
         raise WrongInputError("Input must be a string or dict/list.")
@@ -536,9 +541,7 @@ def getModTime(headers):
 def encodebase64(inputStr, encodeFlag=True):
     """Encode str to base64."""
     if encodeFlag and inputStr:
-        if isinstance(inputStr, bytes):
-            return base64.b64encode(inputStr.encode("UTF-8"))
-        return base64.b64encode(bytes(inputStr.encode("UTF-8")))
+        return base64.b64encode(bytestoStr(inputStr))
     return inputStr
 
 

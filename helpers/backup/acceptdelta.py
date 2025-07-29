@@ -35,7 +35,7 @@ def getdeltaAll(sitename, deltaUID):
         "ID": delta["uid"],
         "insertdate": delta["insertdate"],
         "updatedate": delta["updatedate"],
-        "Content": ast.literal_eval(str(delta["content"])),
+        "content": ast.literal_eval(str(delta["content"])),
         "State": "accepting",
         "modelId": delta["modelid"],
     }

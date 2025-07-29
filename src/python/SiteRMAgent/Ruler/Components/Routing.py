@@ -60,7 +60,6 @@ class Rules:
     def _add_iprange(self, rule_from):
         """Add IP range to rule"""
         # if it is all, then add None;
-        rule_from = rule_from if isinstance(rule_from, bytes) else rule_from
         if rule_from == "all":
             self.rule_ip_table.append(None)
         # if it is with / then it is already a range;
@@ -76,14 +75,10 @@ class Rules:
     def add_rule(self, rule_id, rule_from, rule_to, rule_lookup):
         """Add Rule to list"""
 
-        def __to_str(val):
-            """Convert value to string"""
-            return val if isinstance(val, bytes) else val
-
-        self.rule_id.append(__to_str(rule_id))
-        self.rule_from.append(__to_str(rule_from))
-        self.rule_to.append(__to_str(rule_to))
-        self.rule_lookup.append(__to_str(rule_lookup))
+        self.rule_id.append(rule_id)
+        self.rule_from.append(rule_from)
+        self.rule_to.append(rule_to)
+        self.rule_lookup.append(rule_lookup)
         # Identify from rule_from and IP range on the host;
         self._add_iprange(rule_from)
 

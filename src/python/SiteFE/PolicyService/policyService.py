@@ -31,6 +31,7 @@ from SiteRMLibs.CustomExceptions import (
     ServiceNotReady,
     WrongIPAddress,
 )
+from SiteRMLibs.DefaultParams import DELTA_COMMIT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     contentDB,
@@ -924,10 +925,36 @@ class PolicyService(RDFHelper, Timing, BWService):
                 raise Exception(f"Unknown delta action. Action submitted {action}")
         return currentGraph
 
+    def _addDeltasToModel(self, currentGraph, deltaContent):
+        """Add deltas to current graph."""
+        for key, value in deltaContent.items():
+            if not value:
+                continue
+            self.logger.debug(f"Adding Content {value} for key {key}")
+            with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
+                tmpFile = fd.name
+                try:
+                    fd.write(value)
+                except ValueError:
+                    fd.write(decodebase64(value))
+            currentGraph = self.deltaToModel(currentGraph, tmpFile, key)
+            os.unlink(tmpFile)
+        return currentGraph
+
+    def _addAllAcceptedDeltas(self, currentGraph):
+        """Add all accepted deltas to the current graph."""
+        self.logger.info(f"Adding all accepted deltas to the current graph, not older than {DELTA_COMMIT_TIMEOUT} seconds")
+        for delta in self.dbI.get("deltas", search=[["state", "accepted"], ["insertdate", ">", getUTCnow() - DELTA_COMMIT_TIMEOUT]], limit=50):
+            delta["content"] = evaldict(delta["content"])
+            self.logger.debug(f"Adding delta {delta['uid']} to current graph")
+            currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
+        return currentGraph
+
     def acceptDelta(self, deltapath):
         """Accept delta."""
         self._refreshHosts()
         currentGraph = self.deltaToModel(None, None, None)
+        currentGraph = self._addAllAcceptedDeltas(currentGraph)
         self.currentActive = getActiveDeltas(self)
         self.newActive = {"output": {}}
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
@@ -938,17 +965,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         toDict["Type"] = "submission"
         toDict["modadd"] = "idle"
         try:
-            for key in ["reduction", "addition"]:
-                if toDict.get("Content", {}).get(key, {}):
-                    self.logger.debug(f"Got Content {toDict['Content'][key]} for key {key}")
-                    with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
-                        tmpFile = fd.name
-                        try:
-                            fd.write(toDict["Content"][key])
-                        except ValueError:
-                            fd.write(decodebase64(toDict["Content"][key]))
-                    currentGraph = self.deltaToModel(currentGraph, tmpFile, key)
-                    os.unlink(tmpFile)
+            self._addDeltasToModel(currentGraph, toDict.get("content", {}))
             self.newActive["output"] = self.parseModel(currentGraph)
             try:
                 self.conflictChecker.checkConflicts(self, self.newActive["output"], self.currentActive["output"], True)
@@ -964,7 +981,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             self.stateMachine.failed(self.dbI, toDict)
         else:
             toDict["State"] = "accepted"
-            self.stateMachine.accepted(self.dbI, toDict)
+            self.stateMachine.accepting(self.dbI, toDict)
             # =================================
         return toDict
 
@@ -984,7 +1001,7 @@ def execute(config=None, args=None):
                 if not delta:
                     raise Exception(f"Delta {args.deltaid} not found in database")
                 delta = delta[0]
-                delta["Content"] = evaldict(delta["content"])
+                delta["content"] = evaldict(delta["content"])
                 tmpfd = tempfile.NamedTemporaryFile(delete=False, mode="w+")
                 tmpfd.close()
                 policer.siteDB.saveContent(tmpfd.name, delta)

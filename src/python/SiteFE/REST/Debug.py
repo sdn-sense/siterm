@@ -21,6 +21,7 @@ from SiteFE.REST.dependencies import (
     checkSite,
 )
 from SiteRMLibs import __version__ as runningVersion
+from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
     dumpFileContentAsJson,
@@ -28,7 +29,6 @@ from SiteRMLibs.MainUtilities import (
     getFileContentAsJson,
     getUTCnow,
 )
-from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.Validator import validator
 
 router = APIRouter()
@@ -161,12 +161,10 @@ class DebugItem(BaseModel):
     request: Optional[Dict[str, Any]] = {}
     output: Optional[Dict[str, Any]] = {}
 
+
 # TODO few more debug calls to add
-# 2. Get a list of hostnames (split by hostname: type)
 # 3. Get a list of allowed ipv6 dynamicfrom
 # 4. implement ethr-server and ethr-client
-
-
 # ==========================================================
 # /api/{sitename}/debugactions # Return all possible debug actions
 # ==========================================================
@@ -180,8 +178,14 @@ class DebugItem(BaseModel):
             200: {"description": "Debug actions list retrieved successfully", "content": {"application/json": {"example": {"debug_actions_list": "example_debug_actions_list"}}}},
             404: {
                 "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Action <action> not found in debug actions.",
-                "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
-                                                             "no_action": {"detail": "Action <action> not found in debug actions."}}}},
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
+                            "no_action": {"detail": "Action <action> not found in debug actions."},
+                        }
+                    }
+                },
             },
         },
         **DEFAULT_RESPONSES,
@@ -210,8 +214,14 @@ async def getDebugActionsList(request: Request, sitename: str = Path(..., descri
             200: {"description": "Debug action information retrieved successfully", "content": {"application/json": {"example": {"debug_action_info": "example_debug_action_info"}}}},
             404: {
                 "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug action <action> not found for site <sitename>.",
-                "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
-                                                             "no_action": {"detail": "Debug action <action> not found for site <sitename>."}}}},
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
+                            "no_action": {"detail": "Debug action <action> not found for site <sitename>."},
+                        }
+                    }
+                },
             },
         },
         **DEFAULT_RESPONSES,
@@ -246,9 +256,13 @@ async def getDebugActionInfo(
     tags=["Debug"],
     responses={
         **{
-            200: {"description": "Debug actions retrieved successfully. No action found returns empty array.", "content": {"application/json": {"example": {"debug_actions": "example_debug_actions"}}}},
-            404: {"description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.",
-                  "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
+            200: {
+                "description": "Debug actions retrieved successfully. No action found returns empty array.",
+                "content": {"application/json": {"example": {"debug_actions": "example_debug_actions"}}},
+            },
+            404: {
+                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.",
+                "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
             },
         },
         **DEFAULT_RESPONSES,
@@ -323,9 +337,17 @@ async def getDebugInfo(
     tags=["Debug"],
     responses={
         200: {"description": "Debug action information updated successfully", "content": {"application/json": {"example": {"Status": "success", "ID": "<debug_id>"}}}},
-        404: {"description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug request with ID <debugvar> not found.",
-              "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
-                                                           "debug_not_found": {"detail": "Debug request with ID <debugvar> not found."}}}}},
+        404: {
+            "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug request with ID <debugvar> not found.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
+                        "debug_not_found": {"detail": "Debug request with ID <debugvar> not found."},
+                    }
+                }
+            },
+        },
     },
 )
 async def updatedebug(
@@ -358,9 +380,17 @@ async def updatedebug(
     tags=["Debug"],
     responses={
         200: {"description": "Debug action information deleted successfully", "content": {"application/json": {"example": {"Status": "success", "ID": "<debug_id>"}}}},
-        404: {"description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug request with ID <debugvar> not found.",
-              "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
-                                                           "debug_not_found": {"detail": "Debug request with ID <debugvar> not found."}}}}},
+        404: {
+            "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug request with ID <debugvar> not found.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
+                        "debug_not_found": {"detail": "Debug request with ID <debugvar> not found."},
+                    }
+                }
+            },
+        },
     },
 )
 async def deletedebug(
@@ -399,8 +429,10 @@ async def deletedebug(
     tags=["Debug"],
     responses={
         200: {"description": "Debug action request submitted successfully", "content": {"application/json": {"example": {"Status": "success", "ID": "<debug_id>"}}}},
-        404: {"description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug request with ID <debugvar> not found.",
-              "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}}},
+        404: {
+            "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Debug request with ID <debugvar> not found.",
+            "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
+        },
         400: {"description": "Bad request", "content": {"application/json": {"example": {"detail": "Bad Request. Possible reasons: Wrong value, parameter, input validation failed."}}}},
     },
 )

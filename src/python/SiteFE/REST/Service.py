@@ -102,7 +102,35 @@ class ServiceItem(BaseModel):
     tags=["Service States"],
     responses={
         **{
-            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "TODO",
+                "content": {
+                    "application/json": [
+                        {
+                            "id": 20,
+                            "hostname": "siterm-deb11a-conf-111111111111111111111111-0",
+                            "servicename": "Debugger",
+                            "servicestate": "OK",
+                            "runtime": 2,
+                            "version": "1.5.43",
+                            "insertdate": 1753727760,
+                            "updatedate": 1753745117,
+                            "exc": "No Exception provided by service",
+                        },
+                        {
+                            "id": 5,
+                            "hostname": "default",
+                            "servicename": "DBWorker",
+                            "servicestate": "OK",
+                            "runtime": 0,
+                            "version": "1.5.43",
+                            "insertdate": 1753547862,
+                            "updatedate": 1753745115,
+                            "exc": "No Exception provided by service",
+                        },
+                    ]
+                },
+            },
         },
         **DEFAULT_RESPONSES,
     },
@@ -237,7 +265,7 @@ class ServiceStateItem(BaseModel):
     "/{sitename}/servicestates",
     summary="Get Service States",
     description=("Returns the current service states from the database."),
-    tags=["Frontend"],
+    tags=["Service States"],
     responses={
         **{
             200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},

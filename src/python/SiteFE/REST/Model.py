@@ -71,7 +71,7 @@ async def getModelInfo(
     checkSite(deps, sitename)
     try:
         if current:
-            outmodels = depGetModel(deps["dbI"], limit=1, orderby=["insertdate", "DESC"])
+            outmodels = depGetModel(deps["dbI"], limit=1, orderby=["insertdate", "DESC"])[0]
             # Check IF_MODIFIED_SINCE from request headers
             if outmodels["insertdate"] < getModTime(request.headers):
                 return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers={"Last-Modified": httpdate(outmodels["insertdate"])})
@@ -119,7 +119,19 @@ async def getModelInfo(
     tags=["Models"],
     responses={
         **{
-            200: {"description": "Model information retrieved successfully", "content": {"application/json": {"example": {"model": "example_model"}}}},
+            200: {
+                "description": "Model information retrieved successfully",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "id": "744bdc40-6c09-11f0-a13b-00000004e9ab",
+                            "creationTime": "2025-07-28T23:20:31.000+0000",
+                            "href": "http://sense-dev-sdsc.nrp-nautilus.io/api/T2_US_SDSC_DEV/models/744bdc40-6c09-11f0-a13b-00000004e9ab",
+                            "model": "@prefix mrs: <http://schemas.ogf.org/mrs/2013/12/topology#> .\n@prefix nml: <http://schemas.ogf.org/nml/2013/03/base#> .\n@prefix schema1: <http://schemas.ogf.org/nml/2012/10/ethernet> .\n@prefix sd: <http://schemas.ogf.org/nsi/2013/12/services/definition#> .\n@prefix site: <urn:ogf:network:nrp-nautilus-dev.io:2025> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\nsite: a nml:Topology ;\n    nml:hasNode <urn:ogf:network:nrp-nautilus-dev.io:2025:edgecore_s0>,\n        <urn:ogf:network:nrp-nautilus-dev.io:2025:node-2-6.sdsc.optiputer.net>,\n",
+                        }
+                    }
+                },
+            },
             404: {"description": "Model not found", "content": {"application/json": {"example": {"detail": "Model not found in the database. First time run?"}}}},
             304: {"description": "Not Modified", "content": {"application/json": {"example": {"detail": "Model not modified since last request"}}}},
         },
@@ -141,7 +153,7 @@ async def getModelByID(
     """
     # Get model by ID
     try:
-        model = depGetModel(deps["dbI"], modelID=modelID, limit=1)
+        model = depGetModel(deps["dbI"], modelID=modelID, limit=1)[0]
         # Check IF_MODIFIED_SINCE from request headers
         if model["insertdate"] < getModTime(request.headers):
             return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers={"Last-Modified": httpdate(model["insertdate"])})

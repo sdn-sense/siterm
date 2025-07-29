@@ -28,3 +28,7 @@ SERVICE_DOWN_TIMEOUT = 300
 SERVICE_DEAD_TIMEOUT = 600
 # Auto refresh of git configuration time in seconds (In case forced via API)
 GIT_CONFIG_REFRESH_TIMEOUT = 300
+# Time for delta to receive commit message (5 minutes)
+DELTA_COMMIT_TIMEOUT = 300
+# Time for delta to be removed from database (1 hour)
+DELTA_REMOVE_TIMEOUT = 3600
