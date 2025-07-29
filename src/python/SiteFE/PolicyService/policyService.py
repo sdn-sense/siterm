@@ -760,16 +760,8 @@ class PolicyService(RDFHelper, Timing, BWService):
             # 1. Get delta content for reduction, addition
             # 2. Add into model and see if it overlaps with any
             delta["content"] = evaldict(delta["content"])
-            for key in ["reduction", "addition"]:
-                if delta.get("content", {}).get(key, {}):
-                    with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
-                        tmpFile = fd.name
-                        try:
-                            fd.write(delta["content"][key])
-                        except ValueError:
-                            fd.write(decodebase64(delta["content"][key]))
-                    currentGraph = self.deltaToModel(currentGraph, tmpFile, key)
-                    os.unlink(tmpFile)
+            # 3. Add to current graph
+            currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
             # Now we parse new model and generate new currentActive config
             self.newActive["output"] = self.parseModel(currentGraph)
             modelParseRan = True
@@ -943,20 +935,30 @@ class PolicyService(RDFHelper, Timing, BWService):
             os.unlink(tmpFile)
         return currentGraph
 
-    def _addAllAcceptedDeltas(self, currentGraph):
+    def _addAllPendingDeltas(self, currentGraph):
         """Add all accepted deltas to the current graph."""
         self.logger.info(f"Adding all accepted deltas to the current graph, not older than {DELTA_COMMIT_TIMEOUT} seconds")
         for delta in self.dbI.get("deltas", search=[["state", "accepted"], ["insertdate", ">", getUTCnow() - DELTA_COMMIT_TIMEOUT]], limit=50):
             delta["content"] = evaldict(delta["content"])
             self.logger.debug(f"Adding delta {delta['uid']} to current graph")
             currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
+        # We also need to add all committing, committed, activating
+        for state in ["committing", "committed", "activating"]:
+            self.logger.info(f"Adding all {state} deltas to the current graph")
+            # We limit to 50 deltas, so we do not overload the system
+            # This is needed for cases when we have multiple deltas in committing state
+            # and we want to apply them all at once.
+            for delta in self.dbI.get("deltas", search=[["state", state]], limit=50):
+                delta["content"] = evaldict(delta["content"])
+                self.logger.debug(f"Adding delta {delta['uid']} to current graph")
+                currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
         return currentGraph
 
     def acceptDelta(self, deltapath):
         """Accept delta."""
         self._refreshHosts()
         currentGraph = self.deltaToModel(None, None, None)
-        currentGraph = self._addAllAcceptedDeltas(currentGraph)
+        currentGraph = self._addAllPendingDeltas(currentGraph)
         self.currentActive = getActiveDeltas(self)
         self.newActive = {"output": {}}
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
