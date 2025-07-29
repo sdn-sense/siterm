@@ -681,7 +681,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         return returnout
 
     @staticmethod
-    def identifyglobalstate(tmpstates):
+    def _identifyglobalstate(tmpstates):
         """Based on all subdelta states, identify top level delta state"""
         nstate = "unknown"
         if not tmpstates:
@@ -700,14 +700,14 @@ class PolicyService(RDFHelper, Timing, BWService):
             nstate = "deactivating"
         return nstate
 
-    def topLevelDeltaState(self):
+    def _topLevelDeltaState(self):
         """Identify and set top level delta state"""
         for key, vals in self.newActive["output"].get("vsw", {}).items():
             if "_params" in vals:
                 tmpcopy = copy.deepcopy(vals)
                 del tmpcopy["_params"]
                 tmpstates = dictSearch("networkstatus", tmpcopy, [], ["hasService"])
-                globst = self.identifyglobalstate(tmpstates)
+                globst = self._identifyglobalstate(tmpstates)
                 self.logger.debug(f"Identified global state for {key} as {globst}. All states: {tmpstates}")
                 self.newActive["output"]["vsw"][key]["_params"]["networkstatus"] = globst
 
@@ -724,7 +724,7 @@ class PolicyService(RDFHelper, Timing, BWService):
                     actEntry["hasService"]["_params"]["networkstatus"] = dbout["uuidstate"]
             changed = True
             self.dbI.delete("deltatimestates", [["id", dbout["id"]]])
-        self.topLevelDeltaState()
+        self._topLevelDeltaState()
         return changed
 
     def generateActiveConfigDict(self, currentGraph, usedIPs, usedVLANs):
@@ -922,20 +922,30 @@ class PolicyService(RDFHelper, Timing, BWService):
             os.unlink(tmpFile)
         return currentGraph
 
-    def _addAllAcceptedDeltas(self, currentGraph):
+    def _addAllPendingDeltas(self, currentGraph):
         """Add all accepted deltas to the current graph."""
         self.logger.info(f"Adding all accepted deltas to the current graph, not older than {DELTA_COMMIT_TIMEOUT} seconds")
         for delta in self.dbI.get("deltas", search=[["state", "accepted"], ["insertdate", ">", getUTCnow() - DELTA_COMMIT_TIMEOUT]], limit=50):
             delta["content"] = evaldict(delta["content"])
             self.logger.debug(f"Adding delta {delta['uid']} to current graph")
             currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
+        # We also need to add all committing, committed, activating
+        for state in ["committing", "committed", "activating"]:
+            self.logger.info(f"Adding all {state} deltas to the current graph")
+            # We limit to 50 deltas, so we do not overload the system
+            # This is needed for cases when we have multiple deltas in committing state
+            # and we want to apply them all at once.
+            for delta in self.dbI.get("deltas", search=[["state", state]], limit=50):
+                delta["content"] = evaldict(delta["content"])
+                self.logger.debug(f"Adding delta {delta['uid']} to current graph")
+                currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
         return currentGraph
 
     def acceptDelta(self, deltapath):
         """Accept delta."""
         self._refreshHosts()
         currentGraph = self.deltaToModel(None, None, None)
-        currentGraph = self._addAllAcceptedDeltas(currentGraph)
+        currentGraph = self._addAllPendingDeltas(currentGraph)
         self.currentActive = getActiveDeltas(self)
         self.newActive = {"output": {}}
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
