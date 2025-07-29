@@ -309,6 +309,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def startwork(self):
         """Main start."""
         # pylint: disable=too-many-statements
+        speedup = False
         self.logger.info("Started LookupService work")
         firstRunCheck(self.firstRun, "LookUpService")
         self.__clean()
@@ -380,6 +381,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 self.logger.info("Forcefully update model in db as it is older than 1h")
                 self.saveModel(saveName)
                 self.dbI.insert("models", [lastKnownModel])
+                speedup = True
             else:
                 self.logger.info("Models are equal.")
                 lastKnownModel = modelinDB[0]
@@ -389,6 +391,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             self.logger.info("Models are different. Update DB")
             self.saveModel(saveName)
             self.dbI.insert("models", [lastKnownModel])
+            speedup = True
 
         self.logger.debug(f"Last Known Model: {str(lastKnownModel['fileloc'])}")
 
@@ -399,12 +402,14 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             self.logger.info("Update is needed. Informing to renew all devices state")
             # If models are different, we need to update all devices information
             self.switch.deviceUpdate(self.sitename)
+            speedup = True
         elif self.warningstart and self.warningstart <= getUTCnow() + 3600:  # If warnings raise an hour ago - refresh
             self.warningstart = 0
             self.logger.info("Warnings were raised more than 1hr ago. Informing to renew all devices state")
             self.switch.deviceUpdate(self.sitename)
         self.checkVlansWarnings()
         self.checkAndRaiseWarnings()
+        return speedup
 
 
 def execute(config=None):

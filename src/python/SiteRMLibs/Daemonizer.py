@@ -74,8 +74,8 @@ def getParser(description):
     oparser.add_argument(
         "--sleeptimeok",
         dest="sleeptimeok",
-        default="15",
-        help="Sleep time in seconds when everything is ok. Default 15",
+        default="10",
+        help="Sleep time in seconds when everything is ok. Default 10",
     )
     oparser.add_argument(
         "--sleeptimefailure",
@@ -215,7 +215,7 @@ class DBBackend:
             if self.component == "ConfigFetcher":
                 return True
             for action in actions[0]:
-                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component}, useragent="Daemonizer")
+                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component, "action": action["action"]}, useragent="Daemonizer")
                 refresh = True
         except Exception:
             excType, excValue = sys.exc_info()[:2]
@@ -282,6 +282,7 @@ class Daemon(DBBackend):
     def _getHandlers(self):
         """Get handlers for all sites."""
         # TODO: Need to normalize sitename and site between FE and Agent.
+        # pylint: disable=W0702
         if not self.getGitConf:
             return
         try:
@@ -576,7 +577,7 @@ class Daemon(DBBackend):
             self.logger.debug("Started Memory Usage Tracking")
             self.logger.debug("Memory usage: %s", tracemalloc.get_traced_memory())
         try:
-            rthread.startwork()
+            return rthread.startwork()
         finally:
             if self.memdebug:
                 snapshot = tracemalloc.take_snapshot()
@@ -595,6 +596,7 @@ class Daemon(DBBackend):
             hadFailure = False
             refresh = False
             stwork = int(getUTCnow())
+            needspeedup = False
             try:
                 for sitename, rthread in list(self.runThreads.items()):
                     stwork = int(getUTCnow())
@@ -602,7 +604,7 @@ class Daemon(DBBackend):
                     self.logger.debug("Start worker for %s site", sitename)
                     try:
                         self.preRunThread(sitename, rthread)
-                        self.__run(rthread)
+                        needspeedup = self.__run(rthread)
                         self.reporter("OK", sitename, stwork)
                     except ServiceWarning as ex:
                         exc = traceback.format_exc()
@@ -618,7 +620,7 @@ class Daemon(DBBackend):
                     finally:
                         self.postRunThread(sitename, rthread)
                 if self.runLoop():
-                    time.sleep(self.sleepTimers["ok"])
+                    time.sleep(self.sleepTimers["ok"] // 2 if needspeedup else self.sleepTimers["ok"])
             except KeyboardInterrupt as ex:
                 self.reporter("KEYBOARDINTERRUPT", sitename, stwork)
                 self.logger.critical("Received KeyboardInterrupt: %s ", ex)

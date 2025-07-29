@@ -263,9 +263,9 @@ class PolicyService(RDFHelper, Timing, BWService):
 
     def getisAlias(self, gIn, bidPort):
         """Get isAlias from model"""
-        out = self.queryGraph(
-            gIn,
-            bidPort,
+        out = self._queryGraph(
+            graphIn=gIn,
+            sub=bidPort,
             search=URIRef(f"{self.prefixes['nml']}isAlias"),
             allowMultiple=True,
         )
@@ -276,16 +276,23 @@ class PolicyService(RDFHelper, Timing, BWService):
         return ""
 
     @staticmethod
-    def queryGraph(graphIn, sub=None, pre=None, obj=None, search=None, allowMultiple=True):
+    def _queryGraph(**kwargs):
+        # graphIn, sub=None, pre=None, obj=None, search=None, allowMultiple=True
         """Search inside the graph based on provided parameters."""
+        # Set defaults if missing
+        kwargs.setdefault("sub", None)
+        kwargs.setdefault("pre", None)
+        kwargs.setdefault("obj", None)
+        kwargs.setdefault("search", None)
+        kwargs.setdefault("allowMultiple", True)
         foundItems = []
-        for _sIn, pIn, oIn in graphIn.triples((sub, pre, obj)):
-            if search:
-                if search == pIn:
+        for _sIn, pIn, oIn in kwargs["graphIn"].triples((kwargs["sub"], kwargs["pre"], kwargs["obj"])):
+            if kwargs["search"]:
+                if kwargs["search"] == pIn:
                     foundItems.append(oIn)
             else:
                 foundItems.append(oIn)
-        if not allowMultiple:
+        if not kwargs["allowMultiple"]:
             if len(foundItems) > 1:
                 raise Exception(f"Search returned multiple entries. Not Supported. Out: {foundItems}")
         return foundItems
@@ -295,13 +302,9 @@ class PolicyService(RDFHelper, Timing, BWService):
         In case it fails to get correct timestamp, resources will be
         provisioned right away.
         """
-        out = self.queryGraph(
-            gIn,
-            connectionID,
-            search=URIRef(f"{self.prefixes['mrs']}hasNetworkStatus"),
-        )
+        out = self._queryGraph(graphIn=gIn, sub=connectionID, search=URIRef(f"{self.prefixes['mrs']}hasNetworkStatus"))
         for statusuri in out:
-            tout = self.queryGraph(gIn, statusuri, search=URIRef(f"{self.prefixes['mrs']}value"))
+            tout = self._queryGraph(graphIn=gIn, sub=statusuri, search=URIRef(f"{self.prefixes['mrs']}value"))
             if tout:
                 scanVals = connOut.setdefault("_params", {})
                 scanVals["networkstatus"] = str(tout[0])
@@ -311,11 +314,11 @@ class PolicyService(RDFHelper, Timing, BWService):
         In case it fails to get correct timestamp, resources will be
         provisioned right away.
         """
-        out = self.queryGraph(gIn, connectionID, search=URIRef(f"{self.prefixes['nml']}existsDuring"))
+        out = self._queryGraph(graphIn=gIn, sub=connectionID, search=URIRef(f"{self.prefixes['nml']}existsDuring"))
         for timeline in out:
             times = connOut.setdefault("_params", {}).setdefault("existsDuring", {"uri": str(timeline)})
             for timev in ["end", "start"]:
-                tout = self.queryGraph(gIn, timeline, search=URIRef(f"{self.prefixes['nml']}{timev}"))
+                tout = self._queryGraph(graphIn=gIn, sub=timeline, search=URIRef(f"{self.prefixes['nml']}{timev}"))
                 if not tout:
                     continue
                 try:
@@ -397,10 +400,10 @@ class PolicyService(RDFHelper, Timing, BWService):
         if str(connID) in self.scannedRoutes:
             return str(connID)
         for rtype in ["nextHop", "routeFrom", "routeTo"]:
-            out = self.queryGraph(gIn, connID, search=URIRef(f"{self.prefixes['mrs']}{rtype}"))
+            out = self._queryGraph(graphIn=gIn, sub=connID, search=URIRef(f"{self.prefixes['mrs']}{rtype}"))
             for item in out:
-                mrstypes = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}type"))
-                mrsvals = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}value"))
+                mrstypes = self._queryGraph(graphIn=gIn, sub=item, search=URIRef(f"{self.prefixes['mrs']}type"))
+                mrsvals = self._queryGraph(graphIn=gIn, sub=item, search=URIRef(f"{self.prefixes['mrs']}value"))
                 if mrstypes and mrsvals and len(mrstypes) == len(mrsvals):
                     for index, mrtype in enumerate(mrstypes):
                         if mrtype and mrsvals[index]:
@@ -415,7 +418,7 @@ class PolicyService(RDFHelper, Timing, BWService):
 
     def getRouteTable(self, gIn, connID, returnout):
         """Get all route tables from model for specific connID and call getRoute"""
-        out = self.queryGraph(gIn, connID, search=URIRef(f"{self.prefixes['mrs']}hasRoute"))
+        out = self._queryGraph(graphIn=gIn, sub=connID, search=URIRef(f"{self.prefixes['mrs']}hasRoute"))
         tmpRet = []
         for item in out:
             tmpRet.append(self.getRoute(gIn, item, returnout))
@@ -430,11 +433,7 @@ class PolicyService(RDFHelper, Timing, BWService):
                 {"key": "providesRoute", "call": self.getRoute},
                 {"key": "providesRoutingTable", "call": self.getRouteTable},
             ]:
-                out = self.queryGraph(
-                    gIn,
-                    URIRef(uri),
-                    search=URIRef(f"{self.prefixes['mrs']}{rsttype['key']}"),
-                )
+                out = self._queryGraph(graphIn=gIn, sub=URIRef(uri), search=URIRef(f"{self.prefixes['mrs']}{rsttype['key']}"))
                 for connectionID in out:
                     if connectionID.startswith(f"{uri}:rt-table+vrf-") or connectionID.endswith("rt-table+main"):
                         # Ignoring default vrf and main table.
@@ -464,20 +463,10 @@ class PolicyService(RDFHelper, Timing, BWService):
         out = scanVals.setdefault("hasNetworkAttribute", {})
         for attrkey in attrkeys:
             attrout = out.setdefault(str(attrkey), {})
-            mtype = self.queryGraph(
-                gIn,
-                attrkey,
-                search=URIRef(f"{self.prefixes['mrs']}type"),
-                allowMultiple=True,
-            )
+            mtype = self._queryGraph(graphIn=gIn, sub=attrkey, search=URIRef(f"{self.prefixes['mrs']}type"), allowMultiple=True)
             if mtype:
                 attrout["type"] = str("|".join(mtype))
-            mvalue = self.queryGraph(
-                gIn,
-                attrkey,
-                search=URIRef(f"{self.prefixes['mrs']}value"),
-                allowMultiple=True,
-            )
+            mvalue = self._queryGraph(graphIn=gIn, sub=attrkey, search=URIRef(f"{self.prefixes['mrs']}value"), allowMultiple=True)
             if mvalue:
                 attrout["value"] = str("|".join(mvalue))
 
@@ -495,12 +484,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             }
         )
         for tag, pref in keys.items():
-            out = self.queryGraph(
-                gIn,
-                bidPort,
-                search=URIRef(f"{self.prefixes[pref]}{tag}"),
-                allowMultiple=True,
-            )
+            out = self._queryGraph(graphIn=gIn, bidPort=bidPort, search=URIRef(f"{self.prefixes[pref]}{tag}"), allowMultiple=True)
             if out and tag != "hasNetworkAttribute":
                 scanVals[tag] = str("|".join(out))
             elif out:
@@ -517,13 +501,13 @@ class PolicyService(RDFHelper, Timing, BWService):
     def _hasLabel(self, gIn, bidPort, returnout):
         """Query Graph and get Labels"""
         self._hasTags(gIn, bidPort, returnout)
-        out = self.queryGraph(gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}hasLabel"))
+        out = self._queryGraph(graphIn=gIn, sub=bidPort, search=URIRef(f"{self.prefixes['nml']}hasLabel"))
         for item in out:
             scanVals = returnout.setdefault("hasLabel", {})
-            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}labeltype"))
+            out = self._queryGraph(graphIn=gIn, sub=item, search=URIRef(f"{self.prefixes['nml']}labeltype"))
             if out:
                 scanVals["labeltype"] = "ethernet#vlan"
-            out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['nml']}value"))
+            out = self._queryGraph(graphIn=gIn, sub=item, search=URIRef(f"{self.prefixes['nml']}value"))
             if out:
                 scanVals["value"] = int(out[0])
             scanVals["uri"] = str(item)
@@ -531,7 +515,7 @@ class PolicyService(RDFHelper, Timing, BWService):
     def _hasService(self, gIn, bidPort, returnout):
         """Query Graph and get Services"""
         self._hasTags(gIn, bidPort, returnout)
-        out = self.queryGraph(gIn, bidPort, search=URIRef(f"{self.prefixes['nml']}hasService"))
+        out = self._queryGraph(graphIn=gIn, sub=bidPort, search=URIRef(f"{self.prefixes['nml']}hasService"))
         for item in out:
             scanVals = returnout.setdefault("hasService", {})
             scanVals["uri"] = str(item)
@@ -546,7 +530,7 @@ class PolicyService(RDFHelper, Timing, BWService):
                 "type",
                 "unit",
             ]:
-                out = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}{key}"))
+                out = self._queryGraph(graphIn=gIn, sub=item, search=URIRef(f"{self.prefixes['mrs']}{key}"))
                 if out:
                     try:
                         scanVals[key] = int(out[0])
@@ -558,13 +542,13 @@ class PolicyService(RDFHelper, Timing, BWService):
         if not vswParams:
             self._hasTags(gIn, bidPort, returnout)
         # Get all hasNetworkAddress items
-        out = self.queryGraph(gIn, bidPort, search=URIRef(f"{self.prefixes['mrs']}hasNetworkAddress"))
+        out = self._queryGraph(graphIn=gIn, sub=bidPort, search=URIRef(f"{self.prefixes['mrs']}hasNetworkAddress"))
         for item in out:
             scanVals = returnout.setdefault("hasNetworkAddress", {})
             # Get item type
-            out1 = self.queryGraph(
-                gIn,
-                item,
+            out1 = self._queryGraph(
+                graphIn=gIn,
+                sub=item,
                 search=URIRef(f"{self.prefixes['mrs']}type"),
                 allowMultiple=True,
             )
@@ -578,7 +562,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             vals = scanVals.setdefault(name, {})
             vals["uri"] = str(item)
             vals["type"] = "|".join([str(item) for item in sorted(out1)])
-            out2 = self.queryGraph(gIn, item, search=URIRef(f"{self.prefixes['mrs']}value"))
+            out2 = self._queryGraph(graphIn=gIn, sub=item, search=URIRef(f"{self.prefixes['mrs']}value"))
             if out2:
                 vals["value"] = str(out2[0])
             self._hasTags(gIn, item, vals, False, vswParams)
@@ -593,9 +577,9 @@ class PolicyService(RDFHelper, Timing, BWService):
     def parsePorts(self, gIn, connectionID, hostsOnly=False):
         """Get all ports for any connection and scan all of them"""
         for key in ["hasBidirectionalPort", "isAlias"]:
-            tmpPorts = self.queryGraph(
-                gIn,
-                connectionID,
+            tmpPorts = self._queryGraph(
+                graphIn=gIn,
+                sub=connectionID,
                 search=URIRef(f"{self.prefixes['nml']}{key}"),
                 allowMultiple=True,
             )
@@ -676,9 +660,9 @@ class PolicyService(RDFHelper, Timing, BWService):
     def parsel2Request(self, gIn, returnout, _switchName):
         """Parse L2 request."""
         self.logger.info(f"Lets try to get connection ID subject for {self.prefixes['main']}")
-        cout = self.queryGraph(
-            gIn,
-            URIRef(self.prefixes["main"]),
+        cout = self._queryGraph(
+            graphIn=gIn,
+            sub=URIRef(self.prefixes["main"]),
             search=URIRef(f"{self.prefixes['mrs']}providesSubnet"),
         )
         for connectionID in cout:
@@ -687,7 +671,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             connOut = returnout["vsw"].setdefault(str(connectionID), {})
             self._hasTags(gIn, connectionID, connOut)
             self.logger.info(f"This is our connection ID: {connectionID}")
-            out = self.queryGraph(gIn, connectionID, search=URIRef(f"{self.prefixes['nml']}labelSwapping"))
+            out = self._queryGraph(graphIn=gIn, sub=connectionID, search=URIRef(f"{self.prefixes['nml']}labelSwapping"))
             if out:
                 connOut.setdefault("_params", {}).setdefault("labelSwapping", str(out[0]))
             # Parse hasNetworkAddress (debugip)
@@ -699,21 +683,22 @@ class PolicyService(RDFHelper, Timing, BWService):
     @staticmethod
     def identifyglobalstate(tmpstates):
         """Based on all subdelta states, identify top level delta state"""
+        nstate = "unknown"
         if not tmpstates:
-            return "deactivated"
-        if "activate-error" in tmpstates:
-            return "activate-error"
-        if "deactivate-error" in tmpstates:
-            return "deactivate-error"
-        if tmpstates.count("activated") == len(tmpstates):
-            return "activated"
-        if tmpstates.count("deactivated") == len(tmpstates):
-            return "deactivated"
-        if "activated" in tmpstates:
-            return "activating"
-        if "deactivated" in tmpstates:
-            return "deactivating"
-        return "unknown"
+            nstate = "deactivated"
+        elif "activate-error" in tmpstates:
+            nstate = "activate-error"
+        elif "deactivate-error" in tmpstates:
+            nstate = "deactivate-error"
+        elif tmpstates.count("activated") == len(tmpstates):
+            nstate = "activated"
+        elif tmpstates.count("deactivated") == len(tmpstates):
+            nstate = "deactivated"
+        elif "activated" in tmpstates:
+            nstate = "activating"
+        elif "deactivated" in tmpstates:
+            nstate = "deactivating"
+        return nstate
 
     def topLevelDeltaState(self):
         """Identify and set top level delta state"""
@@ -760,16 +745,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             # 1. Get delta content for reduction, addition
             # 2. Add into model and see if it overlaps with any
             delta["content"] = evaldict(delta["content"])
-            for key in ["reduction", "addition"]:
-                if delta.get("content", {}).get(key, {}):
-                    with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
-                        tmpFile = fd.name
-                        try:
-                            fd.write(delta["content"][key])
-                        except ValueError:
-                            fd.write(decodebase64(delta["content"][key]))
-                    currentGraph = self.deltaToModel(currentGraph, tmpFile, key)
-                    os.unlink(tmpFile)
+            currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
             # Now we parse new model and generate new currentActive config
             self.newActive["output"] = self.parseModel(currentGraph)
             modelParseRan = True
@@ -891,6 +867,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         """Start Policy Service."""
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started")
+        speedup = False
         fnewdir = os.path.join(self.config.get(self.sitename, "privatedir"), "PolicyService", "httpnew")
         ffinishdir = os.path.join(
             self.config.get(self.sitename, "privatedir"),
@@ -901,6 +878,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         for fname in os.listdir(fnewdir):
             if fname.endswith(".tmp"):
                 continue
+            speedup = True
             fullpath = os.path.join(fnewdir, fname)
             self.logger.info(f"Processing delta {fullpath}")
             out = self.acceptDelta(fullpath)
@@ -908,6 +886,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             self.siteDB.saveContent(os.path.join(ffinishdir, fname), out)
             self.siteDB.removeFile(fullpath)
         self.logger.info("Component PolicyService Finished")
+        return speedup
 
     def deltaToModel(self, currentGraph, deltaPath, action):
         """Add delta to current Model. If no delta provided, returns current Model"""
@@ -929,6 +908,8 @@ class PolicyService(RDFHelper, Timing, BWService):
         """Add deltas to current graph."""
         for key, value in deltaContent.items():
             if not value:
+                continue
+            if key not in ["reduction", "addition"]:
                 continue
             self.logger.debug(f"Adding Content {value} for key {key}")
             with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
