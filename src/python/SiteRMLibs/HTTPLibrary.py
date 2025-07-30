@@ -88,6 +88,35 @@ def getCAPathFromEnv():
     return os.environ.get("X509_CERT_DIR")
 
 
+
+def httpserviceready(endpoint="/api/ready"):
+    """Decorator that checks if the HTTP service is ready before executing the decorated function."""
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs) -> Any:
+            # Check if service is ready by calling the specified endpoint
+            try:
+                response, status_code, reason_phrase, _ = self.http_makeRequest("GET", endpoint)
+                if status_code == 503:
+                    raise HTTPServerNotReady(f"HTTP Frontend is not ready and returns 503 from {endpoint}. Please check SiteRM Frontend")
+                if status_code != 200:
+                    raise HTTPServerNotReady(f"HTTP Frontend is not ready to serve connections. Please check SiteRM Frontend. Error: {status_code} {reason_phrase} from {endpoint}")
+                if endpoint == "/api/ready":
+                    if not isinstance(response, dict) or response.get("status") != "ready":
+                        raise HTTPServerNotReady("HTTP Frontend is not ready to serve connections. Please check SiteRM Frontend.")
+                elif endpoint == "/api/alive":
+                    if not isinstance(response, dict) or response.get("status") != "alive":
+                        raise HTTPServerNotReady("HTTP Frontend is not alive. Please check SiteRM Frontend.")
+            except HTTPServerNotReady:
+                raise
+            except Exception as e:
+                raise HTTPServerNotReady(f"Failed to check service readiness from {endpoint}: {str(e)}") from e
+            return func(self, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+
 class Requests:
     """Main Requests class to handle HTTP requests."""
 
@@ -113,37 +142,6 @@ class Requests:
             self.logger.debug(message)
         else:
             print(message)
-
-    @staticmethod
-    def httpserviceready(endpoint="/api/ready"):
-        """Decorator that checks if the HTTP service is ready before executing the decorated function."""
-
-        def decorator(func: Callable) -> Callable:
-            @functools.wraps(func)
-            def wrapper(self, *args, **kwargs) -> Any:
-                # Check if service is ready by calling the specified endpoint
-                try:
-                    response, status_code, reason_phrase, _ = self.http_makeRequest("GET", endpoint)
-
-                    if status_code == 503:
-                        raise HTTPServerNotReady(f"HTTP Frontend is not ready and returns 503 from {endpoint}. Please check SiteRM Frontend")
-                    if status_code != 200:
-                        raise HTTPServerNotReady(f"HTTP Frontend is not ready to serve connections. Please check SiteRM Frontend. Error: {status_code} {reason_phrase} from {endpoint}")
-                    if endpoint == "/api/ready":
-                        if not isinstance(response, dict) or response.get("status") != "ready":
-                            raise HTTPServerNotReady("HTTP Frontend is not ready to serve connections. Please check SiteRM Frontend.")
-                    elif endpoint == "/api/alive":
-                        if not isinstance(response, dict) or response.get("status") != "alive":
-                            raise HTTPServerNotReady("HTTP Frontend is not alive. Please check SiteRM Frontend.")
-                except HTTPServerNotReady:
-                    raise
-                except Exception as e:
-                    raise HTTPServerNotReady(f"Failed to check service readiness from {endpoint}: {str(e)}") from e
-                return func(self, *args, **kwargs)
-
-            return wrapper
-
-        return decorator
 
     @httpserviceready("/api/alive")
     def apiAlive(self):
