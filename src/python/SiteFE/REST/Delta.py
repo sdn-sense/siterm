@@ -213,7 +213,6 @@ async def submitDelta(
     request: Request,
     item: DeltaItem,
     sitename: str = Path(..., description="The site name to submit the delta for."),
-    checkignore: bool = Query(False, description="Bypass Frontend Readiness. Force submit delta even if SiteFE is not ready."),
     deps=Depends(allAPIDeps),
 ):
     """
@@ -221,11 +220,11 @@ async def submitDelta(
     """
     checkSite(deps, sitename)
     # Check if checkignore is set, if so, check if first run is finished
-    if not checkReadyState(checkignore):
+    if not checkReadyState(deps):
         # If first run is not finished, raise an exception
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="You cannot submit delta yet, because LookUpService or ProvisioningService is not finished with first run (Server restart?). Retry later.",
+            detail="API is not in a ready state to accept requests. Server restart? Failing service?. Retry later.",
         )
     # If both addition and reduction are empty, raise a Error
     if not item.reduction and not item.addition:
@@ -238,7 +237,7 @@ async def submitDelta(
         # Get latest model, and check if modelId is same as latest
         # If not, raise an Error, as model was updated, and things have changed.
         latestModel = depGetModel(deps["dbI"], limit=1, orderby=["insertdate", "DESC"])[0]
-        item.modelId = latestModel["uid"] if not item.modelId else item.modelId # Set it to the latest, if not provided.
+        item.modelId = latestModel["uid"] if not item.modelId else item.modelId  # Set it to the latest, if not provided.
         if latestModel["uid"] != item.modelId:
             # Model ID does not match latest model, and latest model is the one with all committed changes. We will bypass the request and use the latest model ID.
             print(f"WARNING! Bypassing requested modelID {item.modelId}. Using latest model for comparison: {latestModel['uid']}")
@@ -377,7 +376,6 @@ async def performActionOnDelta(
     sitename: str = Path(..., description="The site name to perform the action on the delta for."),
     delta_id: str = Path(..., description="The ID of the delta to perform the action on."),
     action: Literal["commit", "forcecommit", "forceapply"] = Path(..., description="The action to perform on the delta."),
-    checkignore: bool = Query(False, description="Bypass Frontend Readiness. Force action on delta even if SiteFE is not ready."),
     deps=Depends(allAPIDeps),
 ):
     """
@@ -386,12 +384,9 @@ async def performActionOnDelta(
     checkSite(deps, sitename)
     # actions are commit, forceapply
     # Check if checkignore is set, if so, check if first run is finished
-    if not checkReadyState(checkignore):
+    if not checkReadyState(deps):
         # If first run is not finished, raise an exception
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="You cannot request delta commit yet, because LookUpService or ProvisioningService is not finished with first run (Server restart?). Retry later.",
-        )
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="API is not in a ready state to accept requests. Server restart? Failing service?. Retry later.")
     # Check if delta state is valid for commit action;
     delta = _getdeltas(deps["dbI"], deltaID=delta_id)
     if not delta:

@@ -8,6 +8,11 @@ import argparse
 from datetime import datetime
 from SiteRMLibs.MainUtilities import getFileContentAsJson, timedhourcheck
 from SiteRMLibs.hostcert import HostCertHandler
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.HTTPLibrary import Requests
+from SiteRMLibs.MainUtilities import getFullUrl, getSitesFromConfig
+
+
 
 def certCheker():
     """Check if certificates are valid and ready to use."""
@@ -67,6 +72,21 @@ def disableReadinessCheck(statFile):
         with open(statFile, 'r', encoding='utf-8') as fd:
             print(fd.read())
 
+def checkHTTPService():
+    """Check if the HTTP service is ready."""
+    if not os.path.exists("/tmp/config-fetcher-ready"):
+        return 0
+    try:
+        config = getGitConfig()
+        for sitename in getSitesFromConfig(config):
+            fullUrl = getFullUrl(config, sitename)
+            requestHandler = Requests(url=fullUrl, logger=None)
+            requestHandler.apiAlive()
+            requestHandler.apiReady()
+        return 0
+    except Exception as ex:
+        print(f"Error checking HTTP service readiness: {ex}")
+    return 1
 
 if __name__ == "__main__":
     readinessFile = "/tmp/siterm-readiness-disable"
@@ -75,6 +95,10 @@ if __name__ == "__main__":
     parser.add_argument("--disable", action="store_true", help="Disable the liveness check.")
     parser.add_argument("--ignorelock", action="store_true", help="Ignore Liveness lock file and run all checks. (Useful for debugging failing service)", )
     args = parser.parse_args()
+
+    if os.path.exists("/tmp/config-fetcher-ready"):
+        print("Config fetcher is still running. Exiting. Check stdout/stderr log files")
+        sys.exit(0)
 
     if args.enable:
         enableReadinessCheck(readinessFile)

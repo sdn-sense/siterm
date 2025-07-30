@@ -617,6 +617,19 @@ def getAllHosts(dbI):
     return jOut
 
 
+def getSitesFromConfig(config):
+    """Get sites from config."""
+    # TODO: Need to normalize sitename and site between FE and Agent.
+    try:
+        if config.get("general", "sites"):
+            return config.get("general", "sites")
+        raise Exception("No sites found in config.")
+    except Exception as ex:
+        if config.get("general", "sitename"):
+            return config.get("general", "sitename")
+        raise ex
+
+
 def getActiveDeltas(cls):
     """Get Active deltas from DB."""
     activeDeltas = cls.dbI.get("activeDeltas")

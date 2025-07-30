@@ -8,7 +8,6 @@ import argparse
 import subprocess
 from datetime import datetime
 from SiteRMLibs.MainUtilities import timedhourcheck
-from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.hostcert import HostCertHandler
 
 def certCheker():
@@ -19,9 +18,9 @@ def certCheker():
     return certHandler.externalCertChecker()
 
 
-def checkServices():
+def checkServices(onlyservices=None):
     """Check if all services are running in supervisorctl"""
-    ret = True
+    onlyservices = onlyservices or []
     try:
         # Run supervisorctl status command
         result = subprocess.run(["supervisorctl", "status"], capture_output=True, text=True, check=False)
@@ -30,14 +29,15 @@ def checkServices():
         # Parse output to check if all services are running
         services = output.strip().split('\n')
         for service in services:
-            service_status = service.split()[1]
-            if service_status != 'RUNNING':
-                print(f'Service not running state. Details: {service}')
-                ret = False
+            serviceline = service.split()
+            if serviceline[1] != 'RUNNING':
+                if serviceline[0] in onlyservices or not onlyservices:
+                    print(f'Service not running state. Details: {service}')
+                    return False
     except subprocess.CalledProcessError as e:
         print("Error running supervisorctl:", e)
         print("Will ignore error and return all is good.")
-    return ret
+    return True
 
 def enableLivenessCheck(statFile):
     """Enable the liveness check by removing the disable file if it exists."""
@@ -72,9 +72,6 @@ def runchecks():
     """Run all checks"""
     state = 0 if checkServices() else 1
     state = state or certCheker()
-    # TODO - Review delay of config fetch (timeouts, need update Helm delay)
-    #if os.path.exists("/tmp/config-fetcher-ready"):
-    #    state = state or checkHTTPService(getGitConfig())
     return state
 
 if __name__ == "__main__":
@@ -84,6 +81,10 @@ if __name__ == "__main__":
     parser.add_argument("--disable", action="store_true", help="Disable the liveness check.")
     parser.add_argument("--ignorelock", action="store_true", help="Ignore Liveness lock file and run all checks. (Useful for debugging failing service)", )
     args = parser.parse_args()
+
+    if os.path.exists("/tmp/config-fetcher-ready"):
+        print("Config fetcher is still running. Exiting. Check stdout/stderr log files")
+        sys.exit(0)
 
     if args.enable:
         enableLivenessCheck(livenessFile)
@@ -95,7 +96,7 @@ if __name__ == "__main__":
 
     if os.path.exists("/tmp/siterm-mariadb-init"):
         print("Mariadb init is still running. Exiting. Check /var/log/supervisor/mariadb_* log files")
-        sys.exit(0)
+        sys.exit(0 if checkServices(["mariadb", "mariadb_init"]) else 1)
 
     if os.path.exists(livenessFile) and not args.ignorelock:
         print("Liveness check is disabled. Use --enable to enable or --ignorelock to run all checks and bypass this.")

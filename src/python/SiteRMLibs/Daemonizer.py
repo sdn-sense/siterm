@@ -17,7 +17,12 @@ import tracemalloc
 
 import psutil
 from SiteRMLibs import __version__ as runningVersion
-from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
+from SiteRMLibs.CustomExceptions import (
+    HTTPServerNotReady,
+    NoOptionError,
+    NoSectionError,
+    ServiceWarning,
+)
 from SiteRMLibs.DefaultParams import GIT_CONFIG_REFRESH_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.HTTPLibrary import Requests
@@ -29,6 +34,7 @@ from SiteRMLibs.MainUtilities import (
     getFullUrl,
     getHostname,
     getLoggingObject,
+    getSitesFromConfig,
     getUTCnow,
     getVal,
     loadEnvFile,
@@ -281,18 +287,13 @@ class Daemon(DBBackend):
 
     def _getHandlers(self):
         """Get handlers for all sites."""
-        # TODO: Need to normalize sitename and site between FE and Agent.
         # pylint: disable=W0702
         if not self.getGitConf:
             return
-        try:
-            for sitename in self.config.get("general", "sites"):
-                fullURL = getFullUrl(self.config, sitename)
-                self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
-        except:
-            for sitename in self.config.get("general", "sitename"):
-                fullURL = getFullUrl(self.config, sitename)
-                self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
+        sites = getSitesFromConfig(self.config)
+        for sitename in sites:
+            fullURL = getFullUrl(self.config, sitename)
+            self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
 
     def _getLogLevel(self):
         """Get log level."""
@@ -612,6 +613,11 @@ class Daemon(DBBackend):
                         self.logger.warning("Service Warning!!! Error details:  %s", ex)
                         self.logger.warning("Service Warning!!! Traceback details:  %s", exc)
                         self.logger.warning("It is not fatal error. Continue to run normally.")
+                    except HTTPServerNotReady as ex:
+                        exc = traceback.format_exc()
+                        self.logger.error("HTTP Server Not Ready!!! Error details:  %s", ex)
+                        self.logger.error("HTTP Server Not Ready!!! Traceback details:  %s", exc)
+                        self.logger.error("Look at SiteRM Frontend logs for more details.")
                     except:
                         hadFailure = True
                         exc = traceback.format_exc()
