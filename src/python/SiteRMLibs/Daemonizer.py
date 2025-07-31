@@ -220,6 +220,9 @@ class DBBackend:
                 return False
             if self.component == "ConfigFetcher":
                 return True
+            if not actions:
+                self.logger.debug("No actions found for %s", kwargs["sitename"])
+                return False
             for action in actions[0]:
                 self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component, "action": action["action"]}, useragent="Daemonizer")
                 refresh = True

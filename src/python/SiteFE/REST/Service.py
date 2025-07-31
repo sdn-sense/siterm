@@ -352,8 +352,7 @@ class ServiceActionItem(BaseModel):
     tags=["Service Actions"],
     responses={
         **{
-            200: {"description": "Service actions retrieved successfully.", "content": {"application/json": {"example": {"Status": "Retrieved <actions>"}}}},
-            404: {"description": "No service actions found for the given parameters.", "content": {"application/json": {"example": {"detail": "No service actions found for the given parameters."}}}},
+            200: {"description": "Service actions retrieved successfully.", "content": {"application/json": {"example": {"Status": "Retrieved <actions>"}}}}
         },
         **DEFAULT_RESPONSES,
     },
@@ -375,7 +374,7 @@ async def getserviceaction(
         search.append(["servicename", servicename])
     actions = deps["dbI"].get("serviceaction", search=search, limit=limit)
     if not actions:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No service actions found for the given parameters.")
+        return APIResponse.genResponse(request, [])
     return APIResponse.genResponse(request, actions)
 
 
