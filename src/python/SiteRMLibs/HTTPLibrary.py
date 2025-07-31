@@ -95,6 +95,8 @@ def httpserviceready(endpoint="/api/ready"):
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs) -> Any:
             # Check if service is ready by calling the specified endpoint
+            if not kwargs.get('SiteRMHTTPCall', True):
+                return func(self, *args, **kwargs)
             try:
                 response, status_code, reason_phrase, _ = self.http_makeRequest("GET", endpoint)
                 if status_code == 503:
@@ -217,12 +219,13 @@ class Requests:
         finally:
             self.__http_resetUserAgent()
 
-    @httpserviceready
-    def makeHttpCall(self, verb, url, **kwargs):
+    @httpserviceready()
+    def makeHttpCall(self, verb, url, SiteRMHTTPCall=True, **kwargs):
         """Put JSON to the Site FE."""
         kwargs.setdefault("retries", 3)
         kwargs.setdefault("raiseEx", True)
         kwargs.setdefault("sleep", 1)
+        kwargs.setdefault("SiteRMHTTPCall", SiteRMHTTPCall)
         exc = []
         if verb not in ["GET", "POST", "PUT", "DELETE"]:
             raise ValueError(f"Invalid HTTP verb: {verb}. Must be one of GET, POST, PUT, DELETE.")
