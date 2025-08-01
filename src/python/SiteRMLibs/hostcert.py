@@ -19,6 +19,7 @@ Date                    : 2019/10/01
 """
 import os.path
 from datetime import datetime
+
 from OpenSSL import crypto
 from SiteRMLibs.GitConfig import getGitConfig
 
@@ -39,9 +40,7 @@ class HostCertHandler:
             if filename.endswith(".pem"):
                 try:
                     with open(os.path.join(capath, filename), "rb") as cafile:
-                        cacert = crypto.load_certificate(
-                            crypto.FILETYPE_PEM, cafile.read()
-                        )
+                        cacert = crypto.load_certificate(crypto.FILETYPE_PEM, cafile.read())
                         store.add_cert(cacert)
                 except Exception as ex:
                     print(f"Failed to load CA cert {filename}: {ex}")
@@ -66,33 +65,16 @@ class HostCertHandler:
             castore = self.loadCACerts("/etc/grid-security/certificates")
 
             subject = cert.get_subject()
-            out["subject"] = "".join(
-                f"/{name.decode()}={value.decode()}"
-                for name, value in subject.get_components()
-            )
-            out["notAfter"] = int(
-                datetime.strptime(
-                    cert.get_notAfter().decode("UTF-8"), "%Y%m%d%H%M%SZ"
-                ).timestamp()
-            )
-            out["notBefore"] = int(
-                datetime.strptime(
-                    cert.get_notBefore().decode("UTF-8"), "%Y%m%d%H%M%SZ"
-                ).timestamp()
-            )
-            out["issuer"] = "".join(
-                f"/{name.decode()}={value.decode()}"
-                for name, value in cert.get_issuer().get_components()
-            )
+            out["subject"] = "".join(f"/{name.decode()}={value.decode()}" for name, value in subject.get_components())
+            out["notAfter"] = int(datetime.strptime(cert.get_notAfter().decode("UTF-8"), "%Y%m%d%H%M%SZ").timestamp())
+            out["notBefore"] = int(datetime.strptime(cert.get_notBefore().decode("UTF-8"), "%Y%m%d%H%M%SZ").timestamp())
+            out["issuer"] = "".join(f"/{name.decode()}={value.decode()}" for name, value in cert.get_issuer().get_components())
             out["fullDN"] = f"{out['issuer']}{out['subject']}"
 
             try:
                 context = crypto.X509StoreContext(castore, cert)
                 context.verify_certificate()
-                if (
-                    cert.get_pubkey().to_cryptography_key().public_numbers()
-                    != key.to_cryptography_key().public_key().public_numbers()
-                ):
+                if cert.get_pubkey().to_cryptography_key().public_numbers() != key.to_cryptography_key().public_key().public_numbers():
                     out["failure"] = "Certificate and private key do not match!"
             except Exception as ex:
                 out["failure"] = f"Certificate and key verification failed: {ex}"
@@ -115,9 +97,7 @@ class HostCertHandler:
             print(msg)
             exitCode = 3
         if "notBefore" in certinfo and certinfo["notBefore"] > timestampnow:
-            msg = (
-                f"Certificate not valid yet. Not valid before: {certinfo['notBefore']}"
-            )
+            msg = f"Certificate not valid yet. Not valid before: {certinfo['notBefore']}"
             print(msg)
             exitCode = 4
         if "notAfter" in certinfo and certinfo["notAfter"] - timestampnow < 1209600:
@@ -129,7 +109,7 @@ class HostCertHandler:
         """Call for External service like Readiness/Liveness"""
         exitCode = 0
         for cert, key in [
-            ("/etc/siterm/certs/hostcert.pem", "/etc/siterm/certs/hostkey.pem"),
+            ("/etc/grid-security/hostcert.pem", "/etc/grid-security/hostkey.pem"),
             ("/etc/httpd/certs/cert.pem", "/etc/httpd/certs/privkey.pem"),
         ]:
             certCheck = self.validateHostCertKey(cert, key)

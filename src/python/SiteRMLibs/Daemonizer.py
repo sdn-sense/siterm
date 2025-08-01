@@ -101,6 +101,12 @@ def getParser(description):
         help="Bypass start check. Default false",
         default=False,
     )
+    oparser.add_argument(
+        "--forceremovepid",
+        action="store_true",
+        help="Force remove PID file during status action if process is dead. Default false",
+    )
+    oparser.set_defaults(forceremovepid=False)
     # Add config param for debug level
     oparser.add_argument("--loglevel", dest="loglevel", default=None, help="Log level. Default None")
     oparser.set_defaults(logtostdout=False)
@@ -381,13 +387,17 @@ class Daemon(DBBackend):
 
         # write pidfile
         atexit.register(self.delpid)
-        pid = str(os.getpid())
-        with open(self.pidfile, "w+", encoding="utf-8") as fd:
-            fd.write(f"{pid}\n")
+        self.writepid()
 
     def delpid(self):
         """Remove pid file."""
         os.remove(self.pidfile)
+
+    def writepid(self):
+        """Write pid file."""
+        pid = str(os.getpid())
+        with open(self.pidfile, "w+", encoding="utf-8") as fd:
+            fd.write(f"{pid}\n")
 
     def start(self):
         """Start the daemon."""
@@ -463,6 +473,10 @@ class Daemon(DBBackend):
                 psutil.Process(pid)
                 print(f"Application info: PID {pid}")
         except psutil.NoSuchProcess:
+            if self.inargs.forceremovepid:
+                print(f"PID lock present, but process not running. Removing lock file {self.pidfile}")
+                os.remove(self.pidfile)
+                sys.exit(1)
             print(f"PID lock present, but process not running. Remove lock file {self.pidfile}")
             sys.exit(1)
         except IOError:
@@ -474,6 +488,9 @@ class Daemon(DBBackend):
         if self.inargs.action == "start" and self.inargs.foreground:
             self.start()
         elif self.inargs.action == "start" and not self.inargs.foreground:
+            # Register pid file deletion on exit and write pid file
+            atexit.register(self.delpid)
+            self.writepid()
             self.run()
         elif self.inargs.action == "stop":
             self.stop()
