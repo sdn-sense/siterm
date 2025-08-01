@@ -114,6 +114,6 @@ class HostCertHandler:
         ]:
             certCheck = self.validateHostCertKey(cert, key)
             tmpExitCode, _msg = self.runChecks(certCheck)
-            if tmpExitCode > exitCode:
+            if max(exitCode, tmpExitCode):
                 exitCode = tmpExitCode
         return exitCode

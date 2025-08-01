@@ -579,15 +579,14 @@ class Daemon(DBBackend):
             except SystemExit:
                 exc = traceback.format_exc()
                 self.logger.critical(f"SystemExit!!! Error details:  {exc}")
-                sys.exit(1)
+                raise
             except (NoOptionError, NoSectionError) as ex:
                 exc = traceback.format_exc()
                 self.logger.critical(f"Exception!!! Traceback details: {exc}, Catched Exception: {ex}")
                 time.sleep(self.sleepTimers["failure"])
                 self._refreshConfigAfterFailure()
-            except:
-                exc = traceback.format_exc()
-                self.logger.critical(f"Exception!!! Error details: {exc}")
+            except Exception as ex:
+                self.logger.critical(f"Exception!!! Error details: {ex}")
                 time.sleep(self.sleepTimers["failure"])
 
     def __run(self, rthread):
@@ -638,11 +637,10 @@ class Daemon(DBBackend):
                         self.logger.error("HTTP Server Not Ready!!! Error details:  %s", ex)
                         self.logger.error("HTTP Server Not Ready!!! Traceback details:  %s", exc)
                         self.logger.error("Look at SiteRM Frontend logs for more details.")
-                    except:
+                    except Exception as ex:
                         hadFailure = True
-                        exc = traceback.format_exc()
-                        self.reporter("FAILED", sitename, stwork, str(exc))
-                        self.logger.critical("Exception!!! Error details:  %s", exc)
+                        self.reporter("FAILED", sitename, stwork, str(ex))
+                        self.logger.critical("Exception!!! Error details:  %s", ex)
                     finally:
                         self.postRunThread(sitename, rthread)
                 if self.runLoop():

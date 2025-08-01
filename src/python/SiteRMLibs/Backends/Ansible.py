@@ -131,6 +131,7 @@ class Switch:
                 self.logger.error(f"Ansible playbook got FileNotFound (usually cleanup. Will retry in 5sec): {ex}")
                 retryCount -= 1
                 time.sleep(5)
+        raise Exception("Ansible playbook execution failed after 3 retries. Check logs for more details.")
 
     def getAnsNetworkOS(self, host, subitem=""):
         """Get Ansible network os from hosts file"""
