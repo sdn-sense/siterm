@@ -101,6 +101,12 @@ def getParser(description):
         help="Bypass start check. Default false",
         default=False,
     )
+    oparser.add_argument(
+        "--forceremovepid",
+        action="store_true",
+        help="Force remove PID file during status action if process is dead. Default false",
+    )
+    oparser.set_defaults(forceremovepid=False)
     # Add config param for debug level
     oparser.add_argument("--loglevel", dest="loglevel", default=None, help="Log level. Default None")
     oparser.set_defaults(logtostdout=False)
@@ -381,13 +387,17 @@ class Daemon(DBBackend):
 
         # write pidfile
         atexit.register(self.delpid)
-        pid = str(os.getpid())
-        with open(self.pidfile, "w+", encoding="utf-8") as fd:
-            fd.write(f"{pid}\n")
+        self.writepid()
 
     def delpid(self):
         """Remove pid file."""
         os.remove(self.pidfile)
+
+    def writepid(self):
+        """Write pid file."""
+        pid = str(os.getpid())
+        with open(self.pidfile, "w+", encoding="utf-8") as fd:
+            fd.write(f"{pid}\n")
 
     def start(self):
         """Start the daemon."""
@@ -463,6 +473,10 @@ class Daemon(DBBackend):
                 psutil.Process(pid)
                 print(f"Application info: PID {pid}")
         except psutil.NoSuchProcess:
+            if self.inargs.forceremovepid:
+                print(f"PID lock present, but process not running. Removing lock file {self.pidfile}")
+                os.remove(self.pidfile)
+                sys.exit(1)
             print(f"PID lock present, but process not running. Remove lock file {self.pidfile}")
             sys.exit(1)
         except IOError:
@@ -474,6 +488,9 @@ class Daemon(DBBackend):
         if self.inargs.action == "start" and self.inargs.foreground:
             self.start()
         elif self.inargs.action == "start" and not self.inargs.foreground:
+            # Register pid file deletion on exit and write pid file
+            atexit.register(self.delpid)
+            self.writepid()
             self.run()
         elif self.inargs.action == "stop":
             self.stop()
@@ -562,15 +579,14 @@ class Daemon(DBBackend):
             except SystemExit:
                 exc = traceback.format_exc()
                 self.logger.critical(f"SystemExit!!! Error details:  {exc}")
-                sys.exit(1)
+                raise
             except (NoOptionError, NoSectionError) as ex:
                 exc = traceback.format_exc()
                 self.logger.critical(f"Exception!!! Traceback details: {exc}, Catched Exception: {ex}")
                 time.sleep(self.sleepTimers["failure"])
                 self._refreshConfigAfterFailure()
-            except:
-                exc = traceback.format_exc()
-                self.logger.critical(f"Exception!!! Error details: {exc}")
+            except Exception as ex:
+                self.logger.critical(f"Exception!!! Error details: {ex}")
                 time.sleep(self.sleepTimers["failure"])
 
     def __run(self, rthread):
@@ -621,11 +637,10 @@ class Daemon(DBBackend):
                         self.logger.error("HTTP Server Not Ready!!! Error details:  %s", ex)
                         self.logger.error("HTTP Server Not Ready!!! Traceback details:  %s", exc)
                         self.logger.error("Look at SiteRM Frontend logs for more details.")
-                    except:
+                    except Exception as ex:
                         hadFailure = True
-                        exc = traceback.format_exc()
-                        self.reporter("FAILED", sitename, stwork, str(exc))
-                        self.logger.critical("Exception!!! Error details:  %s", exc)
+                        self.reporter("FAILED", sitename, stwork, str(ex))
+                        self.logger.critical("Exception!!! Error details:  %s", ex)
                     finally:
                         self.postRunThread(sitename, rthread)
                 if self.runLoop():

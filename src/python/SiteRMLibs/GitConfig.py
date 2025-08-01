@@ -92,6 +92,13 @@ class GitConfig:
                 for key3, val3 in val2.items():
                     self.config[key1][key2].setdefault(key3, val3)
 
+    @staticmethod
+    def __valReplacer(val, keyword, replacement):
+        """Replace keyword in value with replacement"""
+        if isinstance(val, str):
+            return val.replace(keyword, replacement)
+        return val
+
     def __addSiteDefaults(self, defaults):
         """Add default site config parameters"""
         for sitename in self.config.get("MAIN", {}).get("general", {}).get("sites", []):
@@ -101,7 +108,7 @@ class GitConfig:
             for key1, val1 in defaults["default_params"].items():
                 self.config["MAIN"][sitename]["default_params"].setdefault(key1, {})
                 for key2, val2 in val1.items():
-                    self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, val2)
+                    self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, self.__valReplacer(val2, "%%SITENAME%%", sitename))
 
     def __addSwitchDefaults(self, defaults):
         """Add default switch config parameters"""
@@ -109,12 +116,25 @@ class GitConfig:
             for switch in self.config["MAIN"][sitename].get("switch", []):
                 for key1, val1 in defaults.items():
                     self.config["MAIN"].setdefault(switch, {})
-                    self.config["MAIN"][switch].setdefault(key1, {})
                     if isinstance(val1, dict):
+                        self.config["MAIN"][switch].setdefault(key1, {})
                         for key2, val2 in val1.items():
-                            self.config["MAIN"][switch][key1].setdefault(key2, val2)
+                            self.config["MAIN"][switch][key1].setdefault(key2, self.__valReplacer(val2, "%%SWITCHNAME%%", switch))
                     else:
-                        self.config["MAIN"][switch][key1] = val1
+                        self.config["MAIN"][switch].setdefault(key1, self.__valReplacer(val1, "%%SWITCHNAME%%", switch))
+
+    def __addInterfaceDefaults(self, defaults):
+        """Add default interface config parameters"""
+        for interface in self.config.get("MAIN", {}).get("agent", {}).get("interfaces", []):
+            if interface not in self.config["MAIN"]["agent"]["interfaces"]:
+                self.config["MAIN"]["agent"]["interfaces"][interface] = {}
+            for key1, val1 in defaults.items():
+                self.config["MAIN"]["agent"]["interfaces"][interface].setdefault(key1, {})
+                if isinstance(val1, dict):
+                    for key2, val2 in val1.items():
+                        self.config["MAIN"]["agent"]["interfaces"][interface][key1].setdefault(key2, val2)
+                else:
+                    self.config["MAIN"]["agent"]["interfaces"][interface][key1] = val1
 
     def presetAgentDefaultConfigs(self):
         """Preset default config parameters for Agent"""
@@ -131,14 +151,55 @@ class GitConfig:
                     "noqos": False,
                 },
                 "qos": {
-                    "policy": "default-not-set",
+                    "policy": "hostlevel",
                     "qos_params": "mtu 9000 mpu 9000 quantum 200000 burst 300000 cburst 300000 qdisc sfq balanced",
                     "class_max": True,
                     "interfaces": [],
                 },
             }
         }
+        interfaceDefaults = {
+            "shared": False,
+            "bwParams": {
+                "unit": "mbps",
+                "type": "guaranteedCapped",
+                "priority": 0,
+                "minReservableCapacity": 100,
+                # "maximumCapacity": XXXX, # If not defined, will be identified as 100% of link speed
+                "granularity": 100,
+            },
+            "ipv6-address-pool": [
+                "fc00:0000:0100::/40",
+                "fc00:0000:0200::/40",
+                "fc00:0000:0300::/40",
+                "fc00:0000:0400::/40",
+                "fc00:0000:0500::/40",
+                "fc00:0000:0600::/40",
+                "fc00:0000:0700::/40",
+                "fc00:0000:0800::/40",
+                "fc00:0000:0900::/40",
+                "fc00:0000:ff00::/40",
+            ],
+            "ipv4-address-pool": [
+                "10.251.85.0/24",
+                "10.251.86.0/24",
+                "10.251.87.0/24",
+                "10.251.88.0/24",
+                "10.251.89.0/24",
+                "172.16.3.0/30",
+                "172.17.3.0/30",
+                "172.18.3.0/30",
+                "172.19.3.0/30",
+                "172.31.10.0/24",
+                "172.31.11.0/24",
+                "172.31.12.0/24",
+                "172.31.13.0/24",
+                "172.31.14.0/24",
+                "172.31.15.0/24",
+            ],
+        }
         self.__addDefaults(defConfig)
+        self.__addInterfaceDefaults(interfaceDefaults)
         self.__generatevlaniplists()
 
     def __generatevlaniplists(self):
@@ -236,6 +297,7 @@ class GitConfig:
                     "logDir": "/var/log/siterm-site-fe/",
                     "logLevel": "INFO",
                     "privatedir": "/opt/siterm/config/",
+                    "probes": ["https_v4_siterm_2xx", "icmp_v4", "icmp_v6", "https_v6_siterm_2xx"],
                 },
                 "ansible": {
                     "private_data_dir": "/opt/siterm/config/ansible/sense/",
@@ -365,6 +427,37 @@ class GitConfig:
         }
         siteDefaults = {
             "default_params": {
+                "ipv6-address-pool": [
+                    "fc00:0000:0100::/40",
+                    "fc00:0000:0200::/40",
+                    "fc00:0000:0300::/40",
+                    "fc00:0000:0400::/40",
+                    "fc00:0000:0500::/40",
+                    "fc00:0000:0600::/40",
+                    "fc00:0000:0700::/40",
+                    "fc00:0000:0800::/40",
+                    "fc00:0000:0900::/40",
+                    "fc00:0000:ff00::/40",
+                ],
+                "ipv4-address-pool": [
+                    "10.251.85.0/24",
+                    "10.251.86.0/24",
+                    "10.251.87.0/24",
+                    "10.251.88.0/24",
+                    "10.251.89.0/24",
+                    "172.16.3.0/30",
+                    "172.17.3.0/30",
+                    "172.18.3.0/30",
+                    "172.19.3.0/30",
+                    "172.31.10.0/24",
+                    "172.31.11.0/24",
+                    "172.31.12.0/24",
+                    "172.31.13.0/24",
+                    "172.31.14.0/24",
+                    "172.31.15.0/24",
+                ],
+                "year": "2025",
+                "privatedir": "/opt/siterm/config/%%SITENAME%%/",
                 "starttime": {
                     "seconds": 10,
                     "minutes": 0,
@@ -386,7 +479,18 @@ class GitConfig:
                 "bw": {"type": "bestEffort", "unit": "mbps", "minCapacity": "100"},
             }
         }
-        switchDefaults = {"qos_policy": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7}, "rate_limit": False}
+        switchDefaults = {
+            "qos_policy": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7},
+            "rate_limit": False,
+            "vsw": "%%SWITCHNAME%%",
+            "vswmp": "%%SWITCHNAME%%_mp",
+            "rst": "%%SWITCHNAME%%",
+            "snmp_monitoring": True,
+            "bgpmp": True,
+            "vlan_mtu": 9000,  # This is the safest option (Sites can override it)
+            "allports": True,
+            "allvlans": False,
+        }
         self.__addDefaults(defConfig)
         self.__addSiteDefaults(siteDefaults)
         self.__addSwitchDefaults(switchDefaults)

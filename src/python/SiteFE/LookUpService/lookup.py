@@ -57,6 +57,8 @@ class MultiWorker:
         """Start execution of new requests"""
         retOut = {"stdout": [], "stderr": [], "exitCode": -1}
         command = f"SwitchWorker --action {action} --devicename {device}"
+        if action == "status":
+            command += " --forceremovepid"
         if foreground:
             command += " --foreground"
         cmdOut = externalCommand(command, False)
