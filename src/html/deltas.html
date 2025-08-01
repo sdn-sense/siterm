@@ -41,34 +41,39 @@
           saveObj.append(tableTag);
        }
        function deltaStates(deltaID, sitename, saveObj){
-          $.ajax({url: '/api/' + sitename + '/deltastates/'+ deltaID,
+          $.ajax({url: '/api/' + sitename + '/deltas/'+ deltaID + '/timestates?limit=100',
             dataType: 'json', data: {}, async: false,
             success: function(json){
                 tableAdd(json, ['id', 'deltaid', 'insertdate', 'state'], saveObj);
             }
          });
        }
-       function forceCommit(deltaID, sitename){
-            $.ajax({url: '/api/' + sitename + '/deltas/'+ deltaID + '/actions/forcecommit',
-              dataType: 'json',
-              data: {},
-              async: false,
-              success: function(json){
-                alert('Force Commit Done for Delta ID: ' + deltaID);
-              }});
-       }
-
+        function forceCommit(deltaID, sitename) {
+          $.ajax({
+            url: '/api/' + sitename + '/deltas/' + deltaID + '/actions/forcecommit',
+            type: 'PUT',
+            dataType: 'json',
+            data: {},
+            success: function(json) {
+              alert('Force Commit Done for Delta ID: ' + deltaID);
+            },
+            error: function(xhr, status, error) {
+              alert('Force Commit failed: ' + error);
+              console.error('Error details:', status, xhr.responseText);
+            }
+          });
+        }
 
        function loadDelta(deltaID, sitename)
        {
-          $.ajax({url: '/api/' + sitename + '/deltas/'+ deltaID + '?encode=false&summary=false',
+          $.ajax({url: '/api/' + sitename + '/deltas/'+ deltaID + '?summary=false',
             dataType: 'json',
             data: {},
             async: false,
             success: function(json){
               json = json[0];
               model = $('<div><\/div>');
-              model.append('<div class="row"><b>Delta UID: <\/b>' + json['uid'] + '<\/div>');
+              model.append('<div class="row"><b>Delta UID: <\/b>' + json['id'] + '<\/div>');
               model.append('<div class="row"><b>Delta State: <\/b>' + json['state'] + '<\/div>');
               model.append('<div class="row"><b>Insert Date: <\/b>' + json['insertdate'] + '<\/div>');
               model.append('<div class="row"><b>Update Date: <\/b>' + json['updatedate'] + '<\/div>');
@@ -78,14 +83,10 @@
               // Delta Info From Orchestrator
               model.append('<div class="row"><b>Full Delta Information From Orhestrator:<\/b><\/div>');
               model.append('<div class="row">============================================<\/div>');
-              var myObject = (0, eval)('(' + json['content'] + ')');
-              model.append('<div class="row"><b>    Delta ID: <\/b>' + myObject['id'] + '<\/div>');
-	          model.append('<div class="row"><b>    Last Modified: <\/b>' + myObject['lastModified'] + '<\/div>');
-              model.append('<div class="row"><b>    Model ID: <\/b>' + myObject['modelId'] + '<\/div>');
               model.append('<div class="row"><b>    Model Addition: <\/b><\/div>');
-              mrmlSaver(myObject['addition'], model);
+              mrmlSaver(json['addition'], model);
               model.append('<div class="row"><b>    Model Reduction: <\/b><\/div>');
-              mrmlSaver(myObject['reduction'], model);
+              mrmlSaver(json['reduction'], model);
               model.append('<div class="row"><b>DELTA STATES:<\/b><\/div>');
               model.append('<div class="row">============================================<\/div>');
               deltaStates(deltaID, sitename, model);
@@ -96,7 +97,7 @@
           }});
        }
 
-        function defineAllModels(data, sitename) {
+        function defineAllDeltas(data, sitename) {
           menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"><\/div>');
           cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
           latest = true;
@@ -121,14 +122,14 @@
               data['deltas'] = {};
               for (i=0; i < data['general']['sites'].length; i++){
                  sitename = data['general']['sites'][i];
-                 $.ajax({url: '/api/' + sitename + '/deltas',
+                 $.ajax({url: '/api/' + sitename + '/deltas?summary=true',
                    dataType: 'json',
                    data: {},
                    async: false,
                    success: function(json){
                      data['deltas'][sitename] = json;
                   }});
-              defineAllModels(data, sitename);
+              defineAllDeltas(data, sitename);
               }
             })};
   //]]>

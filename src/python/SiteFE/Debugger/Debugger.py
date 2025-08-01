@@ -24,6 +24,7 @@ import sys
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.DebugService import DebugService
+from SiteRMLibs.DefaultParams import SERVICE_NOACCEPT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import checkoverlap, ipVersion
 from SiteRMLibs.MainUtilities import (
@@ -90,8 +91,8 @@ class Debugger(DebugService):
         workers = {}
         for service in services:
             if service["hostname"] not in workers:
-                # Check if service is not older than 2 minutes
-                if service.get("updatedate", 0) > getUTCnow() - 120:
+                # Check if service is not older than SERVICE_NOACCEPT_TIMEOUT minutes
+                if service.get("updatedate", 0) > getUTCnow() - SERVICE_NOACCEPT_TIMEOUT:
                     workers[service["hostname"]] = {
                         "hostname": service["hostname"],
                         "servicename": service["servicename"],

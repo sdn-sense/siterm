@@ -10,12 +10,25 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
-from typing import Optional, Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel
-from SiteFE.REST.dependencies import DEFAULT_RESPONSES, allAPIDeps, checkSite, APIResponse
+from SiteFE.REST.dependencies import (
+    DEFAULT_RESPONSES,
+    APIResponse,
+    allAPIDeps,
+    checkSite,
+)
 from SiteRMLibs import __version__ as runningVersion
+from SiteRMLibs.DefaultParams import (
+    LIMIT_DEFAULT,
+    LIMIT_MAX,
+    LIMIT_MIN,
+    LIMIT_SERVICE_DEFAULT,
+    LIMIT_SERVICE_MAX,
+    LIMIT_SERVICE_MIN,
+)
 from SiteRMLibs.MainUtilities import (
     HOSTSERVICES,
     dumpFileContentAsJson,
@@ -48,8 +61,8 @@ def __updateServiceData(item, sitename, dbI, config):
     out = {
         "hostname": item.hostname,
         "servicename": item.servicename,
-        "insertdate": item.insertTime or getUTCnow(),
-        "updatedate": item.updateTime or getUTCnow(),
+        "insertdate": getUTCnow(),
+        "updatedate": getUTCnow(),
         "serviceinfo": fname,
     }
     search = []
@@ -64,8 +77,6 @@ def __updateServiceData(item, sitename, dbI, config):
         servicest = "ADDED"
     else:
         out["id"] = host[0]["id"]
-        del out["insertdate"]
-        out["updatedate"] = getUTCnow()
         dumpFileContentAsJson(fname, item.dict())
         dbI.update("services", [out])
         servicest = "UPDATED"
@@ -80,8 +91,6 @@ class ServiceItem(BaseModel):
     servicename: str
     # Optional fields
     serviceinfo: Optional[Dict[str, Any]] = {}
-    insertTime: Optional[int] = None
-    updateTime: Optional[int] = None
 
 
 # GET
@@ -93,7 +102,35 @@ class ServiceItem(BaseModel):
     tags=["Service States"],
     responses={
         **{
-            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "TODO",
+                "content": {
+                    "application/json": [
+                        {
+                            "id": 20,
+                            "hostname": "siterm-deb11a-conf-111111111111111111111111-0",
+                            "servicename": "Debugger",
+                            "servicestate": "OK",
+                            "runtime": 2,
+                            "version": "1.5.43",
+                            "insertdate": 1753727760,
+                            "updatedate": 1753745117,
+                            "exc": "No Exception provided by service",
+                        },
+                        {
+                            "id": 5,
+                            "hostname": "default",
+                            "servicename": "DBWorker",
+                            "servicestate": "OK",
+                            "runtime": 0,
+                            "version": "1.5.43",
+                            "insertdate": 1753547862,
+                            "updatedate": 1753745115,
+                            "exc": "No Exception provided by service",
+                        },
+                    ]
+                },
+            },
         },
         **DEFAULT_RESPONSES,
     },
@@ -218,10 +255,8 @@ class ServiceStateItem(BaseModel):
     servicestate: str
     # Optional fields
     runtime: Optional[int] = -1  # Runtime in seconds, default is -1
-    version: Optional[str] = runningVersion  # Version of the service, default is "UNSET"
+    version: Optional[str] = "UNSET"  # Version of the service, default is "UNSET"
     exc: Optional[str] = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
-    insertTime: Optional[str] = None
-    updateTime: Optional[str] = None
 
 
 # GET
@@ -230,7 +265,7 @@ class ServiceStateItem(BaseModel):
     "/{sitename}/servicestates",
     summary="Get Service States",
     description=("Returns the current service states from the database."),
-    tags=["Frontend"],
+    tags=["Service States"],
     responses={
         **{
             200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
@@ -238,13 +273,18 @@ class ServiceStateItem(BaseModel):
         **DEFAULT_RESPONSES,
     },
 )
-async def getservicestates(request: Request, sitename: str = Path(..., description="The site name to retrieve the service states for."), deps=Depends(allAPIDeps)):
+async def getservicestates(
+    request: Request,
+    limit: int = Query(LIMIT_SERVICE_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_SERVICE_DEFAULT}.", ge=LIMIT_SERVICE_MIN, le=LIMIT_SERVICE_MAX),
+    sitename: str = Path(..., description="The site name to retrieve the service states for."),
+    deps=Depends(allAPIDeps),
+):
     """
     Get service state data from the database.
     - Returns a list of service states with their information.
     """
     checkSite(deps, sitename)
-    return APIResponse.genResponse(request, deps["dbI"].get("servicestates", orderby=["updatedate", "DESC"], limit=100))
+    return APIResponse.genResponse(request, deps["dbI"].get("servicestates", orderby=["updatedate", "DESC"], limit=limit))
 
 
 # add/update (POST)
@@ -277,8 +317,8 @@ async def addservicestate(request: Request, item: ServiceStateItem, sitename: st
             "servicename": item.servicename,
             "runtime": item.runtime,
             "version": item.version,
-            "insertdate": item.insertTime or getUTCnow(),
-            "updatedate": item.updateTime or getUTCnow(),
+            "insertdate": getUTCnow(),
+            "updatedate": getUTCnow(),
             "exc": str(item.exc)[:4095],
         }
         services = deps["dbI"].get("servicestates", search=[["hostname", item.hostname], ["servicename", item.servicename]])
@@ -312,8 +352,7 @@ class ServiceActionItem(BaseModel):
     tags=["Service Actions"],
     responses={
         **{
-            200: {"description": "Service actions retrieved successfully.", "content": {"application/json": {"example": {"Status": "Retrieved <actions>"}}}},
-            404: {"description": "No service actions found for the given parameters.", "content": {"application/json": {"example": {"detail": "No service actions found for the given parameters."}}}},
+            200: {"description": "Service actions retrieved successfully.", "content": {"application/json": {"example": {"Status": "Retrieved <actions>"}}}}
         },
         **DEFAULT_RESPONSES,
     },
@@ -323,6 +362,7 @@ async def getserviceaction(
     sitename: str = Path(..., description="The site name to retrieve the service action for."),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: str = Query(default=None, description="Service name to filter by"),
+    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(allAPIDeps),
 ):
     """Get service actions from the database."""
@@ -332,9 +372,9 @@ async def getserviceaction(
         search.append(["hostname", hostname])
     if servicename:
         search.append(["servicename", servicename])
-    actions = deps["dbI"].get("serviceaction", search=search)
+    actions = deps["dbI"].get("serviceaction", search=search, limit=limit)
     if not actions:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No service actions found for the given parameters.")
+        return APIResponse.genResponse(request, [])
     return APIResponse.genResponse(request, actions)
 
 

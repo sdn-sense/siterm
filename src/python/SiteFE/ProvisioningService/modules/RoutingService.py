@@ -204,6 +204,7 @@ class RoutingService:
                 self.connID = connID
                 self._addparamsrst(connDict, switches)
                 if self.firstrun and connID not in self.forceapply:
+                    self.logger.debug(f"First run, will force apply {self.acttype} for {connID}.")
                     self.forceapply.append(connID)
 
     def compareBGP(self, switch, runningConf, uuid):

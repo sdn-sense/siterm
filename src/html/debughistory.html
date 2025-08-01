@@ -69,11 +69,12 @@
 
        function loadDebug(debugID, sitename)
        {
-          $.ajax({url: '/api/' + sitename + '/debug/' + debugID,
+          $.ajax({url: '/api/' + sitename + '/debug/' + debugID + '?details=True',
             dataType: 'json',
             data: {},
             async: false,
             success: function(json){
+              json = json[0];
               model = $('<div><\/div>');
               model.append('<div class="row"><b>Debug ID: <\/b>' + json['id'] + '<\/div>');
               model.append('<div class="row"><b>Debug Hostname: <\/b>' + json['hostname'] + '<\/div>');
@@ -86,21 +87,20 @@
               tableAddKeyVal(myObject, ['Key', 'Value'], model);
               // Debug Output
               if (json['output']){
-                  var myObject = JSON.parse(json['output']);
-                  if (myObject['exitCode']){
-                      model.append('<div class="row"><b>Runtime Exit Code: <\/b>' + myObject['exitCode'] + '<\/div>');
+                  if (json['output']['exitCode']){
+                      model.append('<div class="row"><b>Runtime Exit Code: <\/b>' + json['output']['exitCode'] + '<\/div>');
                   }
-                  if (myObject['stderr']){
+                  if (json['output']['stderr']){
                       model.append('<div class="row"><b>Debug Err:<\/b><\/div>');
-                      tableAddKeyLine(myObject['stderr'], ['LineNum', 'Value'], model);
+                      tableAddKeyLine(json['output']['stderr'], ['LineNum', 'Value'], model);
                   }
-                  if (myObject['stdout']){
+                  if (json['output']['stdout']){
                       model.append('<div class="row"><b>Debug Output:<\/b><\/div>');
-                      tableAddKeyLine(myObject['stdout'], ['LineNum', 'Value'], model);
+                      tableAddKeyLine(json['output']['stdout'], ['LineNum', 'Value'], model);
                   }
-                  if (myObject['processOut']){
+                  if (json['output']['processOut']){
                       model.append('<div class="row"><b>Process Output:<\/b><\/div>');
-                      tableAddKeyLine(myObject['processOut'], ['LineNum', 'Value'], model);
+                      tableAddKeyLine(json['output']['processOut'], ['LineNum', 'Value'], model);
                   }
               }
               $('#v-pills-' + debugID).empty();

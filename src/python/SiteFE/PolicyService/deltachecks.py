@@ -9,9 +9,14 @@ Date: 2021/01/20
 import copy
 import itertools
 
-from SiteRMLibs.CustomExceptions import OverlapException, WrongIPAddress, ServiceNotReady
-from SiteRMLibs.CustomExceptions import NoOptionError
-from SiteRMLibs.CustomExceptions import NoSectionError
+from SiteRMLibs.CustomExceptions import (
+    NoOptionError,
+    NoSectionError,
+    OverlapException,
+    ServiceNotReady,
+    WrongIPAddress,
+)
+from SiteRMLibs.DefaultParams import SERVICE_NOACCEPT_TIMEOUT
 from SiteRMLibs.ipaddr import checkOverlap as incheckOverlap
 from SiteRMLibs.ipaddr import ipOverlap as inipOverlap
 from SiteRMLibs.MainUtilities import getLoggingObject, getUTCnow
@@ -44,9 +49,9 @@ class ConflictChecker(Timing):
         """Check if Host is alive"""
         if hostname in polcls.hosts:
             updatedate = polcls.hosts[hostname]["updatedate"]
-            if updatedate < getUTCnow() - 120:
+            if updatedate < getUTCnow() - SERVICE_NOACCEPT_TIMEOUT:
                 raise OverlapException(
-                    f"Host {hostname} did not update in the last 2 minutes. \
+                    f"Host {hostname} did not update in the last {SERVICE_NOACCEPT_TIMEOUT // 60} minutes. \
                                        Cannot proceed with this request. Check Agent status for the host \
                                        Last update: {updatedate}, CurrentTime: {getUTCnow()}"
                 )
@@ -58,9 +63,9 @@ class ConflictChecker(Timing):
         if not dbitem:
             raise ServiceNotReady(f"Ruler service not found for {hostname}. Is Agent container running at the site?")
 
-        if dbitem[0]["updatedate"] < getUTCnow() - 120:
+        if dbitem[0]["updatedate"] < getUTCnow() - SERVICE_NOACCEPT_TIMEOUT:
             raise ServiceNotReady(
-                f"Ruler service did not update in the last 2 minutes for {hostname}. \
+                f"Ruler service did not update in the last {SERVICE_NOACCEPT_TIMEOUT // 60} minutes for {hostname}. \
                                        Cannot proceed with this request. Check Agent status for the host \
                                        Last update: {dbitem[0]['updatedate']}, CurrentTime: {getUTCnow()}"
             )
@@ -96,12 +101,7 @@ class ConflictChecker(Timing):
             return
         # If Agent, check in agent reported configuration
         if hostname in polcls.hosts:
-            interfaces = (
-                polcls.hosts[hostname]
-                .get("hostinfo", {})
-                .get("NetInfo", {})
-                .get("interfaces", {})
-            )
+            interfaces = polcls.hosts[hostname].get("hostinfo", {}).get("NetInfo", {}).get("interfaces", {})
             if vlan["interface"] not in interfaces:
                 raise OverlapException(
                     f"Interface not available for dtn {hostname} in configuration. \
@@ -119,23 +119,13 @@ class ConflictChecker(Timing):
         if hostname in rawConf:
             # Get Global vlan range for device
             vlanRange = rawConf.get(hostname, {}).get("vlan_range_list", [])
-            if rawConf[hostname].get('ports', {}).get(vlan["interface"], {}).get('realportname', ''):
+            if rawConf[hostname].get("ports", {}).get(vlan["interface"], {}).get("realportname", ""):
                 # If port is a fake and it points to a real port, we check only fake port vlan range
-                vlanRange = (
-                    rawConf.get(hostname, {})
-                    .get("ports", {})
-                    .get(vlan["interface"], {})
-                    .get("vlan_range_list", vlanRange)
-                )
+                vlanRange = rawConf.get(hostname, {}).get("ports", {}).get(vlan["interface"], {}).get("vlan_range_list", vlanRange)
             else:
                 portName = polcls.switch.getSwitchPortName(hostname, vlan["interface"])
                 # If port has vlan range, use that. Means check is done at the port level.
-                vlanRange = (
-                    rawConf.get(hostname, {})
-                    .get("ports", {})
-                    .get(portName, {})
-                    .get("vlan_range_list", vlanRange)
-                )
+                vlanRange = rawConf.get(hostname, {}).get("ports", {}).get(portName, {}).get("vlan_range_list", vlanRange)
 
             if vlanRange and vlan["vlan"] not in vlanRange:
                 raise OverlapException(
@@ -143,9 +133,7 @@ class ConflictChecker(Timing):
                                        Either used or not configured. Allowed Vlans: {vlanRange}"
                 )
         else:
-            raise OverlapException(
-                f"(1) Hostname {hostname} not available in this Frontend."
-            )
+            raise OverlapException(f"(1) Hostname {hostname} not available in this Frontend.")
 
     def _checkifIPInRange(self, polcls, ipval, iptype, hostname):
         """Check if IP in Allowed range"""
@@ -153,54 +141,35 @@ class ConflictChecker(Timing):
             return
         iptoCheck = ipval[f"{iptype}-address"]
 
-        ipRange = (
-            polcls.config.getraw("MAIN")
-            .get(polcls.sitename, {})
-            .get(f"{iptype}-address-pool-list", [])
-        )
+        ipRange = polcls.config.getraw("MAIN").get(polcls.sitename, {}).get(f"{iptype}-address-pool-list", [])
         if hostname in polcls.config.getraw("MAIN"):
-            ipRange = (
-                polcls.config.getraw("MAIN")
-                .get(hostname, {})
-                .get(f"{iptype}-address-pool-list", ipRange)
-            )
+            ipRange = polcls.config.getraw("MAIN").get(hostname, {}).get(f"{iptype}-address-pool-list", ipRange)
             if ipRange and not self.checkOverlap(ipRange, iptoCheck, iptype):
                 raise OverlapException(
                     f"IP {ipval} not available for {hostname} in configuration. \
                           Either used or not configured. Allowed IPs: {ipRange}"
                 )
         elif hostname in polcls.hosts:
-            interfaces = (
-                polcls.hosts[hostname]
-                .get("hostinfo", {})
-                .get("NetInfo", {})
-                .get("interfaces", {})
-            )
+            interfaces = polcls.hosts[hostname].get("hostinfo", {}).get("NetInfo", {}).get("interfaces", {})
             if ipval["interface"] not in interfaces:
                 raise OverlapException(
                     f"Interface not available for dtn {hostname} in configuration. \
                                        Available interfaces: {interfaces}"
                 )
-            ipRange = interfaces.get(ipval["interface"], {}).get(
-                f"{iptype}-address-pool-list", []
-            )
+            ipRange = interfaces.get(ipval["interface"], {}).get(f"{iptype}-address-pool-list", [])
             if not self.checkOverlap(ipRange, iptoCheck, iptype):
                 raise OverlapException(
                     f"IP {ipval} not available for {hostname} in configuration. \
                           Either used or not configured. Allowed IPs: {ipRange}"
                 )
         else:
-            raise OverlapException(
-                f"(2) Hostname {hostname} not available in this Frontend."
-            )
+            raise OverlapException(f"(2) Hostname {hostname} not available in this Frontend.")
 
     def _checkIfVlanOverlap(self, vlan1, vlan2):
         """Check if Vlan equal. Raise error if True"""
         v1, v2 = vlan1.get("vlan", None), vlan2.get("vlan", None)
         if not v1 or not v2:
-            self.logger.debug(
-                f"Vlan not available for {self.newid} or {self.oldid}. Input: {vlan1}, {vlan2}"
-            )
+            self.logger.debug(f"Vlan not available for {self.newid} or {self.oldid}. Input: {vlan1}, {vlan2}")
             return
         if v1 == v2:
             raise OverlapException(
@@ -226,7 +195,6 @@ class ConflictChecker(Timing):
                   Requested: {ip1} and {ip2} are overlapping. "
             )
 
-
     def _checkIfIPRouteAll(self, polcls, ipval, iptype, hostname):
         """Check if IP Range is in allowed configuration"""
         # If switch, check in Switch config
@@ -234,18 +202,12 @@ class ConflictChecker(Timing):
             return
         rawConf = polcls.config.getraw("MAIN")
         if hostname not in rawConf:
-            raise OverlapException(
-                f"(3) Hostname {hostname} not available in this Frontend."
-            )
+            raise OverlapException(f"(3) Hostname {hostname} not available in this Frontend.")
         if ipval and ipval.get(iptype, {}).get("nextHop", ""):
             iptoCheck = ipval[iptype]["nextHop"]
-            ipRange = rawConf.get(polcls.sitename, {}).get(
-                f"{iptype}-address-pool-list", []
-            )
+            ipRange = rawConf.get(polcls.sitename, {}).get(f"{iptype}-address-pool-list", [])
             if hostname in rawConf:
-                ipRange = rawConf.get(hostname, {}).get(
-                    f"{iptype}-address-pool-list", ipRange
-                )
+                ipRange = rawConf.get(hostname, {}).get(f"{iptype}-address-pool-list", ipRange)
             if ipRange and not self.checkOverlap(ipRange, iptoCheck, iptype):
                 raise WrongIPAddress(
                     f"IP {ipval} not available for {hostname} in configuration. \
@@ -253,13 +215,9 @@ class ConflictChecker(Timing):
                 )
         if ipval and ipval.get(iptype, {}).get("routeFrom", ""):
             iptoCheck = ipval[iptype]["routeFrom"]
-            ipRange = rawConf.get(polcls.sitename, {}).get(
-                f"{iptype}-subnet-pool-list", []
-            )
+            ipRange = rawConf.get(polcls.sitename, {}).get(f"{iptype}-subnet-pool-list", [])
             if hostname in rawConf:
-                ipRange = rawConf.get(hostname, {}).get(
-                    f"{iptype}-subnet-pool-list", ipRange
-                )
+                ipRange = rawConf.get(hostname, {}).get(f"{iptype}-subnet-pool-list", ipRange)
             if ipRange and not self.checkOverlap(ipRange, iptoCheck, iptype):
                 raise WrongIPAddress(
                     f"IP {ipval} not available for {hostname} in configuration. \
@@ -293,7 +251,7 @@ class ConflictChecker(Timing):
                 if key1 == "hasNetworkAddress" and "ipv4-address" in val1:
                     out.setdefault("ipv4-address", val1["ipv4-address"]["value"])
                 # After all checks, we check if it has all required key/values
-            if 'interface' in out and 'vlan' in out:
+            if "interface" in out and "vlan" in out:
                 # If either ipv4 or ipv6 is set, we add it to allIPs
                 if out.get("ipv4-address", "") or out.get("ipv6-address", ""):
                     allIPs.append(out)
@@ -305,27 +263,15 @@ class ConflictChecker(Timing):
         out = {}
         for key in ["ipv4", "ipv6"]:
             for _route, routeItems in dataIn.get(key, {}).get("hasRoute", {}).items():
-                nextHop = (
-                    routeItems.get("nextHop", {})
-                    .get(f"{key}-address", {})
-                    .get("value", None)
-                )
+                nextHop = routeItems.get("nextHop", {}).get(f"{key}-address", {}).get("value", None)
                 if nextHop:
                     out.setdefault(key, {})
                     out[key]["nextHop"] = nextHop
-                routeFrom = (
-                    routeItems.get("routeFrom", {})
-                    .get(f"{key}-prefix-list", {})
-                    .get("value", None)
-                )
+                routeFrom = routeItems.get("routeFrom", {}).get(f"{key}-prefix-list", {}).get("value", None)
                 if routeFrom:
                     out.setdefault(key, {})
                     out[key]["routeFrom"] = routeFrom
-                routeTo = (
-                    routeItems.get("routeTo", {})
-                    .get(f"{key}-prefix-list", {})
-                    .get("value", None)
-                )
+                routeTo = routeItems.get("routeTo", {}).get(f"{key}-prefix-list", {}).get("value", None)
                 if routeTo:
                     out.setdefault(key, {})
                     out[key]["routeTo"] = routeTo
@@ -360,9 +306,7 @@ class ConflictChecker(Timing):
         if self.checkIfEnded(connItems):
             self.logger.debug(f"End date is in past for {self.newid}")
             self.logger.debug(f"Connection Items: {connItems}")
-            raise OverlapException(
-                f"End date is in past for {self.newid}. Cannot modify or add new resources."
-            )
+            raise OverlapException(f"End date is in past for {self.newid}. Cannot modify or add new resources.")
 
     def _checkIPOverlaps(self, nStats, connItems, hostname, oldConfig):
         """Check if IP Overlaps"""
@@ -397,13 +341,9 @@ class ConflictChecker(Timing):
         """Check if overlaps with any IP set on the system"""
         for iptype in ["ipv4", "ipv6"]:
             ipaddr = nStats.get(f"{iptype}-address", "")
-            if ipaddr in oldConfig.get("usedIPs", {}).get("deltas", {}).get(
-                hostname, {}
-            ).get(iptype, []):
+            if ipaddr in oldConfig.get("usedIPs", {}).get("deltas", {}).get(hostname, {}).get(iptype, []):
                 continue
-            if ipaddr in oldConfig.get("usedIPs", {}).get("system", {}).get(
-                hostname, {}
-            ).get(iptype, []):
+            if ipaddr in oldConfig.get("usedIPs", {}).get("system", {}).get(hostname, {}).get(iptype, []):
                 raise OverlapException(
                     f"IP {ipaddr} is already in use on the system (manually set \
                                         or remains from undeleted request). Cannot proceed with this request."
@@ -446,16 +386,8 @@ class ConflictChecker(Timing):
             if "isAlias" in vals and vals["isAlias"]:
                 # If isAlias is set, check if it is in the configuration
                 realPortName = polcls.switch.getSwitchPortName(hostname, intf)
-                if realPortName in polcls.config.getraw("MAIN").get(hostname, {}).get(
-                    "ports", {}
-                ):
-                    confAlias = (
-                        polcls.config.getraw("MAIN")
-                        .get(hostname, {})
-                        .get("ports", {})
-                        .get(realPortName, {})
-                        .get("isAlias", None)
-                    )
+                if realPortName in polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}):
+                    confAlias = polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}).get(realPortName, {}).get("isAlias", None)
                     if confAlias and not vals["isAlias"].startswith(confAlias):
                         raise OverlapException(
                             f"Alias mismatch for {hostname} on {intf}. \
@@ -468,12 +400,12 @@ class ConflictChecker(Timing):
             return
         if len(nStats) < 2:
             return
-        ips = {'ipv4': [], 'ipv6': []}
+        ips = {"ipv4": [], "ipv6": []}
         for item in nStats:
             if item.get("ipv4-address", ""):
-                ips['ipv4'].append(item["ipv4-address"])
+                ips["ipv4"].append(item["ipv4-address"])
             if item.get("ipv6-address", ""):
-                ips['ipv6'].append(item["ipv6-address"])
+                ips["ipv6"].append(item["ipv6-address"])
         # Check for overlaps in the collected IPs
         for iptype, iplist in ips.items():
             if len(iplist) > 1:
@@ -566,9 +498,7 @@ class ConflictChecker(Timing):
                             oStats.get(key, {}).get("nextHop", ""),
                             key,
                         )
-                        self._checkRSTIPOverlap(
-                            nStats.get(key, {}), oStats.get(key, {}), key
-                        )
+                        self._checkRSTIPOverlap(nStats.get(key, {}), oStats.get(key, {}), key)
 
     def checkrst(self, cls, rstitems, oldConfig, newDelta=False):
         """Check rst Service"""
@@ -620,15 +550,8 @@ class ConflictChecker(Timing):
                     cleaned.append(subnet)
                     newconf[key].pop(subnet, None)
                     for host in subnetdict.keys():
-                        if (
-                            newconf.get("SubnetMapping", {})
-                            .get(host, {})
-                            .get("providesSubnet", {})
-                            .get(subnet, None)
-                        ):
-                            newconf["SubnetMapping"][host]["providesSubnet"].pop(
-                                subnet, None
-                            )
+                        if newconf.get("SubnetMapping", {}).get(host, {}).get("providesSubnet", {}).get(subnet, None):
+                            newconf["SubnetMapping"][host]["providesSubnet"].pop(subnet, None)
         # RST Cleanup
         for rkey, rval in {
             "providesRoute": "RoutingMapping",
@@ -637,12 +560,7 @@ class ConflictChecker(Timing):
             for host, pRoutes in activeConfig.get(rval, {}).items():
                 for route, rdict in pRoutes.get(rkey, {}).items():
                     for iptype in rdict.keys():
-                        if self._ended(
-                            activeConfig.get("rst", {})
-                            .get(route, {})
-                            .get(host, {})
-                            .get(iptype, {})
-                        ):
+                        if self._ended(activeConfig.get("rst", {}).get(route, {}).get(host, {}).get(iptype, {})):
                             cleaned.append(route)
                             newconf[rval][host][rkey].pop(route, None)
                             newconf["rst"].pop(route, None)

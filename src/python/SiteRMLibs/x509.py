@@ -161,5 +161,5 @@ class CertHandler:
         # Check if reload of auth list is needed.
         self.loadAuthorized()
         # Check DN in authorized list
-        self.checkAuthorized(certinfo)
+        certinfo["permissions"] = self.checkAuthorized(certinfo)
         return certinfo

@@ -19,13 +19,15 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2017/09/26
 """
 
+import functools
 import os
 import socket
 import time
 import urllib.parse
+from typing import Any, Callable
 
 import httpx
-from SiteRMLibs.CustomExceptions import ValidityFailure
+from SiteRMLibs.CustomExceptions import HTTPServerNotReady, ValidityFailure
 
 
 def argValidity(arg, aType):
@@ -86,6 +88,37 @@ def getCAPathFromEnv():
     return os.environ.get("X509_CERT_DIR")
 
 
+
+def httpserviceready(endpoint="/api/ready"):
+    """Decorator that checks if the HTTP service is ready before executing the decorated function."""
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs) -> Any:
+            # Check if service is ready by calling the specified endpoint
+            if not kwargs.get('SiteRMHTTPCall', True):
+                return func(self, *args, **kwargs)
+            try:
+                response, status_code, reason_phrase, _ = self.http_makeRequest("GET", endpoint)
+                if status_code == 503:
+                    raise HTTPServerNotReady(f"HTTP Frontend is not ready and returns 503 from {endpoint}. Please check SiteRM Frontend")
+                if status_code != 200:
+                    raise HTTPServerNotReady(f"HTTP Frontend is not ready to serve connections. Please check SiteRM Frontend. Error: {status_code} {reason_phrase} from {endpoint}")
+                if endpoint == "/api/ready":
+                    if not isinstance(response, dict) or response.get("status") != "ready":
+                        raise HTTPServerNotReady("HTTP Frontend is not ready to serve connections. Please check SiteRM Frontend.")
+                elif endpoint == "/api/alive":
+                    if not isinstance(response, dict) or response.get("status") != "alive":
+                        raise HTTPServerNotReady("HTTP Frontend is not alive. Please check SiteRM Frontend.")
+            except HTTPServerNotReady:
+                raise
+            except Exception as e:
+                raise HTTPServerNotReady(f"Failed to check service readiness from {endpoint}: {str(e)}") from e
+            return func(self, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+
 class Requests:
     """Main Requests class to handle HTTP requests."""
 
@@ -104,6 +137,23 @@ class Requests:
         """Close the HTTP sessions."""
         self.session.close()
         self.notFEsession.close()
+
+    def _logMessage(self, message):
+        """Log a message if logger is set."""
+        if self.logger:
+            self.logger.debug(message)
+        else:
+            print(message)
+
+    @httpserviceready("/api/alive")
+    def apiAlive(self):
+        """Just a place holder for decorator check."""
+        return True
+
+    @httpserviceready("/api/ready")
+    def apiReady(self):
+        """Just a place holder for decorator check."""
+        return True
 
     def setHost(self, url):
         """Set the host URL for the Requests class."""
@@ -139,7 +189,7 @@ class Requests:
             url = urllib.parse.urljoin(self.host, uri)
         return url
 
-    def __http_makeRequest(self, verb, uri, **kwargs):
+    def http_makeRequest(self, verb, uri, **kwargs):
         """Make an HTTP request with the given parameters."""
         kwargs.setdefault("data", None)
         kwargs.setdefault("headers", None)
@@ -156,6 +206,11 @@ class Requests:
             # The only implementation of nonFESession is to fetch github config files
             # We are not passing headers or json data here
             response = self.notFEsession.request(method=verb, url=url)
+            if response.status_code not in [200, 201, 202, 204, 304]:
+                self._logMessage(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
+                if kwargs["raiseEx"]:
+                    raise httpx.HTTPStatusError(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
+                return response.text, response.status_code, response.reason_phrase, False
             return response.text, response.status_code, response.reason_phrase, False
         except httpx.HTTPStatusError as e:
             return e.response.text, e.response.status_code, e.response.reason_phrase, False
@@ -164,23 +219,25 @@ class Requests:
         finally:
             self.__http_resetUserAgent()
 
-    def makeHttpCall(self, verb, url, **kwargs):
+    @httpserviceready()
+    def makeHttpCall(self, verb, url, SiteRMHTTPCall=True, **kwargs):
         """Put JSON to the Site FE."""
         kwargs.setdefault("retries", 3)
         kwargs.setdefault("raiseEx", True)
         kwargs.setdefault("sleep", 1)
+        kwargs.setdefault("SiteRMHTTPCall", SiteRMHTTPCall)
         exc = []
         if verb not in ["GET", "POST", "PUT", "DELETE"]:
             raise ValueError(f"Invalid HTTP verb: {verb}. Must be one of GET, POST, PUT, DELETE.")
         while kwargs["retries"] > 0:
             kwargs["retries"] -= 1
             try:
-                return self.__http_makeRequest(verb, url, **kwargs)
+                return self.http_makeRequest(verb, url, **kwargs)
             except Exception as ex:
-                self.logger.debug(f"Got Exception: {ex}. Will retry {kwargs['retries']} more times.")
+                self._logMessage(f"Got Exception: {ex}. Will retry {kwargs['retries']} more times.")
                 exc.append(str(ex))
                 if kwargs["retries"] == 0 and kwargs["raiseEx"]:
-                    self.logger.debug("No more retries left. Raising exception.")
+                    self._logMessage("No more retries left. Raising exception.")
                     raise Exception(f"Failed to make HTTP call after retries: {exc}") from ex
                 if kwargs["retries"] != 0:
                     time.sleep(kwargs["sleep"])

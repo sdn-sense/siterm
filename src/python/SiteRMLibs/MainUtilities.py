@@ -18,7 +18,6 @@ import logging
 import logging.handlers
 import os
 import os.path
-import re
 import shlex
 import shutil
 import socket
@@ -28,7 +27,6 @@ import time
 import uuid
 from pathlib import Path
 
-import psutil
 import simplejson as json
 from rdflib import Graph
 from SiteRMLibs.CustomExceptions import (
@@ -46,11 +44,12 @@ HOSTSERVICES = [
     "ProvisioningService",
     "SNMPMonitoring",
     "DBWorker",
+    "DBCleaner",
+    "Validator",
     "PolicyService",
     "SwitchWorker",
-    "Prometheus-Push",
-    "Arp-Push",
     "ConfigFetcher",
+    "MonitoringService",
 ]
 
 
@@ -216,18 +215,23 @@ def getTimeRotLogger(**kwargs):
     return logger
 
 
+def bytestoStr(inputBytes):
+    """Convert bytes object to string."""
+    if isinstance(inputBytes, bytes):
+        try:
+            return inputBytes.decode("utf-8")
+        except UnicodeDecodeError as ex:
+            raise WrongInputError(f"Input bytes could not be decoded. Error: {ex}") from ex
+    return inputBytes
+
+
 def evaldict(inputDict):
     """Safely evaluate input to dict/list."""
     if not inputDict:
         return {}
     if isinstance(inputDict, (list, dict)):
         return inputDict
-    # Decode if it is bytes
-    if isinstance(inputDict, bytes):
-        try:
-            inputDict = inputDict.decode("utf-8")
-        except UnicodeDecodeError as ex:
-            raise WrongInputError(f"Input bytes could not be decoded. Error: {ex}") from ex
+    inputDict = bytestoStr(inputDict)
     # At this stage, if not string, raise error.  list/dict is checked in previous if
     if not isinstance(inputDict, str):
         raise WrongInputError("Input must be a string or dict/list.")
@@ -258,7 +262,7 @@ def externalCommand(command, communicate=True):
     """Execute External Commands and return stdout and stderr."""
     # pylint: disable=consider-using-with
     command = shlex.split(str(command))
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if communicate:
         return proc.communicate()
     return proc
@@ -268,7 +272,7 @@ def externalCommandStdOutErr(command, stdout, stderr):
     """Execute External Commands and return stdout and stderr."""
     command = shlex.split(str(command))
     with open(stdout, "w", encoding="utf-8") as outFD, open(stderr, "w", encoding="utf-8") as errFD:
-        with subprocess.Popen(command, stdout=outFD, stderr=errFD) as proc:
+        with subprocess.Popen(command, stdout=outFD, stderr=errFD, text=True) as proc:
             return proc.communicate()
 
 
@@ -537,9 +541,7 @@ def getModTime(headers):
 def encodebase64(inputStr, encodeFlag=True):
     """Encode str to base64."""
     if encodeFlag and inputStr:
-        if isinstance(inputStr, bytes):
-            return base64.b64encode(inputStr.encode("UTF-8"))
-        return base64.b64encode(bytes(inputStr.encode("UTF-8")))
+        return base64.b64encode(bytestoStr(inputStr))
     return inputStr
 
 
@@ -615,6 +617,19 @@ def getAllHosts(dbI):
     return jOut
 
 
+def getSitesFromConfig(config):
+    """Get sites from config."""
+    # TODO: Need to normalize sitename and site between FE and Agent.
+    try:
+        if config.get("general", "sites"):
+            return config.get("general", "sites")
+        raise Exception("No sites found in config.")
+    except Exception as ex:
+        if config.get("general", "sitename"):
+            return config.get("general", "sitename")
+        raise ex
+
+
 def getActiveDeltas(cls):
     """Get Active deltas from DB."""
     activeDeltas = cls.dbI.get("activeDeltas")
@@ -653,7 +668,7 @@ def strtolist(intext, splitter):
 def getArpVals():
     """Get Arp Values from /proc/net/arp. Return generator."""
     neighs = externalCommand("ip neigh")
-    for arpline in neighs[0].decode("UTF-8").splitlines():
+    for arpline in neighs[0].splitlines():
         parts = arpline.split()
         if len(parts) < 5:
             continue
@@ -705,91 +720,3 @@ def tryConvertToNumeric(value):
     except ValueError:
         return floatVal if floatVal else value
     return intVal
-
-
-def parseStorageInfo(tmpOut, storageInfo):
-    """Parse df stdout and add to storageInfo var."""
-    lineNum = 0
-    localOut = {"Keys": [], "Values": []}
-    for item in tmpOut:
-        if not item:
-            continue
-        for line in item.decode("UTF-8").split("\n"):
-            if "unrecognized option" in line:
-                return storageInfo, False
-            line = re.sub(" +", " ", line)
-            if lineNum == 0:
-                lineNum += 1
-                line = line.replace("Mounted on", "Mounted_on")
-                localOut["Keys"] = line.split()
-            else:
-                newList = [tryConvertToNumeric(x) for x in line.split()]
-                if newList:
-                    localOut["Values"].append(newList)
-    for oneLine in localOut["Values"]:
-        storageInfo["Values"].setdefault(oneLine[0], {})
-        for index, elem in enumerate(oneLine):
-            key = localOut["Keys"][index].replace("%", "Percentage")
-            # Append size and also change to underscore
-            if key in ["Avail", "Used", "Size"]:
-                key = f"{key}_gb"
-                try:
-                    storageInfo["Values"][oneLine[0]][key] = elem[:1]
-                except TypeError:
-                    storageInfo["Values"][oneLine[0]][key] = elem
-                continue
-            if key == "1024-blocks":
-                key = "1024_blocks"
-            storageInfo["Values"][oneLine[0]][key] = elem
-    return storageInfo, True
-
-
-def getStorageInfo():
-    """Get storage mount points information."""
-    storageInfo = {"Values": {}}
-    tmpOut = externalCommand("df -P -h")
-    storageInfo, _ = parseStorageInfo(tmpOut, dict(storageInfo))
-    tmpOut = externalCommand("df -i -P")
-    storageInfo, _ = parseStorageInfo(tmpOut, dict(storageInfo))
-    outStorage = {"FileSystems": {}, "total_gb": 0, "app": "FileSystem"}
-    totalSum = 0
-    for mountName, mountVals in storageInfo["Values"].items():
-        outStorage["FileSystems"][mountName] = mountVals["Avail_gb"]
-        totalSum += int(mountVals["Avail_gb"])
-    outStorage["total_gb"] = totalSum
-    storageInfo["FileSystems"] = outStorage
-    return storageInfo
-
-
-def getProcInfo(procID):
-    """Get Process informationa about specific process."""
-    procOutInfo = {}
-    procS = psutil.Process(int(procID))
-    procOutInfo["CreateTime"] = procS.create_time()
-    ioCounters = procS.io_counters()
-    procOutInfo["IOCounters"] = {}
-    procOutInfo["IOCounters"]["ReadCount"] = ioCounters.read_count
-    procOutInfo["IOCounters"]["WriteCount"] = ioCounters.write_count
-    procOutInfo["IOCounters"]["ReadBytes"] = ioCounters.read_bytes
-    procOutInfo["IOCounters"]["WriteBytes"] = ioCounters.write_bytes
-    procOutInfo["IOCounters"]["ReadChars"] = ioCounters.read_chars
-    procOutInfo["IOCounters"]["WriteChars"] = ioCounters.write_chars
-    procOutInfo["IOCounters"]["NumFds"] = procS.num_fds()
-    memInfo = procS.memory_full_info()
-    procOutInfo["MemUseInfo"] = {}
-    procOutInfo["MemUseInfo"]["Rss"] = memInfo.rss
-    procOutInfo["MemUseInfo"]["Vms"] = memInfo.vms
-    procOutInfo["MemUseInfo"]["Shared"] = memInfo.shared
-    procOutInfo["MemUseInfo"]["Text"] = memInfo.text
-    procOutInfo["MemUseInfo"]["Lib"] = memInfo.lib
-    procOutInfo["MemUseInfo"]["Data"] = memInfo.data
-    procOutInfo["MemUseInfo"]["Dirty"] = memInfo.dirty
-    procOutInfo["MemUseInfo"]["Uss"] = memInfo.uss
-    procOutInfo["MemUseInfo"]["Pss"] = memInfo.pss
-    procOutInfo["MemUseInfo"]["Swap"] = memInfo.swap
-    procOutInfo["Connections"] = {}
-    for item in procS.connections():
-        if item.status not in list(procOutInfo["Connections"].keys()):
-            procOutInfo["Connections"][item.status] = 0
-        procOutInfo["Connections"][item.status] += 1
-    return procOutInfo

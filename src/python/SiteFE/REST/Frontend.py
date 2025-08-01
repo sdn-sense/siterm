@@ -14,15 +14,65 @@ from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
     allAPIDeps,
+    checkReadyState,
     checkSite,
 )
+from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson
 
 router = APIRouter()
 
 
+# =========================================================
+# /api/alive
+# =========================================================
+@router.get(
+    "/alive",
+    summary="Check API Health",
+    description=("Checks if the API is alive and responsive."),
+    tags=["Frontend"],
+    responses={
+        **{
+            200: {"description": "API is alive.", "content": {"application/json": {"example": {"status": "alive"}}}},
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def checkAPIHealth(request: Request, _deps=Depends(allAPIDeps)):
+    """
+    Check the health of the API.
+    """
+    return APIResponse.genResponse(request, {"status": "alive"})
+
+
+# =========================================================
+# /api/ready
+# =========================================================
+@router.get(
+    "/ready",
+    summary="Check API Readiness",
+    description=("Checks if the API is ready to serve requests."),
+    tags=["Frontend"],
+    responses={
+        **{
+            200: {"description": "API is ready.", "content": {"application/json": {"example": {"status": "ready"}}}},
+            503: {"description": "API is not ready to serve requests.", "content": {"application/json": {"example": {"detail": "API is not ready to serve requests."}}}},
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def checkAPIReadiness(request: Request, deps=Depends(allAPIDeps)):
+    """
+    Check the readiness of the API.
+    """
+    if not checkReadyState(deps):
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="API is not ready to serve requests.")
+    return APIResponse.genResponse(request, {"status": "ready"})
+
+
 # ==========================================================
 # /api/frontend/sites
+# ==========================================================
 @router.get(
     "/frontend/sites",
     summary="Get All Sites",
@@ -242,7 +292,7 @@ async def getfeconfig(request: Request, deps=Depends(allAPIDeps)):
 async def getswitchdata(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the switch data for."),
-    limit: int = Query(10, description="The maximum number of results to return. Defaults to 10.", ge=1, le=100),
+    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(allAPIDeps),
 ):
     """
@@ -321,7 +371,7 @@ async def getactivedeltas(request: Request, sitename: str = Path(..., descriptio
 async def getqosdata(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the QoS data for."),
-    limit: int = Query(100, description="The maximum number of hosts to lookup. Defaults to 100.", ge=1, le=100),
+    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of hosts to lookup. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(allAPIDeps),
 ):
     """

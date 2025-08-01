@@ -17,7 +17,13 @@ import tracemalloc
 
 import psutil
 from SiteRMLibs import __version__ as runningVersion
-from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, ServiceWarning
+from SiteRMLibs.CustomExceptions import (
+    HTTPServerNotReady,
+    NoOptionError,
+    NoSectionError,
+    ServiceWarning,
+)
+from SiteRMLibs.DefaultParams import GIT_CONFIG_REFRESH_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.MainUtilities import (
@@ -28,6 +34,7 @@ from SiteRMLibs.MainUtilities import (
     getFullUrl,
     getHostname,
     getLoggingObject,
+    getSitesFromConfig,
     getUTCnow,
     getVal,
     loadEnvFile,
@@ -73,14 +80,14 @@ def getParser(description):
     oparser.add_argument(
         "--sleeptimeok",
         dest="sleeptimeok",
-        default="15",
-        help="Sleep time in seconds when everything is ok. Default 15",
+        default="10",
+        help="Sleep time in seconds when everything is ok. Default 10",
     )
     oparser.add_argument(
         "--sleeptimefailure",
         dest="sleeptimefailure",
-        default="20",
-        help="Sleep time in seconds when there is a failure. Default 20",
+        default="10",
+        help="Sleep time in seconds when there is a failure. Default 10",
     )
     oparser.add_argument(
         "--devicename",
@@ -129,7 +136,6 @@ class DBBackend:
             return False
         reported = True
         try:
-            # TODO: Report psutil process information from MainUtilities, back to FE/DB
             dbOut = {
                 "hostname": kwargs.get("hostname", "default"),
                 "servicestate": kwargs.get("servicestate", "UNSET"),
@@ -171,9 +177,9 @@ class DBBackend:
                 "runtime": kwargs["runtime"],
                 "hostname": getHostname(self.config, self.component),
                 "version": runningVersion,
-                "exc": kwargs.get("exc", "No Exception provided by service"),
+                "exc": kwargs.get("exc", "No Exception provided by service")[:4095],
             }
-            self.handlers[kwargs["sitename"]].makeHttpCall("PUT", f"/api/{kwargs['sitename']}/servicestates", data=dic, useragent="Daemonizer")
+            self.handlers[kwargs["sitename"]].makeHttpCall("POST", f"/api/{kwargs['sitename']}/servicestates", data=dic, useragent="Daemonizer")
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
@@ -204,12 +210,21 @@ class DBBackend:
             kwargs["hostname"] = getHostname(self.config, self.component)
             url = f"/api/{kwargs['sitename']}/serviceaction?hostname={kwargs['hostname']}&servicename={self.component}"
 
-            actions = self.handlers[kwargs["sitename"]].makeHttpCall("GET", url, useragent="Daemonizer")
+            actions = self.handlers[kwargs["sitename"]].makeHttpCall("GET", url, raiseEx=False, useragent="Daemonizer")
             # Config Fetcher is not allowed to delete other services refresh.
-            if actions[0] and self.component == "ConfigFetcher":
+            if actions[1] == 404:
+                self.logger.debug("No service actions found for %s", kwargs["sitename"])
+                return False
+            if actions[1] != 200:
+                self.logger.error("Failed to get service actions for %s: %s", kwargs["sitename"], actions[0])
+                return False
+            if self.component == "ConfigFetcher":
                 return True
+            if not actions:
+                self.logger.debug("No actions found for %s", kwargs["sitename"])
+                return False
             for action in actions[0]:
-                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component}, useragent="Daemonizer")
+                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component, "action": action["action"]}, useragent="Daemonizer")
                 refresh = True
         except Exception:
             excType, excValue = sys.exc_info()[:2]
@@ -275,17 +290,13 @@ class Daemon(DBBackend):
 
     def _getHandlers(self):
         """Get handlers for all sites."""
-        # TODO: Need to normalize sitename and site between FE and Agent.
+        # pylint: disable=W0702
         if not self.getGitConf:
             return
-        try:
-            for sitename in self.config.get("general", "sites"):
-                fullURL = getFullUrl(self.config, sitename)
-                self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
-        except (NoOptionError, NoSectionError):
-            for sitename in self.config.get("general", "sitename"):
-                fullURL = getFullUrl(self.config, sitename)
-                self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
+        sites = getSitesFromConfig(self.config)
+        for sitename in sites:
+            fullURL = getFullUrl(self.config, sitename)
+            self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
 
     def _getLogLevel(self):
         """Get log level."""
@@ -509,7 +520,7 @@ class Daemon(DBBackend):
         """Auto Refresh if there is a DB request to do so."""
         # pylint: disable=W0703
         # Minimize queries to this and do this only every 5 minutes
-        if self.lastRefresh + 300 > int(getUTCnow()):
+        if self.lastRefresh + GIT_CONFIG_REFRESH_TIMEOUT > int(getUTCnow()):
             return False
         self.lastRefresh = int(getUTCnow())
         refresh = False
@@ -570,7 +581,7 @@ class Daemon(DBBackend):
             self.logger.debug("Started Memory Usage Tracking")
             self.logger.debug("Memory usage: %s", tracemalloc.get_traced_memory())
         try:
-            rthread.startwork()
+            return rthread.startwork()
         finally:
             if self.memdebug:
                 snapshot = tracemalloc.take_snapshot()
@@ -588,6 +599,7 @@ class Daemon(DBBackend):
             self.runCount += 1
             hadFailure = False
             refresh = False
+            speedup = False
             stwork = int(getUTCnow())
             try:
                 for sitename, rthread in list(self.runThreads.items()):
@@ -596,7 +608,7 @@ class Daemon(DBBackend):
                     self.logger.debug("Start worker for %s site", sitename)
                     try:
                         self.preRunThread(sitename, rthread)
-                        self.__run(rthread)
+                        speedup = self.__run(rthread)
                         self.reporter("OK", sitename, stwork)
                     except ServiceWarning as ex:
                         exc = traceback.format_exc()
@@ -604,6 +616,11 @@ class Daemon(DBBackend):
                         self.logger.warning("Service Warning!!! Error details:  %s", ex)
                         self.logger.warning("Service Warning!!! Traceback details:  %s", exc)
                         self.logger.warning("It is not fatal error. Continue to run normally.")
+                    except HTTPServerNotReady as ex:
+                        exc = traceback.format_exc()
+                        self.logger.error("HTTP Server Not Ready!!! Error details:  %s", ex)
+                        self.logger.error("HTTP Server Not Ready!!! Traceback details:  %s", exc)
+                        self.logger.error("Look at SiteRM Frontend logs for more details.")
                     except:
                         hadFailure = True
                         exc = traceback.format_exc()
@@ -612,7 +629,7 @@ class Daemon(DBBackend):
                     finally:
                         self.postRunThread(sitename, rthread)
                 if self.runLoop():
-                    time.sleep(self.sleepTimers["ok"])
+                    time.sleep(self.sleepTimers["ok"] // 2 if speedup else self.sleepTimers["ok"])
             except KeyboardInterrupt as ex:
                 self.reporter("KEYBOARDINTERRUPT", sitename, stwork)
                 self.logger.critical("Received KeyboardInterrupt: %s ", ex)

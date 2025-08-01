@@ -83,6 +83,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
     def __cleanup(self):
         """Cleanup yaml conf output"""
         self.yamlconfuuid = {}
+        self.forceapply = []
 
     def getConfigValue(self, section, option, raiseError=False):
         """Get Config Val"""
@@ -333,6 +334,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)
                             if uuid in self.forceapply:
+                                self.logger.debug(f"UUID {uuid} is in force apply list, will apply {acttype} for {swname} and delete from forceapply list.")
                                 self.forceapply.remove(uuid)
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)
@@ -373,6 +375,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         if forceapply:
             for item in forceapply:
                 if item["uuid"] not in self.forceapply:
+                    self.logger.debug(f"Adding {item['uuid']} to force apply list as this was forced by external request.")
                     self.forceapply.append(item["uuid"])
                     # delete from db
                     self.dbI.delete("forceapplyuuid", {"uuid": item["uuid"]})

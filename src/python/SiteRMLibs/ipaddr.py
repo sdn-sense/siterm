@@ -33,7 +33,7 @@ def getMasterSlaveInterfaces():
     """Get dictionary of slaveIntfName: MasterIntfName interfaces"""
     out = {}
     nics = externalCommand("ip -br a")
-    for nicline in nics[0].decode("UTF-8").split("\n"):
+    for nicline in nics[0].split("\n"):
         if not nicline:
             continue
         nictmp = nicline.split()[0].split("@")

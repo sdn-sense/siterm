@@ -71,7 +71,6 @@ def validateStreams(config, inputDict):
 
 def validateTraceRouteNet(config, inputDict):
     """Validate traceroute debug request for network device"""
-    inputDict = validateAddDefaults(config, inputDict)
     validateKeys(inputDict, ["ip"])
     validateIP(config, inputDict)
     validateRuntime(config, inputDict)
@@ -79,7 +78,6 @@ def validateTraceRouteNet(config, inputDict):
 
 def validateTraceRoute(config, inputDict):
     """Validate traceroute debug request."""
-    inputDict = validateAddDefaults(config, inputDict)
     validateKeys(inputDict, ["ip"])
     validateIP(config, inputDict)
     validateRuntime(config, inputDict)
@@ -96,14 +94,12 @@ def validateTraceRoute(config, inputDict):
 
 def validateArp(config, inputDict):
     """Validate aprdump debug request."""
-    inputDict = validateAddDefaults(config, inputDict)
     validateKeys(inputDict, ["interface"])
     validateRuntime(config, inputDict)
 
 
 def validateIperfClient(config, inputDict):
     """Validate iperfclient debug request."""
-    inputDict = validateAddDefaults(config, inputDict)
     validateKeys(inputDict, ["ip", "time", "port", "runtime", "streams"])
     validateIP(config, inputDict)
     validateStreams(config, inputDict)
@@ -112,7 +108,6 @@ def validateIperfClient(config, inputDict):
 
 def validateIperfServer(config, inputDict):
     """Validate iperf server debug request."""
-    inputDict = validateAddDefaults(config, inputDict)
     validateKeys(inputDict, ["port", "time", "runtime"])
     validateIP(config, inputDict)
     validateRuntime(config, inputDict)
@@ -120,7 +115,6 @@ def validateIperfServer(config, inputDict):
 
 def validateFdtClient(config, inputDict):
     """Validate fdtclient debug request."""
-    inputDict = validateAddDefaults(config, inputDict)
     validateKeys(inputDict, ["ip", "runtime", "streams"])
     validateIP(config, inputDict)
     validateStreams(config, inputDict)
@@ -129,7 +123,6 @@ def validateFdtClient(config, inputDict):
 
 def validateFdtServer(config, inputDict):
     """Validate fdt server debug request."""
-    inputDict = validateAddDefaults(config, inputDict)
     validateKeys(inputDict, ["runtime"])
     validateIP(config, inputDict)
     validateRuntime(config, inputDict)
@@ -137,7 +130,6 @@ def validateFdtServer(config, inputDict):
 
 def validateRapidpingNet(config, inputDict):
     """Validate rapid ping debug request for network device"""
-    inputDict = validateAddDefaults(config, inputDict)
     validateKeys(inputDict, ["ip", "count", "timeout"])
     maxcount = config["MAIN"]["debuggers"][inputDict["type"]]["maxcount"]
     if int(inputDict["count"]) > maxcount:
@@ -151,7 +143,6 @@ def validateRapidpingNet(config, inputDict):
 
 def validateRapidping(config, inputDict):
     """Validate rapid ping debug request."""
-    inputDict = validateAddDefaults(config, inputDict)
     validateKeys(inputDict, ["ip", "time", "packetsize", "interface", "runtime"])
     # time reply wait <deadline> in seconds
     maxtimeout = config["MAIN"]["debuggers"][inputDict["type"]]["maxtimeout"]
@@ -170,14 +161,12 @@ def validateRapidping(config, inputDict):
 
 def validateTcpdump(config, inputDict):
     """Validate tcpdump debug request."""
-    inputDict = validateAddDefaults(config, inputDict)
     validateKeys(inputDict, ["interface"])
     validateRuntime(config, inputDict)
 
 
 def validateRuntime(config, inputDict):
     """Validate Runtime"""
-    inputDict = validateAddDefaults(config, inputDict)
     totalRuntime = int(int(inputDict["runtime"]) - getUTCnow())
     defRuntime = config["MAIN"]["debuggers"][inputDict["type"]]["defruntime"]
     maxRuntime = config["MAIN"]["debuggers"][inputDict["type"]]["maxruntime"]
@@ -188,7 +177,7 @@ def validateRuntime(config, inputDict):
 def validator(config, inputDict):
     """Validate debug request"""
     debug_type = inputDict["type"]
-
+    inputDict = validateAddDefaults(config, inputDict)
     if debug_type == "traceroute-net":
         validateTraceRouteNet(config, inputDict)
     elif debug_type == "traceroute":
@@ -211,4 +200,4 @@ def validator(config, inputDict):
         validateTcpdump(config, inputDict)
     else:
         raise BadRequestError(f"Debug type {debug_type} not supported. Supported types: {config['MAIN']['debuggers'].keys()}")
-    return True
+    return inputDict

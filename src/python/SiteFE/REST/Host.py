@@ -10,7 +10,6 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel
@@ -20,6 +19,7 @@ from SiteFE.REST.dependencies import (
     allAPIDeps,
     checkSite,
 )
+from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
     dumpFileContentAsJson,
     getFileContentAsJson,
@@ -38,9 +38,6 @@ class HostItem(BaseModel):
     # pylint: disable=too-few-public-methods
     hostname: str
     ip: str
-    # Optional fields
-    insertTime: Optional[int] = None
-    updateTime: Optional[int] = None
 
     class Config:
         # pylint: disable=missing-class-docstring
@@ -52,11 +49,36 @@ class HostItem(BaseModel):
 @router.get(
     "/{sitename}/hosts",
     summary="Get All Registered Hosts",
-    description=("TODO"),
+    description=("Get all registered hosts for a specific site."),
     tags=["Hosts"],
     responses={
         **{
-            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "TODO",
+                "content": {
+                    "application/json": [
+                        {
+                            "id": 3,
+                            "ip": "132.249.252.210",
+                            "hostname": "node-2-7.sdsc.optiputer.net",
+                            "insertdate": 1746465664,
+                            "updatedate": 1753745473,
+                            "hostinfo": {
+                                "hostname": "node-2-7.sdsc.optiputer.net",
+                                "ip": "132.249.252.210",
+                                "Summary": {
+                                    "config": {
+                                        "agent": {"hostname": "node-2-7.sdsc.optiputer.net", "interfaces": ["enp65s0f1np1"], "noqos": True, "norules": False, "rsts_enabled": "ipv4,ipv6"},
+                                        "enp65s0f1np1": {
+                                            "bwParams": {"granularity": 1000, "maximumCapacity": 100000, "minReservableCapacity": 1000, "priority": 0, "type": "guaranteedCapped", "unit": "mbps"}
+                                        },
+                                    }
+                                },
+                            },
+                        }
+                    ]
+                },
+            },
             404: {
                 "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.",
                 "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
@@ -68,7 +90,8 @@ class HostItem(BaseModel):
 async def gethosts(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the hosts for."),
-    limit: int = Query(100, description="The maximum number of results to return. Defaults to 100.", ge=1, le=100),
+    details: bool = Query(False, description="If True, returns detailed host information. In case detail, limit is ignored and set to 1."),
+    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(allAPIDeps),
 ):
     """
@@ -76,10 +99,15 @@ async def gethosts(
     - Returns a list of hosts with their information.
     """
     checkSite(deps, sitename)
+    if details:
+        limit = 1
     hosts = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=limit)
     out = []
     for host in hosts:
-        host["hostinfo"] = getFileContentAsJson(host.get("hostinfo", ""))
+        if details:
+            host["hostinfo"] = getFileContentAsJson(host.get("hostinfo", ""))
+        else:
+            host.pop("hostinfo", None)
         out.append(host)
     return APIResponse.genResponse(request, out)
 
@@ -88,8 +116,8 @@ async def gethosts(
 # ---------------------------------------------------------
 @router.post(
     "/{sitename}/hosts",
-    summary="Add or Update Host",
-    description=("Adds a new host in the database."),
+    summary="Add new host to the database. THIS IS INTERNAL API CALL FOR AGENTS TO ADD HOSTS.",
+    description=("Adds a new host in the database. THIS IS INTERNAL API CALL FOR AGENTS TO ADD HOSTS."),
     tags=["Hosts"],
     responses={
         **{
@@ -114,7 +142,7 @@ async def addhost(request: Request, item: HostItem, sitename: str = Path(..., de
     if not host:
         fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "HostData")
         fname = os.path.join(fpath, item.hostname, "hostinfo.json")
-        out = {"hostname": item.hostname, "ip": item.ip, "insertdate": item.insertTime or getUTCnow(), "updatedate": item.updateTime or getUTCnow(), "hostinfo": fname}
+        out = {"hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": fname}
         dumpFileContentAsJson(fname, item.dict())
         deps["dbI"].insert("hosts", [out])
     else:
@@ -126,12 +154,12 @@ async def addhost(request: Request, item: HostItem, sitename: str = Path(..., de
 # ---------------------------------------------------------
 @router.put(
     "/{sitename}/hosts",
-    summary="Update Host",
-    description=("Updates an existing host in the database."),
+    summary="Update Host in Database. THIS IS INTERNAL API CALL FOR AGENTS TO UPDATE HOSTS.",
+    description=("Updates an existing host in the database. THIS IS INTERNAL API CALL FOR AGENTS TO UPDATE HOSTS."),
     tags=["Hosts"],
     responses={
         **{
-            200: {"description": "Host updated successfully", "content": {"application/json": {"example": {"Status": "UPDATED"}}}},
+            200: {"description": "Host updated successfully", "content": {"application/json": {"example": {"status": "UPDATED"}}}},
             404: {
                 "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Host does not exist in the database.",
                 "content": {
@@ -155,12 +183,12 @@ async def updatehost(request: Request, item: HostItem, sitename: str = Path(...,
     if host:
         fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "HostData")
         fname = os.path.join(fpath, item.hostname, "hostinfo.json")
-        out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": item.insertTime or getUTCnow(), "updatedate": item.updateTime or getUTCnow(), "hostinfo": fname}
+        out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": fname}
         dumpFileContentAsJson(fname, item.dict())
         deps["dbI"].update("hosts", [out])
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This host is not in db. Use POST to add new host.")
-    return APIResponse.genResponse(request, {"Status": "UPDATED"})
+    return APIResponse.genResponse(request, {"status": "UPDATED"})
 
 
 # delete (DELETE)
@@ -172,7 +200,7 @@ async def updatehost(request: Request, item: HostItem, sitename: str = Path(...,
     tags=["Hosts"],
     responses={
         **{
-            200: {"description": "Host deleted successfully", "content": {"application/json": {"example": {"Status": "DELETED"}}}},
+            200: {"description": "Host deleted successfully", "content": {"application/json": {"example": {"status": "DELETED"}}}},
             404: {
                 "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Host does not exist in the database.",
                 "content": {
@@ -202,4 +230,4 @@ async def deletehost(request: Request, item: HostItem, sitename: str = Path(...,
         deps["dbI"].delete("hosts", [["id", host[0]["id"]]])
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This host is not in db. Why to delete non-existing host?")
-    return APIResponse.genResponse(request, {"Status": "DELETED"})
+    return APIResponse.genResponse(request, {"status": "DELETED"})

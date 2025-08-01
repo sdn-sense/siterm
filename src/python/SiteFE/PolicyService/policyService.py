@@ -31,6 +31,7 @@ from SiteRMLibs.CustomExceptions import (
     ServiceNotReady,
     WrongIPAddress,
 )
+from SiteRMLibs.DefaultParams import DELTA_COMMIT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     contentDB,
@@ -717,15 +718,13 @@ class PolicyService(RDFHelper, Timing, BWService):
     def topLevelDeltaState(self):
         """Identify and set top level delta state"""
         for key, vals in self.newActive["output"].get("vsw", {}).items():
-            for reqkey, reqdict in vals.items():
-                if reqkey == "_params":
-                    continue
-                # TODO Ignore keys hasService should depend on switch configuration
-                # if QoS is enabled or not.
-                tmpstates = dictSearch("networkstatus", reqdict, [], ["hasService"])
+            if "_params" in vals:
+                tmpcopy = copy.deepcopy(vals)
+                del tmpcopy["_params"]
+                tmpstates = dictSearch("networkstatus", tmpcopy, [], ["hasService"])
                 globst = self.identifyglobalstate(tmpstates)
-                if "_params" in vals:
-                    self.newActive["output"]["vsw"][key]["_params"]["networkstatus"] = globst
+                self.logger.debug(f"Identified global state for {key} as {globst}. All states: {tmpstates}")
+                self.newActive["output"]["vsw"][key]["_params"]["networkstatus"] = globst
 
     def recordDeltaStates(self):
         """Record delta states in activeDeltas output"""
@@ -761,16 +760,8 @@ class PolicyService(RDFHelper, Timing, BWService):
             # 1. Get delta content for reduction, addition
             # 2. Add into model and see if it overlaps with any
             delta["content"] = evaldict(delta["content"])
-            for key in ["reduction", "addition"]:
-                if delta.get("content", {}).get(key, {}):
-                    with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
-                        tmpFile = fd.name
-                        try:
-                            fd.write(delta["content"][key])
-                        except ValueError:
-                            fd.write(decodebase64(delta["content"][key]))
-                    currentGraph = self.deltaToModel(currentGraph, tmpFile, key)
-                    os.unlink(tmpFile)
+            # 3. Add to current graph
+            currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
             # Now we parse new model and generate new currentActive config
             self.newActive["output"] = self.parseModel(currentGraph)
             modelParseRan = True
@@ -892,6 +883,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         """Start Policy Service."""
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started")
+        speedup = False
         fnewdir = os.path.join(self.config.get(self.sitename, "privatedir"), "PolicyService", "httpnew")
         ffinishdir = os.path.join(
             self.config.get(self.sitename, "privatedir"),
@@ -908,7 +900,9 @@ class PolicyService(RDFHelper, Timing, BWService):
             # Write output to a new file in finished directory
             self.siteDB.saveContent(os.path.join(ffinishdir, fname), out)
             self.siteDB.removeFile(fullpath)
+            speedup = True
         self.logger.info("Component PolicyService Finished")
+        return speedup
 
     def deltaToModel(self, currentGraph, deltaPath, action):
         """Add delta to current Model. If no delta provided, returns current Model"""
@@ -926,10 +920,48 @@ class PolicyService(RDFHelper, Timing, BWService):
                 raise Exception(f"Unknown delta action. Action submitted {action}")
         return currentGraph
 
+    def _addDeltasToModel(self, currentGraph, deltaContent):
+        """Add deltas to current graph."""
+        for key, value in deltaContent.items():
+            if not value:
+                continue
+            if key not in ["reduction", "addition"]:
+                continue
+            self.logger.debug(f"Adding Content {value} for key {key}")
+            with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
+                tmpFile = fd.name
+                try:
+                    fd.write(value)
+                except ValueError:
+                    fd.write(decodebase64(value))
+            currentGraph = self.deltaToModel(currentGraph, tmpFile, key)
+            os.unlink(tmpFile)
+        return currentGraph
+
+    def _addAllPendingDeltas(self, currentGraph):
+        """Add all accepted deltas to the current graph."""
+        self.logger.info(f"Adding all accepted deltas to the current graph, not older than {DELTA_COMMIT_TIMEOUT} seconds")
+        for delta in self.dbI.get("deltas", search=[["state", "accepted"], ["insertdate", ">", getUTCnow() - DELTA_COMMIT_TIMEOUT]], limit=50):
+            delta["content"] = evaldict(delta["content"])
+            self.logger.debug(f"Adding delta {delta['uid']} to current graph")
+            currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
+        # We also need to add all committing, committed, activating
+        for state in ["committing", "committed", "activating"]:
+            self.logger.info(f"Adding all {state} deltas to the current graph")
+            # We limit to 50 deltas, so we do not overload the system
+            # This is needed for cases when we have multiple deltas in committing state
+            # and we want to apply them all at once.
+            for delta in self.dbI.get("deltas", search=[["state", state]], limit=50):
+                delta["content"] = evaldict(delta["content"])
+                self.logger.debug(f"Adding delta {delta['uid']} to current graph")
+                currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
+        return currentGraph
+
     def acceptDelta(self, deltapath):
         """Accept delta."""
         self._refreshHosts()
         currentGraph = self.deltaToModel(None, None, None)
+        currentGraph = self._addAllPendingDeltas(currentGraph)
         self.currentActive = getActiveDeltas(self)
         self.newActive = {"output": {}}
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
@@ -940,17 +972,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         toDict["Type"] = "submission"
         toDict["modadd"] = "idle"
         try:
-            for key in ["reduction", "addition"]:
-                if toDict.get("Content", {}).get(key, {}):
-                    self.logger.debug(f"Got Content {toDict['Content'][key]} for key {key}")
-                    with tempfile.NamedTemporaryFile(delete=False, mode="w+") as fd:
-                        tmpFile = fd.name
-                        try:
-                            fd.write(toDict["Content"][key])
-                        except ValueError:
-                            fd.write(decodebase64(toDict["Content"][key]))
-                    currentGraph = self.deltaToModel(currentGraph, tmpFile, key)
-                    os.unlink(tmpFile)
+            self._addDeltasToModel(currentGraph, toDict.get("content", {}))
             self.newActive["output"] = self.parseModel(currentGraph)
             try:
                 self.conflictChecker.checkConflicts(self, self.newActive["output"], self.currentActive["output"], True)
@@ -966,7 +988,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             self.stateMachine.failed(self.dbI, toDict)
         else:
             toDict["State"] = "accepted"
-            self.stateMachine.accepted(self.dbI, toDict)
+            self.stateMachine.accepting(self.dbI, toDict)
             # =================================
         return toDict
 
@@ -986,7 +1008,7 @@ def execute(config=None, args=None):
                 if not delta:
                     raise Exception(f"Delta {args.deltaid} not found in database")
                 delta = delta[0]
-                delta["Content"] = evaldict(delta["content"])
+                delta["content"] = evaldict(delta["content"])
                 tmpfd = tempfile.NamedTemporaryFile(delete=False, mode="w+")
                 tmpfd.close()
                 policer.siteDB.saveContent(tmpfd.name, delta)

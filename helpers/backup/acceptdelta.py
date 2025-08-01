@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """Change delta state to activating."""
+import ast
 import sys
 import tempfile
-import ast
-from SiteRMLibs.MainUtilities import getVal
-from SiteRMLibs.MainUtilities import evaldict
-from SiteRMLibs.MainUtilities import contentDB
-from SiteRMLibs.MainUtilities import getConfig, getStreamLogger
-from SiteRMLibs.FECalls import getDBConn
-from SiteFE.PolicyService.stateMachine import StateMachine
+
 from SiteFE.PolicyService import policyService as polS
+from SiteFE.PolicyService.stateMachine import StateMachine
+from SiteRMLibs.FECalls import getDBConn
+from SiteRMLibs.MainUtilities import (
+    contentDB,
+    evaldict,
+    getConfig,
+    getStreamLogger,
+    getVal,
+)
 
 CONFIG = getConfig()
 LOGGER = getStreamLogger()
@@ -29,9 +33,9 @@ def getdeltaAll(sitename, deltaUID):
     tmpFile.close()
     outContent = {
         "ID": delta["uid"],
-        "InsertTime": delta["insertdate"],
-        "UpdateTime": delta["updatedate"],
-        "Content": ast.literal_eval(str(delta["content"])),
+        "insertdate": delta["insertdate"],
+        "updatedate": delta["updatedate"],
+        "content": ast.literal_eval(str(delta["content"])),
         "State": "accepting",
         "modelId": delta["modelid"],
     }
@@ -68,9 +72,7 @@ def getdeltainfo(sitename, deltaUID):
         LOGGER.info("-" * 20)
         LOGGER.info("Delta times")
         for deltatimes in dbobj.get("states", search=[["deltaid", delta["uid"]]]):
-            LOGGER.info(
-                "State: %s Date: %s", deltatimes["state"], deltatimes["insertdate"]
-            )
+            LOGGER.info("State: %s Date: %s", deltatimes["state"], deltatimes["insertdate"])
         if delta["deltat"] in ["reduction", "addition"]:
             for hostname in list(delta[delta["deltat"]]["hosts"].keys()):
                 LOGGER.info("-" * 20)

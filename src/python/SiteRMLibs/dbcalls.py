@@ -132,7 +132,7 @@ create_snmpmon = """CREATE TABLE IF NOT EXISTS snmpmon(
                           hostname text NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
-                          output longtext NOT NULL,
+                          output json NOT NULL,
                           primary key(id))"""
 create_deltatimestates = """CREATE TABLE IF NOT EXISTS deltatimestates(
                              id int auto_increment,

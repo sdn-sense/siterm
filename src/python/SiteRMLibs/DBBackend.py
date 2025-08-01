@@ -69,7 +69,7 @@ class DBBackend:
         ]
 
     @staticmethod
-    def __checkConnection(cursor):
+    def checkConnection(cursor):
         """Check if connection is available."""
         # Check that the connection was successful
         cursor.execute("SELECT 1")
@@ -94,7 +94,7 @@ class DBBackend:
                 cursorclass=pymysql.cursors.Cursor,
             )
             cursor = conn.cursor()
-            self.__checkConnection(cursor)
+            self.checkConnection(cursor)
             try:
                 yield conn, cursor
             finally:
@@ -244,6 +244,19 @@ class dbinterface:
             err = f"Called {callaction}_{calltype}, but got exception {str(ex)}"
             raise AttributeError(err) from ex
         return callquery
+
+    def isDBReady(self):
+        """Check if database is ready."""
+        try:
+            with self.db.get_connection() as (_conn, cursor):
+                self.db.checkConnection(cursor)
+            return True
+        except pymysql.MySQLError as ex:
+            print(f"Database is not ready. Error: {ex}")
+            return False
+        except Exception as ex:
+            print(f"Unexpected error while checking database readiness: {ex}")
+            return False
 
     # =====================================================
     #  HERE GOES GET CALLS

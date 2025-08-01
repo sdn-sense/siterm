@@ -20,78 +20,8 @@ Date                    : 2018/11/26
 """
 import json
 
-from SiteRMLibs.MainUtilities import evaldict, getLoggingObject, getUTCnow
-
-
-class ConnectionMachine:
-    """Connection State machine.Maps Deltas with 1 to N connections"""
-
-    def __init__(self, config):
-        self.config = config
-        self.logger = getLoggingObject(config=self.config, service="PolicyService")
-
-    @staticmethod
-    def accepted(dbObj, delta):
-        """If delta addition and accepted - add connection entry in DB"""
-        if delta["deltat"] in ["addition", "modify"] and delta["state"] in [
-            "accepting",
-            "accepted",
-        ]:
-            for connid in evaldict(delta["connectionid"]):
-                dbOut = {
-                    "deltaid": delta["uid"],
-                    "connectionid": connid,
-                    "state": "accepted",
-                }
-                dbObj.insert("delta_connections", [dbOut])
-
-    @staticmethod
-    def committed(dbObj, delta):
-        """Change specific delta connection id state to commited."""
-        if delta["deltat"] in ["addition", "modify"]:
-            for connid in evaldict(delta["connectionid"]):
-                dbOut = {
-                    "deltaid": delta["uid"],
-                    "connectionid": connid,
-                    "state": "committed",
-                }
-                dbObj.update("delta_connections", [dbOut])
-
-    @staticmethod
-    def activating(dbObj, delta):
-        """Change specific delta connection id state to commited."""
-        if delta["deltat"] in ["addition", "modify"]:
-            for connid in evaldict(delta["connectionid"]):
-                dbOut = {
-                    "deltaid": delta["uid"],
-                    "connectionid": connid,
-                    "state": "activating",
-                }
-                dbObj.update("delta_connections", [dbOut])
-
-    @staticmethod
-    def activated(dbObj, delta):
-        """Change specific delta connection id state to activated. Reduction - cancelled"""
-        if delta["deltat"] in ["addition", "modify"]:
-            for connid in evaldict(delta["connectionid"]):
-                dbOut = {
-                    "deltaid": delta["uid"],
-                    "connectionid": connid,
-                    "state": "activated",
-                }
-                dbObj.update("delta_connections", [dbOut])
-        elif delta["deltat"] == "reduction":
-            for connid in evaldict(delta["connectionid"]):
-                for dConn in dbObj.get(
-                    "delta_connections",
-                    search=[["connectionid", connid], ["state", "activated"]],
-                ):
-                    dbOut = {
-                        "deltaid": dConn["deltaid"],
-                        "connectionid": dConn["connectionid"],
-                        "state": "cancelled",
-                    }
-                    dbObj.update("delta_connections", [dbOut])
+from SiteRMLibs.DefaultParams import DELTA_COMMIT_TIMEOUT, DELTA_REMOVE_TIMEOUT
+from SiteRMLibs.MainUtilities import getLoggingObject, getUTCnow
 
 
 class StateMachine:
@@ -101,7 +31,6 @@ class StateMachine:
         self.config = config
         self.logger = getLoggingObject(config=self.config, service="PolicyService")
         self.limit = 100
-        self.connMgr = ConnectionMachine(config)
 
     def stateChangerDelta(self, dbObj, newState, **kwargs):
         """Delta State change."""
@@ -133,23 +62,29 @@ class StateMachine:
         """Add new delta to db."""
         dbOut = {
             "uid": delta["ID"],
-            "insertdate": int(delta["InsertTime"]),
-            "updatedate": int(delta["UpdateTime"]),
+            "insertdate": int(delta["insertdate"]),
+            "updatedate": int(delta["updatedate"]),
             "state": str(state),
             "deltat": str(delta["Type"]),
-            "content": json.dumps(delta["Content"]),
+            "content": json.dumps(delta["content"]),
             "modelid": str(delta["modelId"]),
             "modadd": str(delta["modadd"]),
             "error": "" if "Error" not in list(delta.keys()) else str(delta["Error"]),
         }
         dbObj.insert("deltas", [dbOut])
-        self.connMgr.accepted(dbObj, dbOut)
         dbOut["state"] = delta["State"]
         self.stateChangerDelta(dbObj, delta["State"], **dbOut)
 
-    def accepted(self, dbObj, delta):
-        """Marks delta as accepting."""
-        self._newdelta(dbObj, delta, "accepting")
+    def accepting(self, dbObj, delta):
+        """Marks delta as accepted."""
+        self._newdelta(dbObj, delta, "accepted")
+
+    def accepted(self, dbObj):
+        """Marks delta as accepted."""
+        # Get all deltas in accepted state and check timeout
+        for dbentry in dbObj.get("deltas", search=[["state", "accepted"], ["insertdate", "<", getUTCnow() - DELTA_COMMIT_TIMEOUT]], limit=50):
+            self.logger.info(f"Delta {dbentry['uid']} is in accepted state for more than {DELTA_COMMIT_TIMEOUT} seconds. Changing to remove state.")
+            self.stateChangerDelta(dbObj, "remove", **dbentry)
 
     def commit(self, dbObj, delta):
         """Marks delta as committing."""
@@ -168,7 +103,6 @@ class StateMachine:
         for delta in dbObj.get("deltas", search=[["state", "committing"]]):
             self.stateChangerDelta(dbObj, "committed", **delta)
             self.modelstatechanger(dbObj, "add", **delta)
-            self.connMgr.committed(dbObj, delta)
 
     def committed(self, dbObj):
         """Committed state Check."""
@@ -192,10 +126,9 @@ class StateMachine:
     def remove(self, dbObj):
         """Check on all remove state deltas."""
         # Remove fully from database
-        for delta in dbObj.get("deltas", search=[["state", "remove"]]):
-            if delta["updatedate"] < int(getUTCnow() - 600):
-                self.stateChangerDelta(dbObj, "removed", **delta)
-                self.modelstatecancel(dbObj, **delta)
+        for delta in dbObj.get("deltas", search=[["state", "remove"], ["updatedate", "<", int(getUTCnow() - DELTA_REMOVE_TIMEOUT)]]):
+            self.stateChangerDelta(dbObj, "removed", **delta)
+            self.modelstatecancel(dbObj, **delta)
 
     def removed(self, dbObj):
         """Check on all remove state deltas."""

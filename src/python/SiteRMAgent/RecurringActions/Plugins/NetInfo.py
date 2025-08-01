@@ -6,20 +6,27 @@ Authors:
 
 Date: 2022/01/29
 """
-import os
 import copy
 import ipaddress
+import os
 import pprint
 
 from pyroute2 import IPRoute
-from SiteRMLibs.ipaddr import replaceSpecialSymbols
-from SiteRMLibs.ipaddr import getIfAddrStats
-from SiteRMLibs.MainUtilities import (evaldict, externalCommand, getFileContentAsJson)
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.BWService import BWService
-from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.ipaddr import getInterfaceSpeed, getIfInterfaceReady
 from SiteRMLibs.CustomExceptions import NotFoundError
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.ipaddr import (
+    getIfAddrStats,
+    getIfInterfaceReady,
+    getInterfaceSpeed,
+    replaceSpecialSymbols,
+)
+from SiteRMLibs.MainUtilities import (
+    evaldict,
+    externalCommand,
+    getFileContentAsJson,
+    getLoggingObject,
+)
 
 
 def str2bool(val):
@@ -51,9 +58,7 @@ def ipv6_netmask_to_prefix_length(netmask):
         # Expand the netmask to full form
         expanded_netmask = expand_ipv6(netmask)
         # Remove the colons and convert each hexadecimal block to its binary representation
-        binary_str = "".join(
-            [bin(int(block, 16))[2:].zfill(16) for block in expanded_netmask.split(":")]
-        )
+        binary_str = "".join([bin(int(block, 16))[2:].zfill(16) for block in expanded_netmask.split(":")])
         # Count the number of '1' bits in the binary string
         prefix_length = binary_str.count("1")
         return prefix_length
@@ -66,9 +71,7 @@ class NetInfo(BWService):
 
     def __init__(self, config=None, logger=None):
         self.config = config if config else getGitConfig()
-        self.logger = (
-            logger if logger else getLoggingObject(config=self.config, service="Agent")
-        )
+        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
         self.activeDeltas = {}
         self.warningscounters = {}
         self.errors = []
@@ -112,9 +115,7 @@ class NetInfo(BWService):
         """Get interface name and vlan id belonging to it"""
         out = {}
         if not os.path.isfile("/proc/net/vlan/config"):
-            self.logger.warning(
-                "No /proc/net/vlan/config file found. Will not get vlan information"
-            )
+            self.logger.warning("No /proc/net/vlan/config file found. Will not get vlan information")
             return out
         with open("/proc/net/vlan/config", "r", encoding="utf-8") as fd:
             vlanconf = fd.read()
@@ -166,9 +167,7 @@ class NetInfo(BWService):
             nicInfo["vlan_range"] = self.config.get(intf, "vlan_range")
             nicInfo["vlan_range_list"] = self.config.get(intf, "vlan_range_list")
             if self.config.has_option(intf, "port"):
-                nicInfo["switch_port"] = replaceSpecialSymbols(
-                    str(self.config.get(intf, "port"))
-                )
+                nicInfo["switch_port"] = replaceSpecialSymbols(str(self.config.get(intf, "port")))
             if self.config.has_option(intf, "switch"):
                 nicInfo["switch"] = str(self.config.get(intf, "switch"))
             nicInfo["shared"] = str2bool(self.config.get(intf, "shared"))
@@ -176,29 +175,12 @@ class NetInfo(BWService):
             # Bandwidth parameters
             nicInfo.setdefault("bwParams", {})
             nicInfo["bwParams"]["unit"] = "mbit"
-            nicInfo["bwParams"]["type"] = self.config.get(intf, "bwParams").get(
-                "type", "guaranteedCapped"
-            )
-            nicInfo["bwParams"]["priority"] = self.config.get(intf, "bwParams").get(
-                "priority", 0
-            )
-            nicInfo["bwParams"]["reservedCapacity"] = int(
-                self.config.get(intf, "bwParams").get("reservedCapacity", 1000)
-            )
-            nicInfo["bwParams"]["minimumCapacity"] = int(
-                self.config.get(intf, "bwParams").get("minimumCapacity", 100)
-            )
-            nicInfo["bwParams"]["maximumCapacity"] = (
-                int(
-                    self.config.get(intf, "bwParams").get(
-                        "maximumCapacity", getInterfaceSpeed(intf)
-                    )
-                )
-                - nicInfo["bwParams"]["reservedCapacity"]
-            )
-            nicInfo["bwParams"]["granularity"] = int(
-                self.config.get(intf, "bwParams").get("granularity", 100)
-            )
+            nicInfo["bwParams"]["type"] = self.config.get(intf, "bwParams").get("type", "guaranteedCapped")
+            nicInfo["bwParams"]["priority"] = self.config.get(intf, "bwParams").get("priority", 0)
+            nicInfo["bwParams"]["reservedCapacity"] = int(self.config.get(intf, "bwParams").get("reservedCapacity", 1000))
+            nicInfo["bwParams"]["minimumCapacity"] = int(self.config.get(intf, "bwParams").get("minimumCapacity", 100))
+            nicInfo["bwParams"]["maximumCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", getInterfaceSpeed(intf))) - nicInfo["bwParams"]["reservedCapacity"]
+            nicInfo["bwParams"]["granularity"] = int(self.config.get(intf, "bwParams").get("granularity", 100))
             reservedCap = self.bwCalculatereservableServer(
                 self.config.config["MAIN"],
                 self.config.get("agent", "hostname"),
@@ -206,12 +188,8 @@ class NetInfo(BWService):
                 nicInfo["bwParams"]["maximumCapacity"],
             )
             nicInfo["bwParams"]["availableCapacity"] = reservedCap
-            nicInfo["bwParams"]["reservableCapacity"] = nicInfo["bwParams"][
-                "maximumCapacity"
-            ]
-            nicInfo["bwParams"]["usedCapacity"] = (
-                nicInfo["bwParams"]["maximumCapacity"] - reservedCap
-            )
+            nicInfo["bwParams"]["reservableCapacity"] = nicInfo["bwParams"]["maximumCapacity"]
+            nicInfo["bwParams"]["usedCapacity"] = nicInfo["bwParams"]["maximumCapacity"] - reservedCap
         return netInfo
 
     def _getintfstats(self, netInfo):
@@ -219,7 +197,7 @@ class NetInfo(BWService):
         privVlans = self.getvlans()
         tmpifAddr, tmpifStats = getIfAddrStats()
         nics = externalCommand("ip -br a")
-        for nicline in nics[0].decode("UTF-8").split("\n"):
+        for nicline in nics[0].split("\n"):
             if not nicline:
                 continue
             nictmp = nicline.split()[0].split("@")
@@ -250,17 +228,13 @@ class NetInfo(BWService):
                 }
                 if int(vals.family.value) in [2, 10] and vals.address and vals.netmask:
                     try:
-                        ipwithnetmask = ipaddress.ip_interface(
-                            f"{vals.address}/{netmask}"
-                        )
+                        ipwithnetmask = ipaddress.ip_interface(f"{vals.address}/{netmask}")
                         if isinstance(ipwithnetmask, ipaddress.IPv4Interface):
                             familyInfo["ipv4-address"] = str(ipwithnetmask)
                         elif isinstance(ipwithnetmask, ipaddress.IPv6Interface):
                             familyInfo["ipv6-address"] = str(ipwithnetmask)
                         else:
-                            self.logger.debug(
-                                f"This type was not understood by the system. Type: {type(ipwithnetmask)} and value: {str(ipwithnetmask)}"
-                            )
+                            self.logger.debug(f"This type was not understood by the system. Type: {type(ipwithnetmask)} and value: {str(ipwithnetmask)}")
                     except ValueError:
                         continue
                 elif int(vals.family.value) in [17]:
@@ -276,10 +250,8 @@ class NetInfo(BWService):
                     # More detail information about all types here:
                     # http://lxr.free-electrons.qcom/source/include/uapi/linux/if_arp.h
                     nicType = externalCommand("cat /sys/class/net/" + nic + "/type")
-                    familyInfo["Type"] = nicType[0].decode("UTF-8").strip()
-                    txQueueLen = externalCommand(
-                        "cat /sys/class/net/" + nic + "/tx_queue_len"
-                    )
+                    familyInfo["Type"] = nicType[0].strip()
+                    txQueueLen = externalCommand("cat /sys/class/net/" + nic + "/tx_queue_len")
                     familyInfo["txqueuelen"] = txQueueLen[0].strip()
                 nicInfo[str(vals.family.value)].append(familyInfo)
         return netInfo
@@ -311,17 +283,15 @@ class NetInfo(BWService):
         """Get LLDP Info, if socket is available and lldpcli command does not raise exception"""
         try:
             lldpOut = externalCommand("lldpcli show neighbors -f json")
-            lldpObj = evaldict(lldpOut[0].decode("utf-8"))
+            lldpObj = evaldict(lldpOut[0])
             if not lldpObj:
                 self.logger.debug("No LLDP information found. lldpcli show neighbors -f json returned empty.")
                 self.addError("LLDP information not found. lldpcli show neighbors -f json returned empty.")
                 return {}
             # Check lldpOut errors
             if len(lldpOut) > 1 and lldpOut[2].strip():
-                self.logger.debug(
-                    f"lldpcli show neighbors -f json returned error: {lldpOut[2].decode('utf-8')}"
-                )
-                self.addError(f"lldpcli show neighbors -f json returned error: {lldpOut[2].decode('utf-8')}")
+                self.logger.debug(f"lldpcli show neighbors -f json returned error: {lldpOut[2]}")
+                self.addError(f"lldpcli show neighbors -f json returned error: {lldpOut[2]}")
             out = {}
             for item in lldpObj.get("lldp", {}).get("interface", []):
                 for intf, vals in item.items():
@@ -344,9 +314,7 @@ class NetInfo(BWService):
                         }
             return out
         except Exception as ex:
-            self.logger.debug(
-                "Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?"
-            )
+            self.logger.debug("Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?")
             self.addError(f"Failed to get lldp information. Exception: {str(ex)}")
             self.logger.debug(f"Exception: {ex}")
         return {}
@@ -377,19 +345,13 @@ class NetInfo(BWService):
         for key, intfData in data.get("NetInfo", {}).get("interfaces", {}).items():
             # This will not raise exception, as this info can come from Kubernetes.
             if not intfData.get("switch_port"):
-                self.logger.error(
-                    f"Interface {key} has no switch port defined, nor was available from Kube (in case Kube install)!"
-                )
+                self.logger.error(f"Interface {key} has no switch port defined, nor was available from Kube (in case Kube install)!")
             if not intfData.get("switch"):
-                self.logger.error(
-                    f"Interface {key} has no switch defined, nor was available from Kube (in case Kube install)!"
-                )
+                self.logger.error(f"Interface {key} has no switch defined, nor was available from Kube (in case Kube install)!")
             # Check if there are any warnings to raise, e.g.:
             # -no remaining vlans in vlan_range_list
             # - bwParams over subscribed
-            if intfData.get("bwParams", {}).get(
-                "reservableCapacity", 0
-            ) <= intfData.get("bwParams", {}).get("minReservableCapacity", 0):
+            if intfData.get("bwParams", {}).get("reservableCapacity", 0) <= intfData.get("bwParams", {}).get("minReservableCapacity", 0):
                 errmsg = f"Interface {key} has no remaining reservable capacity! Over subscribed?"
                 self.addError(errmsg)
             vlanrange = copy.deepcopy(intfData.get("vlan_range_list", []))
@@ -404,9 +366,7 @@ class NetInfo(BWService):
                     if self.skipactivecheck:
                         continue
                     # Check if vlan comes from delta
-                    if vlanid not in self.activeDeltas.get("output", {}).get(
-                        "usedVLANs", {}
-                    ).get("deltas", {}).get(hostname, []):
+                    if vlanid not in self.activeDeltas.get("output", {}).get("usedVLANs", {}).get("deltas", {}).get(hostname, []):
                         errmsg = f"Vlan {vlanid} in interface {key} is not from delta! Manual provisioned or deletion failed?"
                         self.addError(errmsg)
                     vlanrange.remove(vlanid)

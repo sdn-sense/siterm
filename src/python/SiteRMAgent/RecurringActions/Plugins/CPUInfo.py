@@ -14,10 +14,12 @@ Date: 2022/01/29
 """
 import pprint
 
-from SiteRMLibs.MainUtilities import tryConvertToNumeric
-from SiteRMLibs.MainUtilities import externalCommand
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import (
+    externalCommand,
+    getLoggingObject,
+    tryConvertToNumeric,
+)
 
 
 class CPUInfo:
@@ -25,27 +27,21 @@ class CPUInfo:
 
     def __init__(self, config=None, logger=None):
         self.config = config if config else getGitConfig()
-        self.logger = (
-            logger if logger else getLoggingObject(config=self.config, service="Agent")
-        )
+        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
 
     def get(self, **_kwargs):
         """Get lscpu information"""
         cpuInfo = {}
         tmpOut = externalCommand("lscpu")
         for item in tmpOut:
-            for desc in item.decode("UTF-8").split("\n"):
+            for desc in item.split("\n"):
                 vals = desc.split(":")
                 if len(vals) == 2:
                     cpuInfo[vals[0].strip()] = tryConvertToNumeric(vals[1].strip())
         try:
-            cpuInfo["num_cores"] = int(cpuInfo["Socket(s)"]) * int(
-                cpuInfo["Core(s) per socket"]
-            )
+            cpuInfo["num_cores"] = int(cpuInfo["Socket(s)"]) * int(cpuInfo["Core(s) per socket"])
         except (ValueError, KeyError):
-            self.logger.warning(
-                f"Failed to calculate num_cores from {cpuInfo}. will set to 1"
-            )
+            self.logger.warning(f"Failed to calculate num_cores from {cpuInfo}. will set to 1")
             cpuInfo["num_cores"] = 1
         return cpuInfo
 

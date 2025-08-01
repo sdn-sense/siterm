@@ -83,25 +83,24 @@ def depGetModelContent(dbentry, **kwargs):
 
 def depGetModel(dbI, **kwargs):
     """Get all models."""
+    orderby = kwargs.get("orderby", ["insertdate", "DESC"])
     if not kwargs.get("modelID", None):
-        models = dbI.get("models", limit=kwargs.get("limit", 10), orderby=["insertdate", "DESC"])
+        models = dbI.get("models", limit=kwargs.get("limit", 10), orderby=orderby)
         if not models:
             raise ModelNotFound("No models in database. First time run?")
-        if kwargs.get("limit", 10) == 1:
-            return models[0]
         return models
     model = dbI.get("models", limit=1, search=[["uid", kwargs["modelID"]]])
     if not model:
         raise ModelNotFound(f"Model with {kwargs['modelID']} id was not found in the system")
-    return model[0]
+    return model
 
 
-def checkReadyState(checkignore: bool = False):
+def checkReadyState(deps):
     """Check if the system is ready for delta and model operations."""
-    if not checkignore:
-        if not (firstRunFinished("LookUpService") or firstRunFinished("ProvisioningService")):
-            return False
-    return True
+    if not (firstRunFinished("LookUpService") or firstRunFinished("ProvisioningService")):
+        return False
+    # Check database connection.
+    return deps["dbI"].isDBReady()
 
 
 def checkSite(deps, sitename: str):

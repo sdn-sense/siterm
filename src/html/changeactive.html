@@ -155,7 +155,7 @@
                         dropdown.appendChild(opt);
                       }}}})})}})}
 
-        function submitForm(formId) {
+          function submitForm(formId) {
             docObj = document.getElementById(formId);
             var params = {};
             for (var i = 0; i < docObj.elements.length; i++) {
@@ -167,19 +167,31 @@
                   params[fieldName] = Math.floor(date.getTime() / 1000);
                 } else {
                   params[fieldName] = fieldValue;
-                }}}
-            $.ajax({
-              type: "POST",
-              url: "/api/" + params['sitename'] + "/setinstancestartend",
-              data: params,
-              success: function (result) {
-                params['type'] = 'main';
-                newAlert("New change action request submitted: " + JSON.stringify(result), params);
-              },
-              error: function (jqXHR, textStatus, errorThrown) {
-                params['type'] = 'main';
-                newAlert("Error: " + textStatus + " - " + errorThrown + " - Status: " + jqXHR.status + " - Response: " + jqXHR.responseText, params, "alert-danger");
+                }
               }
+            }
+
+            fetch("/api/" + params['sitename'] + "/setinstancestartend", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(params)
+            })
+            .then(response => {
+              if (response.ok) {
+                return response.json();
+              } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
+            })
+            .then(result => {
+              params['type'] = 'main';
+              newAlert("New change action request submitted: " + JSON.stringify(result), params);
+            })
+            .catch(error => {
+              params['type'] = 'main';
+              newAlert("Error: " + error.message, params, "alert-danger");
             });
           }
           function load_data() {

@@ -287,8 +287,8 @@ class TestUtils(unittest.TestCase):
         dic = {
             "hostname": "unittest",
             "ip": "1.2.3.4",
-            "insertTime": getUTCnow(),
-            "updateTime": getUTCnow(),
+            "insertdate": getUTCnow(),
+            "updatedate": getUTCnow(),
             "NetInfo": {"unittest": "randomvalue"},
         }
         # Add Host
@@ -307,8 +307,8 @@ class TestUtils(unittest.TestCase):
         dic = {
             "hostname": "unittest",
             "ip": "1.2.3.4",
-            "insertTime": getUTCnow(),
-            "updateTime": getUTCnow(),
+            "insertdate": getUTCnow(),
+            "updatedate": getUTCnow(),
             "NetInfo": {"unittest": "randomvalue"},
         }
         # Add Host

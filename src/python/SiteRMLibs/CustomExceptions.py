@@ -45,6 +45,7 @@ def exceptionCode(excName):
         TooManyArgumentalValues: -31,
         NotSupportedArgument: -32,
         ServiceNotReady: -33,
+        HTTPServerNotReady: -34,
     }
     if excName in exCodes:
         return exCodes[excName]
@@ -191,3 +192,7 @@ class IssuesWithAuth(ExceptionTemplate):
 
 class ServiceNotReady(ExceptionTemplate):
     """Service Not Ready Error."""
+
+
+class HTTPServerNotReady(ExceptionTemplate):
+    """HTTP Server Not Ready Error."""
