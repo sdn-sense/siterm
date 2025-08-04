@@ -108,9 +108,12 @@ class GitConfig:
             raise Exception(f"Site {sitename} is not available in configuration. Will not start services")
         self.config["MAIN"][sitename].setdefault("default_params", {})
         for key1, val1 in defaults["default_params"].items():
-            self.config["MAIN"][sitename]["default_params"].setdefault(key1, {})
-            for key2, val2 in val1.items():
-                self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, self.__valReplacer(val2, "%%SITENAME%%", sitename))
+            if isinstance(val1, dict):
+                self.config["MAIN"][sitename]["default_params"].setdefault(key1, {})
+                for key2, val2 in val1.items():
+                    self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, self.__valReplacer(val2, "%%SITENAME%%", sitename))
+            else:
+                self.config["MAIN"][sitename]["default_params"][key1] = val1
 
     def __addSwitchDefaults(self, defaults):
         """Add default switch config parameters"""
