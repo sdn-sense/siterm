@@ -130,15 +130,15 @@ class GitConfig:
     def __addInterfaceDefaults(self, defaults):
         """Add default interface config parameters"""
         for interface in self.config.get("MAIN", {}).get("agent", {}).get("interfaces", []):
-            if interface not in self.config["MAIN"]["agent"]["interfaces"]:
-                self.config["MAIN"]["agent"]["interfaces"][interface] = {}
+            if interface not in self.config["MAIN"]:
+                self.config["MAIN"][interface] = {}
             for key1, val1 in defaults.items():
-                self.config["MAIN"]["agent"]["interfaces"][interface].setdefault(key1, {})
+                self.config["MAIN"][interface].setdefault(key1, {})
                 if isinstance(val1, dict):
                     for key2, val2 in val1.items():
-                        self.config["MAIN"]["agent"]["interfaces"][interface][key1].setdefault(key2, val2)
+                        self.config["MAIN"][interface][key1].setdefault(key2, val2)
                 else:
-                    self.config["MAIN"]["agent"]["interfaces"][interface][key1] = val1
+                    self.config["MAIN"][interface][key1] = val1
 
     def presetAgentDefaultConfigs(self):
         """Preset default config parameters for Agent"""

@@ -307,6 +307,8 @@ class Daemon(DBBackend):
         """Get log level."""
         if self.inargs.loglevel:
             return self.inargs.loglevel
+        if not self.config:
+            return "DEBUG"
         return self.config.get("general", "logLevel", "DEBUG")
 
     def startready(self):
