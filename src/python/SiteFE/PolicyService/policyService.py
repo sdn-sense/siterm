@@ -45,6 +45,7 @@ from SiteRMLibs.MainUtilities import (
     getDBConn,
     getFileContentAsJson,
     getLoggingObject,
+    getSiteNameFromConfig,
     getUTCnow,
     getVal,
     parseRDFFile,
@@ -91,9 +92,8 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.stateMachine = StateMachine(self.config)
         self.switch = Switch(config, sitename)
         self.hosts = {}
-        for siteName in self.config.get("general", "sites"):
-            workDir = os.path.join(self.config.get(siteName, "privatedir"), "PolicyService/")
-            createDirs(workDir)
+        workDir = os.path.join(self.config.get(sitename, "privatedir"), "PolicyService/")
+        createDirs(workDir)
         self.getSavedPrefixes()
         self.bidPorts = {}
         self.scannedPorts = {}
@@ -1019,9 +1019,8 @@ def execute(config=None, args=None):
                 out = policer.parseModel(newModel)
                 pprint.pprint(out)
         elif args.action == "fullRun":
-            for sitename in config.get("general", "sites"):
-                policer = PolicyService(config, sitename)
-                policer.startwork()
+            policer = PolicyService(config, getSiteNameFromConfig(config))
+            policer.startwork()
 
 
 def get_parser():

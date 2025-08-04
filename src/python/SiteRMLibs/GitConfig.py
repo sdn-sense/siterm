@@ -101,27 +101,31 @@ class GitConfig:
 
     def __addSiteDefaults(self, defaults):
         """Add default site config parameters"""
-        for sitename in self.config.get("MAIN", {}).get("general", {}).get("sites", []):
-            if sitename not in self.config["MAIN"]:
-                raise Exception(f"Site {sitename} is not available in configuration. Will not start services")
-            self.config["MAIN"][sitename].setdefault("default_params", {})
-            for key1, val1 in defaults["default_params"].items():
-                self.config["MAIN"][sitename]["default_params"].setdefault(key1, {})
-                for key2, val2 in val1.items():
-                    self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, self.__valReplacer(val2, "%%SITENAME%%", sitename))
+        sitename = self.config.get("MAIN", {}).get("general", {}).get("sitename", "")
+        if not sitename:
+            raise Exception("Sitename is not configured in configuration.")
+        if sitename not in self.config["MAIN"]:
+            raise Exception(f"Site {sitename} is not available in configuration. Will not start services")
+        self.config["MAIN"][sitename].setdefault("default_params", {})
+        for key1, val1 in defaults["default_params"].items():
+            self.config["MAIN"][sitename]["default_params"].setdefault(key1, {})
+            for key2, val2 in val1.items():
+                self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, self.__valReplacer(val2, "%%SITENAME%%", sitename))
 
     def __addSwitchDefaults(self, defaults):
         """Add default switch config parameters"""
-        for sitename in self.config.get("MAIN", {}).get("general", {}).get("sites", []):
-            for switch in self.config["MAIN"][sitename].get("switch", []):
-                for key1, val1 in defaults.items():
-                    self.config["MAIN"].setdefault(switch, {})
-                    if isinstance(val1, dict):
-                        self.config["MAIN"][switch].setdefault(key1, {})
-                        for key2, val2 in val1.items():
-                            self.config["MAIN"][switch][key1].setdefault(key2, self.__valReplacer(val2, "%%SWITCHNAME%%", switch))
-                    else:
-                        self.config["MAIN"][switch].setdefault(key1, self.__valReplacer(val1, "%%SWITCHNAME%%", switch))
+        sitename = self.config.get("MAIN", {}).get("general", {}).get("sitename", "")
+        if not sitename:
+            raise Exception("Sitename is not configured in configuration.")
+        for switch in self.config["MAIN"][sitename].get("switch", []):
+            for key1, val1 in defaults.items():
+                self.config["MAIN"].setdefault(switch, {})
+                if isinstance(val1, dict):
+                    self.config["MAIN"][switch].setdefault(key1, {})
+                    for key2, val2 in val1.items():
+                        self.config["MAIN"][switch][key1].setdefault(key2, self.__valReplacer(val2, "%%SWITCHNAME%%", switch))
+                else:
+                    self.config["MAIN"][switch].setdefault(key1, self.__valReplacer(val1, "%%SWITCHNAME%%", switch))
 
     def __addInterfaceDefaults(self, defaults):
         """Add default interface config parameters"""

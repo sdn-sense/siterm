@@ -9,22 +9,24 @@ Changes applied to this code:
 """
 import sys
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
+from SiteRMLibs.MainUtilities import getSiteNameFromConfig
 from SiteRMAgent.RecurringActions.DTNMain import RecurringAction
 
 COMPONENT = 'Agent'
 DESCRIPTION = "Agent gathers all information about DTN and publishes it to Frontend."
 DAEMON = None
 
+
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
-        for sitename in self.config.get('general', 'sitename'):
-            if sitename not in self.runThreads:
-                recAgent = RecurringAction(self.config, sitename)
-                self.runThreads[sitename] = recAgent
-            self.runThreads[sitename].refreshthread()
+        sitename = getSiteNameFromConfig(self.config)
+        if sitename not in self.runThreads:
+            recAgent = RecurringAction(self.config, sitename)
+            self.runThreads[sitename] = recAgent
+        self.runThreads[sitename].refreshthread()
 
 
 if __name__ == "__main__":

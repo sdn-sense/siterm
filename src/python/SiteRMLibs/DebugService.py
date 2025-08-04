@@ -33,7 +33,7 @@ class DebugService:
         self.logger = getLoggingObject(config=self.config, service="DebugService")
         self.workDir = self.config.get("general", "privatedir") + "/SiteRM/background/"
         createDirs(self.workDir)
-        fullURL = getFullUrl(self.config, sitename)
+        fullURL = getFullUrl(self.config)
         self.requestHandler = Requests(url=fullURL, logger=self.logger)
 
     def publishToFE(self, inDic):

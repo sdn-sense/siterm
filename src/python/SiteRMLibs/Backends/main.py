@@ -9,6 +9,7 @@ Authors:
 Date: 2021/12/01
 """
 import time
+
 from SiteRMLibs.Backends.Ansible import Switch as Ansible
 from SiteRMLibs.Backends.generalFunctions import (
     checkConfig,
@@ -18,12 +19,13 @@ from SiteRMLibs.Backends.generalFunctions import (
 )
 from SiteRMLibs.Backends.NodeInfo import Node
 from SiteRMLibs.Backends.Raw import Switch as Raw
-from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.MainUtilities import (
     evaldict,
     getDBConn,
     getLoggingObject,
+    getSiteNameFromConfig,
     getUTCnow,
     jsondumps,
 )
@@ -57,9 +59,7 @@ class Switch(Node):
         elif self.config[site]["plugin"] == "raw":
             self.plugin = Raw(self.config, self.site)
         else:
-            raise Exception(
-                f"Plugin {self.config[site]['plugin']} is not supported. Contact Support"
-            )
+            raise Exception(f"Plugin {self.config[site]['plugin']} is not supported. Contact Support")
 
     def getWarnings(self):
         """Get Warnings"""
@@ -81,40 +81,28 @@ class Switch(Node):
     def _cleanOutput(self):
         """Clean output"""
         self.warnings = []
-        self.output = {
-            "switches": {},
-            "ports": {},
-            "vlans": {},
-            "routes": {},
-            "lldp": {},
-            "info": {},
-            "portMapping": {},
-            "nametomac": {},
-            "mactable": {}
-        }
+        self.output = {"switches": {}, "ports": {}, "vlans": {}, "routes": {}, "lldp": {}, "info": {}, "portMapping": {}, "nametomac": {}, "mactable": {}}
 
     def deviceUpdate(self, site=None, device=None):
         """Update all devices information."""
         self.logger.info("Forcefully update all device information")
-        for siteName in self.config.get("general", "sites"):
-            if site and siteName != site:
+        sitename = getSiteNameFromConfig(self.config)
+        if site and sitename != site:
+            return
+        for dev in self.config.get(sitename, "switch"):
+            if device and dev != device:
                 continue
-            for dev in self.config.get(siteName, "switch"):
-                if device and dev != device:
-                    continue
-                fname = f"{self.config.get(siteName, 'privatedir')}/SwitchWorker/{dev}.update"
-                self.logger.info(
-                    f"Set Update flag for device {dev} {siteName}, {fname}"
-                )
-                success = False
-                while not success:
-                    try:
-                        with open(fname, "w", encoding="utf-8") as fd:
-                            fd.write(str(getUTCnow()))
-                            success = True
-                    except OSError as ex:
-                        self.logger.error(f"Got OS Error writing {fname}. {ex}")
-                        time.sleep(1)
+            fname = f"{self.config.get(sitename, 'privatedir')}/SwitchWorker/{dev}.update"
+            self.logger.info(f"Set Update flag for device {dev} {sitename}, {fname}")
+            success = False
+            while not success:
+                try:
+                    with open(fname, "w", encoding="utf-8") as fd:
+                        fd.write(str(getUTCnow()))
+                        success = True
+                except OSError as ex:
+                    self.logger.error(f"Got OS Error writing {fname}. {ex}")
+                    time.sleep(1)
 
     def _delPortFromOut(self, switch, portname):
         """Delete Port from Output"""
@@ -252,9 +240,7 @@ class Switch(Node):
             }
             if switch not in self.switches["output"]:
                 out["insertdate"] = getUTCnow()
-                self.logger.debug(
-                    f"No switches {switch} in database. Calling to add error."
-                )
+                self.logger.debug(f"No switches {switch} in database. Calling to add error.")
                 self.logger.debug(f"Error: {errmsg}")
                 self.dbI.insert("switch_error", [out])
             else:
@@ -298,35 +284,20 @@ class Switch(Node):
         vlans = self.plugin.getvlans(self.switches["output"][switch])
         for port in list(list(ports) + list(vlans)):
             if port in portsIgn:
-                self.logger.debug(
-                    f"Port {switch}{port} ignored. It is under site configuration to ignore this port"
-                )
+                self.logger.debug(f"Port {switch}{port} ignored. It is under site configuration to ignore this port")
                 self._delPortFromOut(switch, port)
                 continue
             tmpData = self.plugin.getportdata(self.switches["output"][switch], port)
-            confPort = (
-                self.config.config["MAIN"]
-                .get(switch, {})
-                .get("ports", {})
-                .get(port, {})
-            )
+            confPort = self.config.config["MAIN"].get(switch, {}).get("ports", {}).get(port, {})
             if not tmpData and confPort:
                 # This port only defined in RM Config (fake switch port)
                 self.output["ports"][switch].setdefault(port, confPort)
                 continue
-            if (
-                self._notSwitchport(tmpData)
-                and port not in vlans
-                and not port.lower().startswith("vlan")
-            ):
+            if self._notSwitchport(tmpData) and port not in vlans and not port.lower().startswith("vlan"):
                 warning = f"Warning. Port {switch}{port} not added into model. Its status not switchport. Ansible runner returned: {tmpData}."
                 self.logger.debug(warning)
                 # Only add warning if allports flag is False.
-                if (
-                    not self.config.config["MAIN"]
-                    .get(switch, {})
-                    .get("allports", False)
-                ):
+                if not self.config.config["MAIN"].get(switch, {}).get("allports", False):
                     self.warnings.append(warning)
                 self._delPortFromOut(switch, port)
                 continue
@@ -345,24 +316,12 @@ class Switch(Node):
                 self._addyamlInfoToPort(switch, port, defVlans, switchesDict)
         # Add route information and lldp information to output dictionary
 
-        self.output["info"][switch] = self.plugin.getfactvalues(
-            self.switches["output"][switch], "ansible_net_info"
-        )
-        self.output["routes"][switch]["ipv4"] = self.plugin.getfactvalues(
-            self.switches["output"][switch], "ansible_net_ipv4"
-        )
-        self.output["routes"][switch]["ipv6"] = self.plugin.getfactvalues(
-            self.switches["output"][switch], "ansible_net_ipv6"
-        )
-        self.output["lldp"][switch] = self.plugin.getfactvalues(
-            self.switches["output"][switch], "ansible_net_lldp"
-        )
-        self.output["nametomac"][switch] = self.plugin.nametomac(
-            self.switches["output"][switch], switch
-        )
-        self.output["mactable"][switch] = self.plugin.getfactvalues(
-            self.switches["output"][switch], "ansible_net_mactable"
-        )
+        self.output["info"][switch] = self.plugin.getfactvalues(self.switches["output"][switch], "ansible_net_info")
+        self.output["routes"][switch]["ipv4"] = self.plugin.getfactvalues(self.switches["output"][switch], "ansible_net_ipv4")
+        self.output["routes"][switch]["ipv6"] = self.plugin.getfactvalues(self.switches["output"][switch], "ansible_net_ipv6")
+        self.output["lldp"][switch] = self.plugin.getfactvalues(self.switches["output"][switch], "ansible_net_lldp")
+        self.output["nametomac"][switch] = self.plugin.nametomac(self.switches["output"][switch], switch)
+        self.output["mactable"][switch] = self.plugin.getfactvalues(self.switches["output"][switch], "ansible_net_mactable")
 
     def getinfo(self):
         """Get info about Network Devices using database."""
@@ -390,10 +349,10 @@ def execute(config=None):
     """Main Execute."""
     if not config:
         config = getGitConfig()
-    for siteName in config.get("general", "sites"):
-        switchM = Switch(config, siteName)
-        out = switchM.getinfo()
-        print(out)
+    sitename = getSiteNameFromConfig(config)
+    switchM = Switch(config, sitename)
+    out = switchM.getinfo()
+    print(out)
 
 
 if __name__ == "__main__":

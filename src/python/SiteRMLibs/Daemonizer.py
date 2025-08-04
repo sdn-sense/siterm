@@ -34,7 +34,7 @@ from SiteRMLibs.MainUtilities import (
     getFullUrl,
     getHostname,
     getLoggingObject,
-    getSitesFromConfig,
+    getSiteNameFromConfig,
     getUTCnow,
     getVal,
     loadEnvFile,
@@ -299,10 +299,9 @@ class Daemon(DBBackend):
         # pylint: disable=W0702
         if not self.getGitConf:
             return
-        sites = getSitesFromConfig(self.config)
-        for sitename in sites:
-            fullURL = getFullUrl(self.config, sitename)
-            self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
+        sitename = getSiteNameFromConfig(self.config)
+        fullURL = getFullUrl(self.config)
+        self.handlers[sitename] = Requests(url=fullURL, logger=self.logger)
 
     def _getLogLevel(self):
         """Get log level."""

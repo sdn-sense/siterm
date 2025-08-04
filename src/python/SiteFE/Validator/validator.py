@@ -39,9 +39,8 @@ class Validator:
         self.dbI = getVal(getDBConn("Validator", self), **{"sitename": self.sitename})
         self.switch = Switch(config, sitename)
         self.hosts = {}
-        for siteName in self.config.get("general", "sites"):
-            workDir = os.path.join(self.config.get(siteName, "privatedir"), "Validator/")
-            createDirs(workDir)
+        workDir = os.path.join(self.config.get(sitename, "privatedir"), "Validator/")
+        createDirs(workDir)
         self.switchInfo = {}
         self.activeDeltas = {}
         self.warnings = []

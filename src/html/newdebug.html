@@ -57,13 +57,12 @@
         function doSiteUpdateN(ids) {
             strSite = document.getElementById(ids + "sitename").value;
             $.get('/api/frontend/configuration', function(data){
-              for (i=0; i < data['general']['sites'].length; i++){
-                sitename = data['general']['sites'][i];
-                if (strSite === sitename) {
+              sitename = data['general']['sitename'];
+              if (strSite === sitename) {
                   const switchArray = data[sitename]['switch'];
                   switchArray.forEach((name, index) => {
                     addDropDown(name, $("#" + ids + "hostname"))
-                  })}}})}
+                  })}})}
 
         function doDTNUpdate(ids, ipkeys, intkeys) {
         strDTN = document.getElementById(ids + "hostname").value;
@@ -97,17 +96,15 @@
 
         function load_data() {
           $.get('/api/frontend/configuration', function(data){
-            for (i=0; i < data['general']['sites'].length; i++){
-              sitename = data['general']['sites'][i];
-              addDropDown(sitename, $("#f1_sitename"));
-              addDropDown(sitename, $("#f2_sitename"));
-              addDropDown(sitename, $("#f3_sitename"));
-              addDropDown(sitename, $("#f4_sitename"));
-              addDropDown(sitename, $("#f5_sitename"));
-              addDropDown(sitename, $("#f6_sitename"));
-              addDropDown(sitename, $("#f7_sitename"));
-              addDropDown(sitename, $("#f8_sitename"));
-            }
+            sitename = data['general']['sitename'];
+            addDropDown(sitename, $("#f1_sitename"));
+            addDropDown(sitename, $("#f2_sitename"));
+            addDropDown(sitename, $("#f3_sitename"));
+            addDropDown(sitename, $("#f4_sitename"));
+            addDropDown(sitename, $("#f5_sitename"));
+            addDropDown(sitename, $("#f6_sitename"));
+            addDropDown(sitename, $("#f7_sitename"));
+            addDropDown(sitename, $("#f8_sitename"));
           });
        };
   //]]>

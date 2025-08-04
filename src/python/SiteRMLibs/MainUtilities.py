@@ -131,12 +131,9 @@ def getVal(conDict, **kwargs):
     raise Exception("This Call Should not happen. Contact Support")
 
 
-def getFullUrl(config, sitename=None):
+def getFullUrl(config):
     """Prepare full URL from Config."""
     webdomain = config.get("general", "webdomain")
-    # TODO, Remove everywhere sitename, as it is not used anymore
-    if not sitename:
-        sitename = config.get("general", "sitename")
     if not webdomain.startswith("http"):
         webdomain = "http://" + webdomain
     return f"{webdomain}/"
@@ -562,11 +559,10 @@ def getDBConn(serviceName="", cls=None):
     if dbConnMain:
         return dbConnMain
 
-    sites = ["MAIN"] + cls.config["MAIN"].get("general", {}).get("sites", [])
-    for sitename in sites:
-        if hasattr(cls, "dbI") and hasattr(cls.dbI, sitename):
-            continue
-        dbConnMain[sitename] = dbinterface(serviceName, cls.config, sitename)
+    sitename = getSiteNameFromConfig(cls.config)
+    if hasattr(cls, "dbI") and hasattr(cls.dbI, sitename):
+        return dbConnMain
+    dbConnMain[sitename] = dbinterface(serviceName, cls.config, sitename)
 
     return dbConnMain
 
@@ -617,17 +613,14 @@ def getAllHosts(dbI):
     return jOut
 
 
-def getSitesFromConfig(config):
-    """Get sites from config."""
-    # TODO: Need to normalize sitename and site between FE and Agent.
-    try:
-        if config.get("general", "sites"):
-            return config.get("general", "sites")
-        raise Exception("No sites found in config.")
-    except Exception as ex:
-        if config.get("general", "sitename"):
-            return config.get("general", "sitename")
-        raise ex
+def getSiteNameFromConfig(config):
+    """Get sitename from config."""
+    sitename = None
+    if config.has_option("general", "sitename"):
+        sitename = config.get("general", "sitename")
+    else:
+        raise ValueError("No sitename defined in config file. Fatal Failure.")
+    return sitename
 
 
 def getActiveDeltas(cls):

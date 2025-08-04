@@ -10,7 +10,7 @@ from SiteRMLibs.MainUtilities import getFileContentAsJson, timedhourcheck
 from SiteRMLibs.hostcert import HostCertHandler
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.HTTPLibrary import Requests
-from SiteRMLibs.MainUtilities import getFullUrl, getSitesFromConfig
+from SiteRMLibs.MainUtilities import getFullUrl
 
 
 
@@ -78,11 +78,10 @@ def checkHTTPService():
         return 0
     try:
         config = getGitConfig()
-        for sitename in getSitesFromConfig(config):
-            fullUrl = getFullUrl(config, sitename)
-            requestHandler = Requests(url=fullUrl, logger=None)
-            requestHandler.apiAlive()
-            requestHandler.apiReady()
+        fullUrl = getFullUrl(config)
+        requestHandler = Requests(url=fullUrl, logger=None)
+        requestHandler.apiAlive()
+        requestHandler.apiReady()
         return 0
     except Exception as ex:
         print(f"Error checking HTTP service readiness: {ex}")

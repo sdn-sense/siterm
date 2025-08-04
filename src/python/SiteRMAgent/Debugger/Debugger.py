@@ -65,7 +65,7 @@ class Debugger(DebugService):
         super(Debugger, self).__init__(config, sitename)
         self.config = config if config else getGitConfig()
         self.logger = getLoggingObject(config=self.config, service="Debugger")
-        fullURL = getFullUrl(self.config, sitename)
+        fullURL = getFullUrl(self.config)
         self.reqHandler = Requests(url=fullURL, logger=self.logger)
         self.sitename = sitename
         self.hostname = socket.getfqdn()
@@ -76,7 +76,7 @@ class Debugger(DebugService):
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
-        fullURL = getFullUrl(self.config, self.sitename)
+        fullURL = getFullUrl(self.config)
         self.reqHandler.close()
         self.reqHandler = Requests(url=fullURL, logger=self.logger)
         self.hostname = socket.getfqdn()

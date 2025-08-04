@@ -8,10 +8,17 @@ Authors:
 Date: 2024/06/10
 """
 import os
-from SiteRMLibs.Warnings import Warnings
-from SiteRMLibs.MainUtilities import (getDBConn, getLoggingObject, getVal, getUTCnow)
-from SiteRMLibs.GitConfig import getGitConfig
+
 from SiteFE.PolicyService.policyService import PolicyService
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import (
+    getDBConn,
+    getLoggingObject,
+    getSiteNameFromConfig,
+    getUTCnow,
+    getVal,
+)
+from SiteRMLibs.Warnings import Warnings
 
 
 class DBWorker(Warnings):
@@ -58,9 +65,7 @@ class DBWorker(Warnings):
                 try:
                     os.unlink(model["fileloc"])
                 except OSError as ex:
-                    self.logger.debug(
-                        f"Got OS Error removing this model {model['fileloc']}. Exc: {str(ex)}"
-                    )
+                    self.logger.debug(f"Got OS Error removing this model {model['fileloc']}. Exc: {str(ex)}")
                 self.dbI.delete("models", [["id", model["id"]]])
 
     def startwork(self):
@@ -76,6 +81,8 @@ class DBWorker(Warnings):
 if __name__ == "__main__":
     logObj = getLoggingObject(logType="StreamLogger", service="DBWorker")
     gconfig = getGitConfig()
-    for siteName in gconfig.get("general", "sites"):
-        dbworker = DBWorker(gconfig, siteName)
-        dbworker.startwork()
+    siteName = getSiteNameFromConfig(gconfig)
+    logObj.info(f"Starting DBWorker for {siteName}")
+    dbworker = DBWorker(gconfig, siteName)
+    dbworker.startwork()
+    logObj.info("DBWorker finished all actions.")

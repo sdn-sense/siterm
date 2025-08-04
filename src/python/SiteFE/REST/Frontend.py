@@ -74,29 +74,29 @@ async def checkAPIReadiness(request: Request, deps=Depends(allAPIDeps)):
 # /api/frontend/sites
 # ==========================================================
 @router.get(
-    "/frontend/sites",
-    summary="Get All Sites",
-    description=("Returns a list of all sites configured in the system."),
+    "/frontend/sitename",
+    summary="Get Site Name",
+    description=("Returns the sitename configured in the system."),
     tags=["Frontend"],
     responses={
         **{
-            200: {"description": "List of all sites successfully returned.", "content": {"application/json": {"example": ["T1_US_ESnet", "T2_US_ESnet"]}}},
-            404: {"description": "No sites configured in the system.", "content": {"application/json": {"example": {"detail": "No sites configured in the system."}}}},
+            200: {"description": "Site name successfully returned.", "content": {"application/json": {"example": ["T1_US_ESnet"]}}},
+            404: {"description": "No site configured in the system.", "content": {"application/json": {"example": {"detail": "No site configured in the system."}}}},
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def getAllSites(request: Request, deps=Depends(allAPIDeps)):
     """
-    Get a list of all sites configured in the system.
-    - Returns a list of site names.
+    Get a site name configured in the system.
+    - Returns a site name in a list.
     """
-    if not deps["config"]["MAIN"].get("general", {}).get("sites", []):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No sites configured in the system.")
-    out = deps["config"]["MAIN"].get("general", {}).get("sites", [])
+    if not deps["config"]["MAIN"].get("general", {}).get("sitename", []):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No site configured in the system.")
+    out = deps["config"]["MAIN"].get("general", {}).get("sitename", [])
     if not out:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No sites configured in the system.")
-    return APIResponse.genResponse(request, out)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No site configured in the system.")
+    return APIResponse.genResponse(request, [out])
 
 
 # =========================================================
@@ -152,7 +152,7 @@ async def getAllSites(request: Request, deps=Depends(allAPIDeps)):
                                 "logLevel": "DEBUG",
                                 "privatedir": "/opt/siterm/config/",
                                 "probes": ["https_v4_siterm_2xx"],
-                                "sites": ["T9_US_SITENAME"],
+                                "sitename": "T9_US_SITENAME",
                                 "webdomain": "https://web.sdn-sense.net:443",
                                 "logDir": "/var/log/siterm-site-fe/",
                             },
@@ -382,6 +382,8 @@ async def getqosdata(
     # pylint: disable=too-many-nested-blocks
     hosts = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=limit)
     out = {}
+    # TODO: Check if host is alive before adding this to the list;
+    # Based on timing
     for host in hosts:
         tmpH = getFileContentAsJson(host.get("hostinfo", ""))
         tmpInf = tmpH.get("Summary", {}).get("config", {}).get("qos", {}).get("interfaces", {})

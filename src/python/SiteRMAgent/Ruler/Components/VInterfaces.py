@@ -103,7 +103,7 @@ class VInterfaces:
         self.sitename = sitename
         self.hostname = self.config.get("agent", "hostname")
         self.logger = logger
-        fullURL = getFullUrl(self.config, sitename)
+        fullURL = getFullUrl(self.config)
         self.requestHandler = Requests(fullURL, logger=self.logger)
 
     def _add(self, vlan, raiseError=False):

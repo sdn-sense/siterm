@@ -114,13 +114,12 @@
       function prefillSites() {
         $.get('/api/frontend/configuration', function(data){
           const dropdown = document.getElementById("f0_sitename");
-          for (i=0; i < data['general']['sites'].length; i++){
-            sitename = data['general']['sites'][i];
-            const opt = document.createElement("option");
-            opt.value = sitename;
-            opt.textContent = sitename;
-            dropdown.appendChild(opt);
-          }})};
+          sitename = data['general']['sitename'];
+          const opt = document.createElement("option");
+          opt.value = sitename;
+          opt.textContent = sitename;
+          dropdown.appendChild(opt);
+          })};
 
         // Helper function to add options to a dropdown
         function addDropDown(name, dropdown) {

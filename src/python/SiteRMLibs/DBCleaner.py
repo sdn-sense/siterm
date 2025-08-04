@@ -2,7 +2,13 @@
 """Database cleaner"""
 import pymysql
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.MainUtilities import getDBConn, getLoggingObject, getUTCnow, getVal
+from SiteRMLibs.MainUtilities import (
+    getDBConn,
+    getLoggingObject,
+    getSiteNameFromConfig,
+    getUTCnow,
+    getVal,
+)
 
 
 class DBCleaner:
@@ -74,6 +80,6 @@ class DBCleaner:
 if __name__ == "__main__":
     logObj = getLoggingObject(logType="StreamLogger", service="DBCleaner")
     gconfig = getGitConfig()
-    for siteName in gconfig.get("general", "sites"):
-        dbworker = DBCleaner(gconfig, siteName)
-        dbworker.startwork()
+    siteName = getSiteNameFromConfig(gconfig)
+    dbworker = DBCleaner(gconfig, siteName)
+    dbworker.startwork()
