@@ -20,75 +20,68 @@ Date                    : 2019/05/01
 """
 create_models = """CREATE TABLE IF NOT EXISTS models(
                           id int auto_increment,
-                          uid text NOT NULL,
+                          uid VARCHAR(255) NOT NULL,
                           insertdate int NOT NULL,
-                          fileloc text NOT NULL,
-                          content longtext NOT NULL,
+                          fileloc VARCHAR(4096) NOT NULL,
                           primary key(id))"""
 create_deltas = """CREATE TABLE IF NOT EXISTS deltas(
                           id int auto_increment,
-                          uid text NOT NULL,
+                          uid VARCHAR(255) NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
-                          state text NOT NULL,
-                          deltat text NOT NULL,
+                          state VARCHAR(64) NOT NULL,
+                          deltat VARCHAR(64) NOT NULL,
                           content longtext NOT NULL,
-                          modelid text NOT NULL,
-                          modadd longtext,
+                          modelid VARCHAR(255) NOT NULL,
+                          modadd VARCHAR(64),
                           primary key(id))"""
 create_delta_connections = """CREATE TABLE IF NOT EXISTS delta_connections(
                           id int auto_increment,
-                          deltaid text NOT NULL,
-                          connectionid text NOT NULL,
-                          state text NOT NULL,
+                          deltaid VARCHAR(255) NOT NULL,
+                          connectionid VARCHAR(1024) NOT NULL,
+                          state VARCHAR(64) NOT NULL,
                           primary key(id))"""
 create_states = """CREATE TABLE IF NOT EXISTS states(
                           id int auto_increment,
-                          deltaid text NOT NULL,
-                          state text NOT NULL,
+                          deltaid VARCHAR(255) NOT NULL,
+                          state VARCHAR(64) NOT NULL,
                           insertdate int NOT NULL,
                           primary key(id))"""
 create_hoststates = """CREATE TABLE IF NOT EXISTS hoststates(
                           id int auto_increment,
-                          deltaid text NOT NULL,
-                          state text NOT NULL,
+                          deltaid VARCHAR(255) NOT NULL,
+                          state VARCHAR(64) NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
-                          hostname text NOT NULL,
+                          hostname VARCHAR(255) NOT NULL,
                           primary key(id))"""
 create_hoststateshistory = """CREATE TABLE IF NOT EXISTS hoststateshistory(
                           id int auto_increment,
-                          deltaid text NOT NULL,
-                          state text NOT NULL,
+                          deltaid VARCHAR(255) NOT NULL,
+                          state VARCHAR(64) NOT NULL,
                           insertdate int NOT NULL,
-                          hostname text NOT NULL,
-                          primary key(id))"""
-create_parsed = """CREATE TABLE IF NOT EXISTS parsed(
-                          id int auto_increment,
-                          deltaid text NOT NULL,
-                          vals longtext NOT NULL,
-                          insertdate int NOT NULL,
+                          hostname VARCHAR(255) NOT NULL,
                           primary key(id))"""
 create_hosts = """CREATE TABLE IF NOT EXISTS hosts(
                           id int auto_increment,
-                          ip varchar(45) NOT NULL,
-                          hostname varchar(255) NOT NULL,
+                          ip VARCHAR(45) NOT NULL,
+                          hostname VARCHAR(255) NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
-                          hostinfo varchar(4096) NOT NULL,
+                          hostinfo VARCHAR(4096) NOT NULL,
                           primary key(id), unique key(ip))"""
 create_services = """CREATE TABLE IF NOT EXISTS services(
                           id int auto_increment,
-                          hostname varchar(255) NOT NULL,
-                          servicename varchar(50) NOT NULL,
+                          hostname VARCHAR(255) NOT NULL,
+                          servicename VARCHAR(50) NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
-                          serviceinfo varchar(4096) NOT NULL,
+                          serviceinfo VARCHAR(4096) NOT NULL,
                           primary key(id), unique key(hostname, servicename))"""
 create_switch = """CREATE TABLE IF NOT EXISTS switch(
                           id int auto_increment,
-                          sitename text NOT NULL,
-                          device text NOT NULL,
+                          sitename VARCHAR(64) NOT NULL,
+                          device VARCHAR(64) NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
                           output longtext NOT NULL,
@@ -103,21 +96,21 @@ create_servicestates = """CREATE TABLE IF NOT EXISTS servicestates(
                           version VARCHAR(50) NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
-                          exc varchar(4096) NOT NULL,
+                          exc VARCHAR(4096) NOT NULL,
                           primary key(id))"""
 create_debugworkers = """CREATE TABLE IF NOT EXISTS debugworkers(
                           id int auto_increment,
                           hostname VARCHAR(255) NOT NULL,
-                          hostinfo varchar(4096) NOT NULL,
+                          hostinfo VARCHAR(4096) NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
                           primary key(id))"""
 create_debugrequests = """CREATE TABLE IF NOT EXISTS debugrequests(
                           id int auto_increment,
                           hostname VARCHAR(255) NOT NULL,
-                          state VARCHAR(20) NOT NULL,
-                          debuginfo varchar(4096) NOT NULL,
-                          outputinfo varchar(4096) NOT NULL,
+                          state VARCHAR(64) NOT NULL,
+                          debuginfo VARCHAR(4096) NOT NULL,
+                          outputinfo VARCHAR(4096) NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
                           primary key(id))"""
@@ -129,7 +122,7 @@ create_activeDeltas = """CREATE TABLE IF NOT EXISTS activeDeltas(
                           primary key(id))"""
 create_snmpmon = """CREATE TABLE IF NOT EXISTS snmpmon(
                           id int auto_increment,
-                          hostname text NOT NULL,
+                          hostname VARCHAR(255) NOT NULL,
                           insertdate int NOT NULL,
                           updatedate int NOT NULL,
                           output json NOT NULL,
@@ -137,51 +130,50 @@ create_snmpmon = """CREATE TABLE IF NOT EXISTS snmpmon(
 create_deltatimestates = """CREATE TABLE IF NOT EXISTS deltatimestates(
                              id int auto_increment,
                              insertdate int NOT NULL,
-                             uuid text NOT NULL,
-                             uuidtype text NOT NULL,
-                             hostname text NOT NULL,
-                             hostport text NOT NULL,
-                             uuidstate text NOT NULL,
+                             uuid VARCHAR(255) NOT NULL,
+                             uuidtype VARCHAR(64) NOT NULL,
+                             hostname VARCHAR(255) NOT NULL,
+                             hostport VARCHAR(64) NOT NULL,
+                             uuidstate VARCHAR(64) NOT NULL,
                              primary key(id))"""
 create_serviceaction = """CREATE TABLE IF NOT EXISTS serviceaction(
                                 id int auto_increment,
-                                servicename text NOT NULL,
-                                hostname text NOT NULL,
-                                serviceaction text NOT NULL,
+                                servicename VARCHAR(64) NOT NULL,
+                                hostname VARCHAR(255) NOT NULL,
+                                serviceaction VARCHAR(64) NOT NULL,
                                 insertdate int NOT NULL,
                                 primary key(id))"""
 create_forceapplyuuid = """CREATE TABLE IF NOT EXISTS forceapplyuuid(
                                 id int auto_increment,
-                                uuid text NOT NULL,
+                                uuid VARCHAR(255) NOT NULL,
                                 primary key(id))"""
 create_instancestartend = """CREATE TABLE IF NOT EXISTS instancestartend(
                                 id int auto_increment,
-                                instanceid text NOT NULL,
+                                instanceid VARCHAR(1024) NOT NULL,
                                 insertdate int NOT NULL,
                                 starttimestamp int NOT NULL,
                                 endtimestamp int NOT NULL,
                                 primary key(id))"""
 create_deltasusertracking = """CREATE TABLE IF NOT EXISTS deltasusertracking(
                                 id int auto_increment,
-                                username text NOT NULL,
+                                username VARCHAR(255) NOT NULL,
                                 insertdate int NOT NULL,
-                                deltaid text NOT NULL,
-                                useraction text NOT NULL,
+                                deltaid VARCHAR(255) NOT NULL,
+                                useraction VARCHAR(255) NOT NULL,
                                 otherinfo longtext NOT NULL,
                                 primary key(id))"""
 create_dbversion = """CREATE TABLE IF NOT EXISTS dbversion(
                                 id int auto_increment,
-                                version text NOT NULL,
+                                version VARCHAR(255) NOT NULL,
                                 primary key(id))"""
 
-insert_models = "INSERT INTO models(uid, insertdate, fileloc, content) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s, %(content)s)"
+insert_models = "INSERT INTO models(uid, insertdate, fileloc) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s)"
 insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, modadd)
                    VALUES(%(uid)s, %(insertdate)s, %(updatedate)s, %(state)s, %(deltat)s, %(content)s, %(modelid)s, %(modadd)s)"""
 insert_delta_connections = """INSERT INTO delta_connections(deltaid, connectionid, state) VALUES(%(deltaid)s, %(connectionid)s, %(state)s)"""
 insert_states = "INSERT INTO states(deltaid, state, insertdate) VALUES(%(deltaid)s, %(state)s, %(insertdate)s)"
 insert_hoststates = "INSERT INTO hoststates(deltaid, state, insertdate, updatedate, hostname) VALUES(%(deltaid)s, %(state)s, %(insertdate)s, %(updatedate)s, %(hostname)s)"
 insert_hoststateshistory = "INSERT INTO hoststateshistory(deltaid, state, insertdate, hostname) VALUES(%(deltaid)s, %(state)s, %(insertdate)s, %(hostname)s)"
-insert_parsed = "INSERT INTO parsed(deltaid, vals, insertdate) VALUES(%(deltaid)s, %(vals)s, %(insertdate)s)"
 insert_hosts = "INSERT INTO hosts(ip, hostname, insertdate, updatedate, hostinfo) VALUES (%(ip)s, %(hostname)s, %(insertdate)s, %(updatedate)s, %(hostinfo)s)"
 insert_services = "INSERT INTO services(hostname, servicename, insertdate, updatedate, serviceinfo) VALUES (%(hostname)s, %(servicename)s, %(insertdate)s, %(updatedate)s, %(serviceinfo)s)"
 insert_switch = "INSERT INTO switch(sitename, device, insertdate, updatedate, output, error) VALUES(%(sitename)s, %(device)s, %(insertdate)s, %(updatedate)s, %(output)s, %(error)s)"
@@ -202,13 +194,12 @@ insert_instancestartend = "INSERT INTO instancestartend(instanceid, insertdate, 
 insert_deltasusertracking = "INSERT INTO deltasusertracking(username, insertdate, deltaid, useraction, otherinfo) VALUES(%(username)s, %(insertdate)s, %(deltaid)s, %(useraction)s, %(otherinfo)s)"
 insert_dbversion = "INSERT INTO dbversion(version) VALUES(%(version)s)"
 
-get_models = "SELECT id, uid, insertdate, fileloc, content FROM models"
+get_models = "SELECT id, uid, insertdate, fileloc FROM models"
 get_deltas = "SELECT id, uid, insertdate, updatedate, state, deltat, content, modelid, modadd FROM deltas"
 get_delta_connections = "SELECT id, deltaid, connectionid, state FROM delta_connections"
 get_states = "SELECT id, deltaid, state, insertdate FROM states"
 get_hoststates = "SELECT id, deltaid, state, insertdate, updatedate, hostname FROM hoststates"
 get_hoststateshistory = "SELECT id, deltaid, state, insertdate, hostname FROM hoststateshistory"
-get_parsed = "SELECT id, deltaid, vals, insertdate FROM parsed"
 get_hosts = "SELECT id, ip, hostname, insertdate, updatedate, hostinfo FROM hosts"
 get_services = "SELECT id, hostname, servicename, insertdate, updatedate, serviceinfo FROM services"
 get_switch = "SELECT id, sitename, device, insertdate, updatedate, output FROM switch"
@@ -251,7 +242,6 @@ delete_delta_connections = "DELETE FROM delta_connections"
 delete_states = "DELETE FROM states"
 delete_hoststates = "DELETE FROM hoststates"
 delete_hoststateshistory = "DELETE FROM hoststateshistory"
-delete_parsed = "DELETE FROM parsed"
 delete_hosts = "DELETE FROM hosts"
 delete_services = "DELETE FROM services"
 delete_switch = "DELETE FROM switch"
