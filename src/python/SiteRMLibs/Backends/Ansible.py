@@ -77,7 +77,7 @@ class Switch:
             return tmpOut
         return out
 
-    def _getRotateArtifacts(self, playbook, hosts=None, subitem=""):
+    def _getRotateArtifacts(self, playbook, subitem=""):
         """Get Rotate Artifacts Counter"""
         # This is a hack to make sure we have unique artifacts count.
         # And also that cleanup process is dony only by getfacts playbook.
@@ -113,24 +113,32 @@ class Switch:
         """Execute Ansible playbook"""
         # As we might be running multiple workers, we need to make sure
         # cleanup process is done correctly.
-        retryCount = 3
+        retryCount = self.config.getint("ansible", "ansible_runtime_retry")
         while retryCount > 0:
             try:
                 ansOut = ansible_runner.run(
                     private_data_dir=self.config.get("ansible", "private_data_dir" + subitem),
                     inventory=self.config.get("ansible", "inventory" + subitem),
                     playbook=playbook,
-                    rotate_artifacts=self._getRotateArtifacts(playbook, hosts, subitem),
+                    rotate_artifacts=self._getRotateArtifacts(playbook, subitem),
                     debug=self.config.getboolean("ansible", "debug" + subitem),
                     verbosity=self.__getVerbosity(subitem),
                     ignore_logging=self.config.getboolean("ansible", "ignore_logging" + subitem),
+                    idle_timeout=self.config.getint("ansible", "ansible_runtime_idle_timeout"),
+                    job_timeout=self.config.getint("ansible", "ansible_runtime_job_timeout"),
                 )
                 self.__logAnsibleOutput(ansOut)
                 return ansOut
             except FileNotFoundError as ex:
                 self.logger.error(f"Ansible playbook got FileNotFound (usually cleanup. Will retry in 5sec): {ex}")
+                self.logger.debug(f"Exception happened for {playbook} on hosts {hosts} with subitem {subitem}")
                 retryCount -= 1
-                time.sleep(5)
+                time.sleep(self.config.getint("ansible", "ansible_runtime_retry_delay"))
+            except Exception as ex:
+                self.logger.error(f"Ansible playbook got unexpected Exception: {ex}")
+                self.logger.debug(f"Exception happened for {playbook} on hosts {hosts} with subitem {subitem}", exc_info=True)
+                retryCount -= 1
+                time.sleep(self.config.getint("ansible", "ansible_runtime_retry_delay"))
         raise Exception("Ansible playbook execution failed after 3 retries. Check logs for more details.")
 
     def getAnsNetworkOS(self, host, subitem=""):
