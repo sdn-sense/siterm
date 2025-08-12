@@ -11,10 +11,10 @@ import copy
 import os
 import os.path
 import time
+from yaml import safe_load as yload
 
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
 from SiteRMLibs.MainUtilities import generateMD5, getHostname
-from yaml import safe_load as yload
 
 
 class GitConfig:
@@ -300,6 +300,10 @@ class GitConfig:
                     "ignore_logging_debug": False,
                     "verbosity_debug": 0,
                     "debug_debug": False,
+                    "ansible_runtime_job_timeout": 300,
+                    "ansible_runtime_idle_timeout": 300,
+                    "ansible_runtime_retry": 3,
+                    "ansible_runtime_retry_delay": 5,
                 },
                 "debuggers": {
                     "iperf-server": {
