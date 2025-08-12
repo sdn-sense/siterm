@@ -90,21 +90,23 @@ class GitConfig:
                     procVal = self.__valReplacer(procVal, f"%%{kw.upper()}%%", repl)
                 targetDict.setdefault(key, procVal)
 
-    def __addSiteDefaults(self, defaults):
-        """Add default site config parameters"""
+    def __getSiteName(self):
+        """Get site name from config."""
         sitename = self.config.get("MAIN", {}).get("general", {}).get("sitename", "")
         if not sitename:
             raise Exception("Sitename is not configured in configuration.")
         if sitename not in self.config["MAIN"]:
             raise Exception(f"Site {sitename} is not available in configuration. Will not start services")
+        return sitename
 
+    def __addSiteDefaults(self, defaults):
+        """Add default site config parameters"""
+        sitename = self.__getSiteName()
         self._mergeDefaults(self.config["MAIN"][sitename], defaults, sitename=sitename)
 
     def __addSwitchDefaults(self, defaults):
         """Add default switch config parameters"""
-        sitename = self.config.get("MAIN", {}).get("general", {}).get("sitename", "")
-        if not sitename:
-            raise Exception("Sitename is not configured in configuration.")
+        sitename = self.__getSiteName()
         for switch in self.config["MAIN"][sitename].get("switch", []):
             self.config["MAIN"].setdefault(switch, {})
             self._mergeDefaults(self.config["MAIN"][switch], defaults, switchname=switch)
