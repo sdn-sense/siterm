@@ -13,8 +13,6 @@ import os.path
 import time
 
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
-
-# Custom exceptions imports
 from SiteRMLibs.MainUtilities import generateMD5, getHostname
 from yaml import safe_load as yload
 
@@ -29,7 +27,8 @@ class GitConfig:
             "GIT_REPO": {"optional": True, "default": "sdn-sense/rm-configs"},
             "GIT_URL": {"optional": True, "default": "https://raw.githubusercontent.com/"},
             "GIT_BRANCH": {"optional": True, "default": "master"},
-            "MD5": {"optional": True, "default": generateMD5(getHostname())}}
+            "MD5": {"optional": True, "default": generateMD5(getHostname())},
+        }
 
     @staticmethod
     def gitConfigCache(name, raiseEx=False):
@@ -50,8 +49,7 @@ class GitConfig:
 
     def getFullGitUrl(self, customAdds=None):
         """Get Full Git URL."""
-        urlJoinList = [self.config["GIT_URL"], self.config["GIT_REPO"],
-                       self.config["GIT_BRANCH"], self.config["SITENAME"]]
+        urlJoinList = [self.config["GIT_URL"], self.config["GIT_REPO"], self.config["GIT_BRANCH"], self.config["SITENAME"]]
         if customAdds:
             for item in customAdds:
                 urlJoinList.append(item)
@@ -457,8 +455,9 @@ class GitConfig:
                     "months": 3,
                     "years": 0,
                 },
-                "bw": {"type": "bestEffort", "unit": "mbps", "minCapacity": "100"}}
-            }
+                "bw": {"type": "bestEffort", "unit": "mbps", "minCapacity": "100"},
+            },
+        }
         switchDefaults = {
             "qos_policy": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7},
             "rate_limit": False,
