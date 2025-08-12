@@ -9,6 +9,7 @@ from SiteRMLibs.MainUtilities import getUTCnow
 from SiteRMLibs.MainUtilities import writeActiveDeltas
 from SiteRMLibs.MainUtilities import getActiveDeltas
 from SiteRMLibs.MainUtilities import getFileContentAsJson
+from SiteRMLibs.MainUtilities import getSiteNameFromConfig
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteFE.PolicyService.stateMachine import StateMachine
 
@@ -28,35 +29,20 @@ class Helper:
                          "exit": {"desc": "Exit helper script.",
                                   "call": self.exithelper}}
         self.config = getGitConfig()
-        self.sitename = self._getSitename()
+        self.sitename = getSiteNameFromConfig(self.config)
         self.dbI = getVal(getDBConn('List', self), **{'sitename': self.sitename})
         self.statemachine = StateMachine(self.config)
 
     @staticmethod
-    def _getInput(question, validOptions=[]):
+    def _getInput(question, validOptions=None):
         """Wrapper for correct input to question"""
+        validOptions = validOptions if validOptions else []
         while True:
             inpVal = input(question)
             if validOptions and inpVal not in validOptions:
                 print(f'Input {inpVal} not in allowed list: {validOptions}')
             else:
                 return inpVal
-
-    def _getSitename(self):
-        """Get Sitename from Git Config"""
-        if len(self.config.get('general', 'sites')) == 1:
-            sitename = self.config.get('general', 'sites')[0]
-        else:
-            print('Which sitename you want to modify?')
-            nid = -1
-            availcmds = []
-            for stname in self.config.get('general', 'sites'):
-                nid += 1
-                availcmds.append(str(nid))
-                print(f'{nid} : {stname}')
-            siteID = self._getInput("Enter sitename ID: ", availcmds)
-            sitename = self.config.get('general', 'sites')[int(siteID)]
-        return sitename
 
     def changedeltastate(self):
         """Change delta state to committed and readd to model"""

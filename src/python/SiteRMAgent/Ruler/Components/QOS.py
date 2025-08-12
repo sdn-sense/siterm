@@ -145,7 +145,7 @@ class QOS:
         return (nicAvail * totalReq) / reqVal
 
     def calculateRSTFairshare(self, reqRules):
-        """Calculate L3 RST Fairshare throughput. Equivalent Fractions finding."""
+        """Calculate L3 RST Faishare throughput. Equivalent Fractions findinrg."""
         self.getQoSTotals()
         reqRate, _ = self.convertToRate(reqRules["rules"])
         totalRate = None

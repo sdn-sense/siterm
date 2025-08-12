@@ -34,6 +34,7 @@ from SiteRMLibs.MainUtilities import (
     getAllHosts,
     getDBConn,
     getLoggingObject,
+    getSiteNameFromConfig,
     getUTCnow,
     getVal,
     isValFloat,
@@ -76,24 +77,24 @@ class Topology:
     def _getWANLinks(self, incr):
         """Get WAN Links for visualization"""
         wan_links = {}
-        for site in self.config["MAIN"].get("general", {}).get("sites", []):
-            for sw in self.config["MAIN"].get(site, {}).get("switch", []):
-                if not self.config["MAIN"].get(sw, {}):
-                    continue
-                if not isinstance(self.config["MAIN"].get(sw, {}).get("ports", None), dict):
-                    continue
-                for _, val in self.config["MAIN"].get(sw, {}).get("ports", {}).items():
-                    if "wanlink" in val and val["wanlink"] and val.get("isAlias", None):
-                        wan_links.setdefault(
-                            f"wan{incr}",
-                            {
-                                "_id": incr,
-                                "topo": {},
-                                "DeviceInfo": {"type": "cloud", "name": val["isAlias"]},
-                            },
-                        )
-                        wan_links[f"wan{incr}"]["topo"].setdefault(val["isAlias"].split(":")[-1], {"device": sw, "port": val})
-                        incr += 1
+        sitename = getSiteNameFromConfig(self.config)
+        for sw in self.config["MAIN"].get(sitename, {}).get("switch", []):
+            if not self.config["MAIN"].get(sw, {}):
+                continue
+            if not isinstance(self.config["MAIN"].get(sw, {}).get("ports", None), dict):
+                continue
+            for _, val in self.config["MAIN"].get(sw, {}).get("ports", {}).items():
+                if "wanlink" in val and val["wanlink"] and val.get("isAlias", None):
+                    wan_links.setdefault(
+                        f"wan{incr}",
+                        {
+                            "_id": incr,
+                            "topo": {},
+                            "DeviceInfo": {"type": "cloud", "name": val["isAlias"]},
+                        },
+                    )
+                    wan_links[f"wan{incr}"]["topo"].setdefault(val["isAlias"].split(":")[-1], {"device": sw, "port": val})
+                    incr += 1
         return wan_links
 
     def gettopology(self):
@@ -736,9 +737,9 @@ def execute(config=None, args=None):
         snmpmon = SNMPMonitoring(config, args[1])
         snmpmon.startwork()
     else:
-        for sitename in config.get("general", "sites"):
-            snmpmon = SNMPMonitoring(config, sitename)
-            snmpmon.startwork()
+        sitename = getSiteNameFromConfig(config)
+        snmpmon = SNMPMonitoring(config, sitename)
+        snmpmon.startwork()
 
 
 if __name__ == "__main__":

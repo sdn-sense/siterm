@@ -120,9 +120,8 @@
             $.get('/api/frontend/configuration', function(data){
               defineSites(data, false);
               data['deltas'] = {};
-              for (i=0; i < data['general']['sites'].length; i++){
-                 sitename = data['general']['sites'][i];
-                 $.ajax({url: '/api/' + sitename + '/deltas?summary=true',
+              sitename = data['general']['sitename'];
+              $.ajax({url: '/api/' + sitename + '/deltas?summary=true',
                    dataType: 'json',
                    data: {},
                    async: false,
@@ -130,7 +129,6 @@
                      data['deltas'][sitename] = json;
                   }});
               defineAllDeltas(data, sitename);
-              }
             })};
   //]]>
   </script>

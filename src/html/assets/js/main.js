@@ -36,22 +36,21 @@ function escapeHtml (string) {
         function defineSites(data, definehosts=true) {
             sitesTab = $('<ul class="nav nav-pills" id="myTab" role="tablist"></ul>');
             allSites = $('<div id="sites" class="tab-content"></div>');
-            for (i=0; i < data['general']['sites'].length; i++){
-                sitename = data['general']['sites'][i];
-                nName = sitename;
-                // FE Config
-                sitesTab.append('<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="'+ nName +'" aria-selected="false" id="tab_fe_'+ nName +'"  href="#view_fe_'+ nName +'">' + nName + ' FE</a></li>');
-                allSites.append('<div class="tab-pane fade" role="tabpanel" aria-labelledby="tab_fe_'+ nName +'" id="view_fe_'+ nName +'"></div>');
-                // All DTNs
-                if (definehosts){
-                  for (j=0; j < data['hostinfo'][sitename].length; j++){
-                      dtns = data['hostinfo'][sitename][j];
-                      htmlhostname = dtns['hostname'].replace(/\./g,'_');
-                      nName = sitename + "_" + htmlhostname;
-                      sitesTab.append('<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="'+ nName +'" aria-selected="false" id="tab_'+ nName +'"  href="#view_'+ nName +'">' + dtns['hostname'] + '</a></li>');
-                      allSites.append('<div class="tab-pane fade row" role="tabpanel" aria-labelledby="tab_' + nName + '" id="view_'+ nName +'"></div>');
-                  }
-                }
+            // TODO: Remove div as this is always one site
+            sitename = data['general']['sitename'];
+            nName = sitename;
+            // FE Config
+            sitesTab.append('<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="'+ nName +'" aria-selected="false" id="tab_fe_'+ nName +'"  href="#view_fe_'+ nName +'">' + nName + ' FE</a></li>');
+            allSites.append('<div class="tab-pane fade" role="tabpanel" aria-labelledby="tab_fe_'+ nName +'" id="view_fe_'+ nName +'"></div>');
+            // All DTNs
+            if (definehosts){
+              for (j=0; j < data['hostinfo'][sitename].length; j++){
+                  dtns = data['hostinfo'][sitename][j];
+                  htmlhostname = dtns['hostname'].replace(/\./g,'_');
+                  nName = sitename + "_" + htmlhostname;
+                  sitesTab.append('<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="'+ nName +'" aria-selected="false" id="tab_'+ nName +'"  href="#view_'+ nName +'">' + dtns['hostname'] + '</a></li>');
+                  allSites.append('<div class="tab-pane fade row" role="tabpanel" aria-labelledby="tab_' + nName + '" id="view_'+ nName +'"></div>');
+              }
             }
             $("#sites_tab").append(sitesTab);
             $("#main_tab").append(allSites);

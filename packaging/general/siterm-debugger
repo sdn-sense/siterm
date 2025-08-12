@@ -9,6 +9,7 @@ Changes applied to this code:
 """
 import sys
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
+from SiteRMLibs.MainUtilities import getSiteNameFromConfig
 try:
     from SiteRMAgent.Debugger import Debugger
 except (ImportError, ModuleNotFoundError):
@@ -23,18 +24,11 @@ class MyDaemon(Daemon):
 
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
-        sites = []
-        if self.config.has_option('general', "sites"):
-            sites = self.config.get('general', 'sites')
-        elif self.config.has_option('general', "sitename"):
-            sites = self.config.get('general', 'sitename')
-        else:
-            raise ValueError("No sites defined in config file. Fatal Failure")
-        for sitename in sites:
-            if sitename not in self.runThreads:
-                debAgent = Debugger.Debugger(self.config, sitename)
-                self.runThreads[sitename] = debAgent
-            self.runThreads[sitename].refreshthread()
+        sitename = getSiteNameFromConfig(self.config)
+        if sitename not in self.runThreads:
+            debAgent = Debugger.Debugger(self.config, sitename)
+            self.runThreads[sitename] = debAgent
+        self.runThreads[sitename].refreshthread()
 
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)

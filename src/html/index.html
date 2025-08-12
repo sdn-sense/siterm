@@ -97,10 +97,8 @@
     }
   });
   if (configdata){
-    var sites = configdata['general']['sites'];
-    for (i=0; i < sites.length; i++){
-      sitename = sites[i];
-      $.ajax({url:'/api/' + sitename + '/topo/gettopology',
+    var sitename = configdata['general']['sitename'];
+    $.ajax({url:'/api/' + sitename + '/topo/gettopology',
         dataType: 'json',
         async: false,
         success: function(json){
@@ -111,7 +109,7 @@
           data = json;
         }
       })
-  }};
+  };
   for (var x=Object.keys(data),i=0;i<x.length,key=x[i],value=data[key];i++){
       topologyData["nodes"].push({"id": value["_id"],
       "name": key,

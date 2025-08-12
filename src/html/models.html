@@ -100,9 +100,8 @@
             $.get('/api/frontend/configuration', function(data){
               defineSites(data, false);
               data['models'] = {};
-              for (i=0; i < data['general']['sites'].length; i++){
-                 sitename = data['general']['sites'][i];
-                 $.ajax({url: '/api/' + sitename + '/models',
+              sitename = data['general']['sitename'];
+              $.ajax({url: '/api/' + sitename + '/models',
                    dataType: 'json',
                    data: {},
                    async: false,
@@ -110,7 +109,6 @@
                      data['models'][sitename] = json;
                   }});
               defineAllModels(data, sitename);
-              }
             })};
   //]]>
   </script>

@@ -29,6 +29,7 @@ from SiteRMLibs.MainUtilities import (
     createDirs,
     getFullUrl,
     getLoggingObject,
+    getSiteNameFromConfig,
     getUTCnow,
 )
 from SiteRMLibs.MemDiskStats import MemDiskStats
@@ -48,7 +49,7 @@ class RecurringAction:
         self._loadClasses()
         self.hostname = socket.getfqdn()
         self.agent = contentDB()
-        fullUrl = getFullUrl(self.config, self.sitename)
+        fullUrl = getFullUrl(self.config)
         self.requestHandler = Requests(url=fullUrl, logger=self.logger)
         self.memDiskStats = MemDiskStats()
 
@@ -69,7 +70,7 @@ class RecurringAction:
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
         self._loadClasses()
-        fullUrl = getFullUrl(self.config, self.sitename)
+        fullUrl = getFullUrl(self.config)
         self.requestHandler.close()
         self.requestHandler = Requests(url=fullUrl, logger=self.logger)
 
@@ -194,9 +195,9 @@ def execute(config):
     """Main Execute."""
     if not config:
         config = getGitConfig()
-    for sitename in config.get("general", "sitename"):
-        rec = RecurringAction(config, sitename)
-        rec.startwork()
+    siteName = getSiteNameFromConfig(config)
+    rec = RecurringAction(config, siteName)
+    rec.startwork()
 
 
 if __name__ == "__main__":

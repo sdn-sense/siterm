@@ -8,9 +8,10 @@ Authors:
 Date: 2022/05/19
 """
 import os
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.GitConfig import getGitConfig
+
 from SiteRMLibs.Backends.main import Switch
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import getLoggingObject, getSiteNameFromConfig
 
 
 class SwitchWorker:
@@ -42,9 +43,7 @@ class SwitchWorker:
             except OSError as ex:
                 self.logger.error(f"Got OS Error removing {fname}. {ex}")
         if self.renewsNeeded:
-            self.logger.info(
-                f"Renew needed for {self.device}. Renewing {self.renewsNeeded} times."
-            )
+            self.logger.info(f"Renew needed for {self.device}. Renewing {self.renewsNeeded} times.")
             self.switch.getinfoNew(self.device)
             self.renewsNeeded -= 1
         else:
@@ -53,8 +52,11 @@ class SwitchWorker:
 
 if __name__ == "__main__":
     logObj = getLoggingObject(logType="StreamLogger", service="SwitchWorker")
-    config = getGitConfig()
-    for siteName in config.get("general", "sites"):
-        for dev in config.get(siteName, "switch"):
-            swWorker = SwitchWorker(config, siteName, dev)
-            swWorker.startwork()
+    gconfig = getGitConfig()
+    siteName = getSiteNameFromConfig(gconfig)
+    logObj.info(f"Starting Switch Worker for {siteName}")
+    for dev in gconfig.get(siteName, "switch"):
+        swWorker = SwitchWorker(gconfig, siteName, dev)
+        swWorker.startwork()
+        logObj.info(f"Finished Switch Worker for {dev}")
+    logObj.info("Switch Worker finished all devices.")

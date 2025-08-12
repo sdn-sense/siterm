@@ -50,9 +50,8 @@
             $.get('/api/frontend/configuration', function(data){
               defineSites(data, false);
               data['states'] = {};
-              for (i=0; i < data['general']['sites'].length; i++){
-                 sitename = data['general']['sites'][i];
-                 $.ajax({url: '/api/' + sitename + '/servicestates',
+              sitename = data['general']['sitename'];
+              $.ajax({url: '/api/' + sitename + '/servicestates',
                    dataType: 'json',
                    data: {},
                    async: false,
@@ -60,7 +59,6 @@
                      data['states'][sitename] = json;
                   }});
               defineAllStates(data, sitename);
-              }
             })};
   //]]>
   </script>

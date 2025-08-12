@@ -73,26 +73,20 @@ function reloadconfig(hostname) {
         function load_data() {
             $.get('/api/frontend/configuration', function(data){
               data['hostinfo'] = {};
-              for (i=0; i < data['general']['sites'].length; i++){
-                sitename = data['general']['sites'][i];
-                $.ajax({url: '/api/' + sitename + '/hosts',
+              sitename = data['general']['sitename'];
+              $.ajax({url: '/api/' + sitename + '/hosts',
                   dataType: 'json',
                   data: {},
                   async: false,
                   success: function(json){
                     data['hostinfo'][sitename] = json;
                   }
-                });
+              });
             defineSites(data);
-            for (i=0; i < data['general']['sites'].length; i++){
-                sitename = data['general']['sites'][i];
-                defineSitesConfig(data, sitename);
-                for (j=0; j < data['hostinfo'][sitename].length; j++){
-                  defineDTNConfig(data['hostinfo'][sitename][j], sitename, data['hostinfo'][sitename][j]['hostname']);
-                }
-            };
-            }}
-       )};
+            defineSitesConfig(data, sitename);
+            for (j=0; j < data['hostinfo'][sitename].length; j++){
+              defineDTNConfig(data['hostinfo'][sitename][j], sitename, data['hostinfo'][sitename][j]['hostname']);
+            }})};
   //]]>
   </script>
   <title>Site-RM: Frontend Configuration</title>

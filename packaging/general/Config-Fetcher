@@ -32,11 +32,12 @@ class MyDaemon(Daemon):
         for _, rthread in list(self.runThreads.items()):
             try:
                 rthread.cleaner()
-            except:
+            except Exception as e:
+                print(f"Error cleaning thread {rthread}: {e}")
                 continue
         time.sleep(60)
 
-    def postRunThread(self, sitename, rthread):
+    def postRunThread(self, _sitename, rthread):
         """Call after thread runtime in case something needed to be done by Daemon"""
         if not self.config or not self.dbI:
             rthread.gitObj.getGitConfig()

@@ -131,17 +131,15 @@
             $.get('/api/frontend/configuration', function(data){
               defineSites(data, false);
               data['debug'] = {};
-              for (i=0; i < data['general']['sites'].length; i++){
-                 sitename = data['general']['sites'][i];
-                 $.ajax({url: '/api/' + sitename + '/debug',
+              sitename = data['general']['sitename'];
+              $.ajax({url: '/api/' + sitename + '/debug',
                    dataType: 'json',
                    data: {},
                    async: false,
                    success: function(json){
                      data['debug'][sitename] = json;
-                  }});
+              }});
               defineAllModels(data, sitename);
-              }
             })};
   //]]>
   </script>

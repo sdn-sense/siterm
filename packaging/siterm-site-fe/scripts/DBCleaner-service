@@ -9,22 +9,24 @@ Changes applied to this code:
 """
 import sys
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
+from SiteRMLibs.MainUtilities import getSiteNameFromConfig
 from SiteRMLibs.DBCleaner import DBCleaner as dbcleaner
 
 COMPONENT = 'DBCleaner'
 DESCRIPTION = "DBCleaner responsible for cleaning database of old entries."
 DAEMON = None
 
+
 class MyDaemon(Daemon):
     """ My own Deamon override """
 
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
-        for sitename in self.config.get('general', 'sites'):
-            if sitename not in self.runThreads:
-                thr = dbcleaner(self.config, sitename)
-                self.runThreads[sitename] = thr
-            self.runThreads[sitename].refreshthread()
+        sitename = getSiteNameFromConfig(self.config)
+        if sitename not in self.runThreads:
+            thr = dbcleaner(self.config, sitename)
+            self.runThreads[sitename] = thr
+        self.runThreads[sitename].refreshthread()
 
 
 if __name__ == "__main__":

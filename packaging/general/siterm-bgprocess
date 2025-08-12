@@ -11,7 +11,7 @@ import os
 import sys
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
 from SiteRMLibs.MainUtilities import getFileContentAsJson
-from SiteRMLibs.MainUtilities import evaldict
+from SiteRMLibs.MainUtilities import evaldict, getSiteNameFromConfig
 
 WORKERTYPE='UNKNOWN'
 try:
@@ -73,22 +73,16 @@ class MyDaemon(Daemon):
                    'arp-table': ArpTable, 'tcpdump': TCPDump,
                    'traceroute': Traceroute, 'traceroutenet': TracerouteNet}
         backgConfig = self.__getdebugconf()
-        if WORKERTYPE == 'Agent':
-            sites = self.config.get('general', 'sitename')
-        elif WORKERTYPE == 'FE':
-            sites = self.config.get('general', 'sites')
-        else:
-            raise Exception(f'Unknown worker type: {WORKERTYPE}. Exiting.')
-        for sitename in sites:
-            if sitename not in self.runThreads:
-                # Here need to check what type of worker we are running
-                # And is it available for a specific type of worker
-                if backgConfig['requestdict'].get('type', {}) not in WORKERS:
-                    raise Exception(f'Worker type {backgConfig["requestdict"]["type"]} is not available for {WORKERTYPE}. Exiting.')
-                worker = WORKERS[backgConfig['requestdict']['type']]
-                workerDm = worker(self.config, sitename, backgConfig)
-                self.runThreads[sitename] = workerDm
-            self.runThreads[sitename].refreshthread()
+        sitename = getSiteNameFromConfig(self.config)
+        if sitename not in self.runThreads:
+            # Here need to check what type of worker we are running
+            # And is it available for a specific type of worker
+            if backgConfig['requestdict'].get('type', {}) not in WORKERS:
+                raise Exception(f'Worker type {backgConfig["requestdict"]["type"]} is not available for {WORKERTYPE}. Exiting.')
+            worker = WORKERS[backgConfig['requestdict']['type']]
+            workerDm = worker(self.config, sitename, backgConfig)
+            self.runThreads[sitename] = workerDm
+        self.runThreads[sitename].refreshthread()
         if not self.runThreads:
             raise Exception('There are no threads configured. Fatal failure')
 

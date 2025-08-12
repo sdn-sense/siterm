@@ -18,7 +18,8 @@ from SiteRMLibs.BWService import BWService
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.HTTPLibrary import Requests
-from SiteRMLibs.ipaddr import checkOverlap
+
+# from SiteRMLibs.ipaddr import checkOverlap
 from SiteRMLibs.MainUtilities import (
     contentDB,
     createDirs,
@@ -26,6 +27,7 @@ from SiteRMLibs.MainUtilities import (
     getFileContentAsJson,
     getFullUrl,
     getLoggingObject,
+    getSiteNameFromConfig,
 )
 from SiteRMLibs.timing import Timing
 
@@ -42,7 +44,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         createDirs(self.workDir)
         self.sitename = sitename
         self.siteDB = contentDB()
-        fullUrl = getFullUrl(self.config, self.sitename)
+        fullUrl = getFullUrl(self.config)
         self.requestHandler = Requests(fullUrl, logger=self.logger)
         self.hostname = self.config.get("agent", "hostname")
         self.logger.info("====== Ruler Start Work. Hostname: %s", self.hostname)
@@ -59,7 +61,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
         self.config = getGitConfig()
-        fullUrl = getFullUrl(self.config, self.sitename)
+        fullUrl = getFullUrl(self.config)
         self.hostname = self.config.get("agent", "hostname")
         self.layer2 = VInterfaces(self.config, self.sitename, self.logger)
         self.layer3 = Routing(self.config, self.sitename, self.logger, self)
@@ -184,9 +186,9 @@ def execute(config=None):
     """Execute main script for SiteRM Agent output preparation."""
     if not config:
         config = getGitConfig()
-    for sitename in config.get("general", "sitename"):
-        ruler = Ruler(config, sitename)
-        ruler.startwork()
+    siteName = getSiteNameFromConfig(config)
+    ruler = Ruler(config, siteName)
+    ruler.startwork()
 
 
 if __name__ == "__main__":

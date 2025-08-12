@@ -34,6 +34,7 @@ from SiteRMLibs.MainUtilities import (
     getCurrentModel,
     getDBConn,
     getLoggingObject,
+    getSiteNameFromConfig,
     getUTCnow,
     getVal,
     parseRDFFile,
@@ -77,38 +78,38 @@ class MultiWorker:
         """Multiworker main process"""
         self.logger.info("Started MultiWorker work to check switch processes")
         restarted = False
-        for siteName in self.config.get("general", "sites"):
-            for dev in self.config.get(siteName, "switch"):
-                # Check status
-                retOut = self._runCmd("status", dev)
-                # If status failed, and first run, start it
-                if retOut["exitCode"] != 0 and self.firstRun:
-                    self.logger.info(f"Starting SwitchWorker for {dev}")
-                    retOut = self._runCmd("start", dev, True)
-                    self.logger.info(f"Starting SwitchWorker for {dev} - {retOut}")
-                    restarted = True
-                    continue
-                # If status failed, and not first run, restart it
-                if retOut["exitCode"] != 0 and not self.firstRun:
-                    self.logger.error(f"SwitchWorker for {dev} failed: {retOut}")
-                    retOut = self._runCmd("restart", dev, True)
-                    self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
-                    restarted = True
-                    continue
-                # If status is OK, and needRestart flag set - restart it
-                if retOut["exitCode"] == 0 and self.needRestart:
-                    self.logger.info(f"Restarting SwitchWorker for {dev} as it is instructed by config change")
-                    retOut = self._runCmd("restart", dev, True)
-                    self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
-                    restarted = True
-                    continue
-                # If status is OK, and needRestart flag set - restart it
-                if retOut["exitCode"] != 0 and self.needRestart:
-                    self.logger.info(f"Restarting Failed SwitchWorker for {dev} as it is instructed by config change")
-                    retOut = self._runCmd("restart", dev, True)
-                    self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
-                    restarted = True
-                    continue
+        siteName = getSiteNameFromConfig(self.config)
+        for dev in self.config.get(siteName, "switch"):
+            # Check status
+            retOut = self._runCmd("status", dev)
+            # If status failed, and first run, start it
+            if retOut["exitCode"] != 0 and self.firstRun:
+                self.logger.info(f"Starting SwitchWorker for {dev}")
+                retOut = self._runCmd("start", dev, True)
+                self.logger.info(f"Starting SwitchWorker for {dev} - {retOut}")
+                restarted = True
+                continue
+            # If status failed, and not first run, restart it
+            if retOut["exitCode"] != 0 and not self.firstRun:
+                self.logger.error(f"SwitchWorker for {dev} failed: {retOut}")
+                retOut = self._runCmd("restart", dev, True)
+                self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
+                restarted = True
+                continue
+            # If status is OK, and needRestart flag set - restart it
+            if retOut["exitCode"] == 0 and self.needRestart:
+                self.logger.info(f"Restarting SwitchWorker for {dev} as it is instructed by config change")
+                retOut = self._runCmd("restart", dev, True)
+                self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
+                restarted = True
+                continue
+            # If status is OK, and needRestart flag set - restart it
+            if retOut["exitCode"] != 0 and self.needRestart:
+                self.logger.info(f"Restarting Failed SwitchWorker for {dev} as it is instructed by config change")
+                retOut = self._runCmd("restart", dev, True)
+                self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
+                restarted = True
+                continue
         # Mark as not first run, so if service stops, it uses restart
         if self.firstRun and restarted:
             self.logger.info("First run is done. Marking as not first run. Also sleep 1 minute so that it get's all data from switches")
@@ -420,13 +421,13 @@ def execute(config=None):
     """Main Execute."""
     if not config:
         config = getGitConfig()
-    for siteName in config.get("general", "sites"):
-        lserv = LookUpService(config, siteName)
-        i = 20
-        while i > 0:
-            lserv.startwork()
-            time.sleep(5)
-            i -= 1
+    siteName = getSiteNameFromConfig(config)
+    lserv = LookUpService(config, siteName)
+    i = 20
+    while i > 0:
+        lserv.startwork()
+        time.sleep(5)
+        i -= 1
 
 
 if __name__ == "__main__":
