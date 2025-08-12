@@ -27,13 +27,9 @@ class GitConfig:
         self.defaults = {
             "SITENAME": {"optional": False},
             "GIT_REPO": {"optional": True, "default": "sdn-sense/rm-configs"},
-            "GIT_URL": {
-                "optional": True,
-                "default": "https://raw.githubusercontent.com/",
-            },
+            "GIT_URL": {"optional": True, "default": "https://raw.githubusercontent.com/"},
             "GIT_BRANCH": {"optional": True, "default": "master"},
-            "MD5": {"optional": True, "default": generateMD5(getHostname())},
-        }
+            "MD5": {"optional": True, "default": generateMD5(getHostname())}}
 
     @staticmethod
     def gitConfigCache(name, raiseEx=False):
@@ -54,12 +50,8 @@ class GitConfig:
 
     def getFullGitUrl(self, customAdds=None):
         """Get Full Git URL."""
-        urlJoinList = [
-            self.config["GIT_URL"],
-            self.config["GIT_REPO"],
-            self.config["GIT_BRANCH"],
-            self.config["SITENAME"],
-        ]
+        urlJoinList = [self.config["GIT_URL"], self.config["GIT_REPO"],
+                       self.config["GIT_BRANCH"], self.config["SITENAME"]]
         if customAdds:
             for item in customAdds:
                 urlJoinList.append(item)
@@ -76,21 +68,9 @@ class GitConfig:
             if key not in list(self.config.keys()):
                 # Check if it is optional or not;
                 if not requirement["optional"]:
-                    print(
-                        "Configuration /etc/siterm.yaml missing non optional config parameter %s",
-                        key,
-                    )
+                    print(f"Configuration /etc/siterm.yaml missing non optional config parameter {key}")
                     raise Exception(f"Configuration /etc/siterm.yaml missing non optional config parameter {key}")
                 self.config[key] = requirement["default"]
-
-    def __addDefaults(self, defaults):
-        """Add default config parameters"""
-        for key1, val1 in defaults.items():
-            self.config.setdefault(key1, {})
-            for key2, val2 in val1.items():
-                self.config[key1].setdefault(key2, {})
-                for key3, val3 in val2.items():
-                    self.config[key1][key2].setdefault(key3, val3)
 
     @staticmethod
     def __valReplacer(val, keyword, replacement):
@@ -99,6 +79,17 @@ class GitConfig:
             return val.replace(keyword, replacement)
         return val
 
+    def _mergeDefaults(self, targetDict, defaultsDict, **kwargs):
+        for key, value in defaultsDict.items():
+            if isinstance(value, dict):
+                targetDict.setdefault(key, {})
+                self._mergeDefaults(targetDict[key], value, **kwargs)
+            else:
+                procVal = value
+                for kw, repl in kwargs.items():
+                    procVal = self.__valReplacer(procVal, f"%%{kw.upper()}%%", repl)
+                targetDict.setdefault(key, procVal)
+
     def __addSiteDefaults(self, defaults):
         """Add default site config parameters"""
         sitename = self.config.get("MAIN", {}).get("general", {}).get("sitename", "")
@@ -106,14 +97,8 @@ class GitConfig:
             raise Exception("Sitename is not configured in configuration.")
         if sitename not in self.config["MAIN"]:
             raise Exception(f"Site {sitename} is not available in configuration. Will not start services")
-        self.config["MAIN"][sitename].setdefault("default_params", {})
-        for key1, val1 in defaults["default_params"].items():
-            if isinstance(val1, dict):
-                self.config["MAIN"][sitename]["default_params"].setdefault(key1, {})
-                for key2, val2 in val1.items():
-                    self.config["MAIN"][sitename]["default_params"][key1].setdefault(key2, self.__valReplacer(val2, "%%SITENAME%%", sitename))
-            else:
-                self.config["MAIN"][sitename]["default_params"][key1] = val1
+
+        self._mergeDefaults(self.config["MAIN"][sitename], defaults, sitename=sitename)
 
     def __addSwitchDefaults(self, defaults):
         """Add default switch config parameters"""
@@ -121,27 +106,14 @@ class GitConfig:
         if not sitename:
             raise Exception("Sitename is not configured in configuration.")
         for switch in self.config["MAIN"][sitename].get("switch", []):
-            for key1, val1 in defaults.items():
-                self.config["MAIN"].setdefault(switch, {})
-                if isinstance(val1, dict):
-                    self.config["MAIN"][switch].setdefault(key1, {})
-                    for key2, val2 in val1.items():
-                        self.config["MAIN"][switch][key1].setdefault(key2, self.__valReplacer(val2, "%%SWITCHNAME%%", switch))
-                else:
-                    self.config["MAIN"][switch].setdefault(key1, self.__valReplacer(val1, "%%SWITCHNAME%%", switch))
+            self.config["MAIN"].setdefault(switch, {})
+            self._mergeDefaults(self.config["MAIN"][switch], defaults, switchname=switch)
 
     def __addInterfaceDefaults(self, defaults):
         """Add default interface config parameters"""
         for interface in self.config.get("MAIN", {}).get("agent", {}).get("interfaces", []):
-            if interface not in self.config["MAIN"]:
-                self.config["MAIN"][interface] = {}
-            for key1, val1 in defaults.items():
-                self.config["MAIN"][interface].setdefault(key1, {})
-                if isinstance(val1, dict):
-                    for key2, val2 in val1.items():
-                        self.config["MAIN"][interface][key1].setdefault(key2, val2)
-                else:
-                    self.config["MAIN"][interface][key1] = val1
+            self.config["MAIN"].setdefault(interface, {})
+            self._mergeDefaults(self.config["MAIN"][interface], defaults)
 
     def presetAgentDefaultConfigs(self):
         """Preset default config parameters for Agent"""
@@ -205,7 +177,7 @@ class GitConfig:
                 "172.31.15.0/24",
             ],
         }
-        self.__addDefaults(defConfig)
+        self._mergeDefaults(self.config, defConfig)
         self.__addInterfaceDefaults(interfaceDefaults)
         self.__generatevlaniplists()
 
@@ -497,7 +469,7 @@ class GitConfig:
             "allports": True,
             "allvlans": False,
         }
-        self.__addDefaults(defConfig)
+        self._mergeDefaults(self.config, defConfig)
         self.__addSiteDefaults(siteDefaults)
         self.__addSwitchDefaults(switchDefaults)
         # Generate list vals - not in a str format. Needed in delta checks
