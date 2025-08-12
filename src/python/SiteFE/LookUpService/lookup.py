@@ -371,12 +371,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
         self.logger.info("Checking if new model is different from previous")
         modelsEqual, modelinDB = self.checkForModelDiff(saveName)
-        lastKnownModel = {
-            "uid": hashNum,
-            "insertdate": getUTCnow(),
-            "fileloc": saveName,
-            "content": str(serialized),
-        }
+        lastKnownModel = {"uid": hashNum, "insertdate": getUTCnow(), "fileloc": saveName}
         updateNeeded = False
         if modelsEqual:
             if modelinDB[0]["insertdate"] < int(getUTCnow() - 3600):

@@ -61,7 +61,6 @@ class DBCleaner:
             "states",
             "hoststates",
             "hoststateshistory",
-            "parsed",
             "switch",
             "snmpmon",
             "serviceaction",
