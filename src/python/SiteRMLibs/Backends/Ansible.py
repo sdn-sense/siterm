@@ -124,8 +124,8 @@ class Switch:
                     debug=self.config.getboolean("ansible", "debug" + subitem),
                     verbosity=self.__getVerbosity(subitem),
                     ignore_logging=self.config.getboolean("ansible", "ignore_logging" + subitem),
-                    idle_timeout=self.config.getint("ansible", "ansible_runtime_idle_timeout"),
-                    job_timeout=self.config.getint("ansible", "ansible_runtime_job_timeout"),
+                    envvars={"ANSIBLE_RUNNER_IDLE_TIMEOUT": str(self.config.getint("ansible", "ansible_runtime_idle_timeout")),
+                             "ANSIBLE_RUNNER_TIMEOUT": str(self.config.getint("ansible", "ansible_runtime_job_timeout"))}
                 )
                 self.__logAnsibleOutput(ansOut)
                 return ansOut
