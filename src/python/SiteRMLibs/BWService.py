@@ -68,9 +68,7 @@ class BWService:
             elif inputRate == "kbps":
                 retVal = int(inputVal // 1000)
             else:
-                self.logger.error(
-                    f"Unknown input rate parameter {inputRate} and {inputVal}"
-                )
+                self.logger.error(f"Unknown input rate parameter {inputRate} and {inputVal}")
                 retVal = 100
         except TypeError as ex:
             self.logger.error(f"Error converting BW Service. {ex}. Input {params}")
@@ -100,22 +98,30 @@ class BWService:
             if not bwparams:
                 continue
             reservedRate = self.convertToRate(bwparams)
-            self.logger.debug(
-                f"Device {device} port {port} has reserved {reservedRate[0]} {reservedRate[1]}"
-            )
+            self.logger.debug(f"Device {device} port {port} has reserved {reservedRate[0]} {reservedRate[1]}")
             maxbw -= reservedRate[0]
             self.logger.debug(f"Device {device} port {port} has left {maxbw}")
         if maxbw < 0:
-            self.logger.warning(
-                f"Device {device} port {port} has reserved more than allowed. {maxbw}"
-            )
+            self.logger.warning(f"Device {device} port {port} has reserved more than allowed. {maxbw}")
             return 0
         return maxbw
 
-    def bwCalculatereservableSwitch(
-        self, config, device, port, maxbw, nosubtract=False
-    ):
+    def __getMaxSwitchPortBandwidth(self, device, port):
+        """Get max port bandwidth."""
+        switchInfo = self.switch.getinfo()
+        bw = 0
+        if "capacity" in switchInfo.get("ports", {}).get(device, {}).get(port, {}):
+            bw = int(switchInfo["ports"][device][port]["capacity"])
+        elif "bandwidth" in switchInfo.get("ports", {}).get(device, {}).get(port, {}):
+            bw = int(switchInfo["ports"][device][port]["bandwidth"])
+        if bw <= 0:
+            self.logger.warning(f"Device {device} port {port} has no bandwidth information. ")
+        return bw
+
+    def bwCalculatereservableSwitch(self, config, device, port, maxbw=None, nosubtract=False):
         """Calculate reserved bandwidth for port on switch."""
+        if not maxbw:
+            maxbw = self.__getMaxSwitchPortBandwidth(device, port)
         reserve = config.get(device, {}).get(port, {}).get("reservableCapacity", -1)
         if reserve == -1:
             reserve = config.get(device, {}).get("reservableCapacity", -1)
@@ -123,9 +129,7 @@ class BWService:
         vport = self.switch.getSystemValidPortName(port)
         return self._calculateRemaining(device, vport, maxbw, reserve, nosubtract)
 
-    def bwCalculatereservableServer(
-        self, config, device, port, maxbw, nosubtract=False
-    ):
+    def bwCalculatereservableServer(self, config, device, port, maxbw, nosubtract=False):
         """Calculate reserved bandwidth for port on server."""
         reserve = config.get(port, {}).get("bwParams", {}).get("reservableCapacity", -1)
         if reserve == -1:
