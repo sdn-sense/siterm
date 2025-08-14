@@ -58,14 +58,31 @@ class QualityOfService:
         vlanD = tmpD.setdefault(f"{port}-{vlan}", {})
         vlanD.setdefault("port", portName)
         vlanD.setdefault("vlan", vlan)
-        vlanD.setdefault("rate", resvRate)
+        vlanD.setdefault("min_rate", resvRate)
         vlanD.setdefault("unit", resvUnit)
+        vlanD.setdefault("burst_size", self.getConfigValue(host, "qos_policy").get("burst_size", "100"))
         vlanD.setdefault("qosnumber", self.__getQoSPolicyNumber(host, portDict))
         vlanD.setdefault("qosname", portDict.get("hasService", {}).get("type", "default"))
         vlanD.setdefault("state", "present")
+        # Identify max remaining, max policy rate
+        maxrem = self.bwCalculatereservableSwitch(self.config.config["MAIN"], host, port)
+        maxPolicyRate = self.getConfigValue(host, "qos_policy").get("max_policy_rate", "10000")
+        # In case request is guaranteed capped, min and max should be the same
+        if vlanD["qosname"] == "guaranteedCapped" and resvRate > maxPolicyRate:
+            # In case requested rate is higher than max policy rate, we overwrite min_rate to maxPolicyRate
+            # In this case max_rate is not set.
+            vlanD["min_rate"] = maxPolicyRate
+        elif vlanD["qosname"] == "guaranteedCapped":
+            # In case requested rate is lower than max policy rate, we set max_rate to requested rate
+            vlanD["max_rate"] = resvRate
+        elif resvRate > maxPolicyRate:
+            # For anything else, if requested rate is higher than max policy rate, we set min_rate to maxPolicyRate
+            vlanD["min_rate"] = maxPolicyRate
+            # Max rate is set to maxPolicyRate, or to requested rate, whichever is lower
+            vlanD["max_rate"] = maxrem if maxrem < maxPolicyRate else maxPolicyRate
+
         vlanD.setdefault("maxremaining", self.bwCalculatereservableSwitch(self.config.config["MAIN"], host, port))
-        vlanD.setdefault("burst_size", self.getConfigValue(host, "qos_policy").get("burst_size", "100"))
-        vlanD.setdefault("max_policy_rate", self.getConfigValue(host, "qos_policy").get("max_policy_rate", "1000"))
+        vlanD.setdefault("max_policy_rate", self.getConfigValue(host, "qos_policy").get("max_policy_rate", "10000"))
 
     def compareQoS(self, switch, runningConf, uuid=""):
         """Compare expected and running conf"""
