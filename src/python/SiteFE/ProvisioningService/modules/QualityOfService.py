@@ -53,8 +53,8 @@ class QualityOfService:
             # Should we still add this to 1?
             return
 
-        vlan = self.__getVlanID(host, port, portDict)
-        tmpD = self.__getdefaultIntf(host, "qos", "qos")
+        vlan = self._getVlanID(host, port, portDict)
+        tmpD = self._getdefaultIntf(host, "qos", "qos")
         vlanD = tmpD.setdefault(f"{port}-{vlan}", {})
         vlanD.setdefault("port", portName)
         vlanD.setdefault("vlan", vlan)

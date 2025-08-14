@@ -69,7 +69,7 @@ class VirtualSwitchingService:
     def __init__(self):
         super().__init__()
 
-    def __getdefaultIntf(self, host, key="vsw", subkey="interface"):
+    def _getdefaultIntf(self, host, key="vsw", subkey="interface"):
         """Setup default yaml dict for interfaces"""
         tmpD = self.yamlconfuuid.setdefault(key, {}).setdefault(self.connID, {})
         tmpD = tmpD.setdefault(host, {})
@@ -84,16 +84,16 @@ class VirtualSwitchingService:
             return normalizedip(ipval)
         return None
 
-    def __getVlanID(self, host, port, portDict):
+    def _getVlanID(self, host, port, portDict):
         """Get vlan id from portDict"""
         if "hasLabel" not in portDict or "value" not in portDict["hasLabel"]:
             raise Exception(f"Bad running config. Missing vlan entry: {host} {port} {portDict}")
         return portDict["hasLabel"]["value"]
 
-    def __getdefaultVlan(self, host, port, portDict):
+    def _getdefaultVlan(self, host, port, portDict):
         """Default yaml dict setup"""
-        tmpD = self.__getdefaultIntf(host, self.acttype)
-        vlan = self.__getVlanID(host, port, portDict)
+        tmpD = self._getdefaultIntf(host, self.acttype)
+        vlan = self._getVlanID(host, port, portDict)
         vlanName = f"Vlan{vlan}"
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault("name", vlanName)

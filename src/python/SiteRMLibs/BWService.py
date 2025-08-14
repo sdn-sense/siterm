@@ -110,6 +110,7 @@ class BWService:
         """Get max port bandwidth."""
         switchInfo = self.switch.getinfo()
         bw = 0
+        port = self.switch.getSwitchPortName(device, port)
         if "capacity" in switchInfo.get("ports", {}).get(device, {}).get(port, {}):
             bw = int(switchInfo["ports"][device][port]["capacity"])
         elif "bandwidth" in switchInfo.get("ports", {}).get(device, {}).get(port, {}):
