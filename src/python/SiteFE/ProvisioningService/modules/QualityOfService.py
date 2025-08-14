@@ -65,8 +65,8 @@ class QualityOfService:
         vlanD.setdefault("qosname", portDict.get("hasService", {}).get("type", "default"))
         vlanD.setdefault("state", "present")
         # Identify max remaining, max policy rate
-        maxrem = self.bwCalculatereservableSwitch(self.config.config["MAIN"], host, port)
-        maxPolicyRate = self.getConfigValue(host, "qos_policy").get("max_policy_rate", "10000")
+        maxrem = int(self.bwCalculatereservableSwitch(self.config.config["MAIN"], host, port))
+        maxPolicyRate = int(self.getConfigValue(host, "qos_policy").get("max_policy_rate", "10000"))
         # In case request is guaranteed capped, min and max should be the same
         if vlanD["qosname"] == "guaranteedCapped" and resvRate > maxPolicyRate:
             # In case requested rate is higher than max policy rate, we overwrite min_rate to maxPolicyRate
