@@ -108,7 +108,7 @@ class VirtualSwitchingService:
 
     def _addTaggedInterfaces(self, host, port, portDict, _params):
         """Add Tagged Interfaces to expected yaml conf"""
-        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        vlanDict = self._getdefaultVlan(host, port, portDict)
         portName = self.switch.getSwitchPortName(host, port)
         vlanDict.setdefault("tagged_members", {})
         vlanDict["tagged_members"][portName] = "present"
@@ -116,7 +116,7 @@ class VirtualSwitchingService:
     def _addIPv4Address(self, host, port, portDict, params):
         """Add IPv4 to expected yaml conf"""
         # For IPv4 - only single IP is supported. No secondary ones
-        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        vlanDict = self._getdefaultVlan(host, port, portDict)
         ipaddr = self.__getIP("ipv4", portDict)
         if ipaddr:
             vlanDict.setdefault("ipv4_address", {})
@@ -129,7 +129,7 @@ class VirtualSwitchingService:
 
     def _addIPv6Address(self, host, port, portDict, params):
         """Add IPv6 to expected yaml conf"""
-        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        vlanDict = self._getdefaultVlan(host, port, portDict)
         ipaddr = self.__getIP("ipv6", portDict)
         if ipaddr:
             vlanDict.setdefault("ipv6_address", {})
@@ -141,7 +141,7 @@ class VirtualSwitchingService:
             vlanDict["ipv6_address"][ipaddr] = "present"
 
     def _presetDefaultParams(self, host, port, portDict, _params):
-        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        vlanDict = self._getdefaultVlan(host, port, portDict)
         vlanDict["description"] = portDict.get("_params", {}).get("tag", "SENSE-VLAN-Without-Tag")
         vlanDict["belongsTo"] = portDict.get("_params", {}).get("belongsTo", "SENSE-VLAN-Without-belongsTo")
         vlanDict["state"] = "present"

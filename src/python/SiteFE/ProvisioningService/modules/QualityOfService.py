@@ -34,11 +34,11 @@ class QualityOfService:
         """Get QoS policy number from portDict"""
         qosPolicy = portDict.get("hasService", {}).get("type", {})
         qosPolicy = qosPolicy if qosPolicy else "default"
-        if qosPolicy not in self.getConfigValue(host, "qos_policy"):
+        if qosPolicy not in self.getConfigValue(host, "qos_policy").get("traffic_classes", {}):
             self.logger.warning(f"QoS policy {qosPolicy} is not defined in config. " "Using default instead.")
             qosPolicy = "default"
-            return self.getConfigValue(host, "qos_policy").get(qosPolicy, 1)
-        return self.getConfigValue(host, "qos_policy")[qosPolicy]
+            return self.getConfigValue(host, "qos_policy").get("traffic_classes", {}).get(qosPolicy, 1)
+        return self.getConfigValue(host, "qos_policy").get("traffic_classes", {}).get(qosPolicy, 1)
 
     def addQoS(self, host, port, portDict, _params):
         """Add QoS to expected yaml conf"""
@@ -64,6 +64,8 @@ class QualityOfService:
         vlanD.setdefault("qosname", portDict.get("hasService", {}).get("type", "default"))
         vlanD.setdefault("state", "present")
         vlanD.setdefault("maxremaining", self.bwCalculatereservableSwitch(self.config.config["MAIN"], host, port))
+        vlanD.setdefault("burst_size", self.getConfigValue(host, "qos_policy").get("burst_size", "100"))
+        vlanD.setdefault("max_policy_rate", self.getConfigValue(host, "qos_policy").get("max_policy_rate", "1000"))
 
     def compareQoS(self, switch, runningConf, uuid=""):
         """Compare expected and running conf"""
