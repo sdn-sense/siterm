@@ -99,12 +99,12 @@ class QualityOfService:
                     key,
                     {
                         "state": "absent",
-                        "rate": val["rate"],
-                        "unit": val["unit"],
-                        "port": val["port"],
-                        "vlan": val["vlan"],
-                        "qosnumber": val["qosnumber"],
-                        "qosname": val["qosname"],
+                        "rate": val.get("rate", 0),
+                        "unit": val.get("unit", ""),
+                        "port": val.get("port", ""),
+                        "vlan": val.get("vlan", ""),
+                        "qosnumber": val.get("qosnumber", 0),
+                        "qosname": val.get("qosname", ""),
                     },
                 )
             if val["state"] != "absent":
