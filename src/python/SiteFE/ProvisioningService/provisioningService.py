@@ -23,6 +23,7 @@ UpdateDate              : 2022/05/09
 import copy
 import sys
 
+from SiteFE.ProvisioningService.modules.QualityOfService import QualityOfService
 from SiteFE.ProvisioningService.modules.RoutingService import RoutingService
 from SiteFE.ProvisioningService.modules.VirtualSwitchingService import (
     VirtualSwitchingService,
@@ -44,7 +45,7 @@ from SiteRMLibs.MainUtilities import (
 from SiteRMLibs.timing import Timing
 
 
-class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Timing):
+class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfService, BWService, Timing):
     """
     Provisioning service communicates with Local controllers and applies
     network changes.
@@ -65,7 +66,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         self.yamlconfuuid = {}
         self.yamlconfuuidActive = {}
         self.connID = None
-        self.activeOutput = {"output": {}}
+        self.activeDeltas = {"output": {}}
         self.forceapply = []
         self.firstrun = False
         self.acttype = None
@@ -268,15 +269,19 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             }
         )
 
+    def calculateQoS(self, switches):
+        """Calculate QoS for all switches"""
+        for swname in switches:
+            self.logger.info(f"Calculating QoS for {swname}")
+            # Call the QoS calculation logic here
+
     def compareIndv(self, switches):
         """Compare individual entries and report it's status"""
         changed = False
-        scannedUUIDs = []
-        for acttype, actcalls in {
-            "vsw": {"interface": self.compareVsw},
-            "rst": {"sense_bgp": self.compareBGP},
-            "singleport": {"interface": self.compareVsw},
-        }.items():
+        scannedUUIDs = {}
+
+        for acttype, actcalls in {"vsw": {"interface": self.compareVsw}, "rst": {"sense_bgp": self.compareBGP}, "singleport": {"interface": self.compareVsw}, "qos": {"qos": self.compareQoS}}.items():
+            scannedUUIDs.setdefault(acttype, [])
             self.acttype = acttype
             uuidDict = self.yamlconfuuidActive.get(acttype, {})
             if not self.yamlconfuuidActive:
@@ -285,7 +290,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
             for idx, (uuid, ddict) in enumerate(uuidDict.items(), start=1):
                 self.logger.info("-" * 100)
                 self.logger.info(f"Working on {acttype} {idx} out of {total}")
-                scannedUUIDs.append(uuid)
+                scannedUUIDs[acttype].append(uuid)
                 for swname, swdict in ddict.items():
                     if swname not in switches:
                         continue
@@ -308,12 +313,13 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
                                 changed = True
                                 self.applyIndvConfig(swname, uuid, key, acttype)
             # We also want to apply any new ones asap (timed especially, which start at any time set)
+            # TODO: Move to it's own function
             self.logger.info("Start check of all new applies")
             total = len(self.yamlconfuuid.get(acttype, {}))
             for idx, (uuid, ddict) in enumerate(self.yamlconfuuid.get(acttype, {}).items(), start=1):
-                if uuid in scannedUUIDs:
+                if uuid in scannedUUIDs.get(acttype, []):
                     continue
-                scannedUUIDs.append(uuid)
+                scannedUUIDs[acttype].append(uuid)
                 self.logger.debug("-" * 100)
                 self.logger.info(f"[NEW APPLY]: Working on {acttype} {idx} out of {total}. UUID: {uuid}")
                 for swname, swdict in ddict.items():
@@ -328,11 +334,11 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
 
     def _getActive(self):
         """Get Active Output"""
-        self.activeOutput = {"output": {}}
+        self.activeDeltas = {"output": {}}
         activeDeltas = self.dbI.get("activeDeltas")
         if activeDeltas:
             activeDeltas = activeDeltas[0]
-            self.activeOutput["output"] = evaldict(activeDeltas["output"])
+            self.activeDeltas["output"] = evaldict(activeDeltas["output"])
 
     def _getAllForceApply(self):
         """Get all force apply"""
@@ -356,7 +362,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, BWService, Ti
         self._getAllForceApply()
         self.switch.getinfo()
         switches = self.switch.getAllSwitches()
-        self.prepareYamlConf(self.activeOutput["output"], switches)
+        self.prepareYamlConf(self.activeDeltas["output"], switches)
 
         # Compare individual requests and report it's states
         configChanged = self.compareIndv(switches)

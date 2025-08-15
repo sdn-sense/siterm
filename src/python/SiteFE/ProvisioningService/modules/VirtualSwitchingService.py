@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# pylint: disable=line-too-long
 """Virtual Switching module to prepare/compare with ansible config.
 
 Copyright 2021 California Institute of Technology
@@ -67,7 +69,7 @@ class VirtualSwitchingService:
     def __init__(self):
         super().__init__()
 
-    def __getdefaultIntf(self, host, key="vsw", subkey="interface"):
+    def _getdefaultIntf(self, host, key="vsw", subkey="interface"):
         """Setup default yaml dict for interfaces"""
         tmpD = self.yamlconfuuid.setdefault(key, {}).setdefault(self.connID, {})
         tmpD = tmpD.setdefault(host, {})
@@ -82,16 +84,16 @@ class VirtualSwitchingService:
             return normalizedip(ipval)
         return None
 
-    def __getVlanID(self, host, port, portDict):
+    def _getVlanID(self, host, port, portDict):
         """Get vlan id from portDict"""
         if "hasLabel" not in portDict or "value" not in portDict["hasLabel"]:
             raise Exception(f"Bad running config. Missing vlan entry: {host} {port} {portDict}")
         return portDict["hasLabel"]["value"]
 
-    def __getdefaultVlan(self, host, port, portDict):
+    def _getdefaultVlan(self, host, port, portDict):
         """Default yaml dict setup"""
-        tmpD = self.__getdefaultIntf(host, self.acttype)
-        vlan = self.__getVlanID(host, port, portDict)
+        tmpD = self._getdefaultIntf(host, self.acttype)
+        vlan = self._getVlanID(host, port, portDict)
         vlanName = f"Vlan{vlan}"
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault("name", vlanName)
@@ -104,57 +106,9 @@ class VirtualSwitchingService:
             vlanDict.setdefault("mtu", tmpVlanMTU)
         return vlanDict
 
-    def __checkQoSEnabled(self, host, portData):
-        """Check if QoS is enabled for this port"""
-        # First check if this is enabled (either at port level, or globally at switch)
-        hostratelimit = self.getConfigValue(host, "rate_limit")
-        if hostratelimit != "":
-            if not bool(hostratelimit):
-                self.logger.debug(f"QoS is not enabled at switch level for {host}. ")
-                return False
-        portratelimit = portData.get("rate_limit", "NOTSET")
-        if portratelimit == "NOTSET":
-            # If not set, and switch level is set to true, then we assume it is enabled
-            return True
-        return bool(portratelimit)
-
-    def __getQoSPolicyNumber(self, host, portDict):
-        """Get QoS policy number from portDict"""
-        qosPolicy = portDict.get("hasService", {}).get("type", {})
-        qosPolicy = qosPolicy if qosPolicy else "default"
-        if qosPolicy not in self.getConfigValue(host, "qos_policy"):
-            self.logger.warning(f"QoS policy {qosPolicy} is not defined in config. " "Using default instead.")
-            qosPolicy = "default"
-            return self.getConfigValue(host, "qos_policy").get(qosPolicy, 1)
-        return self.getConfigValue(host, "qos_policy")[qosPolicy]
-
-    def _addQoS(self, host, port, portDict, _params):
-        """Add QoS to expected yaml conf"""
-        portName = self.switch.getSwitchPortName(host, port)
-        portData = self.switch.getSwitchPort(host, portName)
-        if not self.__checkQoSEnabled(host, portData):
-            # QoS is not enabled, so no need to add it
-            return
-        resvRate, resvUnit = self.convertToRate(portDict.get("hasService", {}))
-        if resvRate == 0:
-            self.logger.debug(f"QoS is enabled for {host} {port} {portDict}. " "Rate is 0, so not adding to ansible yaml")
-            # Should we still add this to 1?
-            return
-
-        vlan = self.__getVlanID(host, port, portDict)
-        tmpD = self.__getdefaultIntf(host, "qos", "qos")
-        vlanD = tmpD.setdefault(f"{port}-{vlan}", {})
-        vlanD.setdefault("port", portName)
-        vlanD.setdefault("vlan", vlan)
-        vlanD.setdefault("rate", resvRate)
-        vlanD.setdefault("unit", resvUnit)
-        vlanD.setdefault("qosnumber", self.__getQoSPolicyNumber(host, portDict))
-        vlanD.setdefault("qosname", portDict.get("hasService", {}).get("type", "default"))
-        vlanD.setdefault("state", "present")
-
     def _addTaggedInterfaces(self, host, port, portDict, _params):
         """Add Tagged Interfaces to expected yaml conf"""
-        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        vlanDict = self._getdefaultVlan(host, port, portDict)
         portName = self.switch.getSwitchPortName(host, port)
         vlanDict.setdefault("tagged_members", {})
         vlanDict["tagged_members"][portName] = "present"
@@ -162,7 +116,7 @@ class VirtualSwitchingService:
     def _addIPv4Address(self, host, port, portDict, params):
         """Add IPv4 to expected yaml conf"""
         # For IPv4 - only single IP is supported. No secondary ones
-        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        vlanDict = self._getdefaultVlan(host, port, portDict)
         ipaddr = self.__getIP("ipv4", portDict)
         if ipaddr:
             vlanDict.setdefault("ipv4_address", {})
@@ -175,7 +129,7 @@ class VirtualSwitchingService:
 
     def _addIPv6Address(self, host, port, portDict, params):
         """Add IPv6 to expected yaml conf"""
-        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        vlanDict = self._getdefaultVlan(host, port, portDict)
         ipaddr = self.__getIP("ipv6", portDict)
         if ipaddr:
             vlanDict.setdefault("ipv6_address", {})
@@ -187,7 +141,7 @@ class VirtualSwitchingService:
             vlanDict["ipv6_address"][ipaddr] = "present"
 
     def _presetDefaultParams(self, host, port, portDict, _params):
-        vlanDict = self.__getdefaultVlan(host, port, portDict)
+        vlanDict = self._getdefaultVlan(host, port, portDict)
         vlanDict["description"] = portDict.get("_params", {}).get("tag", "SENSE-VLAN-Without-Tag")
         vlanDict["belongsTo"] = portDict.get("_params", {}).get("belongsTo", "SENSE-VLAN-Without-belongsTo")
         vlanDict["state"] = "present"
@@ -204,7 +158,7 @@ class VirtualSwitchingService:
                     self._addTaggedInterfaces(host, port, portDict, params)
                     self._addIPv4Address(host, port, portDict, params)
                     self._addIPv6Address(host, port, portDict, params)
-                    self._addQoS(host, port, portDict, params)
+                    self.addQoS(host, port, portDict, params)
 
     def addvsw(self, activeConfig, switches):
         """Prepare ansible yaml from activeConf (for vsw)"""
@@ -223,37 +177,6 @@ class VirtualSwitchingService:
                 if self.firstrun and connID not in self.forceapply:
                     self.logger.debug(f"First run, will force apply {self.acttype} for {connID}.")
                     self.forceapply.append(connID)
-
-    def compareQoS(self, switch, runningConf, uuid=""):
-        """Compare expected and running conf"""
-        # TODO: This currently is not used anywhere, and should be used for QoS on network devices;
-        tmpD = self.yamlconfuuid.setdefault("qos", {}).setdefault(uuid, {}).setdefault(switch, {})
-        tmpD = tmpD.setdefault("qos", {})
-        if tmpD == runningConf:
-            return False
-        for key, val in runningConf.items():
-            if key not in tmpD.keys() and val["state"] != "absent":
-                # QoS is present in ansible config, but not in new config
-                # set qos to state: 'absent'. In case it is absent already
-                # we dont need to set it again. Switch is unhappy to apply
-                # same command if service is not present.
-                tmpD.setdefault(
-                    key,
-                    {
-                        "state": "absent",
-                        "rate": val["rate"],
-                        "unit": val["unit"],
-                        "port": val["port"],
-                        "vlan": val["vlan"],
-                        "qosnumber": val["qosnumber"],
-                        "qosname": val["qosname"],
-                    },
-                )
-            if val["state"] != "absent":
-                for key1, val1 in val.items():
-                    if key1 in ["rate", "unit"]:
-                        tmpD.setdefault(key, {}).setdefault(key1, val1)
-        return True
 
     def compareVsw(self, switch, runningConf, uuid):
         """Compare expected and running conf"""

@@ -68,15 +68,13 @@ class BWService:
             elif inputRate == "kbps":
                 retVal = int(inputVal // 1000)
             else:
-                self.logger.error(
-                    f"Unknown input rate parameter {inputRate} and {inputVal}"
-                )
+                self.logger.error(f"Unknown input rate parameter {inputRate} and {inputVal}")
                 retVal = 100
         except TypeError as ex:
             self.logger.error(f"Error converting BW Service. {ex}. Input {params}")
         return retVal
 
-    def _calculateRemaining(self, device, port, maxbw, reserve, nosubtract=False):
+    def _calculateRemaining(self, device, port, maxbw, reserve, nosubtract=False, subtractGC=False):
         """Calculate remaining bandwidth for device and port."""
         # If reserve is still -1, means full link speed allowed; if not, then we need to calculate
         # if reserve is 0, then no bandwidth is allowed.
@@ -100,35 +98,48 @@ class BWService:
             if not bwparams:
                 continue
             reservedRate = self.convertToRate(bwparams)
-            self.logger.debug(
-                f"Device {device} port {port} has reserved {reservedRate[0]} {reservedRate[1]}"
-            )
+            self.logger.debug(f"Device {device} port {port} has reserved {reservedRate[0]} {reservedRate[1]} for {bwparams.get('type', 'default')}")
+            # In case subtractGC is set to True, we only subtract guaranteedCapped policies
+            # This is mainly used for QoS calculation on switches, where only guaranteedCapped
+            # policies actually reserve bandwidth on the switch port. Other policies are just
+            # limiting traffic and use traffic classes to tell switch how to treat traffic.
+            if subtractGC and bwparams.get("type", "") != "guaranteedCapped":
+                continue
             maxbw -= reservedRate[0]
             self.logger.debug(f"Device {device} port {port} has left {maxbw}")
         if maxbw < 0:
-            self.logger.warning(
-                f"Device {device} port {port} has reserved more than allowed. {maxbw}"
-            )
+            self.logger.warning(f"Device {device} port {port} has reserved more than allowed. {maxbw}")
             return 0
         return maxbw
 
-    def bwCalculatereservableSwitch(
-        self, config, device, port, maxbw, nosubtract=False
-    ):
+    def __getMaxSwitchPortBandwidth(self, device, port):
+        """Get max port bandwidth."""
+        switchInfo = self.switch.getinfo()
+        bw = 0
+        port = self.switch.getSwitchPortName(device, port)
+        if "capacity" in switchInfo.get("ports", {}).get(device, {}).get(port, {}):
+            bw = int(switchInfo["ports"][device][port]["capacity"])
+        elif "bandwidth" in switchInfo.get("ports", {}).get(device, {}).get(port, {}):
+            bw = int(switchInfo["ports"][device][port]["bandwidth"])
+        if bw <= 0:
+            self.logger.warning(f"Device {device} port {port} has no bandwidth information. ")
+        return bw
+
+    def bwCalculatereservableSwitch(self, config, device, port, maxbw=None, nosubtract=False, subtractGC=False):
         """Calculate reserved bandwidth for port on switch."""
+        if not maxbw:
+            maxbw = self.__getMaxSwitchPortBandwidth(device, port)
         reserve = config.get(device, {}).get(port, {}).get("reservableCapacity", -1)
         if reserve == -1:
             reserve = config.get(device, {}).get("reservableCapacity", -1)
         # Now we need to remove all active QoS policies and calculate how much is left for the port to use.
         vport = self.switch.getSystemValidPortName(port)
-        return self._calculateRemaining(device, vport, maxbw, reserve, nosubtract)
+        return self._calculateRemaining(device, vport, maxbw, reserve, nosubtract, subtractGC)
 
-    def bwCalculatereservableServer(
-        self, config, device, port, maxbw, nosubtract=False
-    ):
+    def bwCalculatereservableServer(self, config, device, port, maxbw, nosubtract=False, subtractGC=False):
         """Calculate reserved bandwidth for port on server."""
         reserve = config.get(port, {}).get("bwParams", {}).get("reservableCapacity", -1)
         if reserve == -1:
             reserve = config.get("agent", {}).get("reservableCapacity", -1)
         # Now we need to remove all active QoS policies and calculate how much is left for the port to use.
-        return self._calculateRemaining(device, port, maxbw, reserve, nosubtract)
+        return self._calculateRemaining(device, port, maxbw, reserve, nosubtract, subtractGC)

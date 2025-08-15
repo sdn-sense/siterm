@@ -463,7 +463,9 @@ class GitConfig:
             },
         }
         switchDefaults = {
-            "qos_policy": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7},
+            "qos_policy": {"traffic_classes": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7},
+                           "max_policy_rate": "268000",
+                           "burst_size": "256"},
             "rate_limit": False,
             "vsw": "%%SWITCHNAME%%",
             "vswmp": "%%SWITCHNAME%%_mp",
