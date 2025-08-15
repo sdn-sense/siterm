@@ -278,9 +278,10 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
     def compareIndv(self, switches):
         """Compare individual entries and report it's status"""
         changed = False
-        scannedUUIDs = []
+        scannedUUIDs = {}
 
         for acttype, actcalls in {"vsw": {"interface": self.compareVsw}, "rst": {"sense_bgp": self.compareBGP}, "singleport": {"interface": self.compareVsw}, "qos": {"qos": self.compareQoS}}.items():
+            scannedUUIDs.setdefault(acttype, [])
             self.acttype = acttype
             uuidDict = self.yamlconfuuidActive.get(acttype, {})
             if not self.yamlconfuuidActive:
@@ -289,7 +290,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
             for idx, (uuid, ddict) in enumerate(uuidDict.items(), start=1):
                 self.logger.info("-" * 100)
                 self.logger.info(f"Working on {acttype} {idx} out of {total}")
-                scannedUUIDs.append(uuid)
+                scannedUUIDs[acttype].append(uuid)
                 for swname, swdict in ddict.items():
                     if swname not in switches:
                         continue
@@ -316,9 +317,9 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
             self.logger.info("Start check of all new applies")
             total = len(self.yamlconfuuid.get(acttype, {}))
             for idx, (uuid, ddict) in enumerate(self.yamlconfuuid.get(acttype, {}).items(), start=1):
-                if uuid in scannedUUIDs:
+                if uuid in scannedUUIDs.get(acttype, []):
                     continue
-                scannedUUIDs.append(uuid)
+                scannedUUIDs[acttype].append(uuid)
                 self.logger.debug("-" * 100)
                 self.logger.info(f"[NEW APPLY]: Working on {acttype} {idx} out of {total}. UUID: {uuid}")
                 for swname, swdict in ddict.items():

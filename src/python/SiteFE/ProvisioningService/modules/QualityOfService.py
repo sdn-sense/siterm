@@ -10,8 +10,10 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/08/14
 """
 
+
 class QualityOfService:
     """Quality of Service - manage QoS settings for switches"""
+
     # pylint: disable=E1101,W0201,W0235
     def __init__(self):
         super().__init__()
@@ -65,7 +67,7 @@ class QualityOfService:
         vlanD.setdefault("qosname", portDict.get("hasService", {}).get("type", "default"))
         vlanD.setdefault("state", "present")
         # Identify max remaining, max policy rate
-        maxrem = int(self.bwCalculatereservableSwitch(self.config.config["MAIN"], host, port))
+        maxrem = int(self.bwCalculatereservableSwitch(self.config.config["MAIN"], host, port, subtractGC=True))
         maxPolicyRate = int(self.getConfigValue(host, "qos_policy").get("max_policy_rate", "10000"))
         # In case request is guaranteed capped, min and max should be the same
         if vlanD["qosname"] == "guaranteedCapped" and resvRate > maxPolicyRate:
