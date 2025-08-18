@@ -289,9 +289,9 @@ class NetInfo(BWService):
                 self.addError("LLDP information not found. lldpcli show neighbors -f json returned empty.")
                 return {}
             # Check lldpOut errors
-            if len(lldpOut) > 1 and lldpOut[2].strip():
-                self.logger.debug(f"lldpcli show neighbors -f json returned error: {lldpOut[2]}")
-                self.addError(f"lldpcli show neighbors -f json returned error: {lldpOut[2]}")
+            if len(lldpOut) > 1 and lldpOut[1].strip():
+                self.logger.debug(f"lldpcli show neighbors -f json returned error: {lldpOut[1]}")
+                self.addError(f"lldpcli show neighbors -f json returned error: {lldpOut[1]}")
             out = {}
             for item in lldpObj.get("lldp", {}).get("interface", []):
                 for intf, vals in item.items():
