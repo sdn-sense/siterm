@@ -1,305 +1,442 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.4.0">
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="assets/css/bootstrap.css" rel="stylesheet">
-  <link href="assets/css/custom.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/next.css" />
-  <script src="assets/js/jquery.min.js" type="text/javascript"></script>
-  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
-  <script src="assets/js/main.js" type="text/javascript"></script>
-  <script src="assets/js/multiselect.js" type="text/javascript"></script>
-  <script type="text/javascript" src="assets/js/next.js"></script>
-  <script type="text/javascript">
-        google.load('visualization', '1', {packages:['table', 'controls']});
-  </script>
-  <title>Site-RM: Frontend Configuration</title>
-</head>
-<body>
-  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
-  </header>
-  <div class="container-fluid">
-    <div class="row">
-      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-        <div class="position-sticky pt-3">
-          <ul class="nav flex-column">
-            <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="/index.html">Topology</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/frontendconfig.html">Frontend Configuration</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/models.html">Models</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/servicestates.html">ServiceStates</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/deltas.html">Deltas</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/activerequests.html">Active Requests</a>
-            </li>
-          </ul>
-          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"><span>Debugging tools</span> <a class="link-secondary" href="#" aria-label="Debugging tools"></a></h6>
-          <ul class="nav flex-column mb-2">
-            <li class="nav-item">
-              <a class="nav-link" href="/newdebug.html">Request new debug action</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/debughistory.html">Debug history</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/changeactive.html">Change Active Start/End</a>
-            </li>
-          </ul>
-        </div>
-      </nav>
-      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-          <h1 class="h2">Topology</h1>
-        </div>
-      <div class="row">
-        <div class="col ">
-          <label>Filter switch</label>
-          <select name="filterswitch" id="filterswitch" style="width:220px;" multiple multiselect-search="true" multiselect-select-all="true" multiselect-max-items="3" onchange="reload(nx, data)">
-          </select>
-          <label>Filter Server</label>
-          <select name="filterserver" id="filterserver" style="width:220px;" multiple multiselect-search="true" multiselect-select-all="true" multiselect-max-items="3" onchange="reload(nx, data)">
-          </select>
-        <div class="next-app" id="topo"></div>
-        </div>
+  <head>
+    <meta
+      name="generator"
+      content="HTML Tidy for HTML5 for Linux version 5.4.0"
+    />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="assets/css/bootstrap.css" rel="stylesheet" />
+    <link href="assets/css/custom.css" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/css/next.css" />
+    <script src="assets/js/jquery.min.js" type="text/javascript"></script>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script src="assets/js/main.js" type="text/javascript"></script>
+    <script src="assets/js/multiselect.js" type="text/javascript"></script>
+    <script type="text/javascript" src="assets/js/next.js"></script>
+    <script type="text/javascript">
+      google.load("visualization", "1", { packages: ["table", "controls"] });
+    </script>
+    <title>Site-RM: Frontend Configuration</title>
+  </head>
+  <body>
+    <header
+      class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow"
+    >
+      <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#"
+        >SDN SENSE End Site Monitoring</a
+      >
+      <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
+        <span class="text-success mr-3" id="alive-status">Alive: ...</span>
+        <span class="text-success mr-3" id="ready-status">Ready: ...</span>
+        <span class="text-white mr-3" id="swagger-doc"
+          ><a href="/docs#/" target="_blank">Swagger Doc</a></span
+        >
       </div>
-      </main>
+    </header>
+    <div class="container-fluid">
+      <div class="row">
+        <nav
+          id="sidebarMenu"
+          class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"
+        >
+          <div class="position-sticky pt-3">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a
+                  class="nav-link active"
+                  aria-current="page"
+                  href="/index.html"
+                  >Topology</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/frontendconfig.html"
+                  >Frontend Configuration</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/models.html">Models</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/servicestates.html">ServiceStates</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/deltas.html">Deltas</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/activerequests.html"
+                  >Active Requests</a
+                >
+              </li>
+            </ul>
+            <h6
+              class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"
+            >
+              <span>Debugging tools</span>
+              <a
+                class="link-secondary"
+                href="#"
+                aria-label="Debugging tools"
+              ></a>
+            </h6>
+            <ul class="nav flex-column mb-2">
+              <li class="nav-item">
+                <a class="nav-link" href="/newdebug.html"
+                  >Request new debug action</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/debughistory.html">Debug history</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/changeactive.html"
+                  >Change Active Start/End</a
+                >
+              </li>
+            </ul>
+          </div>
+        </nav>
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+          <div
+            class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+          >
+            <h1 class="h2">Topology</h1>
+          </div>
+          <div class="row">
+            <div class="col">
+              <label>Filter switch</label>
+              <select
+                name="filterswitch"
+                id="filterswitch"
+                style="width: 220px"
+                multiple
+                multiselect-search="true"
+                multiselect-select-all="true"
+                multiselect-max-items="3"
+                onchange="reload(nx, data)"
+              ></select>
+              <label>Filter Server</label>
+              <select
+                name="filterserver"
+                id="filterserver"
+                style="width: 220px"
+                multiple
+                multiselect-search="true"
+                multiselect-select-all="true"
+                multiselect-max-items="3"
+                onchange="reload(nx, data)"
+              ></select>
+              <div class="next-app" id="topo"></div>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
-  </div>
-  <script src="assets/js/bootstrap.bundle.js"></script>
-  <script src="assets/js/bootstrap.js"></script>
-  <script>
-  $('#myTab a').click(function (e) {
-    e.preventDefault();
-    $(this).tab('show');
-  })
-  var data = {};
-  var topologyData = {"nodes": [], "links": []}
+    <script src="assets/js/bootstrap.bundle.js"></script>
+    <script src="assets/js/bootstrap.js"></script>
+    <script>
+      $("#myTab a").click(function (e) {
+        e.preventDefault();
+        $(this).tab("show");
+      });
+      var data = {};
+      var topologyData = { nodes: [], links: [] };
 
-  var configdata = null;
-  $.ajax({
-    url: '/api/frontend/configuration',
-    dataType: 'json',
-    async: false,  // blocks the browser until request completes
-    success: function(response) {
-      configdata = response;
-    }
-  });
-  if (configdata){
-    var sitename = configdata['general']['sitename'];
-    $.ajax({url:'/api/' + sitename + '/topo/gettopology',
-        dataType: 'json',
-        async: false,
-        success: function(json){
-          for (j=0; j < json.length; j++){
-            var myObject = (0, eval)('(' + json[j]['hostinfo'] + ')');
-            json[j]['hostinfo'] = myObject;
+      var configdata = null;
+      $.ajax({
+        url: "/api/frontend/configuration",
+        dataType: "json",
+        async: false, // blocks the browser until request completes
+        success: function (response) {
+          configdata = response;
+        },
+      });
+      if (configdata) {
+        var sitename = configdata["general"]["sitename"];
+        $.ajax({
+          url: "/api/" + sitename + "/topo/gettopology",
+          dataType: "json",
+          async: false,
+          success: function (json) {
+            for (j = 0; j < json.length; j++) {
+              var myObject = (0, eval)("(" + json[j]["hostinfo"] + ")");
+              json[j]["hostinfo"] = myObject;
+            }
+            data = json;
+          },
+        });
+      }
+      for (
+        var x = Object.keys(data), i = 0;
+        i < x.length, (key = x[i]), (value = data[key]);
+        i++
+      ) {
+        topologyData["nodes"].push({
+          id: value["_id"],
+          name: key,
+          icontype: value["DeviceInfo"]["type"],
+        });
+        // Make sure device is in the select
+        $("#filter" + value["DeviceInfo"]["type"]).append(
+          $("<option>", {
+            value: key,
+            text: key,
+          }),
+        );
+      }
+    </script>
+    <script>
+      function normalizeKey(str) {
+        return str.toLowerCase().replace(/\s+/g, "");
+      }
+
+      function filterSelect(name) {
+        var input = [];
+        inputSelect = document.getElementById(name);
+        for (i = 0; i < inputSelect.length; i++) {
+          item = inputSelect[i];
+          if (item.selected) {
+            input.push(item.value);
           }
-          data = json;
         }
-      })
-  };
-  for (var x=Object.keys(data),i=0;i<x.length,key=x[i],value=data[key];i++){
-      topologyData["nodes"].push({"id": value["_id"],
-      "name": key,
-      "icontype": value["DeviceInfo"]["type"]})
-    // Make sure device is in the select
-    $('#filter'+value["DeviceInfo"]["type"]).append($('<option>', {
-        value: key,
-        text: key
-    }))}
-</script>
-<script>
-
-  function normalizeKey(str) {
-      return str.toLowerCase().replace(/\s+/g, '');
-  }
-
-  function filterSelect(name){
-    var input = []
-    inputSelect = document.getElementById(name);
-    for(i = 0; i < inputSelect.length; i++) {
-      item = inputSelect[i];
-      if (item.selected) {
-        input.push(item.value)
+        return input;
       }
-    }
-    return input
-  }
 
-  function filterAddItem(item, devtype, filterswitch, filterserver){
-  if (devtype === "switch"){
-    if (filterswitch.length === 0) return true;
-    return filterswitch.includes(item);
-  }
-  if (devtype === "server"){
-    if (filterserver.length === 0) return true;
-    return filterserver.includes(item);
-  }
-  if (devtype === "cloud"){
-    return true;
-  }
-  return false;
-  }
-
-  function loadTopo(nx, data){
-    filterswitch = filterSelect('filterswitch')
-    filterserver = filterSelect('filterserver')
-    var topologyData = {"nodes": [], "links": []}
-    links = {}
-    tmpid = 0;
-  for (var x=Object.keys(data),i=0;i<x.length,key=x[i],value=data[key];i++){
-  if(filterAddItem(key, value["DeviceInfo"]["type"], filterswitch, filterserver)) {
-    tmpdata = {"id": value["_id"], "name": key, "icontype": value["DeviceInfo"]["type"]}
-    if (value["DeviceInfo"]["type"] === "cloud") {
-      tmpdata["isAlias"] = value["DeviceInfo"]["name"]
-    }
-    topologyData["nodes"].push(tmpdata)
-
-    for (var l = Object.keys(data[key]["topo"]), j = 0; j < x.length, intkey = l[j], intval = data[key]["topo"][intkey]; j++) {
-      if(filterAddItem(intval["device"], 'switch', filterswitch, filterserver) || filterAddItem(intval["device"], 'server', filterswitch, filterserver)) {
-        linkkey = key + " " + intkey + " " + intval["device"] + " " + intval["port"]
-        linkkey = normalizeKey(linkkey)
-        linkkey1 = intval["device"] + " " + intval["port"] + " " + key + " " + intkey
-        linkkey1 = normalizeKey(linkkey1)
-        if (linkkey in links && linkkey1 in links) {
-          linkid = links[linkkey]
-        } else {
-          links[linkkey] = tmpid
-          links[linkkey1] = tmpid
-          linkid = tmpid
-          tmpid++
+      function filterAddItem(item, devtype, filterswitch, filterserver) {
+        if (devtype === "switch") {
+          if (filterswitch.length === 0) return true;
+          return filterswitch.includes(item);
         }
-        sourceid = value["_id"];
-        targetid = data[intval["device"]]["_id"]
-        ports = key + ":" + intkey + "<->" + intval["device"] + ":" + intval["port"]
-        topologyData["links"].push({"source": sourceid, "target": targetid, "id": tmpid, "ports": ports})
+        if (devtype === "server") {
+          if (filterserver.length === 0) return true;
+          return filterserver.includes(item);
+        }
+        if (devtype === "cloud") {
+          return true;
+        }
+        return false;
       }
-    }
-  }
-}
 
-        nx.define('SceneOverride', nx.graphic.Topology.DefaultScene, {
-        methods: {
-            enterLink: function(sender, link) {
-                this.inherited(sender, link);
-                link._oldcolor = link._color;
-                link.color('#FFFF00');
+      function loadTopo(nx, data) {
+        filterswitch = filterSelect("filterswitch");
+        filterserver = filterSelect("filterserver");
+        var topologyData = { nodes: [], links: [] };
+        links = {};
+        tmpid = 0;
+        for (
+          var x = Object.keys(data), i = 0;
+          i < x.length, (key = x[i]), (value = data[key]);
+          i++
+        ) {
+          if (
+            filterAddItem(
+              key,
+              value["DeviceInfo"]["type"],
+              filterswitch,
+              filterserver,
+            )
+          ) {
+            tmpdata = {
+              id: value["_id"],
+              name: key,
+              icontype: value["DeviceInfo"]["type"],
+            };
+            if (value["DeviceInfo"]["type"] === "cloud") {
+              tmpdata["isAlias"] = value["DeviceInfo"]["name"];
+            }
+            topologyData["nodes"].push(tmpdata);
+
+            for (
+              var l = Object.keys(data[key]["topo"]), j = 0;
+              j < x.length,
+                (intkey = l[j]),
+                (intval = data[key]["topo"][intkey]);
+              j++
+            ) {
+              if (
+                filterAddItem(
+                  intval["device"],
+                  "switch",
+                  filterswitch,
+                  filterserver,
+                ) ||
+                filterAddItem(
+                  intval["device"],
+                  "server",
+                  filterswitch,
+                  filterserver,
+                )
+              ) {
+                linkkey =
+                  key +
+                  " " +
+                  intkey +
+                  " " +
+                  intval["device"] +
+                  " " +
+                  intval["port"];
+                linkkey = normalizeKey(linkkey);
+                linkkey1 =
+                  intval["device"] +
+                  " " +
+                  intval["port"] +
+                  " " +
+                  key +
+                  " " +
+                  intkey;
+                linkkey1 = normalizeKey(linkkey1);
+                if (linkkey in links && linkkey1 in links) {
+                  linkid = links[linkkey];
+                } else {
+                  links[linkkey] = tmpid;
+                  links[linkkey1] = tmpid;
+                  linkid = tmpid;
+                  tmpid++;
+                }
+                sourceid = value["_id"];
+                targetid = data[intval["device"]]["_id"];
+                ports =
+                  key +
+                  ":" +
+                  intkey +
+                  "<->" +
+                  intval["device"] +
+                  ":" +
+                  intval["port"];
+                topologyData["links"].push({
+                  source: sourceid,
+                  target: targetid,
+                  id: tmpid,
+                  ports: ports,
+                });
+              }
+            }
+          }
+        }
+
+        nx.define("SceneOverride", nx.graphic.Topology.DefaultScene, {
+          methods: {
+            enterLink: function (sender, link) {
+              this.inherited(sender, link);
+              link._oldcolor = link._color;
+              link.color("#FFFF00");
             },
-            leaveLink: function(sender, link) {
-                this.inherited(sender, link);
-                if (link._oldcolor){link.color(link._oldcolor)}
-                else{
-                    link.color(null);
-                }}}});
-    nx.define('TopologyContainer', nx.ui.Component, {
-        // we use this trick to use this object as a nx.ui.Component and display topology at the same time
-        properties: {
+            leaveLink: function (sender, link) {
+              this.inherited(sender, link);
+              if (link._oldcolor) {
+                link.color(link._oldcolor);
+              } else {
+                link.color(null);
+              }
+            },
+          },
+        });
+        nx.define("TopologyContainer", nx.ui.Component, {
+          // we use this trick to use this object as a nx.ui.Component and display topology at the same time
+          properties: {
             topology: {
-                get: function () {
-                    return this.view('topology')}}},
-        view: {
+              get: function () {
+                return this.view("topology");
+              },
+            },
+          },
+          view: {
             content: {
-                name: 'topology',
-                type: 'nx.graphic.Topology',
-                props: {
-                  adaptive: true,
-                  nodeConfig: {
-                    label: function (vertex) {
-                      return vertex.get("name");
-                    },
-                    iconType: function (vertex) {
-                      return vertex.get("icontype");
-                    }},
-                  linkConfig: {
-                        width: 3,
-                        linkType: 'curve',
-                    },
-                    showIcon: true,
-                    data: topologyData,
-                    dataProcessor: 'force',
-                    identityKey: 'id',
+              name: "topology",
+              type: "nx.graphic.Topology",
+              props: {
+                adaptive: true,
+                nodeConfig: {
+                  label: function (vertex) {
+                    return vertex.get("name");
+                  },
+                  iconType: function (vertex) {
+                    return vertex.get("icontype");
+                  },
                 },
+                linkConfig: {
+                  width: 3,
+                  linkType: "curve",
+                },
+                showIcon: true,
+                data: topologyData,
+                dataProcessor: "force",
+                identityKey: "id",
+              },
               events: {
-                    'topologyGenerated': '{#_main}'
-                }}},
-      methods: {
-            _main: function(sender, event) {
-                var topo = sender;
-                topo.registerScene("myscene", "SceneOverride");
-                topo.activateScene('myscene');
-                //var pathLayer = sender.getLayer("paths");
-                //var links1 = [topo.getLink(1), topo.getLink(3), topo.getLink(7)];
+                topologyGenerated: "{#_main}",
+              },
+            },
+          },
+          methods: {
+            _main: function (sender, event) {
+              var topo = sender;
+              topo.registerScene("myscene", "SceneOverride");
+              topo.activateScene("myscene");
+              //var pathLayer = sender.getLayer("paths");
+              //var links1 = [topo.getLink(1), topo.getLink(3), topo.getLink(7)];
 
-                //var i = 0;
-                //while (i < links1.length) {
-                //    links1[i].color('#f00');
-                //    i++;
-                // }
-                //var path1 = new nx.graphic.Topology.Path({
-                //    links: links1,
-                //    arrow: 'cap'
-                //});
+              //var i = 0;
+              //while (i < links1.length) {
+              //    links1[i].color('#f00');
+              //    i++;
+              // }
+              //var path1 = new nx.graphic.Topology.Path({
+              //    links: links1,
+              //    arrow: 'cap'
+              //});
 
-                //pathLayer.addPath(path1);
+              //pathLayer.addPath(path1);
+            },
+          },
+        });
+      }
 
-            }}})}
+      (function (nx, data) {
+        loadTopo(nx, data);
+      })(nx, data);
+    </script>
+    <script>
+      (function (nx) {
+        // initialize a new application instance
+        var app = new nx.ui.Application();
+        /* TopologyContainer is a nx.ui.Component object that can contain much more things than just a nx.graphic.Topology object.
+         */
+        var topologyContainer = new TopologyContainer();
+        // topology instance was made in TopologyContainer, but we can invoke its members through 'topology' variable for convenience
+        var topology = topologyContainer.topology();
+        //assign the app to the <div>
+        app.container(document.getElementById("topo"));
+        // pass topology's instance into action's bar instance
+        //actionBar.assignTopology(topology);
+        topology.attach(app);
+        // preload topology
+        //actionBar.updateTopology();
+      })(nx);
 
-(function (nx, data) {
-loadTopo(nx, data)
-})(nx, data);
-
-
-  </script>
-<script>
-(function (nx) {
-    // initialize a new application instance
-    var app = new nx.ui.Application();
-    /* TopologyContainer is a nx.ui.Component object that can contain much more things than just a nx.graphic.Topology object.
-     */
-    var topologyContainer = new TopologyContainer();
-    // topology instance was made in TopologyContainer, but we can invoke its members through 'topology' variable for convenience
-    var topology = topologyContainer.topology();
-    //assign the app to the <div>
-    app.container(document.getElementById('topo'));
-    // pass topology's instance into action's bar instance
-    //actionBar.assignTopology(topology);
-    topology.attach(app);
-    // preload topology
-    //actionBar.updateTopology();
-})(nx);
-
-function reload(nx, data){
-    loadTopo(nx, data)
-      // initialize a new application instance
-    var app = new nx.ui.Application();
-    /* TopologyContainer is a nx.ui.Component object that can contain much more things than just a nx.graphic.Topology object.
-     */
-    var topologyContainer = new TopologyContainer();
-    // topology instance was made in TopologyContainer, but we can invoke its members through 'topology' variable for convenience
-    var topology = topologyContainer.topology();
-    //assign the app to the <div>
-    document.getElementById('topo').innerHTML = "";
-    app.container(document.getElementById('topo'));
-    // pass topology's instance into action's bar instance
-    //actionBar.assignTopology(topology);
-    topology.attach(app);
-    // preload topology
-    //actionBar.updateTopology();
-}
-</script>
-
-
-</body>
+      function reload(nx, data) {
+        loadTopo(nx, data);
+        // initialize a new application instance
+        var app = new nx.ui.Application();
+        /* TopologyContainer is a nx.ui.Component object that can contain much more things than just a nx.graphic.Topology object.
+         */
+        var topologyContainer = new TopologyContainer();
+        // topology instance was made in TopologyContainer, but we can invoke its members through 'topology' variable for convenience
+        var topology = topologyContainer.topology();
+        //assign the app to the <div>
+        document.getElementById("topo").innerHTML = "";
+        app.container(document.getElementById("topo"));
+        // pass topology's instance into action's bar instance
+        //actionBar.assignTopology(topology);
+        topology.attach(app);
+        // preload topology
+        //actionBar.updateTopology();
+      }
+      // Run status fetch on page load
+      fetchStatus();
+      setInterval(fetchStatus, 10000);
+    </script>
+  </body>
 </html>

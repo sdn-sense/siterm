@@ -21,4 +21,9 @@ for fname in $(git diff --name-only); do
         echo "Checking $fname with bash linter"
         bashlint "$fname"
     fi
+    if [[ $fname == *.html || $fname == *.js ]]
+    then
+        echo "Checking $fname with prettier linters"
+         prettier -w "$fname"
+    fi
 done
