@@ -1,4 +1,4 @@
-name: Build all SiteRM Agent versions (EL8, EL9, EL10)
+name: Build all SiteRM Agent versions (EL8, EL9, EL10, U22)
 
 on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
   workflow_dispatch:
@@ -38,7 +38,7 @@ jobs:
       run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
 
     - name: Build the BASE Docker image el8 version
-      run: | 
+      run: |
         cd siterm-startup/helpers/base_images/agent/
         docker build . --file Dockerfile-el8 --tag sdnsense/sitermagentbase:temp-tag
 
@@ -130,3 +130,37 @@ jobs:
         docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
         docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
         docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el10
+
+    - name: Build the BASE Docker image u22 version
+      run: |
+        cd siterm-startup/helpers/base_images/agent/
+        docker build . --file Dockerfile-u22 --tag sdnsense/sitermagentbase:temp-tag
+
+    - name: Tag BASE image with multiple tags
+      run: |
+        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
+        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-u22
+        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-u22
+
+    - name: Docker Push BASE Image with tag u22 version
+      run: |
+        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
+        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-u22
+        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-u22
+
+    - name: Build the AGENT Docker image u22 version
+      run: |
+        cd siterm-startup/agent/container-build-files/
+        docker build . --file Dockerfile-u22 --build-arg RELEASE=${{ github.event.inputs.buildtag }}-u22 --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-agent:temp-tag
+
+    - name: Tag AGENT image with multiple tags u22 version
+      run: |
+        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
+        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-u22
+        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-u22
+
+    - name: Docker Push AGENT Image with tag and date u22 version
+      run: |
+        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
+        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-u22
+        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-u22

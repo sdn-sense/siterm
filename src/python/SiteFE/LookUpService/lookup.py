@@ -309,6 +309,20 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         # Add switchwarnings (in case any exists)
         self.warnings += self.switch.getWarnings()
 
+    def cleanModelDirectory(self):
+        """Clean Model Directory."""
+        saveDir = f"{self.config.get(self.sitename, 'privatedir')}/LookUpService/"
+        # Find out all files in the directory, older than 7 days
+        for file in os.listdir(saveDir):
+            filePath = os.path.join(saveDir, file)
+            if not os.path.isfile(filePath):
+                continue
+            # Get file creation time
+            fileTime = os.path.getmtime(filePath)
+            if fileTime < getUTCnow() - 604800:
+                self.logger.info(f"Removing old model file {filePath}")
+                os.unlink(filePath)
+
     def startwork(self):
         """Main start."""
         # pylint: disable=too-many-statements
@@ -409,6 +423,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.checkVlansWarnings()
         if not speedup:
             self.checkAndRaiseWarnings()
+            self.cleanModelDirectory()
         return speedup
 
 
