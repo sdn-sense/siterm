@@ -95,7 +95,7 @@ if __name__ == "__main__":
     parser.add_argument("--ignorelock", action="store_true", help="Ignore Liveness lock file and run all checks. (Useful for debugging failing service)", )
     args = parser.parse_args()
 
-    if os.path.exists("/tmp/config-fetcher-ready"):
+    if not os.path.exists("/tmp/config-fetcher-ready"):
         print("Config fetcher is still running. Exiting. Check stdout/stderr log files")
         sys.exit(0)
 
