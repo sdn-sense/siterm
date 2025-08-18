@@ -9,6 +9,8 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
@@ -17,8 +19,13 @@ from SiteFE.REST.dependencies import (
     checkReadyState,
     checkSite,
 )
-from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
-from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson
+from SiteRMLibs.DefaultParams import (
+    LIMIT_DEFAULT,
+    LIMIT_MAX,
+    LIMIT_MIN,
+    SERVICE_DOWN_TIMEOUT,
+)
+from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson, getUTCnow
 
 router = APIRouter()
 
@@ -61,13 +68,71 @@ async def checkAPIHealth(request: Request, _deps=Depends(allAPIDeps)):
         **DEFAULT_RESPONSES,
     },
 )
-async def checkAPIReadiness(request: Request, deps=Depends(allAPIDeps)):
+async def checkAPIReady(request: Request, deps=Depends(allAPIDeps)):
     """
     Check the readiness of the API.
     """
     if not checkReadyState(deps):
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="API is not ready to serve requests.")
     return APIResponse.genResponse(request, {"status": "ready"})
+
+
+# =========================================================
+# /api/liveness
+# =========================================================
+@router.get(
+    "/liveness",
+    summary="Check API Liveness Status",
+    description=("Checks if the API Liveness is functioning correctly. Possible values: ok, error, disabled, unknown."),
+    tags=["Frontend"],
+    responses={
+        **{
+            200: {"description": "Liveness status", "content": {"application/json": {"example": {"status": "ok"}}}},
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def checkAPILiveness(request: Request, _deps=Depends(allAPIDeps)):
+    """
+    Check the health of the API.
+    """
+    if os.path.exists("/tmp/siterm-liveness-disabled"):
+        return APIResponse.genResponse(request, {"status": "disabled"})
+    if os.path.exists("/tmp/siterm-liveness"):
+        with open("/tmp/siterm-liveness", "r", encoding="utf-8") as fd:
+            code = fd.read().strip()
+            if code == "0":
+                return APIResponse.genResponse(request, {"status": "ok"})
+            return APIResponse.genResponse(request, {"status": "error", "code": code})
+    return APIResponse.genResponse(request, {"status": "unknown", "code": "liveness file not found"})
+
+
+# =========================================================
+# /api/readiness
+# =========================================================
+@router.get(
+    "/readiness",
+    summary="Check API Readiness",
+    description=("Checks if the API is ready to serve requests. Possible values: ok, error, disabled, unknown."),
+    tags=["Frontend"],
+    responses={
+        **{200: {"description": "API is ready.", "content": {"application/json": {"example": {"status": "ok"}}}}},
+        **DEFAULT_RESPONSES,
+    },
+)
+async def checkAPIReadiness(request: Request, _deps=Depends(allAPIDeps)):
+    """
+    Check the readiness of the API.
+    """
+    if os.path.exists("/tmp/siterm-readiness-disabled"):
+        return APIResponse.genResponse(request, {"status": "disabled"})
+    if os.path.exists("/tmp/siterm-readiness"):
+        with open("/tmp/siterm-readiness", "r", encoding="utf-8") as fd:
+            code = fd.read().strip()
+            if code == "0":
+                return APIResponse.genResponse(request, {"status": "ok"})
+            return APIResponse.genResponse(request, {"status": "error", "code": code})
+    return APIResponse.genResponse(request, {"status": "unknown", "code": "readiness file not found"})
 
 
 # ==========================================================
@@ -143,9 +208,7 @@ async def getAllSites(request: Request, deps=Depends(allAPIDeps)):
                                 "vlan_range": ["3611-3619"],
                                 "vsw": "switchname1",
                                 "vswmp": "switchname1_mp",
-                                "qos_policy": {"traffic_classes": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7},
-                                               "max_policy_rate": "268000",
-                                               "burst_size": "256"},
+                                "qos_policy": {"traffic_classes": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7}, "max_policy_rate": "268000", "burst_size": "256"},
                                 "rate_limit": False,
                                 "vlan_range_list": [3616, 3617, 3618, 3619, 3611, 3612, 3613, 3614, 3615],
                                 "all_vlan_range_list": [3616, 3617, 3618, 3619, 3611, 3612, 3613, 3614, 3615],
@@ -384,9 +447,13 @@ async def getqosdata(
     # pylint: disable=too-many-nested-blocks
     hosts = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=limit)
     out = {}
-    # TODO: Check if host is alive before adding this to the list;
-    # Based on timing
     for host in hosts:
+        if host.get("updatedate", 0) and (int(host["updatedate"]) + SERVICE_DOWN_TIMEOUT) < getUTCnow():
+            print(f"Host {host.get('hostname', 'null')} did not update state for {SERVICE_DOWN_TIMEOUT} , skipping QoS data calculation for it.")
+            continue
+        if not host.get("hostinfo", ""):
+            print(f"Host {host.get('hostname', 'null')} does not have hostinfo, skipping QoS data calculation for it.")
+            continue
         tmpH = getFileContentAsJson(host.get("hostinfo", ""))
         tmpInf = tmpH.get("Summary", {}).get("config", {}).get("qos", {}).get("interfaces", {})
         if not tmpInf:

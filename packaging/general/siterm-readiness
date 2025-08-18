@@ -2,46 +2,47 @@
 """
 Kubernetes readiness checker for the pod.
 """
+import argparse
 import os
 import sys
-import argparse
 from datetime import datetime
-from SiteRMLibs.MainUtilities import getFileContentAsJson, timedhourcheck
-from SiteRMLibs.hostcert import HostCertHandler
-from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.HTTPLibrary import Requests
-from SiteRMLibs.MainUtilities import getFullUrl
 
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.hostcert import HostCertHandler
+from SiteRMLibs.HTTPLibrary import Requests
+from SiteRMLibs.MainUtilities import getFileContentAsJson, getFullUrl, timedhourcheck
 
 
 def certCheker():
     """Check if certificates are valid and ready to use."""
-    if timedhourcheck('siterm-readiness', 1):
+    if timedhourcheck("siterm-readiness", 1):
         return 0
     certHandler = HostCertHandler()
     return certHandler.externalCertChecker()
 
+
 def getStates():
     """Get the states of all services and return the exit code"""
-    directory = '/tmp/siterm-states/'
+    directory = "/tmp/siterm-states/"
     files = []
     exitCode = 0
-    for (_, _, filenames) in os.walk(directory):
+    for _, _, filenames in os.walk(directory):
         files.extend(filenames)
         break
     for fname in files:
-        if fname.endswith('.json'):
+        if fname.endswith(".json"):
             out = getFileContentAsJson(directory + fname)
-            if out.get('state', 'UNKNOWN') == 'WARNING':
+            if out.get("state", "UNKNOWN") == "WARNING":
                 # Get content and report back, but exitCode does not change that - as this is just a warning
                 msg = f"[WARNING] {out.get('component', 'UNKNOWN')}. Exception: {out.get('exc', 'UNKNOWN')}"
                 print(msg)
-            elif out.get('state', 'UNKNOWN') != 'OK':
+            elif out.get("state", "UNKNOWN") != "OK":
                 exitCode = 1
                 msg = f"[FAILED] {out.get('component', 'UNKNOWN')}. Exception: {out.get('exc', 'UNKNOWN')}."
                 msg += f" State: {out.get('state', 'UNKNOWN')}."
                 print(msg)
     return exitCode
+
 
 def enableReadinessCheck(statFile):
     """Enable the Readiness check by removing the disable file if it exists."""
@@ -60,7 +61,7 @@ def disableReadinessCheck(statFile):
     """Disable the Readiness check by creating the disable file if it doesn't exist."""
     if not os.path.exists(statFile):
         try:
-            with open(statFile, 'w', encoding='utf-8') as fd:
+            with open(statFile, "w", encoding="utf-8") as fd:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 fd.write(f"Readiness check disabled at {timestamp} \n")
             print("Readiness check disabled. Created disable file.")
@@ -69,8 +70,9 @@ def disableReadinessCheck(statFile):
             sys.exit(1)
     else:
         print("Readiness check is already disabled.")
-        with open(statFile, 'r', encoding='utf-8') as fd:
+        with open(statFile, "r", encoding="utf-8") as fd:
             print(fd.read())
+
 
 def checkHTTPService():
     """Check if the HTTP service is ready."""
@@ -87,12 +89,32 @@ def checkHTTPService():
         print(f"Error checking HTTP service readiness: {ex}")
     return 1
 
+
+def runChecks():
+    """Run all checks for readiness."""
+    state = 0
+    try:
+        state = getStates()
+        state = state or certCheker()
+    except Exception as e:
+        print(f"[FAILED] Exception during checks: {e}")
+        state = 100
+    # Write this to output file
+    with open("/tmp/siterm-readiness", "w", encoding="utf-8") as fd:
+        fd.write(f"{state}\n")
+    return state
+
+
 if __name__ == "__main__":
-    readinessFile = "/tmp/siterm-readiness-disable"
+    readinessFile = "/tmp/siterm-readiness-disabled"
     parser = argparse.ArgumentParser(description="Kubernetes readiness checker with enable/disable options.")
     parser.add_argument("--enable", action="store_true", help="Enable the liveness check.")
     parser.add_argument("--disable", action="store_true", help="Disable the liveness check.")
-    parser.add_argument("--ignorelock", action="store_true", help="Ignore Liveness lock file and run all checks. (Useful for debugging failing service)", )
+    parser.add_argument(
+        "--ignorelock",
+        action="store_true",
+        help="Ignore Liveness lock file and run all checks. (Useful for debugging failing service)",
+    )
     args = parser.parse_args()
 
     if not os.path.exists("/tmp/config-fetcher-ready"):
@@ -114,6 +136,5 @@ if __name__ == "__main__":
     if os.path.exists(readinessFile) and not args.ignorelock:
         print("Readiness check is disabled. Use --enable to enable or --ignorelock to run all checks and bypass this.")
         sys.exit(0)
-    state = getStates()
-    state = state or certCheker()
-    sys.exit(state)
+
+    sys.exit(runChecks())

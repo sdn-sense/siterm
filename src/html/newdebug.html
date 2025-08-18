@@ -184,6 +184,12 @@
       <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
         <span class="text-success mr-3" id="alive-status">Alive: ...</span>
         <span class="text-success mr-3" id="ready-status">Ready: ...</span>
+        <span class="text-success mr-3" id="readiness-status"
+          >Readiness: ...</span
+        >
+        <span class="text-success mr-3" id="liveness-status"
+          >Liveness: ...</span
+        >
         <span class="text-white mr-3" id="swagger-doc"
           ><a href="/docs#/" target="_blank">Swagger Doc</a></span
         >
@@ -1030,8 +1036,10 @@
           $(this).tab("show");
         });
         // Run status fetch on page load
-        fetchStatus();
-        setInterval(fetchStatus, 10000);
+        document.addEventListener("DOMContentLoaded", function () {
+          fetchStatus();
+          setInterval(fetchStatus, 10000);
+        });
       </script></span
     >
   </body>
