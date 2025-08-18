@@ -192,3 +192,29 @@ function syntaxHighlight(json) {
         return '<span class="' + cls + '">' + match + '</span>';
     });
 }
+
+async function fetchStatus() {
+  try {
+    // Fetch alive
+    const aliveResp = await fetch("/api/alive");
+    const aliveData = await aliveResp.json();
+    document.getElementById("alive-status").textContent = `Alive: ${aliveData.status === "alive" ? "OK" : "FAIL"}`;
+    document.getElementById("alive-status").className = aliveData.status === "alive" ? "text-success me-3" : "text-danger me-3";
+
+    // Fetch ready
+    const readyResp = await fetch("/api/ready");
+    if (readyResp.status === 200) {
+      const readyData = await readyResp.json();
+      document.getElementById("ready-status").textContent = `Ready: ${readyData.status === "ready" ? "OK" : "FAIL"}`;
+      document.getElementById("ready-status").className = "text-success me-3";
+    } else {
+      document.getElementById("ready-status").textContent = "Ready: FAIL";
+      document.getElementById("ready-status").className = "text-danger me-3";
+    }
+  } catch (err) {
+    document.getElementById("alive-status").textContent = "Alive: ERROR";
+    document.getElementById("alive-status").className = "text-danger me-3";
+    document.getElementById("ready-status").textContent = "Ready: ERROR";
+    document.getElementById("ready-status").className = "text-danger me-3";
+  }
+}

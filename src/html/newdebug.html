@@ -115,6 +115,11 @@
 <body>
   <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
     <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
+  <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
+    <span class="text-success mr-3" id="alive-status">Alive: ...</span>
+    <span class="text-success mr-3" id="ready-status">Ready: ...</span>
+    <span class="text-white mr-3" id="swagger-doc"><a href="/docs#/" target="_blank">Swagger Doc</a></span>
+  </div>
   </header>
   <div class="container-fluid">
     <div class="row">
@@ -600,6 +605,9 @@ It will execute the following command:<br/>
         e.preventDefault();
         $(this).tab('show');
       })
+      // Run status fetch on page load
+      fetchStatus();
+      setInterval(fetchStatus, 10000);
   </script></span>
 </body>
 </html>
