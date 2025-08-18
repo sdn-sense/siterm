@@ -1,613 +1,1038 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.4.0">
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="assets/css/bootstrap.css" rel="stylesheet">
-  <link href="assets/css/custom.css" rel="stylesheet">
-  <script src="assets/js/jquery.min.js" type="text/javascript"></script>
-  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
-  <script src="assets/js/main.js" type="text/javascript"></script>
-  <script type="text/javascript">
-  //<![CDATA[
-        google.load('visualization', '1', {packages:['table', 'controls']});
-        $(document).ready(function() {
-            load_data();
-        });
+  <head>
+    <meta
+      name="generator"
+      content="HTML Tidy for HTML5 for Linux version 5.4.0"
+    />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="assets/css/bootstrap.css" rel="stylesheet" />
+    <link href="assets/css/custom.css" rel="stylesheet" />
+    <script src="assets/js/jquery.min.js" type="text/javascript"></script>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script src="assets/js/main.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      //<![CDATA[
+      google.load("visualization", "1", { packages: ["table", "controls"] });
+      $(document).ready(function () {
+        load_data();
+      });
 
-        function collectInputs(tagName) {
-          docObj = document.getElementById(tagName);
-          var params = {};
-          for (var i = 0; i < docObj.elements.length; i++) {
-            var fieldName = docObj.elements[i].name;
-            var fieldValue = docObj.elements[i].value;
-            if (fieldName) {
-              params[fieldName] = fieldValue;
-            }
+      function collectInputs(tagName) {
+        docObj = document.getElementById(tagName);
+        var params = {};
+        for (var i = 0; i < docObj.elements.length; i++) {
+          var fieldName = docObj.elements[i].name;
+          var fieldValue = docObj.elements[i].value;
+          if (fieldName) {
+            params[fieldName] = fieldValue;
           }
-          var payload = {
-            hostname: params['hostname'],
-            request: params
-          };
-
-          $.ajax({
-            type: "POST",
-            url: "/api/" + params['sitename'] + "/debug",
-            contentType: "application/json",
-            data: JSON.stringify(payload),
-            success: function (result) {
-              newAlert("New debug action submit state: " + JSON.stringify(result), params);
-            },
-            error: function (jqXHR, textStatus, errorThrown) {
-              newAlert("Error: " + textStatus + " - " + errorThrown + " - Status: " + jqXHR.status + " - Response: " + jqXHR.responseText, params, "alert-danger");
-            }
-          });
         }
+        var payload = {
+          hostname: params["hostname"],
+          request: params,
+        };
 
-        function doSiteUpdate(ids) {
+        $.ajax({
+          type: "POST",
+          url: "/api/" + params["sitename"] + "/debug",
+          contentType: "application/json",
+          data: JSON.stringify(payload),
+          success: function (result) {
+            newAlert(
+              "New debug action submit state: " + JSON.stringify(result),
+              params,
+            );
+          },
+          error: function (jqXHR, textStatus, errorThrown) {
+            newAlert(
+              "Error: " +
+                textStatus +
+                " - " +
+                errorThrown +
+                " - Status: " +
+                jqXHR.status +
+                " - Response: " +
+                jqXHR.responseText,
+              params,
+              "alert-danger",
+            );
+          },
+        });
+      }
+
+      function doSiteUpdate(ids) {
         strSite = document.getElementById(ids + "sitename").value;
-        $.ajax({url: '/api/' + strSite + '/hosts',
-            dataType: 'json', data: {}, async: false,
-            success: function(json){
-                for (j=0; j < json.length; j++){
-                    addDropDown(json[j]['hostname'], $("#" + ids + "hostname"));
-                }}})}
+        $.ajax({
+          url: "/api/" + strSite + "/hosts",
+          dataType: "json",
+          data: {},
+          async: false,
+          success: function (json) {
+            for (j = 0; j < json.length; j++) {
+              addDropDown(json[j]["hostname"], $("#" + ids + "hostname"));
+            }
+          },
+        });
+      }
 
-        function doSiteUpdateN(ids) {
-            strSite = document.getElementById(ids + "sitename").value;
-            $.get('/api/frontend/configuration', function(data){
-              sitename = data['general']['sitename'];
-              if (strSite === sitename) {
-                  const switchArray = data[sitename]['switch'];
-                  switchArray.forEach((name, index) => {
-                    addDropDown(name, $("#" + ids + "hostname"))
-                  })}})}
+      function doSiteUpdateN(ids) {
+        strSite = document.getElementById(ids + "sitename").value;
+        $.get("/api/frontend/configuration", function (data) {
+          sitename = data["general"]["sitename"];
+          if (strSite === sitename) {
+            const switchArray = data[sitename]["switch"];
+            switchArray.forEach((name, index) => {
+              addDropDown(name, $("#" + ids + "hostname"));
+            });
+          }
+        });
+      }
 
-        function doDTNUpdate(ids, ipkeys, intkeys) {
+      function doDTNUpdate(ids, ipkeys, intkeys) {
         strDTN = document.getElementById(ids + "hostname").value;
         strSite = document.getElementById(ids + "sitename").value;
-        $.ajax({url: '/api/' + strSite + '/hosts',
-            dataType: 'json', data: {}, async: false,
-            success: function(json){
-                for (j=0; j < json.length; j++){
-                    if (strDTN === json[j]['hostname']) {
-                        var myObject = json[j]['hostinfo'];
-                        for (const [key, value] of Object.entries(myObject['NetInfo']['interfaces'])) {
-                            if (! $.isEmptyObject(value['vlans'])) {
-                              for (const [key1, value1] of Object.entries(value['vlans'])) {
-                                for (let i = 0; i < intkeys.length; i++) {
-                                  addDropDown(key1, $("#" + intkeys[i]));
-                                }
-                                for (const [key2, value2] of Object.entries(value1)){
-                                  console.log(key2, value2);
-                                  if (typeof value2 === 'object' && value2 !== null && key2 == 2) {
-                                    for (let i = 0; i < ipkeys.length; i++) {
-                                      addDropDown(value2[0]['address'], $("#" + ipkeys[i]));
-                                    }}
-                                  if (typeof value2 === 'object' && value2 !== null && key2 == 10) {
-                                    for (let i = 0; i < ipkeys.length; i++) {
-                                      addDropDown(value2[0]['address'], $("#" + ipkeys[i]));
-                                    }}}}}}}}}})}
+        $.ajax({
+          url: "/api/" + strSite + "/hosts",
+          dataType: "json",
+          data: {},
+          async: false,
+          success: function (json) {
+            for (j = 0; j < json.length; j++) {
+              if (strDTN === json[j]["hostname"]) {
+                var myObject = json[j]["hostinfo"];
+                for (const [key, value] of Object.entries(
+                  myObject["NetInfo"]["interfaces"],
+                )) {
+                  if (!$.isEmptyObject(value["vlans"])) {
+                    for (const [key1, value1] of Object.entries(
+                      value["vlans"],
+                    )) {
+                      for (let i = 0; i < intkeys.length; i++) {
+                        addDropDown(key1, $("#" + intkeys[i]));
+                      }
+                      for (const [key2, value2] of Object.entries(value1)) {
+                        console.log(key2, value2);
+                        if (
+                          typeof value2 === "object" &&
+                          value2 !== null &&
+                          key2 == 2
+                        ) {
+                          for (let i = 0; i < ipkeys.length; i++) {
+                            addDropDown(
+                              value2[0]["address"],
+                              $("#" + ipkeys[i]),
+                            );
+                          }
+                        }
+                        if (
+                          typeof value2 === "object" &&
+                          value2 !== null &&
+                          key2 == 10
+                        ) {
+                          for (let i = 0; i < ipkeys.length; i++) {
+                            addDropDown(
+                              value2[0]["address"],
+                              $("#" + ipkeys[i]),
+                            );
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+        });
+      }
 
-        function addDropDown(dropdownVal, saveObj){
-          saveObj.append('<option>'+dropdownVal+'<\/option>');
-        }
+      function addDropDown(dropdownVal, saveObj) {
+        saveObj.append("<option>" + dropdownVal + "<\/option>");
+      }
 
-        function load_data() {
-          $.get('/api/frontend/configuration', function(data){
-            sitename = data['general']['sitename'];
-            addDropDown(sitename, $("#f1_sitename"));
-            addDropDown(sitename, $("#f2_sitename"));
-            addDropDown(sitename, $("#f3_sitename"));
-            addDropDown(sitename, $("#f4_sitename"));
-            addDropDown(sitename, $("#f5_sitename"));
-            addDropDown(sitename, $("#f6_sitename"));
-            addDropDown(sitename, $("#f7_sitename"));
-            addDropDown(sitename, $("#f8_sitename"));
-          });
-       };
-  //]]>
-  </script>
-  <script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/loader.js"></script>
-  <title>Site-RM: Request New Debug Action</title>
-</head>
-<body>
-  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
-  <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
-    <span class="text-success mr-3" id="alive-status">Alive: ...</span>
-    <span class="text-success mr-3" id="ready-status">Ready: ...</span>
-    <span class="text-white mr-3" id="swagger-doc"><a href="/docs#/" target="_blank">Swagger Doc</a></span>
-  </div>
-  </header>
-  <div class="container-fluid">
-    <div class="row">
-      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-        <div class="position-sticky pt-3">
-          <ul class="nav flex-column">
-            <li class="nav-item">
-              <a class="nav-link" href="/index.html">Topology</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/frontendconfig.html">Frontend Configuration</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/models.html">Models</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/servicestates.html">ServiceStates</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/deltas.html">Deltas</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/activerequests.html">Active Requests</a>
-            </li>
-          </ul>
-          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"><span>Debugging tools</span> <a class="link-secondary" href="#" aria-label="Debugging tools"></a></h6>
-          <ul class="nav flex-column mb-2">
-            <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="/newdebug.html">Request new debug action</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/debughistory.html">Debug history</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/changeactive.html">Change Active Start/End</a>
-            </li>
-          </ul>
-        </div>
-      </nav>
-      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-          <h1 class="h2">Request New Debug Action</h1>
-        </div>
-        <div class="row" id="maindiv">
-          <div class="col-md-12" id="alertstop"></div>
-          <div class="row col-md-12 border border-primary">
-            <div class="row col-md-12">
-              <h3 class="h3">Rapid Ping (from Host)</h3>
-            </div>
-            <div class="col-md-12" id="alertsrapid-ping"></div>
-            <div class="col">
-              Rapid ping - very similar to Flood ping implemented in FreeBSD. where a minimum of 100 packets are sent in one second or as soon as a reply to the request has come. <br/>
-              It will execute the following command on selected hostname: <b>ping -i &lt;interval&gt; -w &lt;runtime&gt; &lt;ip&gt; -s &lt;packetsize&gt; -I &lt;Interface&gt;</b><br/><br/>
-              Descriptions:<br/>
-              <b>-i interval</b><br/>
-                Wait interval seconds between sending each packet. The default is to wait for one second between each packet normally, or not to wait in flood mode. Only super-user may set interval to values less 0.2 seconds.<br/>
-<br/>
-              <b>-I interface address</b><br/>
-                Set source address to specified interface address. Argument may be numeric IP address or name of device. When pinging IPv6 link-local address this option is required.<br/>
-<br/>
-              <b>-w deadline</b><br/>
-                Specify a timeout, in seconds, before ping exits regardless of how many packets have been sent or received. In this case ping does not stop after count packet are sent, it waits either for deadline expire or until count probes are answered or for some error notification from network.<br/>
-<br/>
-              <b>-s packetsize</b><br/>
-                Specifies the number of data bytes to be sent. The default is 56, which translates into 64 ICMP data bytes when combined with the 8 bytes of ICMP header data.<br/>
-<br/>
-            </div>
-            <div class="col">
-              <form onsubmit="collectInputs('f1'); return false" id="f1" name="f1">
-                <input id="f1_type" name="type" type="hidden" value="rapid-ping">
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f1_sitename" name="sitename" onchange="doSiteUpdate('f1_');" required="">
-                    <option value="">
-                      Choose Site
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f1_hostname" name="hostname" onchange="doDTNUpdate('f1_', [], ['f1_interface']);" required="">
-                    <option value="">
-                      Choose Hostname
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">IP to ping</label> <input class="form-control" type="text" placeholder="IP to ping" id="f1_ip_ping" name="ip" required="">
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Interface</label> <select class="form-control" id="f1_interface" name="interface" required="">
-                    <option value="">
-                      Choose Interface
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Packet Size</label> <input class="form-control" type="text" placeholder="Packet Size" id="f1_packetsize" name="packetsize" required="">
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Ping time</label> <select class="form-control" id="f1_time" name="time" required="">
-                    <option value="">
-                      Choose Ping time
-                    </option>
-                    <option value="60">
-                      1 minute
-                    </option>
-                    <option value="120">
-                      2 minutes
-                    </option>
-                    <option value="300">
-                      5 minutes
-                    </option>
-                  </select>
-                </div><input type="submit">
-              </form>
-            </div>
+      function load_data() {
+        $.get("/api/frontend/configuration", function (data) {
+          sitename = data["general"]["sitename"];
+          addDropDown(sitename, $("#f1_sitename"));
+          addDropDown(sitename, $("#f2_sitename"));
+          addDropDown(sitename, $("#f3_sitename"));
+          addDropDown(sitename, $("#f4_sitename"));
+          addDropDown(sitename, $("#f5_sitename"));
+          addDropDown(sitename, $("#f6_sitename"));
+          addDropDown(sitename, $("#f7_sitename"));
+          addDropDown(sitename, $("#f8_sitename"));
+        });
+      }
+      //]]>
+    </script>
+    <script
+      type="text/javascript"
+      charset="UTF-8"
+      src="https://www.gstatic.com/charts/49/loader.js"
+    ></script>
+    <title>Site-RM: Request New Debug Action</title>
+  </head>
+  <body>
+    <header
+      class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow"
+    >
+      <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#"
+        >SDN SENSE End Site Monitoring</a
+      >
+      <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
+        <span class="text-success mr-3" id="alive-status">Alive: ...</span>
+        <span class="text-success mr-3" id="ready-status">Ready: ...</span>
+        <span class="text-white mr-3" id="swagger-doc"
+          ><a href="/docs#/" target="_blank">Swagger Doc</a></span
+        >
+      </div>
+    </header>
+    <div class="container-fluid">
+      <div class="row">
+        <nav
+          id="sidebarMenu"
+          class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"
+        >
+          <div class="position-sticky pt-3">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link" href="/index.html">Topology</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/frontendconfig.html"
+                  >Frontend Configuration</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/models.html">Models</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/servicestates.html">ServiceStates</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/deltas.html">Deltas</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/activerequests.html"
+                  >Active Requests</a
+                >
+              </li>
+            </ul>
+            <h6
+              class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"
+            >
+              <span>Debugging tools</span>
+              <a
+                class="link-secondary"
+                href="#"
+                aria-label="Debugging tools"
+              ></a>
+            </h6>
+            <ul class="nav flex-column mb-2">
+              <li class="nav-item">
+                <a
+                  class="nav-link active"
+                  aria-current="page"
+                  href="/newdebug.html"
+                  >Request new debug action</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/debughistory.html">Debug history</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/changeactive.html"
+                  >Change Active Start/End</a
+                >
+              </li>
+            </ul>
           </div>
-          <div class="row col-md-12 border border-secondary">
-            <div class="row col-md-12">
-              <h3 class="h3">TCPDump (from Host)</h3>
-            </div>
-            <div class="col-md-12" id="alertstcpdump"></div>
-            <div class="col">
-              This call will use PyShark, Python wrapper for tshark, allowing python packet parsing using wireshark dissectors. It will capture all packets going via interface for max 30seconds or first 100 packets (whichever comes first).
-            </div>
-            <div class="col">
-              <form onsubmit="collectInputs('f2'); return false" id="f2" name="f2">
-                <input id="f2_type" name="type" type="hidden" value="tcpdump">
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f2_sitename" name="sitename" onchange="doSiteUpdate('f2_');" required="">
-                    <option value="">
-                      Choose Site
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f2_hostname" name="hostname" onchange="doDTNUpdate('f2_', [], ['f2_interface']);" required="">
-                    <option value="">
-                      Choose Hostname
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Interface</label> <select class="form-control" id="f2_interface" name="interface" required="">
-                    <option value="">
-                      Choose Interface
-                    </option>
-                  </select>
-                </div><input type="submit">
-              </form>
-            </div>
+        </nav>
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+          <div
+            class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+          >
+            <h1 class="h2">Request New Debug Action</h1>
           </div>
-          <div class="row col-md-12 border border-success">
-            <div class="row col-md-12">
-              <h3 class="h3">ARP Table</h3>
+          <div class="row" id="maindiv">
+            <div class="col-md-12" id="alertstop"></div>
+            <div class="row col-md-12 border border-primary">
+              <div class="row col-md-12">
+                <h3 class="h3">Rapid Ping (from Host)</h3>
+              </div>
+              <div class="col-md-12" id="alertsrapid-ping"></div>
+              <div class="col">
+                Rapid ping - very similar to Flood ping implemented in FreeBSD.
+                where a minimum of 100 packets are sent in one second or as soon
+                as a reply to the request has come. <br />
+                It will execute the following command on selected hostname:
+                <b
+                  >ping -i &lt;interval&gt; -w &lt;runtime&gt; &lt;ip&gt; -s
+                  &lt;packetsize&gt; -I &lt;Interface&gt;</b
+                ><br /><br />
+                Descriptions:<br />
+                <b>-i interval</b><br />
+                Wait interval seconds between sending each packet. The default
+                is to wait for one second between each packet normally, or not
+                to wait in flood mode. Only super-user may set interval to
+                values less 0.2 seconds.<br />
+                <br />
+                <b>-I interface address</b><br />
+                Set source address to specified interface address. Argument may
+                be numeric IP address or name of device. When pinging IPv6
+                link-local address this option is required.<br />
+                <br />
+                <b>-w deadline</b><br />
+                Specify a timeout, in seconds, before ping exits regardless of
+                how many packets have been sent or received. In this case ping
+                does not stop after count packet are sent, it waits either for
+                deadline expire or until count probes are answered or for some
+                error notification from network.<br />
+                <br />
+                <b>-s packetsize</b><br />
+                Specifies the number of data bytes to be sent. The default is
+                56, which translates into 64 ICMP data bytes when combined with
+                the 8 bytes of ICMP header data.<br />
+                <br />
+              </div>
+              <div class="col">
+                <form
+                  onsubmit="collectInputs('f1'); return false"
+                  id="f1"
+                  name="f1"
+                >
+                  <input
+                    id="f1_type"
+                    name="type"
+                    type="hidden"
+                    value="rapid-ping"
+                  />
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Sitename</label>
+                    <select
+                      class="form-control"
+                      id="f1_sitename"
+                      name="sitename"
+                      onchange="doSiteUpdate('f1_');"
+                      required=""
+                    >
+                      <option value="">Choose Site</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Hostname</label>
+                    <select
+                      class="form-control"
+                      id="f1_hostname"
+                      name="hostname"
+                      onchange="doDTNUpdate('f1_', [], ['f1_interface']);"
+                      required=""
+                    >
+                      <option value="">Choose Hostname</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">IP to ping</label>
+                    <input
+                      class="form-control"
+                      type="text"
+                      placeholder="IP to ping"
+                      id="f1_ip_ping"
+                      name="ip"
+                      required=""
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Interface</label>
+                    <select
+                      class="form-control"
+                      id="f1_interface"
+                      name="interface"
+                      required=""
+                    >
+                      <option value="">Choose Interface</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Packet Size</label>
+                    <input
+                      class="form-control"
+                      type="text"
+                      placeholder="Packet Size"
+                      id="f1_packetsize"
+                      name="packetsize"
+                      required=""
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Ping time</label>
+                    <select
+                      class="form-control"
+                      id="f1_time"
+                      name="time"
+                      required=""
+                    >
+                      <option value="">Choose Ping time</option>
+                      <option value="60">1 minute</option>
+                      <option value="120">2 minutes</option>
+                      <option value="300">5 minutes</option>
+                    </select>
+                  </div>
+                  <input type="submit" />
+                </form>
+              </div>
             </div>
-            <div class="col-md-12" id="alertsarp-table"></div>
-            <div class="col">
-       The ip neigh command manipulates neighbour objects that establish bindings between protocol addresses and link layer addresses for hosts sharing the same link.  Neighbour entries are organized into tables. The IPv4 neighbour table is also known by another name - the ARP table.<br/>
-       The corresponding commands display neighbour bindings and their properties.
+            <div class="row col-md-12 border border-secondary">
+              <div class="row col-md-12">
+                <h3 class="h3">TCPDump (from Host)</h3>
+              </div>
+              <div class="col-md-12" id="alertstcpdump"></div>
+              <div class="col">
+                This call will use PyShark, Python wrapper for tshark, allowing
+                python packet parsing using wireshark dissectors. It will
+                capture all packets going via interface for max 30seconds or
+                first 100 packets (whichever comes first).
+              </div>
+              <div class="col">
+                <form
+                  onsubmit="collectInputs('f2'); return false"
+                  id="f2"
+                  name="f2"
+                >
+                  <input
+                    id="f2_type"
+                    name="type"
+                    type="hidden"
+                    value="tcpdump"
+                  />
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Sitename</label>
+                    <select
+                      class="form-control"
+                      id="f2_sitename"
+                      name="sitename"
+                      onchange="doSiteUpdate('f2_');"
+                      required=""
+                    >
+                      <option value="">Choose Site</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Hostname</label>
+                    <select
+                      class="form-control"
+                      id="f2_hostname"
+                      name="hostname"
+                      onchange="doDTNUpdate('f2_', [], ['f2_interface']);"
+                      required=""
+                    >
+                      <option value="">Choose Hostname</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Interface</label>
+                    <select
+                      class="form-control"
+                      id="f2_interface"
+                      name="interface"
+                      required=""
+                    >
+                      <option value="">Choose Interface</option>
+                    </select>
+                  </div>
+                  <input type="submit" />
+                </form>
+              </div>
             </div>
-            <div class="col">
-              <form onsubmit="collectInputs('f3'); return false" id="f3" name="f3">
-                <input id="f3_type" name="type" type="hidden" value="arp-table">
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f3_sitename" name="sitename" onchange="doSiteUpdate('f3_');" required="">
-                    <option value="">
-                      Choose Site
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f3_hostname" name="hostname" onchange="doDTNUpdate('f3_', [], ['f3_interface']);" required="">
-                    <option value="">
-                      Choose Hostname
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Interface</label> <select class="form-control" id="f3_interface" name="interface" required="">
-                    <option value="">
-                      Choose Interface
-                    </option>
-                  </select>
-                </div><input type="submit">
-              </form>
+            <div class="row col-md-12 border border-success">
+              <div class="row col-md-12">
+                <h3 class="h3">ARP Table</h3>
+              </div>
+              <div class="col-md-12" id="alertsarp-table"></div>
+              <div class="col">
+                The ip neigh command manipulates neighbour objects that
+                establish bindings between protocol addresses and link layer
+                addresses for hosts sharing the same link. Neighbour entries are
+                organized into tables. The IPv4 neighbour table is also known by
+                another name - the ARP table.<br />
+                The corresponding commands display neighbour bindings and their
+                properties.
+              </div>
+              <div class="col">
+                <form
+                  onsubmit="collectInputs('f3'); return false"
+                  id="f3"
+                  name="f3"
+                >
+                  <input
+                    id="f3_type"
+                    name="type"
+                    type="hidden"
+                    value="arp-table"
+                  />
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Sitename</label>
+                    <select
+                      class="form-control"
+                      id="f3_sitename"
+                      name="sitename"
+                      onchange="doSiteUpdate('f3_');"
+                      required=""
+                    >
+                      <option value="">Choose Site</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Hostname</label>
+                    <select
+                      class="form-control"
+                      id="f3_hostname"
+                      name="hostname"
+                      onchange="doDTNUpdate('f3_', [], ['f3_interface']);"
+                      required=""
+                    >
+                      <option value="">Choose Hostname</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Interface</label>
+                    <select
+                      class="form-control"
+                      id="f3_interface"
+                      name="interface"
+                      required=""
+                    >
+                      <option value="">Choose Interface</option>
+                    </select>
+                  </div>
+                  <input type="submit" />
+                </form>
+              </div>
             </div>
-          </div>
-          <div class="row col-md-12 border border-danger">
-            <div class="row col-md-12">
-              <h3 class="h3">IPerf Server (from Host)</h3>
+            <div class="row col-md-12 border border-danger">
+              <div class="row col-md-12">
+                <h3 class="h3">IPerf Server (from Host)</h3>
+              </div>
+              <div class="col-md-12" id="alertsiperf-server"></div>
+              <div class="col">
+                <span class="border" style="width: 100%">
+                  iPerf3 is a tool for active measurements of the maximum
+                  achievable bandwidth on IP networks. It supports tuning of
+                  various parameters related to timing, buffers and protocols
+                  (TCP, UDP, SCTP with IPv4 and IPv6). For each test it reports
+                  the bandwidth, loss, and other parameters.<br />
+                  It will execute the following command:<br />
+                  iperf3 -c &lt;ip&gt; -p &lt;port&gt; -B &lt;interface&gt; -t
+                  &lt;time&gt;<br />
+                  <b>-c IP</b> run in client mode, connecting to &lt;host&gt;<br />
+                  <b>-p PORT</b> server port to listen on/connect to<br />
+                  <b>-B INTERFACE</b> bind to the interface associated with the
+                  address &lt;host&gt;<br />
+                  <b>-t TIME</b> time in seconds to transmit for.<br />
+                </span>
+              </div>
+              <div class="col">
+                <form
+                  onsubmit="collectInputs('f4'); return false"
+                  id="f4"
+                  name="f4"
+                >
+                  <input
+                    id="f4_type"
+                    name="type"
+                    type="hidden"
+                    value="iperf-server"
+                  />
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Sitename</label>
+                    <select
+                      class="form-control"
+                      id="f4_sitename"
+                      name="sitename"
+                      onchange="doSiteUpdate('f4_');"
+                      required=""
+                    >
+                      <option value="">Choose Site</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Hostname</label>
+                    <select
+                      class="form-control"
+                      id="f4_hostname"
+                      name="hostname"
+                      onchange="doDTNUpdate('f4_', ['f4_ip'], ['f4_interface']);"
+                      required=""
+                    >
+                      <option value="">Choose Hostname</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">IP to listen</label>
+                    <input
+                      class="form-control"
+                      type="text"
+                      placeholder="IP to listen"
+                      id="f4_ip"
+                      name="ip"
+                      required=""
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1"
+                      >Port to listen</label
+                    >
+                    <input
+                      class="form-control"
+                      type="text"
+                      placeholder="Port to listen"
+                      id="f4_port"
+                      name="port"
+                      required=""
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1"
+                      >Interface to attach</label
+                    >
+                    <select
+                      class="form-control"
+                      id="f4_interface"
+                      name="interface"
+                      required=""
+                    >
+                      <option value="">Choose Interface</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Runtime</label>
+                    <select
+                      class="form-control"
+                      id="f4_time"
+                      name="time"
+                      required=""
+                    >
+                      <option value="">Choose Iperf Runtime</option>
+                      <option value="60">1 minute</option>
+                      <option value="120">2 minutes</option>
+                      <option value="300">5 minutes</option>
+                    </select>
+                  </div>
+                  <input type="submit" />
+                </form>
+              </div>
             </div>
-            <div class="col-md-12" id="alertsiperf-server"></div>
-            <div class="col">
-              <span class="border" style="width:100%">
-                iPerf3 is a tool for active measurements of the maximum achievable bandwidth on IP networks. It supports tuning of various parameters related to timing, buffers and protocols (TCP, UDP, SCTP with IPv4 and IPv6). For each test it reports the bandwidth, loss, and other parameters.<br/>
-It will execute the following command:<br/>
-                iperf3 -c &lt;ip&gt; -p &lt;port&gt; -B &lt;interface&gt; -t &lt;time&gt;<br/>
-                <b>-c IP</b>    run in client mode, connecting to &lt;host&gt;<br/>
-                <b>-p PORT</b>         server port to listen on/connect to<br/>
-                <b>-B INTERFACE</b>    bind to the interface associated with the address &lt;host&gt;<br/>
-                <b>-t TIME</b>         time in seconds to transmit for.<br/>
-              </span>
+            <div class="row col-md-12 border border-warning">
+              <div class="row col-md-12">
+                <h3 class="h3">IPerf Client (from Host)</h3>
+              </div>
+              <div class="col-md-12" id="alertsiperf-client"></div>
+              <div class="col">
+                <span class="border" style="width: 100%">
+                  iPerf3 is a tool for active measurements of the maximum
+                  achievable bandwidth on IP networks. It supports tuning of
+                  various parameters related to timing, buffers and protocols
+                  (TCP, UDP, SCTP with IPv4 and IPv6). For each test it reports
+                  the bandwidth, loss, and other parameters.<br />
+                  It will execute the following command:<br />
+                  timeout &lt;seconds&gt; iperf3 --server -p &lt;port&gt; -B
+                  &lt;ip&gt; &lt;one-off&gt;<br />
+                  <b>-p PORT</b> server port to listen on/connect to<br />
+                  <b>-B INTERFACE</b> bind to the interface associated with the
+                  address &lt;host&gt;<br />
+                  <b>-1</b> handle one client connection then exit (only added
+                  if checkbox selected)<br />
+                </span>
+              </div>
+              <div class="col">
+                <form
+                  onsubmit="collectInputs('f5'); return false"
+                  id="f5"
+                  name="f5"
+                >
+                  <input
+                    id="f5_type"
+                    name="type"
+                    type="hidden"
+                    value="iperf-client"
+                  />
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Sitename</label>
+                    <select
+                      class="form-control"
+                      id="f5_sitename"
+                      name="sitename"
+                      onchange="doSiteUpdate('f5_');"
+                      required=""
+                    >
+                      <option value="">Choose Site</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Hostname</label>
+                    <select
+                      class="form-control"
+                      id="f5_hostname"
+                      name="hostname"
+                      onchange="doDTNUpdate('f5_', ['f5_ip'], ['f5_interface']);"
+                      required=""
+                    >
+                      <option value="">Choose Hostname</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Port</label>
+                    <input
+                      class="form-control"
+                      type="text"
+                      placeholder="Port"
+                      id="f5_port"
+                      name="port"
+                      required=""
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">IP</label>
+                    <select
+                      class="form-control"
+                      id="f5_ip"
+                      name="ip"
+                      required=""
+                    >
+                      <option value="">Choose IP Address</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1"
+                      >Interface to attach</label
+                    >
+                    <select
+                      class="form-control"
+                      id="f5_interface"
+                      name="interface"
+                      required=""
+                    >
+                      <option value="">Choose Interface</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Runtime</label>
+                    <select
+                      class="form-control"
+                      id="f5_time"
+                      name="time"
+                      required=""
+                    >
+                      <option value="">Choose Server Runtime</option>
+                      <option value="60">1 minute</option>
+                      <option value="120">2 minutes</option>
+                      <option value="300">5 minutes</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <input
+                      type="checkbox"
+                      id="f5_onetime"
+                      name="onetime"
+                      value="True"
+                    />
+                    <label for="f5_onetime"
+                      >Handle one client connection then exit</label
+                    ><br />
+                  </div>
+                  <input type="submit" />
+                </form>
+              </div>
             </div>
-            <div class="col">
-              <form onsubmit="collectInputs('f4'); return false" id="f4" name="f4">
-                <input id="f4_type" name="type" type="hidden" value="iperf-server">
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f4_sitename" name="sitename" onchange="doSiteUpdate('f4_');" required="">
-                    <option value="">
-                      Choose Site
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f4_hostname" name="hostname" onchange="doDTNUpdate('f4_', ['f4_ip'], ['f4_interface']);" required="">
-                    <option value="">
-                      Choose Hostname
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">IP to listen</label> <input class="form-control" type="text" placeholder="IP to listen" id="f4_ip" name="ip" required="">
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Port to listen</label> <input class="form-control" type="text" placeholder="Port to listen" id="f4_port" name="port" required="">
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Interface to attach</label> <select class="form-control" id="f4_interface" name="interface" required="">
-                    <option value="">
-                      Choose Interface
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Runtime</label> <select class="form-control" id="f4_time" name="time" required="">
-                    <option value="">
-                      Choose Iperf Runtime
-                    </option>
-                    <option value="60">
-                      1 minute
-                    </option>
-                    <option value="120">
-                      2 minutes
-                    </option>
-                    <option value="300">
-                      5 minutes
-                    </option>
-                  </select>
-                </div><input type="submit">
-              </form>
-            </div>
-          </div>
-          <div class="row col-md-12 border border-warning">
-            <div class="row col-md-12">
-              <h3 class="h3">IPerf Client (from Host)</h3>
-            </div>
-            <div class="col-md-12" id="alertsiperf-client"></div>
-            <div class="col">
-              <span class="border" style="width:100%">
-                iPerf3 is a tool for active measurements of the maximum achievable bandwidth on IP networks. It supports tuning of various parameters related to timing, buffers and protocols (TCP, UDP, SCTP with IPv4 and IPv6). For each test it reports the bandwidth, loss, and other parameters.<br/>
-It will execute the following command:<br/>
-                timeout &lt;seconds&gt; iperf3 --server -p &lt;port&gt; -B &lt;ip&gt; &lt;one-off&gt;<br/>
-                <b>-p PORT</b>         server port to listen on/connect to<br/>
-                <b>-B INTERFACE</b>    bind to the interface associated with the address &lt;host&gt;<br/>
-                <b>-1</b>              handle one client connection then exit (only added if checkbox selected)<br/>
-              </span>
-            </div>
-            <div class="col">
-              <form onsubmit="collectInputs('f5'); return false" id="f5" name="f5">
-                <input id="f5_type" name="type" type="hidden" value="iperf-client">
-                <div class="form-group">
-                   <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f5_sitename" name="sitename" onchange="doSiteUpdate('f5_');" required="">
-                    <option value="">
-                      Choose Site
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f5_hostname" name="hostname" onchange="doDTNUpdate('f5_', ['f5_ip'], ['f5_interface']);" required="">
-                    <option value="">
-                      Choose Hostname
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Port</label> <input class="form-control" type="text" placeholder="Port" id="f5_port" name="port" required="">
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">IP</label> <select class="form-control" id="f5_ip" name="ip" required="">
-                    <option value="">
-                      Choose IP Address
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Interface to attach</label> <select class="form-control" id="f5_interface" name="interface" required="">
-                    <option value="">
-                      Choose Interface
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Runtime</label> <select class="form-control" id="f5_time" name="time" required="">
-                    <option value="">
-                      Choose Server Runtime
-                    </option>
-                    <option value="60">
-                      1 minute
-                    </option>
-                    <option value="120">
-                      2 minutes
-                    </option>
-                    <option value="300">
-                      5 minutes
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <input type="checkbox" id="f5_onetime" name="onetime" value="True"> <label for="f5_onetime">Handle one client connection then exit</label><br>
-                </div><input type="submit">
-              </form>
-            </div>
-          </div>
 
-          <div class="row col-md-12 border border-danger">
-            <div class="row col-md-12">
-              <h3 class="h3">Traceroute (from Host)</h3>
+            <div class="row col-md-12 border border-danger">
+              <div class="row col-md-12">
+                <h3 class="h3">Traceroute (from Host)</h3>
+              </div>
+              <div class="col-md-12" id="alertstraceroute"></div>
+              <div class="col">
+                <span class="border" style="width: 100%">
+                  Traceroute provides a map of how data travels from its source
+                  to its destination<br />
+                  On host, it will execute the following command:<br />
+                  traceroute [-4|-6] -i [from_interface] -s [from_ip] [ip]<br />
+                  <b>-4|-6</b> It will identify it based on [ip] value<br />
+                  <b>from_interface</b> Instructs which interface to use
+                  (optional if from_ip specified)<br />
+                  <b>from_ip</b> Instructs which IP to use to send traceroute
+                  (optional if from_interface specified)<br />
+                  <b>ip</b> Destination of Traceroute IP<br />
+                </span>
+              </div>
+              <div class="col">
+                <form
+                  onsubmit="collectInputs('f6'); return false"
+                  id="f6"
+                  name="f6"
+                >
+                  <input
+                    id="f6_type"
+                    name="type"
+                    type="hidden"
+                    value="traceroute"
+                  />
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Sitename</label>
+                    <select
+                      class="form-control"
+                      id="f6_sitename"
+                      name="sitename"
+                      onchange="doSiteUpdate('f6_');"
+                      required=""
+                    >
+                      <option value="">Choose Site</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Hostname</label>
+                    <select
+                      class="form-control"
+                      id="f6_hostname"
+                      name="hostname"
+                      onchange="doDTNUpdate('f6_', ['f6_from_ip'], ['f6_from_interface']);"
+                      required=""
+                    >
+                      <option value="">Choose Hostname</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1"
+                      >From Interface (Optional if From IP specified)</label
+                    >
+                    <select
+                      class="form-control"
+                      placeholder="From Interface (Optional of From IP specified)"
+                      id="f6_from_interface"
+                      name="from_interface"
+                    >
+                      <option value="">
+                        From Interface (Optional if From IP specified)
+                      </option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1"
+                      >From IP (Optional if From Interfaces specified)</label
+                    >
+                    <select
+                      class="form-control"
+                      placeholder="From IP (Optional if From Interfaces specified)"
+                      id="f6_from_ip"
+                      name="from_ip"
+                    >
+                      <option value="">
+                        From IP (Optional if From Interfaces specified)
+                      </option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">To IP:</label>
+                    <input
+                      class="form-control"
+                      type="text"
+                      placeholder="Traceroute to IP"
+                      id="f6_ip"
+                      name="ip"
+                      required=""
+                    />
+                  </div>
+                  <input type="submit" />
+                </form>
+              </div>
             </div>
-            <div class="col-md-12" id="alertstraceroute"></div>
-            <div class="col">
-              <span class="border" style="width:100%">
-                Traceroute provides a map of how data travels from its source to its destination<br/>
-                On host, it will execute the following command:<br/>
-                traceroute [-4|-6] -i [from_interface] -s [from_ip] [ip]<br/>
-                <b>-4|-6</b>    It will identify it based on [ip] value<br/>
-                <b>from_interface</b>    Instructs which interface to use (optional if from_ip specified)<br/>
-                <b>from_ip</b>    Instructs which IP to use to send traceroute (optional if from_interface specified)<br/>
-                <b>ip</b>         Destination of Traceroute IP<br/>
-              </span>
+            <div class="row col-md-12 border border-primary">
+              <div class="row col-md-12">
+                <h3 class="h3">Ping (from Network Device)</h3>
+              </div>
+              <div class="col-md-12" id="alertsrapid-pingnet"></div>
+              <div class="col">
+                It will execute the following command on selected network
+                device: ping ipaddress -c count -i interval<br /><br />
+                Descriptions:<br />
+                <b>-i interval</b><br />
+                Wait interval seconds between sending each packet.<br /><br />
+                <b>-c count</b><br />
+                Total number of packets to send. Stop after the last one<br /><br />
+              </div>
+              <div class="col">
+                <form
+                  onsubmit="collectInputs('f7'); return false"
+                  id="f7"
+                  name="f7"
+                >
+                  <input
+                    id="f7_type"
+                    name="type"
+                    type="hidden"
+                    value="rapid-pingnet"
+                  />
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Sitename</label>
+                    <select
+                      class="form-control"
+                      id="f7_sitename"
+                      name="sitename"
+                      onchange="doSiteUpdateN('f7_');"
+                      required=""
+                    >
+                      <option value="">Choose Site</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1"
+                      >Network Device</label
+                    >
+                    <select
+                      class="form-control"
+                      id="f7_hostname"
+                      name="hostname"
+                      required=""
+                    >
+                      <option value="">Choose Network Device</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">IP to ping</label>
+                    <input
+                      class="form-control"
+                      type="text"
+                      placeholder="IP to ping"
+                      id="f7_ip"
+                      name="ip"
+                      required=""
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1"
+                      >Total Count of Pings to send</label
+                    >
+                    <input
+                      class="form-control"
+                      type="text"
+                      placeholder="Ping Count"
+                      id="f7_count"
+                      name="count"
+                      required=""
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1"
+                      >Interval between pings</label
+                    >
+                    <select
+                      class="form-control"
+                      id="f7_timeout"
+                      name="timeout"
+                      required=""
+                    >
+                      <option value="">
+                        Choose Timeout in seconds between each ping
+                      </option>
+                      <option value="1">1 second</option>
+                      <option value="5">5 seconds</option>
+                      <option value="10">10 seconds</option>
+                    </select>
+                  </div>
+                  <input type="submit" />
+                </form>
+              </div>
             </div>
-            <div class="col">
-              <form onsubmit="collectInputs('f6'); return false" id="f6" name="f6">
-                <input id="f6_type" name="type" type="hidden" value="traceroute">
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f6_sitename" name="sitename" onchange="doSiteUpdate('f6_');" required="">
-                    <option value="">
-                      Choose Site
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Hostname</label> <select class="form-control" id="f6_hostname" name="hostname" onchange="doDTNUpdate('f6_', ['f6_from_ip'], ['f6_from_interface']);" required="">
-                    <option value="">
-                      Choose Hostname
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">From Interface (Optional if From IP specified)</label>
-                  <select class="form-control" placeholder="From Interface (Optional of From IP specified)"  id="f6_from_interface" name="from_interface">
-                    <option value="">
-                      From Interface (Optional if From IP specified)
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">From IP (Optional if From Interfaces specified)</label>
-                  <select class="form-control" placeholder="From IP (Optional if From Interfaces specified)" id="f6_from_ip" name="from_ip">
-                    <option value="">
-                      From IP (Optional if From Interfaces specified)
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">To IP:</label> <input class="form-control" type="text" placeholder="Traceroute to IP" id="f6_ip" name="ip" required="">
-                </div>
-                <input type="submit">
-              </form>
+            <div class="row col-md-12 border border-primary">
+              <div class="row col-md-12">
+                <h3 class="h3">Traceroute (from Network Device)</h3>
+              </div>
+              <div class="col-md-12" id="alertstraceroutenet"></div>
+              <div class="col">
+                <span class="border" style="width: 100%">
+                  Traceroute provides a map of how data travels from its source
+                  to its destination<br />
+                  On network device, it will execute the traceroute command
+                  (which might be different on each device):<br />
+                  traceroute[6] [ip] [vrf vrfname]<br />
+                  <b>4|6</b> It will identify it based on [ip] value and used as
+                  needed<br />
+                  <b>ip</b> Destination of Traceroute IP<br />
+                  <b>vrf</b> vrf will be used if configured on Site
+                  configuration (no option to specify via API)<br />
+                </span>
+              </div>
+              <div class="col">
+                <form
+                  onsubmit="collectInputs('f8'); return false"
+                  id="f8"
+                  name="f8"
+                >
+                  <input
+                    id="f8_type"
+                    name="type"
+                    type="hidden"
+                    value="traceroutenet"
+                  />
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1">Sitename</label>
+                    <select
+                      class="form-control"
+                      id="f8_sitename"
+                      name="sitename"
+                      onchange="doSiteUpdateN('f8_');"
+                      required=""
+                    >
+                      <option value="">Choose Site</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1"
+                      >Network device</label
+                    >
+                    <select
+                      class="form-control"
+                      id="f8_hostname"
+                      name="hostname"
+                      required=""
+                    >
+                      <option value="">Choose Network Device</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="exampleFormControlSelect1"
+                      >IP to traceroute to</label
+                    >
+                    <input
+                      class="form-control"
+                      type="text"
+                      placeholder="IP to traceroute"
+                      id="f8_ip"
+                      name="ip"
+                      required=""
+                    />
+                  </div>
+                  <input type="submit" />
+                </form>
+              </div>
             </div>
           </div>
-          <div class="row col-md-12 border border-primary">
-            <div class="row col-md-12">
-              <h3 class="h3">Ping (from Network Device)</h3>
-            </div>
-            <div class="col-md-12" id="alertsrapid-pingnet"></div>
-            <div class="col">
-              It will execute the following command on selected network device: ping ipaddress -c count -i interval<br/><br/>
-              Descriptions:<br/>
-              <b>-i interval</b><br/>
-                Wait interval seconds between sending each packet.<br/><br/>
-              <b>-c count</b><br/>
-                Total number of packets to send. Stop after the last one<br/><br/>
-            </div>
-            <div class="col">
-              <form onsubmit="collectInputs('f7'); return false" id="f7" name="f7">
-                <input id="f7_type" name="type" type="hidden" value="rapid-pingnet">
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f7_sitename" name="sitename" onchange="doSiteUpdateN('f7_');" required="">
-                    <option value="">
-                      Choose Site
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Network Device</label> <select class="form-control" id="f7_hostname" name="hostname" required="">
-                    <option value="">
-                      Choose Network Device
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">IP to ping</label> <input class="form-control" type="text" placeholder="IP to ping" id="f7_ip" name="ip" required="">
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Total Count of Pings to send</label> <input class="form-control" type="text" placeholder="Ping Count" id="f7_count" name="count" required="">
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Interval between pings</label> <select class="form-control" id="f7_timeout" name="timeout" required="">
-                    <option value="">
-                      Choose Timeout in seconds between each ping
-                    </option>
-                    <option value="1">
-                      1 second
-                    </option>
-                    <option value="5">
-                      5 seconds
-                    </option>
-                    <option value="10">
-                      10 seconds
-                    </option>
-                  </select>
-                </div><input type="submit">
-              </form>
-            </div>
-          </div>
-        <div class="row col-md-12 border border-primary">
-            <div class="row col-md-12">
-              <h3 class="h3">Traceroute (from Network Device)</h3>
-            </div>
-            <div class="col-md-12" id="alertstraceroutenet"></div>
-            <div class="col">
-              <span class="border" style="width:100%">
-                Traceroute provides a map of how data travels from its source to its destination<br/>
-                On network device, it will execute the traceroute command (which might be different on each device):<br/>
-                traceroute[6] [ip] [vrf vrfname]<br/>
-                <b>4|6</b>    It will identify it based on [ip] value and used as needed<br/>
-                <b>ip</b>         Destination of Traceroute IP<br/>
-                <b>vrf</b>         vrf will be used if configured on Site configuration (no option to specify via API)<br/>
-              </span>
-            </div>
-            <div class="col">
-              <form onsubmit="collectInputs('f8'); return false" id="f8" name="f8">
-                <input id="f8_type" name="type" type="hidden" value="traceroutenet">
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Sitename</label> <select class="form-control" id="f8_sitename" name="sitename" onchange="doSiteUpdateN('f8_');" required="">
-                    <option value="">
-                      Choose Site
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">Network device</label> <select class="form-control" id="f8_hostname" name="hostname" required="">
-                    <option value="">
-                      Choose Network Device
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="exampleFormControlSelect1">IP to traceroute to</label> <input class="form-control" type="text" placeholder="IP to traceroute" id="f8_ip" name="ip" required="">
-                </div>
-                <input type="submit">
-              </form>
-            </div>
-          </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
-  </div><span class="border" style="width:100%">
-  <script src="assets/js/bootstrap.bundle.js"></script>
-  <script src="assets/js/bootstrap.js"></script>
-  <script>
-      $('#myTab a').click(function (e) {
-        e.preventDefault();
-        $(this).tab('show');
-      })
-      // Run status fetch on page load
-      fetchStatus();
-      setInterval(fetchStatus, 10000);
-  </script></span>
-</body>
+    <span class="border" style="width: 100%">
+      <script src="assets/js/bootstrap.bundle.js"></script>
+      <script src="assets/js/bootstrap.js"></script>
+      <script>
+        $("#myTab a").click(function (e) {
+          e.preventDefault();
+          $(this).tab("show");
+        });
+        // Run status fetch on page load
+        fetchStatus();
+        setInterval(fetchStatus, 10000);
+      </script></span
+    >
+  </body>
 </html>

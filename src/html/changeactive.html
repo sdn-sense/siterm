@@ -1,214 +1,296 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.4.0">
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="assets/css/bootstrap.css" rel="stylesheet">
-  <link href="assets/css/custom.css" rel="stylesheet">
-  <script src="assets/js/jquery.min.js" type="text/javascript"></script>
-  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
-  <script src="assets/js/main.js" type="text/javascript"></script>
-  <script type="text/javascript" charset="UTF-8" src="https://www.gstatic.com/charts/49/loader.js"></script>
-  <title>Site-RM: Request New Debug Action</title>
-</head>
-<body>
-  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
-  <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
-    <span class="text-success mr-3" id="alive-status">Alive: ...</span>
-    <span class="text-success mr-3" id="ready-status">Ready: ...</span>
-    <span class="text-white mr-3" id="swagger-doc"><a href="/docs#/" target="_blank">Swagger Doc</a></span>
-  </div>
-  </header>
-  <div class="container-fluid">
-    <div class="row">
-      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-        <div class="position-sticky pt-3">
-          <ul class="nav flex-column">
-            <li class="nav-item">
-              <a class="nav-link" href="/index.html">Topology</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/frontendconfig.html">Frontend Configuration</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/models.html">Models</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/servicestates.html">ServiceStates</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/deltas.html">Deltas</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/activerequests.html">Active Requests</a>
-            </li>
-          </ul>
-          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"><span>Debugging tools</span> <a class="link-secondary" href="#" aria-label="Debugging tools"></a></h6>
-          <ul class="nav flex-column mb-2">
-            <li class="nav-item">
-              <a class="nav-link" aria-current="page" href="/newdebug.html">Request new debug action</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/debughistory.html">Debug history</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link active" href="/changeactive.html">Change Active Start/End</a>
-            </li>
-          </ul>
-        </div>
-      </nav>
-      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-          <h1 class="h2">Change Active Start/End></h1>
-        </div>
-        <div class="row" id="maindiv">
-          <div class="col-md-12" id="alertsmain"></div>
-          <div class="row col-md-12 border border-primary">
-            <div class="row col-md-12">
-              <h3 class="h3">Change Active Start/End</h3>
-            </div>
-            <div class="col">
-              Description: Change the start and end times of an instance.
-              <br/>
-              Instance start and end times are used to determine when an instance is active and when it is not.
-              Select Instance and provide new start and end times.
-            </div>
-            <div class="col">
-              <form onsubmit="submitForm('f0'); return false" id="f0" name="f0" method="POST">
-                <div class="form-group">
-                  <label for="f0_sitename">Select Site</label>
-                  <select class="form-control" id="f0_sitename" name="sitename" onchange="loadModel(this.value);" required="">
-                    <option value="">Choose a site</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="f0_instanceid">Select Instance</label>
-                  <select class="form-control" id="f0_instanceid" name="instanceid" required="">
-                    <option value="">Choose an instance</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="f0_start">Start Timestamp</label>
-                  <input class="form-control" type="datetime-local" id="f0_start" name="starttimestamp" placeholder="Enter UNIX timestamp" required="">
-                </div>
-                <div class="form-group">
-                  <label for="f0_end">End Timestamp</label>
-                  <input class="form-control" type="datetime-local" id="f0_end" name="endtimestamp" placeholder="Enter UNIX timestamp" required="">
-                </div>
-                <input type="submit" class="btn btn-primary" value="Submit">
-              </form>
+  <head>
+    <meta
+      name="generator"
+      content="HTML Tidy for HTML5 for Linux version 5.4.0"
+    />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="assets/css/bootstrap.css" rel="stylesheet" />
+    <link href="assets/css/custom.css" rel="stylesheet" />
+    <script src="assets/js/jquery.min.js" type="text/javascript"></script>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script src="assets/js/main.js" type="text/javascript"></script>
+    <script
+      type="text/javascript"
+      charset="UTF-8"
+      src="https://www.gstatic.com/charts/49/loader.js"
+    ></script>
+    <title>Site-RM: Request New Debug Action</title>
+  </head>
+  <body>
+    <header
+      class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow"
+    >
+      <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#"
+        >SDN SENSE End Site Monitoring</a
+      >
+      <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
+        <span class="text-success mr-3" id="alive-status">Alive: ...</span>
+        <span class="text-success mr-3" id="ready-status">Ready: ...</span>
+        <span class="text-white mr-3" id="swagger-doc"
+          ><a href="/docs#/" target="_blank">Swagger Doc</a></span
+        >
+      </div>
+    </header>
+    <div class="container-fluid">
+      <div class="row">
+        <nav
+          id="sidebarMenu"
+          class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"
+        >
+          <div class="position-sticky pt-3">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link" href="/index.html">Topology</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/frontendconfig.html"
+                  >Frontend Configuration</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/models.html">Models</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/servicestates.html">ServiceStates</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/deltas.html">Deltas</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/activerequests.html"
+                  >Active Requests</a
+                >
+              </li>
+            </ul>
+            <h6
+              class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"
+            >
+              <span>Debugging tools</span>
+              <a
+                class="link-secondary"
+                href="#"
+                aria-label="Debugging tools"
+              ></a>
+            </h6>
+            <ul class="nav flex-column mb-2">
+              <li class="nav-item">
+                <a class="nav-link" aria-current="page" href="/newdebug.html"
+                  >Request new debug action</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/debughistory.html">Debug history</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link active" href="/changeactive.html"
+                  >Change Active Start/End</a
+                >
+              </li>
+            </ul>
+          </div>
+        </nav>
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+          <div
+            class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+          >
+            <h1 class="h2">Change Active Start/End</h1>
+          </div>
+          <div class="row" id="maindiv">
+            <div class="col-md-12" id="alertsmain"></div>
+            <div class="row col-md-12 border border-primary">
+              <div class="row col-md-12">
+                <h3 class="h3">Change Active Start/End</h3>
+              </div>
+              <div class="col">
+                Description: Change the start and end times of an instance.
+                <br />
+                Instance start and end times are used to determine when an
+                instance is active and when it is not. Select Instance and
+                provide new start and end times.
+              </div>
+              <div class="col">
+                <form
+                  onsubmit="submitForm('f0'); return false"
+                  id="f0"
+                  name="f0"
+                  method="POST"
+                >
+                  <div class="form-group">
+                    <label for="f0_sitename">Select Site</label>
+                    <select
+                      class="form-control"
+                      id="f0_sitename"
+                      name="sitename"
+                      onchange="loadModel(this.value);"
+                      required=""
+                    >
+                      <option value="">Choose a site</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="f0_instanceid">Select Instance</label>
+                    <select
+                      class="form-control"
+                      id="f0_instanceid"
+                      name="instanceid"
+                      required=""
+                    >
+                      <option value="">Choose an instance</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="f0_start">Start Timestamp</label>
+                    <input
+                      class="form-control"
+                      type="datetime-local"
+                      id="f0_start"
+                      name="starttimestamp"
+                      placeholder="Enter UNIX timestamp"
+                      required=""
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="f0_end">End Timestamp</label>
+                    <input
+                      class="form-control"
+                      type="datetime-local"
+                      id="f0_end"
+                      name="endtimestamp"
+                      placeholder="Enter UNIX timestamp"
+                      required=""
+                    />
+                  </div>
+                  <input type="submit" class="btn btn-primary" value="Submit" />
+                </form>
+              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
-  </div>
-  <span class="border" style="width:100%"></span>>
-  <script src="assets/js/bootstrap.bundle.js"></script>
-  <script src="assets/js/bootstrap.js"></script>
-  <script type="text/javascript">
-  //<![CDATA[
-        google.load('visualization', '1', {packages:['table', 'controls']});
-        $(document).ready(function() {
-            load_data();
-        });
+    <span class="border" style="width: 100%"></span>
+    <script src="assets/js/bootstrap.bundle.js"></script>
+    <script src="assets/js/bootstrap.js"></script>
+    <script type="text/javascript">
+      //<![CDATA[
+      google.load("visualization", "1", { packages: ["table", "controls"] });
+      $(document).ready(function () {
+        load_data();
+      });
 
       // Function to prefill the site dropdown
       function prefillSites() {
-        $.get('/api/frontend/configuration', function(data){
+        $.get("/api/frontend/configuration", function (data) {
           const dropdown = document.getElementById("f0_sitename");
-          sitename = data['general']['sitename'];
+          sitename = data["general"]["sitename"];
           const opt = document.createElement("option");
           opt.value = sitename;
           opt.textContent = sitename;
           dropdown.appendChild(opt);
-          })};
+        });
+      }
 
-        // Helper function to add options to a dropdown
-        function addDropDown(name, dropdown) {
-          const opt = document.createElement("option");
-          opt.value = name;
-          opt.textContent = name;
-          dropdown.append(opt);
+      // Helper function to add options to a dropdown
+      function addDropDown(name, dropdown) {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        dropdown.append(opt);
+      }
+
+      // Function to load active deltas and populate the instance dropdown
+      function loadModel(sitename) {
+        $.ajax({
+          url: "/api/" + sitename + "/frontend/activedeltas",
+          dataType: "json",
+          async: false,
+          success: function (json) {
+            const dropdown = document.getElementById("f0_instanceid");
+            dropdown.innerHTML = '<option value="">Choose an instance</option>'; // Reset dropdown
+
+            // Loop through each delta in the response
+            Object.keys(json).forEach(function (key) {
+              const delta = json[key];
+              // Access vsw or rst if present
+              ["vsw", "rst"].forEach((type) => {
+                if (delta && delta[type]) {
+                  // Loop through each key in vsw or rst
+                  for (const key in delta[type]) {
+                    if (delta[type].hasOwnProperty(key)) {
+                      const opt = document.createElement("option");
+                      opt.value = key; // The key is used as the value
+                      opt.textContent = key; // The key is shown as the option text
+                      dropdown.appendChild(opt);
+                    }
+                  }
+                }
+              });
+            });
+          },
+        });
+      }
+
+      function submitForm(formId) {
+        docObj = document.getElementById(formId);
+        var params = {};
+        for (var i = 0; i < docObj.elements.length; i++) {
+          var fieldName = docObj.elements[i].name;
+          var fieldValue = docObj.elements[i].value;
+          if (fieldName) {
+            if (
+              fieldName === "starttimestamp" ||
+              fieldName === "endtimestamp"
+            ) {
+              var date = new Date(fieldValue);
+              params[fieldName] = Math.floor(date.getTime() / 1000);
+            } else {
+              params[fieldName] = fieldValue;
+            }
+          }
         }
 
-        // Function to load active deltas and populate the instance dropdown
-        function loadModel(sitename) {
-          $.ajax({
-            url: '/api/' + sitename + '/frontend/activedeltas',
-            dataType: 'json',
-            async: false,
-            success: function (json) {
-              const dropdown = document.getElementById("f0_instanceid");
-              dropdown.innerHTML = '<option value="">Choose an instance</option>'; // Reset dropdown
-
-              // Loop through each delta in the response
-              Object.keys(json).forEach(function (key) {
-                const delta = json[key];
-                // Access vsw or rst if present
-                ['vsw', 'rst'].forEach(type => {
-                  if (delta && delta[type]) {
-                    // Loop through each key in vsw or rst
-                    for (const key in delta[type]) {
-                      if (delta[type].hasOwnProperty(key)) {
-                        const opt = document.createElement("option");
-                        opt.value = key; // The key is used as the value
-                        opt.textContent = key; // The key is shown as the option text
-                        dropdown.appendChild(opt);
-                      }}}})})}})}
-
-          function submitForm(formId) {
-            docObj = document.getElementById(formId);
-            var params = {};
-            for (var i = 0; i < docObj.elements.length; i++) {
-              var fieldName = docObj.elements[i].name;
-              var fieldValue = docObj.elements[i].value;
-              if (fieldName) {
-                if (fieldName === 'starttimestamp' || fieldName === 'endtimestamp') {
-                  var date = new Date(fieldValue);
-                  params[fieldName] = Math.floor(date.getTime() / 1000);
-                } else {
-                  params[fieldName] = fieldValue;
-                }
-              }
+        fetch("/api/" + params["sitename"] + "/setinstancestartend", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(params),
+        })
+          .then((response) => {
+            if (response.ok) {
+              return response.json();
+            } else {
+              throw new Error(
+                `HTTP ${response.status}: ${response.statusText}`,
+              );
             }
-
-            fetch("/api/" + params['sitename'] + "/setinstancestartend", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(params)
-            })
-            .then(response => {
-              if (response.ok) {
-                return response.json();
-              } else {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-              }
-            })
-            .then(result => {
-              params['type'] = 'main';
-              newAlert("New change action request submitted: " + JSON.stringify(result), params);
-            })
-            .catch(error => {
-              params['type'] = 'main';
-              newAlert("Error: " + error.message, params, "alert-danger");
-            });
-          }
-          function load_data() {
-            prefillSites();
-          };
-          $('#myTab a').click(function (e) {
-            e.preventDefault();
-            $(this).tab('show');
           })
+          .then((result) => {
+            params["type"] = "main";
+            newAlert(
+              "New change action request submitted: " + JSON.stringify(result),
+              params,
+            );
+          })
+          .catch((error) => {
+            params["type"] = "main";
+            newAlert("Error: " + error.message, params, "alert-danger");
+          });
+      }
+      function load_data() {
+        prefillSites();
+      }
+      $("#myTab a").click(function (e) {
+        e.preventDefault();
+        $(this).tab("show");
+      });
       // Run status fetch on page load
       fetchStatus();
       setInterval(fetchStatus, 10000);
-    //]]>
-  </script>
-</body>
+      //]]>
+    </script>
+  </body>
 </html>

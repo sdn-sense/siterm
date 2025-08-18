@@ -1,206 +1,328 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.4.0">
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="assets/css/bootstrap.css" rel="stylesheet">
-  <link href="assets/css/custom.css" rel="stylesheet">
-  <script src="assets/js/jquery.min.js" type="text/javascript"></script>
-  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
-  <script src="assets/js/main.js" type="text/javascript"></script>
-  <script type="text/javascript">
-  //<![CDATA[
-        google.load('visualization', '1', {packages:['table', 'controls']});
-        $(document).ready(function() {
-            load_data();
-        });
+  <head>
+    <meta
+      name="generator"
+      content="HTML Tidy for HTML5 for Linux version 5.4.0"
+    />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="assets/css/bootstrap.css" rel="stylesheet" />
+    <link href="assets/css/custom.css" rel="stylesheet" />
+    <script src="assets/js/jquery.min.js" type="text/javascript"></script>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script src="assets/js/main.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      //<![CDATA[
+      google.load("visualization", "1", { packages: ["table", "controls"] });
+      $(document).ready(function () {
+        load_data();
+      });
 
-       function tableAdd(dataIn, dictkeys, saveObj){
-          tableTag = $('<table class="table"><\/table>');
-          theadTag = $('<thead class="thead-dark"><\/thead>');
-          trow = $('<tr><\/tr>');
-          for (key in dictkeys){
-              trow.append('<th scope="col">'+dictkeys[key]+'<\/th>');
-          }
-          theadTag.append(trow);
-          tableTag.append(theadTag);
-          for (rowid in dataIn){
-              trow = $('<tr><\/tr>');
-              for (key in dictkeys){
-		  if (dictkeys[key] === "insertdate"){
-	              var date = new Date(dataIn[rowid][dictkeys[key]] * 1000);
-                      trow.append("<td>"+date.getDate()+"/"+(date.getMonth()+1)+"/"+date.getFullYear()+" "+date.getHours()+":"+date.getMinutes()+":"+date.getSeconds()+"<\/td>");
-		  }
-                  else {
-                      trow.append('<td>'+dataIn[rowid][dictkeys[key]]+'<\/td>');
-                  }
-	      }
-              tableTag.append(trow); 
-          }
-          saveObj.append(tableTag);
-       }
-       function deltaStates(deltaID, sitename, saveObj){
-          $.ajax({url: '/api/' + sitename + '/deltas/'+ deltaID + '/timestates?limit=100',
-            dataType: 'json', data: {}, async: false,
-            success: function(json){
-                tableAdd(json, ['id', 'deltaid', 'insertdate', 'state'], saveObj);
-            }
-         });
-       }
-        function forceCommit(deltaID, sitename) {
-          $.ajax({
-            url: '/api/' + sitename + '/deltas/' + deltaID + '/actions/forcecommit',
-            type: 'PUT',
-            dataType: 'json',
-            data: {},
-            success: function(json) {
-              alert('Force Commit Done for Delta ID: ' + deltaID);
-            },
-            error: function(xhr, status, error) {
-              alert('Force Commit failed: ' + error);
-              console.error('Error details:', status, xhr.responseText);
-            }
-          });
+      function tableAdd(dataIn, dictkeys, saveObj) {
+        tableTag = $('<table class="table"><\/table>');
+        theadTag = $('<thead class="thead-dark"><\/thead>');
+        trow = $("<tr><\/tr>");
+        for (key in dictkeys) {
+          trow.append('<th scope="col">' + dictkeys[key] + "<\/th>");
         }
+        theadTag.append(trow);
+        tableTag.append(theadTag);
+        for (rowid in dataIn) {
+          trow = $("<tr><\/tr>");
+          for (key in dictkeys) {
+            if (dictkeys[key] === "insertdate") {
+              var date = new Date(dataIn[rowid][dictkeys[key]] * 1000);
+              trow.append(
+                "<td>" +
+                  date.getDate() +
+                  "/" +
+                  (date.getMonth() + 1) +
+                  "/" +
+                  date.getFullYear() +
+                  " " +
+                  date.getHours() +
+                  ":" +
+                  date.getMinutes() +
+                  ":" +
+                  date.getSeconds() +
+                  "<\/td>",
+              );
+            } else {
+              trow.append("<td>" + dataIn[rowid][dictkeys[key]] + "<\/td>");
+            }
+          }
+          tableTag.append(trow);
+        }
+        saveObj.append(tableTag);
+      }
+      function deltaStates(deltaID, sitename, saveObj) {
+        $.ajax({
+          url:
+            "/api/" + sitename + "/deltas/" + deltaID + "/timestates?limit=100",
+          dataType: "json",
+          data: {},
+          async: false,
+          success: function (json) {
+            tableAdd(json, ["id", "deltaid", "insertdate", "state"], saveObj);
+          },
+        });
+      }
+      function forceCommit(deltaID, sitename) {
+        $.ajax({
+          url:
+            "/api/" + sitename + "/deltas/" + deltaID + "/actions/forcecommit",
+          type: "PUT",
+          dataType: "json",
+          data: {},
+          success: function (json) {
+            alert("Force Commit Done for Delta ID: " + deltaID);
+          },
+          error: function (xhr, status, error) {
+            alert("Force Commit failed: " + error);
+            console.error("Error details:", status, xhr.responseText);
+          },
+        });
+      }
 
-       function loadDelta(deltaID, sitename)
-       {
-          $.ajax({url: '/api/' + sitename + '/deltas/'+ deltaID + '?summary=false',
-            dataType: 'json',
+      function loadDelta(deltaID, sitename) {
+        $.ajax({
+          url: "/api/" + sitename + "/deltas/" + deltaID + "?summary=false",
+          dataType: "json",
+          data: {},
+          async: false,
+          success: function (json) {
+            json = json[0];
+            model = $("<div><\/div>");
+            model.append(
+              '<div class="row"><b>Delta UID: <\/b>' + json["id"] + "<\/div>",
+            );
+            model.append(
+              '<div class="row"><b>Delta State: <\/b>' +
+                json["state"] +
+                "<\/div>",
+            );
+            model.append(
+              '<div class="row"><b>Insert Date: <\/b>' +
+                json["insertdate"] +
+                "<\/div>",
+            );
+            model.append(
+              '<div class="row"><b>Update Date: <\/b>' +
+                json["updatedate"] +
+                "<\/div>",
+            );
+            model.append(
+              '<div class="row"><b>Delta Type: <\/b>' +
+                json["deltat"] +
+                "<\/div>",
+            );
+            model.append(
+              '<div class="row"><b>Delta ModAdd: <\/b>' +
+                json["modadd"] +
+                "<\/div>",
+            );
+            model.append(
+              '<div class="row"><b>Delta ModelID: <\/b>' +
+                json["modelid"] +
+                "<\/div>",
+            );
+            // Delta Info From Orchestrator
+            model.append(
+              '<div class="row"><b>Full Delta Information From Orhestrator:<\/b><\/div>',
+            );
+            model.append(
+              '<div class="row">============================================<\/div>',
+            );
+            model.append(
+              '<div class="row"><b>    Model Addition: <\/b><\/div>',
+            );
+            mrmlSaver(json["addition"], model);
+            model.append(
+              '<div class="row"><b>    Model Reduction: <\/b><\/div>',
+            );
+            mrmlSaver(json["reduction"], model);
+            model.append('<div class="row"><b>DELTA STATES:<\/b><\/div>');
+            model.append(
+              '<div class="row">============================================<\/div>',
+            );
+            deltaStates(deltaID, sitename, model);
+            $("#v-pills-" + deltaID).empty();
+            $("#v-pills-" + deltaID).append(model);
+            // Add button which will call PUT /api/<sitename>/deltas/<deltaid>/actions/forcecommit
+            model.append(
+              '<div class="row"><button type="button" class="btn btn-primary" onclick="forceCommit(\'' +
+                deltaID +
+                "', '" +
+                sitename +
+                "')\">Force Commit<\/button><\/div>",
+            );
+          },
+        });
+      }
+
+      function defineAllDeltas(data, sitename) {
+        menCol = $(
+          '<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"><\/div>',
+        );
+        cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
+        latest = true;
+        for (var key in data["deltas"][sitename]) {
+          if ($.isPlainObject(data["deltas"][sitename][key])) {
+            modID = data["deltas"][sitename][key]["id"];
+            tagName = modID;
+            menCol.append(
+              '<a class="nav-link" id="v-pills-' +
+                modID +
+                '-tab" data-toggle="pill" onclick="loadDelta(\'' +
+                modID +
+                "', '" +
+                sitename +
+                '\')" href="#v-pills-' +
+                modID +
+                '" role="tab" aria-controls="v-pills-' +
+                modID +
+                '" aria-selected="true">' +
+                tagName +
+                "<\/a>",
+            );
+            cntDiv.append(
+              '<div class="tab-pane fade" id="v-pills-' +
+                modID +
+                '" role="tabpanel" aria-labelledby="v-pills-' +
+                modID +
+                '-tab"><\/div>',
+            );
+          }
+        }
+        nRow = $('<div class="row">');
+        menCol = $('<div class="col-3">').append(menCol);
+        cntDiv = $('<div class="col-9">').append(cntDiv);
+        nRow.append(menCol).append(cntDiv);
+        $("#view_fe_" + sitename).append(nRow);
+      }
+
+      function load_data() {
+        $.get("/api/frontend/configuration", function (data) {
+          defineSites(data, false);
+          data["deltas"] = {};
+          sitename = data["general"]["sitename"];
+          $.ajax({
+            url: "/api/" + sitename + "/deltas?summary=true",
+            dataType: "json",
             data: {},
             async: false,
-            success: function(json){
-              json = json[0];
-              model = $('<div><\/div>');
-              model.append('<div class="row"><b>Delta UID: <\/b>' + json['id'] + '<\/div>');
-              model.append('<div class="row"><b>Delta State: <\/b>' + json['state'] + '<\/div>');
-              model.append('<div class="row"><b>Insert Date: <\/b>' + json['insertdate'] + '<\/div>');
-              model.append('<div class="row"><b>Update Date: <\/b>' + json['updatedate'] + '<\/div>');
-              model.append('<div class="row"><b>Delta Type: <\/b>' + json['deltat'] + '<\/div>');
-              model.append('<div class="row"><b>Delta ModAdd: <\/b>' + json['modadd'] + '<\/div>');
-              model.append('<div class="row"><b>Delta ModelID: <\/b>' + json['modelid'] + '<\/div>');
-              // Delta Info From Orchestrator
-              model.append('<div class="row"><b>Full Delta Information From Orhestrator:<\/b><\/div>');
-              model.append('<div class="row">============================================<\/div>');
-              model.append('<div class="row"><b>    Model Addition: <\/b><\/div>');
-              mrmlSaver(json['addition'], model);
-              model.append('<div class="row"><b>    Model Reduction: <\/b><\/div>');
-              mrmlSaver(json['reduction'], model);
-              model.append('<div class="row"><b>DELTA STATES:<\/b><\/div>');
-              model.append('<div class="row">============================================<\/div>');
-              deltaStates(deltaID, sitename, model);
-              $('#v-pills-' + deltaID).empty();
-              $('#v-pills-' + deltaID).append(model);
-              // Add button which will call PUT /api/<sitename>/deltas/<deltaid>/actions/forcecommit
-              model.append('<div class="row"><button type="button" class="btn btn-primary" onclick="forceCommit(\''+deltaID+'\', \''+sitename+'\')">Force Commit<\/button><\/div>');
-          }});
-       }
-
-        function defineAllDeltas(data, sitename) {
-          menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"><\/div>');
-          cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
-          latest = true;
-          for (var key in data['deltas'][sitename]){
-             if ($.isPlainObject(data['deltas'][sitename][key])){
-               modID = data['deltas'][sitename][key]['id'];
-               tagName = modID;
-               menCol.append('<a class="nav-link" id="v-pills-'+modID+'-tab" data-toggle="pill" onclick="loadDelta(\''+modID+'\', \''+sitename+'\')" href="#v-pills-'+modID+'" role="tab" aria-controls="v-pills-'+ modID +'" aria-selected="true">'+ tagName +'<\/a>');
-               cntDiv.append('<div class="tab-pane fade" id="v-pills-'+modID+'" role="tabpanel" aria-labelledby="v-pills-'+modID+'-tab"><\/div>');
-             }
-          }
-          nRow = $('<div class="row">');
-          menCol = $('<div class="col-3">').append(menCol);
-          cntDiv = $('<div class="col-9">').append(cntDiv);
-          nRow.append(menCol).append(cntDiv);
-          $('#view_fe_'+sitename).append(nRow);
-        }
-
-        function load_data() {
-            $.get('/api/frontend/configuration', function(data){
-              defineSites(data, false);
-              data['deltas'] = {};
-              sitename = data['general']['sitename'];
-              $.ajax({url: '/api/' + sitename + '/deltas?summary=true',
-                   dataType: 'json',
-                   data: {},
-                   async: false,
-                   success: function(json){
-                     data['deltas'][sitename] = json;
-                  }});
-              defineAllDeltas(data, sitename);
-            })};
-  //]]>
-  </script>
-  <title>Site-RM: Deltas Information</title>
-</head>
-<body>
-  <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
-  <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
-    <span class="text-success mr-3" id="alive-status">Alive: ...</span>
-    <span class="text-success mr-3" id="ready-status">Ready: ...</span>
-    <span class="text-white mr-3" id="swagger-doc"><a href="/docs#/" target="_blank">Swagger Doc</a></span>
-  </div>
-  </header>
-  <div class="container-fluid">
-    <div class="row">
-      <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-        <div class="position-sticky pt-3">
-          <ul class="nav flex-column">
-            <li class="nav-item">
-              <a class="nav-link" href="/index.html">Topology</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/frontendconfig.html">Frontend Configuration</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/models.html">Models</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/servicestates.html">ServiceStates</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="/deltas.html">Deltas</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/activerequests.html">Active Requests</a>
-            </li>
-          </ul>
-          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"><span>Debugging tools</span> <a class="link-secondary" href="#" aria-label="Debugging tools"></a></h6>
-          <ul class="nav flex-column mb-2">
-            <li class="nav-item">
-              <a class="nav-link" href="/newdebug.html">Request new debug action</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/debughistory.html">Debug history</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/changeactive.html">Change Active Start/End</a>
-            </li>
-          </ul>
-        </div>
-      </nav>
-      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-          <h1 class="h2">Dashboard</h1>
-        </div>
-        <div class="row" id="maindiv"></div>
-        <div id="sites_tab"></div>
-        <div id="main_tab"></div>
-      </main>
+            success: function (json) {
+              data["deltas"][sitename] = json;
+            },
+          });
+          defineAllDeltas(data, sitename);
+        });
+      }
+      //]]>
+    </script>
+    <title>Site-RM: Deltas Information</title>
+  </head>
+  <body>
+    <header
+      class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow"
+    >
+      <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#"
+        >SDN SENSE End Site Monitoring</a
+      >
+      <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
+        <span class="text-success mr-3" id="alive-status">Alive: ...</span>
+        <span class="text-success mr-3" id="ready-status">Ready: ...</span>
+        <span class="text-white mr-3" id="swagger-doc"
+          ><a href="/docs#/" target="_blank">Swagger Doc</a></span
+        >
+      </div>
+    </header>
+    <div class="container-fluid">
+      <div class="row">
+        <nav
+          id="sidebarMenu"
+          class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"
+        >
+          <div class="position-sticky pt-3">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link" href="/index.html">Topology</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/frontendconfig.html"
+                  >Frontend Configuration</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/models.html">Models</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/servicestates.html">ServiceStates</a>
+              </li>
+              <li class="nav-item">
+                <a
+                  class="nav-link active"
+                  aria-current="page"
+                  href="/deltas.html"
+                  >Deltas</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/activerequests.html"
+                  >Active Requests</a
+                >
+              </li>
+            </ul>
+            <h6
+              class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"
+            >
+              <span>Debugging tools</span>
+              <a
+                class="link-secondary"
+                href="#"
+                aria-label="Debugging tools"
+              ></a>
+            </h6>
+            <ul class="nav flex-column mb-2">
+              <li class="nav-item">
+                <a class="nav-link" href="/newdebug.html"
+                  >Request new debug action</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/debughistory.html">Debug history</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/changeactive.html"
+                  >Change Active Start/End</a
+                >
+              </li>
+            </ul>
+          </div>
+        </nav>
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+          <div
+            class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
+          >
+            <h1 class="h2">Dashboard</h1>
+          </div>
+          <div class="row" id="maindiv"></div>
+          <div id="sites_tab"></div>
+          <div id="main_tab"></div>
+        </main>
+      </div>
     </div>
-  </div>
-  <script src="assets/js/bootstrap.bundle.js"></script>
-  <script src="assets/js/bootstrap.js"></script>
-  <script>
-      $('#myTab a').click(function (e) {
+    <script src="assets/js/bootstrap.bundle.js"></script>
+    <script src="assets/js/bootstrap.js"></script>
+    <script>
+      $("#myTab a").click(function (e) {
         e.preventDefault();
-        $(this).tab('show');
-      })
+        $(this).tab("show");
+      });
       // Run status fetch on page load
       fetchStatus();
       setInterval(fetchStatus, 10000);
-  </script>
-</body>
+    </script>
+  </body>
 </html>
