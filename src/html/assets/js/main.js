@@ -342,7 +342,7 @@ async function fetchStatus() {
     document.getElementById("alive-status").textContent =
       `Alive: ${aliveData.status === "alive" ? "OK" : "FAIL"}`;
     document.getElementById("alive-status").className =
-      aliveData.status === "alive" ? "text-success me-3" : "text-danger me-3";
+      aliveData.status === "alive" ? "text-success mr-3" : "text-danger mr-3";
 
     // Fetch ready
     const readyResp = await fetch("/api/ready");
@@ -350,15 +350,43 @@ async function fetchStatus() {
       const readyData = await readyResp.json();
       document.getElementById("ready-status").textContent =
         `Ready: ${readyData.status === "ready" ? "OK" : "FAIL"}`;
-      document.getElementById("ready-status").className = "text-success me-3";
+      document.getElementById("ready-status").className = "text-success mr-3";
     } else {
       document.getElementById("ready-status").textContent = "Ready: FAIL";
-      document.getElementById("ready-status").className = "text-danger me-3";
+      document.getElementById("ready-status").className = "text-danger mr-3";
+    }
+    // Fetch liveness
+    const livenessResp = await fetch("/api/liveness");
+    if (livenessResp.status === 200) {
+      const livenessData = await livenessResp.json();
+      document.getElementById("liveness-status").textContent =
+        `Liveness: ${livenessData.status === "ok" ? "OK" : livenessData.status}`;
+      document.getElementById("liveness-status").className =
+        livenessData.status === "ok" ? "text-success mr-3" : "text-danger mr-3";
+    } else {
+      document.getElementById("liveness-status").textContent = "Liveness: FAIL";
+      document.getElementById("liveness-status").className = "text-danger mr-3";
+    }
+    // Fetch readiness
+    const readinessResp = await fetch("/api/readiness");
+    if (readinessResp.status === 200) {
+      const readinessData = await readinessResp.json();
+      document.getElementById("readiness-status").textContent =
+        `Readiness: ${readinessData.status === "ok" ? "OK" : readinessData.status}`;
+      document.getElementById("readiness-status").className =
+        readinessData.status === "ok"
+          ? "text-success mr-3"
+          : "text-danger mr-3";
+    } else {
+      document.getElementById("readiness-status").textContent =
+        "Readiness: FAIL";
+      document.getElementById("readiness-status").className =
+        "text-danger mr-3";
     }
   } catch (err) {
     document.getElementById("alive-status").textContent = "Alive: ERROR";
-    document.getElementById("alive-status").className = "text-danger me-3";
+    document.getElementById("alive-status").className = "text-danger mr-3";
     document.getElementById("ready-status").textContent = "Ready: ERROR";
-    document.getElementById("ready-status").className = "text-danger me-3";
+    document.getElementById("ready-status").className = "text-danger mr-3";
   }
 }

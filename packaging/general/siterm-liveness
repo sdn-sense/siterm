@@ -2,17 +2,19 @@
 """
 Kubernetes liveness checker for the service;
 """
-import os
-import sys
 import argparse
+import os
 import subprocess
+import sys
 from datetime import datetime
-from SiteRMLibs.MainUtilities import timedhourcheck
+
 from SiteRMLibs.hostcert import HostCertHandler
+from SiteRMLibs.MainUtilities import timedhourcheck
+
 
 def certCheker():
     """Check if certificates are valid and ready to use."""
-    if timedhourcheck('siterm-liveness', 1):
+    if timedhourcheck("siterm-liveness", 1):
         return 0
     certHandler = HostCertHandler()
     return certHandler.externalCertChecker()
@@ -27,17 +29,18 @@ def checkServices(onlyservices=None):
         output = result.stdout
 
         # Parse output to check if all services are running
-        services = output.strip().split('\n')
+        services = output.strip().split("\n")
         for service in services:
             serviceline = service.split()
-            if serviceline[1] != 'RUNNING':
+            if serviceline[1] != "RUNNING":
                 if serviceline[0] in onlyservices or not onlyservices:
-                    print(f'Service not running state. Details: {service}')
+                    print(f"Service not running state. Details: {service}")
                     return False
     except subprocess.CalledProcessError as e:
         print("Error running supervisorctl:", e)
         print("Will ignore error and return all is good.")
     return True
+
 
 def enableLivenessCheck(statFile):
     """Enable the liveness check by removing the disable file if it exists."""
@@ -56,7 +59,7 @@ def disableLivenessCheck(statFile):
     """Disable the liveness check by creating the disable file if it doesn't exist."""
     if not os.path.exists(statFile):
         try:
-            with open(statFile, 'w', encoding='utf-8') as fd:
+            with open(statFile, "w", encoding="utf-8") as fd:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 fd.write(f"Liveness check disabled at {timestamp} \n")
             print("Liveness check disabled. Created disable file.")
@@ -65,21 +68,34 @@ def disableLivenessCheck(statFile):
             sys.exit(1)
     else:
         print("Liveness check is already disabled.")
-        with open(statFile, 'r', encoding='utf-8') as fd:
+        with open(statFile, "r", encoding="utf-8") as fd:
             print(fd.read())
 
-def runchecks():
+
+def runChecks():
     """Run all checks"""
-    state = 0 if checkServices() else 1
-    state = state or certCheker()
+    try:
+        state = 0 if checkServices() else 1
+        state = state or certCheker()
+    except Exception as e:
+        print(f"[FAILED] Exception during checks: {e}")
+        state = 100
+    # Write this to output file
+    with open("/tmp/siterm-liveness", "w", encoding="utf-8") as fd:
+        fd.write(f"{state}\n")
     return state
 
+
 if __name__ == "__main__":
-    livenessFile = "/tmp/siterm-liveness-disable"
+    livenessFile = "/tmp/siterm-liveness-disabled"
     parser = argparse.ArgumentParser(description="Kubernetes liveness checker with enable/disable options.")
     parser.add_argument("--enable", action="store_true", help="Enable the liveness check.")
     parser.add_argument("--disable", action="store_true", help="Disable the liveness check.")
-    parser.add_argument("--ignorelock", action="store_true", help="Ignore Liveness lock file and run all checks. (Useful for debugging failing service)", )
+    parser.add_argument(
+        "--ignorelock",
+        action="store_true",
+        help="Ignore Liveness lock file and run all checks. (Useful for debugging failing service)",
+    )
     args = parser.parse_args()
 
     if not os.path.exists("/tmp/config-fetcher-ready"):
@@ -102,4 +118,4 @@ if __name__ == "__main__":
         print("Liveness check is disabled. Use --enable to enable or --ignorelock to run all checks and bypass this.")
         sys.exit(0)
 
-    sys.exit(runchecks())
+    sys.exit(runChecks())
