@@ -12,6 +12,7 @@ Date: 2021/12/01
 from SiteRMLibs.ipaddr import validMRMLName
 from SiteRMLibs.CustomExceptions import NoOptionError
 from SiteRMLibs.CustomExceptions import NoSectionError
+from SiteRMLibs.MainUtilities import strtolist
 
 
 class SwitchInfo:
@@ -240,17 +241,19 @@ class SwitchInfo:
 
     def _addSwitchRoutes(self, switchInfo):
         """Add Route info to MRML"""
+        enabledrsts = []
         for switchName, rstEntries in switchInfo.get("routes", {}).items():
             self.logger.debug(f"Adding Switch Routes {switchName}")
             out = {"hostname": switchName}
             try:
                 out["rst"] = self.config.get(switchName, "rst")
                 out["private_asn"] = self.config.get(switchName, "private_asn")
+                enabledrsts = strtolist(self.config.get(switchName, "rsts_enabled"))
             except (NoOptionError, NoSectionError):
                 continue
-            if not out["rst"] or not out["private_asn"]:
+            if not out["rst"] or not out["private_asn"] or not enabledrsts:
                 continue
-            for iptype in ["ipv4", "ipv6"]:
+            for iptype in enabledrsts:
                 tmp = self.__getValFromConfig(f"{iptype}-subnet-pool")
                 if tmp:
                     out[f"{iptype}-subnet-pool"] = tmp
