@@ -9,10 +9,22 @@ from SiteRMLibs.MainUtilities import (
     getActiveDeltas,
     getDBConn,
     getFileContentAsJson,
-    getSiteNameFromConfig,
     getUTCnow,
     getVal,
 )
+
+# TODO: Remove this from here, and use from MainUtilities
+# This is only to cover old release version
+def getSiteNameFromConfig(config):
+    """Get sitename from config."""
+    sitename = None
+    if config.has_option("general", "sitename"):
+        sitename = config.get("general", "sitename")
+    elif config.has_option("general", "sites"):
+        sitename = config.get("general", "sites")[0]
+    else:
+        raise ValueError("No sitename defined in config file. Fatal Failure.")
+    return sitename
 
 
 class Helper:
