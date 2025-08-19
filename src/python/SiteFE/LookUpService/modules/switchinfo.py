@@ -248,7 +248,7 @@ class SwitchInfo:
             try:
                 out["rst"] = self.config.get(switchName, "rst")
                 out["private_asn"] = self.config.get(switchName, "private_asn")
-                enabledrsts = strtolist(self.config.get(switchName, "rsts_enabled"))
+                enabledrsts = strtolist(self.config.get(switchName, "rsts_enabled"), ",")
             except (NoOptionError, NoSectionError):
                 continue
             if not out["rst"] or not out["private_asn"] or not enabledrsts:
