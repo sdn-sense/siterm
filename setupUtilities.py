@@ -26,7 +26,7 @@ import sys
 # src/python/SiteFE/__init__.py
 # src/python/SiteRMAgent/__init__.py
 # src/python/SiteRMLibs/__init__.py
-VERSION = '1.5.43'
+VERSION = '1.5.50'
 
 
 def get_path_to_root(appendLocation=None):
