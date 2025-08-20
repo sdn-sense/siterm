@@ -1,3 +1,71 @@
+# SiteRM 1.5.50 Production release
+
+⚠️  Breaking Release
+**This version introduces a new REST framework (FastAPI), database layout changes, and configuration simplification.**
+**Sites upgrading from v1.5.43 must follow the upgrade procedure below and clean activated resources**
+
+🚨 Upgrade Instructions
+
+- Download the following script inside SiteRM FE Container: https://raw.githubusercontent.com/sdn-sense/siterm/refs/heads/master/packaging/siterm-site-fe/scripts/siterm-fe-helper
+- Run script inside SiteRM FE Container: `python3 siterm-fe-helper`. Select option cancel-all
+- Inform the SENSE team about cleaned resources.
+- Wait a few minutes (or monitor the LookupService log file for cleanup progress).
+- Update your git configuration file (see example here: https://github.com/sdn-sense/rm-configs/blob/master/NRM_CENICDEV/FE/main.yaml or for agent here: https://github.com/sdn-sense/rm-configs/blob/master/T2_US_Caltech_DEV/Agent01/main.yaml) If you are unsure of changes, please contact SENSE team.
+- Remove the existing MySQL database and perform a full upgrade to the new image. (rm -rf /opt/siterm/config/mysql/)
+
+🚀 New Features & Improvements
+
+- **QoS Enhancements (Arista)**
+  - Introduced default QoS policy handling for guaranteedCapped, softCapped, and bestEffort allocations for Arista devices.
+  - SiteRM now ensures correct bandwidth sharing between guaranteed, soft-capped, and best-effort traffic.
+  - Guarantees at least 100 Mbps to bestEffort traffic even during contention.
+- **REST API Change**
+  - Migrated SiteRM API to FastAPI framework. Documentation of all available api calls is under each Sites FE: https://<FQDN>/docs#/
+  - Introduced new calls for application readiness: /api/alive, /api/ready, /api/liveness, /api/readiness, and etc.
+- **Configuration simplification**
+  - Many parameters are now embedded in the codebase. Sites no longer need to manually specify them.
+  - Agent's and FEs specify site as str (not list)
+- **New OS Release**
+  - SiteRM agent is now built also for Ubuntu 22. Image tag `latest-u22`.
+- **Other fixes**
+  - Automatic cleanup of old models based on timestamp (instead of database state).
+  - Improved handling of database failures: readiness/liveness probes now correctly fail and trigger restarts.
+  - Docker startup scripts enable modprobes auatomatically (if SELinux in use).
+  - Fixed SSH connection issue when establishing sessions with remote nodes (seen issue with Edgecore devices).
+  - Status check logic improved: now validates if the process is alive, not just if the PID exists.
+  - Readiness probe now restarts crashed MySQL instances instead of leaving them in a broken state.
+  - Fixed warnings in Ansible cleanup when running in parallel.
+  - Certificates: readiness and liveness checks now fail if a certificate is expired.
+
+## 🔧 Supported OS Releases
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL8
+  - EL9
+  - EL10 **Default for release**
+  - U22
+- **Debugger (x86_64)**
+  - EL10
+
+
+## 📥 Installation Details
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest`.
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
+- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.50`).
+
+### Docker Versions
+- **Agent:** `sdnsense/siterm-agent:latest-20250820-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
+- **Debugger:** `sdnsense/siterm-debugger:latest-20250820-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:latest-20250820` *(or use `latest`)*
+
+### Helm versions
+- **Agent:** Chart version siterm/siterm-agent 1.5.50
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.50
+- **Frontend:** Chart version siterm/siterm-fe 1.5.50
+
+
 # SiteRM 1.5.43 Bug fix Production release
 
 ## SiteRM fixes and improvements
