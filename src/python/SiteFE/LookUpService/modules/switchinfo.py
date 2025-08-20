@@ -137,6 +137,11 @@ class SwitchInfo:
                 rst = self.config.get(switchName, "rst")
             except (NoOptionError, NoSectionError):
                 rst = False
+            # Get rsts enabled
+            try:
+                enabledrsts = strtolist(self.config.get(switchName, "rsts_enabled"), ",")
+            except (NoOptionError, NoSectionError):
+                enabledrsts = []
             for portName, portSwitch in list(switchDict.items()):
                 newuri = f":{switchName}:{self.switch.getSystemValidPortName(portName)}"
                 self._addVswPort(
@@ -148,8 +153,8 @@ class SwitchInfo:
                     globalvlan=globalvlan,
                 )
                 self.addSwitchIntfInfo(switchName, portName, portSwitch, newuri)
-                if rst:
-                    self._addAddressPool(newuri)
+                if rst and enabledrsts:
+                    self._addAddressPool(newuri, enabledrsts=enabledrsts)
 
     def _addSwitchVlanLabel(self, vlanuri, value):
         """Add Switch Vlan Label"""
@@ -220,9 +225,10 @@ class SwitchInfo:
                 localuri = f":{lldpHost}:{self.switch.getSystemValidPortName(lldpIntf)}"
                 self._addIsAlias(uri=localuri, isAlias=remoteuri)
 
-    def _addAddressPool(self, uri):
+    def _addAddressPool(self, uri, enabledrsts=None):
         """Add Address Pools"""
-        for key in ["ipv4-address-pool-list", "ipv6-address-pool-list"]:
+        for iptype in enabledrsts:
+            key = f"{iptype}-address-pool-list"
             tmp = self.__getValFromConfig(key)
             if tmp:
                 self._addNetworkAddress(uri, key[:-5], ",".join(map(str, tmp)))
