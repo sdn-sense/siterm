@@ -197,7 +197,7 @@ async def getDebugActionsList(request: Request, sitename: str = Path(..., descri
     - Returns a list of debug actions.
     """
     checkSite(deps, sitename)
-    out = {"actions": getactions(deps["config"]), "version": runningVersion}
+    out = {"actions": list(getactions(deps["config"])), "version": runningVersion}
     return APIResponse.genResponse(request, out)
 
 
