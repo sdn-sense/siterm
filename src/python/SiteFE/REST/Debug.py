@@ -68,7 +68,7 @@ def getDebugEntry(deps, debugvar=None, hostname=None, state=None, details=False,
 def getactions(config):
     """Get actions for debug calls."""
     _checkactionrequest(config)
-    return config["MAIN"]["debugactions"].keys()
+    return config["MAIN"]["debuggers"].keys()
 
 
 def getdefaults(config, service):

@@ -154,7 +154,7 @@ class ServiceItem(BaseModel):
 )
 async def getservice(
     request: Request,
-    _sitename: str = Path(..., description="The site name to retrieve the service for."),
+    sitename: str = Path(..., description="The site name to retrieve the service for."),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: str = Query(default=None, description="Service name to filter by"),
     deps=Depends(allAPIDeps),
@@ -162,7 +162,7 @@ async def getservice(
     """
     Get a service state from the database based on hostname and servicename.
     """
-    checkSite(deps, _sitename)
+    checkSite(deps, sitename)
     search = []
     if hostname:
         search.append(["hostname", hostname])

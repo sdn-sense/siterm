@@ -36,7 +36,7 @@ router = APIRouter()
 @router.get(
     "/alive",
     summary="Check API Health",
-    description=("Checks if the API is alive and responsive."),
+    description=("Checks if the API is alive and responsive. It does not check readiness or liveness."),
     tags=["Frontend"],
     responses={
         **{
@@ -58,7 +58,7 @@ async def checkAPIHealth(request: Request, _deps=Depends(allAPIDeps)):
 @router.get(
     "/ready",
     summary="Check API Readiness",
-    description=("Checks if the API is ready to serve requests."),
+    description=("Checks if the API is ready to serve requests. It requires to wait for LookupService and ProvisioningService to be ready after first run."),
     tags=["Frontend"],
     responses={
         **{
