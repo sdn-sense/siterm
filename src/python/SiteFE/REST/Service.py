@@ -98,14 +98,31 @@ class ServiceItem(BaseModel):
 @router.get(
     "/{sitename}/services",
     summary="Get Service",
-    description=("Retrieves a service state from the database based on hostname and servicename."),
+    description="Retrieves a service state from the database based on hostname and servicename.",
     tags=["Service States"],
     responses={
-        **{
-            200: {
-                "description": "TODO",
-                "content": {
-                    "application/json": [
+        200: {
+            "description": "List of service states",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "integer"},
+                                "hostname": {"type": "string"},
+                                "servicename": {"type": "string"},
+                                "servicestate": {"type": "string"},
+                                "runtime": {"type": "integer"},
+                                "version": {"type": "string"},
+                                "insertdate": {"type": "integer"},
+                                "updatedate": {"type": "integer"},
+                                "exc": {"type": "string"},
+                            },
+                        },
+                    },
+                    "example": [
                         {
                             "id": 20,
                             "hostname": "siterm-deb11a-conf-111111111111111111111111-0",
@@ -128,8 +145,8 @@ class ServiceItem(BaseModel):
                             "updatedate": 1753745115,
                             "exc": "No Exception provided by service",
                         },
-                    ]
-                },
+                    ],
+                }
             },
         },
         **DEFAULT_RESPONSES,

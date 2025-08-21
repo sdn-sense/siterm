@@ -49,14 +49,45 @@ class HostItem(BaseModel):
 @router.get(
     "/{sitename}/hosts",
     summary="Get All Registered Hosts",
-    description=("Get all registered hosts for a specific site."),
+    description="Get all registered hosts for a specific site.",
     tags=["Hosts"],
     responses={
-        **{
-            200: {
-                "description": "TODO",
-                "content": {
-                    "application/json": [
+        200: {
+            "description": "List of registered hosts",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "integer"},
+                                "ip": {"type": "string"},
+                                "hostname": {"type": "string"},
+                                "insertdate": {"type": "integer"},
+                                "updatedate": {"type": "integer"},
+                                "hostinfo": {
+                                    "type": "object",
+                                    "properties": {
+                                        "hostname": {"type": "string"},
+                                        "ip": {"type": "string"},
+                                        "Summary": {
+                                            "type": "object",
+                                            "properties": {
+                                                "config": {"type": "object",
+                                                           "properties": {
+                                                                "agent": {"type": "object"},
+                                                                "enp65s0f1np1": {"type": "object"},
+                                                    },
+                                                }
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    "example": [
                         {
                             "id": 3,
                             "ip": "132.249.252.210",
@@ -68,20 +99,41 @@ class HostItem(BaseModel):
                                 "ip": "132.249.252.210",
                                 "Summary": {
                                     "config": {
-                                        "agent": {"hostname": "node-2-7.sdsc.optiputer.net", "interfaces": ["enp65s0f1np1"], "noqos": True, "norules": False, "rsts_enabled": "ipv4,ipv6"},
+                                        "agent": {
+                                            "hostname": "node-2-7.sdsc.optiputer.net",
+                                            "interfaces": ["enp65s0f1np1"],
+                                            "noqos": True,
+                                            "norules": False,
+                                            "rsts_enabled": "ipv4,ipv6"
+                                        },
                                         "enp65s0f1np1": {
-                                            "bwParams": {"granularity": 1000, "maximumCapacity": 100000, "minReservableCapacity": 1000, "priority": 0, "type": "guaranteedCapped", "unit": "mbps"}
+                                            "bwParams": {
+                                                "granularity": 1000,
+                                                "maximumCapacity": 100000,
+                                                "minReservableCapacity": 1000,
+                                                "priority": 0,
+                                                "type": "guaranteedCapped",
+                                                "unit": "mbps"
+                                            }
                                         },
                                     }
                                 },
                             },
                         }
-                    ]
-                },
+                    ],
+                }
             },
-            404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.",
-                "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
+        },
+        404: {
+            "description": "Not Found. Possible Reasons:\n - No sites configured in the system.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "no_sites": {
+                            "detail": "Site <sitename> is not configured in the system. Please check the request and configuration."
+                        }
+                    }
+                }
             },
         },
         **DEFAULT_RESPONSES,
