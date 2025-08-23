@@ -38,6 +38,7 @@ from SiteRMLibs.MainUtilities import (
     getUTCnow,
     getVal,
     loadEnvFile,
+    timeout,
 )
 
 
@@ -625,7 +626,8 @@ class Daemon(DBBackend):
                     self.logger.debug("Start worker for %s site", sitename)
                     try:
                         self.preRunThread(sitename, rthread)
-                        speedup = self.__run(rthread)
+                        with timeout(180):
+                            speedup = self.__run(rthread)
                         self.reporter("OK", sitename, stwork)
                     except ServiceWarning as ex:
                         exc = traceback.format_exc()

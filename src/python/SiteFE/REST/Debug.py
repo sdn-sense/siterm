@@ -95,56 +95,150 @@ def getactionkeys(config, action):
     defaults = getdefaults(config, action)
     actionkeys = {
         "iperf-server": {
-            "time": {"description": "Duration of the test in seconds. Used as timeout <seconds> iperf3... It must be lower than runtime duration", "default": None, "required": True},
-            "port": {"description": "Port to run the iperf server on", "default": 5201, "required": False},
+            "time": {
+                "description": "Duration of the test in seconds. Used as timeout <seconds> iperf3... It must be lower than runtime duration",
+                "default": defaults.get("defruntime", None),
+                "required": not defaults.get("defruntime", None),
+            },
+            "port": {"description": "Port to run the iperf server on", "default": defaults.get("defaults", {}).get("port", None), "required": not defaults.get("defaults", {}).get("port", None)},
             "ip": {"description": "IP address to bind the server to. Default is all interfaces", "default": "0.0.0.0", "required": False},
             "onetime": {
                 "description": "One-time flag. If set, the server will only run for one test and then stop. If server finishes earlier than runtime parameter, iperf3 server will not be restarted.",
-                "default": True,
-                "required": False,
+                "default": defaults.get("defaults", {}).get("onetime", None),
+                "required": not defaults.get("defaults", {}).get("onetime", None),
             },
         },
         "iperf-client": {
-            "time": {"description": "Duration of the test in seconds. Used as iperf3 parameter -t <seconds>", "default": None, "required": True},
-            "port": {"description": "Port to connect to on the Iperf server", "default": 5201, "required": False},
+            "time": {
+                "description": "Duration of the test in seconds. Used as iperf3 parameter -t <seconds>",
+                "default": defaults.get("defruntime", None),
+                "required": not defaults.get("defruntime", None),
+            },
+            "port": {
+                "description": "Port to connect to on the Iperf server",
+                "default": defaults.get("defaults", {}).get("port", None),
+                "required": not defaults.get("defaults", {}).get("port", None),
+            },
             "ip": {"description": "IP address of the Iperf server", "default": "0.0.0.0", "required": True},
-            "streams": {"description": "Number of streams to use for the test", "default": 1, "required": True},
+            "streams": {
+                "description": "Number of streams to use for the test",
+                "default": defaults.get("defaults", {}).get("streams", None),
+                "required": not defaults.get("defaults", {}).get("streams", None),
+            },
+        },
+        "ethr-server": {
+            "time": {
+                "description": "Duration of the test in seconds. Used as timeout <seconds> ethr... It must be lower than runtime duration",
+                "default": defaults.get("defruntime", None),
+                "required": not defaults.get("defruntime", None),
+            },
+            "port": {"description": "Port to run the ethr server on", "default": defaults.get("defaults", {}).get("port", None), "required": not defaults.get("defaults", {}).get("port", None)},
+            "ip": {"description": "IP address to bind the server to. Default is all interfaces", "default": "0.0.0.0", "required": True},
+        },
+        "ethr-client": {
+            "time": {
+                "description": "Duration of the test in seconds. Used as timeout <seconds> ethr... It must be lower than runtime duration",
+                "default": defaults.get("defruntime", None),
+                "required": not defaults.get("defruntime", None),
+            },
+            "port": {"description": "Port to connect to on the ethr server", "default": defaults.get("defaults", {}).get("port", None), "required": not defaults.get("defaults", {}).get("port", None)},
+            "ip": {"description": "IP address of the ethr server", "default": "0.0.0.0", "required": True},
         },
         "fdt-server": {
-            "time": {"description": "Duration of the test in seconds. Used as timeout <seconds> java -jar <jarfile> ... It must be lower than runtime duration", "default": None, "required": True},
-            "port": {"description": "Port to run the FDT server on", "default": 54321, "required": False},
+            "time": {
+                "description": "Duration of the test in seconds. Used as timeout <seconds> java -jar <jarfile> ... It must be lower than runtime duration",
+                "default": defaults.get("defruntime", None),
+                "required": not defaults.get("defruntime", None),
+            },
+            "port": {"description": "Port to run the FDT server on", "default": defaults.get("defaults", {}).get("port", None), "required": not defaults.get("defaults", {}).get("port", None)},
             "onetime": {
                 "description": "One-time flag. If set, the server will only run for one test and then stop. If server finishes earlier than runtime parameter, fdt process will not be restarted and task will finish.",
-                "default": True,
-                "required": False,
+                "default": defaults.get("defaults", {}).get("onetime", None),
+                "required": not defaults.get("defaults", {}).get("onetime", None),
             },
         },
         "fdt-client": {
-            "time": {"description": "Duration of the test in seconds. Used as timeout <seconds> java -jar <jarfile> ... It must be lower than runtime duration", "default": None, "required": True},
-            "port": {"description": "Port to connect to on the FDT server", "default": 54321, "required": False},
+            "time": {
+                "description": "Duration of the test in seconds. Used as timeout <seconds> java -jar <jarfile> ... It must be lower than runtime duration",
+                "default": defaults.get("defruntime", None),
+                "required": not defaults.get("defruntime", None),
+            },
+            "port": {"description": "Port to connect to on the FDT server", "default": defaults.get("defaults", {}).get("port", 54321), "required": not defaults.get("defaults", {}).get("port", None)},
             "ip": {"description": "IP address of the FDT server", "default": None, "required": True},
-            "streams": {"description": "Number of streams to use for the test", "default": 1, "required": True},
+            "streams": {
+                "description": "Number of streams to use for the test",
+                "default": defaults.get("defaults", {}).get("streams", None),
+                "required": not defaults.get("defaults", {}).get("streams", None),
+            },
+            "onetime": {
+                "description": "One-time flag. If set, the client will only run for one test and then stop.",
+                "default": defaults.get("defaults", {}).get("onetime", None),
+                "required": not defaults.get("defaults", {}).get("onetime", None),
+            },
         },
         "rapid-pingnet": {
             "ip": {"description": "IP address to ping", "default": None, "required": True},
-            "count": {"description": "Number of ping requests to send", "default": defaults.get("defaults", {}).get("count", 5), "required": True},
-            "timeout": {"description": "Timeout for each ping request in seconds", "default": defaults.get("defaults", {}).get("timeout", 1), "required": True},
+            "count": {"description": f"Number of ping requests to send. Max {defaults.get('maxcount', None)}", "default": None, "required": True},
+            "timeout": {"description": "Timeout for each ping request in seconds", "default": defaults.get("defruntime", None), "required": not defaults.get("defruntime", None)},
+            "onetime": {
+                "description": "If set, only a single ping request is sent",
+                "default": defaults.get("defaults", {}).get("onetime", None),
+                "required": not defaults.get("defaults", {}).get("onetime", None),
+            },
         },
         "rapid-ping": {
             "ip": {"description": "IP address to ping", "default": None, "required": True},
-            "interval": {"description": "Interval between ping requests in seconds", "default": defaults.get("defaults", {}).get("interval", 1), "required": True},
-            "time": {"description": "Total time to run the ping test in seconds", "default": defaults.get("defruntime", 600), "required": True},
-            "packetsize": {"description": "Size of each ping packet in bytes", "default": defaults.get("defaults", {}).get("packetsize", 64), "required": True},
+            "interval": {
+                "description": "Interval between ping requests in seconds",
+                "default": defaults.get("defaults", {}).get("interval", None),
+                "required": not defaults.get("defaults", {}).get("interval", None),
+            },
+            "time": {"description": "Total time to run the ping test in seconds", "default": defaults.get("defruntime", 600), "required": not defaults.get("defruntime", None)},
+            "packetsize": {
+                "description": "Size of each ping packet in bytes",
+                "default": defaults.get("defaults", {}).get("packetsize", 64),
+                "required": not defaults.get("defaults", {}).get("packetsize", None),
+            },
             "interface": {"description": "Network interface to use for the ping request", "default": None, "required": False},
         },
-        "arp-table": {"interface": {"description": "Network interface to get the ARP table for", "default": None, "required": True}},
-        "tcpdump": {"interface": {"description": "Network interface to capture packets on", "default": None, "required": True}},
+        "arp-table": {
+            "interface": {
+                "description": "Network interface to get the ARP table for",
+                "default": None,
+                "required": True,
+                "onetime": {
+                    "description": "If set, only a single ARP table is retrieved",
+                    "default": defaults.get("defaults", {}).get("onetime", None),
+                    "required": not defaults.get("defaults", {}).get("onetime", None),
+                },
+            }
+        },
+        "tcpdump": {
+            "interface": {"description": "Network interface to capture packets on", "default": None, "required": True},
+            "onetime": {
+                "description": "If set, only a single packet capture is retrieved",
+                "default": defaults.get("defaults", {}).get("onetime", None),
+                "required": not defaults.get("defaults", {}).get("onetime", None),
+            },
+        },
         "traceroute": {
             "from_interface": {"description": "Network interface to use for the traceroute", "default": None, "required": False},
             "from_ip": {"description": "IP address to use as the source for the traceroute", "default": None, "required": False},
             "ip": {"description": "IP address to traceroute to", "default": None, "required": True},
+            "onetime": {
+                "description": "If set, only a single traceroute is retrieved",
+                "default": defaults.get("defaults", {}).get("onetime", None),
+                "required": not defaults.get("defaults", {}).get("onetime", None),
+            },
         },
-        "traceroute-net": {"ip": {"description": "IP address to traceroute to", "default": None, "required": True}},
+        "traceroute-net": {
+            "ip": {"description": "IP address to traceroute to", "default": None, "required": True},
+            "onetime": {
+                "description": "If set, only a single traceroute is retrieved",
+                "default": defaults.get("defaults", {}).get("onetime", None),
+                "required": not defaults.get("defaults", {}).get("onetime", None),
+            },
+        },
     }
     if action not in actionkeys:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Action '{action}' not found in debug actions.")
@@ -164,7 +258,7 @@ class DebugItem(BaseModel):
 
 # TODO few more debug calls to add
 # 3. Get a list of allowed ipv6 dynamicfrom
-# 4. implement ethr-server and ethr-client
+# 4. implement ethr-server and ethr-client (need to add this in the backend. Frontend support it now)
 # ==========================================================
 # /api/{sitename}/debugactions # Return all possible debug actions
 # ==========================================================

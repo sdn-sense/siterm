@@ -20,11 +20,13 @@ import os
 import os.path
 import shlex
 import shutil
+import signal
 import socket
 import subprocess
 import tempfile
 import time
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 import simplejson as json
@@ -713,3 +715,33 @@ def tryConvertToNumeric(value):
     except ValueError:
         return floatVal if floatVal else value
     return intVal
+
+
+@contextmanager
+def timeout(seconds):
+    """Context manager that raises TimeoutError"""
+
+    def timeout_handler(signum, frame):
+        raise TimeoutError(f"Operation timed out after {seconds} seconds")
+
+    old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
+
+
+def with_timeout(timeout_seconds=60):
+    """Decorator for function timeout."""
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            with timeout(timeout_seconds):
+                return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

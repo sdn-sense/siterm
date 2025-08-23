@@ -18,7 +18,7 @@ import ansible_runner
 import yaml
 from SiteRMLibs.Backends import parsers
 from SiteRMLibs.CustomExceptions import ConfigException
-from SiteRMLibs.MainUtilities import getLoggingObject
+from SiteRMLibs.MainUtilities import getLoggingObject, withTimeout
 
 
 class Switch:
@@ -91,7 +91,8 @@ class Switch:
         """Get Verbosity level for Ansible Runner"""
         if self.verbosity != 0:
             return self.verbosity
-        return self.config.getint("ansible", "verbosity" + subitem)
+        verbosity = self.config.getint("ansible", "verbosity" + subitem)
+        return min(verbosity, 7)
 
     def __logAnsibleOutput(self, ansOut):
         """Log Ansible Output"""
@@ -109,6 +110,7 @@ class Switch:
             for key, value in ansOut.stats.items():
                 self.logger.debug(f"[STATS] {key}: {value}")
 
+    @withTimeout(120)
     def _executeAnsible(self, playbook, hosts=None, subitem=""):
         """Execute Ansible playbook"""
         # As we might be running multiple workers, we need to make sure
@@ -124,8 +126,10 @@ class Switch:
                     debug=self.config.getboolean("ansible", "debug" + subitem),
                     verbosity=self.__getVerbosity(subitem),
                     ignore_logging=self.config.getboolean("ansible", "ignore_logging" + subitem),
-                    envvars={"ANSIBLE_RUNNER_IDLE_TIMEOUT": str(self.config.getint("ansible", "ansible_runtime_idle_timeout")),
-                             "ANSIBLE_RUNNER_TIMEOUT": str(self.config.getint("ansible", "ansible_runtime_job_timeout"))}
+                    envvars={
+                        "ANSIBLE_RUNNER_IDLE_TIMEOUT": str(self.config.getint("ansible", "ansible_runtime_idle_timeout")),
+                        "ANSIBLE_RUNNER_TIMEOUT": str(self.config.getint("ansible", "ansible_runtime_job_timeout")),
+                    },
                 )
                 self.__logAnsibleOutput(ansOut)
                 return ansOut
@@ -174,10 +178,10 @@ class Switch:
                 raise ConfigException(f"Got Value Error. Ansible configuration exception {ex}") from ex
             failures = self.getAnsErrors(ansOut)
             if failures:
-                self.logger.warning(f"Ansible applyconfig failed. Retrying (out of {retries}) after 5sec sleep")
+                self.logger.error(f"Ansible applyconfig failed. Retrying (out of {retries}) after 5sec sleep")
                 retries -= 1
                 time.sleep(5)
-                self.verbosity = 1000
+                self.verbosity = 7
                 continue
             retries = 0
         return ansOut, self.ansibleErrs
