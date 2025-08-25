@@ -246,7 +246,7 @@ def getactionkeys(config, action):
 
 
 class DebugItem(BaseModel):
-    """Service Item Model."""
+    """Debug Item Model."""
 
     # pylint: disable=too-few-public-methods
     id: Optional[int] = None

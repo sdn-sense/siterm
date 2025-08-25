@@ -94,7 +94,8 @@
         strDTN = document.getElementById(ids + "hostname").value;
         strSite = document.getElementById(ids + "sitename").value;
         $.ajax({
-          url: "/api/" + strSite + "/hosts",
+          url:
+            "/api/" + strSite + "/hosts?hostname=" + strDTN + "&details=true",
           dataType: "json",
           data: {},
           async: false,

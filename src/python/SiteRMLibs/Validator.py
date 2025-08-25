@@ -176,7 +176,9 @@ def validateRuntime(config, inputDict):
 
 def validator(config, inputDict):
     """Validate debug request"""
-    debug_type = inputDict["type"]
+    debug_type = inputDict.get("type", "")
+    if not debug_type:
+        raise BadRequestError("Debug type not specified in debug request.")
     inputDict = validateAddDefaults(config, inputDict)
     if debug_type == "traceroute-net":
         validateTraceRouteNet(config, inputDict)

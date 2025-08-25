@@ -74,10 +74,11 @@ class HostItem(BaseModel):
                                         "Summary": {
                                             "type": "object",
                                             "properties": {
-                                                "config": {"type": "object",
-                                                           "properties": {
-                                                                "agent": {"type": "object"},
-                                                                "enp65s0f1np1": {"type": "object"},
+                                                "config": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "agent": {"type": "object"},
+                                                        "enp65s0f1np1": {"type": "object"},
                                                     },
                                                 }
                                             },
@@ -99,22 +100,9 @@ class HostItem(BaseModel):
                                 "ip": "132.249.252.210",
                                 "Summary": {
                                     "config": {
-                                        "agent": {
-                                            "hostname": "node-2-7.sdsc.optiputer.net",
-                                            "interfaces": ["enp65s0f1np1"],
-                                            "noqos": True,
-                                            "norules": False,
-                                            "rsts_enabled": "ipv4,ipv6"
-                                        },
+                                        "agent": {"hostname": "node-2-7.sdsc.optiputer.net", "interfaces": ["enp65s0f1np1"], "noqos": True, "norules": False, "rsts_enabled": "ipv4,ipv6"},
                                         "enp65s0f1np1": {
-                                            "bwParams": {
-                                                "granularity": 1000,
-                                                "maximumCapacity": 100000,
-                                                "minReservableCapacity": 1000,
-                                                "priority": 0,
-                                                "type": "guaranteedCapped",
-                                                "unit": "mbps"
-                                            }
+                                            "bwParams": {"granularity": 1000, "maximumCapacity": 100000, "minReservableCapacity": 1000, "priority": 0, "type": "guaranteedCapped", "unit": "mbps"}
                                         },
                                     }
                                 },
@@ -126,15 +114,7 @@ class HostItem(BaseModel):
         },
         404: {
             "description": "Not Found. Possible Reasons:\n - No sites configured in the system.",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "no_sites": {
-                            "detail": "Site <sitename> is not configured in the system. Please check the request and configuration."
-                        }
-                    }
-                }
-            },
+            "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
         },
         **DEFAULT_RESPONSES,
     },
@@ -142,6 +122,7 @@ class HostItem(BaseModel):
 async def gethosts(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the hosts for."),
+    hostname: str = Query(None, description="Filter by hostname."),
     details: bool = Query(False, description="If True, returns detailed host information. In case detail, limit is ignored and set to 1."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(allAPIDeps),
@@ -151,9 +132,13 @@ async def gethosts(
     - Returns a list of hosts with their information.
     """
     checkSite(deps, sitename)
+    search = []
+    if hostname:
+        search.append(["hostname", hostname])
+        limit = 1
     if details:
         limit = 1
-    hosts = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=limit)
+    hosts = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=limit, search=search)
     out = []
     for host in hosts:
         if details:
