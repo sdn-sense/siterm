@@ -176,30 +176,31 @@ def validateRuntime(config, inputDict):
 
 def validator(config, inputDict):
     """Validate debug request"""
-    debug_type = inputDict.get("type", "")
-    if not debug_type:
+    debugType = inputDict.get("type", "")
+    if not debugType:
         raise BadRequestError("Debug type not specified in debug request.")
     inputDict = validateAddDefaults(config, inputDict)
-    if debug_type == "traceroute-net":
+    inputDict["action"] = debugType
+    if debugType == "traceroute-net":
         validateTraceRouteNet(config, inputDict)
-    elif debug_type == "traceroute":
+    elif debugType == "traceroute":
         validateTraceRoute(config, inputDict)
-    elif debug_type == "arp-table":
+    elif debugType == "arp-table":
         validateArp(config, inputDict)
-    elif debug_type == "iperf-client":
+    elif debugType == "iperf-client":
         validateIperfClient(config, inputDict)
-    elif debug_type == "iperf-server":
+    elif debugType == "iperf-server":
         validateIperfServer(config, inputDict)
-    elif debug_type == "fdt-client":
+    elif debugType == "fdt-client":
         validateFdtClient(config, inputDict)
-    elif debug_type == "fdt-server":
+    elif debugType == "fdt-server":
         validateFdtServer(config, inputDict)
-    elif debug_type == "rapid-pingnet":
+    elif debugType == "rapid-pingnet":
         validateRapidpingNet(config, inputDict)
-    elif debug_type == "rapid-ping":
+    elif debugType == "rapid-ping":
         validateRapidping(config, inputDict)
-    elif debug_type == "tcpdump":
+    elif debugType == "tcpdump":
         validateTcpdump(config, inputDict)
     else:
-        raise BadRequestError(f"Debug type {debug_type} not supported. Supported types: {config['MAIN']['debuggers'].keys()}")
+        raise BadRequestError(f"Debug type {debugType} not supported. Supported types: {config['MAIN']['debuggers'].keys()}")
     return inputDict
