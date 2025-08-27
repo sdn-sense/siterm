@@ -448,6 +448,7 @@ class PromOut:
                 "deactivated",
                 "deactivate-error",
                 "unknown",
+                "unset"
             ],
             registry=registry,
         )
@@ -455,9 +456,9 @@ class PromOut:
 
         currentActive = getActiveDeltas(self)
         for item in self.activeAPI.generateReport(currentActive):
-            netstatus = item.get("networkstatus", "unknown")
+            netstatus = item.get("networkstatus", "unset")
             if not netstatus:
-                netstatus = "unknown"
+                netstatus = "unset"
             # pylint: disable=E1101
             netState.labels(**genStatusLabels(item)).state(netstatus)
             if "uri" in item and item["uri"]:
