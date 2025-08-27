@@ -109,6 +109,7 @@ create_debugrequests = """CREATE TABLE IF NOT EXISTS debugrequests(
                           id int auto_increment,
                           hostname VARCHAR(255) NOT NULL,
                           state VARCHAR(64) NOT NULL,
+                          action VARCHAR(64) NOT NULL,
                           debuginfo VARCHAR(4096) NOT NULL,
                           outputinfo VARCHAR(4096) NOT NULL,
                           insertdate int NOT NULL,
@@ -182,7 +183,7 @@ insert_activeDeltas = "INSERT INTO activeDeltas(insertdate, updatedate, output) 
 insert_servicestates = "INSERT INTO servicestates(hostname, servicename, servicestate, runtime, version, insertdate, updatedate, exc) VALUES(%(hostname)s, %(servicename)s, %(servicestate)s, %(runtime)s, %(version)s, %(insertdate)s, %(updatedate)s, %(exc)s)"
 insert_debugworkers = "INSERT INTO debugworkers(hostname, hostinfo, insertdate, updatedate) VALUES(%(hostname)s, %(hostinfo)s, %(insertdate)s, %(updatedate)s)"
 insert_debugrequests = (
-    "INSERT INTO debugrequests(hostname, state, debuginfo, outputinfo, insertdate, updatedate) VALUES(%(hostname)s, %(state)s, %(debuginfo)s, %(outputinfo)s, %(insertdate)s, %(updatedate)s)"
+    "INSERT INTO debugrequests(hostname, state, action, debuginfo, outputinfo, insertdate, updatedate) VALUES(%(hostname)s, %(state)s, %(action)s, %(debuginfo)s, %(outputinfo)s, %(insertdate)s, %(updatedate)s)"
 )
 insert_snmpmon = "INSERT INTO snmpmon(hostname, insertdate, updatedate, output) VALUES(%(hostname)s, %(insertdate)s, %(updatedate)s, %(output)s)"
 insert_deltatimestates = (
@@ -206,7 +207,7 @@ get_switch = "SELECT id, sitename, device, insertdate, updatedate, output FROM s
 get_activeDeltas = "SELECT id, insertdate, updatedate, output FROM activeDeltas"
 get_servicestates = "SELECT id, hostname, servicename, servicestate, runtime, version, insertdate, updatedate, exc FROM servicestates"
 get_debugworkers = "SELECT id, hostname, hostinfo, insertdate, updatedate FROM debugworkers"
-get_debugrequests = "SELECT id, hostname, state, debuginfo, outputinfo, insertdate, updatedate FROM debugrequests"
+get_debugrequests = "SELECT id, hostname, state, action, debuginfo, outputinfo, insertdate, updatedate FROM debugrequests"
 get_snmpmon = "SELECT id, hostname, insertdate, updatedate, output FROM snmpmon"
 get_deltatimestates = "SELECT id, insertdate, uuid, uuidtype, hostname, hostport, uuidstate FROM deltatimestates"
 get_serviceaction = "SELECT id, servicename, hostname, serviceaction, insertdate FROM serviceaction"

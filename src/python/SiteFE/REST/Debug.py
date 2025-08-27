@@ -42,7 +42,7 @@ def _checkactionrequest(config, action=None):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{action} not configured for this FE")
 
 
-def getDebugEntry(deps, debugvar=None, hostname=None, state=None, details=False, limit=LIMIT_DEFAULT):
+def getDebugEntry(deps, debugvar=None, hostname=None, state=None, details=False, limit=LIMIT_DEFAULT, action=None):
     """Get Debug entry."""
     search = []
     if debugvar == "ALL":
@@ -54,6 +54,8 @@ def getDebugEntry(deps, debugvar=None, hostname=None, state=None, details=False,
         search.append(["hostname", hostname])
     if state:
         search.append(["state", state])
+    if action:
+        search.append(["action", action])
     out = deps["dbI"].get("debugrequests", orderby=["insertdate", "DESC"], search=search, limit=limit)
     if out is None or len(out) == 0:
         return []
@@ -370,6 +372,7 @@ async def getDebugActions(
     details: bool = Query(False, description="If set, returns detailed information for the debug request."),
     hostname: str = Query(None, description="Hostname to filter the debug requests by. If not set, all debug requests are returned."),
     state: str = Query(None, description="State to filter the debug requests by. If not set, all debug requests are returned."),
+    action: str = Query(None, description="Action to filter the debug requests by. If not set, all debug requests are returned."),
     deps=Depends(allAPIDeps),
 ):
     """
@@ -377,7 +380,7 @@ async def getDebugActions(
     - Returns a list of debug actions.
     """
     checkSite(deps, sitename)
-    out = getDebugEntry(deps, debugvar=debugvar, hostname=hostname, state=state, details=details, limit=limit)
+    out = getDebugEntry(deps, debugvar=debugvar, hostname=hostname, state=state, details=details, limit=limit, action=action)
     return APIResponse.genResponse(request, out)
 
 
@@ -546,6 +549,9 @@ async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..
     requestfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "request.json")
     outputfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "output.json")
     dumpFileContentAsJson(requestfname, inputDict)
-    out = {"hostname": inputDict.get("hostname", "undefined"), "state": "new", "insertdate": getUTCnow(), "updatedate": getUTCnow(), "debuginfo": requestfname, "outputinfo": outputfname}
+    out = {"hostname": inputDict.get("hostname", "undefined"),
+           "state": "new", "action": inputDict['action'],
+           "insertdate": getUTCnow(), "updatedate": getUTCnow(),
+           "debuginfo": requestfname, "outputinfo": outputfname}
     insOut = deps["dbI"].insert("debugrequests", [out])
     return APIResponse.genResponse(request, {"Status": insOut[0], "ID": insOut[2]})
