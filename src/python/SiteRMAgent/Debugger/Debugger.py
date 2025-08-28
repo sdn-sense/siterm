@@ -138,11 +138,11 @@ class Debugger(DebugService):
 
     def _startwork(self):
         """Start execution and get new requests from FE"""
-        for wtype in ["new", "active"]:
+        self.resetActiveProcesses()
+        for wtype in ["active", "new"]:
             self.logger.info(f"Get all {wtype} requests")
             data = self.getData(f"/api/{self.sitename}/debug?hostname={self.hostname}&state={wtype}")
             for item in data:
-                # Do we need to get full data from FE? E.G. Request info?
                 if not self.backgroundProcessItemExists(item):
                     self.logger.info(f"Background process item does not exist. ID: {item['id']}")
                 try:

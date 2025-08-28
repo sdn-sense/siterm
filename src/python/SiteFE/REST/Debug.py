@@ -99,8 +99,8 @@ def getactionkeys(config, action):
         "iperf-server": {
             "time": {
                 "description": "Duration of the test in seconds. Used as timeout <seconds> iperf3... It must be lower than runtime duration",
-                "default": defaults.get("defruntime", None),
-                "required": not defaults.get("defruntime", None),
+                "default": defaults.get("deftime", None),
+                "required": not defaults.get("deftime", None),
             },
             "port": {"description": "Port to run the iperf server on", "default": defaults.get("defaults", {}).get("port", None), "required": not defaults.get("defaults", {}).get("port", None)},
             "ip": {"description": "IP address to bind the server to. Default is all interfaces", "default": "0.0.0.0", "required": False},
@@ -113,8 +113,8 @@ def getactionkeys(config, action):
         "iperf-client": {
             "time": {
                 "description": "Duration of the test in seconds. Used as iperf3 parameter -t <seconds>",
-                "default": defaults.get("defruntime", None),
-                "required": not defaults.get("defruntime", None),
+                "default": defaults.get("deftime", None),
+                "required": not defaults.get("deftime", None),
             },
             "port": {
                 "description": "Port to connect to on the Iperf server",
@@ -131,8 +131,8 @@ def getactionkeys(config, action):
         "ethr-server": {
             "time": {
                 "description": "Duration of the test in seconds. Used as timeout <seconds> ethr... It must be lower than runtime duration",
-                "default": defaults.get("defruntime", None),
-                "required": not defaults.get("defruntime", None),
+                "default": defaults.get("deftime", None),
+                "required": not defaults.get("deftime", None),
             },
             "port": {"description": "Port to run the ethr server on", "default": defaults.get("defaults", {}).get("port", None), "required": not defaults.get("defaults", {}).get("port", None)},
             "ip": {"description": "IP address to bind the server to. Default is all interfaces", "default": "0.0.0.0", "required": True},
@@ -140,8 +140,8 @@ def getactionkeys(config, action):
         "ethr-client": {
             "time": {
                 "description": "Duration of the test in seconds. Used as timeout <seconds> ethr... It must be lower than runtime duration",
-                "default": defaults.get("defruntime", None),
-                "required": not defaults.get("defruntime", None),
+                "default": defaults.get("deftime", None),
+                "required": not defaults.get("deftime", None),
             },
             "port": {"description": "Port to connect to on the ethr server", "default": defaults.get("defaults", {}).get("port", None), "required": not defaults.get("defaults", {}).get("port", None)},
             "ip": {"description": "IP address of the ethr server", "default": "0.0.0.0", "required": True},
@@ -149,8 +149,8 @@ def getactionkeys(config, action):
         "fdt-server": {
             "time": {
                 "description": "Duration of the test in seconds. Used as timeout <seconds> java -jar <jarfile> ... It must be lower than runtime duration",
-                "default": defaults.get("defruntime", None),
-                "required": not defaults.get("defruntime", None),
+                "default": defaults.get("deftime", None),
+                "required": not defaults.get("deftime", None),
             },
             "port": {"description": "Port to run the FDT server on", "default": defaults.get("defaults", {}).get("port", None), "required": not defaults.get("defaults", {}).get("port", None)},
             "onetime": {
@@ -162,8 +162,8 @@ def getactionkeys(config, action):
         "fdt-client": {
             "time": {
                 "description": "Duration of the test in seconds. Used as timeout <seconds> java -jar <jarfile> ... It must be lower than runtime duration",
-                "default": defaults.get("defruntime", None),
-                "required": not defaults.get("defruntime", None),
+                "default": defaults.get("deftime", None),
+                "required": not defaults.get("deftime", None),
             },
             "port": {"description": "Port to connect to on the FDT server", "default": defaults.get("defaults", {}).get("port", 54321), "required": not defaults.get("defaults", {}).get("port", None)},
             "ip": {"description": "IP address of the FDT server", "default": None, "required": True},
@@ -181,7 +181,7 @@ def getactionkeys(config, action):
         "rapid-pingnet": {
             "ip": {"description": "IP address to ping", "default": None, "required": True},
             "count": {"description": f"Number of ping requests to send. Max {defaults.get('maxcount', None)}", "default": None, "required": True},
-            "timeout": {"description": "Timeout for each ping request in seconds", "default": defaults.get("defruntime", None), "required": not defaults.get("defruntime", None)},
+            "timeout": {"description": "Timeout for each ping request in seconds", "default": defaults.get("deftime", None), "required": not defaults.get("deftime", None)},
             "onetime": {
                 "description": "If set, only a single ping request is sent",
                 "default": defaults.get("defaults", {}).get("onetime", None),
@@ -195,7 +195,7 @@ def getactionkeys(config, action):
                 "default": defaults.get("defaults", {}).get("interval", None),
                 "required": not defaults.get("defaults", {}).get("interval", None),
             },
-            "time": {"description": "Total time to run the ping test in seconds", "default": defaults.get("defruntime", 600), "required": not defaults.get("defruntime", None)},
+            "time": {"description": "Total time to run the ping test in seconds", "default": defaults.get("deftime", 600), "required": not defaults.get("deftime", None)},
             "packetsize": {
                 "description": "Size of each ping packet in bytes",
                 "default": defaults.get("defaults", {}).get("packetsize", 64),
@@ -549,9 +549,14 @@ async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..
     requestfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "request.json")
     outputfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "output.json")
     dumpFileContentAsJson(requestfname, inputDict)
-    out = {"hostname": inputDict.get("hostname", "undefined"),
-           "state": "new", "action": inputDict['action'],
-           "insertdate": getUTCnow(), "updatedate": getUTCnow(),
-           "debuginfo": requestfname, "outputinfo": outputfname}
+    out = {
+        "hostname": inputDict.get("hostname", "undefined"),
+        "state": "new",
+        "action": inputDict["action"],
+        "insertdate": getUTCnow(),
+        "updatedate": getUTCnow(),
+        "debuginfo": requestfname,
+        "outputinfo": outputfname,
+    }
     insOut = deps["dbI"].insert("debugrequests", [out])
     return APIResponse.genResponse(request, {"Status": insOut[0], "ID": insOut[2]})

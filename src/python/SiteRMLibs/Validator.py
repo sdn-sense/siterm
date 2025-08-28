@@ -19,8 +19,6 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2025 ESnet
 Date                    : 2025/06/14
 """
-import random
-
 from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.ipaddr import ipVersion
 from SiteRMLibs.MainUtilities import getUTCnow
@@ -33,13 +31,8 @@ def validateAddDefaults(config, inputDict):
     for key, val in config["MAIN"]["debuggers"][inputDict["type"]].get("defaults", {}).items():
         if key not in inputDict:
             inputDict[key] = val
-    # If runtime not added, we add random between defruntime and maxruntime
-    if "runtime" not in inputDict:
-        randtime = random.randint(
-            config["MAIN"]["debuggers"][inputDict["type"]]["defruntime"] + 60,
-            config["MAIN"]["debuggers"][inputDict["type"]]["maxruntime"],
-        )
-        inputDict["runtime"] = getUTCnow() + randtime
+    # Runtime is not for the user to control, and we keep it for admins to set max time to be in the queue.
+    inputDict["runtime"] = getUTCnow() + config["MAIN"]["debuggers"][inputDict["type"]]["maxruntime"]
     # If hostname not added, we add undefined hostname. To be identified by backend.
     if "hostname" not in inputDict:
         inputDict["hostname"] = "undefined"
@@ -73,14 +66,12 @@ def validateTraceRouteNet(config, inputDict):
     """Validate traceroute debug request for network device"""
     validateKeys(inputDict, ["ip"])
     validateIP(config, inputDict)
-    validateRuntime(config, inputDict)
 
 
 def validateTraceRoute(config, inputDict):
     """Validate traceroute debug request."""
     validateKeys(inputDict, ["ip"])
     validateIP(config, inputDict)
-    validateRuntime(config, inputDict)
     # One of these must be present:
     optional = False
     for key in ["from_interface", "from_ip"]:
@@ -92,10 +83,9 @@ def validateTraceRoute(config, inputDict):
         raise BadRequestError("One of these keys must be present: from_interface, from_ip")
 
 
-def validateArp(config, inputDict):
+def validateArp(_config, inputDict):
     """Validate aprdump debug request."""
     validateKeys(inputDict, ["interface"])
-    validateRuntime(config, inputDict)
 
 
 def validateIperfClient(config, inputDict):
@@ -103,14 +93,12 @@ def validateIperfClient(config, inputDict):
     validateKeys(inputDict, ["ip", "time", "port", "runtime", "streams"])
     validateIP(config, inputDict)
     validateStreams(config, inputDict)
-    validateRuntime(config, inputDict)
 
 
 def validateIperfServer(config, inputDict):
     """Validate iperf server debug request."""
     validateKeys(inputDict, ["port", "time", "runtime"])
     validateIP(config, inputDict)
-    validateRuntime(config, inputDict)
 
 
 def validateFdtClient(config, inputDict):
@@ -118,14 +106,12 @@ def validateFdtClient(config, inputDict):
     validateKeys(inputDict, ["ip", "runtime", "streams"])
     validateIP(config, inputDict)
     validateStreams(config, inputDict)
-    validateRuntime(config, inputDict)
 
 
 def validateFdtServer(config, inputDict):
     """Validate fdt server debug request."""
     validateKeys(inputDict, ["runtime"])
     validateIP(config, inputDict)
-    validateRuntime(config, inputDict)
 
 
 def validateRapidpingNet(config, inputDict):
@@ -138,7 +124,6 @@ def validateRapidpingNet(config, inputDict):
     if int(inputDict["timeout"]) > maxtimeout:
         raise BadRequestError(f"Timeout request is more than {maxtimeout} seconds. Requested {inputDict['timeout']}")
     validateIP(config, inputDict)
-    validateRuntime(config, inputDict)
 
 
 def validateRapidping(config, inputDict):
@@ -156,22 +141,11 @@ def validateRapidping(config, inputDict):
     if "packetsize" in inputDict and int(inputDict["packetsize"]) > maxmtu:
         raise BadRequestError(f"Requested Packet Size is bigger than {maxmtu}. That would be considered DDOS and is not allowed.")
     validateIP(config, inputDict)
-    validateRuntime(config, inputDict)
 
 
-def validateTcpdump(config, inputDict):
+def validateTcpdump(_config, inputDict):
     """Validate tcpdump debug request."""
     validateKeys(inputDict, ["interface"])
-    validateRuntime(config, inputDict)
-
-
-def validateRuntime(config, inputDict):
-    """Validate Runtime"""
-    totalRuntime = int(int(inputDict["runtime"]) - getUTCnow())
-    defRuntime = config["MAIN"]["debuggers"][inputDict["type"]]["defruntime"]
-    maxRuntime = config["MAIN"]["debuggers"][inputDict["type"]]["maxruntime"]
-    if totalRuntime < defRuntime or totalRuntime > maxRuntime:
-        raise BadRequestError(f"Total Runtime must be within range of {defRuntime} < x < {maxRuntime} seconds since epoch. You requested {totalRuntime}")
 
 
 def validator(config, inputDict):

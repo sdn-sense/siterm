@@ -35,6 +35,7 @@ class DebugService:
         createDirs(self.workDir)
         fullURL = getFullUrl(self.config)
         self.requestHandler = Requests(url=fullURL, logger=self.logger)
+        self.activeProcesses = {}
 
     def publishToFE(self, inDic):
         """Publish debug runtime to FE"""
@@ -44,6 +45,28 @@ class DebugService:
             self.dbI.update("debugrequests", [out])
             return
         self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/debug/{inDic['id']}", data=inDic, useragent="DebugService")
+
+    def resetActiveProcesses(self):
+        """Reset active processes"""
+        self.activeProcesses = {}
+
+    def _startNewProcesses(self, item):
+        """Check and return true/false to start new process."""
+        if item["state"] != "new":
+            return True
+        # In case it is fdt-server, fdt-client, iperf-server, iperf-client, ethr-server, ethr-client
+        # We can run only one instance per action per hostname.
+        if item["action"] in ["fdt-server", "fdt-client", "iperf-server", "iperf-client", "ethr-server", "ethr-client"] and item["action"] in self.activeProcesses:
+            self.logger.warning(f"Active process for {item['action']} already exists. Active IDs: {self.activeProcesses[item['action']]}.")
+            return False
+        return True
+
+    def _logActiveProcesses(self, item):
+        """Log active processes."""
+        # "state": "active", "action": "fdt-client",
+        if item["state"] != "active":
+            return
+        self.activeProcesses.setdefault(item["action"], []).append(item["id"])
 
     def backgroundProcessItemExists(self, item):
         """Check if background process item exists"""
@@ -74,6 +97,24 @@ class DebugService:
                 self.diragent.dumpFileContentAsJson(fname, itemfe)
             item = itemfe
         try:
+            self._logActiveProcesses(item)
+            if not self._startNewProcesses(item):
+                self.logger.info(f"Skipping start (already running this service) of new process for item {item['id']}")
+                # Publish to FE that we skipped starting it.
+                msg = f"Skipping start, because already running this action type (might be another process) for {item['id']}. Report timestamp: {getUTCnow()}"
+                out = {
+                    "id": item["id"],
+                    "state": item["state"],
+                    "output": {
+                        "processOut": [msg],
+                        "stdout": [],
+                        "stderr": [msg],
+                        "jsonout": {"exitCode": 0, "output": [msg]},
+                        "exitCode": 0,
+                    },
+                    "updatedate": getUTCnow(),
+                }
+                return
             out, exitCode, newstate = self.run(item)
         except (ValueError, KeyError, OSError) as ex:
             out = {

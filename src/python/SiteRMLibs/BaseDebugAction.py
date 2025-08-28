@@ -8,6 +8,8 @@ Authors:
 
 Date: 2023/03/22
 """
+import traceback
+
 from SiteRMLibs.CustomExceptions import BackgroundException
 from SiteRMLibs.MainUtilities import contentDB, getLoggingObject
 
@@ -75,8 +77,8 @@ class CustomWriter:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.wn(f"Closing CustomWriter. Exit info: {exc_type}, {exc_value}, {traceback}")
+    def __exit__(self, exc_type, exc_value, tracemessage):
+        self.wn(f"Closing CustomWriter. Exit info: {exc_type}, {exc_value}, {tracemessage}")
         self.fd.close()
 
 
@@ -132,11 +134,16 @@ class BaseDebugAction:
             self.main()
             self.diragent.dumpFileContentAsJson(self.outfiles["jsonout"], self.jsonout)
         except (ValueError, KeyError, OSError, BackgroundException) as ex:
+            self.processout.wn("Received Error:")
             self.processout.wn(str(ex))
+            tb = traceback.format_exc()
+            self.processout.wn(tb)
             self.diragent.dumpFileContentAsJson(self.outfiles["jsonout"], self.jsonout)
         except Exception as ex:
             self.processout.wn("Received Unexpected Error:")
             self.processout.wn(str(ex))
+            tb = traceback.format_exc()
+            self.processout.wn(tb)
             self.diragent.dumpFileContentAsJson(self.outfiles["jsonout"], self.jsonout)
         finally:
             self.processout.wn(f"====== {self.service} Finish Work. Config: {self.backgConfig}")
