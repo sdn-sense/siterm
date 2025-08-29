@@ -491,8 +491,9 @@ async def updatedebug(
     if not dbentry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Debug request with ID {debugvar} not found.")
     # ==================================
-    # Write output file
-    dumpFileContentAsJson(dbentry[0]["outputinfo"], item.output)
+    # Write output file if output is set
+    if item.output:
+        dumpFileContentAsJson(dbentry[0]["outputinfo"], item.output)
     # Update the state in database.
     out = {"id": debugvar, "state": item.state, "updatedate": getUTCnow()}
     updOut = deps["dbI"].update("debugrequests", [out])
