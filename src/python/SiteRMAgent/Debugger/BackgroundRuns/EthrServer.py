@@ -1,4 +1,4 @@
-c#!/usr/bin/env python3
+#!/usr/bin/env python3
 # pylint: disable=too-few-public-methods
 """
 Title                   : siterm
