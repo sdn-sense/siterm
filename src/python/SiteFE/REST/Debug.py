@@ -497,7 +497,7 @@ async def updatedebug(
     # Update the state in database.
     out = {"id": debugvar, "state": item.state, "updatedate": getUTCnow()}
     updOut = deps["dbI"].update("debugrequests", [out])
-    return APIResponse.genResponse(request, {"Status": updOut[0], "ID": updOut[2]})
+    return APIResponse.genResponse(request, {"Status": updOut[0], "ID": debugvar})
 
 
 @router.delete(
