@@ -50,20 +50,12 @@ class DebugService:
         """Reset active processes"""
         self.activeProcesses = {}
 
-    def _startNewProcesses(self, item):
-        """Check and return true/false to start new process."""
-        if item["state"] != "new":
-            return True
-        # In case it is fdt-server, fdt-client, iperf-server, iperf-client, ethr-server, ethr-client
-        # We can run only one instance per action per hostname.
-        if item["action"] in ["fdt-server", "fdt-client", "iperf-server", "iperf-client", "ethr-server", "ethr-client"] and item["action"] in self.activeProcesses:
-            self.logger.warning(f"Active process for {item['action']} already exists. Active IDs: {self.activeProcesses[item['action']]}.")
-            return False
-        return True
+    def logActiveProcesses(self):
+        """Log active processes"""
+        self.logger.info(f"Active processes: {self.activeProcesses}")
 
     def _logActiveProcesses(self, item):
         """Log active processes."""
-        # "state": "active", "action": "fdt-client",
         if item["state"] != "active":
             return
         self.activeProcesses.setdefault(item["action"], []).append(item["id"])
@@ -98,23 +90,6 @@ class DebugService:
             item = itemfe
         try:
             self._logActiveProcesses(item)
-            if not self._startNewProcesses(item):
-                self.logger.info(f"Skipping start (already running this service) of new process for item {item['id']}")
-                # Publish to FE that we skipped starting it.
-                msg = f"Skipping start, because already running this action type (might be another process) for {item['id']}. Report timestamp: {getUTCnow()}"
-                out = {
-                    "id": item["id"],
-                    "state": item["state"],
-                    "output": {
-                        "processOut": [msg],
-                        "stdout": [],
-                        "stderr": [msg],
-                        "jsonout": {"exitCode": 0, "output": [msg]},
-                        "exitCode": 0,
-                    },
-                    "updatedate": getUTCnow(),
-                }
-                return
             out, exitCode, newstate = self.run(item)
         except (ValueError, KeyError, OSError) as ex:
             out = {
@@ -212,6 +187,21 @@ class DebugService:
             self.logger.info(f"Checking background process: {inputDict['id']}")
             retOut["processOut"].append(f"Checking background process: {inputDict['id']}")
             return retOut, 0, "active"
+
+        # If it is running, and new state is cancel, then we stop it.
+        if retOut["exitCode"] == 0 and inputDict["state"] == "cancel":
+            self.logger.info(f"Stopping background process: {inputDict['id']}")
+            retOut = self._runCmd(inputDict, "stop", False)
+            retOut["processOut"].append(f"Stopping background process: {inputDict['id']}")
+            if retOut["jsonout"].get("exitCode", -1) == 0:
+                self._clean(inputDict)
+            return retOut, 2, "cancelled"
+
+        # If it is not running, and new state is cancel, then we just report it as cancelled.
+        if retOut["exitCode"] != 0 and inputDict["state"] == "cancel":
+            self.logger.info(f"Process not running for cancel: {inputDict['id']}")
+            self._clean(inputDict)
+            return retOut, 2, "cancelled"
 
         # If it is active, but process exited, then it failed.
         if retOut["exitCode"] != 0 and inputDict["state"] == "active":

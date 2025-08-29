@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+c#!/usr/bin/env python3
 # pylint: disable=too-few-public-methods
 """
 Title                   : siterm
@@ -11,27 +11,22 @@ from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 
 
-class FdtServer(BaseDebugAction):
-    """FdtServer class"""
+class EthrServer(BaseDebugAction):
+    """EthrServer class"""
 
     def __init__(self, config, sitename, backgConfig):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
         self.requestdict = backgConfig.get("requestdict", {})
-        self.service = "FdtServer"
+        self.service = "EthrServer"
         super().__init__()
 
     def main(self):
-        """Main FdtServer work. Run FDT Server."""
-        self.logMessage(f"Running FdtServer background run. Input requestdict: {self.requestdict}")
-        command = f'timeout {self.requestdict["time"]} java -jar /opt/fdt.jar -p {self.requestdict["port"]}'
-        if self.requestdict["onetime"] == "True":
-            command += " -S"
+        """Main EthrServer work. Run Ethr Server."""
+        self.logMessage(f"Running EthrServer background run. Input requestdict: {self.requestdict}")
+        command = f'timeout {self.requestdict["time"]} /opt/ethr -s -p {self.requestdict["port"]}'
         self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles["stdout"], self.outfiles["stderr"])
         self.jsonout["exitCode"] = 0
-        self.logMessage("FdtServer background run finished successfully.")
-
-
-# -FDT_LISTEN
+        self.logMessage("EthrServer background run finished successfully.")

@@ -24,7 +24,7 @@ from SiteRMLibs.ipaddr import ipVersion
 from SiteRMLibs.MainUtilities import getUTCnow
 
 
-def validateAddDefaults(config, inputDict):
+def validateAddDefaults(config, dbid, inputDict):
     """Add default params (not controlled by outside)"""
     if inputDict["type"] not in config["MAIN"]["debuggers"]:
         raise BadRequestError(f"Debug type {inputDict['type']} not supported. Supported types: {config['MAIN']['debuggers'].keys()}")
@@ -36,6 +36,10 @@ def validateAddDefaults(config, inputDict):
     # If hostname not added, we add undefined hostname. To be identified by backend.
     if "hostname" not in inputDict:
         inputDict["hostname"] = "undefined"
+    # In case it is fdt-server, iperf-server, ethr-server - we need to assign port if not specified
+    if inputDict["type"] in ["fdt-server", "iperf-server", "ethr-server"]:
+        # This will wrap it between minport and maxports range, based on id (which is databse entry)
+        inputDict["port"] = config["MAIN"]["debuggers"][inputDict["type"]]["minport"] + (dbid % config["MAIN"]["debuggers"][inputDict["type"]]["maxports"])
     return inputDict
 
 
@@ -97,13 +101,13 @@ def validateIperfClient(config, inputDict):
 
 def validateIperfServer(config, inputDict):
     """Validate iperf server debug request."""
-    validateKeys(inputDict, ["port", "time", "runtime"])
+    validateKeys(inputDict, ["time", "runtime"])
     validateIP(config, inputDict)
 
 
 def validateFdtClient(config, inputDict):
     """Validate fdtclient debug request."""
-    validateKeys(inputDict, ["ip", "runtime", "streams"])
+    validateKeys(inputDict, ["ip", "port", "runtime", "streams"])
     validateIP(config, inputDict)
     validateStreams(config, inputDict)
 
@@ -148,12 +152,12 @@ def validateTcpdump(_config, inputDict):
     validateKeys(inputDict, ["interface"])
 
 
-def validator(config, inputDict):
+def validator(config, dbid, inputDict):
     """Validate debug request"""
     debugType = inputDict.get("type", "")
     if not debugType:
         raise BadRequestError("Debug type not specified in debug request.")
-    inputDict = validateAddDefaults(config, inputDict)
+    inputDict = validateAddDefaults(config, dbid, inputDict)
     inputDict["action"] = debugType
     if debugType == "traceroute-net":
         validateTraceRouteNet(config, inputDict)

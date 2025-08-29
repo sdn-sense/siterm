@@ -9,82 +9,102 @@ Changes applied to this code:
 """
 import os
 import sys
-from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
-from SiteRMLibs.MainUtilities import getFileContentAsJson
-from SiteRMLibs.MainUtilities import evaldict, getSiteNameFromConfig
 
-WORKERTYPE='UNKNOWN'
+from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
+from SiteRMLibs.MainUtilities import (
+    evaldict,
+    getFileContentAsJson,
+    getSiteNameFromConfig,
+)
+
+WORKERTYPE = "UNKNOWN"
 try:
     from SiteRMAgent.Debugger.BackgroundRuns.ArpTable import ArpTable
-    from SiteRMAgent.Debugger.BackgroundRuns.IperfClient import IperfClient
-    from SiteRMAgent.Debugger.BackgroundRuns.IperfServer import IperfServer
+    from SiteRMAgent.Debugger.BackgroundRuns.EthrClient import EthrClient
+    from SiteRMAgent.Debugger.BackgroundRuns.EthrServer import EthrServer
     from SiteRMAgent.Debugger.BackgroundRuns.FdtClient import FdtClient
     from SiteRMAgent.Debugger.BackgroundRuns.FdtServer import FdtServer
+    from SiteRMAgent.Debugger.BackgroundRuns.IperfClient import IperfClient
+    from SiteRMAgent.Debugger.BackgroundRuns.IperfServer import IperfServer
     from SiteRMAgent.Debugger.BackgroundRuns.RapidPing import RapidPing
     from SiteRMAgent.Debugger.BackgroundRuns.RapidPingNet import RapidPingNet
     from SiteRMAgent.Debugger.BackgroundRuns.TCPDump import TCPDump
     from SiteRMAgent.Debugger.BackgroundRuns.Traceroute import Traceroute
     from SiteRMAgent.Debugger.BackgroundRuns.TracerouteNet import TracerouteNet
-    WORKERTYPE='Agent'
+
+    WORKERTYPE = "Agent"
 except (ImportError, ModuleNotFoundError):
     from SiteFE.Debugger.BackgroundRuns.ArpTable import ArpTable
-    from SiteFE.Debugger.BackgroundRuns.IperfClient import IperfClient
-    from SiteFE.Debugger.BackgroundRuns.IperfServer import IperfServer
+    from SiteFE.Debugger.BackgroundRuns.EthrClient import EthrClient
+    from SiteFE.Debugger.BackgroundRuns.EthrServer import EthrServer
     from SiteFE.Debugger.BackgroundRuns.FdtClient import FdtClient
     from SiteFE.Debugger.BackgroundRuns.FdtServer import FdtServer
+    from SiteFE.Debugger.BackgroundRuns.IperfClient import IperfClient
+    from SiteFE.Debugger.BackgroundRuns.IperfServer import IperfServer
     from SiteFE.Debugger.BackgroundRuns.RapidPing import RapidPing
     from SiteFE.Debugger.BackgroundRuns.RapidPingNet import RapidPingNet
     from SiteFE.Debugger.BackgroundRuns.TCPDump import TCPDump
     from SiteFE.Debugger.BackgroundRuns.Traceroute import Traceroute
     from SiteFE.Debugger.BackgroundRuns.TracerouteNet import TracerouteNet
-    WORKERTYPE='FE'
 
-COMPONENT = 'SiteRM-Background-Process-Runner'
+    WORKERTYPE = "FE"
+
+COMPONENT = "SiteRM-Background-Process-Runner"
 DESCRIPTION = "SiteRM Background Process Runner"
 DAEMON = None
 
-class MyDaemon(Daemon):
-    """ My own Deamon override """
 
+class MyDaemon(Daemon):
+    """My own Deamon override"""
 
     def __getdebugconf(self):
         """Get debug configuration"""
-        workDir = self.config.get('general', 'privatedir') + "/SiteRM/background/"
+        workDir = self.config.get("general", "privatedir") + "/SiteRM/background/"
         fname = workDir + f"/background-process-{self.inargs.runnum}.json"
         if not os.path.isfile(fname):
-            self.logger.warning(f'Filename {fname} not available for background process. Exiting')
+            self.logger.warning(f"Filename {fname} not available for background process. Exiting")
             sys.exit(1)
         backgConfig = getFileContentAsJson(fname)
-        backgConfig['requestdict'] = evaldict(backgConfig['requestdict'])
+        backgConfig["requestdict"] = evaldict(backgConfig["requestdict"])
         return backgConfig
 
     def postRunThread(self, _sitename, _rthread):
         """Identify if we should continue to run subprocess"""
         backgConfig = self.__getdebugconf()
         self.totalRuntime = 1
-        if 'runtime' in backgConfig['requestdict']:
-            self.totalRuntime = int(backgConfig['requestdict']['runtime'])
+        if "runtime" in backgConfig["requestdict"]:
+            self.totalRuntime = int(backgConfig["requestdict"]["runtime"])
 
     def getThreads(self):
         """Check worker type"""
-        WORKERS = {'iperf-server': IperfServer, 'iperf-client': IperfClient,
-                   'fdt-client': FdtClient, 'fdt-server': FdtServer,
-                   'rapid-ping': RapidPing, 'rapid-pingnet': RapidPingNet,
-                   'arp-table': ArpTable, 'tcpdump': TCPDump,
-                   'traceroute': Traceroute, 'traceroutenet': TracerouteNet}
+        WORKERS = {
+            "iperf-server": IperfServer,
+            "iperf-client": IperfClient,
+            "fdt-client": FdtClient,
+            "fdt-server": FdtServer,
+            "ethr-client": EthrClient,
+            "ethr-server": EthrServer,
+            "rapid-ping": RapidPing,
+            "rapid-pingnet": RapidPingNet,
+            "arp-table": ArpTable,
+            "tcpdump": TCPDump,
+            "traceroute": Traceroute,
+            "traceroutenet": TracerouteNet,
+        }
         backgConfig = self.__getdebugconf()
         sitename = getSiteNameFromConfig(self.config)
         if sitename not in self.runThreads:
             # Here need to check what type of worker we are running
             # And is it available for a specific type of worker
-            if backgConfig['requestdict'].get('type', {}) not in WORKERS:
+            if backgConfig["requestdict"].get("type", {}) not in WORKERS:
                 raise Exception(f'Worker type {backgConfig["requestdict"]["type"]} is not available for {WORKERTYPE}. Exiting.')
-            worker = WORKERS[backgConfig['requestdict']['type']]
+            worker = WORKERS[backgConfig["requestdict"]["type"]]
             workerDm = worker(self.config, sitename, backgConfig)
             self.runThreads[sitename] = workerDm
         self.runThreads[sitename].refreshthread()
         if not self.runThreads:
-            raise Exception('There are no threads configured. Fatal failure')
+            raise Exception("There are no threads configured. Fatal failure")
+
 
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)

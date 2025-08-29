@@ -139,7 +139,7 @@ class Debugger(DebugService):
     def _startwork(self):
         """Start execution and get new requests from FE"""
         self.resetActiveProcesses()
-        for wtype in ["active", "new"]:
+        for wtype in ["active", "new", "cancel"]:
             self.logger.info(f"Get all {wtype} requests")
             data = self.getData(f"/api/{self.sitename}/debug?hostname={self.hostname}&state={wtype}")
             for item in data:
@@ -154,6 +154,8 @@ class Debugger(DebugService):
                     continue
         # Once we are done, we report memory and disk statistics
         self.reportMemDiskStats()
+        # Log active processes to a log file
+        self.logActiveProcesses()
 
 
 def execute(config=None, sitename=None):

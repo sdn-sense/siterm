@@ -26,7 +26,7 @@ class IperfClient(BaseDebugAction):
     def runiperfclient(self):
         """Run TCP IPerf"""
         self.logMessage(f"Running IperfClient background run. Input requestdict: {self.requestdict}")
-        command = f"iperf3 -c {self.requestdict['ip'].split('/')[0]} -p {self.requestdict.get('port', 5201)}"
+        command = f"iperf3 -c {self.requestdict['ip'].split('/')[0]} -p {self.requestdict['port']}"
         command += f" -t {self.requestdict['time']}"
         command += f" -P {self.requestdict['streams']}"
         if self.requestdict.get("interface"):

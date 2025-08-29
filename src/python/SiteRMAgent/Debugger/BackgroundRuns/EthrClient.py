@@ -11,27 +11,25 @@ from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 
 
-class FdtServer(BaseDebugAction):
-    """FdtServer class"""
+class EthrClient(BaseDebugAction):
+    """EthrClient class"""
 
     def __init__(self, config, sitename, backgConfig):
         self.config = config
         self.sitename = sitename
         self.backgConfig = backgConfig
         self.requestdict = backgConfig.get("requestdict", {})
-        self.service = "FdtServer"
+        self.service = "EthrClient"
         super().__init__()
 
     def main(self):
-        """Main FdtServer work. Run FDT Server."""
-        self.logMessage(f"Running FdtServer background run. Input requestdict: {self.requestdict}")
-        command = f'timeout {self.requestdict["time"]} java -jar /opt/fdt.jar -p {self.requestdict["port"]}'
-        if self.requestdict["onetime"] == "True":
-            command += " -S"
+        """Main EthrClient work. Run Ethr client."""
+        self.logMessage(f"Running EthrClient background run. Input requestdict: {self.requestdict}")
+        command = f'timeout {int(self.requestdict["time"])+5} /opt/ethr'
+        command += f' -c {self.requestdict["ip"].split("/")[0]}'
+        command += f' -n {self.requestdict["streams"]} -d {self.requestdict["time"]}s'
+        command += f' -port {self.requestdict["port"]}'
         self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles["stdout"], self.outfiles["stderr"])
         self.jsonout["exitCode"] = 0
-        self.logMessage("FdtServer background run finished successfully.")
-
-
-# -FDT_LISTEN
+        self.logMessage("EthrClient background run finished successfully.")

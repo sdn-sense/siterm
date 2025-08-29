@@ -26,7 +26,7 @@ from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.DefaultParams import SERVICE_NOACCEPT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.ipaddr import checkoverlap, ipVersion
+from SiteRMLibs.ipaddr import checkoverlap, getsubnet, ipVersion
 from SiteRMLibs.MainUtilities import (
     contentDB,
     getDBConn,
@@ -109,6 +109,19 @@ class Debugger(DebugService):
         self.logger.debug("Loaded workers: %s", workers)
         return workers
 
+    def writeWorkerRanges(self, workers):
+        """Write worker ranges to a file."""
+        fpath = os.path.join(self.config.get(self.sitename, "privatedir"), "ServiceData", "workers-ranges.json")
+        out = {"ipv4": [], "ipv6": []}
+        for _, workerd in workers.items():
+            for iptype, ipoutname in [("inet", "ipv4"), ("inet6", "ipv6")]:
+                for key in workerd.get("serviceinfo", {}).get(iptype, {}).keys():
+                    subnet = getsubnet(key)
+                    if subnet and subnet not in out[ipoutname]:
+                        out[ipoutname].append(subnet)
+        self.siteDB.dumpFileContentAsJson(fpath, out)
+        self.logger.debug(f"Wrote worker ranges to {fpath}")
+
     def _findRangeOverlap(self, item, workers):
         """Find range overlap for the item."""
         dynamicfrom = item.get("requestdict", {}).get("dynamicfrom", None)
@@ -133,6 +146,10 @@ class Debugger(DebugService):
         if not data:
             self.logger.info("No new requests for unknown worker")
         workers = self.loadAllWorkers()
+        # From all workers, store range information inside a file
+        # This is used for an FE Call, to allow clients to identify which ranges
+        # are available, so that they can request a dynamic from.
+        self.writeWorkerRanges(workers)
         for item in data:
             item = self.getFullData("undefined", item)
             # Load request information;
@@ -171,7 +188,7 @@ class Debugger(DebugService):
         self.switch.getinfo()
         self.switches = self.switch.getAllSwitches()
         for host in self.switches:
-            for wtype in ["new", "active"]:
+            for wtype in ["new", "active", "cancel"]:
                 self.logger.info(f"Get all {wtype} requests")
                 data = self.getData(host, wtype)
                 for item in data:

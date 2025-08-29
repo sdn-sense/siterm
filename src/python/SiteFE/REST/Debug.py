@@ -258,9 +258,6 @@ class DebugItem(BaseModel):
     output: Optional[Dict[str, Any]] = {}
 
 
-# TODO few more debug calls to add
-# 3. Get a list of allowed ipv6 dynamicfrom
-# 4. implement ethr-server and ethr-client (need to add this in the backend. Frontend support it now)
 # ==========================================================
 # /api/{sitename}/debugactions # Return all possible debug actions
 # ==========================================================
@@ -339,6 +336,38 @@ async def getDebugActionInfo(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Debug action '{action}' not found for site '{sitename}'.")
     defaults = getactionkeys(deps["config"], action)
     out = {"action": action, "defaults": defaults, "keys": getactionkeys(deps["config"], action), "version": runningVersion}
+    return APIResponse.genResponse(request, out)
+
+
+# =========================================================
+# /api/{sitename}/dynamicfromranges
+# =========================================================
+@router.get(
+    "/{sitename}/dynamicfromranges",
+    summary="Get Dynamic From Ranges",
+    description=("Returns a list of allowed dynamicfrom ranges for the given site name."),
+    tags=["Debug"],
+    responses={
+        **{
+            200: {"description": "Dynamic from ranges retrieved successfully", "content": {"application/json": {"example": {"dynamicfrom_ranges": "example_dynamicfrom_ranges"}}}},
+            404: {
+                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Dynamic from ranges file not found for site <sitename>.",
+                "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
+            },
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def getDynamicFromRanges(request: Request, sitename: str = Path(..., description="The site name to retrieve the dynamicfrom ranges for."), deps=Depends(allAPIDeps)):
+    """
+    Get dynamic from ranges for the given site name.
+    - Returns a list of allowed dynamicfrom ranges.
+    """
+    checkSite(deps, sitename)
+    fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "ServiceData", "workers-ranges.json")
+    if not os.path.isfile(fpath):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Dynamic from ranges file not found for site '{sitename}'.")
+    out = getFileContentAsJson(fpath)
     return APIResponse.genResponse(request, out)
 
 
@@ -538,25 +567,36 @@ async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..
     - Submits a new debug action request for the given site name.
     """
     checkSite(deps, sitename)
-    # Check if action is supported;
-    # Check if hostname is alive;
+    # Insert dummy entry in the database with state pending, so that we get an ID back
+    # This id is used for dynamic port generation for transfer service.
+    dummyIns = deps["dbI"].insert(
+        "debugrequests",
+        [{"hostname": item.hostname, "state": "pending", "action": "undefined", "insertdate": getUTCnow(), "updatedate": getUTCnow(), "debuginfo": "undefined", "outputinfo": "undefined"}],
+    )
     try:
-        inputDict = validator(deps["config"], item.request)
+        inputDict = validator(deps["config"], dummyIns[2], item.request)
     except BadRequestError as exc:
+        # Need to delete the dummy entry as validation failed
+        deps["dbI"].delete("debugrequests", [["id", dummyIns[2]]])
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    debugdir = os.path.join(deps["config"].get(sitename, "privatedir"), "DebugRequests")
-    randomuuid = generateRandomUUID()
-    requestfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "request.json")
-    outputfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "output.json")
-    dumpFileContentAsJson(requestfname, inputDict)
-    out = {
-        "hostname": inputDict.get("hostname", "undefined"),
-        "state": "new",
-        "action": inputDict["action"],
-        "insertdate": getUTCnow(),
-        "updatedate": getUTCnow(),
-        "debuginfo": requestfname,
-        "outputinfo": outputfname,
-    }
-    insOut = deps["dbI"].insert("debugrequests", [out])
-    return APIResponse.genResponse(request, {"Status": insOut[0], "ID": insOut[2]})
+    try:
+        debugdir = os.path.join(deps["config"].get(sitename, "privatedir"), "DebugRequests")
+        randomuuid = generateRandomUUID()
+        requestfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "request.json")
+        outputfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "output.json")
+        dumpFileContentAsJson(requestfname, inputDict)
+        out = {
+            "hostname": inputDict.get("hostname", "undefined"),
+            "state": "new",
+            "action": inputDict["action"],
+            "insertdate": getUTCnow(),
+            "updatedate": getUTCnow(),
+            "debuginfo": requestfname,
+            "outputinfo": outputfname,
+        }
+        insOut = deps["dbI"].insert("debugrequests", [out])
+        return APIResponse.genResponse(request, {"Status": insOut[0], "ID": insOut[2]})
+    except Exception as exc:  # pylint: disable=broad-except
+        # Need to delete the dummy entry as something failed
+        deps["dbI"].delete("debugrequests", [["id", dummyIns[2]]])
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc

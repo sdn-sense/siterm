@@ -25,7 +25,7 @@ class IperfServer(BaseDebugAction):
     def runiperf(self):
         """Run Iperf3 server"""
         self.logMessage(f"Running IperfServer background run. Input requestdict: {self.requestdict}")
-        command = f'timeout {self.requestdict["time"]} iperf3 --server -p {self.requestdict.get("port", 5201)}'
+        command = f'timeout {self.requestdict["time"]} iperf3 --server -p {self.requestdict["port"]}'
         if "ip" in self.requestdict:
             command += f' --bind {self.requestdict["ip"]}'
         if self.requestdict["onetime"] == "True":
