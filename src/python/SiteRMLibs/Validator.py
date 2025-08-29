@@ -92,29 +92,16 @@ def validateArp(_config, inputDict):
     validateKeys(inputDict, ["interface"])
 
 
-def validateIperfClient(config, inputDict):
-    """Validate iperfclient debug request."""
+def validateTransferClient(config, inputDict):
+    """Validate transfer client debug request, e.g. FDT, Iperf, Ethr"""
     validateKeys(inputDict, ["ip", "time", "port", "runtime", "streams"])
     validateIP(config, inputDict)
     validateStreams(config, inputDict)
 
 
-def validateIperfServer(config, inputDict):
-    """Validate iperf server debug request."""
+def validateTransferServer(config, inputDict):
+    """Validate transfer server debug request, e.g. FDT, Iperf, Ethr"""
     validateKeys(inputDict, ["time", "runtime"])
-    validateIP(config, inputDict)
-
-
-def validateFdtClient(config, inputDict):
-    """Validate fdtclient debug request."""
-    validateKeys(inputDict, ["ip", "port", "runtime", "streams"])
-    validateIP(config, inputDict)
-    validateStreams(config, inputDict)
-
-
-def validateFdtServer(config, inputDict):
-    """Validate fdt server debug request."""
-    validateKeys(inputDict, ["runtime"])
     validateIP(config, inputDict)
 
 
@@ -165,20 +152,16 @@ def validator(config, dbid, inputDict):
         validateTraceRoute(config, inputDict)
     elif debugType == "arp-table":
         validateArp(config, inputDict)
-    elif debugType == "iperf-client":
-        validateIperfClient(config, inputDict)
-    elif debugType == "iperf-server":
-        validateIperfServer(config, inputDict)
-    elif debugType == "fdt-client":
-        validateFdtClient(config, inputDict)
-    elif debugType == "fdt-server":
-        validateFdtServer(config, inputDict)
     elif debugType == "rapid-pingnet":
         validateRapidpingNet(config, inputDict)
     elif debugType == "rapid-ping":
         validateRapidping(config, inputDict)
     elif debugType == "tcpdump":
         validateTcpdump(config, inputDict)
+    elif debugType in ["iperf-client", "ethr-client", "fdt-client"]:
+        validateTransferClient(config, inputDict)
+    elif debugType in ["iperf-server", "ethr-server", "fdt-server"]:
+        validateTransferServer(config, inputDict)
     else:
         raise BadRequestError(f"Debug type {debugType} not supported. Supported types: {config['MAIN']['debuggers'].keys()}")
     return inputDict
