@@ -11,7 +11,7 @@ Date                    : 2025/07/14
 # Default parameters for SiteRM libraries
 # Defaults for limit queries (used in most of them)
 # These are used in various parts of the code to limit the number of results returned from database
-LIMIT_DEFAULT = 10
+LIMIT_DEFAULT = 50
 LIMIT_MIN = 1
 LIMIT_MAX = 100
 # Default parameters for service queries (Identify that service is up and running)
