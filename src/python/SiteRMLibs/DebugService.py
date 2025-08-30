@@ -41,8 +41,12 @@ class DebugService:
         """Publish debug runtime to FE"""
         # If dbI is defined, than we publish to DB directly.
         if hasattr(self, "dbI"):
-            out = {"id": inDic["id"], "state": inDic["state"], "output": inDic["output"]}
-            self.dbI.update("debugrequests", [out])
+            item = self.dbI.get("debugrequests", search=[["id", inDic["id"]]])
+            if not item:
+                self.logger.error(f"Debug item {inDic['id']} not found in DB to update.")
+                return
+            self.diragent.dumpFileContentAsJson(item[0]["outputinfo"], inDic["output"])
+            self.dbI.update("debugrequests", [{"id": inDic["id"], "state": inDic["state"]}])
             return
         self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/debug/{inDic['id']}", data=inDic, useragent="DebugService")
 

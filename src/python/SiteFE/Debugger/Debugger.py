@@ -82,6 +82,10 @@ class Debugger(DebugService):
         debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
         # Get Request JSON
         requestfname = os.path.join(debugdir, hostname, str(item["id"]), "request.json")
+        if not self.siteDB.fileExists(requestfname):
+            requestfname = item["debuginfo"]
+        if not self.siteDB.fileExists(requestfname):
+            raise BadRequestError(f"Request file {requestfname} does not exist for item {item}")
         item["requestdict"] = self.siteDB.getFileContentAsJson(requestfname)
         return item
 
@@ -142,6 +146,7 @@ class Debugger(DebugService):
 
     def identifyWorker(self):
         """Identify worker for a third party service, e.g. hostname not defined"""
+        workername, ipf, errmsg = None, None, ""
         data = self.getData("undefined", "new")
         if not data:
             self.logger.info("No new requests for unknown worker")
@@ -151,10 +156,14 @@ class Debugger(DebugService):
         # are available, so that they can request a dynamic from.
         self.writeWorkerRanges(workers)
         for item in data:
-            item = self.getFullData("undefined", item)
+            try:
+                item = self.getFullData("undefined", item)
+            except BadRequestError as ex:
+                self.logger.error(f"Received error during getFullData: {str(ex)}")
+                errmsg = f"Received error during getFullData: {str(ex)}"
             # Load request information;
-            item["requestdict"] = self.siteDB.getFileContentAsJson(item["debuginfo"])
-            workername, ipf, errmsg = self._findRangeOverlap(item, workers)
+            if not errmsg:
+                workername, ipf, errmsg = self._findRangeOverlap(item, workers)
             if not errmsg:
                 item["requestdict"]["selectedip"] = ipf
                 item["requestdict"]["hostname"] = workername
@@ -181,7 +190,6 @@ class Debugger(DebugService):
                         "hostname": workername if workername else "notfound",
                     }
                 )
-                continue
 
     def startwork(self):
         """Start execution and get new requests from FE"""

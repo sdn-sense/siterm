@@ -435,6 +435,10 @@ class contentDB:
         """Remove file."""
         removeFile(fileLoc)
 
+    @staticmethod
+    def fileExists(fileLoc):
+        """Check if file exists."""
+        return os.path.isfile(fileLoc)
 
 def delete(inputObj, delObj):
     """Delete function which covers exceptions."""
