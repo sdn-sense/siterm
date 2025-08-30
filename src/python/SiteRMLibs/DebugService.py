@@ -46,7 +46,7 @@ class DebugService:
                 self.logger.error(f"Debug item {inDic['id']} not found in DB to update.")
                 return
             self.diragent.dumpFileContentAsJson(item[0]["outputinfo"], inDic["output"])
-            self.dbI.update("debugrequests", [{"id": inDic["id"], "state": inDic["state"]}])
+            self.dbI.update("debugrequests", [{"id": inDic["id"], "state": inDic["state"], "updatedate": getUTCnow()}])
             return
         self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/debug/{inDic['id']}", data=inDic, useragent="DebugService")
 

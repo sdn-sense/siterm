@@ -19,6 +19,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2019/05/01
 """
 import os
+import traceback
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
@@ -48,7 +49,8 @@ def loadEnvFile(filepath="/etc/environment"):
                 key, value = line.split("=", 1)
                 os.environ[key.strip()] = value.strip()
     except Exception as ex:
-        print(f"Failed to load environment file {filepath}. Error: {ex}")
+        exc = traceback.format_exc()
+        print(f"Exception loading environment file {filepath}. Trace: {exc}, Error: {ex}")
 
 
 class DBBackend:
@@ -109,7 +111,8 @@ class DBBackend:
                     except Exception:
                         pass
         except Exception as ex:
-            print(f"Error establishing database connection: {ex}")
+            exc = traceback.format_exc()
+            print(f"Error establishing database connection: {ex}. Trace: {exc}")
             raise ex
 
     def createdb(self):
@@ -146,13 +149,16 @@ class DBBackend:
                 colname = [tup[0] for tup in cursor.description]
                 alldata = cursor.fetchall()
             except pymysql.InterfaceError as ex:
-                err = f"[GET]MySQLInterfaceError. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[GET]MySQLInterfaceError. Ex: {ex}. Trace: {exc}"
                 raise pymysql.InterfaceError(err) from ex
             except pymysql.Error as ex:
-                err = f"[GET]MySQLError. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[GET]MySQLError. Ex: {ex}. Trace: {exc}"
                 raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f"[GET]MySQL Exception. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[GET]MySQL Exception. Ex: {ex}. Trace: {exc}"
                 raise Exception(err) from ex
         return "OK", colname, alldata
 
@@ -168,15 +174,18 @@ class DBBackend:
                         conn.commit()
                 conn.commit()
             except pymysql.InterfaceError as ex:
-                err = f"[INS]MySQLInterfaceError. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[INS]MySQLInterfaceError. Ex: {ex}. Trace: {exc}"
                 conn.rollback()
                 raise pymysql.InterfaceError(err) from ex
             except pymysql.Error as ex:
-                err = f"[INS]MySQLError. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[INS]MySQLError. Ex: {ex}. Trace: {exc}"
                 conn.rollback()
                 raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f"[INS]MySQL Exception. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[INS]MySQL Exception. Ex: {ex}. Trace: {exc}"
                 conn.rollback()
                 raise Exception(err) from ex
         return "OK", "", lastID
@@ -187,15 +196,18 @@ class DBBackend:
             try:
                 cursor.execute(query)
             except pymysql.InterfaceError as ex:
-                err = f"[DEL]MySQLInterfaceError. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[DEL]MySQLInterfaceError. Ex: {ex}. Trace: {exc}"
                 conn.rollback()
                 raise pymysql.InterfaceError(err) from ex
             except pymysql.Error as ex:
-                err = f"[DEL]MySQLError. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[DEL]MySQLError. Ex: {ex}. Trace: {exc}"
                 conn.rollback()
                 raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f"[DEL]MySQL Exception. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[DEL]MySQL Exception. Ex: {ex}. Trace: {exc}"
                 conn.rollback()
                 raise Exception(err) from ex
         return "OK", "", ""
@@ -206,15 +218,18 @@ class DBBackend:
             try:
                 cursor.execute(query)
             except pymysql.InterfaceError as ex:
-                err = f"[EXC]MySQLInterfaceError. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[EXC]MySQLInterfaceError. Ex: {ex}. Trace: {exc}"
                 conn.rollback()
                 raise pymysql.InterfaceError(err) from ex
             except pymysql.Error as ex:
-                err = f"[EXC]MySQLError. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[EXC]MySQLError. Ex: {ex}. Trace: {exc}"
                 conn.rollback()
                 raise pymysql.Error(err) from ex
             except Exception as ex:
-                err = f"[EXC]MySQL Exception. Ex: {ex}"
+                exc = traceback.format_exc()
+                err = f"[EXC]MySQL Exception. Ex: {ex}. Trace: {exc}"
                 conn.rollback()
                 raise Exception(err) from ex
         return "OK", "", ""
@@ -241,7 +256,8 @@ class dbinterface:
         try:
             callquery = getattr(dbcalls, f"{callaction}_{calltype}")
         except AttributeError as ex:
-            err = f"Called {callaction}_{calltype}, but got exception {str(ex)}"
+            exc = traceback.format_exc()
+            err = f"Called {callaction}_{calltype}, but got exception {str(ex)}. Trace: {exc}"
             raise AttributeError(err) from ex
         return callquery
 
@@ -252,10 +268,12 @@ class dbinterface:
                 self.db.checkConnection(cursor)
             return True
         except pymysql.MySQLError as ex:
-            print(f"Database is not ready. Error: {ex}")
+            exc = traceback.format_exc()
+            print(f"Database is not ready. Error: {ex}. Trace: {exc}")
             return False
         except Exception as ex:
-            print(f"Unexpected error while checking database readiness: {ex}")
+            exc = traceback.format_exc()
+            print(f"Unexpected error while checking database readiness: {ex}. Trace: {exc}")
             return False
 
     # =====================================================
