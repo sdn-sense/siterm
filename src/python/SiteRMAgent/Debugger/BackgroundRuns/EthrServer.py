@@ -25,7 +25,7 @@ class EthrServer(BaseDebugAction):
     def main(self):
         """Main EthrServer work. Run Ethr Server."""
         self.logMessage(f"Running EthrServer background run. Input requestdict: {self.requestdict}")
-        command = f'timeout {self.requestdict["time"]} /opt/ethr -s -p {self.requestdict["port"]}'
+        command = f'timeout {self.requestdict["time"]} /opt/ethr -s -port {self.requestdict["port"]}'
         self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles["stdout"], self.outfiles["stderr"])
         self.jsonout["exitCode"] = 0
