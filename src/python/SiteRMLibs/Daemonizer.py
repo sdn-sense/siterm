@@ -588,7 +588,8 @@ class Daemon(DBBackend):
                 time.sleep(self.sleepTimers["failure"])
                 self._refreshConfigAfterFailure()
             except Exception as ex:
-                self.logger.critical(f"Exception!!! Error details: {ex}")
+                exc = traceback.format_exc()
+                self.logger.critical(f"Exception!!! Error details: {ex}. Traceback details: {exc}")
                 time.sleep(self.sleepTimers["failure"])
 
     def __run(self, rthread):

@@ -587,6 +587,7 @@ async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..
         outputfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "output.json")
         dumpFileContentAsJson(requestfname, inputDict)
         out = {
+            "id": dummyIns[2],
             "hostname": inputDict.get("hostname", "undefined"),
             "state": "new",
             "action": inputDict["action"],
@@ -595,8 +596,8 @@ async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..
             "debuginfo": requestfname,
             "outputinfo": outputfname,
         }
-        insOut = deps["dbI"].insert("debugrequests", [out])
-        return APIResponse.genResponse(request, {"Status": insOut[0], "ID": insOut[2]})
+        insOut = deps["dbI"].update("debugrequestsfull", [out])
+        return APIResponse.genResponse(request, {"Status": insOut[0], "ID": dummyIns[2]})
     except Exception as exc:  # pylint: disable=broad-except
         # Need to delete the dummy entry as something failed
         deps["dbI"].delete("debugrequests", [["id", dummyIns[2]]])

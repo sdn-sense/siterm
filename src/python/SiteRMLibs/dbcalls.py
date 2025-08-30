@@ -228,6 +228,7 @@ update_activeDeltas = "UPDATE activeDeltas SET updatedate = %(updatedate)s, outp
 update_servicestates = "UPDATE servicestates SET servicestate = %(servicestate)s, updatedate = %(updatedate)s, runtime = %(runtime)s, version = %(version)s, exc = %(exc)s WHERE hostname = %(hostname)s AND servicename = %(servicename)s"
 update_debugworkers = "UPDATE debugworkers SET updatedate = %(updatedate)s, hostinfo = %(hostinfo)s, WHERE hostname = %(hostname)s"
 update_debugrequests = "UPDATE debugrequests SET state = %(state)s, updatedate = %(updatedate)s WHERE id = %(id)s"
+update_debugrequestsfull = "UPDATE debugrequests SET hostname = %(hostname)s, state = %(state)s, action = %(action)s, debuginfo = %(debuginfo)s, outputinfo = %(outputinfo)s, updatedate = %(updatedate)s WHERE id = %(id)s"
 update_debugrequestsworker = "UPDATE debugrequests SET state = %(state)s, hostname = %(hostname)s, updatedate = %(updatedate)s WHERE id = %(id)s"
 update_snmpmon = "UPDATE snmpmon SET updatedate = %(updatedate)s, output = %(output)s WHERE id = %(id)s AND hostname = %(hostname)s"
 # update_deltatimestates - Update call is not needed for update delta timestates. It always write a new entry and update not needed.

@@ -313,7 +313,7 @@ class GitConfig:
                     "ethr-server": {"deftime": 600, "maxruntime": 86400, "minport": 44000, "maxports": 2000, "defaults": {"onetime": True}},
                     "ethr-client": {"deftime": 600, "maxruntime": 86400, "minstreams": 1, "maxstreams": 16, "defaults": {"onetime": True, "streams": 1}},
                     "rapid-ping": {"deftime": 600, "maxruntime": 86400, "maxmtu": 9000, "mininterval": 0.2, "maxtimeout": 3600, "defaults": {"packetsize": 64}},
-                    "rapid-pingnet": {"deftime": 600, "maxruntime": 86400, "maxtimeout": 600, "maxcount": 100, "defaults": {"onetime": True}},
+                    "rapid-pingnet": {"deftime": 600, "maxruntime": 86400, "maxtimeout": 600, "maxcount": 100, "defaults": {"onetime": True, "count": 10, "timeout": 5}},
                     "arp-table": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
                     "tcpdump": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
                     "traceroute": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
