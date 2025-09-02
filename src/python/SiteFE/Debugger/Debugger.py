@@ -121,8 +121,9 @@ class Debugger(DebugService):
             for iptype, ipoutname in [("inet", "ipv4"), ("inet6", "ipv6")]:
                 for key in workerd.get("serviceinfo", {}).get(iptype, {}).keys():
                     subnet = getsubnet(key)
-                    if subnet and subnet not in out[ipoutname]:
-                        out[ipoutname].append(subnet)
+                    out.setdefault(ipoutname, {}).setdefault(subnet, [])
+                    if key.split("/")[0] not in out[ipoutname][subnet]:
+                        out[ipoutname][subnet].append(key.split("/")[0])
         self.siteDB.dumpFileContentAsJson(fpath, out)
         self.logger.debug(f"Wrote worker ranges to {fpath}")
 
