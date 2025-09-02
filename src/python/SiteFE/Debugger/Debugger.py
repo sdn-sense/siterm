@@ -116,7 +116,7 @@ class Debugger(DebugService):
     def writeWorkerRanges(self, workers):
         """Write worker ranges to a file."""
         fpath = os.path.join(self.config.get(self.sitename, "privatedir"), "ServiceData", "workers-ranges.json")
-        out = {"ipv4": [], "ipv6": []}
+        out = {"ipv4": {}, "ipv6": {}}
         for _, workerd in workers.items():
             for iptype, ipoutname in [("inet", "ipv4"), ("inet6", "ipv6")]:
                 for key in workerd.get("serviceinfo", {}).get(iptype, {}).keys():
