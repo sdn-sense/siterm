@@ -119,7 +119,7 @@ def validateRapidpingNet(config, inputDict):
 
 def validateRapidping(config, inputDict):
     """Validate rapid ping debug request."""
-    validateKeys(inputDict, ["ip", "time", "packetsize", "interface", "runtime"])
+    validateKeys(inputDict, ["ip", "time", "packetsize", "runtime"])
     # time reply wait <deadline> in seconds
     maxtimeout = config["MAIN"]["debuggers"][inputDict["type"]]["maxtimeout"]
     if int(inputDict["time"]) > maxtimeout:
