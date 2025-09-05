@@ -99,10 +99,9 @@ def validateTransferClient(config, inputDict):
     validateStreams(config, inputDict)
 
 
-def validateTransferServer(config, inputDict):
+def validateTransferServer(_config, inputDict):
     """Validate transfer server debug request, e.g. FDT, Iperf, Ethr"""
     validateKeys(inputDict, ["time", "runtime"])
-    validateIP(config, inputDict)
 
 
 def validateRapidpingNet(config, inputDict):
