@@ -27,14 +27,7 @@ from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.DefaultParams import SERVICE_NOACCEPT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import checkoverlap, getsubnet, ipVersion
-from SiteRMLibs.MainUtilities import (
-    contentDB,
-    getDBConn,
-    getLoggingObject,
-    getUTCnow,
-    getVal,
-)
-from SiteRMLibs.Validator import validator
+from SiteRMLibs.MainUtilities import (contentDB, getDBConn, getLoggingObject, getUTCnow, getVal)
 
 COMPONENT = "Debugger"
 
@@ -169,7 +162,6 @@ class Debugger(DebugService):
                 item["requestdict"]["selectedip"] = ipf
                 item["requestdict"]["hostname"] = workername
                 try:
-                    item["requestdict"] = validator(item["requestdict"])
                     self.siteDB.dumpFileContentAsJson(item["debuginfo"], item["requestdict"])
                     self.updateDebugWorker(**{"id": item["id"], "state": "new", "hostname": workername})
                 except BadRequestError as ex:
