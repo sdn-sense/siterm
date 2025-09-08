@@ -36,9 +36,9 @@
         <span class="text-success mr-3" id="liveness-status"
           >Liveness: ...</span
         >
-        <span class="text-white mr-3" id="swagger-doc"
-          ><a href="/docs#/" target="_blank">Swagger Doc</a></span
-        >
+        <span class="text-white mr-3" id="swagger-doc"><a href="/docs#/" target="_blank">Swagger Doc</a></span>
+        <span class="text-white mr-3" id="prometheus-url"><a href="#" target="_blank">Prometheus Metrics</a></span>
+
       </div>
     </header>
     <div class="container-fluid">
@@ -161,6 +161,10 @@
       });
       if (configdata) {
         var sitename = configdata["general"]["sitename"];
+        // Update links to use sitename
+        $("#prometheus-url").html(
+          '<a href="/api/' + sitename + '/monitoring/prometheus/metrics" target="_blank">Prometheus Metrics</a>',
+        );
         $.ajax({
           url: "/api/" + sitename + "/topo/gettopology",
           dataType: "json",
