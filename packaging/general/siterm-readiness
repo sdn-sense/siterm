@@ -105,6 +105,20 @@ def runChecks():
     return state
 
 
+def checkConfigReady():
+    """Check if config fetcher is done."""
+    if os.path.exists("/tmp/config-fetcher-ready"):
+        return -1
+    print("Config fetcher is still running. Check stdout/stderr.")
+    if os.path.exists("/dev/shm/config-fetcher-counter"):
+        with open("/dev/shm/config-fetcher-counter", "r", encoding="utf-8") as fd:
+            counter = fd.read().strip()
+            if int(counter) >= 10:
+                print("Config fetcher failed counter:", counter)
+                return counter
+    return 0
+
+
 if __name__ == "__main__":
     readinessFile = "/tmp/siterm-readiness-disabled"
     parser = argparse.ArgumentParser(description="Kubernetes readiness checker with enable/disable options.")
@@ -117,9 +131,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if not os.path.exists("/tmp/config-fetcher-ready"):
-        print("Config fetcher is still running. Exiting. Check stdout/stderr log files")
-        sys.exit(0)
+    configFetcher = checkConfigReady()
+    if configFetcher != -1:
+        sys.exit(configFetcher)
 
     if args.enable:
         enableReadinessCheck(readinessFile)
