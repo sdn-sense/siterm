@@ -55,14 +55,32 @@ def getInterfaceTxQueueLen(interface):
     return int(txQueueLen[0].strip())
 
 
+def getAllSubInterfaces(interface):
+    """Get All Sub Interfaces or return same interface if no subinterfaces"""
+    slaves = []
+    try:
+        with open(f"/sys/class/net/{interface}/bonding/slaves", "r", encoding="utf-8") as f:
+            slaves = f.read().strip().split()
+    except FileNotFoundError:
+        slaves = [interface]
+    return slaves
+
+
 def getInterfaceSpeed(interface):
     """Get Interface Speed"""
-    try:
-        speed = externalCommand(f"cat /sys/class/net/{interface}/speed")
-        return int(speed[0].strip())
-    except Exception as ex:
-        print(f"Received an error trying to get interface speed. Error: {ex}. Return default 10gbps")
-        return 10000
+    allslaves = getAllSubInterfaces(interface)
+    interfaceSpeed = 0
+    for slave in allslaves:
+        try:
+            speed = externalCommand(f"cat /sys/class/net/{slave}/speed")
+            speed = int(speed[0].strip())
+            if speed != -1:
+                interfaceSpeed += speed
+            else:
+                print(f"Interface {slave} speed is unknown and /sys/class/net/{slave}/speed returned -1.")
+        except Exception as ex:
+            print(f"Received an error trying to get interface speed. Error: {ex}. Will use default 10Gbps")
+    return interfaceSpeed if interfaceSpeed else 10000
 
 
 def getIfInterfaceReady(interface):
