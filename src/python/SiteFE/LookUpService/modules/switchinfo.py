@@ -50,7 +50,7 @@ class SwitchInfo:
         for key, val in portSwitch.items():
             if not val:
                 continue
-            if key == "vlan_range_list":
+            if key == "vlan_range_list" and not portName.startswith("Vlan"):
                 self.addVlanRange(
                     **{
                         "newuri": newuri,
