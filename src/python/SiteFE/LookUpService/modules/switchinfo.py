@@ -143,6 +143,10 @@ class SwitchInfo:
             except (NoOptionError, NoSectionError):
                 enabledrsts = []
             for portName, portSwitch in list(switchDict.items()):
+                # If portname is vlan, and it is not in list of vlans allowed, skip it
+                # switchInfo["vlans"] is populated from switch backend and compared with rm-configuration of allowed vlans.
+                if portName.startswith("Vlan") and portName not in switchInfo.get("vlans").get(switchName, {}):
+                    continue
                 newuri = f":{switchName}:{self.switch.getSystemValidPortName(portName)}"
                 self._addVswPort(
                     hostname=switchName,
