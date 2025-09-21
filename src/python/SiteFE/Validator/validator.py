@@ -106,9 +106,25 @@ class Validator:
 
     def _getSwitchLLDPInfo(self, hostcheck):
         """Get Switch LLDP Info for switch and port"""
-        # TODO: Raise warnings if switch not available or port not available.
-        # LLDP info is not required to provide, but useful for our debugging.
         return self.switchInfo.get("lldp", {}).get(hostcheck["switch"], {}).get(hostcheck["port"], {})
+
+    def _validateSwichInfo(self):
+        """Validate Switch information"""
+        # Check first if this is ansible configuration site.
+        if self.config.get(self.sitename, {}).get("plugin", "") != "ansible":
+            return
+        # We check that config switchname is correctly defined under switch, and has full config;
+        for swname in self.config.get(self.sitename, "switch"):
+            if not self.switchInfo.get("ports", {}).get(swname, {}):
+                self.addWarning(f"Switch {swname} defined in configuration, but no output received from Ansible call.")
+                self._setwarningstart()
+            # Check also all port information, that it is received from Ansible
+            for portname, portinfo in self.config.get(swname, "ports").items():
+                if portinfo.get("realportname", ""):
+                    portname = portinfo["realportname"]
+                if not self.switchInfo.get("ports", {}).get(swname, {}).get(portname, {}):
+                    self.addWarning(f"Switch {swname} port {portname} defined in configuration, but no output received from Ansible call.")
+                    self._setwarningstart()
 
     def _validateHostSwitchInfo(self, hostinfo, switchlldp):
         """Validate Host and Switch information"""
@@ -168,6 +184,7 @@ class Validator:
         self._cleanWarningCounters()
         self.activeDeltas = getActiveDeltas(self)
         self.switchInfo = self.switch.getinfo()
+        self._validateSwichInfo()
         for hostcheck in self.getAllHostIntfMacs():
             switchlldp = self._getSwitchLLDPInfo(hostcheck)
             if hostcheck and switchlldp:

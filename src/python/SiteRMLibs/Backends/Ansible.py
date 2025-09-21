@@ -204,6 +204,12 @@ class Switch:
                     self.logger.warning("Unsupported NOS. There might be issues. Contact dev team")
                 out[host] = host_events
                 host_events.setdefault("event_data", {}).setdefault("res", {}).setdefault("ansible_facts", {})
+                # If it still remains empty, we report error
+                if not host_events["event_data"]["res"]["ansible_facts"]:
+                    msg = f"No facts available for {host}. There might be issues."
+                    self.logger.error(f"{msg}. Run ansible-runner manually and inform dev team.")
+                    self.ansibleErrs.setdefault(host, {}).setdefault("failures", [])
+                    self.ansibleErrs[host]["failures"].append({"msg": msg})
         self.getAnsErrors(ansOut)
         return out, self.ansibleErrs
 
