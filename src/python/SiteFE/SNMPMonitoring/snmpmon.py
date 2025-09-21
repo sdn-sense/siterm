@@ -358,6 +358,8 @@ class PromOut:
         """Add SNMP Data to prometheus output"""
         # Here get info from DB for switch snmp details
         snmpData = self.dbI.get("snmpmon")
+        if not snmpData:
+            return
         snmpGauge = Gauge(
             "interface_statistics",
             "Interface Statistics",
@@ -602,13 +604,14 @@ class SNMPMonitoring:
             self.snmperrorcount[host] += 1
         return []
 
-    def _junosmac(self, host, macs):
-        """Junos Mac Parser (custom as it requires to get multiple values)"""
+    def _ansiblemac(self, host, macs):
+        """Custom Mac Parser (custom as it requires to get multiple values)"""
         # Junos uses ansible to get mac addresses
         # mainly because SNMP not always returns vlan id associated with mac address
         # There might be some MIBs/oids which can be used to get this information
         # for now, we will use ansible to get mac addresses (as enabling more features
         # at sites - might be more complex)
+        # FRR - runs on top of linux, so we will get mac addresses via ansible
         updatedate = self.switch.switches.get("output", {}).get(host, {}).get("dbinfo", {}).get("updatedate", 0)
         if (getUTCnow() - updatedate) > 1200:
             self.logger.info(f"[{host}]: Forcing ansible to update device information")
@@ -647,10 +650,12 @@ class SNMPMonitoring:
         return False
 
     def _getMacAddrSession(self, host, macs):
-        if not self.session:
+        # Junos does not provide this information via SNMP, we do it via ansible
+        # FRR runs on linux, and we get this data via ansible.
+        if self.hostconf[host].get("ansible_network_os", "undefined") in ["sense.junos.junos", "sense.frr.frr"]:
+            self._ansiblemac(host, macs)
             return
-        if self.hostconf[host].get("ansible_network_os", "undefined") == "sense.junos.junos":
-            self._junosmac(host, macs)
+        if not self.session:
             return
         macs.setdefault(host, {"vlans": {}})
         if "mac_parser" in self.hostconf[host]["snmp_monitoring"]:
