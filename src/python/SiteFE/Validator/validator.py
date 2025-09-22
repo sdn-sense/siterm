@@ -111,7 +111,7 @@ class Validator:
     def _validateSwichInfo(self):
         """Validate Switch information"""
         # Check first if this is ansible configuration site.
-        if self.config.get(self.sitename, {}).get("plugin", "") != "ansible":
+        if self.config.get(self.sitename, "plugin") != "ansible":
             return
         # We check that config switchname is correctly defined under switch, and has full config;
         for swname in self.config.get(self.sitename, "switch"):
@@ -119,6 +119,8 @@ class Validator:
                 self.addWarning(f"Switch {swname} defined in configuration, but no output received from Ansible call.")
                 self._setwarningstart()
             # Check also all port information, that it is received from Ansible
+            if not self.config.get(swname, "ports"):
+                continue
             for portname, portinfo in self.config.get(swname, "ports").items():
                 if portinfo.get("realportname", ""):
                     portname = portinfo["realportname"]
