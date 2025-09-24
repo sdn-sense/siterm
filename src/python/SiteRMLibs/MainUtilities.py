@@ -733,7 +733,7 @@ def timeout(seconds):
         signal.signal(signal.SIGALRM, old_handler)
 
 
-def with_timeout(timeout_seconds=60):
+def withTimeout(timeout_seconds=60):
     """Decorator for function timeout."""
 
     def decorator(func):
