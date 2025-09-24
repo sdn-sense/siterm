@@ -152,8 +152,10 @@ class NetInfo(BWService):
         netInfo = {}
         for intf in self.config.get("agent", "interfaces"):
             nicInfo = netInfo.setdefault(intf, {})
+            tmpswitch, tmpport = None, None
             if self.config.has_option(intf, "isAlias"):
                 nicInfo["isAlias"] = self.config.get(intf, "isAlias")
+                tmpswitch, tmpport = nicInfo["isAlias"].split(":")[-2:]
             for key in [
                 "ipv4-address-pool",
                 "ipv4-subnet-pool",
@@ -168,8 +170,12 @@ class NetInfo(BWService):
             nicInfo["vlan_range_list"] = self.config.get(intf, "vlan_range_list")
             if self.config.has_option(intf, "port"):
                 nicInfo["switch_port"] = replaceSpecialSymbols(str(self.config.get(intf, "port")))
+            elif tmpport:
+                nicInfo["switch_port"] = replaceSpecialSymbols(str(tmpport))
             if self.config.has_option(intf, "switch"):
                 nicInfo["switch"] = str(self.config.get(intf, "switch"))
+            elif tmpswitch:
+                nicInfo["switch"] = replaceSpecialSymbols(str(tmpswitch))
             nicInfo["shared"] = str2bool(self.config.get(intf, "shared"))
             nicInfo["vlans"] = {}
             # Bandwidth parameters
