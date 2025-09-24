@@ -283,17 +283,17 @@ class PromOut:
         diskGauge = Gauge(
             "disk_usage",
             "Disk usage statistics for each filesystem",
-            ["filesystem", "key"],
+            ["filesystem", "key", "hostname"],
             registry=registry,
         )
 
-        for _, hostDict in self.diskMonitor.items():
+        for hostname, hostDict in self.diskMonitor.items():
             for fs, stats in hostDict.get("Values", {}).items():
                 tmpfs = fs
                 if "Mounted_on" in stats and stats["Mounted_on"]:
                     tmpfs = stats["Mounted_on"]
                 for key, val in stats.items():
-                    labels = {"filesystem": tmpfs, "key": key}
+                    labels = {"filesystem": tmpfs, "key": key, "hostname": hostname}
                     if isinstance(val, str):
                         val = val.strip().rstrip("%")
                         try:
