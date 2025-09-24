@@ -286,12 +286,12 @@ class NetInfo(BWService):
             lldpObj = evaldict(lldpOut[0])
             if not lldpObj:
                 self.logger.debug("No LLDP information found. lldpcli show neighbors -f json returned empty.")
-                self.addError("LLDP information not found. lldpcli show neighbors -f json returned empty.")
+                self.logger.debug("This is not a fatal error, just no LLDP information found or checked by SiteRM.")
                 return {}
             # Check lldpOut errors
             if len(lldpOut) > 1 and lldpOut[1].strip():
                 self.logger.debug(f"lldpcli show neighbors -f json returned error: {lldpOut[1]}")
-                self.addError(f"lldpcli show neighbors -f json returned error: {lldpOut[1]}")
+                self.logger.debug("This is not a fatal error, just no LLDP information found or checked by SiteRM.")
             out = {}
             for item in lldpObj.get("lldp", {}).get("interface", []):
                 for intf, vals in item.items():
@@ -315,8 +315,8 @@ class NetInfo(BWService):
             return out
         except Exception as ex:
             self.logger.debug("Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?")
-            self.addError(f"Failed to get lldp information. Exception: {str(ex)}")
             self.logger.debug(f"Exception: {ex}")
+            self.logger.debug("This is not a fatal error, just no LLDP information found or checked by SiteRM.")
         return {}
 
     def getRoutes(self):
