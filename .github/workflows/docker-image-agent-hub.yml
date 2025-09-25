@@ -1,4 +1,4 @@
-name: Build SiteRM Agent Container (One specific OS version)
+name: "[DOCKER] Agent One OS"
 
 on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
   workflow_dispatch:

@@ -1,0 +1,73 @@
+name: "[QUAY] Agent One OS"
+
+on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
+  workflow_dispatch:
+    inputs:
+      buildtag:
+        description: "Build Tag"
+        default: "dev"
+        type: "string"
+      branch:
+        description: "Branch to use of siterm code?"
+        default: "master"
+        type: "string"
+      startupbranch:
+        description: "Branch to use of siterm-startup (build base)?"
+        default: "master"
+        type: "string"
+      osversion:
+        description: "OS Version to build for (el8, el9, el10, u22)?"
+        required: true
+        type: choice
+        options:
+          - el8
+          - el9
+          - el10
+          - u22
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout tools repo
+      uses: actions/checkout@v3
+      with:
+        repository: sdn-sense/siterm-startup
+        path: siterm-startup
+        ref: ${{ github.event.inputs.startupbranch }}
+
+    - name: docker login quay.io
+      env:
+        QUAY_USER: ${{secrets.QUAY_USER}}
+        QUAY_PASSWORD: ${{secrets.QUAY_PASSWORD}}
+      run: docker login quay.io -u $QUAY_USER -p $QUAY_PASSWORD 
+
+    - name: Build the BASE Docker image ${{ github.event.inputs.osversion }} version
+      run: | 
+        cd siterm-startup/helpers/base_images/agent/
+        docker build . --file Dockerfile-${{ github.event.inputs.osversion }} --tag quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ github.event.inputs.osversion }}
+
+    - name: Docker Push BASE Image with tag and date ${{ github.event.inputs.osversion }} version
+      run: docker push quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ github.event.inputs.osversion }}
+
+    - name: Docker Push BASE Image with tag ${{ github.event.inputs.osversion }} version
+      run: |
+        docker tag quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ github.event.inputs.osversion }} quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${{ github.event.inputs.osversion }}
+        docker push quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${{ github.event.inputs.osversion }}
+
+    - name: Build the AGENT Docker image ${{ github.event.inputs.osversion }} version
+      run: | 
+        cd siterm-startup/agent/container-build-files/
+        docker build . --file Dockerfile-${{ github.event.inputs.osversion }} --build-arg RELEASE=${{ github.event.inputs.buildtag }}-${{ github.event.inputs.osversion }} --build-arg GITBR=${{ github.event.inputs.branch }} --tag quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ github.event.inputs.osversion }}
+
+    - name: Docker Push AGENT Image with tag and date ${{ github.event.inputs.osversion }} version
+      run: docker push quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ github.event.inputs.osversion }}
+
+    - name: Docker Push AGENT Image with tag ${{ github.event.inputs.osversion }} version
+      run: |
+        docker tag quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ github.event.inputs.osversion }} quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${{ github.event.inputs.osversion }}
+        docker push quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${{ github.event.inputs.osversion }}

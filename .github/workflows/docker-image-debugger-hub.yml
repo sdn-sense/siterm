@@ -1,4 +1,4 @@
-name: Build SiteRM Debugger Container (EL10)
+name: "[DOCKER] Debugger EL10"
 
 on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
   workflow_dispatch:

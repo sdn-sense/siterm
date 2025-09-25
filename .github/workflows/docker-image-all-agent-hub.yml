@@ -1,4 +1,4 @@
-name: Build all SiteRM Agent versions (EL8, EL9, EL10, U22)
+name: "[DOCKER] Agent One EL8,9,10,U22"
 
 on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
   workflow_dispatch:
