@@ -67,7 +67,7 @@ class ConfigFetcher:
         if os.path.isfile(self.FetcherReadyFile):
             os.remove(self.FetcherReadyFile)
 
-    def _fetchFile(self, name, url):
+    def _fetchFile(self, name, url, raiseEx=True):
         def retryPolicy(outObj, retries=3):
             if outObj[1] == -1:
                 self.logger.debug(f"Got -1 (Timeout usually error. Will retry up to 3 times (5sec sleep): {outObj}")
@@ -106,6 +106,9 @@ class ConfigFetcher:
                     output = yload(outObj[0])
                 else:
                     continue
+                # If retries is 0 and raiseEx is True - raise exception
+                if retries == 0 and raiseEx:
+                    raise Exception(f"Unable to fetch config file {name} from {url}. Last output: {outObj}")
                 with open(filename, "w", encoding="utf-8") as fd:
                     fd.write(ydump(output))
                 try:
@@ -117,26 +120,42 @@ class ConfigFetcher:
                     self.logger.info(f"Got IOError: {ex}")
         return output
 
+    def _fetcher(self, fetchlist):
+        """Multiple file fetcher and url modifier"""
+        output = {}
+        for item in fetchlist:
+            failure = False
+            try:
+                url = self.gitObj.getFullGitUrl([self.gitObj.config["MAPPING"]["config"], item[1]])
+                output[item[0]] = self._fetchFile(item[0], url)
+            except Exception as ex:
+                self.logger.error(f"Got exception during fetching {item[0]} from {url}: {ex}")
+                failure = True
+            if not failure:
+                self.logger.info(f"Successfully fetched {item[0]} from {url}")
+                continue
+            # Here we retry with modified URL to include ref/heads
+            try:
+                url = self.gitObj.getFullGitUrl([self.gitObj.config["MAPPING"]["config"], item[1]], refhead=True)
+                output[item[0]] = self._fetchFile(item[0], url, raiseEx=False)
+            except Exception as ex:
+                self.logger.error(f"Got exception during fetching {item[0]} from {url}: {ex}")
+                raise ex
+        return output
+
     def fetchMapping(self):
         """Fetch mapping file from Github"""
-        url = f"{self.gitObj.getFullGitUrl()}/mapping.yaml"
-        return self._fetchFile("mapping", url)
+        return self._fetcher([["mapping", "mapping.yaml"]]).get("mapping", {})
 
     def fetchAgent(self):
         """Fetch Agent config file from Github"""
         if self.gitObj.config["MAPPING"]["type"] == "Agent":
-            url = self.gitObj.getFullGitUrl([self.gitObj.config["MAPPING"]["config"], "main.yaml"])
-            self._fetchFile("Agent-main", url)
+            self._fetcher(["Agent-main", "main.yaml"])
 
     def fetchFE(self):
         """Fetch FE config file from Github"""
         if self.gitObj.config["MAPPING"]["type"] == "FE":
-            url = self.gitObj.getFullGitUrl([self.gitObj.config["MAPPING"]["config"], "main.yaml"])
-            self._fetchFile("FE-main", url)
-            url = self.gitObj.getFullGitUrl([self.gitObj.config["MAPPING"]["config"], "auth.yaml"])
-            self._fetchFile("FE-auth", url)
-            url = self.gitObj.getFullGitUrl([self.gitObj.config["MAPPING"]["config"], "auth-re.yaml"])
-            self._fetchFile("FE-auth-re", url)
+            self._fetcher([["FE-main", "main.yaml"], ["FE-auth", "auth.yaml"], ["FE-auth-re", "auth-re.yaml"]])
 
     def cleaner(self):
         """Clean files from /tmp/ directory"""

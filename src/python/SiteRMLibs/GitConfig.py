@@ -47,9 +47,13 @@ class GitConfig:
             time.sleep(5)
         return output
 
-    def getFullGitUrl(self, customAdds=None):
+    def getFullGitUrl(self, customAdds=None, refhead=False):
         """Get Full Git URL."""
-        urlJoinList = [self.config["GIT_URL"], self.config["GIT_REPO"], self.config["GIT_BRANCH"], self.config["SITENAME"]]
+        urlJoinList = []
+        if refhead:
+            urlJoinList = [self.config["GIT_URL"], self.config["GIT_REPO"], "refs/heads", self.config["GIT_BRANCH"], self.config["SITENAME"]]
+        else:
+            urlJoinList = [self.config["GIT_URL"], self.config["GIT_REPO"], self.config["GIT_BRANCH"], self.config["SITENAME"]]
         if customAdds:
             for item in customAdds:
                 urlJoinList.append(item)
