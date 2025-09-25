@@ -24,6 +24,7 @@ from SiteRMLibs.MainUtilities import (
     dumpFileContentAsJson,
     getFileContentAsJson,
     getUTCnow,
+    removeFile,
 )
 
 router = APIRouter()
@@ -218,10 +219,12 @@ async def updatehost(request: Request, item: HostItem, sitename: str = Path(...,
     checkSite(deps, sitename)
     host = deps["dbI"].get("hosts", limit=1, search=[["ip", item.ip]])
     if host:
-        fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "HostData")
-        fname = os.path.join(fpath, item.hostname, "hostinfo.json")
-        out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": fname}
-        dumpFileContentAsJson(fname, item.dict())
+        out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": host[0]["hostinfo"]}
+        # Check if there is a data update
+        if "nodatachange" in item.dict() and item.nodatachange:
+            deps["dbI"].update("hosts", [{"id": host[0]["id"], "updatedate": getUTCnow()}])
+            return APIResponse.genResponse(request, {"status": "UPDATED"})
+        dumpFileContentAsJson(host[0]["hostinfo"], item.dict())
         deps["dbI"].update("hosts", [out])
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This host is not in db. Use POST to add new host.")
@@ -261,9 +264,7 @@ async def deletehost(request: Request, item: HostItem, sitename: str = Path(...,
     checkSite(deps, sitename)
     host = deps["dbI"].get("hosts", limit=1, search=[["ip", item.ip], ["hostname", item.hostname]])
     if host:
-        fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "HostData")
-        fname = os.path.join(fpath, item.hostname, "hostinfo.json")
-        os.remove(fname)
+        removeFile(host[0].get("hostinfo", ""))
         deps["dbI"].delete("hosts", [["id", host[0]["id"]]])
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This host is not in db. Why to delete non-existing host?")

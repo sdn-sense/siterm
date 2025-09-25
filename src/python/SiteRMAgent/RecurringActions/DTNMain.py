@@ -6,16 +6,15 @@ Authors:
 
 Date: 2022/01/29
 """
+import copy
 import socket
 import sys
 
+from deepdiff import DeepDiff
 from SiteRMAgent.RecurringActions.Plugins.ArpInfo import ArpInfo
 from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
-from SiteRMAgent.RecurringActions.Plugins.CPUInfo import CPUInfo
 from SiteRMAgent.RecurringActions.Plugins.KubeInfo import KubeInfo
-from SiteRMAgent.RecurringActions.Plugins.MemInfo import MemInfo
 from SiteRMAgent.RecurringActions.Plugins.NetInfo import NetInfo
-from SiteRMAgent.RecurringActions.Plugins.StorageInfo import StorageInfo
 from SiteRMLibs.CustomExceptions import (
     NotFoundError,
     PluginException,
@@ -52,16 +51,14 @@ class RecurringAction:
         fullUrl = getFullUrl(self.config)
         self.requestHandler = Requests(url=fullUrl, logger=self.logger)
         self.memDiskStats = MemDiskStats()
+        self.lastout = {}
 
     def _loadClasses(self):
         """Load all classes"""
         for name, plugin in {
             "CertInfo": CertInfo,
-            "CPUInfo": CPUInfo,
-            "MemInfo": MemInfo,
             "KubeInfo": KubeInfo,
             "NetInfo": NetInfo,
-            "StorageInfo": StorageInfo,
             "ArpInfo": ArpInfo,
         }.items():
             self.classes[name] = plugin(self.config, self.logger)
@@ -73,6 +70,7 @@ class RecurringAction:
         fullUrl = getFullUrl(self.config)
         self.requestHandler.close()
         self.requestHandler = Requests(url=fullUrl, logger=self.logger)
+        self.lastout = {}
 
     def reportMemDiskStats(self):
         """Report memory and disk statistics."""
@@ -163,6 +161,22 @@ class RecurringAction:
         dic["Summary"]["config"] = self.config.getraw("MAIN")
         return dic
 
+    def comparediff(self, newdic):
+        """Compare if 2 dictionaries are different."""
+        tmpcopy = copy.deepcopy(newdic)
+        tmpcopy.pop("updatedate", None)
+        tmpcopy.pop("insertdate", None)
+        if not self.lastout:
+            self.lastout = tmpcopy
+            return True
+        diff = DeepDiff(self.lastout, newdic, ignore_order=True)
+        if diff:
+            self.logger.debug("Agent find differences in machine state:")
+            self.logger.debug(diff.to_json(indent=2))
+            self.lastout = tmpcopy
+            return True
+        return False
+
     def startwork(self):
         """Execute main script for SiteRM Agent output preparation."""
         workDir = self.config.get("general", "privatedir") + "/SiteRM/"
@@ -170,19 +184,30 @@ class RecurringAction:
         dic, excMsg, raiseError = self.prepareJsonOut()
         dic = self.appendConfig(dic)
 
-        self.agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
-
-        self.logger.info("Will try to publish information to SiteFE")
-        outVals = self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/hosts", data=dic, retries=1, raiseEx=False, useragent="Agent")
-        self.logger.info("Update Host result %s", outVals)
-        if outVals[1] != 200:
-            outValsAdd = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/hosts", data=dic, retries=1, raiseEx=False, useragent="Agent")
-            self.logger.info("Insert Host result %s", outValsAdd)
-            if outValsAdd[1] != 200:
-                excMsg += " Could not publish to SiteFE Frontend."
-                excMsg += f"Update to FE: Error: {outVals[2]} HTTP Code: {outVals[1]}"
-                excMsg += f"Add tp FE: Error: {outValsAdd[2]} HTTP Code: {outValsAdd[1]}"
-                self.logger.error(excMsg)
+        diffFromLast = self.comparediff(dic)
+        self.logger.info("Output from Agent is different from last sent: %s", diffFromLast)
+        if not diffFromLast:
+            self.agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
+            # No need to send same data again, we just update timestamp.
+            self.logger.info("Will Inform FE that Agent is alive.")
+            tmpdic = {"hostname": dic["hostname"], "ip": dic["ip"], "updatedate": dic["updatedate"], "insertdate": dic["insertdate"], "nodatachange": True}
+            outVals = self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/hosts", data=tmpdic, retries=1, raiseEx=False, useragent="Agent")
+            if outVals[1] == 200:
+                self.logger.info("FE informed that Agent is alive.")
+            else:
+                diffFromLast = True  # If we could not update timestamp, we will try to send full data again.
+        if diffFromLast:
+            self.logger.info("Will try to publish information to SiteFE")
+            outVals = self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/hosts", data=dic, retries=1, raiseEx=False, useragent="Agent")
+            self.logger.info("Update Host result %s", outVals)
+            if outVals[1] != 200:
+                outValsAdd = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/hosts", data=dic, retries=1, raiseEx=False, useragent="Agent")
+                self.logger.info("Insert Host result %s", outValsAdd)
+                if outValsAdd[1] != 200:
+                    excMsg += " Could not publish to SiteFE Frontend."
+                    excMsg += f"Update to FE: Error: {outVals[2]} HTTP Code: {outVals[1]}"
+                    excMsg += f"Add tp FE: Error: {outValsAdd[2]} HTTP Code: {outValsAdd[1]}"
+                    self.logger.error(excMsg)
         # Once we are done, we report memory and disk statistics
         self.reportMemDiskStats()
         if excMsg and raiseError:
