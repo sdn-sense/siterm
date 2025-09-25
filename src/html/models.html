@@ -139,7 +139,7 @@
             '<a href="/api/' + sitename + '/monitoring/prometheus/metrics" target="_blank">Prometheus Metrics</a>',
           );
           $.ajax({
-            url: "/api/" + sitename + "/models",
+            url: "/api/" + sitename + "/models?limit=100",
             dataType: "json",
             data: {},
             async: false,
