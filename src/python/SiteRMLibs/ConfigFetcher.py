@@ -122,11 +122,18 @@ class ConfigFetcher:
 
     def _fetcher(self, fetchlist):
         """Multiple file fetcher and url modifier"""
+        def getMappings(itemname):
+            """Get mappings for an URL"""
+            if self.gitObj.config.get("MAPPING", {}).get("config", ""):
+                return [self.gitObj.config["MAPPING"]["config"], itemname]
+            return [itemname]
         output = {}
+        url = None
         for item in fetchlist:
             failure = False
+            mappings = getMappings(item[1])
             try:
-                url = self.gitObj.getFullGitUrl([self.gitObj.config["MAPPING"]["config"], item[1]])
+                url = self.gitObj.getFullGitUrl(mappings)
                 output[item[0]] = self._fetchFile(item[0], url)
             except Exception as ex:
                 self.logger.error(f"Got exception during fetching {item[0]} from {url}: {ex}")
@@ -136,7 +143,7 @@ class ConfigFetcher:
                 continue
             # Here we retry with modified URL to include ref/heads
             try:
-                url = self.gitObj.getFullGitUrl([self.gitObj.config["MAPPING"]["config"], item[1]], refhead=True)
+                url = self.gitObj.getFullGitUrl(mappings, refhead=True)
                 output[item[0]] = self._fetchFile(item[0], url, raiseEx=False)
             except Exception as ex:
                 self.logger.error(f"Got exception during fetching {item[0]} from {url}: {ex}")
