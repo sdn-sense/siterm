@@ -89,6 +89,10 @@ class Switch(Node):
         sitename = getSiteNameFromConfig(self.config)
         if site and sitename != site:
             return
+        # If plugin is raw - nothing to do
+        if self.config.get(sitename, "plugin") == "raw":
+            self.logger.info("Plugin is raw for a Site - there is nothing to get from Switches.")
+            return
         for dev in self.config.get(sitename, "switch"):
             if device and dev != device:
                 continue

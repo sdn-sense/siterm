@@ -44,7 +44,7 @@ from SiteRMLibs.Warnings import Warnings
 
 
 class MultiWorker:
-    """SNMP Monitoring Class"""
+    """MultiWorker to launch Switch update workers"""
 
     def __init__(self, config, sitename, logger):
         super().__init__()
@@ -55,7 +55,7 @@ class MultiWorker:
         self.needRestart = False
 
     def _runCmd(self, action, device, foreground=False):
-        """Start execution of new requests"""
+        """Start execution of new SwitchWroker process"""
         retOut = {"stdout": [], "stderr": [], "exitCode": -1}
         command = f"SwitchWorker --action {action} --devicename {device}"
         if action == "status":
@@ -79,6 +79,12 @@ class MultiWorker:
         self.logger.info("Started MultiWorker work to check switch processes")
         restarted = False
         siteName = getSiteNameFromConfig(self.config)
+        # If plugin is raw - nothing to do
+        if self.config.get(siteName, "plugin") == "raw":
+            self.logger.info("Plugin is raw for a Site - there is nothing to manage SwitchWorker processes.")
+            self.firstRun = False
+            self.needRestart = False
+            return
         for dev in self.config.get(siteName, "switch"):
             # Check status
             retOut = self._runCmd("status", dev)
