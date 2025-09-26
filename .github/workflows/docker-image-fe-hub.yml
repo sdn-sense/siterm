@@ -1,4 +1,4 @@
-name: "[DOCKER] FE"
+name: "Build FE Containers"
 
 on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
   workflow_dispatch:
@@ -22,7 +22,6 @@ on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branc
 
 permissions:
   contents: read
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -41,28 +40,49 @@ jobs:
         DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
       run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
 
+    - name: docker login quay.io
+      env:
+        QUAY_USER: ${{secrets.QUAY_USER}}
+        QUAY_PASSWORD: ${{secrets.QUAY_PASSWORD}}
+      run: docker login quay.io -u $QUAY_USER -p $QUAY_PASSWORD 
+
     - name: Build the BASE Docker image
       run: | 
         cd siterm-startup/helpers/base_images/fe/
-        docker build . --file Dockerfile --build-arg ARCH=amd64 --tag sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker build . --file Dockerfile --build-arg ARCH=amd64 \
+         --tag sdnsense/sitermfebase:${{ github.event.inputs.buildtag }} \
+         --tag sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) \
+         --tag quay.io/sdnsense/sitermfebase:${{ github.event.inputs.buildtag }} \
+         --tag quay.io/sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
-    - name: Docker Push BASE Image with tag and date
-      run: docker push sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
-
-    - name: Docker Push BASE Image with tag
-      run: |
-        docker tag sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}
+    - name: Docker Push BASE Image to DockerHub
+      run: | 
         docker push sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}
+        docker push sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+
+    - name: Docker Push BASE Image to Quay.io
+      run: | 
+        docker push quay.io/sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}
+        docker push quay.io/sdnsense/sitermfebase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Build the FE Docker image
       run: | 
         cd siterm-startup/fe/container-build-files/
-        docker build . --file Dockerfile --build-arg RELEASE=${{ github.event.inputs.buildtag }} --build-arg GITBR=${{ github.event.inputs.sitermbranch }} --build-arg GITBRANS=${{ github.event.inputs.branch }} --tag sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+        docker build . --file Dockerfile \
+         --build-arg RELEASE=${{ github.event.inputs.buildtag }} \
+         --build-arg GITBR=${{ github.event.inputs.sitermbranch }} \
+         --build-arg GITBRANS=${{ github.event.inputs.branch }} \
+         --tag sdnsense/siterm-fe:${{ github.event.inputs.buildtag }} \
+         --tag sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) \
+         --tag quay.io/sdnsense/siterm-fe:${{ github.event.inputs.buildtag }} \
+         --tag quay.io/sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
 
     - name: Docker Push FE Image with tag and date
-      run: docker push sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
-
-    - name: Docker Push FE Image with tag
       run: |
-        docker tag sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}
         docker push sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}
+        docker push sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
+
+    - name: Docker Push FE Image to Quay.io
+      run: |
+        docker push quay.io/sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}
+        docker push quay.io/sdnsense/siterm-fe:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
