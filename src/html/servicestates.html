@@ -23,7 +23,7 @@
       function defineAllStates(data, sitename) {
         cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
         cntDiv.append(
-          '<table class="table table-striped table-bordered table-hover" id="data-table-states"><thead class="thead-light"><tr><th>ID</th><th>Hostname</th><th>Service Name</th><th>Service State</th><th>Runtime</th><th>Version</th><th>Insert Date</th><th>Update Date</th><th>Exception</th></tr></thead><tbody></tbody></table>',
+          '<table class="table table-striped table-bordered table-hover" id="data-table-states"><thead class="thead-light"><tr><th>ID</th><th>Hostname</th><th>Service Name</th><th>Service State</th><th>Runtime</th><th>Version</th><th>Insert Date</th><th>Update Date</th><th>Exception</th></th><th>Refresh</th></tr></thead><tbody></tbody></table>',
         );
         nRow = $('<div class="row">');
         nRow.append(cntDiv);
@@ -57,11 +57,50 @@
               ).toLocaleString() +
               "</td>";
             row += "<td>" + data["states"][sitename][key]["exc"] + "</td>";
+            // Add refresh button
+            row +=
+              '<td><button class="btn btn-sm btn-danger refresh-btn" ' +
+              'data-hostname="' +
+              state["hostname"] +
+              '" ' +
+              'data-servicename="' +
+              state["servicename"] +
+              '" ' +
+              'data-sitename="' +
+              sitename +
+              '">' +
+              "Refresh</button></td>";
+
             row += "</tr>";
-            console.log(row);
             $("#data-table-states tbody").append(row);
           }
         }
+
+        // Attach refresh button to an event handler
+        $(".refresh-btn")
+          .off("click")
+          .on("click", function () {
+            var hostname = $(this).data("hostname");
+            var servicename = $(this).data("servicename");
+            var sitename = $(this).data("sitename");
+
+            $.ajax({
+              url: "/api/" + sitename + "/servicestates",
+              type: "DELETE",
+              contentType: "application/json",
+              data: JSON.stringify({
+                hostname: hostname,
+                servicename: servicename,
+              }),
+              success: function (res) {
+                alert("Deleted: " + hostname + " / " + servicename);
+                $(this).closest("tr").remove();
+              }.bind(this),
+              error: function (xhr) {
+                alert("Error: " + xhr.responseText);
+              },
+            });
+          });
       }
 
       function load_data() {
@@ -71,7 +110,9 @@
           sitename = data["general"]["sitename"];
           // Update links to use sitename
           $("#prometheus-url").html(
-            '<a href="/api/' + sitename + '/monitoring/prometheus/metrics" target="_blank">Prometheus Metrics</a>',
+            '<a href="/api/' +
+              sitename +
+              '/monitoring/prometheus/metrics" target="_blank">Prometheus Metrics</a>',
           );
           $.ajax({
             url: "/api/" + sitename + "/servicestates",
@@ -108,7 +149,9 @@
         <span class="text-white mr-3" id="swagger-doc"
           ><a href="/docs#/" target="_blank">Swagger Doc</a></span
         >
-        <span class="text-white mr-3" id="prometheus-url"><a href="#" target="_blank">Prometheus Metrics</a></span>
+        <span class="text-white mr-3" id="prometheus-url"
+          ><a href="#" target="_blank">Prometheus Metrics</a></span
+        >
       </div>
     </header>
     <div class="container-fluid">

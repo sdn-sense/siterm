@@ -269,8 +269,8 @@ class ServiceStateItem(BaseModel):
     # pylint: disable=too-few-public-methods
     hostname: str
     servicename: str
-    servicestate: str
     # Optional fields
+    servicestate: Optional[str] = "UNSET"  # Service state, default is "UNSET"
     runtime: Optional[int] = -1  # Runtime in seconds, default is -1
     version: Optional[str] = "UNSET"  # Version of the service, default is "UNSET"
     exc: Optional[str] = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
@@ -348,6 +348,37 @@ async def addservicestate(request: Request, item: ServiceStateItem, sitename: st
     return APIResponse.genResponse(request, {"Status": "Updated"})
 
 
+@router.delete(
+    "/{sitename}/servicestates",
+    summary="Delete Service State",
+    description=("Deletes a service state from the database."),
+    tags=["Service States"],
+    responses={
+        **{
+            200: {"description": "Service State deleted successfully", "content": {"application/json": {"example": {"Status": "Deleted"}}}},
+            404: {"description": "Service State not found", "content": {"application/json": {"example": {"detail": "Service state for hostname 'example' and servicename 'example' not found."}}}},
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def deleteservicestate(request: Request, item: ServiceStateItem, sitename: str = Path(..., description="The site name to delete the service state for."), deps=Depends(allAPIDeps)):
+    """
+    Delete a service state from the database.
+    """
+    checkSite(deps, sitename)
+    if not _host_supportedService(item.servicename):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"This Service {item.servicename} is not supported by Frontend")
+    try:
+        services = deps["dbI"].get("servicestates", search=[["hostname", item.hostname], ["servicename", item.servicename]])
+        if services:
+            deps["dbI"].delete("servicestates", [["hostname", item.hostname], ["servicename", item.servicename]])
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service state for hostname '{item.hostname}' and servicename '{item.servicename}' not found.")
+    except Exception as ex:
+        raise Exception(f"Error details in deleteservicestate. Exc: {str(ex)}") from ex
+    return APIResponse.genResponse(request, {"Status": "Deleted"})
+
+
 # =========================================================
 # /api/{sitename}/serviceaction
 # =========================================================
@@ -368,9 +399,7 @@ class ServiceActionItem(BaseModel):
     description=("Retrieves service actions from the database."),
     tags=["Service Actions"],
     responses={
-        **{
-            200: {"description": "Service actions retrieved successfully.", "content": {"application/json": {"example": {"Status": "Retrieved <actions>"}}}}
-        },
+        **{200: {"description": "Service actions retrieved successfully.", "content": {"application/json": {"example": {"Status": "Retrieved <actions>"}}}}},
         **DEFAULT_RESPONSES,
     },
 )
