@@ -17,3 +17,4 @@ setuptools
 prometheus-client
 kubernetes
 httpx
+deepdiff

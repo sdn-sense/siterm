@@ -30,33 +30,34 @@
         $("#view_fe_" + sitename).append(nRow);
         for (var key in data["states"][sitename]) {
           if ($.isPlainObject(data["states"][sitename][key])) {
+            var state = data["states"][sitename][key];
             var row = "<tr";
-            if (data["states"][sitename][key]["servicestate"] === "OK") {
+            if (state["servicestate"] === "OK") {
               row += ' class="table-success">';
             } else {
               row += ' class="table-danger">';
             }
-            row += "<td>" + data["states"][sitename][key]["id"] + "</td>";
-            row += "<td>" + data["states"][sitename][key]["hostname"] + "</td>";
+            row += "<td>" + state["id"] + "</td>";
+            row += "<td>" + state["hostname"] + "</td>";
             row +=
-              "<td>" + data["states"][sitename][key]["servicename"] + "</td>";
+              "<td>" + state["servicename"] + "</td>";
             row +=
-              "<td>" + data["states"][sitename][key]["servicestate"] + "</td>";
-            row += "<td>" + data["states"][sitename][key]["runtime"] + "</td>";
-            row += "<td>" + data["states"][sitename][key]["version"] + "</td>";
+              "<td>" + state["servicestate"] + "</td>";
+            row += "<td>" + state["runtime"] + "</td>";
+            row += "<td>" + state["version"] + "</td>";
             row +=
               "<td>" +
               new Date(
-                data["states"][sitename][key]["insertdate"] * 1000,
+                state["insertdate"] * 1000,
               ).toLocaleString() +
               "</td>";
             row +=
               "<td>" +
               new Date(
-                data["states"][sitename][key]["updatedate"] * 1000,
+                state["updatedate"] * 1000,
               ).toLocaleString() +
               "</td>";
-            row += "<td>" + data["states"][sitename][key]["exc"] + "</td>";
+            row += "<td>" + state["exc"] + "</td>";
             // Add refresh button
             row +=
               '<td><button class="btn btn-sm btn-danger refresh-btn" ' +

@@ -48,6 +48,7 @@ HOSTSERVICES = [
     "DBWorker",
     "DBCleaner",
     "Validator",
+    "ValidatorService",
     "PolicyService",
     "SwitchWorker",
     "ConfigFetcher",
