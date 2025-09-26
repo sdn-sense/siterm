@@ -1,4 +1,4 @@
-name: "[DOCKER] Agent One EL8,9,10,U22"
+name: "Build Agent EL8,EL9,EL10,U22"
 
 on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
   workflow_dispatch:
@@ -22,6 +22,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        osver: [el8, el9, el10, u22]
     steps:
 
     - name: Checkout tools repo
@@ -37,130 +41,64 @@ jobs:
         DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
       run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
 
-    - name: Build the BASE Docker image el8 version
+    - name: docker login quay.io
+      env:
+        QUAY_USER: ${{secrets.QUAY_USER}}
+        QUAY_PASSWORD: ${{secrets.QUAY_PASSWORD}}
+      run: docker login quay.io -u $QUAY_USER -p $QUAY_PASSWORD 
+
+    - name: Build the BASE Docker for ${{ matrix.osver }}
       run: |
         cd siterm-startup/helpers/base_images/agent/
-        docker build . --file Dockerfile-el8 --tag sdnsense/sitermagentbase:temp-tag
+        docker build . --file Dockerfile-${{ matrix.osver }} \
+          --tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${{ matrix.osver }} \
+          --tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ matrix.osver }} \
+          --tag quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${{ matrix.osver }} \
+          --tag quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ matrix.osver }}
 
-    - name: Tag BASE image with multiple tags
+    - name: Docker Push BASE Image to DockerHub for ${{ matrix.osver }}
       run: |
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el8
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el8
+        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${{ matrix.osver }}
+        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ matrix.osver }}
 
-    - name: Docker Push BASE Image with tag el8 version
+    - name: Docker Push BASE Image to Quay.io for ${{ matrix.osver }}
       run: |
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el8
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el8
+        docker push quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-${{ matrix.osver }}
+        docker push quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ matrix.osver }}
 
-    - name: Build the AGENT Docker image el8 version
-      run: | 
-        cd siterm-startup/agent/container-build-files/
-        docker build . --file Dockerfile-el8 --build-arg RELEASE=${{ github.event.inputs.buildtag }}-el8 --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-agent:temp-tag
-
-    - name: Tag AGENT image with multiple tags el8 version
+    - name: Tag base as bare (only for el10)
+      if: matrix.osver == 'el10'
       run: |
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el8
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el8
-
-    - name: Docker Push AGENT Image with tag and date el8 version
-      run: |
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el8
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el8
-
-    - name: Build the BASE Docker image el9 version
-      run: | 
-        cd siterm-startup/helpers/base_images/agent/
-        docker build . --file Dockerfile-el9 --tag sdnsense/sitermagentbase:temp-tag
-
-    - name: Tag BASE image with multiple tags
-      run: |
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el9
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el9
-
-    - name: Docker Push BASE Image with tag el9 version
-      run: |
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el9
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el9
-
-    - name: Build the AGENT Docker image el9 version
-      run: | 
-        cd siterm-startup/agent/container-build-files/
-        docker build . --file Dockerfile-el9 --build-arg RELEASE=${{ github.event.inputs.buildtag }}-el9 --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-agent:temp-tag
-
-    - name: Tag AGENT image with multiple tags el9 version
-      run: |
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el9
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el9
-
-    - name: Docker Push AGENT Image with tag and date el9 version
-      run: |
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el9
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el9
-
-    - name: Build the BASE Docker image el10 version
-      run: | 
-        cd siterm-startup/helpers/base_images/agent/
-        docker build . --file Dockerfile-el10 --tag sdnsense/sitermagentbase:temp-tag
-
-    - name: Tag BASE image with multiple tags
-      run: |
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el10
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
-
-    - name: Docker Push BASE Image with tag el10 version
-      run: |
+        docker tag quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el10 quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
+        docker push quay.io/sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
+        docker tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el10 sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
         docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-el10
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
 
-    - name: Build the AGENT Docker image el10 version
+    - name: Build the AGENT Docker for ${{ matrix.osver }}
       run: | 
         cd siterm-startup/agent/container-build-files/
-        docker build . --file Dockerfile-el10 --build-arg RELEASE=${{ github.event.inputs.buildtag }}-el10 --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-agent:temp-tag
+        docker build . --file Dockerfile-${{ matrix.osver }} \
+          --build-arg RELEASE=${{ github.event.inputs.buildtag }}-${{ matrix.osver }} \
+          --build-arg GITBR=${{ github.event.inputs.branch }} \
+          --tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${{ matrix.osver }} \
+          --tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ matrix.osver }} \
+          --tag quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${{ matrix.osver }} \
+          --tag quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ matrix.osver }}
 
-    - name: Tag AGENT image with multiple tags el8 version
+    - name: Docker Push AGENT Image to DockerHub for ${{ matrix.osver }}
       run: |
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el10
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
+        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${{ matrix.osver }}
+        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ matrix.osver }}
 
-    - name: Docker Push AGENT Image with tag and date el10 version
+    - name: Docker Push AGENT Image to Quay.io for ${{ matrix.osver }}
       run: |
+        docker push quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-${{ matrix.osver }}
+        docker push quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-${{ matrix.osver }}
+
+    - name: Tag agent as bare (only for el10)
+      if: matrix.osver == 'el10'
+      run: |
+        docker tag quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el10 quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
+        docker push quay.io/sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
+        docker tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el10 sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
         docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-el10
-
-    - name: Build the BASE Docker image u22 version
-      run: |
-        cd siterm-startup/helpers/base_images/agent/
-        docker build . --file Dockerfile-u22 --tag sdnsense/sitermagentbase:temp-tag
-
-    - name: Tag BASE image with multiple tags
-      run: |
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-u22
-        docker tag sdnsense/sitermagentbase:temp-tag sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-u22
-
-    - name: Docker Push BASE Image with tag u22 version
-      run: |
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-u22
-        docker push sdnsense/sitermagentbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-u22
-
-    - name: Build the AGENT Docker image u22 version
-      run: |
-        cd siterm-startup/agent/container-build-files/
-        docker build . --file Dockerfile-u22 --build-arg RELEASE=${{ github.event.inputs.buildtag }}-u22 --build-arg GITBR=${{ github.event.inputs.branch }} --tag sdnsense/siterm-agent:temp-tag
-
-    - name: Tag AGENT image with multiple tags u22 version
-      run: |
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-u22
-        docker tag sdnsense/siterm-agent:temp-tag sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-u22
-
-    - name: Docker Push AGENT Image with tag and date u22 version
-      run: |
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-u22
-        docker push sdnsense/siterm-agent:${{ github.event.inputs.buildtag }}-u22
