@@ -157,7 +157,7 @@ class ConfigFetcher:
     def fetchAgent(self):
         """Fetch Agent config file from Github"""
         if self.gitObj.config["MAPPING"]["type"] == "Agent":
-            self._fetcher(["Agent-main", "main.yaml"])
+            self._fetcher([["Agent-main", "main.yaml"]])
 
     def fetchFE(self):
         """Fetch FE config file from Github"""
