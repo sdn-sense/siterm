@@ -185,7 +185,8 @@ class NetInfo(BWService):
             nicInfo["bwParams"]["priority"] = self.config.get(intf, "bwParams").get("priority", 0)
             nicInfo["bwParams"]["reservedCapacity"] = int(self.config.get(intf, "bwParams").get("reservedCapacity", 1000))
             nicInfo["bwParams"]["minimumCapacity"] = int(self.config.get(intf, "bwParams").get("minimumCapacity", 100))
-            nicInfo["bwParams"]["maximumCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", getInterfaceSpeed(intf))) - nicInfo["bwParams"]["reservedCapacity"]
+            nicInfo["bwParams"]["portSpeed"] = int(getInterfaceSpeed(intf))
+            nicInfo["bwParams"]["maximumCapacity"] = int(self.config.get(intf, "bwParams").get("maximumCapacity", nicInfo["bwParams"]["portSpeed"])) - nicInfo["bwParams"]["reservedCapacity"]
             nicInfo["bwParams"]["granularity"] = int(self.config.get(intf, "bwParams").get("granularity", 100))
             reservedCap = self.bwCalculatereservableServer(
                 self.config.config["MAIN"],

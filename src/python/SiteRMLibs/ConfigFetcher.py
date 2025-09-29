@@ -84,11 +84,13 @@ class ConfigFetcher:
             return retries
 
         output = {}
+        cachedFile = False
         datetimeNow = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=10)
         filename = f"/tmp/{datetimeNow.strftime('%Y-%m-%d-%H')}-{name}.yaml"
         if os.path.isfile(filename):
             with open(filename, "r", encoding="utf-8") as fd:
                 output = yload(fd.read())
+            cachedFile = True
         else:
             self._newfetch()
             self.logger.info(f"Fetching new config file for {name} from {url}")
@@ -118,7 +120,7 @@ class ConfigFetcher:
                         os.remove(prevfilename)
                 except IOError as ex:
                     self.logger.info(f"Got IOError: {ex}")
-        return output
+        return output, cachedFile
 
     def _fetcher(self, fetchlist):
         """Multiple file fetcher and url modifier"""
@@ -131,20 +133,28 @@ class ConfigFetcher:
         url = None
         for item in fetchlist:
             failure = False
+            cachedFile = False
             mappings = getMappings(item[1])
             try:
                 url = self.gitObj.getFullGitUrl(mappings)
-                output[item[0]] = self._fetchFile(item[0], url)
+                output[item[0]], cachedFile = self._fetchFile(item[0], url)
             except Exception as ex:
                 self.logger.error(f"Got exception during fetching {item[0]} from {url}: {ex}")
                 failure = True
-            if not failure:
+            if not failure and not cachedFile:
                 self.logger.info(f"Successfully fetched {item[0]} from {url}")
+                continue
+            if not failure and cachedFile:
+                self.logger.info(f"Using cached file for {item[0]} from {url}")
                 continue
             # Here we retry with modified URL to include ref/heads
             try:
                 url = self.gitObj.getFullGitUrl(mappings, refhead=True)
-                output[item[0]] = self._fetchFile(item[0], url, raiseEx=False)
+                output[item[0]], cachedFile = self._fetchFile(item[0], url, raiseEx=False)
+                if not cachedFile:
+                    self.logger.info(f"Successfully fetched {item[0]} from {url}")
+                else:
+                    self.logger.info(f"Using cached file for {item[0]} from {url}")
             except Exception as ex:
                 self.logger.error(f"Got exception during fetching {item[0]} from {url}: {ex}")
                 raise ex

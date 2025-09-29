@@ -99,6 +99,12 @@ class Topology:
 
     def gettopology(self):
         """Return all Switches information"""
+        def getHostPortSpeed(netinfo, port):
+            """Get Port Speed from Host NetInfo"""
+            bw = netinfo.get(port, {}).get("bwParams", {}).get("portSpeed", 0)
+            if bw:
+                return bw
+            return netinfo.get(port, {}).get("bwParams", {}).get("maximumCapacity", 0)
         workdata = {}
         incr = 0
         # Get all Switch information
@@ -129,11 +135,14 @@ class Topology:
                 remSwitch = self._findConnection(workdata, vals.get("remote_chassis_id", ""))
                 remPort = vals.get("remote_port_id", "")
                 if remSwitch and remPort:
-                    swout["topo"].setdefault(key, {"device": remSwitch["switch"], "port": remPort})
+                    bw = switchdata['intstats'][key].get('bandwidth', 0)
+                    swout["topo"].setdefault(key, {"device": remSwitch["switch"], "port": remPort, "bandwidth": bw})
+                    print(swout["topo"][key])
         # Now lets get host information
         for host in self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100):
             parsedInfo = self.diragent.getFileContentAsJson(host.get("hostinfo", ""))
             hostconfig = parsedInfo.get("Summary", {}).get("config", {})
+            netinfo = parsedInfo.get("NetInfo", {}).get("interfaces", {})
             hostname = hostconfig.get("agent", {}).get("hostname", "")
             lldpInfo = parsedInfo.get("NetInfo", {}).get("lldp", {})
             hout = out.setdefault(
@@ -153,13 +162,15 @@ class Topology:
                     remSwitch = self._findConnection(workdata, vals.get("remote_chassis_id", ""))
                     remPort = vals.get("remote_port_id", "")
                     if remSwitch and remPort:
-                        hout["topo"].setdefault(intf, {"device": remSwitch["switch"], "port": remPort})
+                        hout["topo"].setdefault(intf, {"device": remSwitch["switch"], "port": remPort, "bandwidth": getHostPortSpeed(netinfo, intf)})
+                        print(hout["topo"][intf])
             else:
                 for intf in hostconfig.get("agent", {}).get("interfaces", []):
                     swintf = hostconfig.get(intf, {}).get("port", "")
                     switch = hostconfig.get(intf, {}).get("switch", "")
                     if switch and swintf:
-                        hout["topo"].setdefault(intf, {"device": switch, "port": swintf})
+                        hout["topo"].setdefault(intf, {"device": switch, "port": swintf, "bandwidth": getHostPortSpeed(netinfo, intf)})
+                        print(hout["topo"][intf])
         out.update(self._getWANLinks(incr))
         # Write new out to file
         fname = os.path.join(self.topodir, "topology.json")
@@ -345,9 +356,6 @@ class PromOut:
             registry=registry,
         )
         for item in dbOut:
-            if int(self.timenow - item["updatedate"]) > SERVICE_DOWN_TIMEOUT:
-                self.logger.warning(f"Switch {item['device']} did not update in the last {SERVICE_DOWN_TIMEOUT // 60} minutes. Skipping.")
-                continue
             out = evaldict(item.get("error", {}))
             if out:
                 for errorkey, errors in out.items():
