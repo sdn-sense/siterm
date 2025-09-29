@@ -79,12 +79,6 @@ class MultiWorker:
         self.logger.info("Started MultiWorker work to check switch processes")
         restarted = False
         siteName = getSiteNameFromConfig(self.config)
-        # If plugin is raw - nothing to do
-        if self.config.get(siteName, "plugin") == "raw":
-            self.logger.info("Plugin is raw for a Site - there is nothing to manage SwitchWorker processes.")
-            self.firstRun = False
-            self.needRestart = False
-            return
         for dev in self.config.get(siteName, "switch"):
             # Check status
             retOut = self._runCmd("status", dev)
