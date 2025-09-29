@@ -209,11 +209,11 @@ class RoutingService:
 
     def compareBGP(self, switch, runningConf, uuid):
         """Compare L3 BGP"""
-        tmpD = (
-            self.yamlconfuuid.setdefault(self.acttype, {})
-            .setdefault(uuid, {})
-            .setdefault(switch, {})
-        )
+        # If runningConf is empty, then it is different
+        if not runningConf:
+            self.logger.debug(f"Running config for {uuid} is empty. Return True")
+            return True
+        tmpD = self.yamlconfuuid.get(self.acttype, {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault("sense_bgp", {})
         # If equal - return no difference
         if tmpD == runningConf:
@@ -222,10 +222,6 @@ class RoutingService:
             )
             return False
         self._getDefaultBGP(switch)  # Just in case running empty, force add bgp info
-        # If runningConf is empty, then it is different
-        if not runningConf:
-            self.logger.debug(f"Running config for {uuid} is empty. Return True")
-            return True
         different = False
         for key, val in runningConf.items():
             # ipv6_network, ipv4_network, neighbor, prefix_list, route_map

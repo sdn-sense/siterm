@@ -144,7 +144,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         if not items:
             return None
         nstate = None
-        if items.get("state", None) not in ["present", "error"] or kwargs.get("uuidstate", None) not in ["ok", "error"]:
+        if items.get("state", None) not in ["present", "error", "absent"] or kwargs.get("uuidstate", None) not in ["ok", "error"]:
             self.logger.info("State is not present or error, or uuidstate is not ok or error. Will return unknown.")
             self.logger.info(f"Items: {items}, kwargs: {kwargs}")
             nstate = "unknown"
@@ -193,29 +193,32 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
     def _identifyFinalState(activeConf):
         """Identify Final State for service."""
 
+        allsubstates = []
+
         def anyNestedPresent(d):
             if isinstance(d, dict):
                 for v in d.values():
                     if isinstance(v, dict):
-                        if anyNestedPresent(v):
-                            return True
+                        anyNestedPresent(v)
                     elif v == "present":
-                        return True
-            return False
+                        allsubstates.append("present")
+                    elif v == "absent":
+                        allsubstates.append("absent")
 
-        # If state already not prsent, return absent
         # Loop via all items, ignore state key
-        # And if anyNetstedItem == present, keep
-        # global state as present; Otherwise return absent
-        if activeConf.get("state") != "present":
-            return "absent"
+        # and identify all values (that can be present/absent)
 
         for key, val in activeConf.items():
             if key == "state":
                 continue
-            if anyNestedPresent(val):
-                return "present"
-        return "absent"
+            anyNestedPresent(val)
+
+        if "present" in allsubstates:
+            return "present"
+        if all(s == "absent" for s in allsubstates):
+            return "absent"
+        return "present"
+
 
     def applyIndvConfig(self, swname, uuid, key, acttype, raiseExc=True):
         """Apply a single delta to network devices and report to DB it's state"""
