@@ -108,6 +108,9 @@ async def prometheuspassthrough(
     nodeexporter_passthrough = hostdata.get("hostinfo", {}).get("Summary", {}).get("config", {}).get("general", {}).get("node_exporter_passthrough", False)
     if not nodeexporter or not nodeexporter_passthrough:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Host {hostname} does not have node_exporter passthrough enabled")
+    # Check if it starts with http or https. by default use http
+    if not nodeexporter.startswith("http"):
+        nodeexporter = f"http://{nodeexporter}"
     # Call node_exporter and return output
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
