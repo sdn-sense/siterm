@@ -12,6 +12,8 @@ Date                    : 2025/07/14
 import os
 from typing import Any, Dict
 
+import httpx
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -31,7 +33,7 @@ from SiteFE.REST.dependencies import (
     checkSite,
 )
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
-from SiteRMLibs.MainUtilities import getUTCnow, jsondumps
+from SiteRMLibs.MainUtilities import getUTCnow, jsondumps, getFileContentAsJson
 
 router = APIRouter()
 
@@ -97,7 +99,28 @@ async def prometheuspassthrough(
     checkSite(deps, sitename)
     # Placeholder for actual implementation
     # This should check if the hostname is valid and then forward the request to the appropriate Prometheus endpoint
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Prometheus passthrough not implemented yet")
+    hostdata = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=1, search=[["hostname", hostname]])
+    if not hostdata:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Host {hostname} not found")
+    hostdata = hostdata[0]
+    hostdata["hostinfo"] = getFileContentAsJson(hostdata.get("hostinfo", ""))
+    nodeexporter = hostdata.get("hostinfo", {}).get("Summary", {}).get("config", {}).get("general", {}).get("node_exporter", "")
+    nodeexporter_passthrough = hostdata.get("hostinfo", {}).get("Summary", {}).get("config", {}).get("general", {}).get("node_exporter_passthrough", False)
+    if not nodeexporter or not nodeexporter_passthrough:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Host {hostname} does not have node_exporter passthrough enabled")
+    # Call node_exporter and return output
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            ret = await client.get(nodeexporter)
+            ret.raise_for_status()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY,
+                            detail=f"Error connecting to node_exporter at {nodeexporter}: {e}") from e
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code,
+                            detail=f"node_exporter returned HTTP {e.response.status_code}") from e
+    return Response(content=ret.text, media_type=CONTENT_TYPE_LATEST)
+
 
 
 # =========================================================
