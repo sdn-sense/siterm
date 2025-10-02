@@ -111,6 +111,8 @@ async def prometheuspassthrough(
     # Check if it starts with http or https. by default use http
     if not nodeexporter.startswith("http"):
         nodeexporter = f"http://{nodeexporter}"
+    if not nodeexporter.endswith("/metrics"):
+        nodeexporter = f"{nodeexporter}/metrics"
     # Call node_exporter and return output
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
