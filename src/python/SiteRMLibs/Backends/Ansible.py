@@ -11,6 +11,7 @@ Authors:
 Date: 2021/12/01
 """
 import os
+import json
 import random
 import time
 
@@ -204,6 +205,18 @@ class Switch:
                     self.logger.warning("Unsupported NOS. There might be issues. Contact dev team")
                 out[host] = host_events
                 host_events.setdefault("event_data", {}).setdefault("res", {}).setdefault("ansible_facts", {})
+                # Check if we got ansible_facts_file, that means output was too big and it is passed
+                # via file
+                if "ansible_facts_file" in host_events["event_data"]["res"]:
+                    fname = host_events["event_data"]["res"]["ansible_facts_file"]["file"]
+                    if os.path.isfile(fname):
+                        with open(fname, "r", encoding="utf-8") as fd:
+                            try:
+                                host_events["event_data"]["res"]["ansible_facts"] = json.load(fd)
+                            except json.JSONDecodeError as e:
+                                print(f"[ERROR] Could not parse JSON from {fname}: {e}")
+                    else:
+                        self.logger.error(f"Ansible facts file {fname} not available. There might be issues.")
                 # If it still remains empty, we report error
                 if not host_events["event_data"]["res"]["ansible_facts"]:
                     msg = f"No facts available for {host}. There might be issues."
