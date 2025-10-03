@@ -273,7 +273,7 @@ async def submitDelta(
     outContent["href"] = f"{request.base_url}api/{sitename}/deltas/{item.id}"
     if outContent["State"] not in ["accepted"]:
         outContent["Error"] = out.get("Error", f"Unknown Error. Error Message: None. Full dump: {jsondumps(out)}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to accept delta. Error Message: {outContent}.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to accept delta. Error Message: {outContent['Error']}.")
     return APIResponse.genResponse(request, outContent, status_code=status.HTTP_201_CREATED)
 
 
