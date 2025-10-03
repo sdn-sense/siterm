@@ -25,6 +25,7 @@ from SiteRMLibs.MainUtilities import (
     firstRunFinished,
     getAllFileContent,
     getDBConnObj,
+    getUTCNow,
 )
 from SiteRMLibs.x509 import CertHandler, OIDCHandler
 
@@ -55,6 +56,16 @@ def depGetStateMachine():
     return DEP_STATE_MACHINE
 
 
+def loguseraction(request, userinfo):
+    """Print user action to log."""
+    client_host = request.client.host if request.client else "unknown"
+    method = request.method
+    url = str(request.url)
+    timestamp = getUTCNow()
+    log_entry = {"timestamp": timestamp, "client_host": client_host, "method": method, "url": url, "userinfo": userinfo}
+    print(f"User Action Log: {log_entry}")
+
+
 async def depAuthenticate(request: Request):
     """Dependency to authenticate the user via certificate or OIDC."""
     cert_handler = CertHandler()
@@ -62,12 +73,15 @@ async def depAuthenticate(request: Request):
     try:
         certInfo = cert_handler.getCertInfo(request)
         userInfo = cert_handler.validateCertificate(request)
+        loguseraction(request, {"cert_info": certInfo, "user_info": userInfo})
         return {"cert_info": certInfo, "user_info": userInfo}
     except (RequestWithoutCert, IssuesWithAuth):
         try:
             userInfo = oidc_handler.validateOIDCInfo(request)
+            loguseraction(request, {"user_info": userInfo})
             return {"user_info": userInfo}
         except (RequestWithoutCert, IssuesWithAuth) as ex:
+            loguseraction(request, {"exception": str(ex)})
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access. Please provide valid credentials or check with your administrator.") from ex
 
 
