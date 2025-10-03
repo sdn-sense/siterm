@@ -471,5 +471,5 @@ async def getqosdata(
                         out.setdefault(tmpIP, 0)
                         out[tmpIP] += maxThrg
             else:
-                print(f"QoS Configure for {intfDict['master_intf']}, but it is not defined in agent config. Misconfig.")
+                print(f"QoS Configure for {intfDict['master_intf']} {host.get('hostname', 'null')}, but it is not defined in agent config. Misconfig.")
     return APIResponse.genResponse(request, [out])
