@@ -644,7 +644,8 @@ class Daemon(DBBackend):
                     except Exception as ex:
                         hadFailure = True
                         self.reporter("FAILED", sitename, stwork, str(ex))
-                        self.logger.critical("Exception!!! Error details:  %s", ex)
+                        exc = traceback.format_exc()
+                        self.logger.critical(f"Exception!!! Error details:  {ex}. Traceback details: {exc}")
                     finally:
                         self.postRunThread(sitename, rthread)
                 if self.runLoop():
