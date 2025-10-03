@@ -25,7 +25,7 @@ from SiteRMLibs.MainUtilities import (
     firstRunFinished,
     getAllFileContent,
     getDBConnObj,
-    getUTCNow,
+    getUTCnow,
 )
 from SiteRMLibs.x509 import CertHandler, OIDCHandler
 
@@ -61,7 +61,7 @@ def loguseraction(request, userinfo):
     client_host = request.client.host if request.client else "unknown"
     method = request.method
     url = str(request.url)
-    timestamp = getUTCNow()
+    timestamp = getUTCnow()
     log_entry = {"timestamp": timestamp, "client_host": client_host, "method": method, "url": url, "userinfo": userinfo}
     print(f"User Action Log: {log_entry}")
 
