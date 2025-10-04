@@ -370,6 +370,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         # Compare individual requests and report it's states
         configChanged = self.compareIndv(switches)
         # Save individual uuid conf inside memory;
+        self.logger.info("Saving current active configuration inside memory")
+        self.logger.info(f"Current active configuration: {self.yamlconfuuid}")
         self.yamlconfuuidActive = copy.deepcopy(self.yamlconfuuid)
         return configChanged
 

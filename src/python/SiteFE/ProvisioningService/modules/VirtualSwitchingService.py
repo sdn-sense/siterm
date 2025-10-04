@@ -181,7 +181,7 @@ class VirtualSwitchingService:
     def compareVsw(self, switch, runningConf, uuid):
         """Compare expected and running conf"""
         different = False
-        tmpD = self.yamlconfuuid.get(self.acttype, {}).setdefault(uuid, {}).setdefault(switch, {})
+        tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault("interface", {})
         # If equal - return no difference
         if tmpD == runningConf:

@@ -213,7 +213,7 @@ class RoutingService:
         if not runningConf:
             self.logger.debug(f"Running config for {uuid} is empty. Return True")
             return True
-        tmpD = self.yamlconfuuid.get(self.acttype, {}).setdefault(uuid, {}).setdefault(switch, {})
+        tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(uuid, {}).setdefault(switch, {})
         tmpD = tmpD.setdefault("sense_bgp", {})
         # If equal - return no difference
         if tmpD == runningConf:
