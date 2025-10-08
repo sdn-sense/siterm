@@ -252,9 +252,7 @@ class ConflictChecker(Timing):
                     out.setdefault("ipv4-address", val1["ipv4-address"]["value"])
                 # After all checks, we check if it has all required key/values
             if "interface" in out and "vlan" in out:
-                # If either ipv4 or ipv6 is set, we add it to allIPs
-                if out.get("ipv4-address", "") or out.get("ipv6-address", ""):
-                    allIPs.append(out)
+                allIPs.append(out)
         return allIPs
 
     @staticmethod
