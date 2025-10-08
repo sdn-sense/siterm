@@ -343,6 +343,47 @@ class PolicyService(RDFHelper, Timing, BWService):
                 self.logger.warning(f"New: {mainval}")
             out.setdefault(key, {})[mainkey] = mainval
 
+    def _parseHostInfo(self, gIn, out):
+        """Parse Host information (kube based and config based isAlias definitions)."""
+        for host, hostDict in self.hosts.items():
+            kubeAliases = hostDict.get("hostinfo", {}).get("KubeInfo", {}).get("isAlias", {})
+            configAliases = {}
+            # Collect config-based aliases if they exist
+            confSummary = hostDict.get("hostinfo", {}).get('Summary', {}).get('config', {})
+            for intf in confSummary.get('agent', {}).get('interfaces', []):
+                if confSummary.get(intf, {}).get('isAlias'):
+                    configAliases[intf] = True
+
+            allAliases = set(kubeAliases.keys()) | set(configAliases.keys())
+
+            for intf in allAliases:
+                self.logger.info(f"Parsing Kube requests for {host} and {intf}")
+
+                connID = f"{self.prefixes['site']}:{host}:{intf}"
+                tmpOut = self.parseL2Ports(gIn, URIRef(connID), {}, True)
+
+                out.setdefault("kube", {})
+                self._addCustomEntry(out, host, intf, tmpOut, "kube")
+        return out
+
+    def _parseSinglePort(self, gIn, out):
+        """Parse SinglePort information"""
+        # Parse single port which are not connected to any service;
+        self.singleport = True
+        for switchName in self.switch.getAllSwitches():
+            for portName in self.switch.getAllAllowedPorts(switchName):
+                connID = f"{self.prefixes['site']}:{switchName}:{self.switch.getSystemValidPortName(portName)}"
+                if connID in self.scannedPorts:
+                    continue
+                try:
+                    out.setdefault("singleport", {})
+                    tmpOut = self.parseL2Ports(gIn, URIRef(connID), {}, True)
+                    self._addCustomEntry(out, switchName, portName, tmpOut, "singleport")
+                except NotFoundError:
+                    continue
+        self.singleport = False
+        return out
+
     def parseModel(self, gIn):
         """Parse delta request and generateout"""
         self.__clean()
@@ -359,32 +400,10 @@ class PolicyService(RDFHelper, Timing, BWService):
                 elif key == "rst":
                     self.logger.info("Parsing L3 information from model")
                     self.parsel3Request(gIn, out, switchName)
-        # Parse Host information (a.k.a Kubernetes nodes connected via isAlias)
-        for host, hostDict in self.hosts.items():
-            if hostDict.get("hostinfo", {}).get("KubeInfo", {}).get("isAlias"):
-                self.logger.info(f"Parsing Kube requests from model for {host}")
-                for intf, _val in hostDict["hostinfo"]["KubeInfo"]["isAlias"].items():
-                    self.logger.info(f"Parsing Kube requests from model for {host} and {intf}")
-                    connID = f"{self.prefixes['site']}:{host}:{intf}"
-                    tmpOut = self.parseL2Ports(gIn, URIRef(connID), {}, True)
-                    # Now here we check if we have for this specifich host and interface isAlias and add that to kube output
-                    out.setdefault("kube", {})
-                    self._addCustomEntry(out, host, intf, tmpOut, "kube")
-        # Parse single port which are not connected to any service;
-        self.singleport = True
-        for switchName in self.switch.getAllSwitches():
-            for portName in self.switch.getAllAllowedPorts(switchName):
-                connID = f"{self.prefixes['site']}:{switchName}:{self.switch.getSystemValidPortName(portName)}"
-                if connID in self.scannedPorts:
-                    continue
-                try:
-                    out.setdefault("singleport", {})
-                    tmpOut = self.parseL2Ports(gIn, URIRef(connID), {}, True)
-                    self._addCustomEntry(out, switchName, portName, tmpOut, "singleport")
-                except NotFoundError:
-                    continue
-        self.singleport = False
-        # Add defaults for BW and Time
+        # Parse HostInfo, if isAlias defined as Kubernetes labels
+        out = self._parseHostInfo(gIn, out)
+        # Parse single ports which are not connected to any service
+        out = self._parseSinglePort(gIn, out)
         # Generate new default start and end time
         self.__generateStartEnd()
         out = self._addDefaultTimeBWWrap(out)
