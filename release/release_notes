@@ -1,24 +1,8 @@
-# SiteRM 1.5.60 Production release
+# SiteRM 1.5.61 Bug fix release
 
 ## New features and fixes
-- VPP/DPDK In Kubernetes with NIC passthrough. SENSE now builds containers for VPP/FRR/DPDK Router, that is preconfigured for SENSE.
-- RTMon and SiteRM full workflow: Automatically issue Iperf3, FDT, ETHR. Ping, traceroute from Host and Network devices;
-- Junos devices queries moved to use XML. Improvement to get configuration from ~2m to 30sec.
-- VLAN Identitification and conflict resolution. SiteRM checks all ports and vlan ranges to ensure that it is not used in any other port.
-- VRF Support in Arista devices
-- Node Exporter Passthrough via Frontend. Sites are not required anymore to open node_exporter port to autogole monitoring.
-- Ansible runtime output store in files. Hit a limit of Subprocess and AsyncIO (>500kb messages are not guaranteed to work.)
-- Container images built and uploaded to Quay.io (default registry). Dockerhub - as a fallback. Only last 2 stable containers are kept
-- And many other small fixes: No lldpd is not an error, monitor disk usage, snmp mac table for vpp/dpdk, Network status in the model fix...
-
-Full list of issues resolved: https://github.com/sdn-sense/siterm/issues?q=is%3Aissue%20state%3Aclosed%20milestone%3A1.5.50
-And all changes diff 1.5.52 and 1.5.60 releases in any of the repos: https://github.com/sdn-sense
-
-## New Sites
-- Internet2 and NRP (40 nodes) - all connected to one of Internet2 ports.
-- UChicago running VPP/DPDK Software based router on Kubernetes
-- KIT (2 Servers + 1 Router) connected via Surfnet
-
+- Always check VLAN and IP Overlap, not only if IP address was requested
+- Fix port scanning, when there is no Switch. e.g. Node connects to another domains via isAlias
 
 ## 🔧 Supported OS Releases
 - **Frontend (x86_64)**
@@ -36,14 +20,14 @@ And all changes diff 1.5.52 and 1.5.60 releases in any of the repos: https://git
 - 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
 - **Recommended Version:** Always use `latest`. 
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
-- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.60`).
+- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.61`).
 
 ### Docker Versions
-- **Agent:** `sdnsense/siterm-agent:latest-20251006-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
-- **Debugger:** `sdnsense/siterm-debugger:latest-20251006-el10` *(or use `latest`)*
-- **Frontend:** `sdnsense/siterm-fe:latest-20251006` *(or use `latest`)*
+- **Agent:** `sdnsense/siterm-agent:latest-20251009-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
+- **Debugger:** `sdnsense/siterm-debugger:latest-20251009-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:latest-20251009` *(or use `latest`)*
 
 ### Helm versions
-- **Agent:** Chart version siterm/siterm-agent 1.5.60
-- **Debugger:** Chart version siterm/siterm-debugger 1.5.60
-- **Frontend:** Chart version siterm/siterm-fe 1.5.60
+- **Agent:** Chart version siterm/siterm-agent 1.5.61
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.61
+- **Frontend:** Chart version siterm/siterm-fe 1.5.61
