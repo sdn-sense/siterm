@@ -73,7 +73,7 @@ class ConflictChecker(Timing):
             raise ServiceNotReady(
                 f"Ruler service state is not OK for {hostname}. \
                                        Cannot proceed with this request. Check Agent status for the host \
-                                       Service state: {dbitem[0]['servicestate']}, Last update: {dbitem[0]['updatedate']}, CurrentTime: {getUTCnow()}"
+                                       Service state: {dbitem[0]['servicestate']}, Last update: {dbitem[0]['updatedate']}, CurrentTime: {getUTCnow()}. Full info: {dbitem[0]}"
             )
 
     def _checkVlanSwapping(self, vlans, hostname):
