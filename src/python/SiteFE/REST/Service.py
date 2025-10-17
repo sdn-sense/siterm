@@ -17,7 +17,8 @@ from pydantic import BaseModel
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
-    allAPIDeps,
+    apiReadDeps,
+    apiWriteDeps,
     checkSite,
 )
 from SiteRMLibs import __version__ as runningVersion
@@ -157,7 +158,7 @@ async def getservice(
     sitename: str = Path(..., description="The site name to retrieve the service for."),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: str = Query(default=None, description="Service name to filter by"),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get a service state from the database based on hostname and servicename.
@@ -185,7 +186,7 @@ async def getservice(
         **DEFAULT_RESPONSES,
     },
 )
-async def createservice(request: Request, item: ServiceItem, sitename: str = Path(..., description="The site name to create the service for."), deps=Depends(allAPIDeps)):
+async def createservice(request: Request, item: ServiceItem, sitename: str = Path(..., description="The site name to create the service for."), deps=Depends(apiWriteDeps)):
     """
     Create a new service state in the database.
     """
@@ -207,7 +208,7 @@ async def createservice(request: Request, item: ServiceItem, sitename: str = Pat
         **DEFAULT_RESPONSES,
     },
 )
-async def updateservice(request: Request, item: ServiceItem, sitename: str = Path(..., description="The site name to update the service for."), deps=Depends(allAPIDeps)):
+async def updateservice(request: Request, item: ServiceItem, sitename: str = Path(..., description="The site name to update the service for."), deps=Depends(apiWriteDeps)):
     """
     Update an existing service state in the database.
     """
@@ -234,7 +235,10 @@ async def updateservice(request: Request, item: ServiceItem, sitename: str = Pat
     },
 )
 async def deleteservice(
-    request: Request, item: ServiceItem = Query(..., description="Service item to delete"), sitename: str = Path(..., description="The site name to delete the service for."), deps=Depends(allAPIDeps)
+    request: Request,
+    item: ServiceItem = Query(..., description="Service item to delete"),
+    sitename: str = Path(..., description="The site name to delete the service for."),
+    deps=Depends(apiWriteDeps),
 ):
     """
     Delete an existing service state from the database.
@@ -294,7 +298,7 @@ async def getservicestates(
     request: Request,
     limit: int = Query(LIMIT_SERVICE_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_SERVICE_DEFAULT}.", ge=LIMIT_SERVICE_MIN, le=LIMIT_SERVICE_MAX),
     sitename: str = Path(..., description="The site name to retrieve the service states for."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get service state data from the database.
@@ -320,7 +324,7 @@ async def getservicestates(
         **DEFAULT_RESPONSES,
     },
 )
-async def addservicestate(request: Request, item: ServiceStateItem, sitename: str = Path(..., description="The site name to add/update the service state for."), deps=Depends(allAPIDeps)):
+async def addservicestate(request: Request, item: ServiceStateItem, sitename: str = Path(..., description="The site name to add/update the service state for."), deps=Depends(apiWriteDeps)):
     """
     Add a new service state or update an existing one.
     """
@@ -361,7 +365,7 @@ async def addservicestate(request: Request, item: ServiceStateItem, sitename: st
         **DEFAULT_RESPONSES,
     },
 )
-async def deleteservicestate(request: Request, item: ServiceStateItem, sitename: str = Path(..., description="The site name to delete the service state for."), deps=Depends(allAPIDeps)):
+async def deleteservicestate(request: Request, item: ServiceStateItem, sitename: str = Path(..., description="The site name to delete the service state for."), deps=Depends(apiWriteDeps)):
     """
     Delete a service state from the database.
     """
@@ -409,7 +413,7 @@ async def getserviceaction(
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: str = Query(default=None, description="Service name to filter by"),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """Get service actions from the database."""
     checkSite(deps, sitename)
@@ -442,7 +446,7 @@ async def getserviceaction(
         **DEFAULT_RESPONSES,
     },
 )
-async def serviceaction(request: Request, item: ServiceActionItem, sitename: str = Path(..., description="The site name to record the service action for."), deps=Depends(allAPIDeps)):
+async def serviceaction(request: Request, item: ServiceActionItem, sitename: str = Path(..., description="The site name to record the service action for."), deps=Depends(apiWriteDeps)):
     """
     Record a service action in the database.
     """
@@ -494,7 +498,7 @@ async def serviceaction(request: Request, item: ServiceActionItem, sitename: str
         **DEFAULT_RESPONSES,
     },
 )
-async def deleteserviceaction(request: Request, item: ServiceActionItem, _sitename: str = Path(..., description="The site name to delete the service action for."), deps=Depends(allAPIDeps)):
+async def deleteserviceaction(request: Request, item: ServiceActionItem, _sitename: str = Path(..., description="The site name to delete the service action for."), deps=Depends(apiWriteDeps)):
     """Delete a service action from the database."""
     checkSite(deps, _sitename)
     if not _host_supportedService(item.servicename):
@@ -556,7 +560,7 @@ class InstanceStartEndItem(BaseModel):
     },
 )
 async def setinstancestartend(
-    request: Request, item: InstanceStartEndItem, sitename: str = Path(..., description="The site name to retrieve the instance start and end time for."), deps=Depends(allAPIDeps)
+    request: Request, item: InstanceStartEndItem, sitename: str = Path(..., description="The site name to retrieve the instance start and end time for."), deps=Depends(apiWriteDeps)
 ):
     """
     Set the start and end time for a specific instance.

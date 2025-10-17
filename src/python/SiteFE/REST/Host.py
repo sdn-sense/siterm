@@ -16,7 +16,9 @@ from pydantic import BaseModel
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
-    allAPIDeps,
+    apiAdminDeps,
+    apiReadDeps,
+    apiWriteDeps,
     checkSite,
 )
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
@@ -126,7 +128,7 @@ async def gethosts(
     hostname: str = Query(None, description="Filter by hostname."),
     details: bool = Query(False, description="If True, returns detailed host information. In case detail, limit is ignored and set to 1."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get host data from the database of all registered hosts.
@@ -169,7 +171,7 @@ async def gethosts(
         **DEFAULT_RESPONSES,
     },
 )
-async def addhost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to add or update the host for."), deps=Depends(allAPIDeps)):
+async def addhost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to add or update the host for."), deps=Depends(apiWriteDeps)):
     """
     Add or update a host in the database.
     - If the host does not exist, it will be added.
@@ -211,7 +213,7 @@ async def addhost(request: Request, item: HostItem, sitename: str = Path(..., de
         **DEFAULT_RESPONSES,
     },
 )
-async def updatehost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to update the host for."), deps=Depends(allAPIDeps)):
+async def updatehost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to update the host for."), deps=Depends(apiWriteDeps)):
     """
     Update an existing host in the database.
     - If the host does not exist, it will raise an exception.
@@ -256,7 +258,7 @@ async def updatehost(request: Request, item: HostItem, sitename: str = Path(...,
         **DEFAULT_RESPONSES,
     },
 )
-async def deletehost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to delete the host for."), deps=Depends(allAPIDeps)):
+async def deletehost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to delete the host for."), deps=Depends(apiAdminDeps)):
     """
     Delete an existing host from the database.
     - If the host does not exist, it will raise an exception.

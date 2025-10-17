@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
-    allAPIDeps,
+    apiReadDeps,
     checkSite,
 )
 from SiteRMLibs.MainUtilities import getFileContentAsJson
@@ -81,7 +81,7 @@ router = APIRouter()
         **DEFAULT_RESPONSES,
     },
 )
-async def gettopology(request: Request, sitename: str = Path(..., description="The site name whose topology is requested.", example="T0_US_ESnet"), deps=Depends(allAPIDeps)):
+async def gettopology(request: Request, sitename: str = Path(..., description="The site name whose topology is requested.", example="T0_US_ESnet"), deps=Depends(apiReadDeps)):
     """
     Get topology in JSON format for the given site.
 

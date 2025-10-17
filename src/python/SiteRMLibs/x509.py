@@ -21,11 +21,28 @@ Date                    : 2019/10/01
 import json
 import os
 import re
+import time
 from datetime import datetime, timezone
 
+import jwt
+import requests
+from jwt.algorithms import RSAAlgorithm
 from SiteRMLibs.CustomExceptions import IssuesWithAuth, RequestWithoutCert
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import loadEnvFile
+
+
+def getjwks(jwks_url):
+    """Get JWKS from URL."""
+    while True:
+        try:
+            print(f"Fetching JWKS from {jwks_url}")
+            response = requests.get(jwks_url, timeout=60)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as ex:
+            print(f"Error fetching JWKS from {jwks_url}: {ex}")
+            time.sleep(5)
 
 
 class OIDCHandler:
@@ -34,51 +51,46 @@ class OIDCHandler:
     def __init__(self):
         """Init OIDC Handler"""
         loadEnvFile()
-        self.required_issuer = os.environ.get("OIDC_REQUIRED_ISSUER", "https://login.sdn-sense.net/")
-        self.permission_claim_prefix = "HTTP_" + os.environ.get("OIDC_PERMISSIONS_CLAIM", "OIDC_CLAIM_HTTPS___SDN_SENSE.NET_PERMISSIONS")
+        self.jwks = self.__getjwks__()
+        self.audience = os.environ.get("OIDC_AUDIENCE", "")
+        self.issuer = os.environ.get("OIDC_ISSUER", "")
 
-    @staticmethod
-    def _getEnv(environ, key):
-        value = environ.get(key)
-        if not value:
-            print(f"Missing required OIDC claim: {key}")
+    def __getjwks__(self):
+        """Get JWKS."""
+        jwks = os.environ.get("OIDC_JWKS", "")
+        if not jwks:
+            print("Missing OIDC_JWKS environment variable")
             raise IssuesWithAuth("Issues with permissions. Check backend logs.")
-        return value
+        return getjwks(jwks)
 
-    def parsePermissions(self, environ):
-        """Extract and parse the custom permissions claim."""
-        for key, value in environ.items():
-            if key.startswith(self.permission_claim_prefix):
-                try:
-                    return json.loads(value)
-                except json.JSONDecodeError as ex:
-                    print(f"Invalid JSON in permissions claim: {value}")
-                    raise IssuesWithAuth("Issues with permissions. Check backend logs.") from ex
-        print(f"Permissions claim with prefix '{self.permission_claim_prefix}' not found")
-        raise IssuesWithAuth("Issues with permissions. Check backend logs.")
+    def __get_key_from_jwks__(self, kid):
+        """Find the key in JWKS that matches the kid"""
+        for key in self.jwks.get("keys", []):
+            if key.get("kid") == kid:
+                return RSAAlgorithm.from_jwk(json.dumps(key))
+        raise IssuesWithAuth(f"No matching JWK found for kid={kid}")
 
-    def validateOIDCInfo(self, environ):
+    def validateOIDCInfo(self, request):
         """Validate OIDC claims and extract user identity & permissions."""
-        email = self._getEnv(environ, "HTTP_OIDC_CLAIM_EMAIL")
-        issuer = self._getEnv(environ, "HTTP_OIDC_CLAIM_ISS")
-        emailVerified = self._getEnv(environ, "HTTP_OIDC_CLAIM_EMAIL_VERIFIED")
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            raise RequestWithoutCert("Unauthorized: Missing or invalid Bearer token")
 
-        if issuer != self.required_issuer:
-            print(f"Unexpected issuer: {issuer} (expected {self.required_issuer})")
-            raise IssuesWithAuth("Issues with permissions. Check backend logs.")
+        token = auth_header.replace("Bearer ", "")
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            kid = unverified_header.get("kid")
+        except Exception as ex:
+            raise IssuesWithAuth(f"Invalid token header: {ex}") from ex
 
-        if emailVerified not in ("1", "true", "True", True):
-            print(f"Email not verified. Debug info {email} {issuer} {emailVerified}")
-            raise IssuesWithAuth("Issues with permissions. Check backend logs.")
-
-        permissions = self.parsePermissions(environ)
-
-        return {
-            "email": email,
-            "issuer": issuer,
-            "permissions": permissions,
-            "claims": {k: v for k, v in environ.items() if k.startswith("HTTP_OIDC_CLAIM_")},
-        }
+        public_key = self.__get_key_from_jwks__(kid)
+        try:
+            decoded = jwt.decode(token, public_key, algorithms=["RS256"], audience=self.audience, issuer=self.issuer)
+            return decoded
+        except jwt.ExpiredSignatureError as ex:
+            raise IssuesWithAuth("Token expired") from ex
+        except jwt.InvalidTokenError as ex:
+            raise IssuesWithAuth(f"Invalid token: {ex}") from ex
 
 
 class CertHandler:

@@ -9,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+import os
 from typing import Any, Dict, List, Union
 
 from fastapi import Depends, HTTPException, Request, Response, status
@@ -26,6 +27,7 @@ from SiteRMLibs.MainUtilities import (
     getAllFileContent,
     getDBConnObj,
     getUTCnow,
+    loadEnvFile,
 )
 from SiteRMLibs.x509 import CertHandler, OIDCHandler
 
@@ -68,21 +70,35 @@ def loguseraction(request, userinfo):
 
 async def depAuthenticate(request: Request):
     """Dependency to authenticate the user via certificate or OIDC."""
-    cert_handler = CertHandler()
-    oidc_handler = OIDCHandler()
-    try:
-        certInfo = cert_handler.getCertInfo(request)
-        userInfo = cert_handler.validateCertificate(request)
-        loguseraction(request, {"cert_info": certInfo, "user_info": userInfo})
-        return {"cert_info": certInfo, "user_info": userInfo}
-    except (RequestWithoutCert, IssuesWithAuth):
+    loadEnvFile()
+    # X509 handler
+    if os.environ.get("AUTH_SUPPORT", "X509").upper() == "X509":
+        cert_handler = CertHandler()
+        try:
+            certInfo = cert_handler.getCertInfo(request)
+            userInfo = cert_handler.validateCertificate(request)
+            loguseraction(request, {"cert_info": certInfo, "user_info": userInfo})
+            return {"cert_info": certInfo, "user_info": userInfo}
+        except (RequestWithoutCert, IssuesWithAuth) as ex:
+            loguseraction(request, {"exception": str(ex)})
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access. Please provide valid credentials or check with your administrator.") from ex
+    # OIDC handler
+    if os.environ.get("AUTH_SUPPORT", "X509").upper() == "OIDC":
+        oidc_handler = OIDCHandler()
         try:
             userInfo = oidc_handler.validateOIDCInfo(request)
             loguseraction(request, {"user_info": userInfo})
             return {"user_info": userInfo}
         except (RequestWithoutCert, IssuesWithAuth) as ex:
             loguseraction(request, {"exception": str(ex)})
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access. Please provide valid credentials or check with your administrator.") from ex
+            # Pass back WWW-Authenticate header for OIDC
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized access. Please provide valid credentials or check with your administrator.",
+                headers={"WWW-Authenticate": os.environ.get("OIDC_REDIRECT_URI", "")},
+            ) from ex
+    else:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication method is not properly configured.")
 
 
 def depGetModelContent(dbentry, **kwargs):
@@ -123,8 +139,29 @@ def checkSite(deps, sitename: str):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Site '{sitename}' is not configured in the system. Please check the request and configuration.")
 
 
-def allAPIDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
+def checkPermissions(userinfo, required_perms: List[str]):
+    """Check if the user has the required permissions."""
+    print("Checking permissions for user:", userinfo)
+    print("Required permissions:", required_perms)
+    # user_perms = userinfo.get("user_info", {}).get("permissions", [])
+    # if not any(perm in user_perms for perm in required_perms):
+    #    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access to this resource is forbidden due to insufficient permissions.")
+
+
+def apiReadDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
+    return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
+
+
+def apiWriteDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
+    """Dependency to get all necessary objects for the REST API."""
+    checkPermissions(user, ["write", "admin"])
+    return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
+
+
+def apiAdminDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
+    """Dependency to get all necessary objects for the REST API."""
+    checkPermissions(user, ["admin"])
     return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
 
 

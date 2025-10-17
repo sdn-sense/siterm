@@ -70,6 +70,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         self.forceapply = []
         self.firstrun = False
         self.acttype = None
+        self.daemoncontrols = self.config.get("daemoncontrols", "ProvisioningService", {})
+        self.activateretry = {}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -79,11 +81,15 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         self.yamlconfuuidActive = {}
         self.forceapply = []
         self.firstrun = False
+        self.daemoncontrols = self.config.get("daemoncontrols", "ProvisioningService", {})
+        self.activateretry = {}
 
     def __cleanup(self):
         """Cleanup yaml conf output"""
         self.yamlconfuuid = {}
         self.forceapply = []
+        self.daemoncontrols = self.config.get("daemoncontrols", "ProvisioningService", {})
+        self.activateretry = {}
 
     def getConfigValue(self, section, option, raiseError=False):
         """Get Config Val"""
@@ -219,7 +225,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
             return "absent"
         return "present"
 
-
     def applyIndvConfig(self, swname, uuid, key, acttype, raiseExc=True):
         """Apply a single delta to network devices and report to DB it's state"""
         # Write new inventory file, based on the currect active(just in case things have changed)
@@ -257,10 +262,15 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
             self.applyConfig(raiseExc, [swname], "_singleapply")
             networkstate = "ok"
             self.logger.info(f"Apply was succesful for {uuid}, {swname}, {key}, {acttype}")
+            if uuid in self.activateretry:
+                del self.activateretry[uuid]
         except SwitchException as ex:
             self.logger.info(f"Received an error to apply for {uuid}, {swname}, {key}, {acttype}")
             self.logger.info(f"Exception: {ex}")
             networkstate = "error"
+            self.activateretry.setdefault(uuid, {"count": 0, "lasttimestamp": getUTCnow()})
+            self.activateretry[uuid]["count"] += 1
+            self.activateretry[uuid]["lasttimestamp"] = getUTCnow()
         self.__reportDeltaState(
             **{
                 "swname": swname,
@@ -278,10 +288,31 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
             self.logger.info(f"Calculating QoS for {swname}")
             # Call the QoS calculation logic here
 
+    def retryFailedChecker(self):
+        """Check all in active retry and see if we can retry them"""
+        if not self.daemoncontrols.get("failedretry", False):
+            return
+        for uuid in list(self.activateretry.keys()):
+            if self.activateretry[uuid]["count"] >= self.daemoncontrols.get("failedretrycount", 10):
+                self.logger.debug(f"UUID {uuid} has reached max retry count. Removing from retry list.")
+                self.logger.debug(f"Last exception was at {self.activateretry[uuid]['lasttimestamp']}")
+                self.logger.debug("Only service restart will reset the retry count.")
+                continue
+            # Incremental backoff calculation
+            nextRetryTime = self.activateretry[uuid]["lasttimestamp"] + (self.daemoncontrols.get("failedretrytimeout", 60) * self.activateretry[uuid]["count"])
+            if getUTCnow() < nextRetryTime:
+                self.logger.debug(f"UUID {uuid} is not ready for retry yet. Next retry time is at {nextRetryTime}.")
+                continue
+            self.logger.info(f"Added UUID {uuid} into force apply list. Retry count {self.activateretry[uuid]['count'] + 1}")
+            self.forceapply.append(uuid)
+
     def compareIndv(self, switches):
         """Compare individual entries and report it's status"""
         changed = False
         scannedUUIDs = {}
+
+        # Check all that have failed to apply, and retry if needed
+        self.retryFailedChecker()
 
         for acttype, actcalls in {"vsw": {"interface": self.compareVsw}, "rst": {"sense_bgp": self.compareBGP}, "singleport": {"interface": self.compareVsw}, "qos": {"qos": self.compareQoS}}.items():
             scannedUUIDs.setdefault(acttype, [])

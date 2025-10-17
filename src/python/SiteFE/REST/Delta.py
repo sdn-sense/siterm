@@ -27,7 +27,9 @@ from pydantic import BaseModel
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
-    allAPIDeps,
+    apiAdminDeps,
+    apiReadDeps,
+    apiWriteDeps,
     checkReadyState,
     checkSite,
     depGetModel,
@@ -142,7 +144,7 @@ async def getDeltas(
     sitename: str = Path(..., description="The site name to retrieve the service deltas for."),
     summary: bool = Query(True, description="Whether to return a summary of the deltas. Defaults to False."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get service deltas from the specified site.
@@ -213,7 +215,7 @@ async def submitDelta(
     request: Request,
     item: DeltaItem,
     sitename: str = Path(..., description="The site name to submit the delta for."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiAdminDeps),
 ):
     """
     Submit a new delta for the specified site.
@@ -309,7 +311,7 @@ async def getDeltaByID(
     sitename: str = Path(..., description="The site name to retrieve the delta information for."),
     delta_id: str = Path(..., description="The ID of the delta to retrieve."),
     summary: bool = Query(False, description="Whether to return a summary of the deltas. Defaults to False."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get delta information by its ID for the given site name.
@@ -376,7 +378,7 @@ async def performActionOnDelta(
     sitename: str = Path(..., description="The site name to perform the action on the delta for."),
     delta_id: str = Path(..., description="The ID of the delta to perform the action on."),
     action: Literal["commit", "forcecommit", "forceapply"] = Path(..., description="The action to perform on the delta."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiAdminDeps),
 ):
     """
     Perform a specified action on a delta by its ID for the given site name.
@@ -447,7 +449,7 @@ async def getTimeStatesForDelta(
     sitename: str = Path(..., description="The site name to retrieve the time states for the delta."),
     delta_id: str = Path(..., description="The ID of the delta to retrieve the time states for."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get time states for the specified delta ID.
@@ -492,7 +494,7 @@ async def createTimeStateForDelta(
     item: DeltaTimeState,
     sitename: str = Path(..., description="The site name to create the time state for the delta."),
     delta_id: str = Path(..., description="The ID of the delta to create the time state for."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiWriteDeps),
 ):
     """
     Create a new time state for the specified delta ID.

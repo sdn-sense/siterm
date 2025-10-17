@@ -13,7 +13,6 @@ import os
 from typing import Any, Dict
 
 import httpx
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -29,11 +28,12 @@ from pydantic import BaseModel
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
-    allAPIDeps,
+    apiReadDeps,
+    apiWriteDeps,
     checkSite,
 )
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
-from SiteRMLibs.MainUtilities import getUTCnow, jsondumps, getFileContentAsJson
+from SiteRMLibs.MainUtilities import getFileContentAsJson, getUTCnow, jsondumps
 
 router = APIRouter()
 
@@ -53,7 +53,7 @@ router = APIRouter()
         **DEFAULT_RESPONSES,
     },
 )
-async def getprommetrics(sitename: str = Path(..., description="The site name to retrieve the service metrics for."), deps=Depends(allAPIDeps)):
+async def getprommetrics(sitename: str = Path(..., description="The site name to retrieve the service metrics for."), deps=Depends(apiReadDeps)):
     """
     Get service metrics from Prometheus.
     """
@@ -91,7 +91,7 @@ async def getprommetrics(sitename: str = Path(..., description="The site name to
 async def prometheuspassthrough(
     sitename: str = Path(..., description="The site name to retrieve the Prometheus passthrough for."),
     hostname: str = Path(..., description="The hostname to retrieve the Prometheus passthrough for."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     This endpoint is a passthrough of host-level Prometheus output.
@@ -119,13 +119,10 @@ async def prometheuspassthrough(
             ret = await client.get(nodeexporter)
             ret.raise_for_status()
     except httpx.RequestError as e:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY,
-                            detail=f"Error connecting to node_exporter at {nodeexporter}: {e}") from e
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Error connecting to node_exporter at {nodeexporter}: {e}") from e
     except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code,
-                            detail=f"node_exporter returned HTTP {e.response.status_code}") from e
+        raise HTTPException(status_code=e.response.status_code, detail=f"node_exporter returned HTTP {e.response.status_code}") from e
     return Response(content=ret.text, media_type=CONTENT_TYPE_LATEST)
-
 
 
 # =========================================================
@@ -155,7 +152,7 @@ async def getmonitoringstats(
     request: Request,
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     sitename: str = Path(..., description="The site name to retrieve the monitoring statistics for."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get monitoring statistics for a specific site.
@@ -180,7 +177,7 @@ async def postmonitoringstats(
     item: MonStats,
     request: Request,
     sitename: str = Path(..., description="The site name to post the monitoring statistics for."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiWriteDeps),
 ):
     """
     Post monitoring statistics for a specific site.

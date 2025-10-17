@@ -309,6 +309,7 @@ class GitConfig:
                     "ansible_runtime_retry": 3,
                     "ansible_runtime_retry_delay": 5,
                 },
+                "daemoncontrols": {"ProvisioningService": {"failedretry": True, "failedretrycount": 10, "failedretrytimeout": 60}},
                 "debuggers": {
                     "iperf-server": {"deftime": 600, "maxruntime": 86400, "minport": 40000, "maxports": 2000, "defaults": {"onetime": True}},
                     "iperf-client": {"deftime": 600, "maxruntime": 86400, "minstreams": 1, "maxstreams": 16, "defaults": {"onetime": True, "streams": 1}},

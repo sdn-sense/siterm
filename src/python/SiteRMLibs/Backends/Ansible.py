@@ -10,8 +10,8 @@ Authors:
 
 Date: 2021/12/01
 """
-import os
 import json
+import os
 import random
 import time
 
@@ -83,10 +83,10 @@ class Switch:
         # This is a hack to make sure we have unique artifacts count.
         # And also that cleanup process is dony only by getfacts playbook.
         if playbook == "getfacts.yaml":
-            return self.config.get("ansible", "rotate_artifacts" + subitem) + random.randint(1, 50)
+            return self.config.get("ansible", "rotate_artifacts" + subitem) + random.randint(1, 100)
         # If we are not running getfacts playbook, we should not rotate artifacts.
         # Just in case - increase it 200 times.
-        return self.config.get("ansible", "rotate_artifacts" + subitem) + 200
+        return self.config.get("ansible", "rotate_artifacts" + subitem) + 500
 
     def __getVerbosity(self, subitem):
         """Get Verbosity level for Ansible Runner"""
@@ -97,6 +97,9 @@ class Switch:
 
     def __logAnsibleOutput(self, ansOut):
         """Log Ansible Output"""
+        # Log ansible output directory
+        if ansOut and hasattr(ansOut, "config") and ansOut.config and hasattr(ansOut.config, "artifact_dir"):
+            self.logger.info(f"Ansible output dir for fruntime: {ansOut.config.artifact_dir}")
         if ansOut and hasattr(ansOut, "stdout") and ansOut.stdout:
             for line in ansOut.stdout:
                 self.logger.debug(f"[STDOUT] {line}")

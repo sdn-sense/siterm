@@ -24,7 +24,7 @@ from fastapi import (
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
-    allAPIDeps,
+    apiReadDeps,
     checkSite,
     depGetModel,
     depGetModelContent,
@@ -62,7 +62,7 @@ async def getModelInfo(
     encode: bool = Query(True, description="Whether to encode the model. Defaults to True."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}. Only applies if current is False.", ge=LIMIT_MIN, le=LIMIT_MAX),
     rdfformat: Literal["turtle", "json-ld", "ntriples"] = Query("turtle", description="Model format: turtle, json-ld, ntriples."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get model information for the given site name.
@@ -146,7 +146,7 @@ async def getModelByID(
     summary: bool = Query(False, description="Whether to return a summary of the model. Defaults to False."),
     encode: bool = Query(False, description="Whether to encode the model. Defaults to False."),
     rdfformat: Literal["turtle", "json-ld", "ntriples"] = Query("turtle", description="Model format: turtle, json-ld, ntriples."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get model information by its ID for the given site name.

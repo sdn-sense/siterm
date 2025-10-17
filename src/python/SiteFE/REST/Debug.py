@@ -17,7 +17,8 @@ from pydantic import BaseModel
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
-    allAPIDeps,
+    apiReadDeps,
+    apiWriteDeps,
     checkSite,
 )
 from SiteRMLibs import __version__ as runningVersion
@@ -284,7 +285,7 @@ class DebugItem(BaseModel):
         **DEFAULT_RESPONSES,
     },
 )
-async def getDebugActionsList(request: Request, sitename: str = Path(..., description="The site name to retrieve the debug actions list for."), deps=Depends(allAPIDeps)):
+async def getDebugActionsList(request: Request, sitename: str = Path(..., description="The site name to retrieve the debug actions list for."), deps=Depends(apiReadDeps)):
     """
     Get a list of all possible debug actions for the given site name.
     - Returns a list of debug actions.
@@ -324,7 +325,7 @@ async def getDebugActionInfo(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the debug action information for."),
     action: str = Query(..., description="The debug action to retrieve information for."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get information about a specific debug action for the given site name.
@@ -358,7 +359,7 @@ async def getDebugActionInfo(
         **DEFAULT_RESPONSES,
     },
 )
-async def getDynamicFromRanges(request: Request, sitename: str = Path(..., description="The site name to retrieve the dynamicfrom ranges for."), deps=Depends(allAPIDeps)):
+async def getDynamicFromRanges(request: Request, sitename: str = Path(..., description="The site name to retrieve the dynamicfrom ranges for."), deps=Depends(apiReadDeps)):
     """
     Get dynamic from ranges for the given site name.
     - Returns a list of allowed dynamicfrom ranges.
@@ -402,7 +403,7 @@ async def getDebugActions(
     hostname: str = Query(None, description="Hostname to filter the debug requests by. If not set, all debug requests are returned."),
     state: str = Query(None, description="State to filter the debug requests by. If not set, all debug requests are returned."),
     action: str = Query(None, description="Action to filter the debug requests by. If not set, all debug requests are returned."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """
     Get debug actions for the given site name.
@@ -441,7 +442,7 @@ async def getDebugInfo(
     details: bool = Query(False, description="If set, returns detailed information for the debug request."),
     hostname: str = Query(None, description="Hostname to filter the debug requests by. If not set, all debug requests are returned."),
     state: str = Query(None, description="State to filter the debug requests by. If not set, all debug requests are returned."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiReadDeps),
 ):
     """Get Debug action information for a specific ID.
     In case of 'ALL', returns all debug requests.
@@ -481,7 +482,7 @@ async def updatedebug(
     item: DebugItem,
     sitename: str = Path(..., description="The site name to get the debug action information for."),
     debugvar: str = Path(..., description="The debug action ID to update information for."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiWriteDeps),
 ):
     """Update Debug action information.
     - Updates the debug action information for the given debug ID.
@@ -524,7 +525,7 @@ async def deletedebug(
     request: Request,
     sitename: str = Path(..., description="The site name to get the debug action information for."),
     debugvar: str = Path(..., description="The debug action ID to delete information for."),
-    deps=Depends(allAPIDeps),
+    deps=Depends(apiWriteDeps),
 ):
     """Delete Debug action information.
     - Deletes the debug action information for the given debug ID.
@@ -563,7 +564,7 @@ async def deletedebug(
         400: {"description": "Bad request", "content": {"application/json": {"example": {"detail": "Bad Request. Possible reasons: Wrong value, parameter, input validation failed."}}}},
     },
 )
-async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..., description="The site name to get the debug action information for."), deps=Depends(allAPIDeps)):
+async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..., description="The site name to get the debug action information for."), deps=Depends(apiWriteDeps)):
     """Submit new debug action request.
     - Submits a new debug action request for the given site name.
     """
