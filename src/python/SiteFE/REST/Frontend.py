@@ -158,7 +158,7 @@ async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps)):
     """
     oidc = deps["config"]["MAIN"].get("general", {}).get("oidc", False)
     auth_method = "OIDC" if oidc else "X509"
-    return APIResponse.genResponse(request, {"auth_method": auth_method})
+    return APIResponse.genResponse(request, {"auth_method": auth_method, "auth_endpoint": os.environ.get("OIDC_REDIRECT_URI", "") if auth_method == "OIDC" else ""})
 
 # ==========================================================
 # /api/frontend/sites

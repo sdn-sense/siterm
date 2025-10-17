@@ -25,9 +25,10 @@ import socket
 import time
 import urllib.parse
 from typing import Any, Callable
-
+import jwt
 import httpx
 from SiteRMLibs.CustomExceptions import HTTPServerNotReady, ValidityFailure
+from SiteRMLibs.MainUtilities import getUTCnow
 
 
 def argValidity(arg, aType):
@@ -88,7 +89,6 @@ def getCAPathFromEnv():
     return os.environ.get("X509_CERT_DIR")
 
 
-
 def httpserviceready(endpoint="/api/ready"):
     """Decorator that checks if the HTTP service is ready before executing the decorated function."""
     def decorator(func: Callable) -> Callable:
@@ -131,7 +131,10 @@ class Requests:
         checkServerUrl(self.host)
 
         self.session = httpx.Client(cert=self.__http_getCertKeyTuple(), verify=self.__http_getCAPath(), timeout=60.0, follow_redirects=True)
+        self.authsession = httpx.Client(cert=self.__http_getCertKeyTuple(), verify=self.__http_getCAPath(), timeout=60.0, follow_redirects=True)
         self.notFEsession = httpx.Client(timeout=60.0, follow_redirects=True)
+        self.bearertoken = None
+        self.authmethod = None
 
     def close(self):
         """Close the HTTP sessions."""
@@ -179,6 +182,39 @@ class Requests:
         """Get CA Path."""
         return getCAPathFromEnv() or True
 
+    def _renewBearerToken(self, auth_info):
+        """Renew the Bearer token by reading it from the environment variable"""
+        if 'auth_endpoint' in auth_info and auth_info['auth_endpoint']:
+            try:
+                response = self.authsession.request(method='POST', url=auth_info['auth_endpoint'], headers={"Content-Type": "application/json"}, json={"frontend": self.host})
+                if response.status_code == 200:
+                    resp_json = response.json()
+                    self.bearertoken = resp_json.get("access_token", None)
+                    if self.bearertoken:
+                        self._logMessage("Successfully renewed Bearer token.")
+                    else:
+                        self._logMessage("Failed to find access_token in the response while renewing Bearer token.")
+                else:
+                    self._logMessage(f"Failed to renew Bearer token from {auth_info['auth_endpoint']}: {response.status_code} {response.reason_phrase}")
+            except Exception as ex:
+                self._logMessage(f"Failed to renew Bearer token from {auth_info['auth_endpoint']}: {ex}")
+
+    def _expiredBearerToken(self):
+        """Check if the Bearer token is expired"""
+        if not self.bearertoken:
+            return True
+        try:
+            unverified_claims = jwt.decode(self.bearertoken, options={"verify_signature": False})
+            exp = unverified_claims.get("exp", 0)
+            current_time = getUTCnow()
+            # Consider token expired if it's within 2 minutes of expiration
+            if current_time >= exp - 120:
+                return True
+        except Exception:
+            print("Failed to decode Bearer token. Assuming it is expired.")
+            return True
+        return False
+
     def _stripHostFromUrl(self, uri):
         """Get the full URL for the given URI."""
         parsed = urllib.parse.urlparse(uri)
@@ -188,6 +224,35 @@ class Requests:
         else:
             url = urllib.parse.urljoin(self.host, uri)
         return url
+
+    def __makeSiteRMHTTPCall(self, url, verb, headers, **kwargs):
+        """Make an HTTP request to the SiteRM Frontend."""
+        if not self.authmethod:
+            response = self.session.request(method='GET', url=urllib.parse.urljoin(self.host, '/api/authentication-method'))
+            if response.status_code == 200:
+                auth_info = response.json()
+                self.authmethod = auth_info.get("auth_method", "")
+                if self.authmethod == "OIDC":
+                    # Check if we need to renew the token
+                    if not self.bearertoken or self._expiredBearerToken():
+                        self._renewBearerToken(auth_info)
+            else:
+                self._logMessage(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
+                raise httpx.HTTPStatusError(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
+        elif self.authmethod == "OIDC":
+            # Check if we need to renew the token
+            if not self.bearertoken or self._expiredBearerToken():
+                response = self.session.request(method='GET', url=urllib.parse.urljoin(self.host, '/api/authentication-method'))
+                if response.status_code == 200:
+                    auth_info = response.json()
+                    self._renewBearerToken(auth_info)
+                else:
+                    self._logMessage(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
+                    raise httpx.HTTPStatusError(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
+        if self.authmethod == "OIDC" and self.bearertoken and kwargs.get("SiteRMHTTPCall", True):
+            headers["Authorization"] = f"Bearer {self.bearertoken}"
+        return self.session.request(method=verb, url=url, headers=headers, json=kwargs["data"] if kwargs["json"] else None, data=None if kwargs["json"] else kwargs["data"])
+
 
     def http_makeRequest(self, verb, uri, **kwargs):
         """Make an HTTP request with the given parameters."""
@@ -201,8 +266,7 @@ class Requests:
         url = urllib.parse.urljoin(self.host, self._stripHostFromUrl(uri))
         try:
             if kwargs["SiteRMHTTPCall"]:
-                response = self.session.request(method=verb, url=url, headers=headers, json=kwargs["data"] if kwargs["json"] else None, data=None if kwargs["json"] else kwargs["data"])
-                return response.json(), response.status_code, response.reason_phrase, False
+                return self.__makeSiteRMHTTPCall(url, verb, headers, **kwargs)
             # The only implementation of nonFESession is to fetch github config files
             # We are not passing headers or json data here
             response = self.notFEsession.request(method=verb, url=url)
