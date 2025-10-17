@@ -16,6 +16,7 @@ from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
     apiReadDeps,
+    apiPublicDeps,
     checkReadyState,
     checkSite,
 )
@@ -134,6 +135,30 @@ async def checkAPIReadiness(request: Request, _deps=Depends(apiReadDeps)):
             return APIResponse.genResponse(request, {"status": "error", "code": code})
     return APIResponse.genResponse(request, {"status": "unknown", "code": "readiness file not found"})
 
+
+# ==========================================================
+# /api/authentication-method
+# ==========================================================
+@router.get(
+    "/authentication-method",
+    summary="Get Authentication Method",
+    description=("Returns the authentication method used by the frontend (X509 or OIDC)."),
+    tags=["Frontend"],
+    responses={
+        **{
+            200: {"description": "Authentication method successfully returned.", "content": {"application/json": {"example": {"auth_method": "X509"}}}},
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps)):
+    """
+    Get the authentication method used by the frontend.
+    - Returns the authentication method in use (X509 or OIDC).
+    """
+    oidc = deps["config"]["MAIN"].get("general", {}).get("oidc", False)
+    auth_method = "OIDC" if oidc else "X509"
+    return APIResponse.genResponse(request, {"auth_method": auth_method})
 
 # ==========================================================
 # /api/frontend/sites

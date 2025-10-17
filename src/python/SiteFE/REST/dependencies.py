@@ -26,8 +26,7 @@ from SiteRMLibs.MainUtilities import (
     firstRunFinished,
     getAllFileContent,
     getDBConnObj,
-    getUTCnow,
-    loadEnvFile,
+    getUTCnow
 )
 from SiteRMLibs.x509 import CertHandler, OIDCHandler
 
@@ -70,8 +69,8 @@ def loguseraction(request, userinfo):
 
 async def depAuthenticate(request: Request):
     """Dependency to authenticate the user via certificate or OIDC."""
-    loadEnvFile()
     # X509 handler
+    checkauthmethod()
     if os.environ.get("AUTH_SUPPORT", "X509").upper() == "X509":
         cert_handler = CertHandler()
         try:
@@ -147,6 +146,21 @@ def checkPermissions(userinfo, required_perms: List[str]):
     # if not any(perm in user_perms for perm in required_perms):
     #    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access to this resource is forbidden due to insufficient permissions.")
 
+def checkauthmethod():
+    """Check if auth method is configured correctly."""
+    config = depGetConfig()
+    auth_method = os.environ.get("AUTH_SUPPORT", "X509").upper()
+    if auth_method not in ["X509", "OIDC"]:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication method is not properly configured.")
+    if auth_method == "OIDC":
+        if not all(k in os.environ for k in ["OIDC_AUDIENCE", "OIDC_ISSUER", "OIDC_JWKS", "OIDC_REDIRECT_URI"]):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="OIDC authentication is not properly configured. Missing environment variables.")
+    # Also check if config has  section
+    oidc = config["MAIN"].get("general", {}).get("oidc", False)
+    auth_method_conf = "OIDC" if oidc else "X509"
+    if auth_method != auth_method_conf:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication method mismatch between configuration and environment variable.")
+
 
 def apiReadDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
@@ -164,6 +178,10 @@ def apiAdminDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=De
     checkPermissions(user, ["admin"])
     return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
 
+def apiPublicDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), stateMachine=Depends(depGetStateMachine)):
+    """Dependency to get all necessary objects for the public REST API."""
+    checkauthmethod()
+    return {"config": config, "dbI": dbI, "stateMachine": stateMachine}
 
 # pylint: disable=too-few-public-methods
 class APIResponse:

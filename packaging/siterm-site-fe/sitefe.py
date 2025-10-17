@@ -14,6 +14,9 @@ from SiteFE.REST.Model import router as model_router
 from SiteFE.REST.Monitoring import router as monitoring_router
 from SiteFE.REST.Service import router as service_router
 from SiteFE.REST.Topo import router as topo_router
+from SiteRMLibs.MainUtilities  import loadEnvFile
+
+loadEnvFile()
 
 app = FastAPI()
 
