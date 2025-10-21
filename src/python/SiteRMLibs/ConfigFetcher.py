@@ -145,7 +145,6 @@ class ConfigFetcher:
                 self.logger.info(f"Successfully fetched {item[0]} from {url}")
                 continue
             if not failure and cachedFile:
-                self.logger.info(f"Using cached file for {item[0]} from {url}")
                 continue
             # Here we retry with modified URL to include ref/heads
             try:
@@ -153,8 +152,6 @@ class ConfigFetcher:
                 output[item[0]], cachedFile = self._fetchFile(item[0], url, raiseEx=False)
                 if not cachedFile:
                     self.logger.info(f"Successfully fetched {item[0]} from {url}")
-                else:
-                    self.logger.info(f"Using cached file for {item[0]} from {url}")
             except Exception as ex:
                 self.logger.error(f"Got exception during fetching {item[0]} from {url}: {ex}")
                 raise ex
