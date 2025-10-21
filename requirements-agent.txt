@@ -18,3 +18,4 @@ prometheus-client
 kubernetes
 httpx
 deepdiff
+PyJWT
