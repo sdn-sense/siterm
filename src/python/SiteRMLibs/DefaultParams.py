@@ -26,8 +26,8 @@ SERVICE_NOACCEPT_TIMEOUT = 120
 SERVICE_DOWN_TIMEOUT = 300
 # Mark service as dead if not updated for 10 minutes
 SERVICE_DEAD_TIMEOUT = 600
-# Auto refresh of git configuration time in seconds (In case forced via API)
-GIT_CONFIG_REFRESH_TIMEOUT = 300
+# Auto refresh of git configuration if changes only every 15 minutes
+GIT_CONFIG_REFRESH_TIMEOUT = 900
 # Time for delta to receive commit message (5 minutes)
 DELTA_COMMIT_TIMEOUT = 300
 # Time for delta to be removed from database (1 hour)

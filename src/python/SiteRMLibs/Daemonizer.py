@@ -16,6 +16,7 @@ import traceback
 import tracemalloc
 
 import psutil
+from deepdiff import DeepDiff
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import (
     HTTPServerNotReady,
@@ -539,17 +540,23 @@ class Daemon(DBBackend):
         """Auto Refresh if there is a DB request to do so."""
         # pylint: disable=W0703
         # Minimize queries to this and do this only every 5 minutes
-        if self.lastRefresh + GIT_CONFIG_REFRESH_TIMEOUT > int(getUTCnow()):
+        if int(getUTCnow()) - self.lastRefresh < GIT_CONFIG_REFRESH_TIMEOUT:
             return False
         self.lastRefresh = int(getUTCnow())
         refresh = False
         if self.component not in HOSTSERVICES:
             return refresh
+        # Do a diff check with current configuration and config obtained from GIT
+        newconf = getGitConfig()
+        diff = DeepDiff(self.config.config, newconf.config, ignore_order=True)
+        if diff:
+            self.logger.info(f"Configuration change detected: {diff}")
+            refresh = True
         try:
             if self.dbI:
-                refresh = self._autoRefreshDB(**kwargs)
+                refresh = self._autoRefreshDB(**kwargs) or refresh
             elif self.config:
-                refresh = self._autoRefreshAPI(**kwargs)
+                refresh = self._autoRefreshAPI(**kwargs) or refresh
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in autoRefreshDB. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
