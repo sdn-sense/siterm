@@ -18,6 +18,9 @@ class Timing:
 
     default_timings = [0, 2147483647]
 
+    def __init__(self):  # pylint: disable=useless-super-delegation
+        super().__init__()
+
     def _getTimings(self, inConf):
         """Get Runtime params"""
         timings = inConf.get("_params", {}).get("existsDuring", {})

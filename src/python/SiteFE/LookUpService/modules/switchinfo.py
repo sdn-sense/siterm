@@ -9,9 +9,8 @@ Authors:
 
 Date: 2021/12/01
 """
+from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
 from SiteRMLibs.ipaddr import validMRMLName
-from SiteRMLibs.CustomExceptions import NoOptionError
-from SiteRMLibs.CustomExceptions import NoSectionError
 from SiteRMLibs.MainUtilities import strtolist
 
 
@@ -19,6 +18,8 @@ class SwitchInfo:
     """Module for Switch Info add to MRML"""
 
     # pylint: disable=E1101,W0201,E0203
+    def __init__(self):  # pylint: disable=useless-super-delegation
+        super().__init__()
 
     def _addSwitchBWParams(self, switchName, portName, portSwitch):
         """Add Switch Bandwidth Params"""
@@ -28,12 +29,8 @@ class SwitchInfo:
         elif "bandwidth" in portSwitch:
             bw = int(portSwitch["bandwidth"])
         bwuri = self._addBandwidthService(hostname=switchName, portName=portName)
-        bwremains = self.bwCalculatereservableSwitch(
-            self.config.config["MAIN"], switchName, portName, bw
-        )
-        bwall = self.bwCalculatereservableSwitch(
-            self.config.config["MAIN"], switchName, portName, bw, True
-        )
+        bwremains = self.bwCalculatereservableSwitch(self.config.config["MAIN"], switchName, portName, bw)
+        bwall = self.bwCalculatereservableSwitch(self.config.config["MAIN"], switchName, portName, bw, True)
         params = {
             "bwuri": bwuri,
             "unit": "mbps",
@@ -59,13 +56,9 @@ class SwitchInfo:
                         "values": portSwitch["vlan_range_list"],
                     }
                 )
-                vlanRange = self.filterOutAvailbVlans(
-                    switchName, portSwitch["vlan_range_list"]
-                )
+                vlanRange = self.filterOutAvailbVlans(switchName, portSwitch["vlan_range_list"])
                 if not vlanRange:
-                    self.addWarning(
-                        f"VLAN Range for {switchName}:{portName} is not available or remaining vlans is empty."
-                    )
+                    self.addWarning(f"VLAN Range for {switchName}:{portName} is not available or remaining vlans is empty.")
                 # Generate host alias or adds' isAlias
                 self._addIsAlias(
                     uri=newuri,
@@ -216,13 +209,9 @@ class SwitchInfo:
         for lldpHost, lldpDict in switchInfo["lldp"].items():
             for lldpIntf, intfDict in lldpDict.items():
                 if "remote_port_id" not in intfDict:
-                    self.logger.debug(
-                        f"Remote port id not available from lldp info. lldp enabled? Full port info {lldpHost} {lldpIntf} {intfDict}"
-                    )
+                    self.logger.debug(f"Remote port id not available from lldp info. lldp enabled? Full port info {lldpHost} {lldpIntf} {intfDict}")
                     continue
-                macName = getSwitchSiteRMName(
-                    switchInfo["nametomac"], intfDict["remote_chassis_id"]
-                )
+                macName = getSwitchSiteRMName(switchInfo["nametomac"], intfDict["remote_chassis_id"])
                 if not macName:
                     continue
                 remoteuri = f"{self.prefixes['site']}:{macName}:{self.switch.getSystemValidPortName(intfDict['remote_port_id'])}"
@@ -275,9 +264,7 @@ class SwitchInfo:
                 out["rstname"] = f"rst-{ipX}"
                 for route in routeList:
                     out["iptype"] = ipX
-                    out["rt-table"] = (
-                        "main" if "vrf" not in route else f"vrf-{route['vrf']}"
-                    )
+                    out["rt-table"] = "main" if "vrf" not in route else f"vrf-{route['vrf']}"
                     if "from" in route:
                         out["routename"] = validMRMLName(route["from"])
                     elif "intf" in route:

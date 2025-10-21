@@ -12,6 +12,9 @@ Date: 2024/02/21
 class BWService:
     """BW Service - converts bandwidth to QoS understandable format."""
 
+    def __init__(self):  # pylint: disable=useless-super-delegation
+        super().__init__()
+
     # bps, bytes per second
     # kbps, Kbps, kilobytes per second
     # mbps, Mbps, megabytes per second

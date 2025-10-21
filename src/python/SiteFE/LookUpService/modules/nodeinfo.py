@@ -10,7 +10,7 @@ Authors:
 Date: 2021/12/01
 """
 from SiteRMLibs.CustomExceptions import NoOptionError
-from SiteRMLibs.MainUtilities import getAllHosts, strtolist, getFileContentAsJson
+from SiteRMLibs.MainUtilities import getAllHosts, getFileContentAsJson, strtolist
 
 
 def ignoreInterface(intfKey, intfDict, hostinfo):
@@ -26,9 +26,7 @@ def ignoreInterface(intfKey, intfDict, hostinfo):
         returnMsg = True
     elif "switch_port" not in list(intfDict.keys()):
         returnMsg = True
-    if intfKey not in hostinfo.get("Summary", {}).get("config", {}).get(
-        "agent", {}
-    ).get("interfaces", []):
+    if intfKey not in hostinfo.get("Summary", {}).get("config", {}).get("agent", {}).get("interfaces", []):
         returnMsg = True
     return returnMsg
 
@@ -37,27 +35,19 @@ class NodeInfo:
     """Module for Node Info add to MRML"""
 
     # pylint: disable=E1101,W0201
+    def __init__(self):  # pylint: disable=useless-super-delegation
+        super().__init__()
 
     @staticmethod
     def __getRstsEnabled(hostinfo):
         """Get RSTS Enabled from Agent Config"""
-        rstsEnabled = (
-            hostinfo.get("Summary", {})
-            .get("config", {})
-            .get("agent", {})
-            .get("rsts_enabled", [])
-        )
+        rstsEnabled = hostinfo.get("Summary", {}).get("config", {}).get("agent", {}).get("rsts_enabled", [])
         return strtolist(rstsEnabled, ",")
 
     def __recordHostUsedVlans(self, nodeDict):
         """Record all host used vlans"""
         # Record used vlans
-        for _intfKey, intfDict in list(
-            nodeDict.get("hostinfo", {})
-            .get("NetInfo", {})
-            .get("interfaces", {})
-            .items()
-        ):
+        for _intfKey, intfDict in list(nodeDict.get("hostinfo", {}).get("NetInfo", {}).get("interfaces", {}).items()):
             if "vlans" in intfDict and intfDict["vlans"]:
                 for _vlanName, vlanDict in list(intfDict["vlans"].items()):
                     vlanid = vlanDict.get("vlanid", None)
@@ -99,23 +89,17 @@ class NodeInfo:
             if "MTU" in item:
                 self._addHasNetworkAttribute(prefixuri, "MTU", "mtu", item["MTU"])
             if "txqueuelen" in item:
-                self._addHasNetworkAttribute(
-                    prefixuri, "txqueuelen", "txqueuelen", item["txqueuelen"]
-                )
+                self._addHasNetworkAttribute(prefixuri, "txqueuelen", "txqueuelen", item["txqueuelen"])
             if item.get("ipv4-address"):
                 splt = item["ipv4-address"].split("/")
                 if len(splt) == 2:
                     # Record IP Address as used
-                    self.recordSystemIPs(
-                        hostname, "ipv4", [{"address": splt[0], "masklen": splt[1]}]
-                    )
+                    self.recordSystemIPs(hostname, "ipv4", [{"address": splt[0], "masklen": splt[1]}])
         for item in inputDict.get("10", []):
             if item.get("ipv6-address"):
                 splt = item["ipv6-address"].split("/")
                 if len(splt) == 2:
-                    self.recordSystemIPs(
-                        hostname, "ipv6", [{"address": splt[0], "masklen": splt[1]}]
-                    )
+                    self.recordSystemIPs(hostname, "ipv6", [{"address": splt[0], "masklen": splt[1]}])
 
     def defineNodeInformation(self, nodeDict):
         """Define node information."""
@@ -130,16 +114,10 @@ class NodeInfo:
         self._nmlLiteral(hosturi, "insertdate", nodeDict["insertdate"])
         # Provide location information about site Frontend
         try:
-            self._nmlLiteral(
-                hosturi, "latitude", self.config.get(self.sitename, "latitude")
-            )
-            self._nmlLiteral(
-                hosturi, "longitude", self.config.get(self.sitename, "longitude")
-            )
+            self._nmlLiteral(hosturi, "latitude", self.config.get(self.sitename, "latitude"))
+            self._nmlLiteral(hosturi, "longitude", self.config.get(self.sitename, "longitude"))
         except NoOptionError:
-            self.logger.debug(
-                "Either one or both (latitude,longitude) are not defined. Continuing as normal"
-            )
+            self.logger.debug("Either one or both (latitude,longitude) are not defined. Continuing as normal")
 
     def addMonName(self, intfKey, uri):
         """Add Mon name to model for SENSE RT Monitoring mapping"""
@@ -158,9 +136,7 @@ class NodeInfo:
             ["mrs", "type"],
             ["sense-rtmon:name"],
         )
-        self.setToGraph(
-            ["site", f"{uri}:sense-rtmon+realportname"], ["mrs", "value"], [intfKey]
-        )
+        self.setToGraph(["site", f"{uri}:sense-rtmon+realportname"], ["mrs", "value"], [intfKey])
 
     def addAgentConfigtoMRML(self, intfDict, newuri, hostname, intf):
         """Agent Configuration params to Model."""
@@ -173,9 +149,7 @@ class NodeInfo:
             "ipv6-subnet-pool-list",
         ]:
             if key in list(intfDict.keys()):
-                self._addNetworkAddress(
-                    newuri, key[:-5], ",".join(map(str, intfDict[key]))
-                )
+                self._addNetworkAddress(newuri, key[:-5], ",".join(map(str, intfDict[key])))
 
         # Add is Alias - So that it has link to Switch.
         # We could use LLDP Info In future.
@@ -211,9 +185,7 @@ class NodeInfo:
             )
             vlanRange = self.filterOutAvailbVlans(hostname, intfDict["vlan_range_list"])
             if not vlanRange:
-                self.addWarning(
-                    f"VLAN Range for {hostname}:{intf} is not available or remaining vlans is empty."
-                )
+                self.addWarning(f"VLAN Range for {hostname}:{intf} is not available or remaining vlans is empty.")
 
         self.shared = "notshared"
         if "shared" in intfDict and intfDict["shared"]:
@@ -225,9 +197,7 @@ class NodeInfo:
         Add All interfaces info.
         """
         rstsEnabled = self.__getRstsEnabled(hostinfo)
-        for intfKey, intfDict in list(
-            hostinfo.get("NetInfo", {}).get("interfaces", {}).items()
-        ):
+        for intfKey, intfDict in list(hostinfo.get("NetInfo", {}).get("interfaces", {}).items()):
             # We exclude QoS interfaces from adding them to MRML.
             # Even so, I still want to have this inside DB for debugging purposes
             if ignoreInterface(intfKey, intfDict, hostinfo):
@@ -287,34 +257,26 @@ class NodeInfo:
                         (
                             self.genUriRef("site", vlanuri),
                             self.genUriRef("nml", "hasLabel"),
-                            self.genUriRef(
-                                "site", f"{vlanuri}:label+{vlanDict['vlanid']}"
-                            ),
+                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),
                         )
                     )
                     self.newGraph.add(
                         (
-                            self.genUriRef(
-                                "site", f"{vlanuri}:label+{vlanDict['vlanid']}"
-                            ),
+                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),
                             self.genUriRef("rdf", "type"),
                             self.genUriRef("nml", "Label"),
                         )
                     )
                     self.newGraph.add(
                         (
-                            self.genUriRef(
-                                "site", f"{vlanuri}:label+{vlanDict['vlanid']}"
-                            ),
+                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),
                             self.genUriRef("nml", "labeltype"),
                             self.genUriRef("schema", "#vlan"),
                         )
                     )
                     self.newGraph.set(
                         (
-                            self.genUriRef(
-                                "site", f"{vlanuri}:label+{vlanDict['vlanid']}"
-                            ),
+                            self.genUriRef("site", f"{vlanuri}:label+{vlanDict['vlanid']}"),
                             self.genUriRef("nml", "value"),
                             self.genLiteral(str(vlanDict["vlanid"])),
                         )

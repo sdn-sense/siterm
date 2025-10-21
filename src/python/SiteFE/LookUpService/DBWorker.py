@@ -25,6 +25,7 @@ class DBWorker(Warnings):
     """Config Fetcher from Github."""
 
     def __init__(self, config, sitename):
+        super().__init__()
         self.config = config
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service="DBWorker")

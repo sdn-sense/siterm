@@ -9,14 +9,16 @@ Authors:
 Date: 2021/12/01
 """
 from rdflib.namespace import XSD
-from SiteRMLibs.MainUtilities import convertTSToDatetime
 from SiteRMLibs.ipaddr import normalizedip
+from SiteRMLibs.MainUtilities import convertTSToDatetime
 
 
 class DeltaInfo:
     """Add Delta info, mainly tag, connID, timeline"""
 
     # pylint: disable=E1101,W0201
+    def __init__(self):  # pylint: disable=useless-super-delegation
+        super().__init__()
 
     def addNetworkStatus(self, params, uri):
         """Add Scheduling state into model"""
@@ -30,12 +32,8 @@ class DeltaInfo:
             netstatus = params["networkstatus"]
         if not netstatus:
             return
-        self.addToGraph(
-            ["site", uri], ["mrs", "hasNetworkStatus"], ["site", f"{uri}:status"]
-        )
-        self.addToGraph(
-            ["site", f"{uri}:status"], ["rdf", "type"], ["mrs", "NetworkStatus"]
-        )
+        self.addToGraph(["site", uri], ["mrs", "hasNetworkStatus"], ["site", f"{uri}:status"])
+        self.addToGraph(["site", f"{uri}:status"], ["rdf", "type"], ["mrs", "NetworkStatus"])
         self.addToGraph(["site", f"{uri}:status"], ["mrs", "type"], ["dataplane"])
         self.setToGraph(["site", f"{uri}:status"], ["mrs", "value"], [netstatus])
 
@@ -71,9 +69,7 @@ class DeltaInfo:
                 timeuri,
             )
         )
-        self.newGraph.add(
-            (timeuri, self.genUriRef("rdf", "type"), self.genUriRef("nml", "Lifetime"))
-        )
+        self.newGraph.add((timeuri, self.genUriRef("rdf", "type"), self.genUriRef("nml", "Lifetime")))
         if "start" in timeline:
             self.setToGraph(
                 ["site", f"{uri}:lifetime"],
@@ -93,12 +89,8 @@ class DeltaInfo:
         for attrkey, attrval in params.get("hasNetworkAttribute", {}).items():
             if "type" not in attrval or "value" not in attrval:
                 continue
-            self.addToGraph(
-                ["site", uri], ["mrs", "hasNetworkAttribute"], ["site", attrkey]
-            )
-            self.addToGraph(
-                ["site", attrkey], ["rdf", "type"], ["mrs", "NetworkAttribute"]
-            )
+            self.addToGraph(["site", uri], ["mrs", "hasNetworkAttribute"], ["site", attrkey])
+            self.addToGraph(["site", attrkey], ["rdf", "type"], ["mrs", "NetworkAttribute"])
             self.addToGraph(["site", attrkey], ["mrs", "type"], [attrval["type"]])
             self.setToGraph(["site", attrkey], ["mrs", "value"], [attrval["value"]])
 
@@ -120,9 +112,7 @@ class DeltaInfo:
                     val = self.genLiteral(str(val), key[3])
                 else:
                     val = self.genUriRef("", custom=val)
-                self.newGraph.add(
-                    (self.genUriRef("site", uri), self.genUriRef(key[1], key[0]), val)
-                )
+                self.newGraph.add((self.genUriRef("site", uri), self.genUriRef(key[1], key[0]), val))
         # Add all hasNetworkAttribute if exists
         if "hasNetworkAttribute" in params.get("_params", {}):
             self.addhasNetworkAttribute(params["_params"], uri)
@@ -155,9 +145,7 @@ class DeltaInfo:
             val = normalizedip(ipdict.get("value", ""))
             uri = ipdict.get("uri", "")
             if val and uri:
-                self._addVals(
-                    ipkey, ipkey, val, portDict["uri"][len(self.prefixes["site"]) :]
-                )
+                self._addVals(ipkey, ipkey, val, portDict["uri"][len(self.prefixes["site"]) :])
                 self._addParams(ipdict, uri)
 
     def _addNetworkAddrVsw(self, params, uri):
@@ -174,9 +162,7 @@ class DeltaInfo:
                 continue
             val = normalizedip(ipdict.get("value", ""))
             if val and uri:
-                ipdict.setdefault("_params", {}).setdefault(
-                    "tag", params.get("_params", {}).get("tag", None)
-                )
+                ipdict.setdefault("_params", {}).setdefault("tag", params.get("_params", {}).get("tag", None))
                 self._addVals(
                     ipkey,
                     ipkey,
@@ -195,15 +181,10 @@ class DeltaInfo:
             if not isinstance(val, dict):
                 continue
             for port, portDict in val.items():
-                if (
-                    portDict.get("hasLabel", {}).get("labeltype", None)
-                    == "ethernet#vlan"
-                ):
+                if portDict.get("hasLabel", {}).get("labeltype", None) == "ethernet#vlan":
                     vlan = str(portDict["hasLabel"]["value"])
                     if "uri" in portDict and self.checkIfStarted(portDict):
-                        self.URIs["vlans"].setdefault(key, {}).setdefault(
-                            port, {}
-                        ).setdefault(int(vlan), portDict["uri"])
+                        self.URIs["vlans"].setdefault(key, {}).setdefault(port, {}).setdefault(int(vlan), portDict["uri"])
                     portDict["uri"] = self._addVlanPort(
                         hostname=key,
                         portName=port,
@@ -220,9 +201,7 @@ class DeltaInfo:
                         labeltype="ethernet#vlan",
                         uri=portDict["uri"],
                     )
-                    self._addIsAlias(
-                        uri=portDict["uri"], isAlias=portDict.get("isAlias")
-                    )
+                    self._addIsAlias(uri=portDict["uri"], isAlias=portDict.get("isAlias"))
                     if key in self.switch.switches["output"].keys():
                         self._addPortSwitchingSubnet(
                             hostname=key,
@@ -237,27 +216,15 @@ class DeltaInfo:
                     self._addService(portDict, portDict["uri"])
                     self._addNetworkAddr(portDict, portDict["uri"])
                 else:
-                    self.logger.debug(
-                        f"port {port} and portDict {portDict} ignored. No vlan label"
-                    )
+                    self.logger.debug(f"port {port} and portDict {portDict} ignored. No vlan label")
 
     def addRouteTables(self):
         """Add Route tables"""
-        for host, vals in (
-            self.activeDeltas.get("output", {}).get("RoutingMapping", {}).items()
-        ):
+        for host, vals in self.activeDeltas.get("output", {}).get("RoutingMapping", {}).items():
             for routeTable, iptypes in vals.get("providesRoutingTable", {}).items():
                 for iptype in iptypes.keys():
-                    self._addRoutingTable(
-                        hostname=host, rstname=f"rst-{iptype}", rtableuri=routeTable
-                    )
-                    routedict = (
-                        self.activeDeltas.get("output", {})
-                        .get("rst", {})
-                        .get(routeTable, {})
-                        .get(host, {})
-                        .get(iptype, {})
-                    )
+                    self._addRoutingTable(hostname=host, rstname=f"rst-{iptype}", rtableuri=routeTable)
+                    routedict = self.activeDeltas.get("output", {}).get("rst", {}).get(routeTable, {}).get(host, {}).get(iptype, {})
                     self._addParams(routedict, routeTable)
                     for route in list(routedict.get("hasRoute", {})):
                         self._addRoute(
@@ -269,25 +236,15 @@ class DeltaInfo:
 
     def addRoutes(self):
         """Add individual routes"""
-        for host, vals in (
-            self.activeDeltas.get("output", {}).get("RoutingMapping", {}).items()
-        ):
+        for host, vals in self.activeDeltas.get("output", {}).get("RoutingMapping", {}).items():
             for routeTable, iptypes in vals.get("providesRoute", {}).items():
                 for iptype in iptypes.keys():
-                    routedict = (
-                        self.activeDeltas.get("output", {})
-                        .get("rst", {})
-                        .get(routeTable, {})
-                        .get(host, {})
-                        .get(iptype, {})
-                    )
+                    routedict = self.activeDeltas.get("output", {}).get("rst", {}).get(routeTable, {}).get(host, {}).get(iptype, {})
                     self._addParams(routedict, routeTable)
                     rtableuri = routedict.get("belongsToRoutingTable", "")
                     self._addParams(routedict, rtableuri)
                     for route, routeInfo in routedict.get("hasRoute", {}).items():
-                        self._addProvidesRoute(
-                            hostname=host, rstname=f"rst-{iptype}", routeuri=route
-                        )
+                        self._addProvidesRoute(hostname=host, rstname=f"rst-{iptype}", routeuri=route)
                         self._addBandwidthServiceRoute(
                             **{
                                 "routeuri": route,
@@ -298,9 +255,7 @@ class DeltaInfo:
                             routedict.get("hasService", {}),
                             routedict.get("hasService", {}).get("uri", ""),
                         )
-                        self._addBandwidthServiceParams(
-                            **routedict.get("hasService", {})
-                        )
+                        self._addBandwidthServiceParams(**routedict.get("hasService", {}))
                         for key, val in routeInfo.items():
                             for _, entrVal in val.items():
                                 netadd = {
@@ -318,15 +273,11 @@ class DeltaInfo:
     def addDeltaInfo(self):
         """Append all deltas to Model."""
         # Virtual Switching Info
-        for host, vals in (
-            self.activeDeltas.get("output", {}).get("SubnetMapping", {}).items()
-        ):
+        for host, vals in self.activeDeltas.get("output", {}).get("SubnetMapping", {}).items():
             for subnet in vals.get("providesSubnet", {}).keys():
                 svcService = self._addSwitchingService(hostname=host, vsw=host)
                 subnetUri = subnet.split(svcService)[1]
-                uri = self._addSwitchingSubnet(
-                    hostname=host, vsw=host, subnet=subnetUri
-                )
+                uri = self._addSwitchingSubnet(hostname=host, vsw=host, subnet=subnetUri)
                 self.addvswInfo(
                     self.activeDeltas.get("output", {}).get("vsw", {}).get(subnet, {}),
                     uri,
@@ -335,9 +286,7 @@ class DeltaInfo:
         for urn, vals in self.activeDeltas.get("output", {}).get("kube", {}).items():
             self.addvswInfo(vals, urn)
         # Add Single port info
-        for urn, vals in (
-            self.activeDeltas.get("output", {}).get("singleport", {}).items()
-        ):
+        for urn, vals in self.activeDeltas.get("output", {}).get("singleport", {}).items():
             self.addvswInfo(vals, urn)
         # Routing Service Info
         self.addRouteTables()

@@ -101,6 +101,8 @@ class RDFHelper:
     """RDF Helper preparation class."""
 
     # pylint: disable=E1101,W0201,W0613
+    def __init__(self):  # pylint: disable=useless-super-delegation
+        super().__init__()
 
     def generateKey(self, inval, inkey):
         """Generate keys for mrml and escape special charts"""
