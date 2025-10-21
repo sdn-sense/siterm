@@ -30,9 +30,6 @@ class DBWorker(Warnings):
         self.logger = getLoggingObject(config=self.config, service="DBWorker")
         self.dbI = getVal(getDBConn("DBWorker", self), **{"sitename": self.sitename})
         self.police = PolicyService(self.config, self.sitename)
-        self.warnings = []
-        self.warningstart = 0
-        self.warningscounters = {}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""

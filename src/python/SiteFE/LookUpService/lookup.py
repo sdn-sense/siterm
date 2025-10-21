@@ -143,20 +143,16 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         for dirname in ["LookUpService", "SwitchWorker"]:
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
-        self.runcount = 0
         self._addedTriples = set()
-        self.warnings = []
-        self.warningstart = 0
-        self.warningscounters = {}
 
     def __clean(self):
         """Clean params of LookUpService"""
         self._addedTriples = set()
         # Clean errors after 100 cycles
+        # pylint: disable=E1101
         self.runcount += 1
         if self.runcount >= 100:
-            self.warningscounters = {}
-            self.runcount = 0
+            self.cleanWarnings()
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -307,6 +303,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                     if vlan in all_vlan_range_list and vlan not in self.usedVlans["deltas"].get(host, []):
                         self.addWarning(f"Vlan {vlan} is configured manually on {host}. It comes not from delta." "Either deletion did not happen or was manually configured.")
         # Add switchwarnings (in case any exists)
+        # pylint: disable=E1101
         self.warnings += self.switch.getWarnings()
 
     def cleanModelDirectory(self):
@@ -410,6 +407,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         # Start Provisioning Service and apply any config changes.
         self.logger.info("Start Provisioning Service")
         stateChanged = self.provision.startwork(self.firstRun)
+        # pylint: disable=E1101,E0203,W0201
         if updateNeeded or stateChanged or stateChangedFirstRun:
             self.logger.info("Update is needed. Informing to renew all devices state")
             # If models are different, we need to update all devices information

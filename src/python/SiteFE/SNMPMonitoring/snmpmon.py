@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1101
 """
     SNMPMonitoring gets all information from switches using SNMP and writes to DB.
 
@@ -41,12 +42,12 @@ from SiteRMLibs.MainUtilities import (
     jsondumps,
 )
 from SiteRMLibs.MemDiskStats import MemDiskStats
+from SiteRMLibs.Warnings import Warnings
 
 
 class Topology:
     """Topology json preparation for visualization"""
 
-    # pylint: disable=E1101
     def __init__(self, config, sitename):
         self.config = config
         self.sitename = sitename
@@ -74,7 +75,7 @@ class Topology:
             return indata.get("event_data", {}).get("res", {}).get("ansible_facts", {}).get(keys[0], {}).get(keys[1], {})
         return {}
 
-    def _getWANLinks(self, incr):
+    def getWANLinks(self, incr):
         """Get WAN Links for visualization"""
         wan_links = {}
         sitename = getSiteNameFromConfig(self.config)
@@ -99,12 +100,14 @@ class Topology:
 
     def gettopology(self):
         """Return all Switches information"""
+
         def getHostPortSpeed(netinfo, port):
             """Get Port Speed from Host NetInfo"""
             bw = netinfo.get(port, {}).get("bwParams", {}).get("portSpeed", 0)
             if bw:
                 return bw
             return netinfo.get(port, {}).get("bwParams", {}).get("maximumCapacity", 0)
+
         workdata = {}
         incr = 0
         # Get all Switch information
@@ -135,7 +138,7 @@ class Topology:
                 remSwitch = self._findConnection(workdata, vals.get("remote_chassis_id", ""))
                 remPort = vals.get("remote_port_id", "")
                 if remSwitch and remPort:
-                    bw = switchdata['intstats'][key].get('bandwidth', 0)
+                    bw = switchdata["intstats"][key].get("bandwidth", 0)
                     swout["topo"].setdefault(key, {"device": remSwitch["switch"], "port": remPort, "bandwidth": bw})
                     print(swout["topo"][key])
         # Now lets get host information
@@ -171,7 +174,7 @@ class Topology:
                     if switch and swintf:
                         hout["topo"].setdefault(intf, {"device": switch, "port": swintf, "bandwidth": getHostPortSpeed(netinfo, intf)})
                         print(hout["topo"][intf])
-        out.update(self._getWANLinks(incr))
+        out.update(self.getWANLinks(incr))
         # Write new out to file
         fname = os.path.join(self.topodir, "topology.json")
         self.diragent.dumpFileContentAsJson(fname, out)
@@ -228,7 +231,7 @@ class ActiveWrapper:
                 self._activeLooper(vals, **kwargs)
         return
 
-    def _loopActKey(self, tkey, out):
+    def loopActKey(self, tkey, out):
         """Loop over vsw/rst key"""
         for key, vals in out.get("output", {}).get(tkey, {}).items():
             self._activeLooper(vals, **{"action": tkey, "key0": key, "level": 0})
@@ -237,7 +240,7 @@ class ActiveWrapper:
         """Generate output"""
         self.__clean()
         for key in ["vsw", "rst", "kube", "singleport"]:
-            self._loopActKey(key, out)
+            self.loopActKey(key, out)
         result = copy.deepcopy(self.reports)
         self.__clean()
         return result
@@ -271,7 +274,7 @@ class PromOut:
         registry = CollectorRegistry()
         return registry
 
-    def __refreshTimeNow(self):
+    def refreshTimeNow(self):
         """Refresh timenow"""
         self.timenow = int(getUTCnow())
 
@@ -451,15 +454,7 @@ class PromOut:
             "network_status",
             "Network Status information",
             labelnames=labelnames,
-            states=[
-                "activating",
-                "activated",
-                "activate-error",
-                "deactivated",
-                "deactivate-error",
-                "unknown",
-                "unset"
-            ],
+            states=["activating", "activated", "activate-error", "deactivated", "deactivate-error", "unknown", "unset"],
             registry=registry,
         )
         qosGauge = Gauge("qos_status", "QoS Requests Status", labelqos, registry=registry)
@@ -469,7 +464,6 @@ class PromOut:
             netstatus = item.get("networkstatus", "unset")
             if not netstatus:
                 netstatus = "unset"
-            # pylint: disable=E1101
             netState.labels(**genStatusLabels(item)).state(netstatus)
             if "uri" in item and item["uri"]:
                 for key in [
@@ -518,7 +512,6 @@ class PromOut:
                 "servicename": service["servicename"],
                 "hostname": service.get("hostname", "UNSET"),
             }
-            # pylint: disable=E1101
             serviceState.labels(**labels).state(state)
             infoState.labels(**labels).info({"version": service["version"]})
             runtimeInfo.labels(**labels).set(runtime)
@@ -531,7 +524,7 @@ class PromOut:
 
     def metrics(self):
         """Return all available Hosts, where key is IP address."""
-        self.__refreshTimeNow()
+        self.refreshTimeNow()
         registry = self.__cleanRegistry()
         self.__getServiceStates(registry)
         data = generate_latest(registry)
@@ -540,7 +533,7 @@ class PromOut:
         self.diragent.dumpFileContent(fname, data)
 
 
-class SNMPMonitoring:
+class SNMPMonitoring(Warnings):
     """SNMP Monitoring Class"""
 
     def __init__(self, config, sitename):
@@ -555,10 +548,8 @@ class SNMPMonitoring:
         self.session = None
         self.prom = PromOut(config, sitename)
         self.topo = Topology(config, sitename)
-        self.err = []
         self.hostconf = {}
         self.memdisk = MemDiskStats()
-        self.snmperrorcount = {}
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -566,9 +557,12 @@ class SNMPMonitoring:
         self.switch = Switch(self.config, self.sitename)
 
     def _start(self):
+        """Start SNMP Monitoring Process"""
+        self.runcount += 1
+        if self.runcount >= 100:
+            self.cleanWarnings()
         self.switch.getinfo()
         self.switches = self.switch.getAllSwitches()
-        self.snmperrorcount = {}
 
     def _getSNMPSession(self, host):
         self.session = None
@@ -601,15 +595,11 @@ class SNMPMonitoring:
         except EasySNMPUnknownObjectIDError as ex:
             ex = f"[{host}]: Got SNMP UnknownObjectID Exception for key {key}: {ex}"
             self.logger.warning(ex)
-            self.err.append(ex)
-            self.snmperrorcount.setdefault(host, 0)
-            self.snmperrorcount[host] += 1
+            self.addWarning(ex)
         except EasySNMPTimeoutError as ex:
             ex = f"[{host}]: Got SNMP Timeout Exception: {ex}"
+            self.addWarning(ex)
             self.logger.warning(ex)
-            self.err.append(ex)
-            self.snmperrorcount.setdefault(host, 0)
-            self.snmperrorcount[host] += 1
         return []
 
     def _ansiblemac(self, host, macs):
@@ -708,19 +698,19 @@ class SNMPMonitoring:
 
     def startwork(self):
         """Scan all switches and get snmp data"""
-        self.err = []
         self._start()
         macs = {}
         for host in self.switches:
             self._getSNMPSession(host)
             if not self.session:
                 continue
+            self.runcount += 1  # Run count increment for each switch, as we need to track warnings per switch
             out = {}
             self._getMacAddrSession(host, macs)
             for key in self.config["MAIN"]["snmp"]["mibs"]:
                 allvals = self._getSNMPVals(key, host)
-                if self.snmperrorcount.get(host, 0) > 3:
-                    self.logger.error(f"[{host}]: Too many SNMP errors ({self.snmperrorcount}), skipping further SNMP queries")
+                if len(self.lastrunwarnings) > 3:
+                    self.logger.error(f"[{host}]: Too many SNMP errors ({self.lastrunwarnings}), skipping further SNMP queries")
                     break
                 for item in allvals:
                     indx = item.oid_index
@@ -739,8 +729,6 @@ class SNMPMonitoring:
         # Set Topology json
         self.topo.gettopology()
         self.logger.info(f"[{self.sitename}]: Topology map written to DB")
-        if self.err:
-            raise Exception(f"SNMP Monitoring Errors: {self.err}")
 
 
 def execute(config=None, args=None):
