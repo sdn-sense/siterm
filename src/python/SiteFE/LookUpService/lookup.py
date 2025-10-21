@@ -123,6 +123,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     """Lookup Service prepares MRML model about the system."""
 
     def __init__(self, config, sitename):
+        super().__init__()
         self.sitename = sitename
         self.config = config
         self.logger = getLoggingObject(config=self.config, service="LookUpService")
