@@ -25,8 +25,9 @@ import socket
 import time
 import urllib.parse
 from typing import Any, Callable
-import jwt
+
 import httpx
+import jwt
 from SiteRMLibs.CustomExceptions import HTTPServerNotReady, ValidityFailure
 from SiteRMLibs.MainUtilities import getUTCnow
 
@@ -91,11 +92,12 @@ def getCAPathFromEnv():
 
 def httpserviceready(endpoint="/api/ready"):
     """Decorator that checks if the HTTP service is ready before executing the decorated function."""
+
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs) -> Any:
             # Check if service is ready by calling the specified endpoint
-            if not kwargs.get('SiteRMHTTPCall', True):
+            if not kwargs.get("SiteRMHTTPCall", True):
                 return func(self, *args, **kwargs)
             try:
                 response, status_code, reason_phrase, _ = self.http_makeRequest("GET", endpoint)
@@ -114,9 +116,10 @@ def httpserviceready(endpoint="/api/ready"):
             except Exception as e:
                 raise HTTPServerNotReady(f"Failed to check service readiness from {endpoint}: {str(e)}") from e
             return func(self, *args, **kwargs)
-        return wrapper
-    return decorator
 
+        return wrapper
+
+    return decorator
 
 
 class Requests:
@@ -184,9 +187,9 @@ class Requests:
 
     def _renewBearerToken(self, auth_info):
         """Renew the Bearer token by reading it from the environment variable"""
-        if 'auth_endpoint' in auth_info and auth_info['auth_endpoint']:
+        if "auth_endpoint" in auth_info and auth_info["auth_endpoint"]:
             try:
-                response = self.authsession.request(method='POST', url=auth_info['auth_endpoint'], headers={"Content-Type": "application/json"}, json={"frontend": self.host})
+                response = self.authsession.request(method="POST", url=auth_info["auth_endpoint"], headers={"Content-Type": "application/json"}, json={"frontend": self.host})
                 if response.status_code == 200:
                     resp_json = response.json()
                     self.bearertoken = resp_json.get("access_token", None)
@@ -225,10 +228,10 @@ class Requests:
             url = urllib.parse.urljoin(self.host, uri)
         return url
 
-    def __makeSiteRMHTTPCall(self, url, verb, headers, **kwargs):
+    def __makeSiteRMHTTPCall(self, url, verb, **kwargs):
         """Make an HTTP request to the SiteRM Frontend."""
         if not self.authmethod:
-            response = self.session.request(method='GET', url=urllib.parse.urljoin(self.host, '/api/authentication-method'))
+            response = self.session.request(method="GET", url=urllib.parse.urljoin(self.host, "/api/authentication-method"))
             if response.status_code == 200:
                 auth_info = response.json()
                 self.authmethod = auth_info.get("auth_method", "")
@@ -242,7 +245,7 @@ class Requests:
         elif self.authmethod == "OIDC":
             # Check if we need to renew the token
             if not self.bearertoken or self._expiredBearerToken():
-                response = self.session.request(method='GET', url=urllib.parse.urljoin(self.host, '/api/authentication-method'))
+                response = self.session.request(method="GET", url=urllib.parse.urljoin(self.host, "/api/authentication-method"))
                 if response.status_code == 200:
                     auth_info = response.json()
                     self._renewBearerToken(auth_info)
@@ -250,9 +253,10 @@ class Requests:
                     self._logMessage(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
                     raise httpx.HTTPStatusError(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
         if self.authmethod == "OIDC" and self.bearertoken and kwargs.get("SiteRMHTTPCall", True):
-            headers["Authorization"] = f"Bearer {self.bearertoken}"
-        return self.session.request(method=verb, url=url, headers=headers, json=kwargs["data"] if kwargs["json"] else None, data=None if kwargs["json"] else kwargs["data"])
-
+            kwargs.setdefault("headers", {})
+            kwargs["headers"]["Authorization"] = f"Bearer {self.bearertoken}"
+        response = self.session.request(method=verb, url=url, headers=kwargs["headers"], json=kwargs["data"] if kwargs["json"] else None, data=None if kwargs["json"] else kwargs["data"])
+        return response.json(), response.status_code, response.reason_phrase, False
 
     def http_makeRequest(self, verb, uri, **kwargs):
         """Make an HTTP request with the given parameters."""
@@ -262,11 +266,11 @@ class Requests:
         kwargs.setdefault("SiteRMHTTPCall", True)
         if kwargs.get("useragent"):
             self.http_extendUserAgent(kwargs["useragent"])
-        headers = {**self.default_headers, **argValidity(kwargs["headers"], dict)}
+        kwargs["headers"] = {**self.default_headers, **argValidity(kwargs["headers"], dict)}
         url = urllib.parse.urljoin(self.host, self._stripHostFromUrl(uri))
         try:
             if kwargs["SiteRMHTTPCall"]:
-                return self.__makeSiteRMHTTPCall(url, verb, headers, **kwargs)
+                return self.__makeSiteRMHTTPCall(url, verb, **kwargs)
             # The only implementation of nonFESession is to fetch github config files
             # We are not passing headers or json data here
             response = self.notFEsession.request(method=verb, url=url)
