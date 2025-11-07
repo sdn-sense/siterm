@@ -167,16 +167,22 @@ class PolicyService(RDFHelper, Timing, BWService):
 
     def __generateStartEnd(self):
         """Generate start and end time for existsDuring"""
-        self.startend = {
-            "start": getUTCnow(**self.config[self.sitename]["default_params"]["starttime"]),
-            "end": getUTCnow(**self.config[self.sitename]["default_params"]["endtime"]),
-        }
+        self.startend = {"default": {
+                             "start": getUTCnow(**self.config[self.sitename]["default_params"]["starttime"]),
+                             "end": getUTCnow(**self.config[self.sitename]["default_params"]["endtime"])}}
 
     def __setTime(self, existsDuring, uri):
         """Set time for existsDuring"""
-        existsDuring.setdefault("start", self.startend["start"])
-        existsDuring.setdefault("end", self.startend["end"])
+        tmptimes = {}
+        if uri in self.startend:
+            tmptimes = self.startend[uri]
+        else:
+            tmptimes = self.startend["default"]
+        existsDuring.setdefault("start", tmptimes["start"])
+        existsDuring.setdefault("end", tmptimes["end"])
         existsDuring.setdefault("uri", f"{uri}:lifetime")
+        # Once we are done, we add times to startend.
+        self.startend[uri] = {"start": existsDuring["start"], "end": existsDuring["end"]}
         return existsDuring
 
     def __getDefBandwidth(self, suburi, currentBW):
