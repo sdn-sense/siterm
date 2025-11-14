@@ -484,7 +484,7 @@ async def getqosdata(
         if not tmpInf:
             continue
         for _intf, intfDict in tmpInf.items():
-            maxThrg = tmpH.get("Summary", {}).get("config", {}).get(intfDict["master_intf"], {}).get("bwParams", {}).get("maximumCapacity", None)
+            maxThrg = tmpH.get("NetInfo", {}).get("interfaces", {}).get(intfDict["master_intf"], {}).get("bwParams", {}).get("maximumCapacity", None)
             if maxThrg:
                 for ipkey in ["ipv4", "ipv6"]:
                     tmpIP = intfDict.get(f"{ipkey}_range", None)
