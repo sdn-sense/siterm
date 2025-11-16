@@ -725,7 +725,7 @@ class PolicyService(RDFHelper, Timing, BWService):
     def identifyglobalstate(tmpstates):
         """Based on all subdelta states, identify top level delta state"""
         if not tmpstates:
-            return "deactivated"
+            return "activated" # TODO: Review after SC. 
         if "activate-error" in tmpstates:
             return "activate-error"
         if "deactivate-error" in tmpstates:
