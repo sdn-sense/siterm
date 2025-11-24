@@ -145,6 +145,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
         self._addedTriples = set()
+        self.modelDiffCounter = 0
 
     def __clean(self):
         """Clean params of LookUpService"""
@@ -391,14 +392,19 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 self.logger.info("Forcefully update model in db as it is older than 1h")
                 self.saveModel(saveName)
                 self.dbI.insert("models", [lastKnownModel])
+                self.modelDiffCounter = 0
                 speedup = True
             else:
                 self.logger.info("Models are equal.")
                 lastKnownModel = modelinDB[0]
                 os.unlink(saveName)
+                # Check if model difference counter is more than 60 - if yes, then raise warning
+                if self.modelDiffCounter >= 60:
+                    self.addWarning("Model has updated more than 60 times. Please check LookupService/PolicyService for possible issues.")
         else:
             updateNeeded = True
             self.logger.info("Models are different. Update DB")
+            self.modelDiffCounter += 1
             self.saveModel(saveName)
             self.dbI.insert("models", [lastKnownModel])
             speedup = True
