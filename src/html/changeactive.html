@@ -227,9 +227,9 @@
             Object.keys(json).forEach(function (key) {
               const delta = json[key];
               // Access vsw or rst if present
-              ["vsw", "rst"].forEach((type) => {
+              ["vsw", "rst", "kube", "singleport"].forEach((type) => {
                 if (delta && delta[type]) {
-                  // Loop through each key in vsw or rst
+                  // Loop through each key in vsw, rst, kube, or singleport
                   for (const key in delta[type]) {
                     if (delta[type].hasOwnProperty(key)) {
                       const opt = document.createElement("option");
