@@ -575,10 +575,9 @@ async def setinstancestartend(
     activeDeltas = activeDeltas[0]
     activeDeltas["output"] = evaldict(activeDeltas["output"])
     found = False
-    if item.instanceid in activeDeltas.get("output", {}).get("vsw", {}):
-        found = True
-    if item.instanceid in activeDeltas.get("output", {}).get("rst", {}):
-        found = True
+    for key in ["singleport", "kube", "vsw", "rst"]:
+        if item.instanceid in activeDeltas.get("output", {}).get(key, {}):
+            found = True
     if not found:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Instance ID {item.instanceid} is not found in activeDeltas.")
     # Insert start and end time in instancestartend table
