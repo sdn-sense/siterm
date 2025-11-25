@@ -46,6 +46,7 @@ def exceptionCode(excName):
         NotSupportedArgument: -32,
         ServiceNotReady: -33,
         HTTPServerNotReady: -34,
+        HTTPException: -35,
     }
     if excName in exCodes:
         return exCodes[excName]
@@ -196,3 +197,6 @@ class ServiceNotReady(ExceptionTemplate):
 
 class HTTPServerNotReady(ExceptionTemplate):
     """HTTP Server Not Ready Error."""
+
+class HTTPException(ExceptionTemplate):
+    """HTTP Exception."""

@@ -29,7 +29,7 @@ from typing import Any, Callable
 
 import httpx
 import jwt
-from SiteRMLibs.CustomExceptions import HTTPServerNotReady, ValidityFailure
+from SiteRMLibs.CustomExceptions import HTTPServerNotReady, HTTPException, ValidityFailure
 from SiteRMLibs.MainUtilities import getUTCnow
 
 
@@ -254,9 +254,7 @@ class Requests:
                         self._renewBearerToken(auth_info)
             else:
                 self._logMessage(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
-                raise httpx.HTTPStatusError(
-                    f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}", request=response.request, response=response
-                )
+                raise HTTPException(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
         elif self.authmethod == "OIDC":
             # Check if we need to renew the token
             if not self.bearertoken or self._expiredBearerToken():
@@ -266,9 +264,7 @@ class Requests:
                     self._renewBearerToken(auth_info)
                 else:
                     self._logMessage(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
-                    raise httpx.HTTPStatusError(
-                        f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}", request=response.request, response=response
-                    )
+                    raise HTTPException(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
         if self.authmethod == "OIDC" and self.bearertoken and kwargs.get("SiteRMHTTPCall", True):
             kwargs.setdefault("headers", {})
             kwargs["headers"]["Authorization"] = f"Bearer {self.bearertoken}"
@@ -295,11 +291,11 @@ class Requests:
             if response.status_code not in [200, 201, 202, 204, 304]:
                 self._logMessage(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
                 if kwargs["raiseEx"]:
-                    raise httpx.HTTPStatusError(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}", request=response.request, response=response)
+                    raise HTTPException(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
                 return response.text, response.status_code, response.reason_phrase, False
             return response.text, response.status_code, response.reason_phrase, False
-        except httpx.HTTPStatusError as e:
-            return e.response.text, e.response.status_code, e.response.reason_phrase, False
+        except HTTPException as e:
+            return {"error": str(e)}, 500, "HTTP Exception", False
         except Exception as e:
             return {"error": str(e)}, 500, "Internal Error", False
         finally:
