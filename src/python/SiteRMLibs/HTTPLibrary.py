@@ -19,6 +19,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2017/09/26
 """
 
+import copy
 import functools
 import os
 import socket
@@ -97,24 +98,36 @@ def httpserviceready(endpoint="/api/ready"):
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs) -> Any:
             # Check if service is ready by calling the specified endpoint
+            kwargscopy = copy.deepcopy(kwargs)
+            kwargscopy.setdefault("retries", 3)
+            kwargscopy.setdefault("raiseEx", True)
+            kwargscopy.setdefault("sleep", 5)
             if not kwargs.get("SiteRMHTTPCall", True):
                 return func(self, *args, **kwargs)
-            try:
-                response, status_code, reason_phrase, _ = self.http_makeRequest("GET", endpoint)
-                if status_code == 503:
-                    raise HTTPServerNotReady(f"HTTP Frontend is not ready and returns 503 from {endpoint}. Please check SiteRM Frontend")
-                if status_code != 200:
-                    raise HTTPServerNotReady(f"HTTP Frontend is not ready to serve connections. Please check SiteRM Frontend. Error: {status_code} {reason_phrase} from {endpoint}")
-                if endpoint == "/api/ready":
-                    if not isinstance(response, dict) or response.get("status") != "ready":
-                        raise HTTPServerNotReady("HTTP Frontend is not ready to serve connections. Please check SiteRM Frontend.")
-                elif endpoint == "/api/alive":
-                    if not isinstance(response, dict) or response.get("status") != "alive":
-                        raise HTTPServerNotReady("HTTP Frontend is not alive. Please check SiteRM Frontend.")
-            except HTTPServerNotReady:
-                raise
-            except Exception as e:
-                raise HTTPServerNotReady(f"Failed to check service readiness from {endpoint}: {str(e)}") from e
+            while kwargscopy["retries"] > 0:
+                kwargscopy["retries"] -= 1
+                try:
+                    response, status_code, reason_phrase, _ = self.http_makeRequest("GET", endpoint)
+                    if status_code == 503:
+                        raise HTTPServerNotReady(f"HTTP Frontend is not ready and returns 503 from {endpoint}. Please check SiteRM Frontend")
+                    if status_code != 200:
+                        raise HTTPServerNotReady(f"HTTP Frontend is not ready to serve connections. Please check SiteRM Frontend. Error: {status_code} {reason_phrase} from {endpoint}")
+                    if endpoint == "/api/ready":
+                        if not isinstance(response, dict) or response.get("status") != "ready":
+                            raise HTTPServerNotReady("HTTP Frontend is not ready to serve connections. Please check SiteRM Frontend.")
+                    elif endpoint == "/api/alive":
+                        if not isinstance(response, dict) or response.get("status") != "alive":
+                            raise HTTPServerNotReady("HTTP Frontend is not alive. Please check SiteRM Frontend.")
+                except HTTPServerNotReady as ex:
+                    print(str(ex))
+                    if kwargscopy["retries"] == 0 and kwargscopy["raiseEx"]:
+                        raise ex
+                except Exception as e:
+                    print(f"Exception while checking service readiness from {endpoint}: {str(e)}")
+                    if kwargscopy["retries"] == 0 and kwargscopy["raiseEx"]:
+                        raise HTTPServerNotReady(f"Failed to check service readiness from {endpoint}: {str(e)}") from e
+                if kwargscopy["retries"] > 0:
+                    time.sleep(kwargscopy["sleep"])
             return func(self, *args, **kwargs)
 
         return wrapper
@@ -241,7 +254,9 @@ class Requests:
                         self._renewBearerToken(auth_info)
             else:
                 self._logMessage(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
-                raise httpx.HTTPStatusError(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
+                raise httpx.HTTPStatusError(
+                    f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}", request=response.request, response=response
+                )
         elif self.authmethod == "OIDC":
             # Check if we need to renew the token
             if not self.bearertoken or self._expiredBearerToken():
@@ -251,7 +266,9 @@ class Requests:
                     self._renewBearerToken(auth_info)
                 else:
                     self._logMessage(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
-                    raise httpx.HTTPStatusError(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
+                    raise httpx.HTTPStatusError(
+                        f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}", request=response.request, response=response
+                    )
         if self.authmethod == "OIDC" and self.bearertoken and kwargs.get("SiteRMHTTPCall", True):
             kwargs.setdefault("headers", {})
             kwargs["headers"]["Authorization"] = f"Bearer {self.bearertoken}"
@@ -270,14 +287,15 @@ class Requests:
         url = urllib.parse.urljoin(self.host, self._stripHostFromUrl(uri))
         try:
             if kwargs["SiteRMHTTPCall"]:
-                return self.__makeSiteRMHTTPCall(url, verb, **kwargs)
+                response = self.__makeSiteRMHTTPCall(url, verb, **kwargs)
             # The only implementation of nonFESession is to fetch github config files
             # We are not passing headers or json data here
-            response = self.notFEsession.request(method=verb, url=url)
+            else:
+                response = self.notFEsession.request(method=verb, url=url)
             if response.status_code not in [200, 201, 202, 204, 304]:
                 self._logMessage(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
                 if kwargs["raiseEx"]:
-                    raise httpx.HTTPStatusError(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
+                    raise httpx.HTTPStatusError(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}", request=response.request, response=response)
                 return response.text, response.status_code, response.reason_phrase, False
             return response.text, response.status_code, response.reason_phrase, False
         except httpx.HTTPStatusError as e:
@@ -292,7 +310,7 @@ class Requests:
         """Put JSON to the Site FE."""
         kwargs.setdefault("retries", 3)
         kwargs.setdefault("raiseEx", True)
-        kwargs.setdefault("sleep", 1)
+        kwargs.setdefault("sleep", 5)
         kwargs.setdefault("SiteRMHTTPCall", SiteRMHTTPCall)
         exc = []
         if verb not in ["GET", "POST", "PUT", "DELETE"]:
