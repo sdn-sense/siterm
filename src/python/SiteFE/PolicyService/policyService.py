@@ -881,13 +881,15 @@ class PolicyService(RDFHelper, Timing, BWService):
                 int(override["starttimestamp"]),
                 int(override["endtimestamp"]),
             )
-            # Identify if it vsw or rst
-            if instanceid in newconf.get("vsw", {}):
-                args = ("vsw", instanceid)
-            elif instanceid in newconf.get("rst", {}):
-                args = ("rst", instanceid)
-            else:
+            args = ()
+            for key in ["singleport", "kube", "rst", "vsw"]:
+                if instanceid in newconf.get(key, {}):
+                    args = (key, instanceid)
+                    break
+            if not args:
+                self.logger.warning(f"Instance ID {instanceid} not found in current active config. Skipping override.")
                 continue
+            self.logger.info(f"Applying forced override for instance {instanceid} with timestamps {timestamps}")
             # Set lifetime for all subitems
             __loopsubitems(currentActive[args[0]][args[1]], newconf[args[0]][args[1]], timestamps)
             # Remove from database
