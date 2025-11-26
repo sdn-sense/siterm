@@ -277,7 +277,7 @@ class Requests:
             """Get response content based on json flag."""
             if json:
                 return response.json()
-            return response.text()
+            return response.text
         kwargs.setdefault("data", None)
         kwargs.setdefault("headers", None)
         kwargs.setdefault("json", True)
