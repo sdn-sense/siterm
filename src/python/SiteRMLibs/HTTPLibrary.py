@@ -269,10 +269,15 @@ class Requests:
             kwargs.setdefault("headers", {})
             kwargs["headers"]["Authorization"] = f"Bearer {self.bearertoken}"
         response = self.session.request(method=verb, url=url, headers=kwargs["headers"], json=kwargs["data"] if kwargs["json"] else None, data=None if kwargs["json"] else kwargs["data"])
-        return response.json(), response.status_code, response.reason_phrase, False
+        return response
 
     def http_makeRequest(self, verb, uri, **kwargs):
         """Make an HTTP request with the given parameters."""
+        def getResponseContent(response, json):
+            """Get response content based on json flag."""
+            if json:
+                return response.json()
+            return response.text()
         kwargs.setdefault("data", None)
         kwargs.setdefault("headers", None)
         kwargs.setdefault("json", True)
@@ -292,8 +297,8 @@ class Requests:
                 self._logMessage(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
                 if kwargs["raiseEx"]:
                     raise HTTPException(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
-                return response.text, response.status_code, response.reason_phrase, False
-            return response.text, response.status_code, response.reason_phrase, False
+                return getResponseContent(response, kwargs["json"]), response.status_code, response.reason_phrase, False
+            return getResponseContent(response, kwargs["json"]), response.status_code, response.reason_phrase, False
         except HTTPException as e:
             return {"error": str(e)}, 500, "HTTP Exception", False
         except Exception as e:

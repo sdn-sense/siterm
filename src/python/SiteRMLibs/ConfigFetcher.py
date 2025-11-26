@@ -100,7 +100,7 @@ class ConfigFetcher:
             retries = 3
             while retries > 0:
                 self.requestHandler.setHost(url)
-                outObj = self.requestHandler.makeHttpCall("GET", url, SiteRMHTTPCall=False)
+                outObj = self.requestHandler.makeHttpCall("GET", url, SiteRMHTTPCall=False, json=False)
                 retries = retryPolicy(outObj, retries)
                 if retries == 0:
                     output = {}
@@ -149,7 +149,7 @@ class ConfigFetcher:
             # Here we retry with modified URL to include ref/heads
             try:
                 url = self.gitObj.getFullGitUrl(mappings, refhead=True)
-                output[item[0]], cachedFile = self._fetchFile(item[0], url, raiseEx=False)
+                output[item[0]], cachedFile = self._fetchFile(item[0], url, raiseEx=True)
                 if not cachedFile:
                     self.logger.info(f"Successfully fetched {item[0]} from {url}")
             except Exception as ex:
