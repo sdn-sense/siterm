@@ -1,8 +1,13 @@
-# SiteRM 1.5.61 Bug fix release
+# SiteRM 1.5.62 Bug fix release
 
 ## New features and fixes
-- Always check VLAN and IP Overlap, not only if IP address was requested
-- Fix port scanning, when there is no Switch. e.g. Node connects to another domains via isAlias
+- Retry implementation for failed instance apply.
+- Expand OIDC support and configuration via custom provider.
+- Improve logging and and review warnings, errors raise.
+- Fix recurring time override for provisioned instances (if time not specified for start/end)
+- Fix QoS apply for L3.
+- Allow to cancel kube and singleport instances (mainly for instances without switchingservice)
+- Use HTTP Retries for HTTP calls and not override git configuration.
 
 ## 🔧 Supported OS Releases
 - **Frontend (x86_64)**
@@ -20,14 +25,14 @@
 - 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
 - **Recommended Version:** Always use `latest`. 
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
-- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.61`).
+- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.62`).
 
 ### Docker Versions
-- **Agent:** `sdnsense/siterm-agent:latest-20251009-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
-- **Debugger:** `sdnsense/siterm-debugger:latest-20251009-el10` *(or use `latest`)*
-- **Frontend:** `sdnsense/siterm-fe:latest-20251009` *(or use `latest`)*
+- **Agent:** `sdnsense/siterm-agent:latest-20251126-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
+- **Debugger:** `sdnsense/siterm-debugger:latest-20251126-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:latest-20251126` *(or use `latest`)*
 
 ### Helm versions
-- **Agent:** Chart version siterm/siterm-agent 1.5.61
-- **Debugger:** Chart version siterm/siterm-debugger 1.5.61
-- **Frontend:** Chart version siterm/siterm-fe 1.5.61
+- **Agent:** Chart version siterm/siterm-agent 1.5.62
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.62
+- **Frontend:** Chart version siterm/siterm-fe 1.5.62
