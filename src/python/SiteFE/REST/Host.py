@@ -264,6 +264,9 @@ async def deletehost(request: Request, item: HostItem, sitename: str = Path(...,
     - If the host does not exist, it will raise an exception.
     """
     checkSite(deps, sitename)
+    # Delete all servicestates related to this host (even host is not found, we need to clean servicestates)
+    deps["dbI"].delete("servicestates", [["hostname", item.hostname]])
+    # Delete host entries
     host = deps["dbI"].get("hosts", limit=1, search=[["ip", item.ip], ["hostname", item.hostname]])
     if host:
         removeFile(host[0].get("hostinfo", ""))
