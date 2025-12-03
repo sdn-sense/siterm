@@ -61,7 +61,7 @@ def getConfigParams(config, switch, cls=None):
         if switch in cls.switches["output"]:
             ports = cls.plugin.getports(cls.switches["output"][switch])
     if config.has_option(switch, "ports"):
-        ports = list(set(ports + config.get(switch, "ports")))
+        ports = list(set(list(ports) + list(config.get(switch, "ports").keys())))
     if config.has_option(switch, "vlan_range_list"):
         vlanRange = config.get(switch, "vlan_range_list")
     if config.has_option(switch, "ports_ignore"):
