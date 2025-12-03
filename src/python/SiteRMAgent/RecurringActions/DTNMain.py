@@ -11,6 +11,7 @@ import socket
 import sys
 
 from deepdiff import DeepDiff
+from SiteRMAgent import __version__
 from SiteRMAgent.RecurringActions.Plugins.ArpInfo import ArpInfo
 from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
 from SiteRMAgent.RecurringActions.Plugins.KubeInfo import KubeInfo
@@ -159,6 +160,10 @@ class RecurringAction:
         dic["updatedate"] = getUTCnow()
         dic["Summary"].setdefault("config", {})
         dic["Summary"]["config"] = self.config.getraw("MAIN")
+        # Set default version info for metadata
+        dic["Summary"]["config"].setdefault("general", {})
+        dic["Summary"]["config"]["general"].setdefault("metadata", {})
+        dic["Summary"]["config"]["general"]["metadata"].setdefault("version", __version__)
         return dic
 
     def comparediff(self, newdic):

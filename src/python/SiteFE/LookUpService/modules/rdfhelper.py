@@ -13,6 +13,7 @@ import json
 
 from rdflib import Literal, URIRef
 from rdflib.namespace import XSD
+from SiteFE import __version__
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
 from SiteRMLibs.ipaddr import (
     makeUrl,
@@ -317,6 +318,8 @@ class RDFHelper:
                 self._addHasNetworkAttribute(metaService, key, f"/{key}", json.dumps(vals))
         except (NoSectionError, NoOptionError):
             pass
+        # Add version info of Frontend
+        self._addHasNetworkAttribute(metaService, "version", "/version", __version__)
 
     def _addNodeMetadata(self, **kwargs):
         """Add Node Metadata to Model"""
