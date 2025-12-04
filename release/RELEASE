@@ -1,3 +1,199 @@
+# SiteRM 1.5.63 Bug fix release
+
+## New features and fixes
+- Increase Daemonizer logging for Configuration refresh
+- Break loop during alive/readiness check if service is fully ready
+- Add version information inside the model
+- Clean ServiceStates if host is deleted from Frontend (previously raised False Alarms)
+- Fix bug that allows fake ports specified, if allports is set to True.
+
+## 🔧 Supported OS Releases
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL8
+  - EL9
+  - EL10 **Default for release**
+  - U22
+- **Debugger (x86_64)**
+  - EL10
+
+
+## 📥 Installation Details
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest`. 
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
+- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.63`).
+
+### Docker Versions
+- **Agent:** `sdnsense/siterm-agent:latest-20251204-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
+- **Debugger:** `sdnsense/siterm-debugger:latest-20251204-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:latest-20251204` *(or use `latest`)*
+
+### Helm versions
+- **Agent:** Chart version siterm/siterm-agent 1.5.63
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.63
+- **Frontend:** Chart version siterm/siterm-fe 1.5.63
+
+# SiteRM 1.5.62 Bug fix release
+
+## New features and fixes
+- Retry implementation for failed instance apply.
+- Expand OIDC support and configuration via custom provider.
+- Improve logging and and review warnings, errors raise.
+- Fix recurring time override for provisioned instances (if time not specified for start/end)
+- Fix QoS apply for L3.
+- Allow to cancel kube and singleport instances (mainly for instances without switchingservice)
+- Use HTTP Retries for HTTP calls and not override git configuration.
+
+## 🔧 Supported OS Releases
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL8
+  - EL9
+  - EL10 **Default for release**
+  - U22
+- **Debugger (x86_64)**
+  - EL10
+
+
+## 📥 Installation Details
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest`. 
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
+- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.62`).
+
+### Docker Versions
+- **Agent:** `sdnsense/siterm-agent:latest-20251126-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
+- **Debugger:** `sdnsense/siterm-debugger:latest-20251126-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:latest-20251126` *(or use `latest`)*
+
+### Helm versions
+- **Agent:** Chart version siterm/siterm-agent 1.5.62
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.62
+- **Frontend:** Chart version siterm/siterm-fe 1.5.62
+
+# SiteRM 1.5.61 Bug fix release
+
+## New features and fixes
+- Always check VLAN and IP Overlap, not only if IP address was requested
+- Fix port scanning, when there is no Switch. e.g. Node connects to another domains via isAlias
+
+## 🔧 Supported OS Releases
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL8
+  - EL9
+  - EL10 **Default for release**
+  - U22
+- **Debugger (x86_64)**
+  - EL10
+
+
+## 📥 Installation Details
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest`. 
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
+- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.61`).
+
+### Docker Versions
+- **Agent:** `sdnsense/siterm-agent:latest-20251009-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
+- **Debugger:** `sdnsense/siterm-debugger:latest-20251009-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:latest-20251009` *(or use `latest`)*
+
+### Helm versions
+- **Agent:** Chart version siterm/siterm-agent 1.5.61
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.61
+- **Frontend:** Chart version siterm/siterm-fe 1.5.61
+
+# SiteRM 1.5.60 Production release
+
+## New features and fixes
+- VPP/DPDK In Kubernetes with NIC passthrough. SENSE now builds containers for VPP/FRR/DPDK Router, that is preconfigured for SENSE.
+- RTMon and SiteRM full workflow: Automatically issue Iperf3, FDT, ETHR. Ping, traceroute from Host and Network devices;
+- Junos devices queries moved to use XML. Improvement to get configuration from ~2m to 30sec.
+- VLAN Identitification and conflict resolution. SiteRM checks all ports and vlan ranges to ensure that it is not used in any other port.
+- VRF Support in Arista devices
+- Node Exporter Passthrough via Frontend. Sites are not required anymore to open node_exporter port to autogole monitoring.
+- Ansible runtime output store in files. Hit a limit of Subprocess and AsyncIO (>500kb messages are not guaranteed to work.)
+- Container images built and uploaded to Quay.io (default registry). Dockerhub - as a fallback. Only last 2 stable containers are kept
+- And many other small fixes: No lldpd is not an error, monitor disk usage, snmp mac table for vpp/dpdk, Network status in the model fix...
+
+Full list of issues resolved: https://github.com/sdn-sense/siterm/issues?q=is%3Aissue%20state%3Aclosed%20milestone%3A1.5.50
+And all changes diff 1.5.52 and 1.5.60 releases in any of the repos: https://github.com/sdn-sense
+
+## New Sites
+- Internet2 and NRP (40 nodes) - all connected to one of Internet2 ports.
+- UChicago running VPP/DPDK Software based router on Kubernetes
+- KIT (2 Servers + 1 Router) connected via Surfnet
+
+
+## 🔧 Supported OS Releases
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL8
+  - EL9
+  - EL10 **Default for release**
+  - U22
+- **Debugger (x86_64)**
+  - EL10
+
+
+## 📥 Installation Details
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest`. 
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
+- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.60`).
+
+### Docker Versions
+- **Agent:** `sdnsense/siterm-agent:latest-20251006-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
+- **Debugger:** `sdnsense/siterm-debugger:latest-20251006-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:latest-20251006` *(or use `latest`)*
+
+### Helm versions
+- **Agent:** Chart version siterm/siterm-agent 1.5.60
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.60
+- **Frontend:** Chart version siterm/siterm-fe 1.5.60
+
+# SiteRM 1.5.51 Bugfix release
+
+## Fixes
+- Add Ansible operation timeout. Issue with Edgecore devices during cleanup after operation
+- FastAPI documentation update. Defaults for Debug actions.
+- Fix DebugService and ServiceStates FastAPI calls.
+- Frontend accept ethr-server/ethr-client
+
+## 🔧 Supported OS Releases
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL8
+  - EL9
+  - EL10 **Default for release**
+  - U22
+- **Debugger (x86_64)**
+  - EL10
+
+
+## 📥 Installation Details
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- **Recommended Version:** Always use `latest`. 
+- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
+- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.51`).
+
+### Docker Versions
+- **Agent:** `sdnsense/siterm-agent:latest-20250823-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
+- **Debugger:** `sdnsense/siterm-debugger:latest-20250823-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:latest-20250823` *(or use `latest`)*
+
+### Helm versions
+- **Agent:** Chart version siterm/siterm-agent 1.5.51
+- **Debugger:** Chart version siterm/siterm-debugger 1.5.51
+- **Frontend:** Chart version siterm/siterm-fe 1.5.51
+
 # SiteRM 1.5.50 Production release
 
 ⚠️  Breaking Release
