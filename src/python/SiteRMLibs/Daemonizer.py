@@ -235,8 +235,10 @@ class DBBackend:
                 self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component, "action": action["action"]}, useragent="Daemonizer")
                 refresh = True
         except Exception:
+            exc = traceback.format_exc()
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in _autoRefreshAPI. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
+            print(f"Traceback details: {exc}")
         return refresh
 
 
@@ -627,6 +629,7 @@ class Daemon(DBBackend):
             refresh = False
             speedup = False
             stwork = int(getUTCnow())
+            self.logger.debug("Daemonizer main loop start. Run count: %s", self.runCount)
             try:
                 for sitename, rthread in list(self.runThreads.items()):
                     stwork = int(getUTCnow())
@@ -655,6 +658,7 @@ class Daemon(DBBackend):
                         self.logger.critical(f"Exception!!! Error details:  {ex}. Traceback details: {exc}")
                     finally:
                         self.postRunThread(sitename, rthread)
+                        self.logger.debug("Finished worker for %s site", sitename)
                 if self.runLoop():
                     time.sleep(self.sleepTimers["ok"] // 2 if speedup else self.sleepTimers["ok"])
             except KeyboardInterrupt as ex:
@@ -675,6 +679,7 @@ class Daemon(DBBackend):
                 self.cleaner()
                 self._refreshConfig()
                 self.refreshThreads()
+            self.logger.debug("Daemonizer main loop end. Run count: %s", self.runCount)
 
     @staticmethod
     def getThreads():

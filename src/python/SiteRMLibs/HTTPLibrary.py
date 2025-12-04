@@ -118,6 +118,8 @@ def httpserviceready(endpoint="/api/ready"):
                     elif endpoint == "/api/alive":
                         if not isinstance(response, dict) or response.get("status") != "alive":
                             raise HTTPServerNotReady("HTTP Frontend is not alive. Please check SiteRM Frontend.")
+                    # Here it means service is ready. break the loop
+                    break
                 except HTTPServerNotReady as ex:
                     print(str(ex))
                     if kwargscopy["retries"] == 0 and kwargscopy["raiseEx"]:
