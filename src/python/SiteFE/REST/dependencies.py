@@ -26,7 +26,7 @@ from SiteRMLibs.MainUtilities import (
     firstRunFinished,
     getAllFileContent,
     getDBConnObj,
-    getUTCnow
+    getUTCnow,
 )
 from SiteRMLibs.x509 import CertHandler, OIDCHandler
 
@@ -146,6 +146,7 @@ def checkPermissions(userinfo, required_perms: List[str]):
     # if not any(perm in user_perms for perm in required_perms):
     #    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access to this resource is forbidden due to insufficient permissions.")
 
+
 def checkauthmethod():
     """Check if auth method is configured correctly."""
     config = depGetConfig()
@@ -178,10 +179,12 @@ def apiAdminDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=De
     checkPermissions(user, ["admin"])
     return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
 
+
 def apiPublicDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the public REST API."""
     checkauthmethod()
     return {"config": config, "dbI": dbI, "stateMachine": stateMachine}
+
 
 # pylint: disable=too-few-public-methods
 class APIResponse:
@@ -203,3 +206,18 @@ class APIResponse:
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
             detail=f"Unsupported Accept header: {accept_header}. Supported: application/json, text/plain, */*",
         )
+
+
+def forbidExtraQueryParams(*allowedParams: str):
+    """Dependency to forbid extra query parameters not in allowedParams."""
+
+    async def checker(request: Request):
+        if "*" in allowedParams:
+            return  # Permit anything
+        incoming = set(request.query_params.keys())
+        allowed = set(allowedParams)
+        unknown = incoming - allowed
+        if unknown:
+            raise HTTPException(status_code=422, detail=[{"type": "extra_forbidden", "loc": ["query", unknown], "msg": f"Unexpected query parameter: {unknown}"}])
+
+    return checker

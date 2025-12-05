@@ -31,11 +31,19 @@ from SiteFE.REST.dependencies import (
     apiReadDeps,
     apiWriteDeps,
     checkSite,
+    forbidExtraQueryParams,
 )
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
-from SiteRMLibs.MainUtilities import getFileContentAsJson, getUTCnow, jsondumps
+from SiteRMLibs.MainUtilities import (
+    getFileContentAsJson,
+    getstartupconfig,
+    getUTCnow,
+    jsondumps,
+)
 
 router = APIRouter()
+
+startupConfig = getstartupconfig()
 
 
 # =========================================================
@@ -53,7 +61,11 @@ router = APIRouter()
         **DEFAULT_RESPONSES,
     },
 )
-async def getprommetrics(sitename: str = Path(..., description="The site name to retrieve the service metrics for."), deps=Depends(apiReadDeps)):
+async def getprommetrics(
+    sitename: str = Path(..., description="The site name to retrieve the service metrics for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Get service metrics from Prometheus.
     """
@@ -75,7 +87,6 @@ async def getprommetrics(sitename: str = Path(..., description="The site name to
 # =========================================================
 # /{sitename}/monitoring/prometheus/passthrough/{hostname}
 # =========================================================
-# TODO
 @router.get(
     "/{sitename}/monitoring/prometheus/passthrough/{hostname}",
     summary="Prometheus monitoring Passthrough",
@@ -89,9 +100,10 @@ async def getprommetrics(sitename: str = Path(..., description="The site name to
     },
 )
 async def prometheuspassthrough(
-    sitename: str = Path(..., description="The site name to retrieve the Prometheus passthrough for."),
+    sitename: str = Path(..., description="The site name to retrieve the Prometheus passthrough for.", example=startupConfig.get("SITENAME", "default")),
     hostname: str = Path(..., description="The hostname to retrieve the Prometheus passthrough for."),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
 ):
     """
     This endpoint is a passthrough of host-level Prometheus output.
@@ -151,8 +163,9 @@ class MonStats(BaseModel):
 async def getmonitoringstats(
     request: Request,
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
-    sitename: str = Path(..., description="The site name to retrieve the monitoring statistics for."),
+    sitename: str = Path(..., description="The site name to retrieve the monitoring statistics for.", example=startupConfig.get("SITENAME", "default")),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("limit")),
 ):
     """
     Get monitoring statistics for a specific site.
@@ -176,8 +189,9 @@ async def getmonitoringstats(
 async def postmonitoringstats(
     item: MonStats,
     request: Request,
-    sitename: str = Path(..., description="The site name to post the monitoring statistics for."),
+    sitename: str = Path(..., description="The site name to post the monitoring statistics for.", example=startupConfig.get("SITENAME", "default")),
     deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
 ):
     """
     Post monitoring statistics for a specific site.

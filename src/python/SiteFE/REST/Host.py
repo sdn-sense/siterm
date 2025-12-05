@@ -20,16 +20,20 @@ from SiteFE.REST.dependencies import (
     apiReadDeps,
     apiWriteDeps,
     checkSite,
+    forbidExtraQueryParams,
 )
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
     dumpFileContentAsJson,
     getFileContentAsJson,
+    getstartupconfig,
     getUTCnow,
     removeFile,
 )
 
 router = APIRouter()
+
+startupConfig = getstartupconfig()
 
 
 # =========================================================
@@ -124,11 +128,12 @@ class HostItem(BaseModel):
 )
 async def gethosts(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the hosts for."),
+    sitename: str = Path(..., description="The site name to retrieve the hosts for.", example=startupConfig.get("SITENAME", "default")),
     hostname: str = Query(None, description="Filter by hostname."),
     details: bool = Query(False, description="If True, returns detailed host information. In case detail, limit is ignored and set to 1."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("hostname", "details", "limit")),
 ):
     """
     Get host data from the database of all registered hosts.
@@ -171,7 +176,13 @@ async def gethosts(
         **DEFAULT_RESPONSES,
     },
 )
-async def addhost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to add or update the host for."), deps=Depends(apiWriteDeps)):
+async def addhost(
+    request: Request,
+    item: HostItem,
+    sitename: str = Path(..., description="The site name to add or update the host for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Add or update a host in the database.
     - If the host does not exist, it will be added.
@@ -213,7 +224,13 @@ async def addhost(request: Request, item: HostItem, sitename: str = Path(..., de
         **DEFAULT_RESPONSES,
     },
 )
-async def updatehost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to update the host for."), deps=Depends(apiWriteDeps)):
+async def updatehost(
+    request: Request,
+    item: HostItem,
+    sitename: str = Path(..., description="The site name to update the host for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Update an existing host in the database.
     - If the host does not exist, it will raise an exception.
@@ -258,7 +275,13 @@ async def updatehost(request: Request, item: HostItem, sitename: str = Path(...,
         **DEFAULT_RESPONSES,
     },
 )
-async def deletehost(request: Request, item: HostItem, sitename: str = Path(..., description="The site name to delete the host for."), deps=Depends(apiAdminDeps)):
+async def deletehost(
+    request: Request,
+    item: HostItem,
+    sitename: str = Path(..., description="The site name to delete the host for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiAdminDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Delete an existing host from the database.
     - If the host does not exist, it will raise an exception.

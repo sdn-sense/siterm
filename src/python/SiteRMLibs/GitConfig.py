@@ -13,7 +13,7 @@ import os.path
 import time
 
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
-from SiteRMLibs.MainUtilities import generateMD5, getHostname
+from SiteRMLibs.MainUtilities import generateMD5, getHostname, getstartupconfig
 from yaml import safe_load as yload
 
 
@@ -61,11 +61,7 @@ class GitConfig:
 
     def getLocalConfig(self):
         """Get local config for info where all configs are kept in git."""
-        if not os.path.isfile("/etc/siterm.yaml"):
-            print("Config file /etc/siterm.yaml does not exist.")
-            raise Exception("Config file /etc/siterm.yaml does not exist.")
-        with open("/etc/siterm.yaml", "r", encoding="utf-8") as fd:
-            self.config = yload(fd.read())
+        self.config = getstartupconfig()
         for key, requirement in list(self.defaults.items()):
             if key not in list(self.config.keys()):
                 # Check if it is optional or not;

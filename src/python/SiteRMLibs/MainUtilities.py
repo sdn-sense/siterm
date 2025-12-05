@@ -37,6 +37,7 @@ from SiteRMLibs.CustomExceptions import (
     WrongInputError,
 )
 from SiteRMLibs.DBBackend import dbinterface
+from yaml import safe_load as yload
 
 HOSTSERVICES = [
     "Agent",
@@ -54,6 +55,16 @@ HOSTSERVICES = [
     "ConfigFetcher",
     "MonitoringService",
 ]
+
+
+def getstartupconfig(conffile="/etc/siterm.yaml"):
+    """Get local config for info where all configs are kept in git."""
+    if not os.path.isfile(conffile):
+        print(f"Config file {conffile} does not exist.")
+        raise Exception(f"Config file {conffile} does not exist.")
+    with open(conffile, "r", encoding="utf-8") as fd:
+        out = yload(fd.read())
+    return out
 
 
 def loadEnvFile(filepath="/etc/environment"):
@@ -440,6 +451,7 @@ class contentDB:
     def fileExists(fileLoc):
         """Check if file exists."""
         return os.path.isfile(fileLoc)
+
 
 def delete(inputObj, delObj):
     """Delete function which covers exceptions."""

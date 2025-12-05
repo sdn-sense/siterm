@@ -2,6 +2,7 @@
 # pylint: disable=no-name-in-module
 """FastAPI application for SiteFE REST API."""
 import os
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
@@ -14,7 +15,7 @@ from SiteFE.REST.Model import router as model_router
 from SiteFE.REST.Monitoring import router as monitoring_router
 from SiteFE.REST.Service import router as service_router
 from SiteFE.REST.Topo import router as topo_router
-from SiteRMLibs.MainUtilities  import loadEnvFile
+from SiteRMLibs.MainUtilities import loadEnvFile
 
 loadEnvFile()
 
@@ -78,6 +79,7 @@ async def custom_401_handler(request: Request, exc: HTTPException):
     logdetails(request, 401, str(exc))
     return JSONResponse(status_code=401, content={"detail": f"Unauthorized. Exception: {exc}"})
 
+
 @app.exception_handler(404)
 async def custom_404_handler(request: Request, exc: HTTPException):
     """Custom 404 error handler."""
@@ -89,7 +91,9 @@ async def custom_404_handler(request: Request, exc: HTTPException):
 async def custom_405_handler(request: Request, exc: HTTPException):
     """Custom 405 error handler."""
     logdetails(request, 405, str(exc))
-    return JSONResponse(status_code=405, content={"detail": f"Method Not Allowed. Exception: {exc}"})
+    # Add allowed methods header to the response based on RFC 9110
+    headers = {"Allow": "GET, POST, PUT, DELETE"}
+    return JSONResponse(status_code=405, content={"detail": f"Method Not Allowed. Exception: {exc}"}, headers=headers)
 
 
 @app.exception_handler(500)

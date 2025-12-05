@@ -20,6 +20,7 @@ from SiteFE.REST.dependencies import (
     apiReadDeps,
     apiWriteDeps,
     checkSite,
+    forbidExtraQueryParams,
 )
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import BadRequestError
@@ -28,11 +29,14 @@ from SiteRMLibs.MainUtilities import (
     dumpFileContentAsJson,
     generateRandomUUID,
     getFileContentAsJson,
+    getstartupconfig,
     getUTCnow,
 )
 from SiteRMLibs.Validator import validator
 
 router = APIRouter()
+
+startupConfig = getstartupconfig()
 
 
 def _checkactionrequest(config, action=None):
@@ -285,7 +289,12 @@ class DebugItem(BaseModel):
         **DEFAULT_RESPONSES,
     },
 )
-async def getDebugActionsList(request: Request, sitename: str = Path(..., description="The site name to retrieve the debug actions list for."), deps=Depends(apiReadDeps)):
+async def getDebugActionsList(
+    request: Request,
+    sitename: str = Path(..., description="The site name to retrieve the debug actions list for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Get a list of all possible debug actions for the given site name.
     - Returns a list of debug actions.
@@ -323,9 +332,10 @@ async def getDebugActionsList(request: Request, sitename: str = Path(..., descri
 )
 async def getDebugActionInfo(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the debug action information for."),
+    sitename: str = Path(..., description="The site name to retrieve the debug action information for.", example=startupConfig.get("SITENAME", "default")),
     action: str = Query(..., description="The debug action to retrieve information for."),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("action")),
 ):
     """
     Get information about a specific debug action for the given site name.
@@ -359,7 +369,12 @@ async def getDebugActionInfo(
         **DEFAULT_RESPONSES,
     },
 )
-async def getDynamicFromRanges(request: Request, sitename: str = Path(..., description="The site name to retrieve the dynamicfrom ranges for."), deps=Depends(apiReadDeps)):
+async def getDynamicFromRanges(
+    request: Request,
+    sitename: str = Path(..., description="The site name to retrieve the dynamicfrom ranges for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Get dynamic from ranges for the given site name.
     - Returns a list of allowed dynamicfrom ranges.
@@ -396,7 +411,7 @@ async def getDynamicFromRanges(request: Request, sitename: str = Path(..., descr
 )
 async def getDebugActions(
     request: Request,
-    sitename: str = Path(..., description="The site name to get the debug action information for."),
+    sitename: str = Path(..., description="The site name to get the debug action information for.", example=startupConfig.get("SITENAME", "default")),
     debugvar: Optional[str] = Query(None, description="The debug action ID to retrieve information for."),
     limit: int = Query(LIMIT_DEFAULT, description="Limit the number of debug requests returned. Only applicable for debugvar 'ALL'.", ge=LIMIT_MIN, le=LIMIT_MAX),
     details: bool = Query(False, description="If set, returns detailed information for the debug request."),
@@ -404,6 +419,7 @@ async def getDebugActions(
     state: str = Query(None, description="State to filter the debug requests by. If not set, all debug requests are returned."),
     action: str = Query(None, description="Action to filter the debug requests by. If not set, all debug requests are returned."),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("limit", "details", "hostname", "state", "action")),
 ):
     """
     Get debug actions for the given site name.
@@ -436,13 +452,14 @@ def _getdebuginfo(out):
 )
 async def getDebugInfo(
     request: Request,
-    sitename: str = Path(..., description="The site name to get the debug action information for."),
+    sitename: str = Path(..., description="The site name to get the debug action information for.", example=startupConfig.get("SITENAME", "default")),
     debugvar: str = Path(..., description="The debug action ID to retrieve information for."),
     limit: int = Query(LIMIT_DEFAULT, description="Limit the number of debug requests returned. Only applicable for debugvar 'ALL'.", ge=LIMIT_MIN, le=LIMIT_MAX),
     details: bool = Query(False, description="If set, returns detailed information for the debug request."),
     hostname: str = Query(None, description="Hostname to filter the debug requests by. If not set, all debug requests are returned."),
     state: str = Query(None, description="State to filter the debug requests by. If not set, all debug requests are returned."),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("limit", "details", "hostname", "state")),
 ):
     """Get Debug action information for a specific ID.
     In case of 'ALL', returns all debug requests.
@@ -480,9 +497,10 @@ async def getDebugInfo(
 async def updatedebug(
     request: Request,
     item: DebugItem,
-    sitename: str = Path(..., description="The site name to get the debug action information for."),
+    sitename: str = Path(..., description="The site name to get the debug action information for.", example=startupConfig.get("SITENAME", "default")),
     debugvar: str = Path(..., description="The debug action ID to update information for."),
     deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
 ):
     """Update Debug action information.
     - Updates the debug action information for the given debug ID.
@@ -523,9 +541,10 @@ async def updatedebug(
 )
 async def deletedebug(
     request: Request,
-    sitename: str = Path(..., description="The site name to get the debug action information for."),
+    sitename: str = Path(..., description="The site name to get the debug action information for.", example=startupConfig.get("SITENAME", "default")),
     debugvar: str = Path(..., description="The debug action ID to delete information for."),
     deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
 ):
     """Delete Debug action information.
     - Deletes the debug action information for the given debug ID.
@@ -564,7 +583,13 @@ async def deletedebug(
         400: {"description": "Bad request", "content": {"application/json": {"example": {"detail": "Bad Request. Possible reasons: Wrong value, parameter, input validation failed."}}}},
     },
 )
-async def submitdebug(request: Request, item: DebugItem, sitename: str = Path(..., description="The site name to get the debug action information for."), deps=Depends(apiWriteDeps)):
+async def submitdebug(
+    request: Request,
+    item: DebugItem,
+    sitename: str = Path(..., description="The site name to get the debug action information for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """Submit new debug action request.
     - Submits a new debug action request for the given site name.
     """

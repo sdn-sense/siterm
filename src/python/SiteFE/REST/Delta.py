@@ -33,6 +33,7 @@ from SiteFE.REST.dependencies import (
     checkReadyState,
     checkSite,
     depGetModel,
+    forbidExtraQueryParams,
 )
 from SiteRMLibs.CustomExceptions import ModelNotFound
 from SiteRMLibs.DefaultParams import (
@@ -46,6 +47,7 @@ from SiteRMLibs.MainUtilities import (
     evaldict,
     getFileContentAsJson,
     getModTime,
+    getstartupconfig,
     getUTCnow,
     httpdate,
     jsondumps,
@@ -54,6 +56,8 @@ from SiteRMLibs.MainUtilities import (
 )
 
 router = APIRouter()
+
+startupConfig = getstartupconfig()
 
 
 def _getdeltas(dbI, **kwargs):
@@ -141,10 +145,11 @@ class DeltaTimeState(BaseModel):
 )
 async def getDeltas(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the service deltas for."),
+    sitename: str = Path(..., description="The site name to retrieve the service deltas for.", example=startupConfig.get("SITENAME", "default")),
     summary: bool = Query(True, description="Whether to return a summary of the deltas. Defaults to False."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("limit", "summary")),
 ):
     """
     Get service deltas from the specified site.
@@ -214,8 +219,9 @@ async def getDeltas(
 async def submitDelta(
     request: Request,
     item: DeltaItem,
-    sitename: str = Path(..., description="The site name to submit the delta for."),
+    sitename: str = Path(..., description="The site name to submit the delta for.", example=startupConfig.get("SITENAME", "default")),
     deps=Depends(apiAdminDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
 ):
     """
     Submit a new delta for the specified site.
@@ -308,10 +314,11 @@ async def submitDelta(
 )
 async def getDeltaByID(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the delta information for."),
+    sitename: str = Path(..., description="The site name to retrieve the delta information for.", example=startupConfig.get("SITENAME", "default")),
     delta_id: str = Path(..., description="The ID of the delta to retrieve."),
     summary: bool = Query(False, description="Whether to return a summary of the deltas. Defaults to False."),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("summary")),
 ):
     """
     Get delta information by its ID for the given site name.
@@ -375,10 +382,11 @@ async def getDeltaByID(
 )
 async def performActionOnDelta(
     request: Request,
-    sitename: str = Path(..., description="The site name to perform the action on the delta for."),
+    sitename: str = Path(..., description="The site name to perform the action on the delta for.", example=startupConfig.get("SITENAME", "default")),
     delta_id: str = Path(..., description="The ID of the delta to perform the action on."),
     action: Literal["commit", "forcecommit", "forceapply"] = Path(..., description="The action to perform on the delta."),
     deps=Depends(apiAdminDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
 ):
     """
     Perform a specified action on a delta by its ID for the given site name.
@@ -446,10 +454,11 @@ async def performActionOnDelta(
 )
 async def getTimeStatesForDelta(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the time states for the delta."),
+    sitename: str = Path(..., description="The site name to retrieve the time states for the delta.", example=startupConfig.get("SITENAME", "default")),
     delta_id: str = Path(..., description="The ID of the delta to retrieve the time states for."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("limit")),
 ):
     """
     Get time states for the specified delta ID.
@@ -492,7 +501,7 @@ async def getTimeStatesForDelta(
 async def createTimeStateForDelta(
     request: Request,
     item: DeltaTimeState,
-    sitename: str = Path(..., description="The site name to create the time state for the delta."),
+    sitename: str = Path(..., description="The site name to create the time state for the delta.", example=startupConfig.get("SITENAME", "default")),
     delta_id: str = Path(..., description="The ID of the delta to create the time state for."),
     deps=Depends(apiWriteDeps),
 ):

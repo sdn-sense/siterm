@@ -28,12 +28,20 @@ from SiteFE.REST.dependencies import (
     checkSite,
     depGetModel,
     depGetModelContent,
+    forbidExtraQueryParams,
 )
 from SiteRMLibs.CustomExceptions import ModelNotFound
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
-from SiteRMLibs.MainUtilities import convertTSToDatetime, getModTime, httpdate
+from SiteRMLibs.MainUtilities import (
+    convertTSToDatetime,
+    getModTime,
+    getstartupconfig,
+    httpdate,
+)
 
 router = APIRouter()
+
+startupConfig = getstartupconfig()
 
 
 # =========================================================
@@ -56,13 +64,14 @@ router = APIRouter()
 async def getModelInfo(
     # pylint: disable=too-many-locals
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the model information for."),
+    sitename: str = Path(..., description="The site name to retrieve the model information for.", example=startupConfig.get("SITENAME", "default")),
     current: bool = Query(False, description="Whether to return the current model. Defaults to False."),
     summary: bool = Query(True, description="Whether to return a summary of the model. Defaults to True."),
     encode: bool = Query(True, description="Whether to encode the model. Defaults to True."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}. Only applies if current is False.", ge=LIMIT_MIN, le=LIMIT_MAX),
     rdfformat: Literal["turtle", "json-ld", "ntriples"] = Query("turtle", description="Model format: turtle, json-ld, ntriples."),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("current", "summary", "encode", "limit", "rdfformat")),
 ):
     """
     Get model information for the given site name.
@@ -141,12 +150,13 @@ async def getModelInfo(
 # pylint: disable=too-many-arguments,too-many-locals
 async def getModelByID(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the model information for."),
+    sitename: str = Path(..., description="The site name to retrieve the model information for.", example=startupConfig.get("SITENAME", "default")),
     modelID: str = Path(..., description="The ID of the model to retrieve."),
     summary: bool = Query(False, description="Whether to return a summary of the model. Defaults to False."),
     encode: bool = Query(False, description="Whether to encode the model. Defaults to False."),
     rdfformat: Literal["turtle", "json-ld", "ntriples"] = Query("turtle", description="Model format: turtle, json-ld, ntriples."),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("summary", "encode", "rdfformat")),
 ):
     """
     Get model information by its ID for the given site name.

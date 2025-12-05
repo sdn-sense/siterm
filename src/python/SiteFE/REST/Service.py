@@ -20,6 +20,7 @@ from SiteFE.REST.dependencies import (
     apiReadDeps,
     apiWriteDeps,
     checkSite,
+    forbidExtraQueryParams,
 )
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.DefaultParams import (
@@ -34,10 +35,13 @@ from SiteRMLibs.MainUtilities import (
     HOSTSERVICES,
     dumpFileContentAsJson,
     evaldict,
+    getstartupconfig,
     getUTCnow,
 )
 
 router = APIRouter()
+
+startupConfig = getstartupconfig()
 
 
 def _host_supportedService(servicename):
@@ -155,10 +159,11 @@ class ServiceItem(BaseModel):
 )
 async def getservice(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the service for."),
+    sitename: str = Path(..., description="The site name to retrieve the service for.", example=startupConfig.get("SITENAME", "default")),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: str = Query(default=None, description="Service name to filter by"),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("hostname", "servicename")),
 ):
     """
     Get a service state from the database based on hostname and servicename.
@@ -186,7 +191,13 @@ async def getservice(
         **DEFAULT_RESPONSES,
     },
 )
-async def createservice(request: Request, item: ServiceItem, sitename: str = Path(..., description="The site name to create the service for."), deps=Depends(apiWriteDeps)):
+async def createservice(
+    request: Request,
+    item: ServiceItem,
+    sitename: str = Path(..., description="The site name to create the service for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Create a new service state in the database.
     """
@@ -208,7 +219,13 @@ async def createservice(request: Request, item: ServiceItem, sitename: str = Pat
         **DEFAULT_RESPONSES,
     },
 )
-async def updateservice(request: Request, item: ServiceItem, sitename: str = Path(..., description="The site name to update the service for."), deps=Depends(apiWriteDeps)):
+async def updateservice(
+    request: Request,
+    item: ServiceItem,
+    sitename: str = Path(..., description="The site name to update the service for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Update an existing service state in the database.
     """
@@ -237,8 +254,9 @@ async def updateservice(request: Request, item: ServiceItem, sitename: str = Pat
 async def deleteservice(
     request: Request,
     item: ServiceItem = Query(..., description="Service item to delete"),
-    sitename: str = Path(..., description="The site name to delete the service for."),
+    sitename: str = Path(..., description="The site name to delete the service for.", example=startupConfig.get("SITENAME", "default")),
     deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
 ):
     """
     Delete an existing service state from the database.
@@ -297,8 +315,9 @@ class ServiceStateItem(BaseModel):
 async def getservicestates(
     request: Request,
     limit: int = Query(LIMIT_SERVICE_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_SERVICE_DEFAULT}.", ge=LIMIT_SERVICE_MIN, le=LIMIT_SERVICE_MAX),
-    sitename: str = Path(..., description="The site name to retrieve the service states for."),
+    sitename: str = Path(..., description="The site name to retrieve the service states for.", example=startupConfig.get("SITENAME", "default")),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("limit")),
 ):
     """
     Get service state data from the database.
@@ -324,7 +343,13 @@ async def getservicestates(
         **DEFAULT_RESPONSES,
     },
 )
-async def addservicestate(request: Request, item: ServiceStateItem, sitename: str = Path(..., description="The site name to add/update the service state for."), deps=Depends(apiWriteDeps)):
+async def addservicestate(
+    request: Request,
+    item: ServiceStateItem,
+    sitename: str = Path(..., description="The site name to add/update the service state for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Add a new service state or update an existing one.
     """
@@ -365,7 +390,13 @@ async def addservicestate(request: Request, item: ServiceStateItem, sitename: st
         **DEFAULT_RESPONSES,
     },
 )
-async def deleteservicestate(request: Request, item: ServiceStateItem, sitename: str = Path(..., description="The site name to delete the service state for."), deps=Depends(apiWriteDeps)):
+async def deleteservicestate(
+    request: Request,
+    item: ServiceStateItem,
+    sitename: str = Path(..., description="The site name to delete the service state for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Delete a service state from the database.
     """
@@ -409,11 +440,12 @@ class ServiceActionItem(BaseModel):
 )
 async def getserviceaction(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the service action for."),
+    sitename: str = Path(..., description="The site name to retrieve the service action for.", example=startupConfig.get("SITENAME", "default")),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: str = Query(default=None, description="Service name to filter by"),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("hostname", "servicename", "limit")),
 ):
     """Get service actions from the database."""
     checkSite(deps, sitename)
@@ -446,7 +478,13 @@ async def getserviceaction(
         **DEFAULT_RESPONSES,
     },
 )
-async def serviceaction(request: Request, item: ServiceActionItem, sitename: str = Path(..., description="The site name to record the service action for."), deps=Depends(apiWriteDeps)):
+async def serviceaction(
+    request: Request,
+    item: ServiceActionItem,
+    sitename: str = Path(..., description="The site name to record the service action for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Record a service action in the database.
     """
@@ -498,7 +536,13 @@ async def serviceaction(request: Request, item: ServiceActionItem, sitename: str
         **DEFAULT_RESPONSES,
     },
 )
-async def deleteserviceaction(request: Request, item: ServiceActionItem, _sitename: str = Path(..., description="The site name to delete the service action for."), deps=Depends(apiWriteDeps)):
+async def deleteserviceaction(
+    request: Request,
+    item: ServiceActionItem,
+    _sitename: str = Path(..., description="The site name to delete the service action for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """Delete a service action from the database."""
     checkSite(deps, _sitename)
     if not _host_supportedService(item.servicename):
@@ -560,7 +604,11 @@ class InstanceStartEndItem(BaseModel):
     },
 )
 async def setinstancestartend(
-    request: Request, item: InstanceStartEndItem, sitename: str = Path(..., description="The site name to retrieve the instance start and end time for."), deps=Depends(apiWriteDeps)
+    request: Request,
+    item: InstanceStartEndItem,
+    sitename: str = Path(..., description="The site name to retrieve the instance start and end time for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
 ):
     """
     Set the start and end time for a specific instance.

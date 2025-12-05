@@ -15,10 +15,11 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, sta
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
-    apiReadDeps,
     apiPublicDeps,
+    apiReadDeps,
     checkReadyState,
     checkSite,
+    forbidExtraQueryParams,
 )
 from SiteRMLibs.DefaultParams import (
     LIMIT_DEFAULT,
@@ -26,7 +27,14 @@ from SiteRMLibs.DefaultParams import (
     LIMIT_MIN,
     SERVICE_DOWN_TIMEOUT,
 )
-from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson, getUTCnow
+from SiteRMLibs.MainUtilities import (
+    evaldict,
+    getFileContentAsJson,
+    getstartupconfig,
+    getUTCnow,
+)
+
+startupConfig = getstartupconfig()
 
 router = APIRouter()
 
@@ -46,7 +54,7 @@ router = APIRouter()
         **DEFAULT_RESPONSES,
     },
 )
-async def checkAPIHealth(request: Request, _deps=Depends(apiReadDeps)):
+async def checkAPIHealth(request: Request, _deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
     """
     Check the health of the API.
     """
@@ -69,7 +77,7 @@ async def checkAPIHealth(request: Request, _deps=Depends(apiReadDeps)):
         **DEFAULT_RESPONSES,
     },
 )
-async def checkAPIReady(request: Request, deps=Depends(apiReadDeps)):
+async def checkAPIReady(request: Request, deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
     """
     Check the readiness of the API.
     """
@@ -93,7 +101,7 @@ async def checkAPIReady(request: Request, deps=Depends(apiReadDeps)):
         **DEFAULT_RESPONSES,
     },
 )
-async def checkAPILiveness(request: Request, _deps=Depends(apiReadDeps)):
+async def checkAPILiveness(request: Request, _deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams)):
     """
     Check the health of the API.
     """
@@ -121,7 +129,7 @@ async def checkAPILiveness(request: Request, _deps=Depends(apiReadDeps)):
         **DEFAULT_RESPONSES,
     },
 )
-async def checkAPIReadiness(request: Request, _deps=Depends(apiReadDeps)):
+async def checkAPIReadiness(request: Request, _deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
     """
     Check the readiness of the API.
     """
@@ -151,7 +159,7 @@ async def checkAPIReadiness(request: Request, _deps=Depends(apiReadDeps)):
         **DEFAULT_RESPONSES,
     },
 )
-async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps)):
+async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps), _forbid=Depends(forbidExtraQueryParams())):
     """
     Get the authentication method used by the frontend.
     - Returns the authentication method in use (X509 or OIDC).
@@ -159,6 +167,7 @@ async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps)):
     oidc = deps["config"]["MAIN"].get("general", {}).get("oidc", False)
     auth_method = "OIDC" if oidc else "X509"
     return APIResponse.genResponse(request, {"auth_method": auth_method, "auth_endpoint": os.environ.get("OIDC_REDIRECT_URI", "") if auth_method == "OIDC" else ""})
+
 
 # ==========================================================
 # /api/frontend/sites
@@ -176,7 +185,7 @@ async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps)):
         **DEFAULT_RESPONSES,
     },
 )
-async def getAllSites(request: Request, deps=Depends(apiReadDeps)):
+async def getAllSites(request: Request, deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
     """
     Get a site name configured in the system.
     - Returns a site name in a list.
@@ -317,7 +326,7 @@ async def getAllSites(request: Request, deps=Depends(apiReadDeps)):
         **DEFAULT_RESPONSES,
     },
 )
-async def getfeconfig(request: Request, deps=Depends(apiReadDeps)):
+async def getfeconfig(request: Request, deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
     """
     Get frontend configuration in JSON format for the given site.
     - Returns frontend configuration as JSON if found, else 404 if file is missing.
@@ -381,9 +390,10 @@ async def getfeconfig(request: Request, deps=Depends(apiReadDeps)):
 )
 async def getswitchdata(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the switch data for."),
+    sitename: str = Path(..., description="The site name to retrieve the switch data for.", example=startupConfig.get("SITENAME", "default")),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("limit")),
 ):
     """
     Get switch data from the database of all registered switches.
@@ -422,7 +432,12 @@ async def getswitchdata(
         **DEFAULT_RESPONSES,
     },
 )
-async def getactivedeltas(request: Request, sitename: str = Path(..., description="The site name to retrieve the active deltas for."), deps=Depends(apiReadDeps)):
+async def getactivedeltas(
+    request: Request,
+    sitename: str = Path(..., description="The site name to retrieve the active deltas for.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Get active delta data from the database.
     - Returns a list of active deltas with their information.
@@ -460,9 +475,10 @@ async def getactivedeltas(request: Request, sitename: str = Path(..., descriptio
 )
 async def getqosdata(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the QoS data for."),
+    sitename: str = Path(..., description="The site name to retrieve the QoS data for.", example=startupConfig.get("SITENAME", "default")),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of hosts to lookup. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("limit")),
 ):
     """
     Get QoS data from the database.

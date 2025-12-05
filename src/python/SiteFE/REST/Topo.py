@@ -17,10 +17,13 @@ from SiteFE.REST.dependencies import (
     APIResponse,
     apiReadDeps,
     checkSite,
+    forbidExtraQueryParams,
 )
-from SiteRMLibs.MainUtilities import getFileContentAsJson
+from SiteRMLibs.MainUtilities import getFileContentAsJson, getstartupconfig
 
 router = APIRouter()
+
+startupConfig = getstartupconfig()
 
 # =========================================================
 # /api/{sitename}/topo/gettopology
@@ -81,7 +84,12 @@ router = APIRouter()
         **DEFAULT_RESPONSES,
     },
 )
-async def gettopology(request: Request, sitename: str = Path(..., description="The site name whose topology is requested.", example="T0_US_ESnet"), deps=Depends(apiReadDeps)):
+async def gettopology(
+    request: Request,
+    sitename: str = Path(..., description="The site name whose topology is requested.", example=startupConfig.get("SITENAME", "default")),
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Get topology in JSON format for the given site.
 
