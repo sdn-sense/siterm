@@ -217,7 +217,9 @@ class DBBackend:
             kwargs["servicename"] = self.component
             kwargs["hostname"] = getHostname(self.config, self.component)
             url = f"/api/{kwargs['sitename']}/serviceaction?hostname={kwargs['hostname']}&servicename={self.component}"
-
+            # If handler not available, skip
+            if kwargs["sitename"] not in self.handlers:
+                return False
             actions = self.handlers[kwargs["sitename"]].makeHttpCall("GET", url, raiseEx=False, useragent="Daemonizer")
             # Config Fetcher is not allowed to delete other services refresh.
             if actions[1] == 404:
