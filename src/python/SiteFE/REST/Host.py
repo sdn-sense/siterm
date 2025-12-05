@@ -131,7 +131,7 @@ async def gethosts(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the hosts for.", example=startupConfig.get("SITENAME", "default")),
     hostname: str = Query(None, description="Filter by hostname."),
-    details: StrictBool = Query(False, description="If True, returns detailed host information. In case detail, limit is ignored and set to 1."),
+    details: StrictBool = Query("False", description="If True, returns detailed host information. In case detail, limit is ignored and set to 1."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("hostname", "details", "limit")),
