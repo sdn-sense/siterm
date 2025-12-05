@@ -19,7 +19,7 @@ from SiteFE.REST.dependencies import (
     apiReadDeps,
     checkReadyState,
     checkSite,
-    forbidExtraQueryParams,
+    forbidExtraQueryParams
 )
 from SiteRMLibs.DefaultParams import (
     LIMIT_DEFAULT,

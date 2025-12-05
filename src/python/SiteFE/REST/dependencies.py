@@ -37,6 +37,7 @@ DEP_STATE_MACHINE = ST.StateMachine(DEP_CONFIG)
 DEFAULT_RESPONSES = {
     401: {"description": "Unauthorized", "content": {"application/json": {"example": {"detail": "Not authorized to access this resource"}}}},
     403: {"description": "Forbidden", "content": {"application/json": {"example": {"detail": "Access to this resource is forbidden"}}}},
+    422: {"description": "Unprocessable Entity", "content": {"application/json": {"example": {"detail": "Request parameters are invalid"}}}},
     500: {"description": "Internal Server Error", "content": {"application/json": {"example": {"detail": "Internal server error"}}}},
     503: {"description": "Service Unavailable", "content": {"application/json": {"example": {"detail": "Service temporarily unavailable"}}}},
 }
@@ -218,3 +219,22 @@ def forbidExtraQueryParams(*allowedParams: str):
             raise HTTPException(status_code=422,
                                 detail=[{"type": "extra_forbidden", "loc": ["query", param], "msg": f"Unexpected query parameter: {param}"} for param in unknown])
     return checker
+
+class StrictBool:
+    """A Pydantic-compatible type that strictly requires boolean values from strings."""
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, value: Any) -> bool:
+        """Validate and convert the input to a boolean."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            v = value.lower()
+            if v == "true":
+                return True
+            if v == "false":
+                return False
+        raise ValueError("Invalid boolean value. Expected 'true' or 'false'.")
