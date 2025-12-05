@@ -34,6 +34,7 @@ from SiteFE.REST.dependencies import (
     checkSite,
     depGetModel,
     forbidExtraQueryParams,
+    StrictBool
 )
 from SiteRMLibs.CustomExceptions import ModelNotFound
 from SiteRMLibs.DefaultParams import (
@@ -146,7 +147,7 @@ class DeltaTimeState(BaseModel):
 async def getDeltas(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the service deltas for.", example=startupConfig.get("SITENAME", "default")),
-    summary: bool = Query(True, description="Whether to return a summary of the deltas. Defaults to False."),
+    summary: StrictBool = Query(True, description="Whether to return a summary of the deltas. Defaults to False."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("limit", "summary")),
@@ -316,7 +317,7 @@ async def getDeltaByID(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the delta information for.", example=startupConfig.get("SITENAME", "default")),
     delta_id: str = Path(..., description="The ID of the delta to retrieve."),
-    summary: bool = Query(False, description="Whether to return a summary of the deltas. Defaults to False."),
+    summary: StrictBool = Query(False, description="Whether to return a summary of the deltas. Defaults to False."),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("summary")),
 ):

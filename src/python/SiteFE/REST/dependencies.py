@@ -11,6 +11,8 @@ Date                    : 2025/07/14
 """
 import os
 from typing import Any, Dict, List, Union
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import core_schema
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
@@ -220,21 +222,20 @@ def forbidExtraQueryParams(*allowedParams: str):
                                 detail=[{"type": "extra_forbidden", "loc": ["query", param], "msg": f"Unexpected query parameter: {param}"} for param in unknown])
     return checker
 
+#pylint: disable=unused-argument
 class StrictBool:
     """A Pydantic-compatible type that strictly requires boolean values from strings."""
     @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+    def __get_pydantic_core_schema__(cls, source, handler: GetCoreSchemaHandler):
+        return core_schema.union_schema(
+            [core_schema.no_info_after_validator_function(cls.validate_string_bool, core_schema.str_schema())])
 
-    @classmethod
-    def validate(cls, value: Any) -> bool:
+    @staticmethod
+    def validate_string_bool(value: str):
         """Validate and convert the input to a boolean."""
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            v = value.lower()
-            if v == "true":
-                return True
-            if v == "false":
-                return False
+        v = value.lower()
+        if v == "true":
+            return True
+        if v == "false":
+            return False
         raise ValueError("Invalid boolean value. Expected 'true' or 'false'.")
