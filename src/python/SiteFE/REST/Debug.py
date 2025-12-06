@@ -13,7 +13,7 @@ import os
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
@@ -258,10 +258,10 @@ class DebugItem(BaseModel):
 
     # pylint: disable=too-few-public-methods
     id: Optional[int] = None
-    hostname: Optional[str] = "undefined"  # Hostname to use. In case not set or undefined, requires to have a dynamicfrom set.
-    state: Optional[str] = "new"
-    request: Optional[Dict[str, Any]] = {}
-    output: Optional[Dict[str, Any]] = {}
+    hostname: constr(strip_whitespace=True, min_length=1, max_length=255) = "undefined"  # Hostname to use. In case not set or undefined, requires to have a dynamicfrom set.
+    state: constr(strip_whitespace=True, min_length=1, max_length=45) = "new"
+    request: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    output: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 # ==========================================================

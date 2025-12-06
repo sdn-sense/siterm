@@ -12,7 +12,7 @@ Date                    : 2025/07/14
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
@@ -44,8 +44,8 @@ class HostItem(BaseModel):
     """Host Item Model."""
 
     # pylint: disable=too-few-public-methods
-    hostname: str
-    ip: str
+    hostname: constr(strip_whitespace=True, min_length=1, max_length=255)
+    ip: constr(strip_whitespace=True, min_length=1, max_length=45)
 
     class Config:
         # pylint: disable=missing-class-docstring

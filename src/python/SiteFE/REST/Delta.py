@@ -23,7 +23,7 @@ from fastapi import (
     Response,
     status,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
@@ -78,22 +78,22 @@ class DeltaItem(BaseModel):
     """Service Item Model."""
 
     # pylint: disable=too-few-public-methods
-    modelId: Optional[str] = None
-    id: str
+    modelId: Optional[constr(strip_whitespace=True, min_length=1, max_length=255)] = None
+    id: constr(strip_whitespace=True, min_length=1, max_length=255)
     # Optional fields
-    reduction: Optional[str] = None
-    addition: Optional[str] = None
+    reduction: Optional[constr(strip_whitespace=True, min_length=1)] = None
+    addition: Optional[constr(strip_whitespace=True, min_length=1)] = None
 
 
 class DeltaTimeState(BaseModel):
     """Service Item Model."""
 
     # pylint: disable=too-few-public-methods
-    uuid: str
-    uuidtype: str
-    hostname: str
-    hostport: str
-    uuidstate: str
+    uuid: constr(strip_whitespace=True, min_length=1, max_length=255)
+    uuidtype: constr(strip_whitespace=True, min_length=1, max_length=64)
+    hostname: constr(strip_whitespace=True, min_length=1, max_length=255)
+    hostport: constr(strip_whitespace=True, min_length=1, max_length=64)
+    uuidstate: constr(strip_whitespace=True, min_length=1, max_length=64)
 
 
 # =========================================================

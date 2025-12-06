@@ -24,7 +24,7 @@ from fastapi import (
     status,
 )
 from prometheus_client import CONTENT_TYPE_LATEST
-from pydantic import BaseModel
+from pydantic import BaseModel, constr, Field
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
@@ -144,8 +144,8 @@ class MonStats(BaseModel):
     """Service Item Model."""
 
     # pylint: disable=too-few-public-methods
-    hostname: str
-    output: Dict[str, Any]
+    hostname: constr(strip_whitespace=True, min_length=1, max_length=255)
+    output: Dict[str, Any] = Field(default_factory=dict)
 
 
 @router.get(

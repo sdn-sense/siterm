@@ -13,7 +13,7 @@ import os
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, constr, Field
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
@@ -92,10 +92,10 @@ class ServiceItem(BaseModel):
     """Service Item Model."""
 
     # pylint: disable=too-few-public-methods
-    hostname: str
-    servicename: str
+    hostname: constr(strip_whitespace=True, min_length=1, max_length=255)
+    servicename: constr(strip_whitespace=True, min_length=1, max_length=50)
     # Optional fields
-    serviceinfo: Optional[Dict[str, Any]] = {}
+    serviceinfo: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 # GET
