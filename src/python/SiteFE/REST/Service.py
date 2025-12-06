@@ -10,7 +10,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel, constr, Field
@@ -256,7 +256,7 @@ async def deleteservice(
     item: ServiceItem = Query(..., description="Service item to delete"),
     sitename: str = Path(..., description="The site name to delete the service for.", example=startupConfig.get("SITENAME", "default")),
     deps=Depends(apiWriteDeps),
-    _forbid=Depends(forbidExtraQueryParams()),
+    _forbid=Depends(forbidExtraQueryParams("hostname", "servicename", "serviceinfo")),
 ):
     """
     Delete an existing service state from the database.
@@ -289,14 +289,13 @@ class ServiceStateItem(BaseModel):
     """Service State Item Model."""
 
     # pylint: disable=too-few-public-methods
-    hostname: str
-    servicename: str
+    hostname: constr(strip_whitespace=True, min_length=1, max_length=255)
+    servicename: Literal[*HOSTSERVICES, "ALL"]
     # Optional fields
-    servicestate: Optional[str] = "UNSET"  # Service state, default is "UNSET"
+    servicestate: constr(strip_whitespace=True, min_length=1, max_length=50) = "UNSET"  # Service state, default is "UNSET"
     runtime: Optional[int] = -1  # Runtime in seconds, default is -1
-    version: Optional[str] = "UNSET"  # Version of the service, default is "UNSET"
-    exc: Optional[str] = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
-
+    version: constr(strip_whitespace=True, min_length=1, max_length=50) = "UNSET"  # Version of the service, default is "UNSET"
+    exc: constr(strip_whitespace=True, min_length=1, max_length=4096) = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
 
 # GET
 # ---------------------------------------------------------
@@ -308,6 +307,7 @@ class ServiceStateItem(BaseModel):
     responses={
         **{
             200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            404: {"description": "Service States not found", "content": {"application/json": {"example": {"detail": "No service states found in the database."}}}}
         },
         **DEFAULT_RESPONSES,
     },
@@ -354,8 +354,6 @@ async def addservicestate(
     Add a new service state or update an existing one.
     """
     checkSite(deps, sitename)
-    if not _host_supportedService(item.servicename):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"This Service {item.servicename} is not supported by Frontend")
     try:
         dbOut = {
             "hostname": item.hostname,
