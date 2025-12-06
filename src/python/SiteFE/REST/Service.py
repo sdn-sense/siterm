@@ -43,16 +43,6 @@ router = APIRouter()
 
 startupConfig = getstartupconfig()
 
-
-def _host_supportedService(servicename):
-    """Check if service is supported."""
-    if servicename == "ALL":
-        return True
-    if servicename in HOSTSERVICES:
-        return True
-    return False
-
-
 # =========================================================
 # /api/{sitename}/services
 # =========================================================
@@ -93,7 +83,7 @@ class ServiceItem(BaseModel):
 
     # pylint: disable=too-few-public-methods
     hostname: constr(strip_whitespace=True, min_length=1, max_length=255)
-    servicename: constr(strip_whitespace=True, min_length=1, max_length=50)
+    servicename: Literal[*HOSTSERVICES, "ALL"]
     # Optional fields
     serviceinfo: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
@@ -161,7 +151,7 @@ async def getservice(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the service for.", example=startupConfig.get("SITENAME", "default")),
     hostname: str = Query(default=None, description="Hostname to filter by"),
-    servicename: str = Query(default=None, description="Service name to filter by"),
+    servicename: Literal[*HOSTSERVICES, "ALL"] = Query(default=None, description="Service name to filter by"),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("hostname", "servicename")),
 ):
@@ -253,8 +243,9 @@ async def updateservice(
 )
 async def deleteservice(
     request: Request,
-    item: ServiceItem = Query(..., description="Service item to delete"),
     sitename: str = Path(..., description="The site name to delete the service for.", example=startupConfig.get("SITENAME", "default")),
+    hostname: constr(strip_whitespace=True, min_length=1, max_length=255) = Query(default=None, description="Hostname to filter by"),
+    servicename: Literal[*HOSTSERVICES, "ALL"] = Query(default=None, description="Service name to filter by"),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams("hostname", "servicename", "serviceinfo")),
 ):
@@ -262,19 +253,19 @@ async def deleteservice(
     Delete an existing service state from the database.
     """
     checkSite(deps, sitename)
-    if not item.hostname and not item.servicename:
+    if not hostname and not servicename:
         raise HTTPException(
             status_code=400,
             detail="At least one of 'hostname' or 'servicename' query parameters must be provided.",
         )
     search = []
-    if item.hostname:
-        search.append(["hostname", item.hostname])
-    if item.servicename:
-        search.append(["servicename", item.servicename])
+    if hostname:
+        search.append(["hostname", hostname])
+    if servicename:
+        search.append(["servicename", servicename])
     host = deps["dbI"].get("services", limit=1, search=search)
     if not host:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service with hostname '{item.hostname}' and servicename '{item.servicename}' not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service with hostname '{hostname}' and servicename '{servicename}' not found.")
     # Delete from services
     deps["dbI"].delete("services", [["id", host[0]["id"]]])
     return APIResponse.genResponse(request, {"Status": f"DELETED {host[0]['hostname']}"})
@@ -293,7 +284,7 @@ class ServiceStateItem(BaseModel):
     servicename: Literal[*HOSTSERVICES, "ALL"]
     # Optional fields
     servicestate: constr(strip_whitespace=True, min_length=1, max_length=50) = "UNSET"  # Service state, default is "UNSET"
-    runtime: Optional[int] = -1  # Runtime in seconds, default is -1
+    runtime: int = Field(default=-1, ge=-1)  # Runtime in seconds, default is -1
     version: constr(strip_whitespace=True, min_length=1, max_length=50) = "UNSET"  # Version of the service, default is "UNSET"
     exc: constr(strip_whitespace=True, min_length=1, max_length=4096) = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
 
@@ -390,23 +381,22 @@ async def addservicestate(
 )
 async def deleteservicestate(
     request: Request,
-    item: ServiceStateItem,
     sitename: str = Path(..., description="The site name to delete the service state for.", example=startupConfig.get("SITENAME", "default")),
+    hostname: str = Query(..., description="Hostname of the service state to delete"),
+    servicename: Literal[*HOSTSERVICES, "ALL"] = Query(..., description="Service name of the service state to delete"),
     deps=Depends(apiWriteDeps),
-    _forbid=Depends(forbidExtraQueryParams()),
+    _forbid=Depends(forbidExtraQueryParams("hostname", "servicename")),
 ):
     """
     Delete a service state from the database.
     """
     checkSite(deps, sitename)
-    if not _host_supportedService(item.servicename):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"This Service {item.servicename} is not supported by Frontend")
     try:
-        services = deps["dbI"].get("servicestates", search=[["hostname", item.hostname], ["servicename", item.servicename]])
+        services = deps["dbI"].get("servicestates", search=[["hostname", hostname], ["servicename", servicename]])
         if services:
-            deps["dbI"].delete("servicestates", [["hostname", item.hostname], ["servicename", item.servicename]])
+            deps["dbI"].delete("servicestates", [["hostname", hostname], ["servicename", servicename]])
         else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service state for hostname '{item.hostname}' and servicename '{item.servicename}' not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service state for hostname '{hostname}' and servicename '{servicename}' not found.")
     except Exception as ex:
         raise Exception(f"Error details in deleteservicestate. Exc: {str(ex)}") from ex
     return APIResponse.genResponse(request, {"Status": "Deleted"})
@@ -419,9 +409,9 @@ class ServiceActionItem(BaseModel):
     """Service Action Item Model."""
 
     # pylint: disable=too-few-public-methods
-    hostname: str  # Hostname to filter by
-    servicename: str  # Service name to filter by
-    action: str  # Action to perform (e.g., "start", "stop", etc.)
+    hostname: constr(strip_whitespace=True, min_length=1, max_length=255)
+    servicename: Literal[*HOSTSERVICES, "ALL"]
+    action: constr(strip_whitespace=True, min_length=1, max_length=50)
 
 
 # GET
@@ -440,7 +430,7 @@ async def getserviceaction(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the service action for.", example=startupConfig.get("SITENAME", "default")),
     hostname: str = Query(default=None, description="Hostname to filter by"),
-    servicename: str = Query(default=None, description="Service name to filter by"),
+    servicename: Literal[*HOSTSERVICES, "ALL"] = Query(default=None, description="Service name to filter by"),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("hostname", "servicename", "limit")),
@@ -487,8 +477,6 @@ async def serviceaction(
     Record a service action in the database.
     """
     checkSite(deps, sitename)
-    if not _host_supportedService(item.servicename):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"This Service {item.servicename} is not supported by Frontend")
     services = [item.servicename]
     if services == ["ALL"]:
         services = HOSTSERVICES
@@ -536,27 +524,29 @@ async def serviceaction(
 )
 async def deleteserviceaction(
     request: Request,
-    item: ServiceActionItem,
     _sitename: str = Path(..., description="The site name to delete the service action for.", example=startupConfig.get("SITENAME", "default")),
+    hostname: constr(strip_whitespace=True, min_length=1, max_length=255) = Query(default=None, description="Hostname to filter by"),
+    servicename: Literal[*HOSTSERVICES, "ALL"] = Query(default=None, description="Service name to filter by"),
+    action: constr(strip_whitespace=True, min_length=1, max_length=50) = Query(default=None, description="Action to filter by"),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
     """Delete a service action from the database."""
     checkSite(deps, _sitename)
-    if not _host_supportedService(item.servicename):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"This Service {item.servicename} is not supported by Frontend")
     search = []
-    if item.hostname:
-        search.append(["hostname", item.hostname])
-    if item.servicename:
-        search.append(["servicename", item.servicename])
+    if hostname:
+        search.append(["hostname", hostname])
+    if servicename:
+        search.append(["servicename", servicename])
+    if action:
+        search.append(["serviceaction", action])
     if not search:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No hostname or servicename provided to delete service action.")
     actions = deps["dbI"].get("serviceaction", search=search)
     if not actions:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service action not found for the given parameters.")
     deps["dbI"].delete("serviceaction", search)
-    return APIResponse.genResponse(request, {"Status": f"Deleted {item.hostname} {item.servicename} {item.action}"})
+    return APIResponse.genResponse(request, {"Status": f"Deleted {hostname} {servicename} {action}"})
 
 
 # TODO: Move to its own file
