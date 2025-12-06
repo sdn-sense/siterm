@@ -197,10 +197,16 @@ async def addhost(
         out = {"hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": fname}
         dumpFileContentAsJson(fname, item.dict())
         deps["dbI"].insert("hosts", [out])
+        return APIResponse.genResponse(request, {"status": "ADDED"})
     else:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This host is already in db. Use PUT to update existing host.")
-    return APIResponse.genResponse(request, {"Status": "ADDED"})
-
+        out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": host[0]["hostinfo"]}
+        # Check if there is a data update
+        if "nodatachange" in item.dict() and item.nodatachange:
+            deps["dbI"].update("hosts", [{"id": host[0]["id"], "updatedate": getUTCnow()}])
+        else:
+            dumpFileContentAsJson(host[0]["hostinfo"], item.dict())
+            deps["dbI"].update("hosts", [out])
+    return APIResponse.genResponse(request, {"status": "UPDATED"})
 
 # update (PUT)
 # ---------------------------------------------------------
@@ -243,9 +249,9 @@ async def updatehost(
         # Check if there is a data update
         if "nodatachange" in item.dict() and item.nodatachange:
             deps["dbI"].update("hosts", [{"id": host[0]["id"], "updatedate": getUTCnow()}])
-            return APIResponse.genResponse(request, {"status": "UPDATED"})
-        dumpFileContentAsJson(host[0]["hostinfo"], item.dict())
-        deps["dbI"].update("hosts", [out])
+        else:
+            dumpFileContentAsJson(host[0]["hostinfo"], item.dict())
+            deps["dbI"].update("hosts", [out])
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This host is not in db. Use POST to add new host.")
     return APIResponse.genResponse(request, {"status": "UPDATED"})

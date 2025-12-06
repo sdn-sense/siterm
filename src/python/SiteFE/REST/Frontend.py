@@ -101,7 +101,7 @@ async def checkAPIReady(request: Request, deps=Depends(apiReadDeps), _forbid=Dep
         **DEFAULT_RESPONSES,
     },
 )
-async def checkAPILiveness(request: Request, _deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams)):
+async def checkAPILiveness(request: Request, _deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
     """
     Check the health of the API.
     """
@@ -427,7 +427,8 @@ async def getswitchdata(
                         }
                     }
                 },
-            }
+            },
+            404: {"description": "No site configured in the system.", "content": {"application/json": {"example": {"detail": "No site configured in the system."}}}},
         },
         **DEFAULT_RESPONSES,
     },
