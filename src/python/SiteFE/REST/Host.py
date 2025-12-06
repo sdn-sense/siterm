@@ -121,8 +121,9 @@ class HostItem(BaseModel):
             },
         },
         404: {
-            "description": "Not Found. Possible Reasons:\n - No sites configured in the system.",
-            "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
+            "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - No hosts found in the database.",
+            "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
+                                                         "no_hosts": {"detail": "No hosts found in the database."}}}},
         },
         **DEFAULT_RESPONSES,
     },
@@ -131,7 +132,7 @@ async def gethosts(
     request: Request,
     sitename: str = Path(..., description="The site name to retrieve the hosts for.", example=startupConfig.get("SITENAME", "default")),
     hostname: str = Query(None, description="Filter by hostname."),
-    details: StrictBool = Query("False", description="If True, returns detailed host information. In case detail, limit is ignored and set to 1."),
+    details: StrictBool = Query(False, description="If True, returns detailed host information. In case detail, limit is ignored and set to 1."),
     limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("hostname", "details", "limit")),
@@ -149,9 +150,13 @@ async def gethosts(
         limit = 1
     hosts = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=limit, search=search)
     out = []
+    if not hosts:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No hosts found in the database.")
     for host in hosts:
         if details:
             host["hostinfo"] = getFileContentAsJson(host.get("hostinfo", ""))
+            out.append(host)
+            break
         else:
             host.pop("hostinfo", None)
         out.append(host)

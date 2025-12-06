@@ -223,19 +223,35 @@ def forbidExtraQueryParams(*allowedParams: str):
     return checker
 
 #pylint: disable=unused-argument
+#pylint: disable=unused-argument
 class StrictBool:
-    """A Pydantic-compatible type that strictly requires boolean values from strings."""
+    """Strict boolean:
+       - Accepts: real booleans, 'true', 'false'
+       - Rejects: 0, 1, yes, no, on, off, etc."""
+
     @classmethod
     def __get_pydantic_core_schema__(cls, source, handler: GetCoreSchemaHandler):
-        return core_schema.union_schema(
-            [core_schema.no_info_after_validator_function(cls.validate_string_bool, core_schema.str_schema())])
+        bool_schema = core_schema.bool_schema()
+        str_schema = core_schema.no_info_after_validator_function(
+            cls.validate_string_bool,
+            core_schema.str_schema()
+        )
+        return core_schema.union_schema([bool_schema, str_schema])
 
     @staticmethod
     def validate_string_bool(value: str):
-        """Validate and convert the input to a boolean."""
-        v = value.lower()
+        """Validate string representation of boolean."""
+        v = value.strip().lower()
         if v == "true":
             return True
         if v == "false":
             return False
         raise ValueError("Invalid boolean value. Expected 'true' or 'false'.")
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, schema, handler):
+        """Generate JSON schema for StrictBool."""
+        return {
+            "type": "boolean",
+            "description": "Strict bool: accepts only true/false (as boolean or string)."
+        }
