@@ -28,6 +28,7 @@ import time
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
+from enum import Enum
 
 import simplejson as json
 from rdflib import Graph
@@ -55,6 +56,8 @@ HOSTSERVICES = [
     "ConfigFetcher",
     "MonitoringService",
 ]
+
+HOSTSERVICEENUMALL = Enum("HOSTSERVICEENUMA", {name: name for name in HOSTSERVICES + ["ALL"]})
 
 
 def getstartupconfig(conffile="/etc/siterm.yaml"):
