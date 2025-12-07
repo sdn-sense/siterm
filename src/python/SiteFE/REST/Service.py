@@ -68,12 +68,12 @@ def __updateServiceData(item, sitename, dbI, config):
         search.append(["servicename", item.servicename.value])
     host = dbI.get("services", limit=1, search=search)
     if not host:
-        dumpFileContentAsJson(fname, item.dict())
+        dumpFileContentAsJson(fname, item.model_dump(mode="json"))
         dbI.insert("services", [out])
         servicest = "ADDED"
     else:
         out["id"] = host[0]["id"]
-        dumpFileContentAsJson(fname, item.dict())
+        dumpFileContentAsJson(fname, item.model_dump(mode="json"))
         dbI.update("services", [out])
         servicest = "UPDATED"
     return {"Status": servicest}
