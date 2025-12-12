@@ -122,8 +122,7 @@ class HostItem(BaseModel):
         },
         404: {
             "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - No hosts found in the database.",
-            "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
-                                                         "no_hosts": {"detail": "No hosts found in the database."}}}},
+            "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
         },
         **DEFAULT_RESPONSES,
     },

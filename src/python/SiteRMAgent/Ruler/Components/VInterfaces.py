@@ -12,7 +12,6 @@ from dataclasses import dataclass
 
 from pyroute2 import IPRoute
 from SiteRMLibs.CustomExceptions import FailedInterfaceCommand
-from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.ipaddr import (
     getBroadCast,
     getIfAddrStats,
@@ -22,7 +21,7 @@ from SiteRMLibs.ipaddr import (
     normalizedip,
     normalizedipwithnet,
 )
-from SiteRMLibs.MainUtilities import execute, getFullUrl
+from SiteRMLibs.MainUtilities import execute
 
 
 @dataclass
@@ -98,13 +97,12 @@ def intfUp(intf):
 class VInterfaces:
     """Virtual interface class."""
 
-    def __init__(self, config, sitename, logger):
+    def __init__(self, config, sitename, logger, rulercli):
         self.config = config
         self.sitename = sitename
         self.hostname = self.config.get("agent", "hostname")
         self.logger = logger
-        fullURL = getFullUrl(self.config)
-        self.requestHandler = Requests(fullURL, logger=self.logger)
+        self.requestHandler = rulercli.requestHandler
 
     def _add(self, vlan, raiseError=False):
         """Add specific vlan."""

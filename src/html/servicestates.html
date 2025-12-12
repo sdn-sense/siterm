@@ -86,13 +86,11 @@
             var sitename = $(this).data("sitename");
 
             $.ajax({
-              url: "/api/" + sitename + "/servicestates",
+              url: "/api/" + sitename + "/servicestates"
+                   + "?hostname=" + encodeURIComponent(hostname)
+                   + "&servicename=" + encodeURIComponent(servicename),
               type: "DELETE",
               contentType: "application/json",
-              data: JSON.stringify({
-                hostname: hostname,
-                servicename: servicename,
-              }),
               success: function (res) {
                 alert("Deleted: " + hostname + " / " + servicename);
                 $(this).closest("tr").remove();

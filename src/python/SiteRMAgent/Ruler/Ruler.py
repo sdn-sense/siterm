@@ -55,7 +55,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         QOS.__init__(self)
         OverlapLib.__init__(self)
         # L2,L3 move it to Class Imports at top.
-        self.layer2 = VInterfaces(self.config, self.sitename, self.logger)
+        self.layer2 = VInterfaces(self.config, self.sitename, self.logger, self)
         self.layer3 = Routing(self.config, self.sitename, self.logger, self)
 
     def refreshthread(self):
@@ -63,7 +63,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         self.config = getGitConfig()
         fullUrl = getFullUrl(self.config)
         self.hostname = self.config.get("agent", "hostname")
-        self.layer2 = VInterfaces(self.config, self.sitename, self.logger)
+        self.layer2 = VInterfaces(self.config, self.sitename, self.logger, self)
         self.layer3 = Routing(self.config, self.sitename, self.logger, self)
         self.requestHandler.close()
         self.requestHandler = Requests(fullUrl, logger=self.logger)
