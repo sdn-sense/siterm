@@ -23,6 +23,15 @@ from SiteRMLibs.MainUtilities import getLoggingObject, getUTCnow
 from SiteRMLibs.timing import Timing
 
 
+def _normalize_ip(ip):
+    """Normalize IP to list"""
+    if ip is None:
+        return []
+    if isinstance(ip, (list, tuple, set)):
+        return list(ip)
+    return [ip]
+
+
 class ConflictChecker(Timing):
     """Conflict Checker"""
 
@@ -38,12 +47,21 @@ class ConflictChecker(Timing):
     @staticmethod
     def checkOverlap(inrange, ipval, iptype):
         """Check if overlap"""
-        return incheckOverlap(inrange, ipval, iptype)
+        out = []
+        ipval = _normalize_ip(ipval)
+        for ip in ipval:
+            out.append(incheckOverlap(inrange, ip, iptype))
+        return any(out)
 
     @staticmethod
     def _ipOverlap(ip1, ip2, iptype):
         """Check if IP Overlap. Return True/False"""
-        return inipOverlap(ip1, ip2, iptype)
+        ip1 = _normalize_ip(ip1)
+        ip2 = _normalize_ip(ip2)
+        out = []
+        for a, b in itertools.product(ip1, ip2):
+            out.append(inipOverlap(a, b, iptype))
+        return any(out)
 
     def _checkIfHostAlive(self, polcls, hostname):
         """Check if Host is alive"""

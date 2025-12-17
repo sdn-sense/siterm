@@ -431,8 +431,10 @@ class PolicyService(RDFHelper, Timing, BWService):
                         if mrtype and mrsvals[index]:
                             routeVals = routeout.setdefault(rtype, {}).setdefault(str(mrtype), {})
                             routeVals["type"] = str(mrtype)
-                            routeVals["value"] = str(mrsvals[index])
+                            # RouteFrom and routeTo can be either a single value or a list of values separated by comma
+                            routeVals["value"] = mrsvals[index].split(",") if rtype != "nextHop" else str(mrsvals[index])
                             routeVals["key"] = str(item)
+                            self.logger.debug(f"Route item: {routeVals}")
                 else:
                     self.logger.warning(f"Either val or type not defined. Key: {str(item)}, Type: {mrstypes}, Val: {mrsvals}")
         self.scannedRoutes.append(str(connID))
@@ -725,7 +727,7 @@ class PolicyService(RDFHelper, Timing, BWService):
     def identifyglobalstate(tmpstates):
         """Based on all subdelta states, identify top level delta state"""
         if not tmpstates:
-            return "activated" # TODO: Review after SC. 
+            return "activated" # TODO: Review after SC.
         if "activate-error" in tmpstates:
             return "activate-error"
         if "deactivate-error" in tmpstates:
@@ -802,6 +804,10 @@ class PolicyService(RDFHelper, Timing, BWService):
                 # If delta apply failed we return right away without writing new Active config
                 self.logger.debug(f"There was failure applying delta. Failure {ex}")
                 # Overwrite back the model with original before failure.
+                currentGraph = copy.deepcopy(gCopy)
+            except Exception as ex:
+                self.logger.error(f"Unexpected error during delta application: {ex}")
+                self.stateMachine.modelstatechanger(self.dbI, "failed", **delta)
                 currentGraph = copy.deepcopy(gCopy)
 
         if not modelParseRan:
@@ -1009,6 +1015,12 @@ class PolicyService(RDFHelper, Timing, BWService):
                 toDict["Error"] = getError(ex)
                 self.stateMachine.failed(self.dbI, toDict)
                 return toDict
+            except Exception as ex:
+                self.logger.error(f"Unexpected error during delta acceptance: {ex}")
+                toDict["State"] = "failed"
+                toDict["Error"] = getError(ex)
+                self.stateMachine.failed(self.dbI, toDict)
+                return toDict
         except IOError as ex:
             toDict["State"] = "failed"
             toDict["Error"] = getError(ex)
@@ -1044,6 +1056,8 @@ def execute(config=None, args=None):
             elif args.action in ["addition", "reduction"]:
                 newModel = policer.deltaToModel(None, args.delta, args.action)
                 out = policer.parseModel(newModel)
+                # currentActive = getActiveDeltas(policer)
+                # policer.conflictChecker.checkConflicts(policer, out, currentActive["output"], False)
                 pprint.pprint(out)
         elif args.action == "fullRun":
             policer = PolicyService(config, getSiteNameFromConfig(config))
