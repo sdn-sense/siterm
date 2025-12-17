@@ -108,9 +108,13 @@ class RoutingService:
                 .get(f"{iptype}-prefix-list", {})
                 .get("value", None)
             )
+            if val and not isinstance(val, list):
+                val = [val]
             if val:
-                bgpdict.setdefault(f"{iptype}_network", {})
-                bgpdict[f"{iptype}_network"][val] = "present"
+                for v in val:
+                    v = normalizedip(v)
+                    bgpdict.setdefault(f"{iptype}_network", {})
+                    bgpdict[f"{iptype}_network"][v] = "present"
 
     def _addNeighbors(self, host, ruid, rDict):
         """Add Neighbors"""
@@ -146,31 +150,24 @@ class RoutingService:
     def _addPrefixList(self, host, ruid, rDict):
         """Add Prefix Lists"""
         bgpdict = self._getDefaultBGP(host)
+        keymaps = [["routeFrom", "mapout"], ["routeTo", "mapin"]]
         for iptype in ["ipv4", "ipv6"]:
-            rTo = (
-                rDict.get("routeFrom", {})
-                .get(f"{iptype}-prefix-list", {})
-                .get("value", None)
-            )
-            rFrom = (
-                rDict.get("routeTo", {})
-                .get(f"{iptype}-prefix-list", {})
-                .get("value", None)
-            )
-            if rTo:
-                prefList = bgpdict.setdefault("prefix_list", {}).setdefault(iptype, {})
-                newRoute = prefList.setdefault(rTo, {})
-                newRoute[f"sense-{ruid}-to"] = "present"
-                self._addRouteMap(
-                    host, f"sense-{ruid}-to", f"sense-{ruid}-mapout", iptype
+            for routeFromTo, mapdir in keymaps:
+                rList = (
+                    rDict.get(routeFromTo, {})
+                    .get(f"{iptype}-prefix-list", {})
+                    .get("value", None)
                 )
-            if rFrom:
-                prefList = bgpdict.setdefault("prefix_list", {}).setdefault(iptype, {})
-                newRoute = prefList.setdefault(rFrom, {})
-                newRoute[f"sense-{ruid}-from"] = "present"
-                self._addRouteMap(
-                    host, f"sense-{ruid}-from", f"sense-{ruid}-mapin", iptype
-                )
+                if rList and not isinstance(rList, list):
+                    rList = [rList]
+                if rList:
+                    for r in rList:
+                        prefList = bgpdict.setdefault("prefix_list", {}).setdefault(iptype, {})
+                        newRoute = prefList.setdefault(r, {})
+                        newRoute[f"sense-{ruid}-{mapdir}"] = "present"
+                        self._addRouteMap(
+                            host, f"sense-{ruid}-{mapdir}", f"sense-{ruid}-map{mapdir}", iptype
+                        )
 
     def _addRouteMap(self, host, match, name, iptype):
         """Add Route Maps"""

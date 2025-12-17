@@ -587,9 +587,12 @@ class RDFHelper:
 
     def _addNetworkAddressEntry(self, **kwargs):
         """Add Network Address Entry to model"""
+        value = kwargs.get("value", "")
+        if isinstance(value, list):
+            value = ",".join(map(str, value))
         self.addToGraph(["site", kwargs["uri"]], ["rdf", "type"], ["mrs", "NetworkAddress"])
         self.addToGraph(["site", kwargs["uri"]], ["mrs", "type"], [kwargs["type"]])
-        self.setToGraph(["site", kwargs["uri"]], ["mrs", "value"], [kwargs["value"]])
+        self.setToGraph(["site", kwargs["uri"]], ["mrs", "value"], [value])
 
     def addVlanRange(self, **kwargs):
         """Add Vlan Range information inside model"""
