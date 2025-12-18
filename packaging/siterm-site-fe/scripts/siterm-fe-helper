@@ -11,21 +11,8 @@ from SiteRMLibs.MainUtilities import (
     getFileContentAsJson,
     getUTCnow,
     getVal,
+    getSiteNameFromConfig
 )
-
-# TODO: Remove this from here, and use from MainUtilities
-# This is only to cover old release version
-def getSiteNameFromConfig(config):
-    """Get sitename from config."""
-    sitename = None
-    if config.has_option("general", "sitename"):
-        sitename = config.get("general", "sitename")
-    elif config.has_option("general", "sites"):
-        sitename = config.get("general", "sites")[0]
-    else:
-        raise ValueError("No sitename defined in config file. Fatal Failure.")
-    return sitename
-
 
 class Helper:
     """Helper class"""
@@ -34,6 +21,7 @@ class Helper:
         self.commands = {
             "print-help": {"desc": "Print all available commands", "call": self.printhelp},
             "print-active": {"desc": "Print all active resources in SiteRM.", "call": self.printactive},
+            "print-active-uuids": {"desc": "Print all active resource UUIDs in SiteRM.", "call": self.printactiveuuids},
             "print-hosts": {"desc": "Print all hosts information in Frontend", "call": self.printhosts},
             "change-delta": {"desc": "Change Delta State", "call": self.changedeltastate},
             "cancel-resource": {"desc": "Cancel resource in SiteRM.", "call": self.cancelresource},
@@ -84,6 +72,16 @@ class Helper:
         activeDeltas = getActiveDeltas(self)
         print("=" * 50)
         pprint.pprint(activeDeltas)
+
+    def printactiveuuids(self):
+        """List Active UUIDs"""
+        activeDeltas = getActiveDeltas(self)
+        print("=" * 50)
+        for key in ["singleport", "kube", "rst", "vsw"]:
+            if activeDeltas.get("output", {}).get(key, {}):
+                print(f"Active {key} UUIDs:")
+                for reskey in activeDeltas["output"][key].keys():
+                    print(f" - {reskey}")
 
     def _cancelConfirmed(self, instanceid):
         """Cancel was confirmed and will modify exitsDuring time for delta"""

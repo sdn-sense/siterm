@@ -16,22 +16,14 @@ def logArchiver():
         return
     # Check if the directory exists
     with tarfile.open(target_file, "w:gz") as tar:
-        source_dir = "/var/log/siterm-agent/"
-        if os.path.isdir(source_dir):
-            tar.add(source_dir, arcname=os.path.basename(source_dir))
-            print(f"All files in {source_dir} have been archived to {target_file}")
-            return
-        source_dir = "/var/log/siterm-site-fe/"
-        if os.path.isdir(source_dir):
-            tar.add(source_dir, arcname=os.path.basename(source_dir))
-            print(f"All files in {source_dir} have been archived to {target_file}")
-            return
-        source_dir = "/var/log/httpd/"
-        if os.path.isdir(source_dir):
-            tar.add(source_dir, arcname=os.path.basename(source_dir))
-            print(f"All files in {source_dir} have been archived to {target_file}")
-            return
-        print(f"Warning: {source_dir} does not exist. Exiting.")
+        for dirname in ["/var/log/siterm-agent/", "/var/log/siterm-site-fe/",
+                        "/var/log/httpd/", "/var/log/supervisor"]:
+            if os.path.isdir(dirname):
+                print(f"Archiving logs from {dirname}...")
+                tar.add(dirname, arcname=os.path.basename(dirname))
+                print(f"All files in {dirname} have been archived to {target_file}")
+            else:
+                print(f"Warning: {dir} does not exist. Exiting.")
     os.remove(target_file)
 
 if __name__ == "__main__":
