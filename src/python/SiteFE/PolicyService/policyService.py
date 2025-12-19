@@ -996,7 +996,11 @@ class PolicyService(RDFHelper, Timing, BWService):
         self._refreshHosts()
         currentGraph = self.deltaToModel(None, None, None)
         currentGraph = self._addAllPendingDeltas(currentGraph)
-        self.currentActive = getActiveDeltas(self)
+        activeDeltasDB = getActiveDeltas(self)
+        self.currentActive = self.parseModel(currentGraph)
+        # We need to take used IPs and VLANs from activeDeltasDB
+        self.currentActive["output"]["usedIPs"] = activeDeltasDB["output"].get("usedIPs", {})
+        self.currentActive["output"]["usedVLANs"] = activeDeltasDB["output"].get("usedVLANs", {})
         self.newActive = {"output": {}}
         fileContent = self.siteDB.getFileContentAsJson(deltapath)
         self.logger.info(f"Called Accept Delta. Content Location: {deltapath}")
