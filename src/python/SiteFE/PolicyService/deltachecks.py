@@ -8,7 +8,10 @@ Date: 2021/01/20
 """
 import copy
 import itertools
+from pprint import pprint
 
+from deepdiff import DeepDiff
+from SiteRMLibs.BWService import BWService
 from SiteRMLibs.CustomExceptions import (
     NoOptionError,
     NoSectionError,
@@ -32,7 +35,7 @@ def _normalize_ip(ip):
     return [ip]
 
 
-class ConflictChecker(Timing):
+class ConflictChecker(Timing, BWService):
     """Conflict Checker"""
 
     def __init__(self, config, sitename):
@@ -253,8 +256,7 @@ class ConflictChecker(Timing):
                         out.append(val1["value"])
         return out
 
-    @staticmethod
-    def _getVlanIPs(dataIn):
+    def _getVlanIPs(self, dataIn, bwstats=False):
         """Get Vlan IPs"""
         allIPs = []
         for intf, val in dataIn.items():
@@ -268,10 +270,72 @@ class ConflictChecker(Timing):
                     out.setdefault("ipv6-address", val1["ipv6-address"]["value"])
                 if key1 == "hasNetworkAddress" and "ipv4-address" in val1:
                     out.setdefault("ipv4-address", val1["ipv4-address"]["value"])
+                if bwstats and key1 == "hasService" and val1.get("type", "") in ["guaranteedCapped", "softCapped", "bestEffort"]:
+                    bw, _bwtype = self.convertToRate(val1)
+                    out.setdefault("bandwidth", bw)
                 # After all checks, we check if it has all required key/values
             if "interface" in out and "vlan" in out:
                 allIPs.append(out)
         return allIPs
+
+    def _bwOverlapCalculation(self, hostname, portName, connItems, oldConfig):
+        """Calculate overlapping bandwidth used on device port"""
+        usedBW = 0
+        for svcitem in ["vsw", "singleport", "kube"]:
+            for oldID, oldItems in oldConfig.get(svcitem, {}).items():
+                # connID == oldID was checked in step3. Skipping it
+                if oldID == self.newid:
+                    continue
+                self.oldid = oldID
+                if self._checkIfOverlap(connItems, oldItems):
+                    # If 2 items overlap, and have same host for config
+                    # Check that vlans and IPs are not overlapping
+                    for oldHost, oldHostItems in oldItems.items():
+                        if hostname != oldHost:
+                            continue
+                        for item in self._getVlanIPs(oldHostItems, bwstats=True):
+                            if portName != item.get("interface", ""):
+                                continue
+                            if "bandwidth" in item:
+                                usedBW += item["bandwidth"]
+                            self.logger.debug(f"Used BW on {hostname} {portName} by {self.oldid}: {item['bandwidth']} Mbps")
+        self.logger.info(f"Total used BW on {hostname} {portName}: {usedBW} Mbps")
+        return usedBW
+
+    def _checkRemainingBandwidth(self, polcls, hostname, hostitems, connItems, oldConfig):
+        """Check Remaining Bandwidth on device ports"""
+        allPortIPs = self._getVlanIPs(hostitems, bwstats=True)
+        for portIP in allPortIPs:
+            # HOST Check
+            if hostname in polcls.hosts:
+                # Take the maximumCapacity from hostinfo. This is what maximum is allowed
+                maxHostBW = polcls.hosts[hostname].get("hostinfo", {}).get("NetInfo", {}).get("interfaces", {}).get(portIP["interface"], {}).get("bwParams", {}).get("maximumCapacity", None)
+                if not maxHostBW:
+                    continue
+                usedBW = self._bwOverlapCalculation(hostname, portIP["interface"], connItems, oldConfig)
+                remainingBW = int(maxHostBW) - portIP.get("bandwidth", 0) - usedBW
+                self.logger.debug(f"BW on {hostname} {portIP['interface']} after applying new delta. Max: {maxHostBW}, Used: {usedBW}, Remaining: {remainingBW} Mbps")
+                if remainingBW < 0:
+                    self.logger.error(f"Insufficient bandwidth on {hostname} {portIP['interface']}. Remaining: {remainingBW} Mbps")
+                    raise OverlapException(
+                        f"Insufficient bandwidth on {hostname} {portIP['interface']}. After all checks, remaining: {remainingBW} Mbps. Max: {maxHostBW} Mbps, Used: {usedBW} Mbps, Requested: {portIP.get('bandwidth', 0)} Mbps"
+                    )
+            # SWITCH Check
+            elif portData := polcls.switch.getSwitchPort(hostname, portIP["interface"]):
+                if "bandwidth" not in portData:
+                    continue
+                remainingBW = int(portData["bandwidth"]) - portIP.get("bandwidth", 0)
+                usedBW = self._bwOverlapCalculation(hostname, portIP["interface"], connItems, oldConfig)
+                remainingBW -= usedBW
+                self.logger.debug(f"BW on {hostname} {portIP['interface']} after applying new delta. Max: {portData['bandwidth']}, Used: {usedBW}, Remaining: {remainingBW} Mbps")
+                if remainingBW < 0:
+                    self.logger.error(f"Insufficient bandwidth on {hostname} {portIP['interface']}. Remaining: {remainingBW} Mbps")
+                    raise OverlapException(
+                        f"Insufficient bandwidth on {hostname} {portIP['interface']}. After all checks, remaining: {remainingBW} Mbps. Max: {portData['bandwidth']} Mbps, Used: {usedBW} Mbps, Requested: {portIP.get('bandwidth', 0)} Mbps"
+                    )
+            # Unknown Host/Switch/Device
+            else:
+                self.logger.error(f"Hostname {hostname} not found in hosts or switches.")
 
     @staticmethod
     def _getRSTIPs(dataIn):
@@ -295,14 +359,11 @@ class ConflictChecker(Timing):
 
     @staticmethod
     def _overlap_count(times1, times2):
-        """Find out if times overlap."""
         latestStart = max(times1.start, times2.start)
         earliestEnd = min(times1.end, times2.end)
-        delta = (earliestEnd - latestStart).seconds
-        overlap = max(0, delta)
-        if earliestEnd < latestStart:
-            overlap = 0
-        return overlap
+
+        delta = (earliestEnd - latestStart).total_seconds()
+        return max(0, delta)
 
     def _checkIfOverlap(self, newitem, oldItem):
         """Check if 2 deltas overlap for timing"""
@@ -370,12 +431,15 @@ class ConflictChecker(Timing):
         # If Connection ID in oldConfig - it is either == or it is a modify call.
         retstate = ""
         if self.newid in oldConfig.get(self.checkmethod, {}):
-            if oldConfig[self.checkmethod][self.newid] != connItems:
+            diff = DeepDiff(oldConfig[self.checkmethod][self.newid], connItems, ignore_order=True)
+            if diff:
                 self.logger.debug("=" * 50)
                 self.logger.debug("MODIFY!!!")
                 self.logger.debug(oldConfig[self.checkmethod][self.newid])
                 self.logger.debug(connItems)
                 self.logger.debug("=" * 50)
+                self.logger.info(f"Diff for {self.newid}:")
+                self.logger.info(pprint(diff))
                 retstate = "modified"
             if oldConfig[self.checkmethod][self.newid] == connItems:
                 # No Changes - connID is same, ignoring it
@@ -461,6 +525,8 @@ class ConflictChecker(Timing):
                     self._checkIfHostAlive(cls, hostname)
                     self._checkVlanSwapping(self._getVlans(hostitems), hostname)
                     self._checkIsAlias(cls, hostname, hostitems)
+                    # Check if remaining BW is > 0
+                    self._checkRemainingBandwidth(cls, hostname, hostitems, connItems, oldConfig)
         for oldID in oldConfig.get(self.checkmethod, {}).keys():
             if oldID not in svcitems:
                 idstatetrack.setdefault("deleted", {}).append(oldID)

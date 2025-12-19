@@ -48,6 +48,7 @@ from SiteRMLibs.MainUtilities import (
     getSiteNameFromConfig,
     getUTCnow,
     getVal,
+    normalizePipeStrings,
     parseRDFFile,
     writeActiveDeltas,
 )
@@ -167,9 +168,7 @@ class PolicyService(RDFHelper, Timing, BWService):
 
     def __generateStartEnd(self):
         """Generate start and end time for existsDuring"""
-        self.startend = {"default": {
-                             "start": getUTCnow(**self.config[self.sitename]["default_params"]["starttime"]),
-                             "end": getUTCnow(**self.config[self.sitename]["default_params"]["endtime"])}}
+        self.startend = {"default": {"start": getUTCnow(**self.config[self.sitename]["default_params"]["starttime"]), "end": getUTCnow(**self.config[self.sitename]["default_params"]["endtime"])}}
 
     def __setTime(self, existsDuring, uri):
         """Set time for existsDuring"""
@@ -355,9 +354,9 @@ class PolicyService(RDFHelper, Timing, BWService):
             kubeAliases = hostDict.get("hostinfo", {}).get("KubeInfo", {}).get("isAlias", {})
             configAliases = {}
             # Collect config-based aliases if they exist
-            confSummary = hostDict.get("hostinfo", {}).get('Summary', {}).get('config', {})
-            for intf in confSummary.get('agent', {}).get('interfaces', []):
-                if confSummary.get(intf, {}).get('isAlias'):
+            confSummary = hostDict.get("hostinfo", {}).get("Summary", {}).get("config", {})
+            for intf in confSummary.get("agent", {}).get("interfaces", []):
+                if confSummary.get(intf, {}).get("isAlias"):
                     configAliases[intf] = True
 
             allAliases = set(kubeAliases.keys()) | set(configAliases.keys())
@@ -413,6 +412,8 @@ class PolicyService(RDFHelper, Timing, BWService):
         # Generate new default start and end time
         self.__generateStartEnd()
         out = self._addDefaultTimeBWWrap(out)
+        # Normalize pipe separated strings in output
+        out = normalizePipeStrings(out)
         return out
 
     def getRoute(self, gIn, connID, returnout):
@@ -727,7 +728,7 @@ class PolicyService(RDFHelper, Timing, BWService):
     def identifyglobalstate(tmpstates):
         """Based on all subdelta states, identify top level delta state"""
         if not tmpstates:
-            return "activated" # TODO: Review after SC.
+            return "activated"  # TODO: Review after SC.
         if "activate-error" in tmpstates:
             return "activate-error"
         if "deactivate-error" in tmpstates:

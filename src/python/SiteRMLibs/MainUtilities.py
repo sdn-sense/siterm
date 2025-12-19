@@ -27,8 +27,8 @@ import tempfile
 import time
 import uuid
 from contextlib import contextmanager
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
 
 import simplejson as json
 from rdflib import Graph
@@ -645,6 +645,22 @@ def getSiteNameFromConfig(config):
     return sitename
 
 
+def normalizePipeStrings(obj):
+    """Recursively walk obj (active deltas). If a string contains '|', normalize it by sorting."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            obj[k] = normalizePipeStrings(v)
+        return obj
+    if isinstance(obj, list):
+        return [normalizePipeStrings(v) for v in obj]
+    if isinstance(obj, tuple):
+        return tuple(normalizePipeStrings(v) for v in obj)
+    if isinstance(obj, str) and "|" in obj:
+        parts = obj.split("|")
+        return "|".join(sorted(parts))
+    return obj
+
+
 def getActiveDeltas(cls):
     """Get Active deltas from DB."""
     activeDeltas = cls.dbI.get("activeDeltas")
@@ -652,6 +668,7 @@ def getActiveDeltas(cls):
         return {"insertdate": int(getUTCnow()), "output": {}}
     activeDeltas = activeDeltas[0]
     activeDeltas["output"] = evaldict(activeDeltas["output"])
+    activeDeltas["output"] = normalizePipeStrings(activeDeltas["output"])
     return activeDeltas
 
 
