@@ -432,8 +432,12 @@ class PolicyService(RDFHelper, Timing, BWService):
                         if mrtype and mrsvals[index]:
                             routeVals = routeout.setdefault(rtype, {}).setdefault(str(mrtype), {})
                             routeVals["type"] = str(mrtype)
-                            # RouteFrom and routeTo can be either a single value or a list of values separated by comma
-                            routeVals["value"] = mrsvals[index].split(",") if rtype != "nextHop" else str(mrsvals[index])
+                            # This is really ... ugly. But we need to support both single and multiple values.
+                            # For list types - we split by comma and create list... Why not use RDF Lists?
+                            if routeVals["type"].endswith("-list"):
+                                routeVals["value"] = mrsvals[index].split(",")
+                            else:
+                                routeVals["value"] = str(mrsvals[index])
                             routeVals["key"] = str(item)
                             self.logger.debug(f"Route item: {routeVals}")
                 else:
