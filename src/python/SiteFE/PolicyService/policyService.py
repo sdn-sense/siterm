@@ -997,7 +997,8 @@ class PolicyService(RDFHelper, Timing, BWService):
         currentGraph = self.deltaToModel(None, None, None)
         currentGraph = self._addAllPendingDeltas(currentGraph)
         activeDeltasDB = getActiveDeltas(self)
-        self.currentActive = self.parseModel(currentGraph)
+        self.currentActive = {"output": {}}
+        self.currentActive["output"] = self.parseModel(currentGraph)
         # We need to take used IPs and VLANs from activeDeltasDB
         self.currentActive["output"]["usedIPs"] = activeDeltasDB["output"].get("usedIPs", {})
         self.currentActive["output"]["usedVLANs"] = activeDeltasDB["output"].get("usedVLANs", {})
