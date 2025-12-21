@@ -166,7 +166,7 @@ class RoutingService:
                         newRoute = prefList.setdefault(r, {})
                         newRoute[f"sense-{ruid}-{mapdir}"] = "present"
                         self._addRouteMap(
-                            host, f"sense-{ruid}-{mapdir}", f"sense-{ruid}-map{mapdir}", iptype
+                            host, f"sense-{ruid}-{mapdir}", f"sense-{ruid}-{mapdir}", iptype
                         )
 
     def _addRouteMap(self, host, match, name, iptype):
