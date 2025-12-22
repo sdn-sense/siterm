@@ -287,6 +287,8 @@ class Switch:
             return int(port[5:])
         if port.startswith("Vlan"):
             return int(port[4:])
+        if port[-4:].isdigit():
+            return int(port[-4:])
         return port
 
     def getvlandata(self, inData, vlan):
