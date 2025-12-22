@@ -329,10 +329,9 @@ class ConflictChecker(Timing, BWService):
                 remainingBW -= usedBW
                 self.logger.debug(f"BW on {hostname} {portIP['interface']} after applying new delta. Max: {portData['bandwidth']}, Used: {usedBW}, Remaining: {remainingBW} Mbps")
                 if remainingBW < 0:
-                    self.logger.error(f"Insufficient bandwidth on {hostname} {portIP['interface']}. Remaining: {remainingBW} Mbps")
-                    raise OverlapException(
-                        f"Insufficient bandwidth on {hostname} {portIP['interface']}. After all checks, remaining: {remainingBW} Mbps. Max: {portData['bandwidth']} Mbps, Used: {usedBW} Mbps, Requested: {portIP.get('bandwidth', 0)} Mbps"
-                    )
+                    msg = f"Insufficient bandwidth on {hostname} {portIP['interface']}. After all checks, remaining BW: {portData.get('bandwidth', 0)-usedBW} Mbps; After applying delta: {remainingBW} Mbps; Max available: {portData.get('bandwidth', 0)} Mbps; Used: {usedBW} Mbps; Requested: {portIP.get('bandwidth', 0)} Mbps"
+                    self.logger.error(msg)
+                    raise OverlapException(msg)
             # Unknown Host/Switch/Device
             else:
                 self.logger.error(f"Hostname {hostname} not found in hosts or switches.")
