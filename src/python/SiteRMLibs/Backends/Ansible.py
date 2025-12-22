@@ -234,6 +234,17 @@ class Switch:
         """Get ports from ansible output"""
         return inData.get("event_data", {}).get("res", {}).get("ansible_facts", {}).get("ansible_net_interfaces", {}).keys()
 
+    def getvlanports(self, inData):
+        """Get vlan ports from ansible output"""
+        vlanports = []
+        for portname, portdata in inData.get("event_data", {}).get("res", {}).get("ansible_facts", {}).get("ansible_net_interfaces", {}).items():
+            if portname.lower().startswith("vlan"):
+                vlanports.append(portname)
+            elif 'tagged' in portdata and portdata['tagged']:
+                self.logger.debug(f"[NewFeature] Port {portname} is tagged, adding to vlanports")
+                vlanports.append(portname)
+        return vlanports
+
     @staticmethod
     def getPortMembers(inData, port):
         """Get port members from ansible output"""
@@ -247,8 +258,7 @@ class Switch:
     def getvlans(self, inData):
         """Get vlans from ansible output"""
         swname = inData.get("event_data", {}).get("host", "")
-        ports = self.getports(inData)
-        tmpout = [vlan for vlan in ports if vlan.startswith("Vlan")]
+        tmpout = self.getvlanports(inData)
         if self.config.has_option(swname, "allvlans") and self.config.get(swname, "allvlans"):
             return tmpout
         # If we reach here, means allvlans flag is false. It should include into model only SENSE Vlans.
