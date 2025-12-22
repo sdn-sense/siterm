@@ -275,6 +275,27 @@ class Switch(Node):
                 out["destport"] = spltAlias[-1]
                 out["hostname"] = spltAlias[-2]
 
+    def _checkPortChannel(self, switch, port, portData):
+        """Check if port is part of a port channel"""
+        if not portData:
+            return
+        if portData.get("channel-member", ""):
+            self.logger.debug(f"Port {switch}{port} have channel members: {portData['channel-member']}")
+            for member in portData["channel-member"]:
+                self.logger.debug(f"Port {switch}{port} channel member: {member}")
+                # Get port data for the channel member
+                memberData = self.plugin.getportdata(self.switches["output"][switch], member)
+                if not memberData:
+                    self.logger.debug(f"Channel member {member} data not found for port {switch}{port}")
+                    continue
+                self.logger.debug(f"Channel member {member} data: {memberData}")
+                print(f"Channel member {member} of port {switch}{port} is not up. Line protocol: {memberData.get('lineprotocol', '')}, Oper status: {memberData.get('operstatus', '')}")
+                if memberData.get("lineprotocol", "") != "up" or memberData.get("operstatus", "") != "up":
+                    msg = f"Channel member {member} of port {switch}{port} is not up. Line protocol: {memberData.get('lineprotocol', '')}, Oper status: {memberData.get('operstatus', '')}"
+                    self.logger.warning(msg)
+                    self.warnings.append(msg)
+
+
     def _mergeYamlAndSwitch(self, switch):
         """Merge yaml and Switch Info. Yaml info overwrites
         any parameter in switch  configuration."""
@@ -301,6 +322,8 @@ class Switch(Node):
                     self.warnings.append(warning)
                 self._delPortFromOut(switch, port)
                 continue
+            # Do check for port Members
+            self._checkPortChannel(switch, port, tmpData)
             if port in vlans:
                 tmpData = self.plugin.getvlandata(self.switches["output"][switch], port)
                 vlansDict = self.output["vlans"][switch].setdefault(port, tmpData)
