@@ -18,7 +18,8 @@ class ArpInfo:
             logger if logger else getLoggingObject(config=self.config, service="Agent")
         )
 
-    def get(self, **_kwargs):
+    @staticmethod
+    def get(**_kwargs):
         """Get lscpu information"""
         out = {}
         out.setdefault("arpinfo", [])

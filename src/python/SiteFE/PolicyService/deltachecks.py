@@ -78,7 +78,8 @@ class ConflictChecker(Timing, BWService):
                 )
             self._checkIfRulerAlive(polcls, hostname)
 
-    def _checkIfRulerAlive(self, polcls, hostname):
+    @staticmethod
+    def _checkIfRulerAlive(polcls, hostname):
         """Check if Ruler Service is alive on the host"""
         dbitem = polcls.dbI.get("servicestates", search=[["hostname", hostname], ["servicename", "Ruler"]], limit=1)
         if not dbitem:
@@ -358,6 +359,7 @@ class ConflictChecker(Timing, BWService):
 
     @staticmethod
     def _overlap_count(times1, times2):
+        """Calculate the overlap in seconds between two time ranges"""
         latestStart = max(times1.start, times2.start)
         earliestEnd = min(times1.end, times2.end)
 

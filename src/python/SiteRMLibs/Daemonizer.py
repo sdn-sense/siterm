@@ -434,6 +434,7 @@ class Daemon(DBBackend):
         """Kill process using psutil lib"""
 
         def processKill(procObj):
+            """Kill a process object."""
             try:
                 procObj.kill()
             except psutil.NoSuchProcess:

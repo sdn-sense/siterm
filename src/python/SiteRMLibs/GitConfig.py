@@ -78,6 +78,7 @@ class GitConfig:
         return val
 
     def _mergeDefaults(self, targetDict, defaultsDict, **kwargs):
+        """Merge default values into the target dictionary"""
         for key, value in defaultsDict.items():
             if isinstance(value, dict):
                 targetDict.setdefault(key, {})

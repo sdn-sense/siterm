@@ -48,7 +48,7 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
     if not packageDirs:
         packageDirs = []
     if not ignoreThese:
-        ignoreThese = set(["CVS", ".svn", "svn", ".git", "", "sitermagent.egg-info"])
+        ignoreThese = {"CVS", ".svn", "svn", ".git", "", "sitermagent.egg-info"}
     else:
         ignoreThese = set(ignoreThese)
     packages = []

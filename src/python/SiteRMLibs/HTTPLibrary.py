@@ -95,8 +95,10 @@ def httpserviceready(endpoint="/api/ready"):
     """Decorator that checks if the HTTP service is ready before executing the decorated function."""
 
     def decorator(func: Callable) -> Callable:
+        """Decorator that checks if the HTTP service is ready before executing the decorated function."""
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs) -> Any:
+            """Wrapper function that checks if the HTTP service is ready before executing the decorated function."""
             # Check if service is ready by calling the specified endpoint
             kwargscopy = copy.deepcopy(kwargs)
             kwargscopy.setdefault("retries", 3)
@@ -189,14 +191,16 @@ class Requests:
         """Reset the User-Agent header to the default value."""
         self.default_headers["User-Agent"] = self.useragent
 
-    def __http_getCertKeyTuple(self):
+    @staticmethod
+    def __http_getCertKeyTuple():
         """Get Certificate and Key Tuple."""
         cert, key = getKeyCertFromEnv()
         if cert and key:
             return (cert, key)
         return None
 
-    def __http_getCAPath(self):
+    @staticmethod
+    def __http_getCAPath():
         """Get CA Path."""
         return getCAPathFromEnv() or True
 

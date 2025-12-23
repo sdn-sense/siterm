@@ -353,12 +353,10 @@ class dbinterface:
     # =====================================================
     #  HERE GOES CLEAN CALLS
     # =====================================================
-    def _clean(self, calltype, values):
+    def _clean(self, _calltype, _values):
         """Database Clean Up"""
-        del calltype, values
         self.db.cleandb()
 
-    def _cleantable(self, calltype, values):
+    def _cleantable(self, calltype, _values):
         """Clean specific table"""
-        del values
         self.db.cleandbtable(calltype)

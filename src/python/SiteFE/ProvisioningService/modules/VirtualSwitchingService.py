@@ -84,7 +84,8 @@ class VirtualSwitchingService:
             return normalizedip(ipval)
         return None
 
-    def _getVlanID(self, host, port, portDict):
+    @staticmethod
+    def _getVlanID(host, port, portDict):
         """Get vlan id from portDict"""
         if "hasLabel" not in portDict or "value" not in portDict["hasLabel"]:
             raise Exception(f"Bad running config. Missing vlan entry: {host} {port} {portDict}")
@@ -141,6 +142,7 @@ class VirtualSwitchingService:
             vlanDict["ipv6_address"][ipaddr] = "present"
 
     def _presetDefaultParams(self, host, port, portDict, _params):
+        """Preset default parameters for a VLAN"""
         vlanDict = self._getdefaultVlan(host, port, portDict)
         vlanDict["description"] = portDict.get("_params", {}).get("tag", "SENSE-VLAN-Without-Tag")
         vlanDict["belongsTo"] = portDict.get("_params", {}).get("belongsTo", "SENSE-VLAN-Without-belongsTo")

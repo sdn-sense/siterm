@@ -150,7 +150,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         if not items:
             return None
         nstate = None
-        if items.get("state", None) not in ["present", "error", "absent"] or kwargs.get("uuidstate", None) not in ["ok", "error"]:
+        if items.get("state") not in ["present", "error", "absent"] or kwargs.get("uuidstate") not in ["ok", "error"]:
             self.logger.info("State is not present or error, or uuidstate is not ok or error. Will return unknown.")
             self.logger.info(f"Items: {items}, kwargs: {kwargs}")
             nstate = "unknown"
@@ -180,7 +180,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
                 for intf in items.get("tagged_members"):
                     tmpkwargs["hostport"] = self.switch.getSystemValidPortName(intf)
                     self.__insertDeltaStateDB(**tmpkwargs)
-        if kwargs["acttype"] == "rst" and kwargs.get("applied", None):
+        if kwargs["acttype"] == "rst" and kwargs.get("applied"):
             kwargs["uuidstate"] = self.__identifyReportState(kwargs["applied"], **kwargs)
             for key, _items in kwargs["applied"].get("neighbor", {}).items():
                 kwargs["hostport"] = key
@@ -198,10 +198,10 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
     @staticmethod
     def _identifyFinalState(activeConf):
         """Identify Final State for service."""
-
         allsubstates = []
 
         def anyNestedPresent(d):
+            """Recursively check if any nested dictionary has a 'present' or 'absent' state."""
             if isinstance(d, dict):
                 for v in d.values():
                     if isinstance(v, dict):

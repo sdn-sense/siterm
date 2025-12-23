@@ -202,14 +202,13 @@ async def addhost(
         dumpFileContentAsJson(fname, item.dict())
         deps["dbI"].insert("hosts", [out])
         return APIResponse.genResponse(request, {"status": "ADDED"})
+    out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": host[0]["hostinfo"]}
+    # Check if there is a data update
+    if "nodatachange" in item.dict() and item.nodatachange:
+        deps["dbI"].update("hosts", [{"id": host[0]["id"], "updatedate": getUTCnow()}])
     else:
-        out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": host[0]["hostinfo"]}
-        # Check if there is a data update
-        if "nodatachange" in item.dict() and item.nodatachange:
-            deps["dbI"].update("hosts", [{"id": host[0]["id"], "updatedate": getUTCnow()}])
-        else:
-            dumpFileContentAsJson(host[0]["hostinfo"], item.dict())
-            deps["dbI"].update("hosts", [out])
+        dumpFileContentAsJson(host[0]["hostinfo"], item.dict())
+        deps["dbI"].update("hosts", [out])
     return APIResponse.genResponse(request, {"status": "UPDATED"})
 
 # update (PUT)

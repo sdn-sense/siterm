@@ -115,7 +115,7 @@ def depGetModelContent(dbentry, **kwargs):
 def depGetModel(dbI, **kwargs):
     """Get all models."""
     orderby = kwargs.get("orderby", ["insertdate", "DESC"])
-    if not kwargs.get("modelID", None):
+    if not kwargs.get("modelID"):
         models = dbI.get("models", limit=kwargs.get("limit", 10), orderby=orderby)
         if not models:
             raise ModelNotFound("No models in database. First time run?")
@@ -211,6 +211,7 @@ def forbidExtraQueryParams(*allowedParams: str):
     """Dependency to forbid extra query parameters not in allowedParams."""
 
     async def checker(request: Request):
+        """Check for extra query parameters not allowed."""
         if "*" in allowedParams:
             return  # Permit anything
         incoming = set(request.query_params.keys())

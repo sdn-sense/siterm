@@ -130,7 +130,8 @@ class StateMachine:
             self.stateChangerDelta(dbObj, "removed", **delta)
             self.modelstatecancel(dbObj, **delta)
 
-    def removed(self, dbObj):
+    @staticmethod
+    def removed(dbObj):
         """Check on all remove state deltas."""
         # Remove fully from database
         for delta in dbObj.get("deltas", search=[["state", "removed"]]):

@@ -827,7 +827,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             dictdiffer.diff(
                 self.currentActive["output"],
                 self.newActive["output"],
-                ignore=set(["usedIPs", "usedVLANs"]),
+                ignore={"usedIPs", "usedVLANs"},
             )
         ):
             self.logger.debug(f"New diff: {diff}")
@@ -1066,8 +1066,6 @@ def execute(config=None, args=None):
             elif args.action in ["addition", "reduction"]:
                 newModel = policer.deltaToModel(None, args.delta, args.action)
                 out = policer.parseModel(newModel)
-                # currentActive = getActiveDeltas(policer)
-                # policer.conflictChecker.checkConflicts(policer, out, currentActive["output"], False)
                 pprint.pprint(out)
         elif args.action == "fullRun":
             policer = PolicyService(config, getSiteNameFromConfig(config))

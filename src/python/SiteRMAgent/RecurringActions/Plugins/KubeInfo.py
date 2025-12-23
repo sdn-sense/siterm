@@ -28,6 +28,7 @@ class KubeInfo:
         self.failedLabels = {}
 
     def _getAllLabels(self, hostname):
+        """Get all Kubernetes labels for the given hostname"""
         # Load kubeconfig from default location or in-cluster configuration
         k8sconfig.load_incluster_config()
         # Create Kubernetes API client

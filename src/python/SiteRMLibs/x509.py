@@ -55,7 +55,8 @@ class OIDCHandler:
         self.audience = os.environ.get("OIDC_AUDIENCE", "")
         self.issuer = os.environ.get("OIDC_ISSUER", "")
 
-    def __getjwks__(self):
+    @staticmethod
+    def __getjwks__():
         """Get JWKS."""
         jwks = os.environ.get("OIDC_JWKS", "")
         if not jwks:

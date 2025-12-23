@@ -26,7 +26,8 @@ class BWService:
     # Seems there are issues with QoS when we use really big bites and it complains about this.
     # Solution is to convert to next lower value...
     # pylint: disable=E1101
-    def convertToRate(self, params):
+    @staticmethod
+    def convertToRate(params):
         """Convert input to rate understandable to fireqos."""
         inputVal = params.get("reservableCapacity", 0)
         inputRate = params.get("unit", "undef")

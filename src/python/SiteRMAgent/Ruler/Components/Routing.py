@@ -74,7 +74,6 @@ class Rules:
 
     def add_rule(self, rule_id, rule_from, rule_to, rule_lookup):
         """Add Rule to list"""
-
         self.rule_id.append(rule_id)
         self.rule_from.append(rule_from)
         self.rule_to.append(rule_to)

@@ -185,6 +185,7 @@ class RDFHelper:
                 self._addRstPort(**kwargs)
 
     def _addVals(self, key, subkey, val, newuri, **kwargs):
+        """Add values to the RDF graph"""
         if not subkey:
             return
         if key in ["ipv4", "ipv6"]:
@@ -313,7 +314,7 @@ class RDFHelper:
                 self._addHasNetworkAttribute(metaService, "nodeExporter", "metadata:/nodeExporter", nodeExporter)
         # Add all metadata from frontend configuration;
         try:
-            metadata = self.config.get(kwargs.get("sitename", None), "metadata")
+            metadata = self.config.get(kwargs.get("sitename"), "metadata")
             for key, vals in metadata.items():
                 self._addHasNetworkAttribute(metaService, key, f"/{key}", json.dumps(vals))
         except (NoSectionError, NoOptionError):
@@ -459,6 +460,7 @@ class RDFHelper:
         return bws
 
     def _addBandwidthServiceRoute(self, **kwargs):
+        """Add Bandwidth Service Route to Model"""
         if self.__checkifReqKeysMissing(["routeuri", "uri"], kwargs):
             return
         self.addTriples([(self.genUriRef("site", kwargs["routeuri"]), self.genUriRef("nml", "hasService"), self.genUriRef("site", kwargs["uri"]))])
@@ -532,7 +534,7 @@ class RDFHelper:
         if not uri:
             return ""
         self._addL3BGPMP(**kwargs)
-        if kwargs.get("rt-table", None):
+        if kwargs.get("rt-table"):
             routingtable = f"{uri}:rt-table+{kwargs.get('rt-table')}"
         elif "rtableuri" in kwargs and kwargs["rtableuri"]:
             routingtable = kwargs["rtableuri"]

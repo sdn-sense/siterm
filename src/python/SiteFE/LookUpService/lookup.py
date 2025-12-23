@@ -54,7 +54,8 @@ class MultiWorker:
         self.firstRun = True
         self.needRestart = False
 
-    def _runCmd(self, action, device, foreground=False):
+    @staticmethod
+    def _runCmd(action, device, foreground=False):
         """Start execution of new SwitchWroker process"""
         retOut = {"stdout": [], "stderr": [], "exitCode": -1}
         command = f"SwitchWorker --action {action} --devicename {device}"

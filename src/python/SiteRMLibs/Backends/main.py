@@ -129,7 +129,7 @@ class Switch(Node):
             for key in item.keys():
                 if key != "output":
                     self.switches["output"][item["device"]]["dbinfo"][key] = item[key]
-        if not self.switches.get("output", None):
+        if not self.switches.get("output"):
             self.logger.debug("No switches in database.")
 
     @staticmethod
@@ -150,7 +150,7 @@ class Switch(Node):
                     continue
                 for portKey in switchDict.keys():
                     self.output["portMapping"].setdefault(switch, {})
-                    realportname = switchDict.get(portKey, {}).get("realportname", None)
+                    realportname = switchDict.get(portKey, {}).get("realportname")
                     if not realportname:
                         continue
                     if portKey.startswith("Vlan") and switchDict.get(portKey, {}).get("value", {}):

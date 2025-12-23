@@ -135,7 +135,8 @@ class NetInfo(BWService):
                     continue
         return out
 
-    def getVlanID(self, nicname, privVlans):
+    @staticmethod
+    def getVlanID(nicname, privVlans):
         """Get Vlan id from privVlans, or from nicname"""
         try:
             if nicname in privVlans:
@@ -326,7 +327,8 @@ class NetInfo(BWService):
             self.logger.debug("This is not a fatal error, just no LLDP information found or checked by SiteRM.")
         return {}
 
-    def getRoutes(self):
+    @staticmethod
+    def getRoutes():
         """Get Routing information from host"""
         routes = []
         with IPRoute() as ipr:

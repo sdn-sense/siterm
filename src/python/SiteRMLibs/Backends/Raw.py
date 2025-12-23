@@ -61,16 +61,18 @@ class Switch:
         with open(confFName, "w", encoding="utf-8") as fd:
             fd.write(yaml.dump(out))
 
-    def _applyNewConfig(self, hosts=None, subitem=""):
+    @staticmethod
+    def _applyNewConfig(hosts=None, subitem=""):
         """RAW Plugin does not apply anything."""
         return {}, {}
 
-    def _executeAnsible(self, playbook, hosts=None, subitem=""):
+    @staticmethod
+    def _executeAnsible(playbook, hosts=None, subitem=""):
         """Execute Ansible playbook. RAW Does nothing"""
         return None
 
     def getAnsNetworkOS(self, host, subitem=""):
-        """Get Ansible network os from hosts file"""
+        """Get Ansible network o`s from hosts file"""
         return self.getHostConfig(host).get("ansible_network_os", "")
 
     def _getFacts(self, hosts=None, subitem=""):
@@ -107,7 +109,8 @@ class Switch:
         # In RAW plugin - there is no data on port details
         return {"switchport": "yes"}
 
-    def getvlans(self, inData):
+    @staticmethod
+    def getvlans(inData):
         """Get vlans from output"""
         # In RAW plugin - there is no vlans
         return []
@@ -133,6 +136,7 @@ class Switch:
             return int(port[4:])
         return port
 
-    def nametomac(self, inData, key):
+    @staticmethod
+    def nametomac(inData, key):
         """Return all mac's associated to that host. Not in use for RAW plugin"""
         return []

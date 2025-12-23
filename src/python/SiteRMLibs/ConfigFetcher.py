@@ -68,7 +68,9 @@ class ConfigFetcher:
             os.remove(self.FetcherReadyFile)
 
     def _fetchFile(self, name, url, raiseEx=True):
+        """Fetch a configuration file from the given URL."""
         def retryPolicy(outObj, retries=3):
+            """Retry policy for fetching the configuration file."""
             if outObj[1] == -1:
                 self.logger.debug(f"Got -1 (Timeout usually error. Will retry up to 3 times (5sec sleep): {outObj}")
                 retries -= 1

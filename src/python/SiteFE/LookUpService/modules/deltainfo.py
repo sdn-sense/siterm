@@ -122,6 +122,7 @@ class DeltaInfo:
             self._addNetworkAddrVsw(params, uri)
 
     def _addService(self, portDict, uri):
+        """Add Service delta info to the model"""
         if not portDict.get("hasService", {}):
             return
         portDict["hasService"]["uri"] = uri
@@ -134,7 +135,6 @@ class DeltaInfo:
 
     def _addNetworkAddr(self, portDict, uri):
         """Add Network delta info"""
-        del uri
         netDict = portDict.get("hasNetworkAddress", {})
         if not netDict:
             return

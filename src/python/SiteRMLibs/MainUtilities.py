@@ -759,6 +759,7 @@ def timeout(seconds):
     """Context manager that raises TimeoutError"""
 
     def timeout_handler(signum, frame):
+        """Handle the timeout signal"""
         raise TimeoutError(f"Operation timed out after {seconds} seconds")
 
     old_handler = signal.signal(signal.SIGALRM, timeout_handler)
@@ -774,11 +775,11 @@ def withTimeout(timeout_seconds=60):
     """Decorator for function timeout."""
 
     def decorator(func):
+        """Decorator that applies a timeout to the function"""
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            """Wrapper function that applies a timeout to the decorated function"""
             with timeout(timeout_seconds):
                 return func(*args, **kwargs)
-
         return wrapper
-
     return decorator

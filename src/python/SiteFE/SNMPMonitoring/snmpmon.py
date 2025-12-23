@@ -565,6 +565,7 @@ class SNMPMonitoring(Warnings):
         self.switches = self.switch.getAllSwitches()
 
     def _getSNMPSession(self, host):
+        """Get SNMP session for a given host"""
         self.session = None
         self.hostconf.setdefault(host, {})
         self.hostconf[host] = self.switch.plugin.getHostConfig(host)
@@ -589,6 +590,7 @@ class SNMPMonitoring(Warnings):
             self.session.update_session(hostname=hostname)
 
     def _getSNMPVals(self, key, host=None):
+        """Get SNMP values for a given key and host"""
         try:
             allvals = self.session.walk(key)
             return allvals
@@ -640,6 +642,7 @@ class SNMPMonitoring(Warnings):
             self.dbI.insert("snmpmon", [out])
 
     def _isVlanAllowed(self, host, vlan):
+        """Check if a VLAN is allowed for a switch/host"""
         try:
             if int(vlan) in self.config.get(host, "vlan_range_list"):
                 return True
@@ -648,6 +651,7 @@ class SNMPMonitoring(Warnings):
         return False
 
     def _getMacAddrSession(self, host, macs):
+        """Get MAC addresses for a host using SNMP or Ansible"""
         # Junos does not provide this information via SNMP, we do it via ansible
         # FRR runs on linux, and we get this data via ansible.
         if self.hostconf[host].get("ansible_network_os", "undefined") in ["sense.junos.junos", "sense.frr.frr"]:
