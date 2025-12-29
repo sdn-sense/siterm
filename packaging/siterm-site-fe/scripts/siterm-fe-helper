@@ -19,19 +19,49 @@ class Helper:
 
     def __init__(self):
         self.commands = {
-            "print-help": {"desc": "Print all available commands", "call": self.printhelp},
-            "print-active": {"desc": "Print all active resources in SiteRM.", "call": self.printactive},
-            "print-active-uuids": {"desc": "Print all active resource UUIDs in SiteRM.", "call": self.printactiveuuids},
-            "print-hosts": {"desc": "Print all hosts information in Frontend", "call": self.printhosts},
-            "change-delta": {"desc": "Change Delta State", "call": self.changedeltastate},
-            "cancel-resource": {"desc": "Cancel resource in SiteRM.", "call": self.cancelresource},
-            "cancel-all": {"desc": "Cancel all active resources in SiteRM.", "call": self.cancelall},
-            "exit": {"desc": "Exit helper script.", "call": self.exithelper},
-        }
+            "list0":{
+                "print-help": {"desc": "Print all available commands", "call": self.printhelp},
+                "print-active": {"desc": "Print all active resources in SiteRM.", "call": self.printactive},
+                "print-active-uuids": {"desc": "Print all active resource UUIDs in SiteRM.", "call": self.printactiveuuids},
+                "print-hosts": {"desc": "Print all hosts information in Frontend", "call": self.printhosts},
+                "change-delta": {"desc": "Change Delta State", "call": self.changedeltastate},
+                "cancel-resource": {"desc": "Cancel resource in SiteRM.", "call": self.cancelresource},
+                "cancel-all": {"desc": "Cancel all active resources in SiteRM.", "call": self.cancelall},
+                },
+            "list1":{
+                "list-users": {"desc": "List all users in SiteRM.", "call": self.listusers},
+                "create-user": {"desc": "Create a new user in SiteRM.", "call": self.createuser},
+                "delete-user": {"desc": "Delete a user in SiteRM.", "call": self.deleteuser},
+                "update-user": {"desc": "Update a user in SiteRM.", "call": self.updateuser}
+                },
+            "list2":{
+                "exit": {"desc": "Exit helper script.", "call": self.exithelper}
+                }
+            }
         self.config = getGitConfig()
         self.sitename = getSiteNameFromConfig(self.config)
         self.dbI = getVal(getDBConn("List", self), **{"sitename": self.sitename})
         self.statemachine = StateMachine(self.config)
+
+    def listusers(self):
+        """List all users in SiteRM."""
+        print("Listing all users...")
+        # Implementation for listing users goes here
+
+    def createuser(self):
+        """Create a new user in SiteRM."""
+        print("Creating a new user...")
+        # Implementation for creating a user goes here
+
+    def deleteuser(self):
+        """Delete a user in SiteRM."""
+        print("Deleting a user...")
+        # Implementation for deleting a user goes here
+
+    def updateuser(self):
+        """Update a user in SiteRM."""
+        print("Updating a user...")
+        # Implementation for updating a user goes here
 
     @staticmethod
     def _getInput(question, validOptions=None):
@@ -176,11 +206,13 @@ class Helper:
 
     def printhelp(self):
         """Print Help and all available commands, descriptions"""
-        print("-" * 50)
+        print("=" * 50)
         print("Available commands:")
-        print("-" * 50)
-        for cmd, cmddict in self.commands.items():
-            print(f"{cmd} : {cmddict['desc']}")
+        print("=" * 50)
+        for _cmdlevel, cmds in self.commands.items():
+            for cmd, cmddict in cmds.items():
+                print(f"  {cmd} : {cmddict['desc']}")
+            print("-" * 50)
         print("-" * 50)
         print("Which command you want to execute? ")
 

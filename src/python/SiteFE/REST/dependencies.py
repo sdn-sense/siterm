@@ -27,13 +27,17 @@ from SiteRMLibs.MainUtilities import (
     firstRunFinished,
     getAllFileContent,
     getDBConnObj,
+    getSQLiteConnObj,
     getUTCnow
 )
-from SiteRMLibs.x509 import CertHandler, OIDCHandler
+from SiteRMLibs.x509 import CertHandler, OIDCHandler, getauthmethod
 
 DEP_CONFIG = getGitConfig()
 DEP_DBOBJ = getDBConnObj()
+DEP_SQLITEOBJ = getSQLiteConnObj(DEP_CONFIG)
 DEP_STATE_MACHINE = ST.StateMachine(DEP_CONFIG)
+CERT_HANDLER = CertHandler()
+OIDC_HANDLER = OIDCHandler()
 
 DEFAULT_RESPONSES = {
     401: {"description": "Unauthorized", "content": {"application/json": {"example": {"detail": "Not authorized to access this resource"}}}},
@@ -49,6 +53,11 @@ def depGetDBObj():
     return DEP_DBOBJ
 
 
+def depGetSQLiteObj():
+    """Dependency to get the SQLite connection object."""
+    return DEP_SQLITEOBJ
+
+
 def depGetConfig():
     """Dependency to get the configuration object."""
     return DEP_CONFIG
@@ -57,6 +66,16 @@ def depGetConfig():
 def depGetStateMachine():
     """Dependency to get the state machine object."""
     return DEP_STATE_MACHINE
+
+
+def depGetOIDCHandler():
+    """Dependency to get the OIDC handler object."""
+    return OIDC_HANDLER
+
+
+def depGetCertHandler():
+    """Dependency to get the certificate handler object."""
+    return CERT_HANDLER
 
 
 def loguseraction(request, userinfo):
@@ -72,8 +91,8 @@ def loguseraction(request, userinfo):
 async def depAuthenticate(request: Request):
     """Dependency to authenticate the user via certificate or OIDC."""
     # X509 handler
-    checkauthmethod()
-    if os.environ.get("AUTH_SUPPORT", "X509").upper() == "X509":
+    authmethod = getauthmethod()
+    if authmethod == "X509":
         cert_handler = CertHandler()
         try:
             certInfo = cert_handler.getCertInfo(request)
@@ -84,13 +103,13 @@ async def depAuthenticate(request: Request):
             loguseraction(request, {"exception": str(ex)})
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access. Please provide valid credentials or check with your administrator.") from ex
     # OIDC handler
-    if os.environ.get("AUTH_SUPPORT", "X509").upper() == "OIDC":
+    elif authmethod == "OIDC":
         oidc_handler = OIDCHandler()
         try:
             userInfo = oidc_handler.validateOIDCInfo(request)
             loguseraction(request, {"user_info": userInfo})
             return {"user_info": userInfo}
-        except (RequestWithoutCert, IssuesWithAuth) as ex:
+        except IssuesWithAuth as ex:
             loguseraction(request, {"exception": str(ex)})
             # Pass back WWW-Authenticate header for OIDC
             raise HTTPException(
@@ -148,42 +167,37 @@ def checkPermissions(userinfo, required_perms: List[str]):
     # if not any(perm in user_perms for perm in required_perms):
     #    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access to this resource is forbidden due to insufficient permissions.")
 
-def checkauthmethod():
-    """Check if auth method is configured correctly."""
-    config = depGetConfig()
-    auth_method = os.environ.get("AUTH_SUPPORT", "X509").upper()
-    if auth_method not in ["X509", "OIDC"]:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication method is not properly configured.")
-    if auth_method == "OIDC":
-        if not all(k in os.environ for k in ["OIDC_AUDIENCE", "OIDC_ISSUER", "OIDC_JWKS", "OIDC_REDIRECT_URI"]):
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="OIDC authentication is not properly configured. Missing environment variables.")
-    # Also check if config has  section
-    oidc = config["MAIN"].get("general", {}).get("oidc", False)
-    auth_method_conf = "OIDC" if oidc else "X509"
-    if auth_method != auth_method_conf:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication method mismatch between configuration and environment variable.")
 
-
-def apiReadDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
+def apiReadDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj),
+                sqliteObj=Depends(depGetSQLiteObj), user=Depends(depAuthenticate),
+                oidcHandler=Depends(depGetOIDCHandler), certHandler=Depends(depGetCertHandler), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
-    return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "sqliteObj": sqliteObj, "user": user, "oidcHandler": oidcHandler, "certHandler": certHandler, "stateMachine": stateMachine}
 
 
-def apiWriteDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
+def apiWriteDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj),
+                 sqliteObj=Depends(depGetSQLiteObj), user=Depends(depAuthenticate),
+                 oidcHandler=Depends(depGetOIDCHandler), certHandler=Depends(depGetCertHandler),
+                 stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["write", "admin"])
-    return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "sqliteObj": sqliteObj, "user": user, "oidcHandler": oidcHandler, "certHandler": certHandler, "stateMachine": stateMachine}
 
 
-def apiAdminDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
+def apiAdminDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj),
+                 sqliteObj=Depends(depGetSQLiteObj), user=Depends(depAuthenticate),
+                 oidcHandler=Depends(depGetOIDCHandler), certHandler=Depends(depGetCertHandler),
+                 stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["admin"])
-    return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "sqliteObj": sqliteObj, "user": user, "oidcHandler": oidcHandler, "certHandler": certHandler, "stateMachine": stateMachine}
 
-def apiPublicDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), stateMachine=Depends(depGetStateMachine)):
+
+def apiPublicDeps(config=Depends(depGetConfig), sqliteObj=Depends(depGetSQLiteObj),
+                  oidcHandler=Depends(depGetOIDCHandler), certHandler=Depends(depGetCertHandler),
+                  dbI=Depends(depGetDBObj), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the public REST API."""
-    checkauthmethod()
-    return {"config": config, "dbI": dbI, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "sqliteObj": sqliteObj, "oidcHandler": oidcHandler, "certHandler": certHandler, "stateMachine": stateMachine}
 
 # pylint: disable=too-few-public-methods
 class APIResponse:

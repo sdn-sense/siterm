@@ -38,6 +38,7 @@ from SiteRMLibs.CustomExceptions import (
     WrongInputError,
 )
 from SiteRMLibs.DBBackend import dbinterface
+from SiteRMLibs.SqLiteBackend import SQLiteBackend
 from yaml import safe_load as yload
 
 HOSTSERVICES = [
@@ -591,9 +592,11 @@ def getDBConn(serviceName="", cls=None):
 
 def getDBConnObj():
     """Get database connection object (no class)"""
-    # TOOD: All the rest should remove use of those params
     return dbinterface()
 
+def getSQLiteConnObj(config):
+    """Get SQLite connection object (no class)"""
+    return SQLiteBackend(config)
 
 def parseRDFFile(modelFile):
     """Parse model file and return Graph."""

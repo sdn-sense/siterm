@@ -1,17 +1,6 @@
 #!/usr/bin/env python3
 # pylint: disable=line-too-long
-"""DB Backend SQL Calls to databses.
-
-Copyright 2019 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+"""DB Backend SQL Calls to databases.
 Title                   : siterm
 Author                  : Justas Balcas
 Email                   : jbalcas (at) es (dot) net
@@ -167,6 +156,47 @@ create_dbversion = """CREATE TABLE IF NOT EXISTS dbversion(
                                 id int auto_increment,
                                 version VARCHAR(255) NOT NULL,
                                 primary key(id))"""
+
+create_users = """CREATE TABLE IF NOT EXISTS users(
+                    id CHAR(36) PRIMARY KEY,
+                    username VARCHAR(128) UNIQUE NOT NULL,
+                    password_hash LONGTEXT NOT NULL,
+                    display_name VARCHAR(255),
+                    is_admin BOOLEAN DEFAULT FALSE,
+                    disabled BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP,
+                    password_changed_at TIMESTAMP)"""
+
+create_sessions = """CREATE TABLE IF NOT EXISTS sessions (
+                        session_id CHAR(64) PRIMARY KEY,
+                        user_id CHAR(36) NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL,
+                        revoked BOOLEAN DEFAULT FALSE,
+                        INDEX(user_id),
+                        FOREIGN KEY (user_id) REFERENCES users(id))"""
+
+create_refresh_tokens = """CREATE TABLE IF NOT EXISTS refresh_tokens (
+                            token_hash CHAR(64) PRIMARY KEY,
+                            session_id CHAR(64) NOT NULL,
+                            expires_at TIMESTAMP NOT NULL,
+                            revoked BOOLEAN DEFAULT FALSE,
+                            rotated_from CHAR(64)"""
+
+insert_users = "INSERT INTO users(id, username, password, display_name, is_admin, disabled, created_at) VALUES(%(id)s, %(username)s, %(password)s, %(display_name)s, %(is_admin)s, %(disabled)s, %(created_at)s)"
+get_users = "SELECT * FROM users"
+update_users = "UPDATE users SET username=%(username)s, password=%(password)s, display_name=%(display_name)s, is_admin=%(is_admin)s, disabled=%(disabled)s, created_at=%(created_at)s WHERE id=%(id)s"
+delete_users = "DELETE FROM users"
+get_sessions = "SELECT * FROM sessions"
+insert_sessions = "INSERT INTO sessions(session_id, user_id, created_at, expires_at, revoked) VALUES(%(session_id)s, %(user_id)s, %(created_at)s, %(expires_at)s, %(revoked)s)"
+update_sessions = "UPDATE sessions SET user_id=%(user_id)s, created_at=%(created_at)s, expires_at=%(expires_at)s, revoked=%(revoked)s WHERE session_id=%(session_id)s"
+delete_sessions = "DELETE FROM sessions"
+get_refresh_tokens = "SELECT * FROM refresh_tokens"
+insert_refresh_tokens = "INSERT INTO refresh_tokens(token_hash, session_id, expires_at, revoked, rotated_from) VALUES(%(token_hash)s, %(session_id)s, %(expires_at)s, %(revoked)s, %(rotated_from)s)"
+update_refresh_tokens = "UPDATE refresh_tokens SET session_id=%(session_id)s, expires_at=%(expires_at)s, revoked=%(revoked)s, rotated_from=%(rotated_from)s WHERE token_hash=%(token_hash)s"
+delete_refresh_tokens = "DELETE FROM refresh_tokens"
+
 
 insert_models = "INSERT INTO models(uid, insertdate, fileloc) VALUES(%(uid)s, %(insertdate)s, %(fileloc)s)"
 insert_deltas = """INSERT INTO deltas(uid, insertdate, updatedate, state, deltat, content, modelid, modadd)

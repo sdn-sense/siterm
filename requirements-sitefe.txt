@@ -23,4 +23,7 @@ Requests
 simplejson
 uvicorn
 deepdiff
-PyJWT
+pyjwt[crypto]
+cryptography
+gitpython
+argon2-cffi
