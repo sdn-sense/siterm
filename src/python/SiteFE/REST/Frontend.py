@@ -16,6 +16,7 @@ from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
     apiReadDeps,
+    apiPublicDeps,
     checkReadyState,
     checkSite,
     forbidExtraQueryParams
@@ -54,7 +55,7 @@ router = APIRouter()
         **DEFAULT_RESPONSES,
     },
 )
-async def checkAPIHealth(request: Request, _deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
+async def checkAPIHealth(request: Request, _deps=Depends(apiPublicDeps), _forbid=Depends(forbidExtraQueryParams())):
     """
     Check the health of the API.
     """
@@ -77,7 +78,7 @@ async def checkAPIHealth(request: Request, _deps=Depends(apiReadDeps), _forbid=D
         **DEFAULT_RESPONSES,
     },
 )
-async def checkAPIReady(request: Request, deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
+async def checkAPIReady(request: Request, deps=Depends(apiPublicDeps), _forbid=Depends(forbidExtraQueryParams())):
     """
     Check the readiness of the API.
     """
