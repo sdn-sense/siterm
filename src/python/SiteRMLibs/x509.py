@@ -305,8 +305,8 @@ class AuthHandler:
         return {
             "issuer": self.oidc_issuer,
             "jwks_uri": f"{self.oidc_issuer}/.well-known/jwks.json",
-            "token_endpoint": f"{self.oidc_issuer}/issue_token",
-            "authorization_endpoint": f"{self.oidc_issuer}/authorize",
+            "token_endpoint": f"{self.oidc_issuer}/m2m/token",
+            "refresh_token_endpoint": f"{self.oidc_issuer}/m2m/token/refresh",
             "response_types_supported": ["token", "id_token"],
             "subject_types_supported": ["public"],
             "id_token_signing_alg_values_supported": [self.oidc_algorithm],

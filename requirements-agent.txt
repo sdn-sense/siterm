@@ -21,4 +21,4 @@ deepdiff
 pyjwt[crypto]
 cryptography
 gitpython
-sqlalchemy
+sqlalchemy>=2.0,<3.0

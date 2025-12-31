@@ -15,9 +15,15 @@ import time
 import traceback
 import urllib.parse
 from typing import Any, Callable
+import base64
 
 import httpx
 import jwt
+
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
 from SiteRMLibs.CustomExceptions import (
     HTTPException,
     HTTPServerNotReady,
@@ -25,6 +31,25 @@ from SiteRMLibs.CustomExceptions import (
 )
 from SiteRMLibs.MainUtilities import getTempDir, getUTCnow
 
+def signChallenge(challenge_response: dict, private_key_pem: str) -> str:
+    """
+    Sign a server-provided challenge using the given private key.
+    """
+    challenge_b64 = challenge_response["challenge"]
+    challenge = base64.b64decode(challenge_b64)
+
+    private_key = load_pem_private_key(private_key_pem.encode("utf-8"), password=None)
+
+    if isinstance(private_key, ec.EllipticCurvePrivateKey):
+        signature = private_key.sign(challenge, ec.ECDSA(hashes.SHA256()))
+
+    elif isinstance(private_key, rsa.RSAPrivateKey):
+        signature = private_key.sign(
+            challenge,
+            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH), hashes.SHA256())
+    else:
+        raise RuntimeError("Unsupported private key type")
+    return base64.b64encode(signature).decode("utf-8")
 
 def argValidity(arg, aType):
     "Argument validation."
@@ -145,11 +170,12 @@ class Requests:
         self.host = sanitizeURL(url)
         checkServerUrl(self.host)
 
-        self.session = httpx.Client(cert=self.__http_getCertKeyTuple(), verify=self.__http_getCAPath(), timeout=60.0, follow_redirects=True)
-        self.authsession = httpx.Client(cert=self.__http_getCertKeyTuple(), verify=self.__http_getCAPath(), timeout=60.0, follow_redirects=True)
+        self.session = httpx.Client(verify=self.__http_getCAPath(), timeout=60.0, follow_redirects=True)
+        self.authsession = httpx.Client(verify=self.__http_getCAPath(), timeout=60.0, follow_redirects=True)
         self.notFEsession = httpx.Client(timeout=60.0, follow_redirects=True)
         self.bearertoken = None
-        self.authmethod = None
+        self.refreshtoken = None
+        self.sessionid = None
 
     def close(self):
         """Close the HTTP sessions."""
@@ -187,35 +213,82 @@ class Requests:
         self.default_headers["User-Agent"] = self.useragent
 
     @staticmethod
-    def __http_getCertKeyTuple():
+    def __http_getCertKeyValue():
         """Get Certificate and Key Tuple."""
         cert, key = getKeyCertFromEnv()
-        if cert and key:
-            return (cert, key)
-        return None
+        if not cert or not key:
+            raise ValueError("Certificate or key not found in environment variables.")
+        # Read file contents and return
+        with open(cert, "r", encoding="utf-8") as fd:
+            certval = fd.read()
+        with open(key, "r", encoding="utf-8") as fd:
+            keyval = fd.read()
+        return certval, keyval
 
     @staticmethod
     def __http_getCAPath():
         """Get CA Path."""
         return getCAPathFromEnv() or True
 
+    def _getNewBearerToken(self, auth_info):
+        """Get a new Bearer token using the token endpoint."""
+        if "token_endpoint" in auth_info and auth_info["token_endpoint"]:
+            try:
+                certval, keyval = self.__http_getCertKeyValue()
+                response = self.authsession.request(method="POST",
+                                                    url=auth_info["token_endpoint"],
+                                                    headers={"Content-Type": "application/json"},
+                                                    json={"certificate": certval})
+                if response.status_code == 200:
+                    # We get the challenge response, that needs to be completed to obtain the token
+                    # Challenge can be solved only with the private key corresponding to the certificate
+                    challengeResponse = response.json()
+                    if challengeResponse:
+                        # Sign the challenge with the private key
+                        signature = signChallenge(challengeResponse, keyval)
+                        # Send the signed challenge to the token endpoint to get the token
+                        token_response = self.authsession.request(method="POST",
+                                                                  url=challengeResponse["ref_url"],
+                                                                  headers={"Content-Type": "application/json"},
+                                                                  json={"signature": signature})
+                        if token_response.status_code == 200:
+                            resp_json = token_response.json()
+                            self.bearertoken = resp_json.get("access_token", None)
+                            self.refreshtoken = resp_json.get("refresh_token", None)
+                            self.sessionid = resp_json.get("session_id", None)
+                            if self.bearertoken:
+                                self._logMessage("Successfully obtained new Bearer token.")
+                else:
+                    self._logMessage(f"Failed to obtain new Bearer token from {auth_info['auth_endpoint']}: {response.status_code} {response.reason_phrase}")
+            except Exception as ex:
+                self._logMessage(f"Failed to obtain new Bearer token from {auth_info['auth_endpoint']}: {ex}")
+                self._logMessage(f"Full traceback: {traceback.format_exc()}")
+
     def _renewBearerToken(self, auth_info):
         """Renew the Bearer token by reading it from the environment variable"""
-        if "auth_endpoint" in auth_info and auth_info["auth_endpoint"]:
-            try:
-                response = self.authsession.request(method="POST", url=auth_info["auth_endpoint"], headers={"Content-Type": "application/json"}, json={"frontend": self.host})
-                if response.status_code == 200:
-                    resp_json = response.json()
-                    self.bearertoken = resp_json.get("access_token", None)
-                    if self.bearertoken:
-                        self._logMessage("Successfully renewed Bearer token.")
-                    else:
-                        self._logMessage("Failed to find access_token in the response while renewing Bearer token.")
+        # If refresh token is available, use it to get a new access token
+        # If no refresh token is available, use the token endpoint to get a new access token via challenge
+        # In case no refreshtoken or access_token, then use client cert as post
+        # and get back the challenged url. Once challenge url received, make response challenge and return
+        # the challenge response (that gives the token back)
+        # Case 1. Token refresh if we have no access_token, but we have a refresh_token
+        if self.refreshtoken and auth_info.get("refresh_token_endpoint"):
+            # need to post sessionid and refresh_token
+            # Call refresh token endpoint
+            response = self.authsession.request(method="POST",
+                                                url=auth_info["refresh_token_endpoint"],
+                                                headers={"Content-Type": "application/json"},
+                                                json={"sessionid": self.sessionid, "refresh_token": self.refreshtoken})
+            if response.status_code == 200:
+                resp_json = response.json()
+                self.bearertoken = resp_json.get("access_token", None)
+                self.refreshtoken = resp_json.get("refresh_token", None)
+                if self.bearertoken:
+                    self._logMessage("Successfully renewed Bearer token using refresh token.")
                 else:
-                    self._logMessage(f"Failed to renew Bearer token from {auth_info['auth_endpoint']}: {response.status_code} {response.reason_phrase}")
-            except Exception as ex:
-                self._logMessage(f"Failed to renew Bearer token from {auth_info['auth_endpoint']}: {ex}")
-                self._logMessage(f"Full traceback: {traceback.format_exc()}")
+                    self._logMessage("Failed to find access_token in the response while renewing Bearer token using refresh token.")
+        else:
+            self._getNewBearerToken(auth_info)
 
     def _expiredBearerToken(self):
         """Check if the Bearer token is expired"""
@@ -246,31 +319,16 @@ class Requests:
 
     def __makeSiteRMHTTPCall(self, url, verb, **kwargs):
         """Make an HTTP request to the SiteRM Frontend."""
-        if not self.authmethod:
-            response = self.session.request(method="GET", url=urllib.parse.urljoin(self.host, "/api/authentication-method"))
+        if not self.bearertoken or self._expiredBearerToken():
+            response = self.session.request(method="GET", url=urllib.parse.urljoin(self.host, "/.well-known/openid-configuration"))
             if response.status_code == 200:
                 auth_info = response.json()
-                self.authmethod = auth_info.get("auth_method", "")
-                if self.authmethod == "OIDC":
-                    # Check if we need to renew the token
-                    if not self.bearertoken or self._expiredBearerToken():
-                        self._renewBearerToken(auth_info)
+                self._renewBearerToken(auth_info)
             else:
-                self._logMessage(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
-                raise HTTPException(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
-        elif self.authmethod == "OIDC":
-            # Check if we need to renew the token
-            if not self.bearertoken or self._expiredBearerToken():
-                response = self.session.request(method="GET", url=urllib.parse.urljoin(self.host, "/api/authentication-method"))
-                if response.status_code == 200:
-                    auth_info = response.json()
-                    self._renewBearerToken(auth_info)
-                else:
-                    self._logMessage(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
-                    raise HTTPException(f"Failed to get authentication method from /api/authentication-method: {response.status_code} {response.reason_phrase}")
-        if self.authmethod == "OIDC" and self.bearertoken and kwargs.get("SiteRMHTTPCall", True):
-            kwargs.setdefault("headers", {})
-            kwargs["headers"]["Authorization"] = f"Bearer {self.bearertoken}"
+                self._logMessage(f"Failed to get authentication method from /.well-known/openid-configuration: {response.status_code} {response.reason_phrase}")
+                raise HTTPException(f"Failed to get authentication method from /.well-known/openid-configuration: {response.status_code} {response.reason_phrase}")
+        kwargs.setdefault("headers", {})
+        kwargs["headers"]["Authorization"] = f"Bearer {self.bearertoken}"
         response = self.session.request(method=verb, url=url, headers=kwargs["headers"], json=kwargs["data"] if kwargs["json"] else None, data=None if kwargs["json"] else kwargs["data"])
         return response
 
