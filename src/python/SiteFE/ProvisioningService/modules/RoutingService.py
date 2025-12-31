@@ -1,17 +1,6 @@
 #!/usr/bin/env python3
 # pylint: disable=line-too-long
 """Routing Service (BGP Control) preparation/comparison
-
-Copyright 2021 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
 Title                   : siterm
 Author                  : Justas Balcas
 Email                   : jbalcas (at) es (dot) net
@@ -19,8 +8,10 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
-from SiteRMLibs.MainUtilities import generateMD5
+import traceback
+
 from SiteRMLibs.ipaddr import normalizedip
+from SiteRMLibs.MainUtilities import generateMD5
 
 
 def dictCompare(inDict, oldDict):
@@ -66,26 +57,22 @@ class RoutingService:
     def generateGroupName(activeInfo, line):
         """Generate group name for BGP"""
         # In case all the rest parameters are empty, we set DEFAULT group name;
-        if all(
-            not activeInfo.get(k)
-            for k in ("ipv6_network", "neighbor", "prefix_list", "route_map")
-        ):
+        if all(not activeInfo.get(k) for k in ("ipv6_network", "neighbor", "prefix_list", "route_map")):
             # This should never reach, but just in case not to delete any provisioned ones.
             return "DEFAULT"
         try:
             groupName = line.split("table+")[1].split(":")[0]
             return groupName
-        except Exception as err:
-            raise Exception(f"Error while generating group name: {err}") from err
+        except Exception as ex:
+            print(f"Full traceback: {traceback.format_exc()}")
+            raise Exception(f"Error while generating group name: {ex}") from ex
 
     def _getDefaultBGP(self, host, emptydict=False):
         """Default yaml dict setup"""
         if emptydict:
             tmpD = {}
         else:
-            tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(
-                self.connID, {}
-            )
+            tmpD = self.yamlconfuuid.setdefault(self.acttype, {}).setdefault(self.connID, {})
             tmpD = tmpD.setdefault(host, {})
             tmpD = tmpD.setdefault("sense_bgp", {})
         tmpD["asn"] = self.getConfigValue(host, "private_asn")
@@ -103,11 +90,7 @@ class RoutingService:
         """Add Routes"""
         bgpdict = self._getDefaultBGP(host)
         for iptype in ["ipv4", "ipv6"]:
-            val = (
-                rDict.get("routeFrom", {})
-                .get(f"{iptype}-prefix-list", {})
-                .get("value", None)
-            )
+            val = rDict.get("routeFrom", {}).get(f"{iptype}-prefix-list", {}).get("value", None)
             if val and not isinstance(val, list):
                 val = [val]
             if val:
@@ -120,23 +103,13 @@ class RoutingService:
         """Add Neighbors"""
         bgpdict = self._getDefaultBGP(host)
         for iptype in ["ipv4", "ipv6"]:
-            remasn = (
-                rDict.get("routeTo", {}).get("bgp-private-asn", {}).get("value", None)
-            )
-            remip = (
-                rDict.get("nextHop", {}).get(f"{iptype}-address", {}).get("value", None)
-            )
+            remasn = rDict.get("routeTo", {}).get("bgp-private-asn", {}).get("value", None)
+            remip = rDict.get("nextHop", {}).get(f"{iptype}-address", {}).get("value", None)
             if remasn and remip:
                 remip = normalizedip(remip)
-                neighbor = (
-                    bgpdict.setdefault("neighbor", {})
-                    .setdefault(iptype, {})
-                    .setdefault(remip, {})
-                )
+                neighbor = bgpdict.setdefault("neighbor", {}).setdefault(iptype, {}).setdefault(remip, {})
                 if neighbor:
-                    raise Exception(
-                        "Neighbor already defined. MultiPath neighbors not supported"
-                    )
+                    raise Exception("Neighbor already defined. MultiPath neighbors not supported")
                 neighbor.setdefault("remote_asn", remasn)
                 neighbor.setdefault("state", "present")
                 neighbor.setdefault(
@@ -153,11 +126,7 @@ class RoutingService:
         keymaps = [["routeFrom", "mapout"], ["routeTo", "mapin"]]
         for iptype in ["ipv4", "ipv6"]:
             for routeFromTo, mapdir in keymaps:
-                rList = (
-                    rDict.get(routeFromTo, {})
-                    .get(f"{iptype}-prefix-list", {})
-                    .get("value", None)
-                )
+                rList = rDict.get(routeFromTo, {}).get(f"{iptype}-prefix-list", {}).get("value", None)
                 if rList and not isinstance(rList, list):
                     rList = [rList]
                 if rList:
@@ -165,9 +134,7 @@ class RoutingService:
                         prefList = bgpdict.setdefault("prefix_list", {}).setdefault(iptype, {})
                         newRoute = prefList.setdefault(r, {})
                         newRoute[f"sense-{ruid}-{mapdir}"] = "present"
-                        self._addRouteMap(
-                            host, f"sense-{ruid}-{mapdir}", f"sense-{ruid}-{mapdir}", iptype
-                        )
+                        self._addRouteMap(host, f"sense-{ruid}-{mapdir}", f"sense-{ruid}-{mapdir}", iptype)
 
     def _addRouteMap(self, host, match, name, iptype):
         """Add Route Maps"""
@@ -231,22 +198,16 @@ class RoutingService:
                 yamlOut = tmpD.setdefault(key, {})
                 equal = dictCompare(yamlOut, val)
                 if equal:
-                    self.logger.debug(
-                        f"There is {key} change for {uuid}. Will return True"
-                    )
+                    self.logger.debug(f"There is {key} change for {uuid}. Will return True")
                     different = True
             else:
                 tmpD[key] = val
         # Compare empty dict with prepared new conf:
         if self._getDefaultBGP(switch, True) == tmpD:
-            self.logger.debug(
-                f"Def BGP and new BGP is empty for {uuid}. Will return False"
-            )
+            self.logger.debug(f"Def BGP and new BGP is empty for {uuid}. Will return False")
             different = False
         # In case of new - keys not equal, need to write
         if tmpD.keys() != runningConf.keys():
-            self.logger.debug(
-                f"Keys for new BGP are not equal for {uuid}. Will return True"
-            )
+            self.logger.debug(f"Keys for new BGP are not equal for {uuid}. Will return True")
             different = True
         return different

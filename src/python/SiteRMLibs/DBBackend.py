@@ -8,15 +8,14 @@ import traceback
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
+from SiteRMLibs.DBModels import REGISTRY, Base
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-
-from SiteRMLibs.DBModels import Base, REGISTRY
-
 
 # ==========================================================
 #  Utilities
 # ==========================================================
+
 
 def getUTCnow() -> int:
     """Get UTC time as epoch seconds."""
@@ -34,7 +33,7 @@ def loadEnvFile(filepath="/etc/environment"):
                 if not line or line.startswith("#"):
                     continue
                 if line.startswith("export "):
-                    line = line[len("export "):]
+                    line = line[len("export ") :]
                 if "=" not in line:
                     continue
                 key, value = line.split("=", 1)
@@ -63,15 +62,13 @@ def buildDatabaseURL() -> str:
     database = os.getenv("MARIA_DB_DATABASE", "sitefe")
     charset = os.getenv("MARIA_DB_CHARSET", "utf8mb4")
 
-    return (
-        f"mysql+pymysql://{user}:{password}"
-        f"@{host}:{port}/{database}?charset={charset}"
-    )
+    return f"mysql+pymysql://{user}:{password}" f"@{host}:{port}/{database}?charset={charset}"
 
 
 # ==========================================================
 #  Database Backend
 # ==========================================================
+
 
 class DBBackend:
     """Database backend using SQLAlchemy ORM."""
@@ -80,9 +77,7 @@ class DBBackend:
         loadEnvFile()
 
         self.database_url = buildDatabaseURL()
-        self.autocommit = os.getenv("MARIA_DB_AUTOCOMMIT", "True") in (
-            "True", "true", "1"
-        )
+        self.autocommit = os.getenv("MARIA_DB_AUTOCOMMIT", "True") in ("True", "true", "1")
 
         self.engine = create_engine(
             self.database_url,
@@ -105,6 +100,7 @@ class DBBackend:
             if self.autocommit:
                 session.commit()
         except Exception:
+            print(f"Full traceback: {traceback.format_exc()}")
             session.rollback()
             raise
         finally:
@@ -169,10 +165,7 @@ class dbinterface:
 
             if orderby:
                 col, direction = orderby
-                q = q.order_by(
-                    getattr(model, col).desc()
-                    if direction.lower() == "desc"
-                    else getattr(model, col).asc())
+                q = q.order_by(getattr(model, col).desc() if direction.lower() == "desc" else getattr(model, col).asc())
 
             if limit:
                 q = q.limit(limit)

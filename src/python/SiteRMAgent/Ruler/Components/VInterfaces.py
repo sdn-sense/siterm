@@ -8,6 +8,7 @@ Authors:
 
 Date: 2022/01/20
 """
+import traceback
 from dataclasses import dataclass
 
 from pyroute2 import IPRoute
@@ -64,6 +65,7 @@ def getDefaultMTU(config, intfKey):
         defaultMTU = ifstats[intfKey].mtu
     except Exception as ex:
         print(f"Failed to get mtu for {intfKey}. Error: {ex}. Use default 1500.")
+        print(f"Full traceback: {traceback.format_exc()}")
     return defaultMTU
 
 
@@ -83,6 +85,7 @@ def getDefaultTXQ(config, intfKey):
         defaultTXQ = getInterfaceTxQueueLen(intfKey)
     except Exception as ex:
         print(f"Failed to get txqueuelen for {intfKey}. Error: {ex}. Use default 1000.")
+        print(f"Full traceback: {traceback.format_exc()}")
     return defaultTXQ
 
 

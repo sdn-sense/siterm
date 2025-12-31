@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Database cleaner"""
+import traceback
+
 import pymysql
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
@@ -73,6 +75,7 @@ class DBCleaner:
                 self.clean(table, 7 * 86400)
             except Exception as e:
                 self.logger.error(f"Error cleaning {table}: {e}")
+                self.logger.error(f"Full traceback: {traceback.format_exc()}")
         self.logger.info("Cleaner finished")
 
 

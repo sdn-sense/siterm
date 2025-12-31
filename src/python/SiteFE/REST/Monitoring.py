@@ -10,6 +10,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
+import traceback
 from typing import Any, Dict
 
 import httpx
@@ -24,7 +25,7 @@ from fastapi import (
     status,
 )
 from prometheus_client import CONTENT_TYPE_LATEST
-from pydantic import BaseModel, constr, Field
+from pydantic import BaseModel, Field, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
@@ -81,6 +82,7 @@ async def getprommetrics(
     except FileNotFoundError as ex:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Metrics are not available") from ex
     except Exception as ex:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unable to retrieve metrics") from ex
 
 

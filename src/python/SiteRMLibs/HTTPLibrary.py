@@ -1,37 +1,29 @@
 #!/usr/bin/env python3
 # pylint: disable=line-too-long
 """Modern HTTP(s) request handler using httpx.
-
-Copyright 2017 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
 Title                   : siterm
 Author                  : Justas Balcas
 Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
-
 import copy
 import functools
 import os
 import socket
 import time
+import traceback
 import urllib.parse
 from typing import Any, Callable
 
 import httpx
 import jwt
-from SiteRMLibs.CustomExceptions import HTTPServerNotReady, HTTPException, ValidityFailure
-from SiteRMLibs.MainUtilities import getUTCnow, getTempDir
-
+from SiteRMLibs.CustomExceptions import (
+    HTTPException,
+    HTTPServerNotReady,
+    ValidityFailure,
+)
+from SiteRMLibs.MainUtilities import getTempDir, getUTCnow
 
 
 def argValidity(arg, aType):
@@ -97,6 +89,7 @@ def httpserviceready(endpoint="/api/ready"):
 
     def decorator(func: Callable) -> Callable:
         """Decorator that checks if the HTTP service is ready before executing the decorated function."""
+
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs) -> Any:
             """Wrapper function that checks if the HTTP service is ready before executing the decorated function."""
@@ -129,6 +122,7 @@ def httpserviceready(endpoint="/api/ready"):
                         raise ex
                 except Exception as e:
                     print(f"Exception while checking service readiness from {endpoint}: {str(e)}")
+                    print(f"Full traceback: {traceback.format_exc()}")
                     if kwargscopy["retries"] == 0 and kwargscopy["raiseEx"]:
                         raise HTTPServerNotReady(f"Failed to check service readiness from {endpoint}: {str(e)}") from e
                 if kwargscopy["retries"] > 0:
@@ -221,6 +215,7 @@ class Requests:
                     self._logMessage(f"Failed to renew Bearer token from {auth_info['auth_endpoint']}: {response.status_code} {response.reason_phrase}")
             except Exception as ex:
                 self._logMessage(f"Failed to renew Bearer token from {auth_info['auth_endpoint']}: {ex}")
+                self._logMessage(f"Full traceback: {traceback.format_exc()}")
 
     def _expiredBearerToken(self):
         """Check if the Bearer token is expired"""
@@ -235,6 +230,7 @@ class Requests:
                 return True
         except Exception:
             print("Failed to decode Bearer token. Assuming it is expired.")
+            print(f"Full traceback: {traceback.format_exc()}")
             return True
         return False
 
@@ -280,11 +276,13 @@ class Requests:
 
     def http_makeRequest(self, verb, uri, **kwargs):
         """Make an HTTP request with the given parameters."""
+
         def getResponseContent(response, json):
             """Get response content based on json flag."""
             if json:
                 return response.json()
             return response.text
+
         kwargs.setdefault("data", None)
         kwargs.setdefault("headers", None)
         kwargs.setdefault("json", True)
@@ -309,6 +307,7 @@ class Requests:
         except HTTPException as e:
             return {"error": str(e)}, 500, "HTTP Exception", False
         except Exception as e:
+            self._logMessage(f"Full traceback: {traceback.format_exc()}")
             return {"error": str(e)}, 500, "Internal Error", False
         finally:
             self.__http_resetUserAgent()
@@ -329,6 +328,7 @@ class Requests:
                 return self.http_makeRequest(verb, url, **kwargs)
             except Exception as ex:
                 self._logMessage(f"Got Exception: {ex}. Will retry {kwargs['retries']} more times.")
+                self._logMessage(f"Full traceback: {traceback.format_exc()}")
                 exc.append(str(ex))
                 if kwargs["retries"] == 0 and kwargs["raiseEx"]:
                     self._logMessage("No more retries left. Raising exception.")

@@ -10,6 +10,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
+import traceback
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
@@ -17,11 +18,11 @@ from pydantic import BaseModel, Field, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
+    StrictBool,
     apiReadDeps,
     apiWriteDeps,
     checkSite,
     forbidExtraQueryParams,
-    StrictBool
 )
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import BadRequestError
@@ -626,6 +627,7 @@ async def submitdebug(
         insOut = deps["dbI"].update("debugrequestsfull", [out])
         return APIResponse.genResponse(request, {"Status": insOut[0], "ID": dummyIns[2]})
     except Exception as exc:  # pylint: disable=broad-except
+        print(f"Full traceback: {traceback.format_exc()}")
         # Need to delete the dummy entry as something failed
         deps["dbI"].delete("debugrequests", [["id", dummyIns[2]]])
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc

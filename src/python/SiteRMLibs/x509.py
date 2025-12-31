@@ -7,31 +7,40 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2019/10/01
 """
+import base64
+import hashlib
 import json
 import os
 import re
-import base64
-import hashlib
 import secrets
-from datetime import datetime, timezone, timedelta
+import traceback
+from datetime import datetime, timedelta, timezone
 
 import jwt
-from jwt.algorithms import RSAAlgorithm
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import rsa, padding, ec
-from cryptography.hazmat.primitives.hashes import Hash
-from cryptography.hazmat.primitives.serialization import load_pem_public_key
-from cryptography.exceptions import InvalidSignature
-from cryptography.x509.oid import NameOID
-
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-
-from SiteRMLibs.CustomExceptions import IssuesWithAuth, RequestWithoutCert, BadRequestError
+from cryptography import x509
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+from cryptography.hazmat.primitives.hashes import Hash
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
+from cryptography.x509.oid import NameOID
+from jwt.algorithms import RSAAlgorithm
+from SiteRMLibs.CustomExceptions import (
+    BadRequestError,
+    IssuesWithAuth,
+    RequestWithoutCert,
+)
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.MainUtilities import loadEnvFile, getUTCnow, getTempDir, dumpFileContentAsJson, getFileContentAsJson, removeFile
-
+from SiteRMLibs.MainUtilities import (
+    dumpFileContentAsJson,
+    getFileContentAsJson,
+    getTempDir,
+    getUTCnow,
+    loadEnvFile,
+    removeFile,
+)
 
 OID_SHORT_NAMES = {
     NameOID.COUNTRY_NAME: "C",
@@ -39,7 +48,8 @@ OID_SHORT_NAMES = {
     NameOID.LOCALITY_NAME: "L",
     NameOID.ORGANIZATION_NAME: "O",
     NameOID.ORGANIZATIONAL_UNIT_NAME: "OU",
-    NameOID.COMMON_NAME: "CN"}
+    NameOID.COMMON_NAME: "CN",
+}
 
 
 def load_cert(cert_pem: str):
@@ -77,7 +87,7 @@ def get_challenge_record(challenge_id: str):
 
 
 def base64url_encode_nopad(b: bytes) -> str:
-    """ Base64url encode without padding. """
+    """Base64url encode without padding."""
     return base64.urlsafe_b64encode(b).rstrip(b"=").decode("ascii")
 
 
@@ -111,16 +121,18 @@ def generate_jwk_from_public_pem(public_pem: str, alg: str = "RS256") -> dict:
     return jwk
 
 
-class AuthHandler():
+class AuthHandler:
     """Authentication handler to manage user/pass and token-based authentication."""
 
     def __init__(self):
         loadEnvFile()
         # Password handling parameters
-        self.hasher = PasswordHasher(time_cost=int(os.environ.get("ARGON2_TIME_COST", 3)),
-                                     memory_cost=int(os.environ.get("ARGON2_MEMORY_COST", 65536)),
-                                     parallelism=int(os.environ.get("ARGON2_PARALLELISM", 4)),
-                                     hash_len=int(os.environ.get("ARGON2_HASH_LEN", 32)))
+        self.hasher = PasswordHasher(
+            time_cost=int(os.environ.get("ARGON2_TIME_COST", 3)),
+            memory_cost=int(os.environ.get("ARGON2_MEMORY_COST", 65536)),
+            parallelism=int(os.environ.get("ARGON2_PARALLELISM", 4)),
+            hash_len=int(os.environ.get("ARGON2_HASH_LEN", 32)),
+        )
         # OIDC and JWKS handling
         self.gitConf = getGitConfig()
         self.oidc_app_name = os.environ.get("OIDC_APP_NAME", "SITERM Token Issuer.")
@@ -145,7 +157,6 @@ class AuthHandler():
         self.loadAuthorized()
         self.gitConf = getGitConfig()
 
-
     def generate_challenge(self, input_cert: str):
         """Generate a challenge for the given certificate."""
         # Challenge storage is filesystem-based (tmp), that breaks if multiple instances are running
@@ -162,15 +173,11 @@ class AuthHandler():
             tempfile = getTempDir() / "m2m" / f"{challenge_id}.json"
             expires_at = getUTCnow() + 60
 
-            dumpFileContentAsJson(tempfile, {
-                "challenge_id": challenge_id,
-                "challenge": base64.b64encode(challenge).decode("utf-8"),
-                "input_cert": input_cert,
-                "expires_at": expires_at
-            })
+            dumpFileContentAsJson(tempfile, {"challenge_id": challenge_id, "challenge": base64.b64encode(challenge).decode("utf-8"), "input_cert": input_cert, "expires_at": expires_at})
             return {"challenge_id": challenge_id, "challenge": challenge, "expires_at": expires_at}
         except Exception as e:
             print(f"Error generating challenge: {e}")
+            print(f"Full traceback: {traceback.format_exc()}")
             raise BadRequestError("Failed to generate challenge") from e
 
     def verify_challenge(self, challenge_id: str, signature_b64: str):
@@ -211,6 +218,7 @@ class AuthHandler():
             return False, None
         except Exception as ex:
             print(f"Error verifying challenge: {ex}")
+            print(f"Full traceback: {traceback.format_exc()}")
             return False, None
         finally:
             tempfile = getTempDir() / "m2m" / f"{challenge_id}.json"
@@ -292,7 +300,6 @@ class AuthHandler():
                 return RSAAlgorithm.from_jwk(json.dumps(key))
         raise IssuesWithAuth(f"No matching JWK found for kid={kid}")
 
-
     def getOpenIDConfiguration(self):
         """Get OpenID Connect configuration."""
         return {
@@ -319,12 +326,7 @@ class AuthHandler():
         now = getUTCnow()
         exp = now + timedelta(minutes=self.oidc_token_lifetime_minutes).total_seconds()
 
-        payload = {
-            "iss": self.oidc_issuer,
-            "aud": self.oidc_audience,
-            "sub": usersub,
-            "iat": int(now),
-            "exp": int(exp)}
+        payload = {"iss": self.oidc_issuer, "aud": self.oidc_audience, "sub": usersub, "iat": int(now), "exp": int(exp)}
 
         if "extra_claims" in kwargs:
             payload.update(kwargs["extra_claims"])
@@ -360,6 +362,7 @@ class AuthHandler():
             if not kid:
                 raise IssuesWithAuth("Missing kid in token header")
         except Exception as ex:
+            print(f"Full traceback: {traceback.format_exc()}")
             raise IssuesWithAuth(f"Invalid token header: {ex}") from ex
 
         public_key = self.__get_key_from_jwks__(kid)
@@ -392,7 +395,6 @@ class AuthHandler():
                     self.allowedWCerts.setdefault(userinfo["full_dn"], {})
                     self.allowedWCerts[userinfo["full_dn"]]["username"] = user
                     self.allowedWCerts[userinfo["full_dn"]]["permissions"] = userinfo["permissions"]
-
 
     def checkAuthorized(self, certinfo):
         """Check if user is authorized."""

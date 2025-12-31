@@ -78,6 +78,7 @@ class DebugService:
             self.logger.warning(f"Item content: {item}")
         except Exception as ex:
             self.logger.warning(f"Error while checking background process item: {ex}")
+            self.logger.warning(f"Full traceback: {traceback.format_exc()}")
         return False
 
     def checkBackgroundProcess(self, item):

@@ -9,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+import traceback
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,22 +17,25 @@ from pydantic import BaseModel, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
-    apiReadDeps,
     apiPublicDeps,
+    apiReadDeps,
     rateLimitIp,
 )
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import BadRequestError
-from SiteRMLibs.MainUtilities import getUTCnow, generateRandomUUID
+from SiteRMLibs.MainUtilities import generateRandomUUID, getUTCnow
 from SiteRMLibs.x509 import generate_challenge, verify_challenge
 
 router = APIRouter()
 
+
 class LoginItem(BaseModel):
     """Login Item Model."""
+
     # pylint: disable=too-few-public-methods
     username: constr(strip_whitespace=True, min_length=1, max_length=255)
     password: constr(strip_whitespace=True, min_length=1, max_length=255)
+
 
 class M2MLoginItem(BaseModel):
     """M2M Login Item Model."""
@@ -40,18 +44,23 @@ class M2MLoginItem(BaseModel):
     session_id: constr(strip_whitespace=True, min_length=1, max_length=255)
     refresh_token: constr(strip_whitespace=True, min_length=1, max_length=4096)
 
+
 class X509LoginItem(BaseModel):
     """X509 Login Item Model."""
+
     # pylint: disable=too-few-public-methods
     certificate: constr(strip_whitespace=True, min_length=1, max_length=4096)
 
+
 class M2MChallengeItem(BaseModel):
     """M2M Challenge Item Model."""
+
     # pylint: disable=too-few-public-methods
     signature: constr(strip_whitespace=True, min_length=1, max_length=4096)
 
+
 # ==========================================================
-#POST /auth/login  Authenticate human user;
+# POST /auth/login  Authenticate human user;
 # ==========================================================
 @router.post("/auth/login", response_model=APIResponse, responses=DEFAULT_RESPONSES)
 @rateLimitIp(maxRequests=5, windowSeconds=60)
@@ -73,23 +82,24 @@ async def login(item: LoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
         refresh_token = deps["authHandler"].getRefreshToken()
         refresh_token_hash = deps["authHandler"].hash_token(refresh_token)
 
-        deps["dbI"].insert("refresh_tokens", {"session_id": generateRandomUUID(), "token_hash": refresh_token_hash,
-                                              "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
-                                              "revoked": False, "rotated_from": None})
+        deps["dbI"].insert(
+            "refresh_tokens",
+            {"session_id": generateRandomUUID(), "token_hash": refresh_token_hash, "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl, "revoked": False, "rotated_from": None},
+        )
 
         response = APIResponse(success=True, data={"message": "Login successful", "user": {"id": user[0]["id"], "username": user[0]["username"]}})
 
-        response.set_cookie(key="refresh_token", value=refresh_token,
-                            httponly=True, secure=True,
-                            samesite="strict", max_age=int(deps["authHandler"].refresh_token_ttl))
+        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="strict", max_age=int(deps["authHandler"].refresh_token_ttl))
         return response
     except BadRequestError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
+
 # ==========================================================
-#GET /auth/whoami Returns identity of whoami;
+# GET /auth/whoami Returns identity of whoami;
 # ==========================================================
 @router.get("/auth/whoami", response_model=APIResponse, responses=DEFAULT_RESPONSES)
 @rateLimitIp(maxRequests=5, windowSeconds=60)
@@ -102,15 +112,16 @@ async def whoami(deps: Dict[str, Any] = Depends(apiReadDeps)):
         print(f"Whoami user: {user}")
         if not user:
             raise BadRequestError("User not authenticated")
-        return APIResponse(success=True, data={"message": "Whoami successful", "user": 'Not implemented'})
+        return APIResponse(success=True, data={"message": "Whoami successful", "user": "Not implemented"})
     except BadRequestError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 
 # ==========================================================
-#POST /token Get Token based on Cert challenge
+# POST /token Get Token based on Cert challenge
 # ==========================================================
 @router.post("/m2m/token", response_model=APIResponse, responses=DEFAULT_RESPONSES)
 @rateLimitIp(maxRequests=5, windowSeconds=60)
@@ -123,10 +134,12 @@ async def token(item: X509LoginItem, _deps: Dict[str, Any] = Depends(apiPublicDe
         challenge["ref_url"] = f"/m2m/token/{challenge['challenge_id']}"
         return APIResponse(success=True, data=challenge)
     except Exception as e:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e)) from e
 
+
 # ==========================================================
-#POST /m2m/token/refresh -> access token (rotated refresh)
+# POST /m2m/token/refresh -> access token (rotated refresh)
 # ==========================================================
 @router.post("/m2m/token/refresh", response_model=APIResponse, responses=DEFAULT_RESPONSES)
 @rateLimitIp(maxRequests=5, windowSeconds=60)
@@ -146,14 +159,19 @@ async def token_refresh(item: M2MLoginItem, deps: Dict[str, Any] = Depends(apiPu
         access_token = deps["authHandler"].getAccessToken(refreshRecord[0]["user"])
         new_refresh_token = deps["authHandler"].getRefreshToken()
         deps["dbI"].delete("refresh_tokens", [["token_hash", deps["authHandler"].hash_token(item.refresh_token)]])
-        out = {"token_hash": deps["authHandler"].hash_token(new_refresh_token), "session_id": item.session_id,
-               "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl, "revoked": False,
-               "rotated_from": refreshRecord[0]["token_hash"]}
+        out = {
+            "token_hash": deps["authHandler"].hash_token(new_refresh_token),
+            "session_id": item.session_id,
+            "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
+            "revoked": False,
+            "rotated_from": refreshRecord[0]["token_hash"],
+        }
         deps["dbI"].insert("refresh_tokens", [out])
         return APIResponse(success=True, data={"session_id": item.session_id, "access_token": access_token, "refresh_token": new_refresh_token, "token_type": "Bearer"})
     except BadRequestError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 
@@ -171,7 +189,13 @@ async def token_challenge(challenge_id: str, item: M2MChallengeItem, deps: Dict[
 
         access_token = deps["authHandler"].getAccessToken(user)
         refresh_token = deps["authHandler"].getRefreshToken()
-        out = {"token_hash": deps["authHandler"].hash_token(refresh_token), "session_id": challenge_id, "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl, "revoked": False, "rotated_from": None}
+        out = {
+            "token_hash": deps["authHandler"].hash_token(refresh_token),
+            "session_id": challenge_id,
+            "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
+            "revoked": False,
+            "rotated_from": None,
+        }
         deps["dbI"].insert("refresh_tokens", [out])
 
         return APIResponse(
@@ -184,10 +208,12 @@ async def token_challenge(challenge_id: str, item: M2MChallengeItem, deps: Dict[
             },
         )
     except Exception as e:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e)) from e
 
+
 # ==========================================================
-#GET /.well-known/jwks.json
+# GET /.well-known/jwks.json
 # ==========================================================
 @router.get("/.well-known/jwks.json", response_model=APIResponse, responses=DEFAULT_RESPONSES)
 async def jwks(payload: Dict[str, Any] = Depends(apiPublicDeps)):
@@ -200,8 +226,9 @@ async def jwks(payload: Dict[str, Any] = Depends(apiPublicDeps)):
     except BadRequestError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
+
 # ==========================================================
-#GET /.well-known/openid-configuration
+# GET /.well-known/openid-configuration
 # ==========================================================
 @router.get("/.well-known/openid-configuration", response_model=APIResponse, responses=DEFAULT_RESPONSES)
 async def openid_configuration(payload: Dict[str, Any] = Depends(apiPublicDeps)):
@@ -214,4 +241,5 @@ async def openid_configuration(payload: Dict[str, Any] = Depends(apiPublicDeps))
     except BadRequestError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e

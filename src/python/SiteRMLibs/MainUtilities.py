@@ -25,6 +25,7 @@ import socket
 import subprocess
 import tempfile
 import time
+import traceback
 import uuid
 from contextlib import contextmanager
 from enum import Enum
@@ -88,6 +89,7 @@ def loadEnvFile(filepath="/etc/environment"):
                 os.environ[key.strip()] = value.strip()
     except Exception as ex:  # pylint: disable=broad-except
         print(f"Failed to load environment file {filepath}. Error: {ex}")
+        print(f"Full traceback: {traceback.format_exc()}")
 
 
 def dictSearch(key, var, ret, ignoreKeys=None):
@@ -318,9 +320,11 @@ def createDirs(fullDirPath):
                 raise
     return
 
+
 def getTempDir():
     """Get the temporary directory."""
     return Path(tempfile.gettempdir())
+
 
 def firstRunCheck(firstRun, servicename):
     """Check if it is first run."""
@@ -596,6 +600,7 @@ def getDBConnObj():
     """Get database connection object (no class)"""
     return dbinterface()
 
+
 def parseRDFFile(modelFile):
     """Parse model file and return Graph."""
     formats = ["ntriples", "turtle", "json-ld"]
@@ -609,6 +614,7 @@ def parseRDFFile(modelFile):
             return graph
         except Exception as ex:  # pylint: disable=broad-except
             exclist.append(f"Failed to parse with format: {fmt}. Error: {ex}")
+            print(f"Full traceback: {traceback.format_exc()}")
     raise NotFoundError(f"Model file {modelFile} could not be parsed with any format: {formats}. " f"Please check the file format or content. All exceptions: {exclist}")
 
 
@@ -777,10 +783,13 @@ def withTimeout(timeout_seconds=60):
 
     def decorator(func):
         """Decorator that applies a timeout to the function"""
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             """Wrapper function that applies a timeout to the decorated function"""
             with timeout(timeout_seconds):
                 return func(*args, **kwargs)
+
         return wrapper
+
     return decorator

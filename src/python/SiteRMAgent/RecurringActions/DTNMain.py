@@ -9,6 +9,7 @@ Date: 2022/01/29
 import copy
 import socket
 import sys
+import traceback
 
 from deepdiff import DeepDiff
 from SiteRMAgent import __version__
@@ -118,18 +119,20 @@ class RecurringAction:
                 raiseError = True
             except Exception as ex:
                 excType, excValue = sys.exc_info()[:2]
+                exmsg = f"{str(excType.__name__)}: {str(excValue)}, {str(ex)}. Full traceback: {traceback.format_exc()}"
                 outputDict[tmpName] = {
                     "errorType": str(excType.__name__),
                     "errorNo": -6,
                     "errMsg": str(excValue),
-                    "exception": str(ex),
+                    "exception": str(exmsg),
                 }
                 excMsg += f" {str(excType.__name__)}: {str(excValue)}"
                 self.logger.critical(
-                    "%s received %s. Exception details: %s",
+                    "%s received %s. Exception details: %s. Full traceback: %s",
                     tmpName,
                     outputDict[tmpName]["errorType"],
                     outputDict[tmpName],
+                    traceback.format_exc(),
                 )
         # Post processing of output (allows any class to modify output based on other Plugins output)
         for tmpName, method in self.classes.items():

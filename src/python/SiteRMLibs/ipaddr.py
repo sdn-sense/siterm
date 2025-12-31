@@ -7,6 +7,7 @@ Authors:
 
 Date: 2022/04/08
 """
+import traceback
 from ipaddress import (
     AddressValueError,
     IPv4Network,
@@ -80,6 +81,7 @@ def getInterfaceSpeed(interface):
                 print(f"Interface {slave} speed is unknown and /sys/class/net/{slave}/speed returned -1.")
         except Exception as ex:
             print(f"Received an error trying to get interface speed. Error: {ex}. Will use default 10Gbps")
+            print(f"Full traceback: {traceback.format_exc()}")
     return interfaceSpeed if interfaceSpeed else 10000
 
 

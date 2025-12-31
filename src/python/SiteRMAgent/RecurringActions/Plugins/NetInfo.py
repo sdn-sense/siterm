@@ -10,6 +10,7 @@ import copy
 import ipaddress
 import os
 import pprint
+import traceback
 
 from pyroute2 import IPRoute
 from SiteRMLibs.BWService import BWService
@@ -324,6 +325,7 @@ class NetInfo(BWService):
         except Exception as ex:
             self.logger.debug("Failed to get lldp information with lldpcli show neighbors -f json. lldp daemon down?")
             self.logger.debug(f"Exception: {ex}")
+            self.logger.debug(f"Full traceback: {traceback.format_exc()}")
             self.logger.debug("This is not a fatal error, just no LLDP information found or checked by SiteRM.")
         return {}
 

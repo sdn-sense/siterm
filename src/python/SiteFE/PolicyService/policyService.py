@@ -15,6 +15,7 @@ import pprint
 import sys
 import tempfile
 import time
+import traceback
 
 import dictdiffer
 from dateutil import parser
@@ -812,6 +813,7 @@ class PolicyService(RDFHelper, Timing, BWService):
                 currentGraph = copy.deepcopy(gCopy)
             except Exception as ex:
                 self.logger.error(f"Unexpected error during delta application: {ex}")
+                self.logger.error(f"Full traceback: {traceback.format_exc()}")
                 self.stateMachine.modelstatechanger(self.dbI, "failed", **delta)
                 currentGraph = copy.deepcopy(gCopy)
 
@@ -1027,6 +1029,7 @@ class PolicyService(RDFHelper, Timing, BWService):
                 return toDict
             except Exception as ex:
                 self.logger.error(f"Unexpected error during delta acceptance: {ex}")
+                self.logger.error(f"Full traceback: {traceback.format_exc()}")
                 toDict["State"] = "failed"
                 toDict["Error"] = getError(ex)
                 self.stateMachine.failed(self.dbI, toDict)

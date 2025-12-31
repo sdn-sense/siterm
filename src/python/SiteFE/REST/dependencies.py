@@ -9,25 +9,29 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
-import time
 import asyncio
-from functools import wraps
+import time
+import traceback
 from collections import defaultdict, deque
-
+from functools import wraps
 from typing import Any, Dict, List, Union
-from pydantic_core import core_schema
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
+from pydantic_core import core_schema
 from SiteFE.PolicyService import stateMachine as ST
-from SiteRMLibs.CustomExceptions import ModelNotFound, IssuesWithAuth, RequestWithoutCert
+from SiteRMLibs.CustomExceptions import (
+    IssuesWithAuth,
+    ModelNotFound,
+    RequestWithoutCert,
+)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     encodebase64,
     firstRunFinished,
     getAllFileContent,
     getDBConnObj,
-    getUTCnow
+    getUTCnow,
 )
 from SiteRMLibs.x509 import AuthHandler
 
@@ -84,12 +88,10 @@ async def depAuthenticate(request: Request):
         loguseraction(request, {"user_info": userInfo})
         return {"user_info": userInfo}
     except (IssuesWithAuth, RequestWithoutCert) as ex:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized",
-            headers={"WWW-Authenticate": "Bearer"}) from ex
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized", headers={"WWW-Authenticate": "Bearer"}) from ex
     except Exception as ex:
         loguseraction(request, {"exception": str(ex)})
+        print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error") from ex
 
 
@@ -140,32 +142,24 @@ def checkPermissions(userinfo, required_perms: List[str]):
     #    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access to this resource is forbidden due to insufficient permissions.")
 
 
-def apiReadDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj),
-                user=Depends(depAuthenticate),
-                authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
+def apiReadDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
     return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
-def apiWriteDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj),
-                  user=Depends(depAuthenticate),
-                 authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
+def apiWriteDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["write", "admin"])
     return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
-def apiAdminDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj),
-                 user=Depends(depAuthenticate),
-                 authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
+def apiAdminDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["admin"])
     return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
-def apiPublicDeps(config=Depends(depGetConfig),
-                  authHandler=Depends(depGetAuthHandler),
-                  dbI=Depends(depGetDBObj), stateMachine=Depends(depGetStateMachine)):
+def apiPublicDeps(config=Depends(depGetConfig), authHandler=Depends(depGetAuthHandler), dbI=Depends(depGetDBObj), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the public REST API."""
     return {"config": config, "dbI": dbI, "authHandler": authHandler, "stateMachine": stateMachine}
 
@@ -203,15 +197,16 @@ def forbidExtraQueryParams(*allowedParams: str):
         allowed = set(allowedParams)
         unknown = incoming - allowed
         if unknown:
-            raise HTTPException(status_code=422,
-                                detail=[{"type": "extra_forbidden", "loc": ["query", param], "msg": f"Unexpected query parameter: {param}"} for param in unknown])
+            raise HTTPException(status_code=422, detail=[{"type": "extra_forbidden", "loc": ["query", param], "msg": f"Unexpected query parameter: {param}"} for param in unknown])
+
     return checker
 
-#pylint: disable=unused-argument
+
+# pylint: disable=unused-argument
 class StrictBool:
     """Strict boolean:
-       - Accepts: real booleans, 'true', 'false'
-       - Rejects everything else.
+    - Accepts: real booleans, 'true', 'false'
+    - Rejects everything else.
     """
 
     @classmethod
@@ -234,14 +229,12 @@ class StrictBool:
 
     @classmethod
     def __get_pydantic_json_schema__(cls, schema, handler):
-        return {
-            "type": "boolean",
-            "description": "Strict boolean. Only true/false allowed (bool or string)."
-        }
+        return {"type": "boolean", "description": "Strict boolean. Only true/false allowed (bool or string)."}
 
 
 _RATE_LIMIT_BUCKETS: dict[str, deque] = defaultdict(deque)
 _RATE_LIMIT_LOCK = asyncio.Lock()
+
 
 def rateLimitIp(
     maxRequests: int = 5,
@@ -279,5 +272,7 @@ def rateLimitIp(
                     )
                 bucket.append(now)
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator

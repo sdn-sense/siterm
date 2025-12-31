@@ -10,11 +10,18 @@ Date: 2021/01/20
 import copy
 import os
 import os.path
+import shutil
+import traceback
 from pathlib import Path
-from git import Repo
 
+from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
-from SiteRMLibs.MainUtilities import generateMD5, getHostname, getstartupconfig, getTempDir
+from SiteRMLibs.MainUtilities import (
+    generateMD5,
+    getHostname,
+    getstartupconfig,
+    getTempDir,
+)
 from yaml import safe_load as yload
 
 
@@ -31,21 +38,34 @@ class GitConfig:
             "GIT_BRANCH": {"optional": True, "default": "master"},
             "MD5": {"optional": True, "default": generateMD5(getHostname())},
         }
+        self.getLocalConfig()
 
     def getGitRepo(self):
-        """Get Git repository."""
-        if os.path.isdir(self.cachedir):
+        """Get or initialize Git repository safely."""
+        gitrepourl = self.config["GIT_URL"] + self.config["GIT_REPO"]
+        if not gitrepourl.endswith(".git"):
+            gitrepourl += ".git"
+        try:
             repo = Repo(self.cachedir)
             repo.git.fetch("--all")
-        else:
-            self.cachedir.mkdir(parents=True, exist_ok=True)
-            gitrepourl = self.config["GIT_URL"] + self.config["GIT_REPO"]
-            if not gitrepourl.endswith(".git"):
-                gitrepourl += ".git"
-            repo = Repo.clone_from(gitrepourl, self.cachedir)
 
-        repo.git.checkout(self.config["GIT_BRANCH"])
-        repo.git.pull(self.config["GIT_BRANCH"], self.config["GIT_BRANCH"])
+        except (InvalidGitRepositoryError, NoSuchPathError):
+            if os.path.exists(self.cachedir):
+                shutil.rmtree(self.cachedir)
+            os.makedirs(self.cachedir, exist_ok=True)
+            repo = Repo.clone_from(gitrepourl, self.cachedir)
+        except Exception as ex:
+            print(f"Full traceback: {traceback.format_exc()}")
+            raise ex
+
+        branch = self.config["GIT_BRANCH"]
+
+        try:
+            repo.git.checkout(branch)
+        except Exception:
+            print(f"Full traceback: {traceback.format_exc()}")
+            repo.git.checkout("-b", branch, f"origin/{branch}")
+        repo.git.pull("origin", branch)
         return repo
 
     def getLocalConfig(self):
@@ -111,11 +131,11 @@ class GitConfig:
         if self.config["MD5"] not in mappings:
             raise Exception(f"MD5 {self.config['MD5']} not found in mappings.")
         frontendAuthReFile = self.cachedir / self.config["SITENAME"] / mappings[self.config["MD5"]]["config"] / "auth_re.yaml"
-        if not frontendAuthReFile.exists():
-            raise Exception(f"Frontend authentication refresh file {frontendAuthReFile} does not exist.")
-        with open(frontendAuthReFile, "r", encoding="utf-8") as fd:
-            frontendAuthRe = yload(fd)
-        return frontendAuthRe
+        if frontendAuthReFile.exists():
+            with open(frontendAuthReFile, "r", encoding="utf-8") as fd:
+                frontendAuthRe = yload(fd)
+            return frontendAuthRe
+        return {}
 
     @staticmethod
     def __valReplacer(val, keyword, replacement):

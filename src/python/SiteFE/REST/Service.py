@@ -10,10 +10,11 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 import os
+import traceback
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
-from pydantic import BaseModel, constr, Field
+from pydantic import BaseModel, Field, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
@@ -32,8 +33,8 @@ from SiteRMLibs.DefaultParams import (
     LIMIT_SERVICE_MIN,
 )
 from SiteRMLibs.MainUtilities import (
-    HOSTSERVICES,
     HOSTSERVICEENUMALL,
+    HOSTSERVICES,
     dumpFileContentAsJson,
     evaldict,
     getstartupconfig,
@@ -289,6 +290,7 @@ class ServiceStateItem(BaseModel):
     version: constr(strip_whitespace=True, min_length=1, max_length=50) = "UNSET"  # Version of the service, default is "UNSET"
     exc: constr(strip_whitespace=True, min_length=1, max_length=4096) = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
 
+
 # GET
 # ---------------------------------------------------------
 @router.get(
@@ -299,7 +301,7 @@ class ServiceStateItem(BaseModel):
     responses={
         **{
             200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
-            404: {"description": "Service States not found", "content": {"application/json": {"example": {"detail": "No service states found in the database."}}}}
+            404: {"description": "Service States not found", "content": {"application/json": {"example": {"detail": "No service states found in the database."}}}},
         },
         **DEFAULT_RESPONSES,
     },
@@ -363,6 +365,7 @@ async def addservicestate(
         else:
             deps["dbI"].insert("servicestates", [dbOut])
     except Exception as ex:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise Exception(f"Error details in reportServiceStatus. Exc: {str(ex)}") from ex
     return APIResponse.genResponse(request, {"Status": "Updated"})
 
@@ -399,6 +402,7 @@ async def deleteservicestate(
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service state for hostname '{hostname}' and servicename '{servicename.value}' not found.")
     except Exception as ex:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise Exception(f"Error details in deleteservicestate. Exc: {str(ex)}") from ex
     return APIResponse.genResponse(request, {"Status": "Deleted"})
 

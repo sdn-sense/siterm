@@ -8,14 +8,12 @@ Authors:
 
 Date: 2023/03/17
 """
-from SiteRMLibs.MainUtilities import isValFloat
-from SiteRMLibs.MainUtilities import evaldict
-from SiteRMLibs.MainUtilities import getVal
-from SiteRMLibs.MainUtilities import getDBConn
-from SiteRMLibs.GitConfig import getGitConfig
+import traceback
+
+from prometheus_client import CollectorRegistry, Gauge, Info, push_to_gateway
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
-from prometheus_client import CollectorRegistry, push_to_gateway
-from prometheus_client import Info, Gauge
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import evaldict, getDBConn, getVal, isValFloat
 
 
 class PromPush(BaseDebugAction):
@@ -28,9 +26,7 @@ class PromPush(BaseDebugAction):
         self.backgConfig = backgConfig
         self.requestdict = backgConfig.get("requestdict", {})
         self.service = "PromPush"
-        self.dbI = getVal(
-            getDBConn("PrometheusPush", self), **{"sitename": self.sitename}
-        )
+        self.dbI = getVal(getDBConn("PrometheusPush", self), **{"sitename": self.sitename})
         self.promLabels = {
             "Key": "",
             "ifDescr": "",
@@ -69,9 +65,7 @@ class PromPush(BaseDebugAction):
                 grouping_key=self.__getMetadataParams(),
             )
         except Exception as ex:
-            self.logMessage(
-                f"Received an exception pushing to remote gateway. Exception: {ex}"
-            )
+            self.logMessage(f"Received an exception pushing to remote gateway. Exception: {ex}. Full traceback: {traceback.format_exc()}")
 
     @staticmethod
     def __filterOutput(filterRules, keys):
@@ -136,9 +130,7 @@ class PromPush(BaseDebugAction):
                                 self.requestdict.get("filter", {}).get("mac", {}),
                                 self.snmpLabels,
                             ):
-                                macState.labels(**self.snmpLabels).info(
-                                    {"macaddress": macaddr}
-                                )
+                                macState.labels(**self.snmpLabels).info({"macaddress": macaddr})
                     continue
                 self.promLabels["ifDescr"] = val.get("ifDescr", "")
                 self.promLabels["ifType"] = val.get("ifType", "")

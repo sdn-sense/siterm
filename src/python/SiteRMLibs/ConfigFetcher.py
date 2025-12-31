@@ -9,9 +9,10 @@ Date: 2022/05/19
 """
 import os
 import time
+import traceback
 
 from SiteRMLibs.GitConfig import GitConfig
-from SiteRMLibs.MainUtilities import getLoggingObject, getTempDir, getUTCNow
+from SiteRMLibs.MainUtilities import getLoggingObject, getTempDir, getUTCnow
 
 
 class ConfigFetcher:
@@ -56,11 +57,12 @@ class ConfigFetcher:
 
     def _main(self):
         """Start Config Fetcher Service."""
+        self.gitObj.getGitRepo()
         self.gitObj.getGitConfig()
         # Create tmp file that fetcher is done. {tmpdir}/config-fetcher-ready
         if not os.path.isfile(self.FetcherReadyFile):
             with open(self.FetcherReadyFile, "w", encoding="utf-8") as fd:
-                fd.write("Ready at: " + str(getUTCNow()))
+                fd.write("Ready at: " + str(getUTCnow()))
 
     def startwork(self):
         """Start work of Config Fetcher."""
@@ -72,15 +74,16 @@ class ConfigFetcher:
             time.sleep(60)
             return
         try:
-            if self.lastFetchTime and (getUTCNow() - self.lastFetchTime)< 1800:
-                timediff = getUTCNow() - self.lastFetchTime
+            if self.lastFetchTime and (getUTCnow() - self.lastFetchTime) < 1800:
+                timediff = getUTCnow() - self.lastFetchTime
                 self.logger.info(f"Last fetch was less than 30 minutes ago. Skipping fetch. Time since last fetch: {timediff} seconds")
                 return
             self._main()
             self._resetCounter()
-            self.lastFetchTime = getUTCNow()
+            self.lastFetchTime = getUTCnow()
         except Exception as ex:
             self.logger.error(f"Got exception during config fetch: {ex}")
+            self.logger.error(traceback.format_exc())
             self._incrementCounter()
             count = self._getCounter()
             if count >= 10:

@@ -36,11 +36,11 @@ from SiteRMLibs.MainUtilities import (
     getHostname,
     getLoggingObject,
     getSiteNameFromConfig,
+    getTempDir,
     getUTCnow,
     getVal,
     loadEnvFile,
     timeout,
-    getTempDir
 )
 
 
@@ -192,6 +192,7 @@ class DBBackend:
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
+            print(f"Full traceback: {traceback.format_exc()}")
 
     def _autoRefreshDB(self, **kwargs):
         """Auto Refresh if there is a DB request to do so."""
@@ -566,6 +567,7 @@ class Daemon(DBBackend):
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in autoRefreshDB. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
+            print(f"Full traceback: {traceback.format_exc()}")
             return refresh
         return refresh
 

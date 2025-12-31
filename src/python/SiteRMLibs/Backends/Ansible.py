@@ -14,6 +14,7 @@ import json
 import os
 import random
 import time
+import traceback
 
 import ansible_runner
 import yaml
@@ -145,6 +146,7 @@ class Switch:
             except Exception as ex:
                 self.logger.error(f"Ansible playbook got unexpected Exception: {ex}")
                 self.logger.debug(f"Exception happened for {playbook} on hosts {hosts} with subitem {subitem}", exc_info=True)
+                self.logger.debug(f"Full traceback: {traceback.format_exc()}")
                 retryCount -= 1
                 time.sleep(self.config.getint("ansible", "ansible_runtime_retry_delay"))
         raise Exception("Ansible playbook execution failed after 3 retries. Check logs for more details.")
@@ -240,7 +242,7 @@ class Switch:
         for portname, portdata in inData.get("event_data", {}).get("res", {}).get("ansible_facts", {}).get("ansible_net_interfaces", {}).items():
             if portname.lower().startswith("vlan"):
                 vlanports.append(portname)
-            elif 'tagged' in portdata and portdata['tagged']:
+            elif "tagged" in portdata and portdata["tagged"]:
                 self.logger.debug(f"[NewFeature] Port {portname} is tagged, adding to vlanports")
                 vlanports.append(portname)
         return vlanports
