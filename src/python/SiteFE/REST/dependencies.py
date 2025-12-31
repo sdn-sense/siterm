@@ -9,35 +9,32 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
-import os
+import time
+import asyncio
+from functools import wraps
+from collections import defaultdict, deque
+
 from typing import Any, Dict, List, Union
 from pydantic_core import core_schema
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from SiteFE.PolicyService import stateMachine as ST
-from SiteRMLibs.CustomExceptions import (
-    IssuesWithAuth,
-    ModelNotFound,
-    RequestWithoutCert,
-)
+from SiteRMLibs.CustomExceptions import ModelNotFound, IssuesWithAuth, RequestWithoutCert
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     encodebase64,
     firstRunFinished,
     getAllFileContent,
     getDBConnObj,
-    getSQLiteConnObj,
     getUTCnow
 )
-from SiteRMLibs.x509 import CertHandler, OIDCHandler, getauthmethod
+from SiteRMLibs.x509 import AuthHandler
 
 DEP_CONFIG = getGitConfig()
 DEP_DBOBJ = getDBConnObj()
-DEP_SQLITEOBJ = getSQLiteConnObj(DEP_CONFIG)
 DEP_STATE_MACHINE = ST.StateMachine(DEP_CONFIG)
-CERT_HANDLER = CertHandler()
-OIDC_HANDLER = OIDCHandler()
+AUTH_HANDLER = AuthHandler()
 
 DEFAULT_RESPONSES = {
     401: {"description": "Unauthorized", "content": {"application/json": {"example": {"detail": "Not authorized to access this resource"}}}},
@@ -53,11 +50,6 @@ def depGetDBObj():
     return DEP_DBOBJ
 
 
-def depGetSQLiteObj():
-    """Dependency to get the SQLite connection object."""
-    return DEP_SQLITEOBJ
-
-
 def depGetConfig():
     """Dependency to get the configuration object."""
     return DEP_CONFIG
@@ -68,14 +60,9 @@ def depGetStateMachine():
     return DEP_STATE_MACHINE
 
 
-def depGetOIDCHandler():
-    """Dependency to get the OIDC handler object."""
-    return OIDC_HANDLER
-
-
-def depGetCertHandler():
-    """Dependency to get the certificate handler object."""
-    return CERT_HANDLER
+def depGetAuthHandler():
+    """Dependency to get the authentication handler object."""
+    return AUTH_HANDLER
 
 
 def loguseraction(request, userinfo):
@@ -90,35 +77,20 @@ def loguseraction(request, userinfo):
 
 async def depAuthenticate(request: Request):
     """Dependency to authenticate the user via certificate or OIDC."""
-    # X509 handler
-    authmethod = getauthmethod()
-    if authmethod == "X509":
-        cert_handler = CertHandler()
-        try:
-            certInfo = cert_handler.getCertInfo(request)
-            userInfo = cert_handler.validateCertificate(request)
-            loguseraction(request, {"cert_info": certInfo, "user_info": userInfo})
-            return {"cert_info": certInfo, "user_info": userInfo}
-        except (RequestWithoutCert, IssuesWithAuth) as ex:
-            loguseraction(request, {"exception": str(ex)})
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access. Please provide valid credentials or check with your administrator.") from ex
-    # OIDC handler
-    elif authmethod == "OIDC":
-        oidc_handler = OIDCHandler()
-        try:
-            userInfo = oidc_handler.validateOIDCInfo(request)
-            loguseraction(request, {"user_info": userInfo})
-            return {"user_info": userInfo}
-        except IssuesWithAuth as ex:
-            loguseraction(request, {"exception": str(ex)})
-            # Pass back WWW-Authenticate header for OIDC
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Unauthorized access. Please provide valid credentials or check with your administrator.",
-                headers={"WWW-Authenticate": os.environ.get("OIDC_REDIRECT_URI", "")},
-            ) from ex
-    else:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication method is not properly configured.")
+    auth_handler = AUTH_HANDLER
+    try:
+        token = auth_handler.extractToken(request)
+        userInfo = auth_handler.validateToken(token)
+        loguseraction(request, {"user_info": userInfo})
+        return {"user_info": userInfo}
+    except (IssuesWithAuth, RequestWithoutCert) as ex:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
+            headers={"WWW-Authenticate": "Bearer"}) from ex
+    except Exception as ex:
+        loguseraction(request, {"exception": str(ex)})
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error") from ex
 
 
 def depGetModelContent(dbentry, **kwargs):
@@ -169,35 +141,34 @@ def checkPermissions(userinfo, required_perms: List[str]):
 
 
 def apiReadDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj),
-                sqliteObj=Depends(depGetSQLiteObj), user=Depends(depAuthenticate),
-                oidcHandler=Depends(depGetOIDCHandler), certHandler=Depends(depGetCertHandler), stateMachine=Depends(depGetStateMachine)):
+                user=Depends(depAuthenticate),
+                authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
-    return {"config": config, "dbI": dbI, "sqliteObj": sqliteObj, "user": user, "oidcHandler": oidcHandler, "certHandler": certHandler, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
 def apiWriteDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj),
-                 sqliteObj=Depends(depGetSQLiteObj), user=Depends(depAuthenticate),
-                 oidcHandler=Depends(depGetOIDCHandler), certHandler=Depends(depGetCertHandler),
-                 stateMachine=Depends(depGetStateMachine)):
+                  user=Depends(depAuthenticate),
+                 authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["write", "admin"])
-    return {"config": config, "dbI": dbI, "sqliteObj": sqliteObj, "user": user, "oidcHandler": oidcHandler, "certHandler": certHandler, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
 def apiAdminDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj),
-                 sqliteObj=Depends(depGetSQLiteObj), user=Depends(depAuthenticate),
-                 oidcHandler=Depends(depGetOIDCHandler), certHandler=Depends(depGetCertHandler),
-                 stateMachine=Depends(depGetStateMachine)):
+                 user=Depends(depAuthenticate),
+                 authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["admin"])
-    return {"config": config, "dbI": dbI, "sqliteObj": sqliteObj, "user": user, "oidcHandler": oidcHandler, "certHandler": certHandler, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
-def apiPublicDeps(config=Depends(depGetConfig), sqliteObj=Depends(depGetSQLiteObj),
-                  oidcHandler=Depends(depGetOIDCHandler), certHandler=Depends(depGetCertHandler),
+def apiPublicDeps(config=Depends(depGetConfig),
+                  authHandler=Depends(depGetAuthHandler),
                   dbI=Depends(depGetDBObj), stateMachine=Depends(depGetStateMachine)):
     """Dependency to get all necessary objects for the public REST API."""
-    return {"config": config, "dbI": dbI, "sqliteObj": sqliteObj, "oidcHandler": oidcHandler, "certHandler": certHandler, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "authHandler": authHandler, "stateMachine": stateMachine}
+
 
 # pylint: disable=too-few-public-methods
 class APIResponse:
@@ -267,3 +238,46 @@ class StrictBool:
             "type": "boolean",
             "description": "Strict boolean. Only true/false allowed (bool or string)."
         }
+
+
+_RATE_LIMIT_BUCKETS: dict[str, deque] = defaultdict(deque)
+_RATE_LIMIT_LOCK = asyncio.Lock()
+
+def rateLimitIp(
+    maxRequests: int = 5,
+    windowSeconds: int = 60,
+):
+    """
+    Rate limit decorator based on client IP.
+
+    Example: 5 requests per 60 seconds per IP
+    """
+
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            request: Request | None = None
+            for arg in args:
+                if isinstance(arg, Request):
+                    request = arg
+                    break
+            if request is None:
+                raise RuntimeError("rate_limit_ip requires Request parameter")
+            client_ip = request.client.host if request.client else "unknown"
+            now = time.time()
+            async with _RATE_LIMIT_LOCK:
+                bucket = _RATE_LIMIT_BUCKETS[client_ip]
+                while bucket and bucket[0] <= now - windowSeconds:
+                    bucket.popleft()
+                if len(bucket) >= maxRequests:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail=f"Rate limit exceeded: {maxRequests}/{windowSeconds}s",
+                        headers={
+                            "Retry-After": str(windowSeconds),
+                        },
+                    )
+                bucket.append(now)
+            return await func(*args, **kwargs)
+        return wrapper
+    return decorator

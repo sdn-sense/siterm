@@ -164,15 +164,15 @@ create_users = """CREATE TABLE IF NOT EXISTS users(
                     display_name VARCHAR(255),
                     is_admin BOOLEAN DEFAULT FALSE,
                     disabled BOOLEAN DEFAULT FALSE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP,
-                    password_changed_at TIMESTAMP)"""
+                    created_at INT NOT NULL,
+                    updated_at INT NOT NULL,
+                    password_changed_at INT NOT NULL)"""
 
 create_sessions = """CREATE TABLE IF NOT EXISTS sessions (
                         session_id CHAR(64) PRIMARY KEY,
                         user_id CHAR(36) NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        expires_at TIMESTAMP NOT NULL,
+                        created_at INT NOT NULL,
+                        expires_at INT NOT NULL,
                         revoked BOOLEAN DEFAULT FALSE,
                         INDEX(user_id),
                         FOREIGN KEY (user_id) REFERENCES users(id))"""
@@ -180,7 +180,7 @@ create_sessions = """CREATE TABLE IF NOT EXISTS sessions (
 create_refresh_tokens = """CREATE TABLE IF NOT EXISTS refresh_tokens (
                             token_hash CHAR(64) PRIMARY KEY,
                             session_id CHAR(64) NOT NULL,
-                            expires_at TIMESTAMP NOT NULL,
+                            expires_at INT NOT NULL,
                             revoked BOOLEAN DEFAULT FALSE,
                             rotated_from CHAR(64)"""
 

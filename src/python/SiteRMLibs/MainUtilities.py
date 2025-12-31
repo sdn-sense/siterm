@@ -38,7 +38,6 @@ from SiteRMLibs.CustomExceptions import (
     WrongInputError,
 )
 from SiteRMLibs.DBBackend import dbinterface
-from SiteRMLibs.SqLiteBackend import SQLiteBackend
 from yaml import safe_load as yload
 
 HOSTSERVICES = [
@@ -319,23 +318,26 @@ def createDirs(fullDirPath):
                 raise
     return
 
+def getTempDir():
+    """Get the temporary directory."""
+    return Path(tempfile.gettempdir())
 
 def firstRunCheck(firstRun, servicename):
     """Check if it is first run."""
     if firstRun:
-        fname = Path(tempfile.gettempdir()) / "siterm" / f"{servicename.lower()}-first-run"
+        fname = getTempDir() / "siterm" / f"{servicename.lower()}-first-run"
         fname.parent.mkdir(parents=True, exist_ok=True)
         if not fname.exists():
             fname.write_text(f"This is first run of {servicename}. Do not remove this file.")
     else:
-        fname = Path(tempfile.gettempdir()) / "siterm" / f"{servicename.lower()}-first-run"
+        fname = getTempDir() / "siterm" / f"{servicename.lower()}-first-run"
         if fname.exists():
             fname.unlink()
 
 
 def firstRunFinished(servicename):
     """Check if first Run finished for a service."""
-    fname = Path(tempfile.gettempdir()) / "siterm" / f"{servicename.lower()}-first-run"
+    fname = getTempDir() / "siterm" / f"{servicename.lower()}-first-run"
     if fname.exists():
         return False
     return True
@@ -593,10 +595,6 @@ def getDBConn(serviceName="", cls=None):
 def getDBConnObj():
     """Get database connection object (no class)"""
     return dbinterface()
-
-def getSQLiteConnObj(config):
-    """Get SQLite connection object (no class)"""
-    return SQLiteBackend(config)
 
 def parseRDFFile(modelFile):
     """Parse model file and return Graph."""

@@ -9,36 +9,23 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
-import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
-from pydantic import BaseModel, Field, constr
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
     apiReadDeps,
-    apiWriteDeps,
     apiPublicDeps,
-    checkSite,
-    forbidExtraQueryParams,
-    StrictBool
+    rateLimitIp,
 )
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import BadRequestError
-from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
-from SiteRMLibs.MainUtilities import (
-    dumpFileContentAsJson,
-    generateRandomUUID,
-    getFileContentAsJson,
-    getstartupconfig,
-    getUTCnow,
-)
-from SiteRMLibs.Validator import validator
+from SiteRMLibs.MainUtilities import getUTCnow, generateRandomUUID
+from SiteRMLibs.x509 import generate_challenge, verify_challenge
 
 router = APIRouter()
-
-startupConfig = getstartupconfig()
 
 class LoginItem(BaseModel):
     """Login Item Model."""
@@ -50,149 +37,163 @@ class M2MLoginItem(BaseModel):
     """M2M Login Item Model."""
 
     # pylint: disable=too-few-public-methods
-    client_id: constr(strip_whitespace=True, min_length=1, max_length=255)
-    client_secret: constr(strip_whitespace=True, min_length=1, max_length=4096)
+    session_id: constr(strip_whitespace=True, min_length=1, max_length=255)
+    refresh_token: constr(strip_whitespace=True, min_length=1, max_length=4096)
 
-# ==========================================================
-# /api/authentication-method
-# ==========================================================
-@router.get(
-    "/auth/method",
-    summary="Get Authentication Method",
-    description=("Returns the authentication method used by the frontend (X509 or OIDC)."),
-    tags=["Frontend"],
-    responses={
-        **{
-            200: {"description": "Authentication method successfully returned.", "content": {"application/json": {"example": {"auth_method": "X509"}}}},
-        },
-        **DEFAULT_RESPONSES,
-    },
-)
-async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps), _forbid=Depends(forbidExtraQueryParams())):
-    """
-    Get the authentication method used by the frontend.
-    - Returns the authentication method in use (X509 or OIDC).
-    """
-    if not deps["oidcHandler"].enabled:
-        auth_method = "X509"
-        return APIResponse.genResponse(request, {"auth_method": auth_method, "auth_endpoint": ""})
-    else:
-        auth_method = "OIDC"
-        openidConfig = deps["oidcHandler"].getOpenIDConfiguration()
-        return APIResponse.genResponse(request, {"auth_method": auth_method, "auth_endpoint": openidConfig})    
+class X509LoginItem(BaseModel):
+    """X509 Login Item Model."""
+    # pylint: disable=too-few-public-methods
+    certificate: constr(strip_whitespace=True, min_length=1, max_length=4096)
+
+class M2MChallengeItem(BaseModel):
+    """M2M Challenge Item Model."""
+    # pylint: disable=too-few-public-methods
+    signature: constr(strip_whitespace=True, min_length=1, max_length=4096)
 
 # ==========================================================
 #POST /auth/login  Authenticate human user;
 # ==========================================================
 @router.post("/auth/login", response_model=APIResponse, responses=DEFAULT_RESPONSES)
-async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
-    """
-    Authenticate human user
-    """
+@rateLimitIp(maxRequests=5, windowSeconds=60)
+async def login(item: LoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
+    """Authenticate human user"""
     try:
-        # Need to use username and hash lib;
-        # Returns Set-Cookie header with refresh token
-        #Set-Cookie: refresh_token=RT1; HttpOnly; Secure; SameSite=Strict; Path=/auth/refresh; Max-Age=2592000
-        user = deps["dbI"].get("users", limit=1, search=[["username", item.username], ["password", item.password]])
-        if user:
-            return APIResponse(success=True, data={"message": "Login successful"})
-        else:
+        pass_handler = deps["passHandler"]
+        user = deps["dbI"].get("users", limit=1, search=[["username", item.username]])
+        if not user:
             raise BadRequestError("Invalid username or password")
-    except BadRequestError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        if user[0].get("disabled"):
+            raise BadRequestError("Invalid username or password")
+        if not pass_handler.verify_password(user[0]["password_hash"], item.password):
+            raise BadRequestError("Invalid username or password")
 
-# ==========================================================
-#POST /auth/logout Logout human user;
-# ==========================================================
-@router.post("/auth/logout", response_model=APIResponse, responses=DEFAULT_RESPONSES)
-async def logout(request: Request, payload: Dict[str, Any] = Depends(apiReadDeps)):
-    """
-    Logout human user
-    """
-    try:
-        # Your logout logic here
-        return APIResponse(success=True, data={"message": "Logout successful"})
+        if pass_handler.needs_rehash(user[0]["password_hash"]):
+            deps["dbI"].update("users", search=[["id", user[0]["id"]]], update={"password_hash": pass_handler.hash_password(item.password)})
+
+        refresh_token = deps["authHandler"].getRefreshToken()
+        refresh_token_hash = deps["authHandler"].hash_token(refresh_token)
+
+        deps["dbI"].insert("refresh_tokens", {"session_id": generateRandomUUID(), "token_hash": refresh_token_hash,
+                                              "user_id": user[0]["id"], "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
+                                              "revoked": False, "rotated_from": None})
+
+        response = APIResponse(success=True, data={"message": "Login successful", "user": {"id": user[0]["id"], "username": user[0]["username"]}})
+
+        response.set_cookie(key="refresh_token", value=refresh_token,
+                            httponly=True, secure=True,
+                            samesite="strict", max_age=int(deps["authHandler"].refresh_token_ttl))
+        return response
     except BadRequestError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
 # ==========================================================
 #GET /auth/whoami Returns identity of whoami;
 # ==========================================================
 @router.get("/auth/whoami", response_model=APIResponse, responses=DEFAULT_RESPONSES)
-async def whoami(request: Request, payload: Dict[str, Any] = Depends(apiReadDeps)):
+@rateLimitIp(maxRequests=5, windowSeconds=60)
+async def whoami(deps: Dict[str, Any] = Depends(apiReadDeps)):
     """
     Returns identity of whoami
     """
     try:
-        # Your whoami logic here
-        return APIResponse(success=True, data={"message": "Whoami successful"})
+        user = deps.get("user")
+        print(f"Whoami user: {user}")
+        if not user:
+            raise BadRequestError("User not authenticated")
+        return APIResponse(success=True, data={"message": "Whoami successful", "user": 'Not implemented'})
     except BadRequestError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-# ==========================================================
-#GET /auth/refresh Returns refresh token;
-# ==========================================================
-@router.get("/auth/refresh", response_model=APIResponse, responses=DEFAULT_RESPONSES)
-async def refresh(request: Request, payload: Dict[str, Any] = Depends(apiReadDeps)):
-    """
-    Returns refresh token
-    """
-    try:
-        # Your refresh token logic here
-        return APIResponse(success=True, data={"message": "Refresh token retrieved"})
-    except BadRequestError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 
 # ==========================================================
 #POST /token Get Token based on Cert challenge
 # ==========================================================
 @router.post("/m2m/token", response_model=APIResponse, responses=DEFAULT_RESPONSES)
-async def token(request: Request, payload: Dict[str, Any] = Depends(apiPublicDeps)):
+@rateLimitIp(maxRequests=5, windowSeconds=60)
+async def token(item: X509LoginItem, _deps: Dict[str, Any] = Depends(apiPublicDeps)):
     """
     Request new token challenge
     """
     try:
-        # Your token logic here
-        return APIResponse(success=True, data={"message": "Token retrieved"})
-    except BadRequestError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        challenge = generate_challenge(item.certificate)
+        challenge["ref_url"] = f"/m2m/token/{challenge['challenge_id']}"
+        return APIResponse(success=True, data=challenge)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 # ==========================================================
 #POST /m2m/token/refresh -> access token (rotated refresh)
 # ==========================================================
 @router.post("/m2m/token/refresh", response_model=APIResponse, responses=DEFAULT_RESPONSES)
-async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
+@rateLimitIp(maxRequests=5, windowSeconds=60)
+async def token_refresh(item: M2MLoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
     """
     Refresh access token (rotated refresh)
     """
     try:
-        # Your token refresh logic here
-        return APIResponse(success=True, data={"message": "Token refreshed"})
+        # Check if refresh token is present in the database
+        refreshRecord = deps["dbI"].get("refresh_tokens", limit=1, search=[["token_hash", deps["authHandler"].hash_token(item.refresh_token)], ["session_id", item.session_id]])
+        if not refreshRecord:
+            raise BadRequestError("Refresh token is invalid or expired")
+        # Check if the refresh token has expired or been revoked
+        if refreshRecord[0]["revoked"] or refreshRecord[0]["expires_at"] < getUTCnow():
+            raise BadRequestError("Refresh token is invalid or expired")
+        # Get new token, new refresh token, delete old refresh token
+        access_token = deps["authHandler"].getAccessToken(refreshRecord[0]["user"])
+        new_refresh_token = deps["authHandler"].getRefreshToken()
+        deps["dbI"].delete("refresh_tokens", refreshRecord[0]["id"])
+        out = {"token_hash": deps["authHandler"].hash_token(new_refresh_token), "session_id": item.session_id, "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl, "revoked": False, "rotated_from": refreshRecord[0]["id"]}
+        deps["dbI"].insert("refresh_tokens", [out])
+        return APIResponse(success=True, data={"session_id": item.session_id, "access_token": access_token, "refresh_token": new_refresh_token, "token_type": "Bearer"})
     except BadRequestError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 
 @router.post("/m2m/token/{challenge_id}", response_model=APIResponse, responses=DEFAULT_RESPONSES)
-async def token_challenge(request: Request, deps: Dict[str, Any] = Depends(apiPublicDeps)):
+@rateLimitIp(maxRequests=5, windowSeconds=60)
+async def token_challenge(challenge_id: str, item: M2MChallengeItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
     """
     Challenge reply
     """
     try:
-        # Your token challenge logic here
-        return APIResponse(success=True, data={"message": "Token challenge retrieved"})
-    except BadRequestError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        verified, user = verify_challenge(challenge_id, item.signature)
+
+        if not verified:
+            raise BadRequestError("Invalid challenge outcome")
+
+        access_token = deps["authHandler"].getAccessToken(user)
+        refresh_token = deps["authHandler"].getRefreshToken()
+        out = {"token_hash": deps["authHandler"].hash_token(refresh_token), "session_id": challenge_id, "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl, "revoked": False, "rotated_from": None}
+        deps["dbI"].insert("refresh_tokens", [out])
+
+        return APIResponse(
+            success=True,
+            data={
+                "session_id": challenge_id,
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "token_type": "Bearer",
+            },
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 # ==========================================================
 #GET /.well-known/jwks.json
 # ==========================================================
 @router.get("/.well-known/jwks.json", response_model=APIResponse, responses=DEFAULT_RESPONSES)
-async def jwks(request: Request, payload: Dict[str, Any] = Depends(apiPublicDeps)):
+async def jwks(payload: Dict[str, Any] = Depends(apiPublicDeps)):
     """
     Get JSON Web Key Set
     """
     try:
-        jwkso = payload["oidcHandler"].getJWKS()
+        jwkso = payload["authHandler"].getJWKS()
         return APIResponse(success=True, data=jwkso)
     except BadRequestError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
@@ -201,12 +202,14 @@ async def jwks(request: Request, payload: Dict[str, Any] = Depends(apiPublicDeps
 #GET /.well-known/openid-configuration
 # ==========================================================
 @router.get("/.well-known/openid-configuration", response_model=APIResponse, responses=DEFAULT_RESPONSES)
-async def openid_configuration(request: Request, payload: Dict[str, Any] = Depends(apiPublicDeps)):
+async def openid_configuration(payload: Dict[str, Any] = Depends(apiPublicDeps)):
     """
     Get OpenID Configuration
     """
     try:
-        openid_config = payload["oidcHandler"].getOpenIDConfiguration()
+        openid_config = payload["authHandler"].getOpenIDConfiguration()
         return APIResponse(success=True, data=openid_config)
     except BadRequestError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e

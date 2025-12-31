@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # pylint: disable=line-too-long
-"""User/Application authentication using Cert or OIDC.
+"""User/Application authentication using User/Pass or token.
 Title                   : siterm
 Author                  : Justas Balcas
 Email                   : jbalcas (at) es (dot) net
@@ -17,38 +17,63 @@ from datetime import datetime, timezone, timedelta
 
 import jwt
 from jwt.algorithms import RSAAlgorithm
+from cryptography import x509
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import rsa, padding, ec
 from cryptography.hazmat.primitives.hashes import Hash
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
+from cryptography.exceptions import InvalidSignature
+from cryptography.x509.oid import NameOID
+
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
-from SiteRMLibs.CustomExceptions import IssuesWithAuth, RequestWithoutCert
+from SiteRMLibs.CustomExceptions import IssuesWithAuth, RequestWithoutCert, BadRequestError
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.MainUtilities import loadEnvFile, getUTCnow, generateRandomUUID
+from SiteRMLibs.MainUtilities import loadEnvFile, getUTCnow, getTempDir, dumpFileContentAsJson, getFileContentAsJson, removeFile
 
 
-def getauthmethod():
-    """Get the authentication method from environment."""
-    loadEnvFile()
-    mode = os.environ.get("AUTH_SUPPORT", "OIDC").upper()
-    if mode not in ["OIDC", "X509"]:
-        raise IssuesWithAuth(f"Unsupported authentication method: {mode}")
-    return mode
+OID_SHORT_NAMES = {
+    NameOID.COUNTRY_NAME: "C",
+    NameOID.STATE_OR_PROVINCE_NAME: "ST",
+    NameOID.LOCALITY_NAME: "L",
+    NameOID.ORGANIZATION_NAME: "O",
+    NameOID.ORGANIZATIONAL_UNIT_NAME: "OU",
+    NameOID.COMMON_NAME: "CN"}
 
 
-def hash_token(token: str) -> str:
-    """Hash refresh token for DB storage (SHA-256 hex)."""
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+def load_cert(cert_pem: str):
+    """Load a certificate from a PEM-encoded certificate."""
+    return x509.load_pem_x509_certificate(cert_pem.encode())
 
 
-def generate_refresh_token() -> str:
-    """
-    Generate a cryptographically strong opaque refresh token.
-    256 bits of entropy.
-    """
-    return secrets.token_urlsafe(32)
+def name_to_openssl(name: x509.Name) -> str:
+    """Convert an x509.Name object to an OpenSSL-style string."""
+    parts = []
+    for attr in name:
+        # pylint: disable=protected-access
+        short = OID_SHORT_NAMES.get(attr.oid, attr.oid._name)
+        parts.append(f"{short}={attr.value}")
+    return "/" + "/".join(parts)
+
+
+def load_cert_info(cert):
+    """Load certificate information into a dictionary."""
+    out = {}
+    out["issuer"] = name_to_openssl(cert.issuer)
+    out["subject"] = name_to_openssl(cert.subject)
+    out["notBefore"] = int(cert.not_valid_before_utc.timestamp())
+    out["notAfter"] = int(cert.not_valid_after_utc.timestamp())
+    out["fullDN"] = f"{out['issuer']}{out['subject']}"
+    return out
+
+
+def get_challenge_record(challenge_id: str):
+    """Retrieve a challenge record by its ID."""
+    tempfile = getTempDir() / "m2m" / f"{challenge_id}.json"
+    if not tempfile.exists():
+        return None
+    return getFileContentAsJson(tempfile)
 
 
 def base64url_encode_nopad(b: bytes) -> str:
@@ -86,14 +111,115 @@ def generate_jwk_from_public_pem(public_pem: str, alg: str = "RS256") -> dict:
     return jwk
 
 
-class PassHandler:
-    """Password handler using Argon2 for hashing and verification."""
+class AuthHandler():
+    """Authentication handler to manage user/pass and token-based authentication."""
 
     def __init__(self):
+        loadEnvFile()
+        # Password handling parameters
         self.hasher = PasswordHasher(time_cost=int(os.environ.get("ARGON2_TIME_COST", 3)),
                                      memory_cost=int(os.environ.get("ARGON2_MEMORY_COST", 65536)),
                                      parallelism=int(os.environ.get("ARGON2_PARALLELISM", 4)),
                                      hash_len=int(os.environ.get("ARGON2_HASH_LEN", 32)))
+        # OIDC and JWKS handling
+        self.gitConf = getGitConfig()
+        self.oidc_app_name = os.environ.get("OIDC_APP_NAME", "SITERM Token Issuer.")
+        self.oidc_issuer = os.environ.get("OIDC_ISSUER", self.gitConf.get("general", "webdomain"))
+        self.oidc_audience = os.environ.get("OIDC_AUDIENCE", self.gitConf.get("general", "webdomain"))
+        self.oidc_algorithm = os.environ.get("OIDC_ALGORITHM", "RS256")
+        self.oidc_token_lifetime_minutes = int(os.environ.get("OIDC_TOKEN_LIFETIME_MINUTES", "60"))
+        self.refresh_token_ttl = timedelta(days=int(os.environ.get("REFRESH_TOKEN_TTL_DAYS", "30"))).total_seconds()
+        self.oidc_leeway = int(os.environ.get("OIDC_LEEWAY", "60"))
+        self.oidc_public_key = os.environ.get("OIDC_PUBLIC_KEY", None)
+        self.oidc_private_key = os.environ.get("OIDC_PRIVATE_KEY", None)
+        self.oidc_prev_public_key = os.environ.get("OIDC_PREV_PUBLIC_KEY", None)
+        self.oidc_prev_private_key = os.environ.get("OIDC_PREV_PRIVATE_KEY", None)
+        self.oidc_kid = None
+        self.__startup__()
+        self.__getjwks__()
+
+        # Certificate handling
+        self.allowedCerts = {}
+        self.allowedWCerts = {}
+        self.loadTime = None
+        self.loadAuthorized()
+        self.gitConf = getGitConfig()
+
+
+    def generate_challenge(self, input_cert: str):
+        """Generate a challenge for the given certificate."""
+        # Challenge storage is filesystem-based (tmp), that breaks if multiple instances are running
+        # or if container is restarted
+        try:
+            cert = load_cert(input_cert)
+            certinfo = load_cert_info(cert)
+            self.validateCertificate(certinfo)
+
+            challenge = secrets.token_bytes(32)
+
+            challenge_id = secrets.token_hex(16)
+
+            tempfile = getTempDir() / "m2m" / f"{challenge_id}.json"
+            expires_at = getUTCnow() + 60
+
+            dumpFileContentAsJson(tempfile, {
+                "challenge_id": challenge_id,
+                "challenge": base64.b64encode(challenge).decode("utf-8"),
+                "input_cert": input_cert,
+                "expires_at": expires_at
+            })
+            return {"challenge_id": challenge_id, "challenge": challenge, "expires_at": expires_at}
+        except Exception as e:
+            print(f"Error generating challenge: {e}")
+            raise BadRequestError("Failed to generate challenge") from e
+
+    def verify_challenge(self, challenge_id: str, signature_b64: str):
+        """Verify a challenge using the provided signature."""
+        record = get_challenge_record(challenge_id)
+        if not record:
+            print(f"Challenge {challenge_id} not found")
+            return False, None
+        if record["expires_at"] < getUTCnow():
+            print(f"Challenge {challenge_id} has expired")
+            return False, None
+        try:
+            cert = load_cert(record["input_cert"])
+            certinfo = load_cert_info(cert)
+            user = self.validateCertificate(certinfo)
+            public_key = cert.public_key()
+            challenge = base64.b64decode(record["challenge"])
+            signature = base64.b64decode(signature_b64)
+
+            if isinstance(public_key, ec.EllipticCurvePublicKey):
+                public_key.verify(
+                    signature,
+                    challenge,
+                    ec.ECDSA(hashes.SHA256()),
+                )
+            else:
+                public_key.verify(
+                    signature,
+                    challenge,
+                    padding.PSS(
+                        mgf=padding.MGF1(hashes.SHA256()),
+                        salt_length=padding.PSS.MAX_LENGTH,
+                    ),
+                    hashes.SHA256(),
+                )
+        except InvalidSignature as ex:
+            print(f"Invalid signature: {ex}")
+            return False, None
+        except Exception as ex:
+            print(f"Error verifying challenge: {ex}")
+            return False, None
+        finally:
+            tempfile = getTempDir() / "m2m" / f"{challenge_id}.json"
+            removeFile(tempfile)
+        return True, user
+
+    # =========================================================
+    # Password handling
+    # =========================================================
 
     def hash_password(self, password: str) -> str:
         """Hash a password."""
@@ -110,36 +236,13 @@ class PassHandler:
         """Check if a hashed password needs to be rehashed."""
         return self.hasher.check_needs_rehash(hashed_password)
 
-
-class OIDCHandler:
-    """OIDC handler to validate claims from Apache environment."""
-
-    def __init__(self):
-        """Init OIDC Handler"""
-        loadEnvFile()
-        self.enabled = getauthmethod() == "OIDC"
-        if not self.enabled:
-            return
-        self.gitConf = getGitConfig()
-        self.oidc_app_name = os.environ.get("OIDC_APP_NAME", "SITERM Token Issuer.")
-        self.oidc_issuer = os.environ.get("OIDC_ISSUER", self.gitConf.get("general", "webdomain"))
-        self.oidc_audience = os.environ.get("OIDC_AUDIENCE", self.gitConf.get("general", "webdomain"))
-        self.oidc_algorithm = os.environ.get("OIDC_ALGORITHM", "RS256")
-        self.oidc_token_lifetime_minutes = int(os.environ.get("OIDC_TOKEN_LIFETIME_MINUTES", "60"))
-        self.oidc_leeway = int(os.environ.get("OIDC_LEEWAY", "60"))
-        self.oidc_public_key = os.environ.get("OIDC_PUBLIC_KEY", None)
-        self.oidc_private_key = os.environ.get("OIDC_PRIVATE_KEY", None)
-        self.oidc_prev_public_key = os.environ.get("OIDC_PREV_PUBLIC_KEY", None)
-        self.oidc_prev_private_key = os.environ.get("OIDC_PREV_PRIVATE_KEY", None)
-        self.oidc_kid = None
-        self.__startup__()
-        self.__getjwks__()
+    # =========================================================
+    # OIDC and JWKS handling
+    # =========================================================
 
     def __startup__(self):
         # Check all environment variables and that everything is set correctly. preset default values if not set
         # Check for current pub and priv keys
-        if not self.enabled:
-            return
         save_dir = os.getenv("RSA_DIR", "/opt/siterm/jwt_secrets")
         privateKeyPath = os.path.join(save_dir, "private_key.pem")
         publicKeyPath = os.path.join(save_dir, "public_key.pem")
@@ -172,8 +275,6 @@ class OIDCHandler:
 
     def __getjwks__(self):
         """Get JWKS."""
-        if not self.enabled:
-            raise IssuesWithAuth("OIDC is not enabled")
         curjwks = generate_jwk_from_public_pem(self.oidc_public_key, self.oidc_algorithm)
         self.oidc_kid = curjwks.get("kid")
         self.jwks = {"keys": [curjwks]}
@@ -186,8 +287,6 @@ class OIDCHandler:
 
     def __get_key_from_jwks__(self, kid):
         """Find the key in JWKS that matches the kid"""
-        if not self.enabled:
-            raise IssuesWithAuth("OIDC is not enabled")
         for key in self.jwks.get("keys", []):
             if key.get("kid") == kid:
                 return RSAAlgorithm.from_jwk(json.dumps(key))
@@ -196,8 +295,6 @@ class OIDCHandler:
 
     def getOpenIDConfiguration(self):
         """Get OpenID Connect configuration."""
-        if not self.enabled:
-            raise IssuesWithAuth("OIDC is not enabled")
         return {
             "issuer": self.oidc_issuer,
             "jwks_uri": f"{self.oidc_issuer}/.well-known/jwks.json",
@@ -210,30 +307,24 @@ class OIDCHandler:
 
     def getJWKS(self):
         """Get JWKS."""
-        if not self.enabled:
-            raise IssuesWithAuth("OIDC is not enabled")
         return self.jwks
 
-    def getRefreshToken(self, **kwargs) -> str:
+    def getRefreshToken(self, **_kwargs) -> str:
         """Get a refresh token for the specified user."""
-        if not self.enabled:
-            raise IssuesWithAuth("OIDC is not enabled")
         # This returns unique uuid for the refresh token
-        return generateRandomUUID()
+        return secrets.token_urlsafe(32)
 
     def getAccessToken(self, usersub: str, **kwargs) -> str:
         """Get an access token for the specified user."""
-        if not self.enabled:
-            raise IssuesWithAuth("OIDC is not enabled")
         now = getUTCnow()
-        exp = now + timedelta(minutes=self.oidc_token_lifetime_minutes)
+        exp = now + timedelta(minutes=self.oidc_token_lifetime_minutes).total_seconds()
 
         payload = {
             "iss": self.oidc_issuer,
             "aud": self.oidc_audience,
             "sub": usersub,
-            "iat": int(now.timestamp()),
-            "exp": int(exp.timestamp())}
+            "iat": int(now),
+            "exp": int(exp)}
 
         if "extra_claims" in kwargs:
             payload.update(kwargs["extra_claims"])
@@ -246,15 +337,23 @@ class OIDCHandler:
         token = jwt.encode(payload, private_key, algorithm=self.oidc_algorithm, headers=headers)
         return token
 
-    def validateOIDCInfo(self, request):
-        """Validate OIDC claims and extract user identity & permissions."""
-        if not self.enabled:
-            raise IssuesWithAuth("OIDC is not enabled")
-        auth_header = request.headers.get("Authorization", "")
-        if not auth_header.startswith("Bearer "):
-            raise RequestWithoutCert("Unauthorized: Missing or invalid Bearer token")
+    @staticmethod
+    def hash_token(token: str):
+        """Hash refresh token for DB storage (SHA-256 hex)."""
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
+    def extractToken(self, request):
+        """Extract the Bearer token from the request."""
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise RequestWithoutCert("Unauthorized: Missing or invalid Bearer token")
         token = auth_header.replace("Bearer ", "")
+        if not token:
+            raise RequestWithoutCert("Unauthorized: Missing or invalid Bearer token")
+        return token
+
+    def validateToken(self, token):
+        """Validate OIDC claims and extract user identity & permissions."""
         try:
             unverified_header = jwt.get_unverified_header(token)
             kid = unverified_header.get("kid")
@@ -266,31 +365,18 @@ class OIDCHandler:
         public_key = self.__get_key_from_jwks__(kid)
         try:
             decoded = jwt.decode(token, public_key, algorithms=[self.oidc_algorithm], audience=self.oidc_audience, issuer=self.oidc_issuer, leeway=self.oidc_leeway)
-            return decoded
         except jwt.ExpiredSignatureError as ex:
             raise IssuesWithAuth("Token expired") from ex
         except jwt.InvalidTokenError as ex:
             raise IssuesWithAuth(f"Invalid token: {ex}") from ex
+        return decoded
 
-
-class CertHandler:
-    """Cert handler."""
-
-    def __init__(self):
-        loadEnvFile()
-        self.enabled = getauthmethod() == "X509"
-        if not self.enabled:
-            return
-        self.allowedCerts = {}
-        self.allowedWCerts = {}
-        self.loadTime = None
-        self.loadAuthorized()
-        self.gitConf = getGitConfig()
+    # ==========================================
+    # Certificate handling
+    # ==========================================
 
     def loadAuthorized(self):
         """Load all authorized users for FE from git."""
-        if not self.enabled:
-            return
         dateNow = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H")
         if dateNow != self.loadTime:
             self.loadTime = dateNow
@@ -308,34 +394,9 @@ class CertHandler:
                     self.allowedWCerts[userinfo["full_dn"]]["permissions"] = userinfo["permissions"]
 
 
-    def getCertInfo(self, request):
-        """Get certificate info."""
-        if not self.enabled:
-            raise IssuesWithAuth("X509 is not enabled")
-        out = {}
-        for key in [
-            "ssl_client_v_remain",
-            "ssl_client_s_dn",
-            "ssl_client_i_dn",
-            "ssl_client_v_start",
-            "ssl_client_v_end",
-        ]:
-            if key not in request.headers or request.headers.get(key, None) in (None, "", "(null)"):
-                print(f"Missing required certificate info: {key}")
-                raise RequestWithoutCert("Unauthorized access. Request without certificate.")
-
-        out["subject"] = request.headers["ssl_client_s_dn"]
-        # pylint: disable=line-too-long
-        out["notAfter"] = int(datetime.strptime(request.headers["ssl_client_v_end"], "%b %d %H:%M:%S %Y %Z").timestamp())
-        out["notBefore"] = int(datetime.strptime(request.headers["ssl_client_v_start"], "%b %d %H:%M:%S %Y %Z").timestamp())
-        out["issuer"] = request.headers["ssl_client_i_dn"]
-        out["fullDN"] = f"{out['issuer']}{out['subject']}"
-        return out
-
     def checkAuthorized(self, certinfo):
         """Check if user is authorized."""
-        if not self.enabled:
-            raise IssuesWithAuth("X509 is not enabled")
+        self.loadAuthorized()
         if certinfo["fullDN"] in self.allowedCerts:
             return self.allowedCerts[certinfo["fullDN"]]
         for wildcarddn, userinfo in self.allowedWCerts.items():
@@ -344,12 +405,9 @@ class CertHandler:
         print(f"User DN {certinfo['fullDN']} is not in authorized list. Full info: {certinfo}")
         raise IssuesWithAuth("Issues with permissions. Check backend logs.")
 
-    def validateCertificate(self, request):
+    def validateCertificate(self, certinfo):
         """Validate certificate validity."""
-        if not self.enabled:
-            raise IssuesWithAuth("X509 is not enabled")
-        certinfo = self.getCertInfo(request)
-        timestamp = int(datetime.now(timezone.utc).timestamp())
+        timestamp = getUTCnow()
         for key in ["subject", "notAfter", "notBefore", "issuer", "fullDN"]:
             if key not in certinfo:
                 print(f"{key} not available in certificate retrieval")
