@@ -21,3 +21,4 @@ deepdiff
 pyjwt[crypto]
 cryptography
 gitpython
+sqlalchemy

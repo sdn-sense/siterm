@@ -27,3 +27,4 @@ pyjwt[crypto]
 cryptography
 gitpython
 argon2-cffi
+sqlalchemy

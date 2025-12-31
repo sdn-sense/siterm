@@ -74,7 +74,7 @@ async def login(item: LoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
         refresh_token_hash = deps["authHandler"].hash_token(refresh_token)
 
         deps["dbI"].insert("refresh_tokens", {"session_id": generateRandomUUID(), "token_hash": refresh_token_hash,
-                                              "user_id": user[0]["id"], "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
+                                              "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
                                               "revoked": False, "rotated_from": None})
 
         response = APIResponse(success=True, data={"message": "Login successful", "user": {"id": user[0]["id"], "username": user[0]["username"]}})
@@ -145,8 +145,10 @@ async def token_refresh(item: M2MLoginItem, deps: Dict[str, Any] = Depends(apiPu
         # Get new token, new refresh token, delete old refresh token
         access_token = deps["authHandler"].getAccessToken(refreshRecord[0]["user"])
         new_refresh_token = deps["authHandler"].getRefreshToken()
-        deps["dbI"].delete("refresh_tokens", refreshRecord[0]["id"])
-        out = {"token_hash": deps["authHandler"].hash_token(new_refresh_token), "session_id": item.session_id, "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl, "revoked": False, "rotated_from": refreshRecord[0]["id"]}
+        deps["dbI"].delete("refresh_tokens", [["token_hash", deps["authHandler"].hash_token(item.refresh_token)]])
+        out = {"token_hash": deps["authHandler"].hash_token(new_refresh_token), "session_id": item.session_id,
+               "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl, "revoked": False,
+               "rotated_from": refreshRecord[0]["token_hash"]}
         deps["dbI"].insert("refresh_tokens", [out])
         return APIResponse(success=True, data={"session_id": item.session_id, "access_token": access_token, "refresh_token": new_refresh_token, "token_type": "Bearer"})
     except BadRequestError as e:
