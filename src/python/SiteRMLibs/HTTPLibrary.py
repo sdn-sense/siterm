@@ -30,7 +30,8 @@ from typing import Any, Callable
 import httpx
 import jwt
 from SiteRMLibs.CustomExceptions import HTTPServerNotReady, HTTPException, ValidityFailure
-from SiteRMLibs.MainUtilities import getUTCnow
+from SiteRMLibs.MainUtilities import getUTCnow, getTempDir
+
 
 
 def argValidity(arg, aType):
@@ -75,7 +76,7 @@ def getKeyCertFromEnv():
         if key and cert and os.path.exists(key) and os.path.exists(cert):
             return cert, key  # httpx expects cert, key
     uid = str(os.getuid())
-    proxy = f"/tmp/x509up_u{uid}"
+    proxy = f"{getTempDir()}/x509up_u{uid}"
     if os.path.exists(proxy):
         return proxy, proxy
     home = os.environ.get("HOME")

@@ -4,12 +4,12 @@
 import os
 import tarfile
 from datetime import datetime
-
+from SiteRMLibs.MainUtilities import getTempDir
 
 def logArchiver():
     """Create tar.gz archive of log files in /var/log/siterm-agent and /var/log/siterm-site-fe directories."""
     date_str = datetime.now().strftime("%Y%m%d")
-    target_file = f"/tmp/log-{date_str}.tar.gz"
+    target_file = getTempDir() / f"log-{date_str}.tar.gz"
 
     if os.path.exists(target_file):
         print(f"Warning: {target_file} already exists. Exiting.")

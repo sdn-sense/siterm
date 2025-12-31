@@ -57,7 +57,7 @@ class ConfigFetcher:
     def _main(self):
         """Start Config Fetcher Service."""
         self.gitObj.getGitConfig()
-        # Create tmp file that fetcher is done. /tmp/config-fetcher-ready
+        # Create tmp file that fetcher is done. {tmpdir}/config-fetcher-ready
         if not os.path.isfile(self.FetcherReadyFile):
             with open(self.FetcherReadyFile, "w", encoding="utf-8") as fd:
                 fd.write("Ready at: " + str(getUTCNow()))

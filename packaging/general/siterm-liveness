@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 
 from SiteRMLibs.hostcert import HostCertHandler
-from SiteRMLibs.MainUtilities import timedhourcheck
+from SiteRMLibs.MainUtilities import timedhourcheck, getTempDir
 
 
 def certCheker():
@@ -81,14 +81,14 @@ def runChecks():
         print(f"[FAILED] Exception during checks: {e}")
         state = 100
     # Write this to output file
-    with open("/tmp/siterm-liveness", "w", encoding="utf-8") as fd:
+    with open(getTempDir() / "siterm-liveness", "w", encoding="utf-8") as fd:
         fd.write(f"{state}\n")
     return state
 
 
 def checkConfigReady():
     """Check if config fetcher is done."""
-    if os.path.exists("/tmp/config-fetcher-ready"):
+    if os.path.exists(getTempDir() / "config-fetcher-ready"):
         return -1
     print("Config fetcher is still running. Check stdout/stderr.")
     if os.path.exists("/dev/shm/config-fetcher-counter"):
@@ -101,7 +101,7 @@ def checkConfigReady():
 
 
 if __name__ == "__main__":
-    livenessFile = "/tmp/siterm-liveness-disabled"
+    livenessFile = getTempDir() / "siterm-liveness-disabled"
     parser = argparse.ArgumentParser(description="Kubernetes liveness checker with enable/disable options.")
     parser.add_argument("--enable", action="store_true", help="Enable the liveness check.")
     parser.add_argument("--disable", action="store_true", help="Disable the liveness check.")
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         disableLivenessCheck(livenessFile)
         sys.exit(0)
 
-    if os.path.exists("/tmp/siterm-mariadb-init"):
+    if os.path.exists(getTempDir() / "siterm-mariadb-init"):
         print("Mariadb init is still running. Exiting. Check /var/log/supervisor/mariadb_* log files")
         sys.exit(0 if checkServices(["mariadb", "mariadb_init"]) else 1)
 

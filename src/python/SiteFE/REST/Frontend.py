@@ -31,6 +31,7 @@ from SiteRMLibs.MainUtilities import (
     getFileContentAsJson,
     getstartupconfig,
     getUTCnow,
+    getTempDir
 )
 
 startupConfig = getstartupconfig()
@@ -104,10 +105,10 @@ async def checkAPILiveness(request: Request, _deps=Depends(apiReadDeps), _forbid
     """
     Check the health of the API.
     """
-    if os.path.exists("/tmp/siterm-liveness-disabled"):
+    if os.path.exists(getTempDir() / "siterm-liveness-disabled"):
         return APIResponse.genResponse(request, {"status": "disabled"})
-    if os.path.exists("/tmp/siterm-liveness"):
-        with open("/tmp/siterm-liveness", "r", encoding="utf-8") as fd:
+    if os.path.exists(getTempDir() / "siterm-liveness"):
+        with open(getTempDir() / "siterm-liveness", "r", encoding="utf-8") as fd:
             code = fd.read().strip()
             if code == "0":
                 return APIResponse.genResponse(request, {"status": "ok"})
@@ -132,10 +133,10 @@ async def checkAPIReadiness(request: Request, _deps=Depends(apiReadDeps), _forbi
     """
     Check the readiness of the API.
     """
-    if os.path.exists("/tmp/siterm-readiness-disabled"):
+    if os.path.exists(getTempDir() / "siterm-readiness-disabled"):
         return APIResponse.genResponse(request, {"status": "disabled"})
-    if os.path.exists("/tmp/siterm-readiness"):
-        with open("/tmp/siterm-readiness", "r", encoding="utf-8") as fd:
+    if os.path.exists(getTempDir() / "siterm-readiness"):
+        with open(getTempDir() / "siterm-readiness", "r", encoding="utf-8") as fd:
             code = fd.read().strip()
             if code == "0":
                 return APIResponse.genResponse(request, {"status": "ok"})

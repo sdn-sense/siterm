@@ -40,6 +40,7 @@ from SiteRMLibs.MainUtilities import (
     getVal,
     loadEnvFile,
     timeout,
+    getTempDir
 )
 
 
@@ -262,9 +263,9 @@ class Daemon(DBBackend):
         self.inargs = inargs
         self.dbI = None
         self.runCount = 0
-        self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}.pid"
+        self.pidfile = f"{getTempDir()}/end-site-rm-{component}-{self.inargs.runnum}.pid"
         if self.inargs.devicename:
-            self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}-{self.inargs.devicename}.pid"
+            self.pidfile = f"{getTempDir()}/end-site-rm-{component}-{self.inargs.runnum}-{self.inargs.devicename}.pid"
         self.config = None
         self.logger = None
         self.firstInitDone = False
@@ -322,16 +323,16 @@ class Daemon(DBBackend):
         retval = True
         if self.inargs.bypassstartcheck:
             return retval
-        if os.path.exists("/tmp/siterm-mariadb-init"):
+        if os.path.exists(getTempDir() / "siterm-mariadb-init"):
             try:
                 self.logger.info("Database init/upgrade started at:")
-                with open("/tmp/siterm-mariadb-init", "r", encoding="utf-8") as fd:
+                with open(getTempDir() / "siterm-mariadb-init", "r", encoding="utf-8") as fd:
                     self.logger.info(fd.read())
             except IOError:
                 pass
             self.logger.info("Database not ready. See details above. If continous, check the mariadb and mariadb_init process.")
             retval = False
-        if not os.path.exists("/tmp/config-fetcher-ready") and not self.firstInitDone:
+        if not os.path.exists(getTempDir() / "config-fetcher-ready") and not self.firstInitDone:
             self.logger.info("Config Fetcher not ready. See details above. If continous, check the config-fetcher process.")
             retval = False
         return retval
@@ -525,10 +526,10 @@ class Daemon(DBBackend):
                 exc=exc,
             )
             # Log state also to local file
-            createDirs("/tmp/siterm-states/")
-            fname = f"/tmp/siterm-states/{self.component}.json"
+            createDirs(getTempDir() / "siterm-states/")
+            fname = f"{getTempDir()}/siterm-states/{self.component}.json"
             if self.inargs.devicename:
-                fname = f"/tmp/siterm-states/{self.component}-{self.inargs.devicename}.json"
+                fname = f"{getTempDir()}/siterm-states/{self.component}-{self.inargs.devicename}.json"
             self.contentDB.dumpFileContentAsJson(
                 fname,
                 {
@@ -679,7 +680,6 @@ class Daemon(DBBackend):
                 sys.exit(0)
             if refresh:
                 self.logger.info("Re-initiating Service with new configuration from GIT. Forced by DB")
-                self.cleaner()
                 self._refreshConfig()
                 self.refreshThreads()
             self.logger.debug("Daemonizer main loop end. Run count: %s", self.runCount)
@@ -688,14 +688,6 @@ class Daemon(DBBackend):
     def getThreads():
         """Overwrite this then Daemonized in your own class"""
         return {}
-
-    @staticmethod
-    def cleaner():
-        """Clean files from /tmp/ directory"""
-        # Only one service overrides it, and it is ConfigFetcher
-        # So if anyone else calls it - we sleep for 30 seconds
-        print("Due to DB Refresh - sleep for 30 seconds until ConfigFetcher is done")
-        time.sleep(30)
 
     @staticmethod
     def preRunThread(_sitename, _rthread):

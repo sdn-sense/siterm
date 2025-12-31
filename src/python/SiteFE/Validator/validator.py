@@ -25,6 +25,8 @@ from SiteRMLibs.MainUtilities import (
     getLoggingObject,
     getUTCnow,
     getVal,
+    getTempDir
+
 )
 
 
@@ -140,7 +142,7 @@ class Validator:
 
     def _checkLivenessReadiness(self):
         """Check if liveness and readiness checks are disabled"""
-        for name, fname in {"Liveness": "/tmp/siterm-liveness-disable", "Readiness": "/tmp/siterm-readiness-disable"}.items():
+        for name, fname in {"Liveness": getTempDir() / "siterm-liveness-disable", "Readiness": getTempDir() / "siterm-readiness-disable"}.items():
             if os.path.exists(fname):
                 msg = f"{name} check is disabled on Frontend. Please enable it to ensure proper operation."
                 self.logger.warning(msg)

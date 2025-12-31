@@ -716,7 +716,7 @@ def getArpVals():
 
 def timedhourcheck(lockname, hours=1):
     """Timed Lock for file."""
-    filename = f"/tmp/siterm-timed-lock-{lockname}"
+    filename = f"{getTempDir()}/siterm-timed-lock-{lockname}"
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as fd:
             timestamp = fd.read()
