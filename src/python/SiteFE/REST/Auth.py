@@ -62,7 +62,7 @@ class M2MChallengeItem(BaseModel):
 # POST /auth/login  Authenticate human user;
 # ==========================================================
 @router.post("/auth/login", responses=DEFAULT_RESPONSES)
-@rateLimitIp(maxRequests=5, windowSeconds=60)
+@rateLimitIp(maxRequests=60, windowSeconds=60)
 async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
     """Authenticate human user"""
     try:
@@ -125,7 +125,7 @@ async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depend
 # GET /auth/whoami Returns identity of whoami;
 # ==========================================================
 @router.get("/auth/whoami", responses=DEFAULT_RESPONSES)
-@rateLimitIp(maxRequests=5, windowSeconds=60)
+@rateLimitIp(maxRequests=60, windowSeconds=60)
 async def whoami(request: Request, deps: Dict[str, Any] = Depends(apiReadDeps)):
     """
     Returns identity of whoami
@@ -148,7 +148,7 @@ async def whoami(request: Request, deps: Dict[str, Any] = Depends(apiReadDeps)):
 # POST /token Get Token based on Cert challenge
 # ==========================================================
 @router.post("/m2m/token", responses=DEFAULT_RESPONSES)
-@rateLimitIp(maxRequests=30, windowSeconds=60)
+@rateLimitIp(maxRequests=60, windowSeconds=60)
 async def token(request: Request, item: X509LoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
     """
     Request new token challenge
@@ -167,7 +167,7 @@ async def token(request: Request, item: X509LoginItem, deps: Dict[str, Any] = De
 # POST /m2m/token/refresh -> access token (rotated refresh)
 # ==========================================================
 @router.post("/m2m/token/refresh", responses=DEFAULT_RESPONSES)
-@rateLimitIp(maxRequests=5, windowSeconds=60)
+@rateLimitIp(maxRequests=60, windowSeconds=60)
 async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
     """
     Refresh access token (rotated refresh)
@@ -219,7 +219,7 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
 
 
 @router.post("/m2m/token/{challenge_id}", responses=DEFAULT_RESPONSES)
-@rateLimitIp(maxRequests=5, windowSeconds=60)
+@rateLimitIp(maxRequests=60, windowSeconds=60)
 async def token_challenge(
     request: Request,
     challenge_id: str,
@@ -235,7 +235,11 @@ async def token_challenge(
         if not verified:
             raise BadRequestError("Invalid challenge outcome")
 
-        access_token = deps["authHandler"].getAccessToken(user)
+        # Check that user is defined correctly
+        if not user or "permissions" not in user or "username" not in user["permissions"]:
+            raise BadRequestError("User information is incomplete")
+
+        access_token = deps["authHandler"].getAccessToken(user["permissions"]["username"])
         refresh_token = deps["authHandler"].getRefreshToken()
         out = {
             "token_hash": deps["authHandler"].hash_token(refresh_token),

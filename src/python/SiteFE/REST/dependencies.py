@@ -341,13 +341,12 @@ _RATE_LIMIT_LOCK = asyncio.Lock()
 
 
 def rateLimitIp(
-    maxRequests: int = 5,
+    maxRequests: int = 60,
     windowSeconds: int = 60,
 ):
     """
     Rate limit decorator based on client IP.
-
-    Example: 5 requests per 60 seconds per IP
+    Example: 60 requests per 60 seconds per IP
     """
 
     def decorator(func):
