@@ -32,7 +32,7 @@ app.include_router(debug_router, prefix="/api")
 app.include_router(topo_router, prefix="/api")
 app.include_router(monitoring_router, prefix="/api")
 app.include_router(service_router, prefix="/api")
-app.include_router(auth_router, prefix="/")
+app.include_router(auth_router)
 
 app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="ui")
 

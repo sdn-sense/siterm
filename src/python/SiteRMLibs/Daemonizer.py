@@ -324,16 +324,16 @@ class Daemon(DBBackend):
         retval = True
         if self.inargs.bypassstartcheck:
             return retval
-        if os.path.exists(getTempDir() / "siterm-mariadb-init"):
+        if os.path.exists(f"{getTempDir()}/siterm-mariadb-init"):
             try:
                 self.logger.info("Database init/upgrade started at:")
-                with open(getTempDir() / "siterm-mariadb-init", "r", encoding="utf-8") as fd:
+                with open(f"{getTempDir()}/siterm-mariadb-init", "r", encoding="utf-8") as fd:
                     self.logger.info(fd.read())
             except IOError:
                 pass
             self.logger.info("Database not ready. See details above. If continous, check the mariadb and mariadb_init process.")
             retval = False
-        if not os.path.exists(getTempDir() / "config-fetcher-ready") and not self.firstInitDone:
+        if not os.path.exists(f"{getTempDir()}/config-fetcher-ready") and not self.firstInitDone:
             self.logger.info("Config Fetcher not ready. See details above. If continous, check the config-fetcher process.")
             retval = False
         return retval
@@ -527,7 +527,7 @@ class Daemon(DBBackend):
                 exc=exc,
             )
             # Log state also to local file
-            createDirs(getTempDir() / "siterm-states/")
+            createDirs(f"{getTempDir()}/siterm-states/")
             fname = f"{getTempDir()}/siterm-states/{self.component}.json"
             if self.inargs.devicename:
                 fname = f"{getTempDir()}/siterm-states/{self.component}-{self.inargs.devicename}.json"

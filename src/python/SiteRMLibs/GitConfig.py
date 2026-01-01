@@ -12,7 +12,6 @@ import os
 import os.path
 import shutil
 import traceback
-from pathlib import Path
 
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
@@ -30,7 +29,7 @@ class GitConfig:
 
     def __init__(self):
         self.config = {}
-        self.cachedir = Path(getTempDir() / "git_config")
+        self.cachedir = f"{getTempDir()}/git_config"
         self.defaults = {
             "SITENAME": {"optional": False},
             "GIT_REPO": {"optional": True, "default": "sdn-sense/rm-configs"},
@@ -130,7 +129,7 @@ class GitConfig:
         mappings = self._getGitMapping()
         if self.config["MD5"] not in mappings:
             raise Exception(f"MD5 {self.config['MD5']} not found in mappings.")
-        frontendAuthReFile = self.cachedir / self.config["SITENAME"] / mappings[self.config["MD5"]]["config"] / "auth_re.yaml"
+        frontendAuthReFile = self.cachedir / self.config["SITENAME"] / mappings[self.config["MD5"]]["config"] / "auth-re.yaml"
         if frontendAuthReFile.exists():
             with open(frontendAuthReFile, "r", encoding="utf-8") as fd:
                 frontendAuthRe = yload(fd)

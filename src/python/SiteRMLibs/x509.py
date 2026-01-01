@@ -80,8 +80,8 @@ def load_cert_info(cert):
 
 def get_challenge_record(challenge_id: str):
     """Retrieve a challenge record by its ID."""
-    tempfile = getTempDir() / "m2m" / f"{challenge_id}.json"
-    if not tempfile.exists():
+    tempfile = f"{getTempDir()}/m2m/{challenge_id}.json"
+    if not os.path.exists(tempfile):
         return None
     return getFileContentAsJson(tempfile)
 
@@ -170,7 +170,7 @@ class AuthHandler:
 
             challenge_id = secrets.token_hex(16)
 
-            tempfile = getTempDir() / "m2m" / f"{challenge_id}.json"
+            tempfile = f"{getTempDir()}/m2m/{challenge_id}.json"
             expires_at = getUTCnow() + 60
 
             dumpFileContentAsJson(tempfile, {"challenge_id": challenge_id, "challenge": base64.b64encode(challenge).decode("utf-8"), "input_cert": input_cert, "expires_at": expires_at})
@@ -221,7 +221,7 @@ class AuthHandler:
             print(f"Full traceback: {traceback.format_exc()}")
             return False, None
         finally:
-            tempfile = getTempDir() / "m2m" / f"{challenge_id}.json"
+            tempfile = f"{getTempDir()}/m2m/{challenge_id}.json"
             removeFile(tempfile)
         return True, user
 
@@ -395,6 +395,8 @@ class AuthHandler:
                     self.allowedWCerts.setdefault(userinfo["full_dn"], {})
                     self.allowedWCerts[userinfo["full_dn"]]["username"] = user
                     self.allowedWCerts[userinfo["full_dn"]]["permissions"] = userinfo["permissions"]
+        print(f"Allowed Certs: {self.allowedCerts}")
+        print(f"Allowed Wildcard Certs: {self.allowedWCerts}")
 
     def checkAuthorized(self, certinfo):
         """Check if user is authorized."""

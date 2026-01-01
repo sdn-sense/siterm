@@ -21,7 +21,6 @@ from SiteFE.REST.dependencies import (
     apiReadDeps,
     rateLimitIp,
 )
-from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import BadRequestError
 from SiteRMLibs.MainUtilities import generateRandomUUID, getUTCnow
 

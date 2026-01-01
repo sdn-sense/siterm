@@ -29,7 +29,6 @@ import traceback
 import uuid
 from contextlib import contextmanager
 from enum import Enum
-from pathlib import Path
 
 import simplejson as json
 from rdflib import Graph
@@ -323,26 +322,27 @@ def createDirs(fullDirPath):
 
 def getTempDir():
     """Get the temporary directory."""
-    return Path(tempfile.gettempdir())
+    return tempfile.gettempdir()
 
 
 def firstRunCheck(firstRun, servicename):
     """Check if it is first run."""
     if firstRun:
-        fname = getTempDir() / "siterm" / f"{servicename.lower()}-first-run"
-        fname.parent.mkdir(parents=True, exist_ok=True)
-        if not fname.exists():
-            fname.write_text(f"This is first run of {servicename}. Do not remove this file.")
+        fname = f"{getTempDir()}/siterm/{servicename.lower()}-first-run"
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        if not os.path.exists(fname):
+            with open(fname, "w", encoding="utf-8") as fd:
+                fd.write(f"This is first run of {servicename}. Do not remove this file.")
     else:
-        fname = getTempDir() / "siterm" / f"{servicename.lower()}-first-run"
-        if fname.exists():
-            fname.unlink()
+        fname = f"{getTempDir()}/siterm/{servicename.lower()}-first-run"
+        if os.path.exists(fname):
+            os.unlink(fname)
 
 
 def firstRunFinished(servicename):
     """Check if first Run finished for a service."""
-    fname = getTempDir() / "siterm" / f"{servicename.lower()}-first-run"
-    if fname.exists():
+    fname = f"{getTempDir()}/siterm/{servicename.lower()}-first-run"
+    if os.path.exists(fname):
         return False
     return True
 

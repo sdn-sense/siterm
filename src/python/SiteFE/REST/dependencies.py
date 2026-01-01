@@ -250,10 +250,20 @@ def rateLimitIp(
         @wraps(func)
         async def wrapper(*args, **kwargs):
             request: Request | None = None
-            for arg in args:
-                if isinstance(arg, Request):
-                    request = arg
+
+            # 1. Look in kwargs
+            for value in kwargs.values():
+                if isinstance(value, Request):
+                    request = value
                     break
+
+            # 2. Fallback: look in args
+            if request is None:
+                for arg in args:
+                    if isinstance(arg, Request):
+                        request = arg
+                        break
+
             if request is None:
                 raise RuntimeError("rate_limit_ip requires Request parameter")
             client_ip = request.client.host if request.client else "unknown"
