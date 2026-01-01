@@ -82,8 +82,8 @@ class GitConfig:
     def _getGitMapping(self):
         """Get Site mapping from Local Git Repository."""
         # Based on site, get mapping.yaml file
-        mappingFile = self.cachedir / self.config["SITENAME"] / "mapping.yaml"
-        if not mappingFile.exists():
+        mappingFile = f"{self.cachedir}/{self.config['SITENAME']}/mapping.yaml"
+        if not os.path.exists(mappingFile):
             raise Exception(f"Mapping file {mappingFile} does not exist.")
         with open(mappingFile, "r", encoding="utf-8") as fd:
             mapping = yload(fd)
@@ -94,8 +94,8 @@ class GitConfig:
         mappings = self._getGitMapping()
         if self.config["MD5"] not in mappings:
             raise Exception(f"MD5 {self.config['MD5']} not found in mappings.")
-        agentConfFile = self.cachedir / self.config["SITENAME"] / mappings[self.config["MD5"]]["config"] / "main.yaml"
-        if not agentConfFile.exists():
+        agentConfFile = f"{self.cachedir}/{self.config['SITENAME']}/{mappings[self.config['MD5']]['config']}/main.yaml"
+        if not os.path.exists(agentConfFile):
             raise Exception(f"Agent configuration file {agentConfFile} does not exist.")
         with open(agentConfFile, "r", encoding="utf-8") as fd:
             agentConfig = yload(fd)
@@ -106,8 +106,8 @@ class GitConfig:
         mappings = self._getGitMapping()
         if self.config["MD5"] not in mappings:
             raise Exception(f"MD5 {self.config['MD5']} not found in mappings.")
-        frontendConfFile = self.cachedir / self.config["SITENAME"] / mappings[self.config["MD5"]]["config"] / "main.yaml"
-        if not frontendConfFile.exists():
+        frontendConfFile = f"{self.cachedir}/{self.config['SITENAME']}/{mappings[self.config['MD5']]['config']}/main.yaml"
+        if not os.path.exists(frontendConfFile):
             raise Exception(f"Frontend configuration file {frontendConfFile} does not exist.")
         with open(frontendConfFile, "r", encoding="utf-8") as fd:
             frontendConfig = yload(fd)
@@ -118,8 +118,8 @@ class GitConfig:
         mappings = self._getGitMapping()
         if self.config["MD5"] not in mappings:
             raise Exception(f"MD5 {self.config['MD5']} not found in mappings.")
-        frontendAuthFile = self.cachedir / self.config["SITENAME"] / mappings[self.config["MD5"]]["config"] / "auth.yaml"
-        if not frontendAuthFile.exists():
+        frontendAuthFile = f"{self.cachedir}/{self.config['SITENAME']}/{mappings[self.config['MD5']]['config']}/auth.yaml"
+        if not os.path.exists(frontendAuthFile):
             raise Exception(f"Frontend authentication file {frontendAuthFile} does not exist.")
         with open(frontendAuthFile, "r", encoding="utf-8") as fd:
             frontendAuth = yload(fd)
@@ -130,8 +130,8 @@ class GitConfig:
         mappings = self._getGitMapping()
         if self.config["MD5"] not in mappings:
             raise Exception(f"MD5 {self.config['MD5']} not found in mappings.")
-        frontendAuthReFile = self.cachedir / self.config["SITENAME"] / mappings[self.config["MD5"]]["config"] / "auth-re.yaml"
-        if frontendAuthReFile.exists():
+        frontendAuthReFile = f"{self.cachedir}/{self.config['SITENAME']}/{mappings[self.config['MD5']]['config']}/auth-re.yaml"
+        if os.path.exists(frontendAuthReFile):
             with open(frontendAuthReFile, "r", encoding="utf-8") as fd:
                 frontendAuthRe = yload(fd)
             return frontendAuthRe

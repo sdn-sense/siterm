@@ -15,6 +15,7 @@ import os
 import re
 import secrets
 import traceback
+import pprint
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -421,8 +422,8 @@ class AuthHandler:
                     self.allowedWCerts.setdefault(userinfo["full_dn"], {})
                     self.allowedWCerts[userinfo["full_dn"]]["username"] = user
                     self.allowedWCerts[userinfo["full_dn"]]["permissions"] = userinfo["permissions"]
-        print(f"Allowed Certs: {self.allowedCerts}")
-        print(f"Allowed Wildcard Certs: {self.allowedWCerts}")
+            print(f"Allowed Certs: {pprint.pformat(self.allowedCerts)}")
+            print(f"Allowed Wildcard Certs: {pprint.pformat(self.allowedWCerts)}")
 
     def checkAuthorized(self, certinfo):
         """Check if user is authorized."""
