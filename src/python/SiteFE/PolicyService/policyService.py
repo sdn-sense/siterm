@@ -8,6 +8,7 @@ Authors:
 
 Date: 2021/12/01
 """
+
 import argparse
 import copy
 import os
@@ -169,7 +170,12 @@ class PolicyService(RDFHelper, Timing, BWService):
 
     def __generateStartEnd(self):
         """Generate start and end time for existsDuring"""
-        self.startend = {"default": {"start": getUTCnow(**self.config[self.sitename]["default_params"]["starttime"]), "end": getUTCnow(**self.config[self.sitename]["default_params"]["endtime"])}}
+        self.startend = {
+            "default": {
+                "start": getUTCnow(**self.config[self.sitename]["default_params"]["starttime"]),
+                "end": getUTCnow(**self.config[self.sitename]["default_params"]["endtime"]),
+            }
+        }
 
     def __setTime(self, existsDuring, uri):
         """Set time for existsDuring"""
@@ -182,7 +188,10 @@ class PolicyService(RDFHelper, Timing, BWService):
         existsDuring.setdefault("end", tmptimes["end"])
         existsDuring.setdefault("uri", f"{uri}:lifetime")
         # Once we are done, we add times to startend.
-        self.startend[uri] = {"start": existsDuring["start"], "end": existsDuring["end"]}
+        self.startend[uri] = {
+            "start": existsDuring["start"],
+            "end": existsDuring["end"],
+        }
         return existsDuring
 
     def __getDefBandwidth(self, suburi, currentBW):
@@ -340,7 +349,7 @@ class PolicyService(RDFHelper, Timing, BWService):
         """Add custom entry to output for kube and singleport - which usually has no switching service"""
         for mainkey, mainval in tmpOut.items():
             # If main key is equal our simple vlanport - ignore it;
-            if mainkey.startswith(f'{self.prefixes["site"]}:{host}:{intf}:vlanport+'):
+            if mainkey.startswith(f"{self.prefixes['site']}:{host}:{intf}:vlanport+"):
                 continue
             # Check if that entry is already in output and alert if it is
             if mainkey in out.get(key, {}):
@@ -981,7 +990,14 @@ class PolicyService(RDFHelper, Timing, BWService):
     def _addAllPendingDeltas(self, currentGraph):
         """Add all accepted deltas to the current graph."""
         self.logger.info(f"Adding all accepted deltas to the current graph, not older than {DELTA_COMMIT_TIMEOUT} seconds")
-        for delta in self.dbI.get("deltas", search=[["state", "accepted"], ["insertdate", ">", getUTCnow() - DELTA_COMMIT_TIMEOUT]], limit=50):
+        for delta in self.dbI.get(
+            "deltas",
+            search=[
+                ["state", "accepted"],
+                ["insertdate", ">", getUTCnow() - DELTA_COMMIT_TIMEOUT],
+            ],
+            limit=50,
+        ):
             delta["content"] = evaldict(delta["content"])
             self.logger.debug(f"Adding delta {delta['uid']} to current graph")
             currentGraph = self._addDeltasToModel(currentGraph, delta["content"])

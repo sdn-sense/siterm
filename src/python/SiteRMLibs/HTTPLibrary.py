@@ -7,6 +7,8 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
+
+import base64
 import copy
 import functools
 import os
@@ -15,21 +17,18 @@ import time
 import traceback
 import urllib.parse
 from typing import Any, Callable
-import base64
 
 import httpx
 import jwt
-
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
-
 from SiteRMLibs.CustomExceptions import (
     HTTPException,
     HTTPServerNotReady,
-    ValidityFailure,
 )
 from SiteRMLibs.MainUtilities import getTempDir, getUTCnow
+
 
 def signChallenge(challenge_response: dict, private_key_pem: str) -> str:
     """
@@ -46,24 +45,12 @@ def signChallenge(challenge_response: dict, private_key_pem: str) -> str:
     elif isinstance(private_key, rsa.RSAPrivateKey):
         signature = private_key.sign(
             challenge,
-            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH), hashes.SHA256())
+            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+            hashes.SHA256(),
+        )
     else:
         raise RuntimeError("Unsupported private key type")
     return base64.b64encode(signature).decode("utf-8")
-
-def argValidity(arg, aType):
-    "Argument validation."
-    if not arg:
-        return {} if aType == dict else []
-    if aType == dict:
-        if isinstance(arg, dict):
-            return arg
-    elif aType == list:
-        if isinstance(arg, list):
-            return arg
-    else:
-        raise ValidityFailure(f"Input {type(arg)} != {aType}.")
-    return {} if aType == dict else []
 
 
 def checkServerUrl(url):
@@ -76,7 +63,16 @@ def sanitizeURL(url):
     """Take the url return sanitized clean URL."""
     endpoint = urllib.parse.urlparse(url)
     netloc = f"{endpoint.hostname}:{endpoint.port}" if endpoint.port else endpoint.hostname
-    cleanUrl = urllib.parse.urlunparse([endpoint.scheme, netloc, endpoint.path, endpoint.params, endpoint.query, endpoint.fragment])
+    cleanUrl = urllib.parse.urlunparse(
+        [
+            endpoint.scheme,
+            netloc,
+            endpoint.path,
+            endpoint.params,
+            endpoint.query,
+            endpoint.fragment,
+        ]
+    )
     return cleanUrl
 
 
@@ -166,7 +162,11 @@ class Requests:
         """Initialize the Requests class with a URL and optional logger."""
         self.logger = logger
         self.useragent = f"SiteRM-{socket.gethostname()}"
-        self.default_headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": self.useragent}
+        self.default_headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": self.useragent,
+        }
         self.host = sanitizeURL(url)
         checkServerUrl(self.host)
 
@@ -235,10 +235,12 @@ class Requests:
         if "token_endpoint" in auth_info and auth_info["token_endpoint"]:
             try:
                 certval, keyval = self.__http_getCertKeyValue()
-                response = self.authsession.request(method="POST",
-                                                    url=auth_info["token_endpoint"],
-                                                    headers={"Content-Type": "application/json"},
-                                                    json={"certificate": certval})
+                response = self.authsession.request(
+                    method="POST",
+                    url=auth_info["token_endpoint"],
+                    headers={"Content-Type": "application/json"},
+                    json={"certificate": certval},
+                )
                 if response.status_code == 200:
                     # We get the challenge response, that needs to be completed to obtain the token
                     # Challenge can be solved only with the private key corresponding to the certificate
@@ -247,10 +249,12 @@ class Requests:
                         # Sign the challenge with the private key
                         signature = signChallenge(challengeResponse, keyval)
                         # Send the signed challenge to the token endpoint to get the token
-                        token_response = self.authsession.request(method="POST",
-                                                                  url=challengeResponse["ref_url"],
-                                                                  headers={"Content-Type": "application/json"},
-                                                                  json={"signature": signature})
+                        token_response = self.authsession.request(
+                            method="POST",
+                            url=challengeResponse["ref_url"],
+                            headers={"Content-Type": "application/json"},
+                            json={"signature": signature},
+                        )
                         if token_response.status_code == 200:
                             resp_json = token_response.json()
                             self.bearertoken = resp_json.get("access_token", None)
@@ -275,10 +279,12 @@ class Requests:
         if self.refreshtoken and auth_info.get("refresh_token_endpoint"):
             # need to post sessionid and refresh_token
             # Call refresh token endpoint
-            response = self.authsession.request(method="POST",
-                                                url=auth_info["refresh_token_endpoint"],
-                                                headers={"Content-Type": "application/json"},
-                                                json={"sessionid": self.sessionid, "refresh_token": self.refreshtoken})
+            response = self.authsession.request(
+                method="POST",
+                url=auth_info["refresh_token_endpoint"],
+                headers={"Content-Type": "application/json"},
+                json={"sessionid": self.sessionid, "refresh_token": self.refreshtoken},
+            )
             if response.status_code == 200:
                 resp_json = response.json()
                 self.bearertoken = resp_json.get("access_token", None)
@@ -320,7 +326,10 @@ class Requests:
     def __makeSiteRMHTTPCall(self, url, verb, **kwargs):
         """Make an HTTP request to the SiteRM Frontend."""
         if not self.bearertoken or self._expiredBearerToken():
-            response = self.session.request(method="GET", url=urllib.parse.urljoin(self.host, "/.well-known/openid-configuration"))
+            response = self.session.request(
+                method="GET",
+                url=urllib.parse.urljoin(self.host, "/.well-known/openid-configuration"),
+            )
             if response.status_code == 200:
                 auth_info = response.json()
                 self._renewBearerToken(auth_info)
@@ -329,7 +338,13 @@ class Requests:
                 raise HTTPException(f"Failed to get authentication method from /.well-known/openid-configuration: {response.status_code} {response.reason_phrase}")
         kwargs.setdefault("headers", {})
         kwargs["headers"]["Authorization"] = f"Bearer {self.bearertoken}"
-        response = self.session.request(method=verb, url=url, headers=kwargs["headers"], json=kwargs["data"] if kwargs["json"] else None, data=None if kwargs["json"] else kwargs["data"])
+        response = self.session.request(
+            method=verb,
+            url=url,
+            headers=kwargs["headers"],
+            json=kwargs["data"] if kwargs["json"] else None,
+            data=None if kwargs["json"] else kwargs["data"],
+        )
         return response
 
     def http_makeRequest(self, verb, uri, **kwargs):
@@ -342,12 +357,12 @@ class Requests:
             return response.text
 
         kwargs.setdefault("data", None)
-        kwargs.setdefault("headers", None)
+        kwargs.setdefault("headers", {})
         kwargs.setdefault("json", True)
         kwargs.setdefault("SiteRMHTTPCall", True)
         if kwargs.get("useragent"):
             self.http_extendUserAgent(kwargs["useragent"])
-        kwargs["headers"] = {**self.default_headers, **argValidity(kwargs["headers"], dict)}
+        kwargs["headers"] = {**self.default_headers, **kwargs["headers"], **dict()}
         url = urllib.parse.urljoin(self.host, self._stripHostFromUrl(uri))
         try:
             if kwargs["SiteRMHTTPCall"]:
@@ -360,8 +375,18 @@ class Requests:
                 self._logMessage(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
                 if kwargs["raiseEx"]:
                     raise HTTPException(f"HTTP request failed: {response.status_code} {response.reason_phrase} for URL: {url}")
-                return getResponseContent(response, kwargs["json"]), response.status_code, response.reason_phrase, False
-            return getResponseContent(response, kwargs["json"]), response.status_code, response.reason_phrase, False
+                return (
+                    getResponseContent(response, kwargs["json"]),
+                    response.status_code,
+                    response.reason_phrase,
+                    False,
+                )
+            return (
+                getResponseContent(response, kwargs["json"]),
+                response.status_code,
+                response.reason_phrase,
+                False,
+            )
         except HTTPException as e:
             return {"error": str(e)}, 500, "HTTP Exception", False
         except Exception as e:

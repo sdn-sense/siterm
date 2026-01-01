@@ -8,6 +8,7 @@ Authors:
 
 Date: 2025/04/21
 """
+
 import argparse
 import os
 import sys
@@ -23,10 +24,9 @@ from SiteRMLibs.MainUtilities import (
     getDBConn,
     getFileContentAsJson,
     getLoggingObject,
+    getTempDir,
     getUTCnow,
     getVal,
-    getTempDir
-
 )
 
 
@@ -142,7 +142,10 @@ class Validator:
 
     def _checkLivenessReadiness(self):
         """Check if liveness and readiness checks are disabled"""
-        for name, fname in {"Liveness": f"{getTempDir()}/siterm-liveness-disable", "Readiness": f"{getTempDir()}/siterm-readiness-disable"}.items():
+        for name, fname in {
+            "Liveness": f"{getTempDir()}/siterm-liveness-disable",
+            "Readiness": f"{getTempDir()}/siterm-readiness-disable",
+        }.items():
             if os.path.exists(fname):
                 msg = f"{name} check is disabled on Frontend. Please enable it to ensure proper operation."
                 self.logger.warning(msg)

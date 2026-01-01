@@ -18,6 +18,7 @@ Authors:
 
 Date: 2022/11/21
 """
+
 import copy
 import os
 import sys
@@ -139,7 +140,14 @@ class Topology:
                 remPort = vals.get("remote_port_id", "")
                 if remSwitch and remPort:
                     bw = switchdata["intstats"][key].get("bandwidth", 0)
-                    swout["topo"].setdefault(key, {"device": remSwitch["switch"], "port": remPort, "bandwidth": bw})
+                    swout["topo"].setdefault(
+                        key,
+                        {
+                            "device": remSwitch["switch"],
+                            "port": remPort,
+                            "bandwidth": bw,
+                        },
+                    )
                     print(swout["topo"][key])
         # Now lets get host information
         for host in self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100):
@@ -165,14 +173,28 @@ class Topology:
                     remSwitch = self._findConnection(workdata, vals.get("remote_chassis_id", ""))
                     remPort = vals.get("remote_port_id", "")
                     if remSwitch and remPort:
-                        hout["topo"].setdefault(intf, {"device": remSwitch["switch"], "port": remPort, "bandwidth": getHostPortSpeed(netinfo, intf)})
+                        hout["topo"].setdefault(
+                            intf,
+                            {
+                                "device": remSwitch["switch"],
+                                "port": remPort,
+                                "bandwidth": getHostPortSpeed(netinfo, intf),
+                            },
+                        )
                         print(hout["topo"][intf])
             else:
                 for intf in hostconfig.get("agent", {}).get("interfaces", []):
                     swintf = hostconfig.get(intf, {}).get("port", "")
                     switch = hostconfig.get(intf, {}).get("switch", "")
                     if switch and swintf:
-                        hout["topo"].setdefault(intf, {"device": switch, "port": swintf, "bandwidth": getHostPortSpeed(netinfo, intf)})
+                        hout["topo"].setdefault(
+                            intf,
+                            {
+                                "device": switch,
+                                "port": swintf,
+                                "bandwidth": getHostPortSpeed(netinfo, intf),
+                            },
+                        )
                         print(hout["topo"][intf])
         out.update(self.getWANLinks(incr))
         # Write new out to file
@@ -289,7 +311,11 @@ class PromOut:
         for hostname, hostDict in self.memMonitor.items():
             for serviceName, vals in hostDict.items():
                 for key, val in vals.items():
-                    labels = {"servicename": serviceName, "key": key, "hostname": hostname}
+                    labels = {
+                        "servicename": serviceName,
+                        "key": key,
+                        "hostname": hostname,
+                    }
                     memInfo.labels(**labels).set(val)
 
     def __diskStats(self, registry):
@@ -454,7 +480,15 @@ class PromOut:
             "network_status",
             "Network Status information",
             labelnames=labelnames,
-            states=["activating", "activated", "activate-error", "deactivated", "deactivate-error", "unknown", "unset"],
+            states=[
+                "activating",
+                "activated",
+                "activate-error",
+                "deactivated",
+                "deactivate-error",
+                "unknown",
+                "unset",
+            ],
             registry=registry,
         )
         qosGauge = Gauge("qos_status", "QoS Requests Status", labelqos, registry=registry)
@@ -654,7 +688,10 @@ class SNMPMonitoring(Warnings):
         """Get MAC addresses for a host using SNMP or Ansible"""
         # Junos does not provide this information via SNMP, we do it via ansible
         # FRR runs on linux, and we get this data via ansible.
-        if self.hostconf[host].get("ansible_network_os", "undefined") in ["sense.junos.junos", "sense.frr.frr"]:
+        if self.hostconf[host].get("ansible_network_os", "undefined") in [
+            "sense.junos.junos",
+            "sense.frr.frr",
+        ]:
             self._ansiblemac(host, macs)
             return
         if not self.session:

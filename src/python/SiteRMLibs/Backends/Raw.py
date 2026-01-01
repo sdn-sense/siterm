@@ -8,6 +8,7 @@ Authors:
 
 Date: 2021/12/01
 """
+
 import os
 
 import yaml
@@ -23,9 +24,7 @@ class Switch:
         self.sitename = sitename
         self.defVlans = []
         self.name = "RAW"
-        self.workDir = os.path.join(
-            self.config.get(sitename, "privatedir"), "RAW-Switch-Config/"
-        )
+        self.workDir = os.path.join(self.config.get(sitename, "privatedir"), "RAW-Switch-Config/")
         createDirs(self.workDir)
 
     @staticmethod
@@ -82,21 +81,14 @@ class Switch:
         for switchn in self.config.get(self.sitename, "switch"):
             hOut = out.setdefault(switchn, {})
             for port in self.config.get(switchn, "ports"):
-                portOut = (
-                    hOut.setdefault("event_data", {})
-                    .setdefault("res", {})
-                    .setdefault("ansible_facts", {})
-                    .setdefault("ansible_net_interfaces", {})
-                )
+                portOut = hOut.setdefault("event_data", {}).setdefault("res", {}).setdefault("ansible_facts", {}).setdefault("ansible_net_interfaces", {})
                 portOut[port] = {}
         return out, {}
 
     @staticmethod
     def getports(inData):
         """Get ports from ansible output"""
-        return inData["event_data"]["res"]["ansible_facts"][
-            "ansible_net_interfaces"
-        ].keys()
+        return inData["event_data"]["res"]["ansible_facts"]["ansible_net_interfaces"].keys()
 
     @staticmethod
     def getPortMembers(inData, port):

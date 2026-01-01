@@ -17,6 +17,7 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2021 California Institute of Technology
 Date                    : 2021/03/12
 """
+
 import argparse
 import os
 import sys
@@ -27,7 +28,13 @@ from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.DefaultParams import SERVICE_NOACCEPT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import checkoverlap, getsubnet, ipVersion
-from SiteRMLibs.MainUtilities import (contentDB, getDBConn, getLoggingObject, getUTCnow, getVal)
+from SiteRMLibs.MainUtilities import (
+    contentDB,
+    getDBConn,
+    getLoggingObject,
+    getUTCnow,
+    getVal,
+)
 
 COMPONENT = "Debugger"
 
@@ -108,7 +115,11 @@ class Debugger(DebugService):
 
     def writeWorkerRanges(self, workers):
         """Write worker ranges to a file."""
-        fpath = os.path.join(self.config.get(self.sitename, "privatedir"), "ServiceData", "workers-ranges.json")
+        fpath = os.path.join(
+            self.config.get(self.sitename, "privatedir"),
+            "ServiceData",
+            "workers-ranges.json",
+        )
         out = {"ipv4": {}, "ipv6": {}}
         for _, workerd in workers.items():
             for iptype, ipoutname in [("inet", "ipv4"), ("inet6", "ipv6")]:

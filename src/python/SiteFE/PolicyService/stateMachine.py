@@ -18,6 +18,7 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2018/11/26
 """
+
 import json
 
 from SiteRMLibs.DefaultParams import DELTA_COMMIT_TIMEOUT, DELTA_REMOVE_TIMEOUT
@@ -82,7 +83,14 @@ class StateMachine:
     def accepted(self, dbObj):
         """Marks delta as accepted."""
         # Get all deltas in accepted state and check timeout
-        for dbentry in dbObj.get("deltas", search=[["state", "accepted"], ["insertdate", "<", getUTCnow() - DELTA_COMMIT_TIMEOUT]], limit=50):
+        for dbentry in dbObj.get(
+            "deltas",
+            search=[
+                ["state", "accepted"],
+                ["insertdate", "<", getUTCnow() - DELTA_COMMIT_TIMEOUT],
+            ],
+            limit=50,
+        ):
             self.logger.info(f"Delta {dbentry['uid']} is in accepted state for more than {DELTA_COMMIT_TIMEOUT} seconds. Changing to remove state.")
             self.stateChangerDelta(dbObj, "remove", **dbentry)
 
@@ -126,7 +134,13 @@ class StateMachine:
     def remove(self, dbObj):
         """Check on all remove state deltas."""
         # Remove fully from database
-        for delta in dbObj.get("deltas", search=[["state", "remove"], ["updatedate", "<", int(getUTCnow() - DELTA_REMOVE_TIMEOUT)]]):
+        for delta in dbObj.get(
+            "deltas",
+            search=[
+                ["state", "remove"],
+                ["updatedate", "<", int(getUTCnow() - DELTA_REMOVE_TIMEOUT)],
+            ],
+        ):
             self.stateChangerDelta(dbObj, "removed", **delta)
             self.modelstatecancel(dbObj, **delta)
 

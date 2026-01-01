@@ -10,6 +10,7 @@ Authors:
 
 Date: 2021/12/01
 """
+
 import json
 import os
 import random
@@ -145,7 +146,10 @@ class Switch:
                 time.sleep(self.config.getint("ansible", "ansible_runtime_retry_delay"))
             except Exception as ex:
                 self.logger.error(f"Ansible playbook got unexpected Exception: {ex}")
-                self.logger.debug(f"Exception happened for {playbook} on hosts {hosts} with subitem {subitem}", exc_info=True)
+                self.logger.debug(
+                    f"Exception happened for {playbook} on hosts {hosts} with subitem {subitem}",
+                    exc_info=True,
+                )
                 self.logger.debug(f"Full traceback: {traceback.format_exc()}")
                 retryCount -= 1
                 time.sleep(self.config.getint("ansible", "ansible_runtime_retry_delay"))
@@ -157,7 +161,7 @@ class Switch:
 
     def getHostConfig(self, host, subitem=""):
         """Get Ansible Host Config"""
-        fname = f"{self.config.get('ansible', 'inventory_host_vars_dir'+ subitem)}/{host}.yaml"
+        fname = f"{self.config.get('ansible', 'inventory_host_vars_dir' + subitem)}/{host}.yaml"
         if not os.path.isfile(fname):
             raise Exception(f"Ansible config file for {host} not available.")
         with open(fname, "r", encoding="utf-8") as fd:

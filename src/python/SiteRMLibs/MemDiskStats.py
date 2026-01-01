@@ -8,6 +8,7 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+
 import re
 
 import psutil

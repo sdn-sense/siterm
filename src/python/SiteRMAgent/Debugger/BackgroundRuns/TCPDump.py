@@ -7,7 +7,9 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
+
 import asyncio.exceptions
+
 import pyshark
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.ipaddr import getInterfaces
@@ -54,9 +56,7 @@ class TCPDump(BaseDebugAction):
 
     def main(self):
         """Do TCP Dump"""
-        self.logMessage(
-            f"Running TCPDump background run. Input requestdict: {self.requestdict}"
-        )
+        self.logMessage(f"Running TCPDump background run. Input requestdict: {self.requestdict}")
         if self.requestdict["interface"] not in getInterfaces():
             self.logMessage("Interface is not available on the node")
             return

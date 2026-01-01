@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Database cleaner"""
+
 import traceback
 
 import pymysql

@@ -35,7 +35,14 @@ def publishState(reqHandler, item: PublishStateInput):
         "hostport": item.modtype,
         "uuidstate": item.state,
     }
-    reqHandler.makeHttpCall("POST", f"/api/{item.sitename}/deltas/{item.uuid}/timestates", data=out, retries=1, raiseEx=False, useragent="Ruler")
+    reqHandler.makeHttpCall(
+        "POST",
+        f"/api/{item.sitename}/deltas/{item.uuid}/timestates",
+        data=out,
+        retries=1,
+        raiseEx=False,
+        useragent="Ruler",
+    )
 
 
 class Rules:
@@ -195,19 +202,37 @@ class Routing:
         try:
             if route.get("src_ipv6_intf", "") and route.get("dst_ipv6", "") and self.rules.lookup_to(route["dst_ipv6"]):
                 initialized = True
-                self.apply_rule(f"ip -6 rule del to {route['dst_ipv6']}", route["src_ipv6_intf"], route["src_ipv6"])
+                self.apply_rule(
+                    f"ip -6 rule del to {route['dst_ipv6']}",
+                    route["src_ipv6_intf"],
+                    route["src_ipv6"],
+                )
             if route.get("src_ipv6", "") and route.get("src_ipv6_intf", ""):
                 if self.rules.lookup_from_lookup(f"{route['src_ipv6']}/128", route["src_ipv6_intf"]):
                     initialized = True
-                    self.apply_rule(f"ip -6 rule del from {route['src_ipv6']}/128", route["src_ipv6_intf"], route["src_ipv6"])
+                    self.apply_rule(
+                        f"ip -6 rule del from {route['src_ipv6']}/128",
+                        route["src_ipv6_intf"],
+                        route["src_ipv6"],
+                    )
                 if self.rules.lookup_to_lookup(f"{route['src_ipv6']}/128", route["src_ipv6_intf"]):
                     initialized = True
-                    self.apply_rule(f"ip -6 rule del to {route['src_ipv6']}/128", route["src_ipv6_intf"], route["src_ipv6"])
+                    self.apply_rule(
+                        f"ip -6 rule del to {route['src_ipv6']}/128",
+                        route["src_ipv6_intf"],
+                        route["src_ipv6"],
+                    )
             if initialized:
-                publishState(self.requestHandler, PublishStateInput("ipv6", uuid, self.hostname, "deactivated", self.sitename))
+                publishState(
+                    self.requestHandler,
+                    PublishStateInput("ipv6", uuid, self.hostname, "deactivated", self.sitename),
+                )
         except FailedInterfaceCommand:
             if initialized:
-                publishState(self.requestHandler, PublishStateInput("ipv6", uuid, self.hostname, "deactivate-error", self.sitename))
+                publishState(
+                    self.requestHandler,
+                    PublishStateInput("ipv6", uuid, self.hostname, "deactivate-error", self.sitename),
+                )
         return []
 
     def activate(self, route, uuid):
@@ -222,20 +247,38 @@ class Routing:
                 rules = self.rules.lookup_to_lookup(route["dst_ipv6"], route["src_ipv6_intf"])
                 if not rules:
                     initialized = True
-                    self.apply_rule(f"ip -6 rule add to {route['dst_ipv6']}", route["src_ipv6_intf"], route["src_ipv6"])
+                    self.apply_rule(
+                        f"ip -6 rule add to {route['dst_ipv6']}",
+                        route["src_ipv6_intf"],
+                        route["src_ipv6"],
+                    )
 
             if route.get("src_ipv6", "") and route.get("src_ipv6_intf", ""):
                 rules = self.rules.lookup_from_lookup(route["src_ipv6"], route["src_ipv6_intf"])
                 if not rules:
                     initialized = True
-                    self.apply_rule(f"ip -6 rule add from {route['src_ipv6']}/128", route["src_ipv6_intf"], route["src_ipv6"])
+                    self.apply_rule(
+                        f"ip -6 rule add from {route['src_ipv6']}/128",
+                        route["src_ipv6_intf"],
+                        route["src_ipv6"],
+                    )
                 rules = self.rules.lookup_to_lookup(route["src_ipv6"], route["src_ipv6_intf"])
                 if not rules:
                     initialized = True
-                    self.apply_rule(f"ip -6 rule add to {route['src_ipv6']}/128", route["src_ipv6_intf"], route["src_ipv6"])
+                    self.apply_rule(
+                        f"ip -6 rule add to {route['src_ipv6']}/128",
+                        route["src_ipv6_intf"],
+                        route["src_ipv6"],
+                    )
             if initialized:
-                publishState(self.requestHandler, PublishStateInput("ipv6", uuid, self.hostname, "activated", self.sitename))
+                publishState(
+                    self.requestHandler,
+                    PublishStateInput("ipv6", uuid, self.hostname, "activated", self.sitename),
+                )
         except FailedInterfaceCommand:
             if initialized:
-                publishState(self.requestHandler, PublishStateInput("ipv6", uuid, self.hostname, "activate-error", self.sitename))
+                publishState(
+                    self.requestHandler,
+                    PublishStateInput("ipv6", uuid, self.hostname, "activate-error", self.sitename),
+                )
         return []

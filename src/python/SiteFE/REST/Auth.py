@@ -9,10 +9,11 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+
 import traceback
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
@@ -75,20 +76,43 @@ async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depend
             raise BadRequestError("Invalid username or password")
 
         if pass_handler.needs_rehash(user[0]["password_hash"]):
-            deps["dbI"].update("users", search=[["id", user[0]["id"]]], update={"password_hash": pass_handler.hash_password(item.password)})
+            deps["dbI"].update(
+                "users",
+                search=[["id", user[0]["id"]]],
+                update={"password_hash": pass_handler.hash_password(item.password)},
+            )
 
         refresh_token = deps["authHandler"].getRefreshToken()
         refresh_token_hash = deps["authHandler"].hash_token(refresh_token)
 
         deps["dbI"].insert(
             "refresh_tokens",
-            {"session_id": generateRandomUUID(), "token_hash": refresh_token_hash, "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl, "revoked": False, "rotated_from": None},
+            {
+                "session_id": generateRandomUUID(),
+                "token_hash": refresh_token_hash,
+                "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
+                "revoked": False,
+                "rotated_from": None,
+            },
         )
 
         # TODO: Review how to pass the cookies to the response
-        response = APIResponse.genResponse(request, {"message": "Login successful", "user": {"id": user[0]["id"], "username": user[0]["username"]}})
+        response = APIResponse.genResponse(
+            request,
+            {
+                "message": "Login successful",
+                "user": {"id": user[0]["id"], "username": user[0]["username"]},
+            },
+        )
 
-        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="strict", max_age=int(deps["authHandler"].refresh_token_ttl))
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="strict",
+            max_age=int(deps["authHandler"].refresh_token_ttl),
+        )
         return response
     except BadRequestError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -149,7 +173,14 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
     """
     try:
         # Check if refresh token is present in the database
-        refreshRecord = deps["dbI"].get("refresh_tokens", limit=1, search=[["token_hash", deps["authHandler"].hash_token(item.refresh_token)], ["session_id", item.session_id]])
+        refreshRecord = deps["dbI"].get(
+            "refresh_tokens",
+            limit=1,
+            search=[
+                ["token_hash", deps["authHandler"].hash_token(item.refresh_token)],
+                ["session_id", item.session_id],
+            ],
+        )
         if not refreshRecord:
             raise BadRequestError("Refresh token is invalid or expired")
         # Check if the refresh token has expired or been revoked
@@ -158,7 +189,10 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
         # Get new token, new refresh token, delete old refresh token
         access_token = deps["authHandler"].getAccessToken(refreshRecord[0]["user"])
         new_refresh_token = deps["authHandler"].getRefreshToken()
-        deps["dbI"].delete("refresh_tokens", [["token_hash", deps["authHandler"].hash_token(item.refresh_token)]])
+        deps["dbI"].delete(
+            "refresh_tokens",
+            [["token_hash", deps["authHandler"].hash_token(item.refresh_token)]],
+        )
         out = {
             "token_hash": deps["authHandler"].hash_token(new_refresh_token),
             "session_id": item.session_id,
@@ -167,7 +201,15 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
             "rotated_from": refreshRecord[0]["token_hash"],
         }
         deps["dbI"].insert("refresh_tokens", [out])
-        return APIResponse.genResponse(request, {"session_id": item.session_id, "access_token": access_token, "refresh_token": new_refresh_token, "token_type": "Bearer"})
+        return APIResponse.genResponse(
+            request,
+            {
+                "session_id": item.session_id,
+                "access_token": access_token,
+                "refresh_token": new_refresh_token,
+                "token_type": "Bearer",
+            },
+        )
     except BadRequestError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
@@ -177,7 +219,12 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
 
 @router.post("/m2m/token/{challenge_id}", responses=DEFAULT_RESPONSES)
 @rateLimitIp(maxRequests=5, windowSeconds=60)
-async def token_challenge(request: Request, challenge_id: str, item: M2MChallengeItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
+async def token_challenge(
+    request: Request,
+    challenge_id: str,
+    item: M2MChallengeItem,
+    deps: Dict[str, Any] = Depends(apiPublicDeps),
+):
     """
     Challenge reply
     """

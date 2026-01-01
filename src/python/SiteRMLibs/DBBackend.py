@@ -62,7 +62,7 @@ def buildDatabaseURL() -> str:
     database = os.getenv("MARIA_DB_DATABASE", "sitefe")
     charset = os.getenv("MARIA_DB_CHARSET", "utf8mb4")
 
-    return f"mysql+pymysql://{user}:{password}" f"@{host}:{port}/{database}?charset={charset}"
+    return f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}?charset={charset}"
 
 
 # ==========================================================
@@ -77,7 +77,11 @@ class DBBackend:
         loadEnvFile()
 
         self.database_url = buildDatabaseURL()
-        self.autocommit = os.getenv("MARIA_DB_AUTOCOMMIT", "True") in ("True", "true", "1")
+        self.autocommit = os.getenv("MARIA_DB_AUTOCOMMIT", "True") in (
+            "True",
+            "true",
+            "1",
+        )
 
         self.engine = create_engine(
             self.database_url,

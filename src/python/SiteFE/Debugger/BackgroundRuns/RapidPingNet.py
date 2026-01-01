@@ -7,9 +7,10 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
+
+from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.CustomExceptions import SwitchException
-from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.ipaddr import ipVersion
 
 
@@ -32,19 +33,13 @@ class RapidPingNet(BaseDebugAction):
                 if "stdout" in host_events and host_events["stdout"]:
                     for line in host_events["stdout"].split("\n"):
                         self.logMessage(line)
-                    for line in (
-                        host_events.get("event_data", {})
-                        .get("res", {})
-                        .get("stdout", [])
-                    ):
+                    for line in host_events.get("event_data", {}).get("res", {}).get("stdout", []):
                         for lline in line.split("\n"):
                             self.logMessage(lline)
 
     def applyConfig(self, raiseExc=True, hosts=None, subitem=""):
         """Apply yaml config on Switch (issue Ping Request)"""
-        ansOut, failures = self.switch.plugin._applyNewConfig(
-            hosts, subitem, templateName="ping.yaml"
-        )
+        ansOut, failures = self.switch.plugin._applyNewConfig(hosts, subitem, templateName="ping.yaml")
         if not ansOut:
             self.logMessage("Ansible output is empty for ping request")
             return
@@ -58,9 +53,7 @@ class RapidPingNet(BaseDebugAction):
         self._logStats(ansOut, hosts)
         if failures and raiseExc:
             self.logMessage(f"Ansible failures: {failures}")
-            raise SwitchException(
-                "There was configuration apply issue. Please contact support and provide this log file."
-            )
+            raise SwitchException("There was configuration apply issue. Please contact support and provide this log file.")
         self.logMessage(f"Ansible output: {ansOut.stats}")
         return
 
@@ -73,11 +66,7 @@ class RapidPingNet(BaseDebugAction):
             "type": f"ipv{ipv}",
             f"ipv{ipv}_address": self.requestdict["ip"],
         }
-        vrf = (
-            self.config.config["MAIN"]
-            .get(self.requestdict["hostname"], {})
-            .get("vrf", "")
-        )
+        vrf = self.config.config["MAIN"].get(self.requestdict["hostname"], {}).get("vrf", "")
         if vrf:
             out["vrf"] = vrf
         return out
@@ -97,9 +86,7 @@ class RapidPingNet(BaseDebugAction):
         # Prepare ping template and attach to new ansible request
         curActiveConf["ping"] = self._getPingTemplate()
         # Write curActiveConf to single apply dir
-        self.logMessage(
-            f"Execute Ping Request for {swname}. Full request: {self.requestdict}"
-        )
+        self.logMessage(f"Execute Ping Request for {swname}. Full request: {self.requestdict}")
         self.switch.plugin._writeHostConfig(swname, curActiveConf, "_debug")
         try:
             self.applyConfig(True, [swname], "_debug")

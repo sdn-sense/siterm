@@ -9,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
+
 import copy
 import sys
 
@@ -303,7 +304,12 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         # Check all that have failed to apply, and retry if needed
         self.retryFailedChecker()
 
-        for acttype, actcalls in {"vsw": {"interface": self.compareVsw}, "rst": {"sense_bgp": self.compareBGP}, "singleport": {"interface": self.compareVsw}, "qos": {"qos": self.compareQoS}}.items():
+        for acttype, actcalls in {
+            "vsw": {"interface": self.compareVsw},
+            "rst": {"sense_bgp": self.compareBGP},
+            "singleport": {"interface": self.compareVsw},
+            "qos": {"qos": self.compareQoS},
+        }.items():
             scannedUUIDs.setdefault(acttype, [])
             self.acttype = acttype
             uuidDict = self.yamlconfuuidActive.get(acttype, {})

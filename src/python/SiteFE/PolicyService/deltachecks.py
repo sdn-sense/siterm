@@ -6,6 +6,7 @@ Authors:
 
 Date: 2021/01/20
 """
+
 import copy
 import itertools
 from pprint import pprint
@@ -81,7 +82,11 @@ class ConflictChecker(Timing, BWService):
     @staticmethod
     def _checkIfRulerAlive(polcls, hostname):
         """Check if Ruler Service is alive on the host"""
-        dbitem = polcls.dbI.get("servicestates", search=[["hostname", hostname], ["servicename", "Ruler"]], limit=1)
+        dbitem = polcls.dbI.get(
+            "servicestates",
+            search=[["hostname", hostname], ["servicename", "Ruler"]],
+            limit=1,
+        )
         if not dbitem:
             raise ServiceNotReady(f"Ruler service not found for {hostname}. Is Agent container running at the site?")
 
@@ -330,7 +335,7 @@ class ConflictChecker(Timing, BWService):
                 remainingBW -= usedBW
                 self.logger.debug(f"BW on {hostname} {portIP['interface']} after applying new delta. Max: {portData['bandwidth']}, Used: {usedBW}, Remaining: {remainingBW} Mbps")
                 if remainingBW < 0:
-                    msg = f"Insufficient bandwidth on {hostname} {portIP['interface']}. After all checks, remaining BW: {portData.get('bandwidth', 0)-usedBW} Mbps; After applying delta: {remainingBW} Mbps; Max available: {portData.get('bandwidth', 0)} Mbps; Used: {usedBW} Mbps; Requested: {portIP.get('bandwidth', 0)} Mbps"
+                    msg = f"Insufficient bandwidth on {hostname} {portIP['interface']}. After all checks, remaining BW: {portData.get('bandwidth', 0) - usedBW} Mbps; After applying delta: {remainingBW} Mbps; Max available: {portData.get('bandwidth', 0)} Mbps; Used: {usedBW} Mbps; Requested: {portIP.get('bandwidth', 0)} Mbps"
                     self.logger.error(msg)
                     raise OverlapException(msg)
             # Unknown Host/Switch/Device

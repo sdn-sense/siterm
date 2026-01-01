@@ -9,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+
 import os
 from time import sleep
 from typing import Literal, Optional
@@ -27,6 +28,7 @@ from pydantic import BaseModel, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
+    StrictBool,
     apiAdminDeps,
     apiReadDeps,
     apiWriteDeps,
@@ -34,7 +36,6 @@ from SiteFE.REST.dependencies import (
     checkSite,
     depGetModel,
     forbidExtraQueryParams,
-    StrictBool
 )
 from SiteRMLibs.CustomExceptions import ModelNotFound
 from SiteRMLibs.DefaultParams import (
@@ -68,7 +69,12 @@ def _getdeltas(dbI, **kwargs):
         search.append(["uid", kwargs.get("deltaID")])
     if kwargs.get("updatedate"):
         search.append(["updatedate", ">", kwargs.get("updatedate")])
-    out = dbI.get("deltas", search=search, limit=kwargs.get("limit", LIMIT_DEFAULT), orderby=["insertdate", "DESC"])
+    out = dbI.get(
+        "deltas",
+        search=search,
+        limit=kwargs.get("limit", LIMIT_DEFAULT),
+        orderby=["insertdate", "DESC"],
+    )
     if out and kwargs.get("deltaID"):
         return out[0]
     return out
@@ -130,7 +136,7 @@ class DeltaTimeState(BaseModel):
                 },
             },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - No deltas found in the system.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - No deltas found in the system.",
                 "content": {
                     "application/json": {
                         "example": {
@@ -146,9 +152,21 @@ class DeltaTimeState(BaseModel):
 )
 async def getDeltas(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the service deltas for.", example=startupConfig.get("SITENAME", "default")),
-    summary: StrictBool = Query(True, description="Whether to return a summary of the deltas. Defaults to False."),
-    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the service deltas for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
+    summary: StrictBool = Query(
+        True,
+        description="Whether to return a summary of the deltas. Defaults to False.",
+    ),
+    limit: int = Query(
+        LIMIT_DEFAULT,
+        description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.",
+        ge=LIMIT_MIN,
+        le=LIMIT_MAX,
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("limit", "summary")),
 ):
@@ -161,7 +179,10 @@ async def getDeltas(
     deltas = _getdeltas(deps["dbI"], limit=limit, updatedate=modTime)
     if not deltas:
         # return 404 Not Found if no deltas are found
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No deltas found in the system.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No deltas found in the system.",
+        )
     # We get it here, but would be more valuable to do this in sql query.
     for delta in deltas:
         current = {
@@ -186,9 +207,12 @@ async def getDeltas(
     tags=["Deltas"],
     responses={
         **{
-            201: {"description": "Delta submitted successfully", "content": {"application/json": {"example": {"delta": "example_delta"}}}},
+            201: {
+                "description": "Delta submitted successfully",
+                "content": {"application/json": {"example": {"delta": "example_delta"}}},
+            },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Model not found in the database.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - Model not found in the database.",
                 "content": {
                     "application/json": {
                         "example": {
@@ -199,7 +223,7 @@ async def getDeltas(
                 },
             },
             400: {
-                "description": "Bad Request. Possible Reasons:\n" " - You did POST method, but nor reduction, nor addition is present.\n" " - Failed to accept delta.",
+                "description": "Bad Request. Possible Reasons:\n - You did POST method, but nor reduction, nor addition is present.\n - Failed to accept delta.",
                 "content": {
                     "application/json": {
                         "example": {
@@ -210,7 +234,7 @@ async def getDeltas(
                 },
             },
             504: {
-                "description": "Gateway Timeout. Possible Reasons:\n" " - Failed to accept delta. Timeout reached and output to accept delta is empty.",
+                "description": "Gateway Timeout. Possible Reasons:\n - Failed to accept delta. Timeout reached and output to accept delta is empty.",
                 "content": {"application/json": {"example": {"timeout": {"detail": "Failed to accept delta. Timeout reached and output to accept delta is empty. Please report to site admins."}}}},
             },
         },
@@ -220,7 +244,11 @@ async def getDeltas(
 async def submitDelta(
     request: Request,
     item: DeltaItem,
-    sitename: str = Path(..., description="The site name to submit the delta for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to submit the delta for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     deps=Depends(apiAdminDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -237,10 +265,19 @@ async def submitDelta(
         )
     # If both addition and reduction are empty, raise a Error
     if not item.reduction and not item.addition:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You did POST method, but nor reduction, nor addition is present")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You did POST method, but nor reduction, nor addition is present",
+        )
     if delta := _getdeltas(deps["dbI"], deltaID=item.id):
         # If delta is not in a final state, we delete it from db, and will add new one.
-        if delta["state"] not in ["activated", "failed", "removed", "accepted", "accepting"]:
+        if delta["state"] not in [
+            "activated",
+            "failed",
+            "removed",
+            "accepted",
+            "accepting",
+        ]:
             deps["dbI"].delete("deltas", [["uid", delta["uid"]]])
     try:
         # Get latest model, and check if modelId is same as latest
@@ -251,11 +288,31 @@ async def submitDelta(
             # Model ID does not match latest model, and latest model is the one with all committed changes. We will bypass the request and use the latest model ID.
             print(f"WARNING! Bypassing requested modelID {item.modelId}. Using latest model for comparison: {latestModel['uid']}")
     except ModelNotFound as ex:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found in the database. First time run?") from ex
-    outContent = {"ID": item.id, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "content": item.dict(), "State": "accepting", "modelId": item.modelId}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found in the database. First time run?",
+        ) from ex
+    outContent = {
+        "ID": item.id,
+        "insertdate": getUTCnow(),
+        "updatedate": getUTCnow(),
+        "content": item.dict(),
+        "State": "accepting",
+        "modelId": item.modelId,
+    }
     # Save item to disk
-    fname = os.path.join(deps["config"].get(sitename, "privatedir"), "PolicyService", "httpnew", f"{item.id}.json")
-    finishedName = os.path.join(deps["config"].get(sitename, "privatedir"), "PolicyService", "httpfinished", f"{item.id}.json")
+    fname = os.path.join(
+        deps["config"].get(sitename, "privatedir"),
+        "PolicyService",
+        "httpnew",
+        f"{item.id}.json",
+    )
+    finishedName = os.path.join(
+        deps["config"].get(sitename, "privatedir"),
+        "PolicyService",
+        "httpfinished",
+        f"{item.id}.json",
+    )
     saveContent(fname, outContent)
 
     # This is a blocking call, better approach is to reply and ask to check later.
@@ -273,16 +330,25 @@ async def submitDelta(
     # If timer reached 0, we will not have file in finished directory
     if timer == 0 and not out:
         # Return failed http code
-        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Failed to accept delta. Timeout reached and output to accept delta is empty.")
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Failed to accept delta. Timeout reached and output to accept delta is empty.",
+        )
     if not out:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to accept delta. Output is empty.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to accept delta. Output is empty.",
+        )
     outContent["State"] = out["State"]
     outContent["id"] = item.id
     outContent["lastModified"] = convertTSToDatetime(outContent["updatedate"])
     outContent["href"] = f"{request.base_url}api/{sitename}/deltas/{item.id}"
     if outContent["State"] not in ["accepted"]:
         outContent["Error"] = out.get("Error", f"Unknown Error. Error Message: None. Full dump: {jsondumps(out)}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to accept delta. Error Message: {outContent['Error']}.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to accept delta. Error Message: {outContent['Error']}.",
+        )
     return APIResponse.genResponse(request, outContent, status_code=status.HTTP_201_CREATED)
 
 
@@ -296,9 +362,12 @@ async def submitDelta(
     tags=["Deltas"],
     responses={
         **{
-            200: {"description": "Delta information retrieved successfully", "content": {"application/json": {"example": {"delta": "example_delta"}}}},
+            200: {
+                "description": "Delta information retrieved successfully",
+                "content": {"application/json": {"example": {"delta": "example_delta"}}},
+            },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Delta not found in the database.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - Delta not found in the database.",
                 "content": {
                     "application/json": {
                         "example": {
@@ -308,16 +377,26 @@ async def submitDelta(
                     }
                 },
             },
-            304: {"description": "Delta not modified", "content": {"application/json": {"example": {"detail": "Delta not modified. See Last-Modified header for the last modification date."}}}},
+            304: {
+                "description": "Delta not modified",
+                "content": {"application/json": {"example": {"detail": "Delta not modified. See Last-Modified header for the last modification date."}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def getDeltaByID(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the delta information for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the delta information for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     delta_id: str = Path(..., description="The ID of the delta to retrieve."),
-    summary: StrictBool = Query(False, description="Whether to return a summary of the deltas. Defaults to False."),
+    summary: StrictBool = Query(
+        False,
+        description="Whether to return a summary of the deltas. Defaults to False.",
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("summary")),
 ):
@@ -328,10 +407,16 @@ async def getDeltaByID(
     modTime = getModTime(request.headers)
     delta = _getdeltas(deps["dbI"], deltaID=delta_id)
     if not delta:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delta not found in the database. First time run?")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delta not found in the database. First time run?",
+        )
     # Check if the delta is modified since last request
     if delta["updatedate"] < modTime:
-        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers={"Last-Modified": httpdate(delta["updatedate"])})
+        return Response(
+            status_code=status.HTTP_304_NOT_MODIFIED,
+            headers={"Last-Modified": httpdate(delta["updatedate"])},
+        )
     # Return 200 OK with delta content
     headers = {"Last-Modified": httpdate(delta["updatedate"])}
     delta["insertdate"] = convertTSToDatetime(delta["insertdate"])
@@ -364,9 +449,12 @@ async def getDeltaByID(
     tags=["Deltas"],
     responses={
         **{
-            200: {"description": "Action performed successfully", "content": {"application/json": {"example": {"result": "Action completed successfully"}}}},
+            200: {
+                "description": "Action performed successfully",
+                "content": {"application/json": {"example": {"result": "Action completed successfully"}}},
+            },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Delta not found in the database.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - Delta not found in the database.",
                 "content": {
                     "application/json": {
                         "example": {
@@ -376,14 +464,21 @@ async def getDeltaByID(
                     }
                 },
             },
-            400: {"description": "Bad Request", "content": {"application/json": {"example": {"detail": "Delta state 'X' is not valid for action 'Y'. Only 'Z' state is allowed."}}}},
+            400: {
+                "description": "Bad Request",
+                "content": {"application/json": {"example": {"detail": "Delta state 'X' is not valid for action 'Y'. Only 'Z' state is allowed."}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def performActionOnDelta(
     request: Request,
-    sitename: str = Path(..., description="The site name to perform the action on the delta for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to perform the action on the delta for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     delta_id: str = Path(..., description="The ID of the delta to perform the action on."),
     action: Literal["commit", "forcecommit", "forceapply"] = Path(..., description="The action to perform on the delta."),
     deps=Depends(apiAdminDeps),
@@ -397,14 +492,21 @@ async def performActionOnDelta(
     # Check if checkignore is set, if so, check if first run is finished
     if not checkReadyState(deps):
         # If first run is not finished, raise an exception
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="API is not in a ready state to accept requests. Server restart? Failing service?. Retry later.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="API is not in a ready state to accept requests. Server restart? Failing service?. Retry later.",
+        )
     # Check if delta state is valid for commit action;
     delta = _getdeltas(deps["dbI"], deltaID=delta_id)
     if not delta:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delta not found in the database.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delta not found in the database.",
+        )
     if delta["state"] != "accepted" and action == "commit":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Delta state '{delta['state']}' is not valid for commit action. Only 'accepted' state is allowed. Current state: {delta['state']}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Delta state '{delta['state']}' is not valid for commit action. Only 'accepted' state is allowed. Current state: {delta['state']}",
         )
     if delta["state"] not in ["activated", "failed", "accepted"] and action == "forcecommit":
         raise HTTPException(
@@ -423,7 +525,10 @@ async def performActionOnDelta(
     if delta["state"] in ["accepted"] and action == "remove":
         # Remove delta from the database
         deps["dbI"].delete("deltas", [["uid", delta_id]])
-    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid action '{action}' specified. Valid actions are 'commit', 'forcecommit', 'forceapply'.")
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Invalid action '{action}' specified. Valid actions are 'commit', 'forcecommit', 'forceapply'.",
+    )
 
 
 # =========================================================
@@ -436,9 +541,12 @@ async def performActionOnDelta(
     tags=["Deltas"],
     responses={
         **{
-            200: {"description": "Time states retrieved successfully", "content": {"application/json": {"example": {"time_states": "example_time_states"}}}},
+            200: {
+                "description": "Time states retrieved successfully",
+                "content": {"application/json": {"example": {"time_states": "example_time_states"}}},
+            },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Delta not found in the database.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - Delta not found in the database.",
                 "content": {
                     "application/json": {
                         "example": {
@@ -455,9 +563,18 @@ async def performActionOnDelta(
 )
 async def getTimeStatesForDelta(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the time states for the delta.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the time states for the delta.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     delta_id: str = Path(..., description="The ID of the delta to retrieve the time states for."),
-    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
+    limit: int = Query(
+        LIMIT_DEFAULT,
+        description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.",
+        ge=LIMIT_MIN,
+        le=LIMIT_MAX,
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("limit")),
 ):
@@ -467,12 +584,23 @@ async def getTimeStatesForDelta(
     checkSite(deps, sitename)
     delta = _getdeltas(deps["dbI"], deltaID=delta_id)
     if not delta:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delta not found in the database.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delta not found in the database.",
+        )
 
     # Retrieve time states from the database
-    timestates = deps["dbI"].get("states", search=[["deltaid", delta_id]], orderby=["insertdate", "DESC"], limit=limit)
+    timestates = deps["dbI"].get(
+        "states",
+        search=[["deltaid", delta_id]],
+        orderby=["insertdate", "DESC"],
+        limit=limit,
+    )
     if not timestates:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No time states found for the specified delta ID.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No time states found for the specified delta ID.",
+        )
     return APIResponse.genResponse(request, timestates)
 
 
@@ -483,9 +611,12 @@ async def getTimeStatesForDelta(
     tags=["Deltas"],
     responses={
         **{
-            201: {"description": "Time state created successfully", "content": {"application/json": {"example": {"time_state": "example_time_state"}}}},
+            201: {
+                "description": "Time state created successfully",
+                "content": {"application/json": {"example": {"time_state": "example_time_state"}}},
+            },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Delta not found in the database.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - Delta not found in the database.",
                 "content": {
                     "application/json": {
                         "example": {
@@ -502,7 +633,11 @@ async def getTimeStatesForDelta(
 async def createTimeStateForDelta(
     request: Request,
     item: DeltaTimeState,
-    sitename: str = Path(..., description="The site name to create the time state for the delta.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to create the time state for the delta.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     delta_id: str = Path(..., description="The ID of the delta to create the time state for."),
     deps=Depends(apiWriteDeps),
 ):
@@ -512,6 +647,26 @@ async def createTimeStateForDelta(
     checkSite(deps, sitename)
     # Check if the delta is in a state that allows creating a time state
     deps["dbI"].insert(
-        "deltatimestates", [{"insertdate": getUTCnow(), "uuid": item.uuid, "uuidtype": item.uuidtype, "hostname": item.hostname, "hostport": item.hostport, "uuidstate": item.uuidstate}]
+        "deltatimestates",
+        [
+            {
+                "insertdate": getUTCnow(),
+                "uuid": item.uuid,
+                "uuidtype": item.uuidtype,
+                "hostname": item.hostname,
+                "hostport": item.hostport,
+                "uuidstate": item.uuidstate,
+            }
+        ],
     )
-    return APIResponse.genResponse(request, [{"status": "Time state created successfully", "delta_id": delta_id, "time_state": item.dict()}], status_code=status.HTTP_201_CREATED)
+    return APIResponse.genResponse(
+        request,
+        [
+            {
+                "status": "Time state created successfully",
+                "delta_id": delta_id,
+                "time_state": item.dict(),
+            }
+        ],
+        status_code=status.HTTP_201_CREATED,
+    )

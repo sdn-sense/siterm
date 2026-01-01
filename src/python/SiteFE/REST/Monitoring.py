@@ -9,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+
 import os
 import traceback
 from typing import Any, Dict
@@ -57,13 +58,20 @@ startupConfig = getstartupconfig()
     tags=["Monitoring Metrics"],
     responses={
         **{
-            200: {"description": "TODO", "content": {CONTENT_TYPE_LATEST: {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "TODO",
+                "content": {CONTENT_TYPE_LATEST: {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def getprommetrics(
-    sitename: str = Path(..., description="The site name to retrieve the service metrics for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the service metrics for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -83,7 +91,10 @@ async def getprommetrics(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Metrics are not available") from ex
     except Exception as ex:
         print(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unable to retrieve metrics") from ex
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to retrieve metrics",
+        ) from ex
 
 
 # =========================================================
@@ -96,13 +107,20 @@ async def getprommetrics(
     tags=["Monitoring Metrics"],
     responses={
         **{
-            200: {"description": "TODO", "content": {CONTENT_TYPE_LATEST: {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "TODO",
+                "content": {CONTENT_TYPE_LATEST: {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def prometheuspassthrough(
-    sitename: str = Path(..., description="The site name to retrieve the Prometheus passthrough for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the Prometheus passthrough for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     hostname: str = Path(..., description="The hostname to retrieve the Prometheus passthrough for."),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -113,7 +131,12 @@ async def prometheuspassthrough(
     checkSite(deps, sitename)
     # Placeholder for actual implementation
     # This should check if the hostname is valid and then forward the request to the appropriate Prometheus endpoint
-    hostdata = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=1, search=[["hostname", hostname]])
+    hostdata = deps["dbI"].get(
+        "hosts",
+        orderby=["updatedate", "DESC"],
+        limit=1,
+        search=[["hostname", hostname]],
+    )
     if not hostdata:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Host {hostname} not found")
     hostdata = hostdata[0]
@@ -121,7 +144,10 @@ async def prometheuspassthrough(
     nodeexporter = hostdata.get("hostinfo", {}).get("Summary", {}).get("config", {}).get("general", {}).get("node_exporter", "")
     nodeexporter_passthrough = hostdata.get("hostinfo", {}).get("Summary", {}).get("config", {}).get("general", {}).get("node_exporter_passthrough", False)
     if not nodeexporter or not nodeexporter_passthrough:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Host {hostname} does not have node_exporter passthrough enabled")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Host {hostname} does not have node_exporter passthrough enabled",
+        )
     # Check if it starts with http or https. by default use http
     if not nodeexporter.startswith("http"):
         nodeexporter = f"http://{nodeexporter}"
@@ -133,9 +159,15 @@ async def prometheuspassthrough(
             ret = await client.get(nodeexporter)
             ret.raise_for_status()
     except httpx.RequestError as e:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Error connecting to node_exporter at {nodeexporter}: {e}") from e
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Error connecting to node_exporter at {nodeexporter}: {e}",
+        ) from e
     except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=f"node_exporter returned HTTP {e.response.status_code}") from e
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=f"node_exporter returned HTTP {e.response.status_code}",
+        ) from e
     return Response(content=ret.text, media_type=CONTENT_TYPE_LATEST)
 
 
@@ -157,15 +189,27 @@ class MonStats(BaseModel):
     tags=["Monitoring Metrics"],
     responses={
         **{
-            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "TODO",
+                "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def getmonitoringstats(
     request: Request,
-    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
-    sitename: str = Path(..., description="The site name to retrieve the monitoring statistics for.", example=startupConfig.get("SITENAME", "default")),
+    limit: int = Query(
+        LIMIT_DEFAULT,
+        description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.",
+        ge=LIMIT_MIN,
+        le=LIMIT_MAX,
+    ),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the monitoring statistics for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("limit")),
 ):
@@ -183,7 +227,10 @@ async def getmonitoringstats(
     tags=["Monitoring Metrics"],
     responses={
         **{
-            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "TODO",
+                "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
@@ -191,7 +238,11 @@ async def getmonitoringstats(
 async def postmonitoringstats(
     item: MonStats,
     request: Request,
-    sitename: str = Path(..., description="The site name to post the monitoring statistics for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to post the monitoring statistics for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -202,10 +253,20 @@ async def postmonitoringstats(
     host = deps["dbI"].get("snmpmon", limit=1, search=[["hostname", item.hostname]])
     updatestate = "UPDATED"
     if host:
-        out = {"id": host[0]["id"], "hostname": item.hostname, "updatedate": getUTCnow(), "output": jsondumps(item.output)}
+        out = {
+            "id": host[0]["id"],
+            "hostname": item.hostname,
+            "updatedate": getUTCnow(),
+            "output": jsondumps(item.output),
+        }
         deps["dbI"].update("snmpmon", [out])
     else:
-        out = {"hostname": item.hostname, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "output": jsondumps(item.output)}
+        out = {
+            "hostname": item.hostname,
+            "insertdate": getUTCnow(),
+            "updatedate": getUTCnow(),
+            "output": jsondumps(item.output),
+        }
         updatestate = "INSERTED"
         deps["dbI"].insert("snmpmon", [out])
     return APIResponse.genResponse(request, {"Status": updatestate})

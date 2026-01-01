@@ -9,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+
 import asyncio
 import time
 import traceback
@@ -41,11 +42,26 @@ DEP_STATE_MACHINE = ST.StateMachine(DEP_CONFIG)
 AUTH_HANDLER = AuthHandler()
 
 DEFAULT_RESPONSES = {
-    401: {"description": "Unauthorized", "content": {"application/json": {"example": {"detail": "Not authorized to access this resource"}}}},
-    403: {"description": "Forbidden", "content": {"application/json": {"example": {"detail": "Access to this resource is forbidden"}}}},
-    422: {"description": "Unprocessable Entity", "content": {"application/json": {"example": {"detail": "Request parameters are invalid"}}}},
-    500: {"description": "Internal Server Error", "content": {"application/json": {"example": {"detail": "Internal server error"}}}},
-    503: {"description": "Service Unavailable", "content": {"application/json": {"example": {"detail": "Service temporarily unavailable"}}}},
+    401: {
+        "description": "Unauthorized",
+        "content": {"application/json": {"example": {"detail": "Not authorized to access this resource"}}},
+    },
+    403: {
+        "description": "Forbidden",
+        "content": {"application/json": {"example": {"detail": "Access to this resource is forbidden"}}},
+    },
+    422: {
+        "description": "Unprocessable Entity",
+        "content": {"application/json": {"example": {"detail": "Request parameters are invalid"}}},
+    },
+    500: {
+        "description": "Internal Server Error",
+        "content": {"application/json": {"example": {"detail": "Internal server error"}}},
+    },
+    503: {
+        "description": "Service Unavailable",
+        "content": {"application/json": {"example": {"detail": "Service temporarily unavailable"}}},
+    },
 }
 
 
@@ -75,7 +91,13 @@ def loguseraction(request, userinfo):
     method = request.method
     url = str(request.url)
     timestamp = getUTCnow()
-    log_entry = {"timestamp": timestamp, "client_host": client_host, "method": method, "url": url, "userinfo": userinfo}
+    log_entry = {
+        "timestamp": timestamp,
+        "client_host": client_host,
+        "method": method,
+        "url": url,
+        "userinfo": userinfo,
+    }
     print(f"User Action Log: {log_entry}")
 
 
@@ -88,11 +110,18 @@ async def depAuthenticate(request: Request):
         loguseraction(request, {"user_info": userInfo})
         return {"user_info": userInfo}
     except (IssuesWithAuth, RequestWithoutCert) as ex:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized", headers={"WWW-Authenticate": "Bearer"}) from ex
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from ex
     except Exception as ex:
         loguseraction(request, {"exception": str(ex)})
         print(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error") from ex
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from ex
 
 
 def depGetModelContent(dbentry, **kwargs):
@@ -101,8 +130,8 @@ def depGetModelContent(dbentry, **kwargs):
     if rettype not in ["json-ld", "ntriples", "turtle"]:
         raise ModelNotFound(f"Model type {rettype} is not supported. Supported: json-ld, ntriples, turtle")
     if kwargs.get("encode", False):
-        return encodebase64(getAllFileContent(f'{dbentry["fileloc"]}.{rettype}'))
-    return getAllFileContent(f'{dbentry["fileloc"]}.{rettype}')
+        return encodebase64(getAllFileContent(f"{dbentry['fileloc']}.{rettype}"))
+    return getAllFileContent(f"{dbentry['fileloc']}.{rettype}")
 
 
 def depGetModel(dbI, **kwargs):
@@ -130,7 +159,10 @@ def checkReadyState(deps):
 def checkSite(deps, sitename: str):
     """Check if the site is configured in the system."""
     if sitename not in deps["config"]["MAIN"]:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Site '{sitename}' is not configured in the system. Please check the request and configuration.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Site '{sitename}' is not configured in the system. Please check the request and configuration.",
+        )
 
 
 def checkPermissions(userinfo, required_perms: List[str]):
@@ -142,26 +174,72 @@ def checkPermissions(userinfo, required_perms: List[str]):
     #    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access to this resource is forbidden due to insufficient permissions.")
 
 
-def apiReadDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
+def apiReadDeps(
+    config=Depends(depGetConfig),
+    dbI=Depends(depGetDBObj),
+    user=Depends(depAuthenticate),
+    authHandler=Depends(depGetAuthHandler),
+    stateMachine=Depends(depGetStateMachine),
+):
     """Dependency to get all necessary objects for the REST API."""
-    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
+    return {
+        "config": config,
+        "dbI": dbI,
+        "user": user,
+        "authHandler": authHandler,
+        "stateMachine": stateMachine,
+    }
 
 
-def apiWriteDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
+def apiWriteDeps(
+    config=Depends(depGetConfig),
+    dbI=Depends(depGetDBObj),
+    user=Depends(depAuthenticate),
+    authHandler=Depends(depGetAuthHandler),
+    stateMachine=Depends(depGetStateMachine),
+):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["write", "admin"])
-    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
+    return {
+        "config": config,
+        "dbI": dbI,
+        "user": user,
+        "authHandler": authHandler,
+        "stateMachine": stateMachine,
+    }
 
 
-def apiAdminDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), authHandler=Depends(depGetAuthHandler), stateMachine=Depends(depGetStateMachine)):
+def apiAdminDeps(
+    config=Depends(depGetConfig),
+    dbI=Depends(depGetDBObj),
+    user=Depends(depAuthenticate),
+    authHandler=Depends(depGetAuthHandler),
+    stateMachine=Depends(depGetStateMachine),
+):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["admin"])
-    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
+    return {
+        "config": config,
+        "dbI": dbI,
+        "user": user,
+        "authHandler": authHandler,
+        "stateMachine": stateMachine,
+    }
 
 
-def apiPublicDeps(config=Depends(depGetConfig), authHandler=Depends(depGetAuthHandler), dbI=Depends(depGetDBObj), stateMachine=Depends(depGetStateMachine)):
+def apiPublicDeps(
+    config=Depends(depGetConfig),
+    authHandler=Depends(depGetAuthHandler),
+    dbI=Depends(depGetDBObj),
+    stateMachine=Depends(depGetStateMachine),
+):
     """Dependency to get all necessary objects for the public REST API."""
-    return {"config": config, "dbI": dbI, "authHandler": authHandler, "stateMachine": stateMachine}
+    return {
+        "config": config,
+        "dbI": dbI,
+        "authHandler": authHandler,
+        "stateMachine": stateMachine,
+    }
 
 
 # pylint: disable=too-few-public-methods
@@ -169,17 +247,30 @@ class APIResponse:
     """API Response class to handle API responses."""
 
     @staticmethod
-    def genResponse(request: Request, data: Union[Dict[str, Any], List[Any]], headers: Dict[str, str] = None, status_code: int = 200):
+    def genResponse(
+        request: Request,
+        data: Union[Dict[str, Any], List[Any]],
+        headers: Dict[str, str] = None,
+        status_code: int = 200,
+    ):
         """Generate a response based on the request and data."""
         if not isinstance(data, (dict, list)):
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Data must be a dictionary or a list. Received: {type(data)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Data must be a dictionary or a list. Received: {type(data)}",
+            )
         accept_header = request.headers.get("accept", "application/json").lower()
         headers = headers or {}
         if "application/json" in accept_header or "*/*" in accept_header:
             return JSONResponse(content=data, headers=headers, status_code=status_code)
         if "text/plain" in accept_header:
             # Handle plain text response if needed
-            return Response(content=str(data), media_type="text/plain", headers=headers, status_code=status_code)
+            return Response(
+                content=str(data),
+                media_type="text/plain",
+                headers=headers,
+                status_code=status_code,
+            )
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
             detail=f"Unsupported Accept header: {accept_header}. Supported: application/json, text/plain, */*",
@@ -197,7 +288,17 @@ def forbidExtraQueryParams(*allowedParams: str):
         allowed = set(allowedParams)
         unknown = incoming - allowed
         if unknown:
-            raise HTTPException(status_code=422, detail=[{"type": "extra_forbidden", "loc": ["query", param], "msg": f"Unexpected query parameter: {param}"} for param in unknown])
+            raise HTTPException(
+                status_code=422,
+                detail=[
+                    {
+                        "type": "extra_forbidden",
+                        "loc": ["query", param],
+                        "msg": f"Unexpected query parameter: {param}",
+                    }
+                    for param in unknown
+                ],
+            )
 
     return checker
 
@@ -229,7 +330,10 @@ class StrictBool:
 
     @classmethod
     def __get_pydantic_json_schema__(cls, schema, handler):
-        return {"type": "boolean", "description": "Strict boolean. Only true/false allowed (bool or string)."}
+        return {
+            "type": "boolean",
+            "description": "Strict boolean. Only true/false allowed (bool or string).",
+        }
 
 
 _RATE_LIMIT_BUCKETS: dict[str, deque] = defaultdict(deque)

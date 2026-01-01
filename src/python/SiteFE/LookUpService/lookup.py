@@ -7,6 +7,7 @@ Authors:
 
 Date: 2021/12/01
 """
+
 import copy
 import os
 import time
@@ -304,7 +305,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 all_vlan_range_list = self.config.config.get("MAIN", {}).get(host, {}).get("all_vlan_range_list", [])
                 for vlan in vlans:
                     if vlan in all_vlan_range_list and vlan not in self.usedVlans["deltas"].get(host, []):
-                        self.addWarning(f"Vlan {vlan} is configured manually on {host}. It comes not from delta." "Either deletion did not happen or was manually configured.")
+                        self.addWarning(f"Vlan {vlan} is configured manually on {host}. It comes not from delta.Either deletion did not happen or was manually configured.")
         # Add switchwarnings (in case any exists)
         # pylint: disable=E1101
         self.warnings += self.switch.getWarnings()
@@ -385,7 +386,11 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
 
         self.logger.info("Checking if new model is different from previous")
         modelsEqual, modelinDB = self.checkForModelDiff(saveName)
-        lastKnownModel = {"uid": hashNum, "insertdate": getUTCnow(), "fileloc": saveName}
+        lastKnownModel = {
+            "uid": hashNum,
+            "insertdate": getUTCnow(),
+            "fileloc": saveName,
+        }
         updateNeeded = False
         if modelsEqual:
             if modelinDB[0]["insertdate"] < int(getUTCnow() - 3600):

@@ -7,6 +7,7 @@ Authors:
 
 Date: 2021/01/20
 """
+
 import copy
 import os
 import os.path
@@ -343,7 +344,12 @@ class GitConfig:
                     "logDir": "/var/log/siterm-site-fe/",
                     "logLevel": "INFO",
                     "privatedir": "/opt/siterm/config/",
-                    "probes": ["https_v4_siterm_2xx", "icmp_v4", "icmp_v6", "https_v6_siterm_2xx"],
+                    "probes": [
+                        "https_v4_siterm_2xx",
+                        "icmp_v4",
+                        "icmp_v6",
+                        "https_v6_siterm_2xx",
+                    ],
                 },
                 "ansible": {
                     "private_data_dir": "/opt/siterm/config/ansible/sense/",
@@ -372,20 +378,91 @@ class GitConfig:
                     "ansible_runtime_retry": 3,
                     "ansible_runtime_retry_delay": 5,
                 },
-                "daemoncontrols": {"ProvisioningService": {"failedretry": True, "failedretrycount": 10, "failedretrytimeout": 60}},
+                "daemoncontrols": {
+                    "ProvisioningService": {
+                        "failedretry": True,
+                        "failedretrycount": 10,
+                        "failedretrytimeout": 60,
+                    }
+                },
                 "debuggers": {
-                    "iperf-server": {"deftime": 600, "maxruntime": 86400, "minport": 40000, "maxports": 2000, "defaults": {"onetime": True}},
-                    "iperf-client": {"deftime": 600, "maxruntime": 86400, "minstreams": 1, "maxstreams": 16, "defaults": {"onetime": True, "streams": 1}},
-                    "fdt-client": {"deftime": 600, "maxruntime": 86400, "minstreams": 1, "maxstreams": 16, "defaults": {"onetime": True, "streams": 1}},
-                    "fdt-server": {"deftime": 600, "maxruntime": 86400, "minport": 42000, "maxports": 2000, "defaults": {"onetime": True}},
-                    "ethr-server": {"deftime": 600, "maxruntime": 86400, "minport": 44000, "maxports": 2000, "defaults": {"onetime": True}},
-                    "ethr-client": {"deftime": 600, "maxruntime": 86400, "minstreams": 1, "maxstreams": 16, "defaults": {"onetime": True, "streams": 1}},
-                    "rapid-ping": {"deftime": 600, "maxruntime": 86400, "maxmtu": 9000, "mininterval": 0.2, "maxtimeout": 3600, "defaults": {"packetsize": 64}},
-                    "rapid-pingnet": {"deftime": 600, "maxruntime": 86400, "maxtimeout": 600, "maxcount": 100, "defaults": {"onetime": True, "count": 10, "timeout": 5}},
-                    "arp-table": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
-                    "tcpdump": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
-                    "traceroute": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
-                    "traceroutenet": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
+                    "iperf-server": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minport": 40000,
+                        "maxports": 2000,
+                        "defaults": {"onetime": True},
+                    },
+                    "iperf-client": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minstreams": 1,
+                        "maxstreams": 16,
+                        "defaults": {"onetime": True, "streams": 1},
+                    },
+                    "fdt-client": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minstreams": 1,
+                        "maxstreams": 16,
+                        "defaults": {"onetime": True, "streams": 1},
+                    },
+                    "fdt-server": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minport": 42000,
+                        "maxports": 2000,
+                        "defaults": {"onetime": True},
+                    },
+                    "ethr-server": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minport": 44000,
+                        "maxports": 2000,
+                        "defaults": {"onetime": True},
+                    },
+                    "ethr-client": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minstreams": 1,
+                        "maxstreams": 16,
+                        "defaults": {"onetime": True, "streams": 1},
+                    },
+                    "rapid-ping": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "maxmtu": 9000,
+                        "mininterval": 0.2,
+                        "maxtimeout": 3600,
+                        "defaults": {"packetsize": 64},
+                    },
+                    "rapid-pingnet": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "maxtimeout": 600,
+                        "maxcount": 100,
+                        "defaults": {"onetime": True, "count": 10, "timeout": 5},
+                    },
+                    "arp-table": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "defaults": {"onetime": True},
+                    },
+                    "tcpdump": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "defaults": {"onetime": True},
+                    },
+                    "traceroute": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "defaults": {"onetime": True},
+                    },
+                    "traceroutenet": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "defaults": {"onetime": True},
+                    },
                 },
                 "prefixes": {
                     "mrs": "http://schemas.ogf.org/mrs/2013/12/topology#",
@@ -485,7 +562,16 @@ class GitConfig:
             },
         }
         switchDefaults = {
-            "qos_policy": {"traffic_classes": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7}, "max_policy_rate": "268000", "burst_size": "256"},
+            "qos_policy": {
+                "traffic_classes": {
+                    "default": 1,
+                    "bestEffort": 2,
+                    "softCapped": 4,
+                    "guaranteedCapped": 7,
+                },
+                "max_policy_rate": "268000",
+                "burst_size": "256",
+            },
             "rate_limit": False,
             "vsw": "%%SWITCHNAME%%",
             "vswmp": "%%SWITCHNAME%%_mp",

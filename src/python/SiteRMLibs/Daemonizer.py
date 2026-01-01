@@ -7,6 +7,7 @@ Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
+
 import argparse
 import atexit
 import os
@@ -188,7 +189,12 @@ class DBBackend:
                 "version": runningVersion,
                 "exc": kwargs.get("exc", "No Exception provided by service")[:4095],
             }
-            self.handlers[kwargs["sitename"]].makeHttpCall("POST", f"/api/{kwargs['sitename']}/servicestates", data=dic, useragent="Daemonizer")
+            self.handlers[kwargs["sitename"]].makeHttpCall(
+                "POST",
+                f"/api/{kwargs['sitename']}/servicestates",
+                data=dic,
+                useragent="Daemonizer",
+            )
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
@@ -228,7 +234,11 @@ class DBBackend:
                 self.logger.debug("No service actions found for %s", kwargs["sitename"])
                 return False
             if actions[1] != 200:
-                self.logger.error("Failed to get service actions for %s: %s", kwargs["sitename"], actions[0])
+                self.logger.error(
+                    "Failed to get service actions for %s: %s",
+                    kwargs["sitename"],
+                    actions[0],
+                )
                 return False
             if self.component == "ConfigFetcher":
                 return True
@@ -236,7 +246,16 @@ class DBBackend:
                 self.logger.debug("No actions found for %s", kwargs["sitename"])
                 return False
             for action in actions[0]:
-                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component, "action": action["action"]}, useragent="Daemonizer")
+                self.handlers[kwargs["sitename"]].makeHttpCall(
+                    "DELETE",
+                    url,
+                    data={
+                        "id": action["id"],
+                        "servicename": self.component,
+                        "action": action["action"],
+                    },
+                    useragent="Daemonizer",
+                )
                 refresh = True
         except Exception:
             exc = traceback.format_exc()

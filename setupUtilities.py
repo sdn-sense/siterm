@@ -17,6 +17,7 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2017/09/26
 """
+
 import os
 import sys
 
@@ -26,7 +27,7 @@ import sys
 # src/python/SiteFE/__init__.py
 # src/python/SiteRMAgent/__init__.py
 # src/python/SiteRMLibs/__init__.py
-VERSION = '1.5.64-dev'
+VERSION = "1.5.64-dev"
 
 
 def get_path_to_root(appendLocation=None):
@@ -67,11 +68,7 @@ def list_packages(packageDirs=None, recurse=True, ignoreThese=None, pyFiles=Fals
                         packages.append(".".join(relPath))
                     else:
                         for fileName in dummyFilenames:
-                            if (
-                                fileName.startswith("__init__.")
-                                or fileName.endswith(".pyc")
-                                or not fileName.endswith(".py")
-                            ):
+                            if fileName.startswith("__init__.") or fileName.endswith(".pyc") or not fileName.endswith(".py"):
                                 continue
                             relName = fileName.rsplit(".", 1)
                             modules.append(f"{'.'.join(relPath)}.{relName[0]}")

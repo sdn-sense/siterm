@@ -7,6 +7,7 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2016 California Institute of Technology
 Date                    : 2019/10/01
 """
+
 import base64
 import hashlib
 import json
@@ -173,8 +174,20 @@ class AuthHandler:
             tempfile = f"{getTempDir()}/m2m/{challenge_id}.json"
             expires_at = getUTCnow() + 60
 
-            dumpFileContentAsJson(tempfile, {"challenge_id": challenge_id, "challenge": base64.b64encode(challenge).decode("utf-8"), "input_cert": input_cert, "expires_at": expires_at})
-            return {"challenge_id": challenge_id, "challenge": challenge, "expires_at": expires_at}
+            dumpFileContentAsJson(
+                tempfile,
+                {
+                    "challenge_id": challenge_id,
+                    "challenge": base64.b64encode(challenge).decode("utf-8"),
+                    "input_cert": input_cert,
+                    "expires_at": expires_at,
+                },
+            )
+            return {
+                "challenge_id": challenge_id,
+                "challenge": challenge,
+                "expires_at": expires_at,
+            }
         except Exception as e:
             print(f"Error generating challenge: {e}")
             print(f"Full traceback: {traceback.format_exc()}")
@@ -326,7 +339,13 @@ class AuthHandler:
         now = getUTCnow()
         exp = now + timedelta(minutes=self.oidc_token_lifetime_minutes).total_seconds()
 
-        payload = {"iss": self.oidc_issuer, "aud": self.oidc_audience, "sub": usersub, "iat": int(now), "exp": int(exp)}
+        payload = {
+            "iss": self.oidc_issuer,
+            "aud": self.oidc_audience,
+            "sub": usersub,
+            "iat": int(now),
+            "exp": int(exp),
+        }
 
         if "extra_claims" in kwargs:
             payload.update(kwargs["extra_claims"])
@@ -367,7 +386,14 @@ class AuthHandler:
 
         public_key = self.__get_key_from_jwks__(kid)
         try:
-            decoded = jwt.decode(token, public_key, algorithms=[self.oidc_algorithm], audience=self.oidc_audience, issuer=self.oidc_issuer, leeway=self.oidc_leeway)
+            decoded = jwt.decode(
+                token,
+                public_key,
+                algorithms=[self.oidc_algorithm],
+                audience=self.oidc_audience,
+                issuer=self.oidc_issuer,
+                leeway=self.oidc_leeway,
+            )
         except jwt.ExpiredSignatureError as ex:
             raise IssuesWithAuth("Token expired") from ex
         except jwt.InvalidTokenError as ex:

@@ -7,6 +7,7 @@ Authors:
 
 Date: 2021/01/20
 """
+
 import base64
 import copy
 import datetime
@@ -286,7 +287,10 @@ def externalCommand(command, communicate=True):
 def externalCommandStdOutErr(command, stdout, stderr):
     """Execute External Commands and return stdout and stderr."""
     command = shlex.split(str(command))
-    with open(stdout, "w", encoding="utf-8") as outFD, open(stderr, "w", encoding="utf-8") as errFD:
+    with (
+        open(stdout, "w", encoding="utf-8") as outFD,
+        open(stderr, "w", encoding="utf-8") as errFD,
+    ):
         with subprocess.Popen(command, stdout=outFD, stderr=errFD, text=True) as proc:
             return proc.communicate()
 
@@ -615,7 +619,7 @@ def parseRDFFile(modelFile):
         except Exception as ex:  # pylint: disable=broad-except
             exclist.append(f"Failed to parse with format: {fmt}. Error: {ex}")
             print(f"Full traceback: {traceback.format_exc()}")
-    raise NotFoundError(f"Model file {modelFile} could not be parsed with any format: {formats}. " f"Please check the file format or content. All exceptions: {exclist}")
+    raise NotFoundError(f"Model file {modelFile} could not be parsed with any format: {formats}. Please check the file format or content. All exceptions: {exclist}")
 
 
 def getCurrentModel(cls, raiseException=False):

@@ -10,6 +10,8 @@ for fname in $(git diff --name-only); do
         isort  --settings-path src/python --profile black "$fname"
         pylint "$fname" --rcfile standarts/pylintrc
         pyink -l 200 "$fname"
+        uvx ruff format --line-length 200 "$fname"
+        uvx ruff check "$fname"
     fi
     if [[ $fname == *.yaml || $fname == *.yml ]]
     then

@@ -9,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
@@ -16,12 +17,12 @@ from pydantic import BaseModel, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
+    StrictBool,
     apiAdminDeps,
     apiReadDeps,
     apiWriteDeps,
     checkSite,
     forbidExtraQueryParams,
-    StrictBool
 )
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
@@ -108,9 +109,22 @@ class HostItem(BaseModel):
                                 "ip": "132.249.252.210",
                                 "Summary": {
                                     "config": {
-                                        "agent": {"hostname": "node-2-7.sdsc.optiputer.net", "interfaces": ["enp65s0f1np1"], "noqos": True, "norules": False, "rsts_enabled": "ipv4,ipv6"},
+                                        "agent": {
+                                            "hostname": "node-2-7.sdsc.optiputer.net",
+                                            "interfaces": ["enp65s0f1np1"],
+                                            "noqos": True,
+                                            "norules": False,
+                                            "rsts_enabled": "ipv4,ipv6",
+                                        },
                                         "enp65s0f1np1": {
-                                            "bwParams": {"granularity": 1000, "maximumCapacity": 100000, "minReservableCapacity": 1000, "priority": 0, "type": "guaranteedCapped", "unit": "mbps"}
+                                            "bwParams": {
+                                                "granularity": 1000,
+                                                "maximumCapacity": 100000,
+                                                "minReservableCapacity": 1000,
+                                                "priority": 0,
+                                                "type": "guaranteedCapped",
+                                                "unit": "mbps",
+                                            }
                                         },
                                     }
                                 },
@@ -129,10 +143,22 @@ class HostItem(BaseModel):
 )
 async def gethosts(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the hosts for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the hosts for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     hostname: str = Query(None, description="Filter by hostname."),
-    details: StrictBool = Query(False, description="If True, returns detailed host information. In case detail, limit is ignored and set to 1."),
-    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
+    details: StrictBool = Query(
+        False,
+        description="If True, returns detailed host information. In case detail, limit is ignored and set to 1.",
+    ),
+    limit: int = Query(
+        LIMIT_DEFAULT,
+        description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.",
+        ge=LIMIT_MIN,
+        le=LIMIT_MAX,
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("hostname", "details", "limit")),
 ):
@@ -150,7 +176,10 @@ async def gethosts(
     hosts = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=limit, search=search)
     out = []
     if not hosts:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No hosts found in the database.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No hosts found in the database.",
+        )
     for host in hosts:
         if details:
             host["hostinfo"] = getFileContentAsJson(host.get("hostinfo", ""))
@@ -171,10 +200,16 @@ async def gethosts(
     tags=["Hosts"],
     responses={
         **{
-            200: {"description": "Host added successfully", "content": {"application/json": {"example": {"Status": "ADDED"}}}},
-            400: {"description": "Host already exists", "content": {"application/json": {"example": {"detail": "This host is already in db. Use PUT to update existing host."}}}},
+            200: {
+                "description": "Host added successfully",
+                "content": {"application/json": {"example": {"Status": "ADDED"}}},
+            },
+            400: {
+                "description": "Host already exists",
+                "content": {"application/json": {"example": {"detail": "This host is already in db. Use PUT to update existing host."}}},
+            },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.",
                 "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
             },
         },
@@ -184,7 +219,11 @@ async def gethosts(
 async def addhost(
     request: Request,
     item: HostItem,
-    sitename: str = Path(..., description="The site name to add or update the host for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to add or update the host for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -198,11 +237,24 @@ async def addhost(
     if not host:
         fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "HostData")
         fname = os.path.join(fpath, item.hostname, "hostinfo.json")
-        out = {"hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": fname}
+        out = {
+            "hostname": item.hostname,
+            "ip": item.ip,
+            "insertdate": getUTCnow(),
+            "updatedate": getUTCnow(),
+            "hostinfo": fname,
+        }
         dumpFileContentAsJson(fname, item.dict())
         deps["dbI"].insert("hosts", [out])
         return APIResponse.genResponse(request, {"status": "ADDED"})
-    out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": host[0]["hostinfo"]}
+    out = {
+        "id": host[0]["id"],
+        "hostname": item.hostname,
+        "ip": item.ip,
+        "insertdate": getUTCnow(),
+        "updatedate": getUTCnow(),
+        "hostinfo": host[0]["hostinfo"],
+    }
     # Check if there is a data update
     if "nodatachange" in item.dict() and item.nodatachange:
         deps["dbI"].update("hosts", [{"id": host[0]["id"], "updatedate": getUTCnow()}])
@@ -210,6 +262,7 @@ async def addhost(
         dumpFileContentAsJson(host[0]["hostinfo"], item.dict())
         deps["dbI"].update("hosts", [out])
     return APIResponse.genResponse(request, {"status": "UPDATED"})
+
 
 # update (PUT)
 # ---------------------------------------------------------
@@ -220,9 +273,12 @@ async def addhost(
     tags=["Hosts"],
     responses={
         **{
-            200: {"description": "Host updated successfully", "content": {"application/json": {"example": {"status": "UPDATED"}}}},
+            200: {
+                "description": "Host updated successfully",
+                "content": {"application/json": {"example": {"status": "UPDATED"}}},
+            },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Host does not exist in the database.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - Host does not exist in the database.",
                 "content": {
                     "application/json": {
                         "example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}},
@@ -237,7 +293,11 @@ async def addhost(
 async def updatehost(
     request: Request,
     item: HostItem,
-    sitename: str = Path(..., description="The site name to update the host for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to update the host for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -248,7 +308,14 @@ async def updatehost(
     checkSite(deps, sitename)
     host = deps["dbI"].get("hosts", limit=1, search=[["ip", item.ip]])
     if host:
-        out = {"id": host[0]["id"], "hostname": item.hostname, "ip": item.ip, "insertdate": getUTCnow(), "updatedate": getUTCnow(), "hostinfo": host[0]["hostinfo"]}
+        out = {
+            "id": host[0]["id"],
+            "hostname": item.hostname,
+            "ip": item.ip,
+            "insertdate": getUTCnow(),
+            "updatedate": getUTCnow(),
+            "hostinfo": host[0]["hostinfo"],
+        }
         # Check if there is a data update
         if "nodatachange" in item.dict() and item.nodatachange:
             deps["dbI"].update("hosts", [{"id": host[0]["id"], "updatedate": getUTCnow()}])
@@ -256,7 +323,10 @@ async def updatehost(
             dumpFileContentAsJson(host[0]["hostinfo"], item.dict())
             deps["dbI"].update("hosts", [out])
     else:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This host is not in db. Use POST to add new host.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This host is not in db. Use POST to add new host.",
+        )
     return APIResponse.genResponse(request, {"status": "UPDATED"})
 
 
@@ -269,9 +339,12 @@ async def updatehost(
     tags=["Hosts"],
     responses={
         **{
-            200: {"description": "Host deleted successfully", "content": {"application/json": {"example": {"status": "DELETED"}}}},
+            200: {
+                "description": "Host deleted successfully",
+                "content": {"application/json": {"example": {"status": "DELETED"}}},
+            },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.\n" " - Host does not exist in the database.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - Host does not exist in the database.",
                 "content": {
                     "application/json": {
                         "example": {
@@ -288,7 +361,11 @@ async def updatehost(
 async def deletehost(
     request: Request,
     item: HostItem,
-    sitename: str = Path(..., description="The site name to delete the host for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to delete the host for.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     deps=Depends(apiAdminDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -305,5 +382,8 @@ async def deletehost(
         removeFile(host[0].get("hostinfo", ""))
         deps["dbI"].delete("hosts", [["id", host[0]["id"]]])
     else:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This host is not in db. Why to delete non-existing host?")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This host is not in db. Why to delete non-existing host?",
+        )
     return APIResponse.genResponse(request, {"status": "DELETED"})

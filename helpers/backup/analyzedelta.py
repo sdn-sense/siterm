@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Print delta information."""
+
 import ast
 import pprint
 import sys

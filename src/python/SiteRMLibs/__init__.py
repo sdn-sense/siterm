@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """DTN RM Libraries."""
+
 __all__ = []
 # IMPORTANT Be aware if you update version here, please update it also in:
 # setupUtilities.py
@@ -7,4 +8,4 @@ __all__ = []
 # src/python/SiteFE/__init__.py
 # src/python/SiteRMAgent/__init__.py
 # src/python/SiteRMLibs/__init__.py
-__version__ = '1.5.64-dev'
+__version__ = "1.5.64-dev"

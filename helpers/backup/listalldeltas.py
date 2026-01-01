@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """List all deltas inFrontend."""
-from __future__ import print_function
-import sys
-from SiteRMLibs.MainUtilities import getVal
-from SiteRMLibs.MainUtilities import evaldict
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import getDBConn
-from SiteRMLibs.GitConfig import getGitConfig
-from SiteFE.PolicyService.stateMachine import StateMachine
 
+from __future__ import print_function
+
+import sys
+
+from SiteFE.PolicyService.stateMachine import StateMachine
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import evaldict, getDBConn, getLoggingObject, getVal
 
 CONFIG = getGitConfig()
 LOGGER = getLoggingObject(config=CONFIG, service="Helpers")
@@ -35,9 +34,7 @@ def getdeltaAll(sitename):
         print("-" * 20)
         print("Delta times")
         for deltatimes in dbobj.get("states", search=[["deltaid", delta["uid"]]]):
-            print(
-                "State: %s Date: %s" % (deltatimes["state"], deltatimes["insertdate"])
-            )
+            print("State: %s Date: %s" % (deltatimes["state"], deltatimes["insertdate"]))
 
 
 if __name__ == "__main__":

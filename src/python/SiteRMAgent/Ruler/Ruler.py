@@ -8,6 +8,7 @@ Authors:
 
 Date: 2022/01/20
 """
+
 import os
 
 from SiteRMAgent.Ruler.Components.QOS import QOS
@@ -18,7 +19,6 @@ from SiteRMLibs.BWService import BWService
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.HTTPLibrary import Requests
-
 from SiteRMLibs.MainUtilities import (
     contentDB,
     createDirs,

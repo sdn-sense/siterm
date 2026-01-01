@@ -49,6 +49,7 @@ Authors:
 
 Date: 2021/01/20
 """
+
 import filecmp
 import os
 import shutil
@@ -316,7 +317,6 @@ class QOS:
             counter += 1
         # Write everything into file
         for counter, l2req in alllines.items():
-
             maxintf = self.params[l2req["destport"]]["intf_max"] + l2req["outrate"]
             # In case request is bestEffort, we want it to be lower than softCapped or guaranteedCapped
             # So we check which ones evaluates first 1/10, 1/9, 1/8, 1/7, 1/6, 1/5, 1/4, 1/3, 1/2 (and last one is 1)

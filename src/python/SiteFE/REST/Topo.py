@@ -9,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
@@ -33,7 +34,7 @@ startupConfig = getstartupconfig()
 @router.get(
     "/{sitename}/topo/gettopology",
     summary="Get Topology JSON",
-    description=("Returns the topology in JSON format for the given site name. " "If the topology file is not found, a 404 error is returned."),
+    description=("Returns the topology in JSON format for the given site name. If the topology file is not found, a 404 error is returned."),
     tags=["Topology"],
     responses={
         **{
@@ -42,7 +43,11 @@ startupConfig = getstartupconfig()
                 "content": {
                     "application/json": {
                         "example": {
-                            "switchname1": {"topo": {}, "DeviceInfo": {"type": "switch", "name": "switchname1"}, "_id": 0},
+                            "switchname1": {
+                                "topo": {},
+                                "DeviceInfo": {"type": "switch", "name": "switchname1"},
+                                "_id": 0,
+                            },
                             "wan2": {
                                 "_id": 2,
                                 "topo": {
@@ -53,11 +58,24 @@ startupConfig = getstartupconfig()
                                             "isAlias": "urn:ogf:network:sense-isAlias-sdn-sense.dev:2025:switchname2:PortChannel500",
                                             "wanlink": True,
                                             "vlan_range": ["3611-3619"],
-                                            "vlan_range_list": [3616, 3617, 3618, 3619, 3611, 3612, 3613, 3614, 3615],
+                                            "vlan_range_list": [
+                                                3616,
+                                                3617,
+                                                3618,
+                                                3619,
+                                                3611,
+                                                3612,
+                                                3613,
+                                                3614,
+                                                3615,
+                                            ],
                                         },
                                     }
                                 },
-                                "DeviceInfo": {"type": "cloud", "name": "urn:ogf:network:sense-isAlias-sdn-sense.dev:2025:switchname2:PortChannel500"},
+                                "DeviceInfo": {
+                                    "type": "cloud",
+                                    "name": "urn:ogf:network:sense-isAlias-sdn-sense.dev:2025:switchname2:PortChannel500",
+                                },
                             },
                             "wan3": {
                                 "_id": 3,
@@ -69,24 +87,44 @@ startupConfig = getstartupconfig()
                                             "isAlias": "urn:ogf:network:sense-isAlias-sdn-sense.dev:2025:switchname2:Port-Channel502",
                                             "wanlink": True,
                                             "vlan_range": ["3611-3619"],
-                                            "vlan_range_list": [3616, 3617, 3618, 3619, 3611, 3612, 3613, 3614, 3615],
+                                            "vlan_range_list": [
+                                                3616,
+                                                3617,
+                                                3618,
+                                                3619,
+                                                3611,
+                                                3612,
+                                                3613,
+                                                3614,
+                                                3615,
+                                            ],
                                         },
                                     }
                                 },
-                                "DeviceInfo": {"type": "cloud", "name": "urn:ogf:network:sense-isAlias-sdn-sense.dev:2025:switchname2:Port-Channel502"},
+                                "DeviceInfo": {
+                                    "type": "cloud",
+                                    "name": "urn:ogf:network:sense-isAlias-sdn-sense.dev:2025:switchname2:Port-Channel502",
+                                },
                             },
                         }
                     }
                 },
             },
-            404: {"description": "Topology file not found", "content": {"application/json": {"example": {"detail": "Topology file not found for site"}}}},
+            404: {
+                "description": "Topology file not found",
+                "content": {"application/json": {"example": {"detail": "Topology file not found for site"}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def gettopology(
     request: Request,
-    sitename: str = Path(..., description="The site name whose topology is requested.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name whose topology is requested.",
+        example=startupConfig.get("SITENAME", "default"),
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -100,6 +138,9 @@ async def gettopology(
     topodir = os.path.join(deps["config"].get(sitename, "privatedir"), "Topology")
     topofname = os.path.join(topodir, "topology.json")
     if not os.path.isfile(topofname):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Topology file not found for site '{sitename}'")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Topology file not found for site '{sitename}'",
+        )
     topo_data = getFileContentAsJson(topofname)
     return APIResponse.genResponse(request, topo_data)

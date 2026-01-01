@@ -7,9 +7,10 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/07/17
 """
+
+from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.CustomExceptions import SwitchException
-from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.ipaddr import ipVersion
 
 
@@ -32,19 +33,13 @@ class TracerouteNet(BaseDebugAction):
                 if "stdout" in host_events and host_events["stdout"]:
                     for line in host_events["stdout"].split("\n"):
                         self.logMessage(line)
-                    for line in (
-                        host_events.get("event_data", {})
-                        .get("res", {})
-                        .get("stdout", [])
-                    ):
+                    for line in host_events.get("event_data", {}).get("res", {}).get("stdout", []):
                         for lline in line.split("\n"):
                             self.logMessage(lline)
 
     def applyConfig(self, raiseExc=True, hosts=None, subitem=""):
         """Apply yaml config on Switch (issue Traceroute Request)"""
-        ansOut, failures = self.switch.plugin._applyNewConfig(
-            hosts, subitem, templateName="traceroute.yaml"
-        )
+        ansOut, failures = self.switch.plugin._applyNewConfig(hosts, subitem, templateName="traceroute.yaml")
         if not ansOut:
             self.logMessage("Ansible output is empty for traceroute request")
             return
@@ -58,9 +53,7 @@ class TracerouteNet(BaseDebugAction):
         self._logStats(ansOut, hosts)
         if failures and raiseExc:
             self.logMessage(f"Ansible failures: {failures}")
-            raise SwitchException(
-                "There was configuration apply issue. Please contact support and provide this log file."
-            )
+            raise SwitchException("There was configuration apply issue. Please contact support and provide this log file.")
         self.logMessage(f"Ansible output: {ansOut.stats}")
         return
 
@@ -68,11 +61,7 @@ class TracerouteNet(BaseDebugAction):
         """Prepare ping template"""
         ipv = ipVersion(self.requestdict["ip"])
         out = {"type": f"ipv{ipv}", f"ipv{ipv}_address": self.requestdict["ip"]}
-        vrf = (
-            self.config.config["MAIN"]
-            .get(self.requestdict["hostname"], {})
-            .get("vrf", "")
-        )
+        vrf = self.config.config["MAIN"].get(self.requestdict["hostname"], {}).get("vrf", "")
         if vrf:
             out["vrf"] = vrf
         return out
@@ -92,9 +81,7 @@ class TracerouteNet(BaseDebugAction):
         # Prepare traceroute template and attach to new ansible request
         curActiveConf["traceroute"] = self._getTracerouteTemplate()
         # Write curActiveConf to single apply dir
-        self.logMessage(
-            f"Execute Traceroute Request for {swname}. Full request: {self.requestdict}"
-        )
+        self.logMessage(f"Execute Traceroute Request for {swname}. Full request: {self.requestdict}")
         self.switch.plugin._writeHostConfig(swname, curActiveConf, "_debug")
         try:
             self.applyConfig(True, [swname], "_debug")

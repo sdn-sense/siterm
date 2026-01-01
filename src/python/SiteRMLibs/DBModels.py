@@ -7,6 +7,7 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2026 ESnet
 Date                    : 2026/01/02
 """
+
 from sqlalchemy import JSON, Boolean, Column, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import DeclarativeBase

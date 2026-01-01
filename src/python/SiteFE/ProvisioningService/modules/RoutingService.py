@@ -8,6 +8,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
+
 import traceback
 
 from SiteRMLibs.ipaddr import normalizedip
@@ -134,7 +135,12 @@ class RoutingService:
                         prefList = bgpdict.setdefault("prefix_list", {}).setdefault(iptype, {})
                         newRoute = prefList.setdefault(r, {})
                         newRoute[f"sense-{ruid}-{mapdir}"] = "present"
-                        self._addRouteMap(host, f"sense-{ruid}-{mapdir}", f"sense-{ruid}-{mapdir}", iptype)
+                        self._addRouteMap(
+                            host,
+                            f"sense-{ruid}-{mapdir}",
+                            f"sense-{ruid}-{mapdir}",
+                            iptype,
+                        )
 
     def _addRouteMap(self, host, match, name, iptype):
         """Add Route Maps"""

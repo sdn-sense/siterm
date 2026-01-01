@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # pylint: disable=no-name-in-module
 """FastAPI application for SiteFE REST API."""
+
 import os
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from SiteFE.REST.Auth import router as auth_router
 from SiteFE.REST.Debug import router as debug_router
 from SiteFE.REST.Delta import router as delta_router
 from SiteFE.REST.Frontend import router as fe_router
@@ -15,7 +17,6 @@ from SiteFE.REST.Model import router as model_router
 from SiteFE.REST.Monitoring import router as monitoring_router
 from SiteFE.REST.Service import router as service_router
 from SiteFE.REST.Topo import router as topo_router
-from SiteFE.REST.Auth import router as auth_router
 from SiteRMLibs.MainUtilities import loadEnvFile
 
 loadEnvFile()
@@ -95,7 +96,11 @@ async def custom_405_handler(request: Request, exc: HTTPException):
     logdetails(request, 405, str(exc))
     # Add allowed methods header to the response based on RFC 9110
     headers = {"Allow": "GET, POST, PUT, DELETE"}
-    return JSONResponse(status_code=405, content={"detail": f"Method Not Allowed. Exception: {exc}"}, headers=headers)
+    return JSONResponse(
+        status_code=405,
+        content={"detail": f"Method Not Allowed. Exception: {exc}"},
+        headers=headers,
+    )
 
 
 @app.exception_handler(500)
