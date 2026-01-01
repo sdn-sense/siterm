@@ -15,6 +15,7 @@ from SiteFE.REST.Model import router as model_router
 from SiteFE.REST.Monitoring import router as monitoring_router
 from SiteFE.REST.Service import router as service_router
 from SiteFE.REST.Topo import router as topo_router
+from SiteFE.REST.Auth import router as auth_router
 from SiteRMLibs.MainUtilities import loadEnvFile
 
 loadEnvFile()
@@ -31,6 +32,7 @@ app.include_router(debug_router, prefix="/api")
 app.include_router(topo_router, prefix="/api")
 app.include_router(monitoring_router, prefix="/api")
 app.include_router(service_router, prefix="/api")
+app.include_router(auth_router, prefix="/")
 
 app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="ui")
 
