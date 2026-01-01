@@ -8,6 +8,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2017/09/26
 """
 
+import random
 import base64
 import copy
 import functools
@@ -241,6 +242,12 @@ class Requests:
                     headers={"Content-Type": "application/json"},
                     json={"certificate": certval},
                 )
+                if response.status_code == 429:
+                    self._logMessage(f"Rate limited when requesting new Bearer token from {auth_info['token_endpoint']}")
+                    sleep_time = random.randint(10, 30)
+                    self._logMessage(f"Sleeping for {sleep_time} seconds before retrying...")
+                    time.sleep(sleep_time)
+                    raise RuntimeError("Rate limited when requesting new Bearer token")
                 if response.status_code == 200:
                     # We get the challenge response, that needs to be completed to obtain the token
                     # Challenge can be solved only with the private key corresponding to the certificate

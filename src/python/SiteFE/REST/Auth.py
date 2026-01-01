@@ -148,14 +148,15 @@ async def whoami(request: Request, deps: Dict[str, Any] = Depends(apiReadDeps)):
 # POST /token Get Token based on Cert challenge
 # ==========================================================
 @router.post("/m2m/token", responses=DEFAULT_RESPONSES)
-@rateLimitIp(maxRequests=5, windowSeconds=60)
+@rateLimitIp(maxRequests=30, windowSeconds=60)
 async def token(request: Request, item: X509LoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
     """
     Request new token challenge
     """
     try:
         challenge = deps["authHandler"].generate_challenge(item.certificate)
-        challenge["ref_url"] = f"/m2m/token/{challenge['challenge_id']}"
+        openid_config = deps["authHandler"].getOpenIDConfiguration()
+        challenge["ref_url"] = f"{openid_config['issuer']}/m2m/token/{challenge['challenge_id']}"
         return APIResponse.genResponse(request, challenge)
     except Exception as e:
         print(f"Full traceback: {traceback.format_exc()}")

@@ -168,7 +168,7 @@ class AuthHandler:
             certinfo = load_cert_info(cert)
             self.validateCertificate(certinfo)
 
-            challenge = secrets.token_bytes(32)
+            challenge_b64 = base64.b64encode(secrets.token_bytes(32)).decode("utf-8")
 
             challenge_id = secrets.token_hex(16)
 
@@ -179,14 +179,14 @@ class AuthHandler:
                 tempfile,
                 {
                     "challenge_id": challenge_id,
-                    "challenge": base64.b64encode(challenge).decode("utf-8"),
+                    "challenge": challenge_b64,
                     "input_cert": input_cert,
                     "expires_at": expires_at,
                 },
             )
             return {
                 "challenge_id": challenge_id,
-                "challenge": challenge,
+                "challenge": challenge_b64,
                 "expires_at": expires_at,
             }
         except Exception as e:
