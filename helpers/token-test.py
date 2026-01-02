@@ -19,6 +19,7 @@ PRIVATE_KEY_PATH = Path(sys.argv[3]) # private key (pem)
 
 MODELS_ENDPOINT = "/api/T2_US_SDSC_DEV/models?current=true&summary=false&encode=false"
 
+WHOAMI_ENDPOINT = "/auth/whoami"
 TOKEN_ENDPOINT = "/m2m/token"
 REFRESH_ENDPOINT = "/m2m/token/refresh"
 
@@ -28,11 +29,28 @@ TIMEOUT = 30
 # ============================
 # helpers
 # ============================
+def whoami(client: httpx.Client) -> dict:
+    """
+    Returns identity of user from validated token.
+    """
+    try:
+        url = SERVER + WHOAMI_ENDPOINT
+        r = client.get(url)
+        r.raise_for_status()
+        data = r.json()
+        print("== whoami ==")
+        print(json.dumps(data, indent=2))
+        return data
+    except httpx.HTTPError as ex:
+        print(f"Error during whoami: {ex}")
+        return {}
+
 def preflight(client: httpx.Client) -> dict:
     """
     Mandatory call before every auth transition.
     Uses Bearer token if present.
     """
+    whoami(client)
     try:
         url = SERVER + MODELS_ENDPOINT
         r = client.get(url)
@@ -154,3 +172,6 @@ def main():
         # --------------------------------------------------
         print("\n== preflight (authenticated with refreshed token) ==")
         preflight(client)
+
+if __name__ == "__main__":
+    main()

@@ -1,10 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta
-      name="generator"
-      content="HTML Tidy for HTML5 for Linux version 5.4.0"
-    />
+    <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.4.0" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="assets/css/bootstrap.css" rel="stylesheet" />
@@ -19,134 +16,222 @@
       google.load("visualization", "1", { packages: ["table", "controls"] });
     </script>
     <title>Site-RM: Frontend Configuration</title>
+
+    <style>
+      /* Simple blocking overlay for login */
+      #loginOverlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.55);
+        display: none;
+        z-index: 9999;
+      }
+      #loginCard {
+        max-width: 420px;
+        margin: 10vh auto;
+      }
+    </style>
   </head>
+
   <body>
-    <header
-      class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow"
-    >
-      <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#"
-        >SDN SENSE End Site Monitoring</a
-      >
+    <!-- Login overlay -->
+    <div id="loginOverlay">
+      <div class="card shadow" id="loginCard">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Login required</h5>
+          <div class="alert alert-danger d-none" id="loginError"></div>
+
+          <div class="mb-3">
+            <label for="loginUser" class="form-label">Username</label>
+            <input type="text" class="form-control" id="loginUser" autocomplete="username" />
+          </div>
+
+          <div class="mb-3">
+            <label for="loginPass" class="form-label">Password</label>
+            <input type="password" class="form-control" id="loginPass" autocomplete="current-password" />
+          </div>
+
+          <button class="btn btn-primary w-100" id="loginBtn">Sign in</button>
+          <div class="text-muted mt-2" style="font-size: 0.9em;">
+            Token is stored in <code>localStorage</code> and used as <code>Authorization: Bearer</code>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+      <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
       <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
         <span class="text-success mr-3" id="alive-status">Alive: ...</span>
         <span class="text-success mr-3" id="ready-status">Ready: ...</span>
-        <span class="text-success mr-3" id="readiness-status"
-          >Readiness: ...</span
-        >
-        <span class="text-success mr-3" id="liveness-status"
-          >Liveness: ...</span
-        >
+        <span class="text-success mr-3" id="readiness-status">Readiness: ...</span>
+        <span class="text-success mr-3" id="liveness-status">Liveness: ...</span>
         <span class="text-white mr-3" id="swagger-doc"><a href="/docs#/" target="_blank">Swagger Doc</a></span>
         <span class="text-white mr-3" id="prometheus-url"><a href="#" target="_blank">Prometheus Metrics</a></span>
-
+        <span class="text-white mr-3">
+          <a href="#" id="logoutLink" class="text-decoration-none">Logout</a>
+        </span>
       </div>
     </header>
+
     <div class="container-fluid">
       <div class="row">
-        <nav
-          id="sidebarMenu"
-          class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse"
-        >
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
           <div class="position-sticky pt-3">
             <ul class="nav flex-column">
-              <li class="nav-item">
-                <a
-                  class="nav-link active"
-                  aria-current="page"
-                  href="/index.html"
-                  >Topology</a
-                >
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/frontendconfig.html"
-                  >Frontend Configuration</a
-                >
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/models.html">Models</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/servicestates.html">ServiceStates</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/deltas.html">Deltas</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/activerequests.html"
-                  >Active Requests</a
-                >
-              </li>
+              <li class="nav-item"><a class="nav-link active" aria-current="page" href="/index.html">Topology</a></li>
+              <li class="nav-item"><a class="nav-link" href="/frontendconfig.html">Frontend Configuration</a></li>
+              <li class="nav-item"><a class="nav-link" href="/models.html">Models</a></li>
+              <li class="nav-item"><a class="nav-link" href="/servicestates.html">ServiceStates</a></li>
+              <li class="nav-item"><a class="nav-link" href="/deltas.html">Deltas</a></li>
+              <li class="nav-item"><a class="nav-link" href="/activerequests.html">Active Requests</a></li>
             </ul>
-            <h6
-              class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted"
-            >
+            <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
               <span>Debugging tools</span>
-              <a
-                class="link-secondary"
-                href="#"
-                aria-label="Debugging tools"
-              ></a>
+              <a class="link-secondary" href="#" aria-label="Debugging tools"></a>
             </h6>
             <ul class="nav flex-column mb-2">
-              <li class="nav-item">
-                <a class="nav-link" href="/newdebug.html"
-                  >Request new debug action</a
-                >
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/debughistory.html">Debug history</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="/changeactive.html"
-                  >Change Active Start/End</a
-                >
-              </li>
+              <li class="nav-item"><a class="nav-link" href="/newdebug.html">Request new debug action</a></li>
+              <li class="nav-item"><a class="nav-link" href="/debughistory.html">Debug history</a></li>
+              <li class="nav-item"><a class="nav-link" href="/changeactive.html">Change Active Start/End</a></li>
             </ul>
           </div>
         </nav>
+
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-          <div
-            class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom"
-          >
+          <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
             <h1 class="h2">Topology</h1>
           </div>
+
           <div class="row">
             <div class="col">
               <label>Filter switch</label>
-              <select
-                name="filterswitch"
-                id="filterswitch"
-                style="width: 220px"
-                multiple
-                multiselect-search="true"
-                multiselect-select-all="true"
-                multiselect-max-items="3"
-                onchange="reload(nx, data)"
-              ></select>
+              <select name="filterswitch" id="filterswitch" style="width: 220px" multiple multiselect-search="true" multiselect-select-all="true" multiselect-max-items="3" onchange="reload(nx, data)"></select>
+
               <label>Filter Server</label>
-              <select
-                name="filterserver"
-                id="filterserver"
-                style="width: 220px"
-                multiple
-                multiselect-search="true"
-                multiselect-select-all="true"
-                multiselect-max-items="3"
-                onchange="reload(nx, data)"
-              ></select>
+              <select name="filterserver" id="filterserver" style="width: 220px" multiple multiselect-search="true" multiselect-select-all="true" multiselect-max-items="3" onchange="reload(nx, data)"></select>
+
               <div class="next-app" id="topo"></div>
             </div>
           </div>
         </main>
       </div>
     </div>
+
     <script src="assets/js/bootstrap.bundle.js"></script>
     <script src="assets/js/bootstrap.js"></script>
+
+    <script>
+      // ==========================
+      // Auth glue for the UI
+      // ==========================
+      const TOKEN_KEY = "siterm_access_token";
+
+      function getToken() {
+        return window.localStorage.getItem(TOKEN_KEY);
+      }
+
+      function setToken(tok) {
+        window.localStorage.setItem(TOKEN_KEY, tok);
+      }
+
+      function clearToken() {
+        window.localStorage.removeItem(TOKEN_KEY);
+      }
+
+      function showLogin() {
+        $("#loginOverlay").show();
+      }
+
+      function hideLogin() {
+        $("#loginOverlay").hide();
+      }
+
+      function showLoginError(msg) {
+        $("#loginError").removeClass("d-none").text(msg);
+      }
+
+      function setupAjaxAuth() {
+        $.ajaxSetup({
+          beforeSend: function(xhr) {
+            const tok = getToken();
+            if (tok) {
+              xhr.setRequestHeader("Authorization", "Bearer " + tok);
+            }
+          }
+        });
+      }
+
+      async function doLogin(username, password) {
+        $("#loginError").addClass("d-none").text("");
+        const res = await fetch("/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = (body && (body.detail || body.message)) ? (body.detail || body.message) : ("HTTP " + res.status);
+          throw new Error(detail);
+        }
+
+        if (!body.access_token) {
+          throw new Error("Login response missing access_token");
+        }
+
+        setToken(body.access_token);
+        setupAjaxAuth();
+        hideLogin();
+      }
+
+      async function doLogout() {
+        // Optional: if you add /auth/logout, call it; otherwise local logout is fine.
+        clearToken();
+        showLogin();
+      }
+
+      // Global 401 handler: show login overlay
+      $(document).ajaxError(function(_evt, jqxhr) {
+        if (jqxhr && jqxhr.status === 401) {
+          clearToken();
+          showLoginError("Session expired. Please login again.");
+          showLogin();
+        }
+      });
+
+      $(document).ready(function() {
+        setupAjaxAuth();
+
+        $("#loginBtn").on("click", async function() {
+          const u = $("#loginUser").val();
+          const p = $("#loginPass").val();
+          try {
+            await doLogin(u, p);
+            // Reload to re-run data fetches cleanly
+            window.location.reload();
+          } catch (e) {
+            showLoginError(e.message || String(e));
+          }
+        });
+
+        $("#logoutLink").on("click", function(e) {
+          e.preventDefault();
+          doLogout();
+        });
+
+        if (!getToken()) {
+          showLogin();
+        }
+      });
+    </script>
+
     <script>
       $("#myTab a").click(function (e) {
         e.preventDefault();
         $(this).tab("show");
       });
+
       var data = {};
       var topologyData = { nodes: [], links: [] };
 
@@ -154,14 +239,14 @@
       $.ajax({
         url: "/api/frontend/configuration",
         dataType: "json",
-        async: false, // blocks the browser until request completes
+        async: false,
         success: function (response) {
           configdata = response;
         },
       });
+
       if (configdata) {
         var sitename = configdata["general"]["sitename"];
-        // Update links to use sitename
         $("#prometheus-url").html(
           '<a href="/api/' + sitename + '/monitoring/prometheus/metrics" target="_blank">Prometheus Metrics</a>',
         );
@@ -178,25 +263,19 @@
           },
         });
       }
-      for (
-        var x = Object.keys(data), i = 0;
-        i < x.length, (key = x[i]), (value = data[key]);
-        i++
-      ) {
+
+      for (var x = Object.keys(data), i = 0; i < x.length, (key = x[i]), (value = data[key]); i++) {
         topologyData["nodes"].push({
           id: value["_id"],
           name: key,
           icontype: value["DeviceInfo"]["type"],
         });
-        // Make sure device is in the select
         $("#filter" + value["DeviceInfo"]["type"]).append(
-          $("<option>", {
-            value: key,
-            text: key,
-          }),
+          $("<option>", { value: key, text: key }),
         );
       }
     </script>
+
     <script>
       function normalizeKey(str) {
         return str.toLowerCase().replace(/\s+/g, "");
@@ -235,67 +314,20 @@
         var topologyData = { nodes: [], links: [] };
         links = {};
         tmpid = 0;
-        for (
-          var x = Object.keys(data), i = 0;
-          i < x.length, (key = x[i]), (value = data[key]);
-          i++
-        ) {
-          if (
-            filterAddItem(
-              key,
-              value["DeviceInfo"]["type"],
-              filterswitch,
-              filterserver,
-            )
-          ) {
-            tmpdata = {
-              id: value["_id"],
-              name: key,
-              icontype: value["DeviceInfo"]["type"],
-            };
+
+        for (var x = Object.keys(data), i = 0; i < x.length, (key = x[i]), (value = data[key]); i++) {
+          if (filterAddItem(key, value["DeviceInfo"]["type"], filterswitch, filterserver)) {
+            tmpdata = { id: value["_id"], name: key, icontype: value["DeviceInfo"]["type"] };
             if (value["DeviceInfo"]["type"] === "cloud") {
               tmpdata["isAlias"] = value["DeviceInfo"]["name"];
             }
             topologyData["nodes"].push(tmpdata);
 
-            for (
-              var l = Object.keys(data[key]["topo"]), j = 0;
-              j < x.length,
-                (intkey = l[j]),
-                (intval = data[key]["topo"][intkey]);
-              j++
-            ) {
-              if (
-                filterAddItem(
-                  intval["device"],
-                  "switch",
-                  filterswitch,
-                  filterserver,
-                ) ||
-                filterAddItem(
-                  intval["device"],
-                  "server",
-                  filterswitch,
-                  filterserver,
-                )
-              ) {
-                linkkey =
-                  key +
-                  " " +
-                  intkey +
-                  " " +
-                  intval["device"] +
-                  " " +
-                  intval["port"];
+            for (var l = Object.keys(data[key]["topo"]), j = 0; j < x.length, (intkey = l[j]), (intval = data[key]["topo"][intkey]); j++) {
+              if (filterAddItem(intval["device"], "switch", filterswitch, filterserver) || filterAddItem(intval["device"], "server", filterswitch, filterserver)) {
+                linkkey = key + " " + intkey + " " + intval["device"] + " " + intval["port"];
                 linkkey = normalizeKey(linkkey);
-                linkkey1 =
-                  intval["device"] +
-                  " " +
-                  intval["port"] +
-                  " " +
-                  key +
-                  " " +
-                  intkey;
+                linkkey1 = intval["device"] + " " + intval["port"] + " " + key + " " + intkey;
                 linkkey1 = normalizeKey(linkkey1);
                 if (linkkey in links && linkkey1 in links) {
                   linkid = links[linkkey];
@@ -307,20 +339,8 @@
                 }
                 sourceid = value["_id"];
                 targetid = data[intval["device"]]["_id"];
-                ports =
-                  key +
-                  ":" +
-                  intkey +
-                  "<->" +
-                  intval["device"] +
-                  ":" +
-                  intval["port"];
-                topologyData["links"].push({
-                  source: sourceid,
-                  target: targetid,
-                  id: tmpid,
-                  ports: ports,
-                });
+                ports = key + ":" + intkey + "<->" + intval["device"] + ":" + intval["port"];
+                topologyData["links"].push({ source: sourceid, target: targetid, id: tmpid, ports: ports });
               }
             }
           }
@@ -343,13 +363,11 @@
             },
           },
         });
+
         nx.define("TopologyContainer", nx.ui.Component, {
-          // we use this trick to use this object as a nx.ui.Component and display topology at the same time
           properties: {
             topology: {
-              get: function () {
-                return this.view("topology");
-              },
+              get: function () { return this.view("topology"); },
             },
           },
           view: {
@@ -359,25 +377,16 @@
               props: {
                 adaptive: true,
                 nodeConfig: {
-                  label: function (vertex) {
-                    return vertex.get("name");
-                  },
-                  iconType: function (vertex) {
-                    return vertex.get("icontype");
-                  },
+                  label: function (vertex) { return vertex.get("name"); },
+                  iconType: function (vertex) { return vertex.get("icontype"); },
                 },
-                linkConfig: {
-                  width: 3,
-                  linkType: "curve",
-                },
+                linkConfig: { width: 3, linkType: "curve" },
                 showIcon: true,
                 data: topologyData,
                 dataProcessor: "force",
                 identityKey: "id",
               },
-              events: {
-                topologyGenerated: "{#_main}",
-              },
+              events: { topologyGenerated: "{#_main}" },
             },
           },
           methods: {
@@ -385,20 +394,6 @@
               var topo = sender;
               topo.registerScene("myscene", "SceneOverride");
               topo.activateScene("myscene");
-              //var pathLayer = sender.getLayer("paths");
-              //var links1 = [topo.getLink(1), topo.getLink(3), topo.getLink(7)];
-
-              //var i = 0;
-              //while (i < links1.length) {
-              //    links1[i].color('#f00');
-              //    i++;
-              // }
-              //var path1 = new nx.graphic.Topology.Path({
-              //    links: links1,
-              //    arrow: 'cap'
-              //});
-
-              //pathLayer.addPath(path1);
             },
           },
         });
@@ -408,43 +403,26 @@
         loadTopo(nx, data);
       })(nx, data);
     </script>
+
     <script>
       (function (nx) {
-        // initialize a new application instance
         var app = new nx.ui.Application();
-        /* TopologyContainer is a nx.ui.Component object that can contain much more things than just a nx.graphic.Topology object.
-         */
         var topologyContainer = new TopologyContainer();
-        // topology instance was made in TopologyContainer, but we can invoke its members through 'topology' variable for convenience
         var topology = topologyContainer.topology();
-        //assign the app to the <div>
         app.container(document.getElementById("topo"));
-        // pass topology's instance into action's bar instance
-        //actionBar.assignTopology(topology);
         topology.attach(app);
-        // preload topology
-        //actionBar.updateTopology();
       })(nx);
 
       function reload(nx, data) {
         loadTopo(nx, data);
-        // initialize a new application instance
         var app = new nx.ui.Application();
-        /* TopologyContainer is a nx.ui.Component object that can contain much more things than just a nx.graphic.Topology object.
-         */
         var topologyContainer = new TopologyContainer();
-        // topology instance was made in TopologyContainer, but we can invoke its members through 'topology' variable for convenience
         var topology = topologyContainer.topology();
-        //assign the app to the <div>
         document.getElementById("topo").innerHTML = "";
         app.container(document.getElementById("topo"));
-        // pass topology's instance into action's bar instance
-        //actionBar.assignTopology(topology);
         topology.attach(app);
-        // preload topology
-        //actionBar.updateTopology();
       }
-      // Run status fetch on page load
+
       document.addEventListener("DOMContentLoaded", function () {
         fetchStatus();
         setInterval(fetchStatus, 10000);

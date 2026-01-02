@@ -142,7 +142,7 @@ class AuthHandler:
         self.oidc_audience = os.environ.get("OIDC_AUDIENCE", self.gitConf.get("general", "webdomain"))
         self.oidc_algorithm = os.environ.get("OIDC_ALGORITHM", "RS256")
         self.oidc_token_lifetime_minutes = int(os.environ.get("OIDC_TOKEN_LIFETIME_MINUTES", "60"))
-        self.refresh_token_ttl = timedelta(days=int(os.environ.get("REFRESH_TOKEN_TTL_DAYS", "30"))).total_seconds()
+        self.refresh_token_ttl = timedelta(days=int(os.environ.get("REFRESH_TOKEN_TTL_DAYS", "7"))).total_seconds()
         self.oidc_leeway = int(os.environ.get("OIDC_LEEWAY", "60"))
         self.oidc_public_key = os.environ.get("OIDC_PUBLIC_KEY", None)
         self.oidc_private_key = os.environ.get("OIDC_PRIVATE_KEY", None)

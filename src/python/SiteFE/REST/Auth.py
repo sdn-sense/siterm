@@ -23,7 +23,7 @@ from SiteFE.REST.dependencies import (
     rateLimitIp,
 )
 from SiteRMLibs.CustomExceptions import BadRequestError
-from SiteRMLibs.MainUtilities import generateRandomUUID, getUTCnow
+from SiteRMLibs.MainUtilities import getUTCnow
 
 router = APIRouter()
 
@@ -64,60 +64,41 @@ class M2MChallengeItem(BaseModel):
 @router.post("/auth/login", responses=DEFAULT_RESPONSES)
 @rateLimitIp(maxRequests=60, windowSeconds=60)
 async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
-    """Authenticate human user"""
+    """Authenticate human user (user/pass) and issue access token"""
     try:
         auth_handler = deps["authHandler"]
+
         user = deps["dbI"].get("users", limit=1, search=[["username", item.username]])
-        if not user:
+        if not user or user[0].get("disabled"):
             raise BadRequestError("Invalid username or password")
-        if user[0].get("disabled"):
-            raise BadRequestError("Invalid username or password")
+
         if not auth_handler.verify_password(user[0]["password_hash"], item.password):
             raise BadRequestError("Invalid username or password")
 
+        # Opportunistic rehash
         if auth_handler.needs_rehash(user[0]["password_hash"]):
-            deps["dbI"].update(
-                "users",
-                search=[["id", user[0]["id"]]],
-                update={"password_hash": auth_handler.hash_password(item.password)},
-            )
+            deps["dbI"].update("users", search=[["id", user[0]["id"]]], update={"password_hash": auth_handler.hash_password(item.password)})
 
-        refresh_token = auth_handler.getRefreshToken()
-        refresh_token_hash = auth_handler.hash_token(refresh_token)
-        deps["dbI"].insert(
-            "refresh_tokens",
-            {
-                "username": user[0]["username"],
-                "session_id": generateRandomUUID(),
-                "token_hash": refresh_token_hash,
-                "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
-                "revoked": False,
-                "rotated_from": None,
-            },
-        )
+        # Issue tokens
+        access_token = auth_handler.getAccessToken(user[0]["username"])
 
-        # TODO: Review how to pass the cookies to the response
-        response = APIResponse.genResponse(request,
+        response = APIResponse.genResponse(
+            request,
             {
                 "message": "Login successful",
                 "user": {"id": user[0]["id"], "username": user[0]["username"]},
+                "access_token": access_token,
+                "token_type": "Bearer",
+                "expires_in": int(auth_handler.oidc_token_lifetime_minutes * 60),
             },
         )
-
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=True,
-            samesite="strict",
-            max_age=int(deps["authHandler"].refresh_token_ttl),
-        )
         return response
+
     except BadRequestError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         print(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 # ==========================================================
@@ -129,7 +110,7 @@ async def whoami(request: Request, deps: Dict[str, Any] = Depends(apiReadDeps)):
     """
     Returns identity of user from validated token.
     """
-    user = deps["user"]
+    user = deps["user"].get("user_info")
     return APIResponse.genResponse(request, {"user": user.get("sub"), "tokeninfo": user})
 
 
