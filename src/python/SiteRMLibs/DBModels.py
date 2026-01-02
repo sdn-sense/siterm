@@ -289,6 +289,7 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
     username = Column(String(36), nullable=False)
+    client_ip = Column(String(64), nullable=False)
     token_hash = Column(String(64), primary_key=True)
     session_id = Column(String(64), nullable=False)
     expires_at = Column(Integer, nullable=False)

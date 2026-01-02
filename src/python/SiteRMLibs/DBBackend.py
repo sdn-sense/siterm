@@ -11,6 +11,9 @@ from datetime import datetime, timezone
 from SiteRMLibs.DBModels import REGISTRY, Base
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+from alembic.config import Config
+from alembic import command
+from alembic.runtime.migration import MigrationContext
 
 # ==========================================================
 #  Utilities
@@ -68,8 +71,6 @@ def buildDatabaseURL() -> str:
 # ==========================================================
 #  Database Backend
 # ==========================================================
-
-
 class DBBackend:
     """Database backend using SQLAlchemy ORM."""
 
@@ -114,6 +115,28 @@ class DBBackend:
         """Create all tables from ORM metadata."""
         Base.metadata.create_all(self.engine)
 
+    def upgradedb(self):
+        """Upgrade database schema to latest Alembic revision (head)."""
+        loadEnvFile()
+
+        cfg = Config("/etc/alembic.ini")
+        cfg.set_main_option("sqlalchemy.url", self.database_url)
+
+        try:
+            with self.engine.connect() as conn:
+                context = MigrationContext.configure(conn)
+                current = context.get_current_revision()
+            command.upgrade(cfg, "head")
+            return current
+
+        except Exception as exc:
+            print("Database upgrade failed")
+            print(traceback.format_exc())
+            print("Exception:", exc)
+            raise
+
+
+
     def cleandb(self):
         """Delete all rows from all tables."""
         with self.session() as session:
@@ -141,6 +164,10 @@ class dbinterface:
     def createdb(self):
         """Create all tables in the database."""
         self.db.createdb()
+
+    def upgradedb(self):
+        """Upgrade the database schema to the latest Alembic revision."""
+        self.db.upgradedb()
 
     def isDBReady(self) -> bool:
         """Check if the database is ready to accept connections."""

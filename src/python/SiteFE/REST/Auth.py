@@ -88,6 +88,7 @@ async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depend
         deps["dbI"].insert(
             "refresh_tokens",
             {
+                "username": user[0]["username"],
                 "session_id": generateRandomUUID(),
                 "token_hash": refresh_token_hash,
                 "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
@@ -187,12 +188,16 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
         # Check if the refresh token has expired or been revoked
         if refreshRecord[0]["revoked"] or refreshRecord[0]["expires_at"] < getUTCnow():
             raise BadRequestError("Refresh token is invalid or expired")
+        clientIP = request.client.host if request.client else "unknown"
+        if clientIP != refreshRecord[0]["client_ip"]:
+            raise BadRequestError("Refresh token is being used from a different IP address")
         # Get new token, new refresh token, delete old refresh token
         access_token = deps["authHandler"].getAccessToken(refreshRecord[0]["username"])
         new_refresh_token = deps["authHandler"].getRefreshToken()
         deps["dbI"].delete("refresh_tokens", [["token_hash", deps["authHandler"].hash_token(item.refresh_token)]])
         out = {
             "username": refreshRecord[0]["username"],
+            "client_ip": clientIP,
             "token_hash": deps["authHandler"].hash_token(new_refresh_token),
             "session_id": item.session_id,
             "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
@@ -237,10 +242,14 @@ async def token_challenge(
         if not user or "permissions" not in user or "username" not in user["permissions"]:
             raise BadRequestError("User information is incomplete")
 
+        clientIP = request.client.host if request.client else "unknown"
+
+
         access_token = deps["authHandler"].getAccessToken(user["permissions"]["username"])
         refresh_token = deps["authHandler"].getRefreshToken()
         out = {
             "username": user["permissions"]["username"],
+            "client_ip": clientIP,
             "token_hash": deps["authHandler"].hash_token(refresh_token),
             "session_id": challenge_id,
             "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
