@@ -66,25 +66,24 @@ class M2MChallengeItem(BaseModel):
 async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depends(apiPublicDeps)):
     """Authenticate human user"""
     try:
-        pass_handler = deps["passHandler"]
+        auth_handler = deps["authHandler"]
         user = deps["dbI"].get("users", limit=1, search=[["username", item.username]])
         if not user:
             raise BadRequestError("Invalid username or password")
         if user[0].get("disabled"):
             raise BadRequestError("Invalid username or password")
-        if not pass_handler.verify_password(user[0]["password_hash"], item.password):
+        if not auth_handler.verify_password(user[0]["password_hash"], item.password):
             raise BadRequestError("Invalid username or password")
 
-        if pass_handler.needs_rehash(user[0]["password_hash"]):
+        if auth_handler.needs_rehash(user[0]["password_hash"]):
             deps["dbI"].update(
                 "users",
                 search=[["id", user[0]["id"]]],
-                update={"password_hash": pass_handler.hash_password(item.password)},
+                update={"password_hash": auth_handler.hash_password(item.password)},
             )
 
-        refresh_token = deps["authHandler"].getRefreshToken()
-        refresh_token_hash = deps["authHandler"].hash_token(refresh_token)
-
+        refresh_token = auth_handler.getRefreshToken()
+        refresh_token_hash = auth_handler.hash_token(refresh_token)
         deps["dbI"].insert(
             "refresh_tokens",
             {
@@ -98,8 +97,7 @@ async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depend
         )
 
         # TODO: Review how to pass the cookies to the response
-        response = APIResponse.genResponse(
-            request,
+        response = APIResponse.genResponse(request,
             {
                 "message": "Login successful",
                 "user": {"id": user[0]["id"], "username": user[0]["username"]},
@@ -129,20 +127,10 @@ async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depend
 @rateLimitIp(maxRequests=60, windowSeconds=60)
 async def whoami(request: Request, deps: Dict[str, Any] = Depends(apiReadDeps)):
     """
-    Returns identity of whoami
+    Returns identity of user from validated token.
     """
-    try:
-        # TODO: Implement whoami logic
-        user = deps.get("user")
-        print(f"Whoami user: {user}")
-        if not user:
-            raise BadRequestError("User not authenticated")
-        return APIResponse.genResponse(request, {"message": "Whoami successful", "user": "Not implemented"})
-    except BadRequestError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
-    except Exception as e:
-        print(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+    user = deps["user"]
+    return APIResponse.genResponse(request, {"user": user.get("sub"), "tokeninfo": user})
 
 
 # ==========================================================

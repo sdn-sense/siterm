@@ -302,8 +302,12 @@ class Requests:
                     self._logMessage("Successfully renewed Bearer token using refresh token.")
                 else:
                     self._logMessage("Failed to find access_token in the response while renewing Bearer token using refresh token.")
+                    self._logMessage(f"Full response: {response.text}")
+                    raise HTTPException(f"Failed to find access_token in the response while renewing Bearer token using refresh token. Full response: {response.text}")
             else:
                 self._logMessage(f"Failed to renew Bearer token using refresh token: {response.status_code} {response.reason_phrase}")
+                self._logMessage(f"Full response: {response.text}")
+                raise HTTPException(f"Failed to renew Bearer token using refresh token: {response.status_code} {response.reason_phrase}. Full response: {response.text}")
         else:
             self._getNewBearerToken(auth_info)
 
