@@ -78,23 +78,9 @@ class DBBackend:
         loadEnvFile()
 
         self.database_url = buildDatabaseURL()
-        self.autocommit = os.getenv("MARIA_DB_AUTOCOMMIT", "True") in (
-            "True",
-            "true",
-            "1",
-        )
-
-        self.engine = create_engine(
-            self.database_url,
-            pool_pre_ping=True,
-            future=True,
-        )
-
-        self.Session = sessionmaker(
-            bind=self.engine,
-            autoflush=False,
-            expire_on_commit=False,
-        )
+        self.autocommit = os.getenv("MARIA_DB_AUTOCOMMIT", "True") in ("True", "true", "1")
+        self.engine = create_engine(self.database_url, pool_pre_ping=True, future=True)
+        self.Session = sessionmaker(bind=self.engine, autoflush=False, expire_on_commit=False)
 
     @contextmanager
     def session(self):
@@ -115,12 +101,13 @@ class DBBackend:
         """Create all tables from ORM metadata."""
         Base.metadata.create_all(self.engine)
 
-    def upgradedb(self):
+    def upgradedb(self, directory):
         """Upgrade database schema to latest Alembic revision (head)."""
         loadEnvFile()
-
+        # Load Alembic configuration
         cfg = Config("/etc/alembic.ini")
         cfg.set_main_option("sqlalchemy.url", self.database_url)
+        cfg.set_main_option("script_location", str(directory))
 
         try:
             with self.engine.connect() as conn:
@@ -135,6 +122,14 @@ class DBBackend:
             print("Exception:", exc)
             raise
 
+    def executeRaw(self, sql):
+        """
+        Execute raw SQL directly on the engine.
+        """
+        with self.engine.connect() as conn:
+            result = conn.execute(text(sql), {})
+            conn.commit()
+            return result
 
 
     def cleandb(self):
@@ -165,9 +160,9 @@ class dbinterface:
         """Create all tables in the database."""
         self.db.createdb()
 
-    def upgradedb(self):
+    def upgradedb(self, directory):
         """Upgrade the database schema to the latest Alembic revision."""
-        self.db.upgradedb()
+        self.db.upgradedb(directory)
 
     def isDBReady(self) -> bool:
         """Check if the database is ready to accept connections."""
@@ -177,6 +172,10 @@ class dbinterface:
             return True
         except Exception:
             return False
+
+    def executeRaw(self, sql):
+        """Execute raw SQL directly on the engine."""
+        return self.db.executeRaw(sql)
 
     def get(self, calltype, limit=None, search=None, orderby=None, mapping=True):
         """Retrieve rows from a specific table."""
