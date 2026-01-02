@@ -188,13 +188,11 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
         if refreshRecord[0]["revoked"] or refreshRecord[0]["expires_at"] < getUTCnow():
             raise BadRequestError("Refresh token is invalid or expired")
         # Get new token, new refresh token, delete old refresh token
-        access_token = deps["authHandler"].getAccessToken(refreshRecord[0]["user"])
+        access_token = deps["authHandler"].getAccessToken(refreshRecord[0]["username"])
         new_refresh_token = deps["authHandler"].getRefreshToken()
-        deps["dbI"].delete(
-            "refresh_tokens",
-            [["token_hash", deps["authHandler"].hash_token(item.refresh_token)]],
-        )
+        deps["dbI"].delete("refresh_tokens", [["token_hash", deps["authHandler"].hash_token(item.refresh_token)]])
         out = {
+            "username": refreshRecord[0]["username"],
             "token_hash": deps["authHandler"].hash_token(new_refresh_token),
             "session_id": item.session_id,
             "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
@@ -242,6 +240,7 @@ async def token_challenge(
         access_token = deps["authHandler"].getAccessToken(user["permissions"]["username"])
         refresh_token = deps["authHandler"].getRefreshToken()
         out = {
+            "username": user["permissions"]["username"],
             "token_hash": deps["authHandler"].hash_token(refresh_token),
             "session_id": challenge_id,
             "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,

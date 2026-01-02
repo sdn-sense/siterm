@@ -8,11 +8,11 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2017/09/26
 """
 
-import random
 import base64
 import copy
 import functools
 import os
+import random
 import socket
 import time
 import traceback
@@ -181,6 +181,7 @@ class Requests:
     def close(self):
         """Close the HTTP sessions."""
         self.session.close()
+        self.authsession.close()
         self.notFEsession.close()
 
     def _logMessage(self, message):
@@ -244,6 +245,7 @@ class Requests:
                 )
                 if response.status_code == 429:
                     self._logMessage(f"Rate limited when requesting new Bearer token from {auth_info['token_endpoint']}")
+                    # sleep between 10 and 30 seconds  randomly and raise an exception
                     sleep_time = random.randint(10, 30)
                     self._logMessage(f"Sleeping for {sleep_time} seconds before retrying...")
                     time.sleep(sleep_time)
@@ -276,7 +278,7 @@ class Requests:
                 self._logMessage(f"Full traceback: {traceback.format_exc()}")
 
     def _renewBearerToken(self, auth_info):
-        """Renew the Bearer token by reading it from the environment variable"""
+        """Renew the Bearer token using the refresh token or by obtaining a new token via challenge."""
         # If refresh token is available, use it to get a new access token
         # If no refresh token is available, use the token endpoint to get a new access token via challenge
         # In case no refreshtoken or access_token, then use client cert as post
@@ -290,7 +292,7 @@ class Requests:
                 method="POST",
                 url=auth_info["refresh_token_endpoint"],
                 headers={"Content-Type": "application/json"},
-                json={"sessionid": self.sessionid, "refresh_token": self.refreshtoken},
+                json={"session_id": self.sessionid, "refresh_token": self.refreshtoken},
             )
             if response.status_code == 200:
                 resp_json = response.json()
@@ -300,6 +302,8 @@ class Requests:
                     self._logMessage("Successfully renewed Bearer token using refresh token.")
                 else:
                     self._logMessage("Failed to find access_token in the response while renewing Bearer token using refresh token.")
+            else:
+                self._logMessage(f"Failed to renew Bearer token using refresh token: {response.status_code} {response.reason_phrase}")
         else:
             self._getNewBearerToken(auth_info)
 
@@ -332,11 +336,9 @@ class Requests:
 
     def __makeSiteRMHTTPCall(self, url, verb, **kwargs):
         """Make an HTTP request to the SiteRM Frontend."""
+
         if not self.bearertoken or self._expiredBearerToken():
-            response = self.session.request(
-                method="GET",
-                url=urllib.parse.urljoin(self.host, "/.well-known/openid-configuration"),
-            )
+            response = self.session.request(method="GET", url=urllib.parse.urljoin(self.host, "/.well-known/openid-configuration"))
             if response.status_code == 200:
                 auth_info = response.json()
                 self._renewBearerToken(auth_info)
