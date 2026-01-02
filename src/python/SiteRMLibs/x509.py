@@ -172,7 +172,7 @@ class AuthHandler:
         self.oidc_private_key = os.environ.get("OIDC_PRIVATE_KEY", None)
         self.oidc_prev_public_key = os.environ.get("OIDC_PREV_PUBLIC_KEY", None)
         self.oidc_prev_private_key = os.environ.get("OIDC_PREV_PRIVATE_KEY", None)
-        self.oidc_ca_store = load_ca_store(os.environ.get("OIDC_CA_DIR", "/etc/grid-security/certificates"))
+        self.oidc_ca_store = load_ca_store(os.environ.get("OIDC_CA_DIR", "/etc/grid-security/truststore/"))
         self.oidc_kid = None
         self.__startup__()
         self.__getjwks__()
