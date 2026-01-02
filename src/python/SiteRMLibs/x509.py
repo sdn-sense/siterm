@@ -28,6 +28,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from cryptography.hazmat.primitives.hashes import Hash
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from cryptography.x509.oid import NameOID
+from cryptography.x509.store import X509Store, X509StoreContext
 from jwt.algorithms import RSAAlgorithm
 from SiteRMLibs.CustomExceptions import (
     BadRequestError,
@@ -68,6 +69,29 @@ def name_to_openssl(name: x509.Name) -> str:
         parts.append(f"{short}={attr.value}")
     return "/" + "/".join(parts)
 
+
+def load_ca_store(ca_dir):
+    store = X509Store()
+    for fname in os.listdir(ca_dir):
+        if not fname.endswith(".pem"):
+            continue
+        path = os.path.join(ca_dir, fname)
+        try:
+            with open(path, "rb") as f:
+                ca_cert = x509.load_pem_x509_certificate(f.read())
+                store.add_cert(ca_cert)
+        except Exception:
+            # Ignore broken / policy / non-cert files
+            continue
+    return store
+
+def verify_cert_chain(cert, ca_store):
+    """
+    cert  : leaf x509.Certificate
+    ca_store : X509Store containing trusted CA certificates
+    """
+    ctx = X509StoreContext(ca_store, cert)
+    ctx.verify_certificate()  # raises on failure
 
 def load_cert_info(cert):
     """Load certificate information into a dictionary."""
@@ -148,6 +172,7 @@ class AuthHandler:
         self.oidc_private_key = os.environ.get("OIDC_PRIVATE_KEY", None)
         self.oidc_prev_public_key = os.environ.get("OIDC_PREV_PUBLIC_KEY", None)
         self.oidc_prev_private_key = os.environ.get("OIDC_PREV_PRIVATE_KEY", None)
+        self.oidc_ca_store = load_ca_store(os.environ.get("OIDC_CA_DIR", "/etc/grid-security/certificates"))
         self.oidc_kid = None
         self.__startup__()
         self.__getjwks__()
@@ -165,6 +190,7 @@ class AuthHandler:
         # or if container is restarted
         try:
             cert = load_cert(input_cert)
+            verify_cert_chain(cert, self.oidc_ca_store)
             certinfo = load_cert_info(cert)
             self.validateCertificate(certinfo)
 
@@ -205,6 +231,7 @@ class AuthHandler:
             return False, None
         try:
             cert = load_cert(record["input_cert"])
+            verify_cert_chain(cert, self.oidc_ca_store)
             certinfo = load_cert_info(cert)
             user = self.validateCertificate(certinfo)
             public_key = cert.public_key()
