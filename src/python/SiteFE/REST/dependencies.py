@@ -172,6 +172,7 @@ def checkPermissions(userinfo, required_perms: List[str]):
     # user_perms = userinfo.get("user_info", {}).get("permissions", [])
     # if not any(perm in user_perms for perm in required_perms):
     #    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access to this resource is forbidden due to insufficient permissions.")
+    # TODO: Implement permission checking logic and also add permissions inside the token
 
 
 def apiReadDeps(

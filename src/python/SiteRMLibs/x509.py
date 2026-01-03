@@ -28,7 +28,8 @@ from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from cryptography.hazmat.primitives.hashes import Hash
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from cryptography.x509.oid import NameOID
-from cryptography.x509.store import X509Store, X509StoreContext
+from OpenSSL import crypto
+from cryptography.hazmat.primitives.serialization import Encoding
 from jwt.algorithms import RSAAlgorithm
 from SiteRMLibs.CustomExceptions import (
     BadRequestError,
@@ -71,14 +72,17 @@ def name_to_openssl(name: x509.Name) -> str:
 
 
 def load_ca_store(ca_dir):
-    store = X509Store()
+    store = crypto.X509Store()
     for fname in os.listdir(ca_dir):
         if not fname.endswith(".pem"):
             continue
         path = os.path.join(ca_dir, fname)
         try:
             with open(path, "rb") as f:
-                ca_cert = x509.load_pem_x509_certificate(f.read())
+                ca_cert = crypto.load_certificate(
+                    crypto.FILETYPE_PEM,
+                    f.read(),
+                )
                 store.add_cert(ca_cert)
         except Exception:
             # Ignore broken / policy / non-cert files
@@ -87,10 +91,14 @@ def load_ca_store(ca_dir):
 
 def verify_cert_chain(cert, ca_store):
     """
-    cert  : leaf x509.Certificate
-    ca_store : X509Store containing trusted CA certificates
+    cert  : leaf cryptography.x509.Certificate
+    ca_store : OpenSSL.crypto.X509Store
     """
-    ctx = X509StoreContext(ca_store, cert)
+    openssl_cert = crypto.load_certificate(
+        crypto.FILETYPE_PEM,
+        cert.public_bytes(Encoding.PEM),
+    )
+    ctx = crypto.X509StoreContext(ca_store, openssl_cert)
     ctx.verify_certificate()  # raises on failure
 
 def load_cert_info(cert):
@@ -215,6 +223,10 @@ class AuthHandler:
                 "challenge": challenge_b64,
                 "expires_at": expires_at,
             }
+        except crypto.X509StoreContextError as ex:
+            print(f"Certificate verification failed: {ex}")
+            print(f"Full traceback: {traceback.format_exc()}")
+            raise IssuesWithAuth("Certificate verification failed") from ex
         except Exception as e:
             print(f"Error generating challenge: {e}")
             print(f"Full traceback: {traceback.format_exc()}")
@@ -254,6 +266,9 @@ class AuthHandler:
                     ),
                     hashes.SHA256(),
                 )
+        except crypto.X509StoreContextError as ex:
+            print(f"Certificate verification failed: {ex}")
+            return False, None
         except InvalidSignature as ex:
             print(f"Invalid signature: {ex}")
             return False, None

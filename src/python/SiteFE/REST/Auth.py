@@ -22,7 +22,7 @@ from SiteFE.REST.dependencies import (
     apiReadDeps,
     rateLimitIp,
 )
-from SiteRMLibs.CustomExceptions import BadRequestError
+from SiteRMLibs.CustomExceptions import BadRequestError, IssuesWithAuth
 from SiteRMLibs.MainUtilities import getUTCnow
 
 router = APIRouter()
@@ -94,6 +94,8 @@ async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depend
         )
         return response
 
+    except IssuesWithAuth as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
     except BadRequestError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
@@ -236,6 +238,8 @@ async def token_challenge(
                 "token_type": "Bearer",
             },
         )
+    except IssuesWithAuth as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
     except Exception as e:
         print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e)) from e
