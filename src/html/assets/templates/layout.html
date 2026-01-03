@@ -1,0 +1,54 @@
+<template id="header-template">
+    <div id="loginOverlay">
+        <div class="card shadow" id="loginCard">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Login required</h5>
+                <div class="alert alert-danger d-none" id="loginError"></div>
+                <div class="mb-3">
+                    <label for="loginUser" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="loginUser" autocomplete="username" />
+                </div>
+                <div class="mb-3">
+                    <label for="loginPass" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="loginPass" autocomplete="current-password" />
+                </div>
+                <button class="btn btn-primary w-100" id="loginBtn">Sign in</button>
+                <div class="text-muted mt-2" style="font-size: 0.9em;">
+                    Token is stored in <code>Javascript localStorage</code> and used as <code>Authorization: Bearer</code>.
+                </div>
+            </div>
+        </div>
+    </div>
+    <header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SDN SENSE End Site Monitoring</a>
+        <div class="ms-auto d-flex align-items-center pe-3" id="status-container">
+            <span class="text-success mr-3" id="alive-status">Alive: ...</span>
+            <span class="text-success mr-3" id="ready-status">Ready: ...</span>
+            <span class="text-success mr-3" id="readiness-status">Readiness: ...</span>
+            <span class="text-success mr-3" id="liveness-status">Liveness: ...</span>
+            <span class="text-success mr-3" id="whoami-status">Whoami: ...</span>
+            <a class="btn btn-outline-light btn-sm" id="logoutLink" href="#">Logout</a>
+        </div>
+    </header>
+</template>
+
+<template id="sidebar-template">
+    <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link active" aria-current="page" href="/index.html">Topology</a></li>
+        <li class="nav-item"><a class="nav-link" href="/frontendconfig.html">Frontend Configuration</a></li>
+        <li class="nav-item"><a class="nav-link" href="/models.html">Models</a></li>
+        <li class="nav-item"><a class="nav-link" href="/servicestates.html">ServiceStates</a></li>
+        <li class="nav-item"><a class="nav-link" href="/deltas.html">Deltas</a></li>
+        <li class="nav-item"><a class="nav-link" href="/activerequests.html">Active Requests</a></li>
+    </ul>
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+        <span>Debugging tools</span><a class="link-secondary" href="#" aria-label="Debugging tools"></a>
+    </h6>
+    <ul class="nav flex-column mb-2">
+        <li class="nav-item"><a class="nav-link" href="/newdebug.html">Request new debug action</a></li>
+        <li class="nav-item"><a class="nav-link" href="/debughistory.html">Debug history</a></li>
+        <li class="nav-item"><a class="nav-link" href="/changeactive.html">Change Active Start/End</a></li>
+        <li class="nav-item"><a class="nav-link" href="/docs#/" target="_blank">Swagger Documentation</a></li>
+        <li class="nav-item"><a class="nav-link" href="/prometheus.html">Prometheus Metrics</a></li>
+    </ul>
+</template>
