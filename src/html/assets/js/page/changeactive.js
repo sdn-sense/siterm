@@ -28,6 +28,13 @@ function loadModel(sitename) {
         url: "/api/" + sitename + "/frontend/activedeltas",
         dataType: "json",
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(json) {
             const dropdown = document.getElementById("f0_instanceid");
             dropdown.innerHTML = '<option value="">Choose an instance</option>'; // Reset dropdown

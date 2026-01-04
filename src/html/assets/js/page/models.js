@@ -22,6 +22,13 @@ function loadModel(modelID, sitename) {
             url: `/api/${sitename}/models/${modelID}?rdfformat=${fmt}`,
             dataType: "json",
             async: false,
+            error: function(xhr, status, error) {
+                showAjaxWarning(
+                    "Failed to load deltas",
+                    `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+                );
+                console.error("AJAX error:", status, xhr.responseText);
+            },
             success: function(json) {
                 if (!metadataSet) {
                     model.append(
@@ -73,13 +80,17 @@ function defineAllModels(data, sitename) {
     );
     cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
     latest = true;
-    for (var key in data["models"][sitename]) {
-        if ($.isPlainObject(data["models"][sitename][key])) {
-            modID = data["models"][sitename][key]["id"];
+    for (j = 0; j < data.length; j++) {
+        if ($.isPlainObject(data[j])) {
+            modID = data[j]["id"];
             tagName = modID;
             if (latest) {
                 latest = false;
                 tagName += " LATEST";
+            }
+            // add creationTime
+            if (data[j]["creationTime"]) {
+                tagName += " (" + data[j]["creationTime"] + ")";
             }
 
             menCol.append(
@@ -122,6 +133,13 @@ function load_data() {
         dataType: "json",
         data: {},
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(json) {
             defineAllModels(json, sitename);
         },

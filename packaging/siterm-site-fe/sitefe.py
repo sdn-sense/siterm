@@ -25,6 +25,7 @@ app = FastAPI()
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+app.include_router(auth_router)
 app.include_router(fe_router, prefix="/api")
 app.include_router(host_router, prefix="/api")
 app.include_router(model_router, prefix="/api")
@@ -33,7 +34,6 @@ app.include_router(debug_router, prefix="/api")
 app.include_router(topo_router, prefix="/api")
 app.include_router(monitoring_router, prefix="/api")
 app.include_router(service_router, prefix="/api")
-app.include_router(auth_router)
 
 app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="ui")
 

@@ -132,6 +132,21 @@
     };
 })(window, jQuery);
 
+function showAjaxWarning(message, details) {
+    const alert = $(`
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <strong>Warning:</strong> ${message}
+            ${details ? `<div class="small text-muted mt-1">${details}</div>` : ""}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    `);
+
+    $("#maindiv").prepend(alert);
+}
+
+
 var entityMap = {
     "&": "&amp;",
     "<": "&lt;",
@@ -178,12 +193,11 @@ function mrmlSaver(dataIn, saveObj) {
 function defineSites(data, definehosts = true) {
     sitesTab = $('<ul class="nav nav-pills" id="myTab" role="tablist"></ul>');
     allSites = $('<div id="sites" class="tab-content"></div>');
-    // TODO: Remove div as this is always one site
     sitename = data["general"]["sitename"];
     nName = sitename;
     // FE Config
     sitesTab.append(
-        '<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="' +
+        '<li class="nav-item" role="presentation"><a class="nav-link active" data-toggle="tab" aria-controls="' +
         nName +
         '" aria-selected="false" id="tab_fe_' +
         nName +
@@ -202,29 +216,34 @@ function defineSites(data, definehosts = true) {
     );
     // All DTNs
     if (definehosts) {
-        for (j = 0; j < data["hostinfo"][sitename].length; j++) {
-            dtns = data["hostinfo"][sitename][j];
-            htmlhostname = dtns["hostname"].replace(/\./g, "_");
-            nName = sitename + "_" + htmlhostname;
-            sitesTab.append(
-                '<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="' +
-                nName +
-                '" aria-selected="false" id="tab_' +
-                nName +
-                '"  href="#view_' +
-                nName +
-                '">' +
-                dtns["hostname"] +
-                "</a></li>",
-            );
-            allSites.append(
-                '<div class="tab-pane fade row" role="tabpanel" aria-labelledby="tab_' +
-                nName +
-                '" id="view_' +
-                nName +
-                '"></div>',
-            );
-        }
+        $.ajax({
+            url: "/api/" + sitename + "/hosts?details=false&limit=100",
+            dataType: "json",
+            data: "",
+            async: false,
+            error: function(xhr, status, error) {
+                showAjaxWarning(
+                    "Failed to load deltas",
+                    `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+                );
+                console.error("AJAX error:", status, xhr.responseText);
+            },
+            success: function(json) {
+                for (j = 0; j < json.length; j++) {
+                    hostname = json[j]["hostname"];
+                    htmlhostname = hostname.replace(/\./g, "_");
+                    nName = sitename + "_" + htmlhostname;
+                    sitesTab.append(
+                        '<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="' +
+                        nName + '" aria-selected="false" id="tab_' + nName + '"  href="#view_' + nName + '">' + hostname + "</a></li>",
+                    );
+                    allSites.append(
+                        '<div class="tab-pane fade row" role="tabpanel" aria-labelledby="tab_' +
+                        nName + '" id="view_' + nName + '"></div>',
+                    );
+                }
+            },
+        });
     }
     $("#sites_tab").append(sitesTab);
     $("#main_tab").append(allSites);
@@ -399,6 +418,13 @@ function doSiteUpdate(ids) {
         dataType: "json",
         data: "",
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(json) {
             for (j = 0; j < json.length; j++) {
                 addDropDown(json[j]["hostname"], $("#" + ids + "dtn"));
@@ -415,6 +441,13 @@ function doDTNUpdate(ids) {
         dataType: "json",
         data: "",
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(json) {
             for (j = 0; j < json.length; j++) {
                 if (strDTN == json[j]["hostname"]) {
@@ -508,6 +541,13 @@ function fetchConfig() {
         url: "/api/frontend/configuration",
         dataType: "json",
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(response) {
             configdata = response;
         },

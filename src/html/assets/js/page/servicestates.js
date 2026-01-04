@@ -12,9 +12,9 @@ function defineAllStates(data, sitename) {
     nRow = $('<div class="row">');
     nRow.append(cntDiv);
     $("#view_fe_" + sitename).append(nRow);
-    for (var key in data["states"][sitename]) {
-        if ($.isPlainObject(data["states"][sitename][key])) {
-            var state = data["states"][sitename][key];
+    for (j = 0; j < data.length; j++) {
+        if ($.isPlainObject(data[j])) {
+            var state = data[j];
             var row = "<tr";
             if (state["servicestate"] === "OK") {
                 row += ' class="table-success">';
@@ -79,8 +79,12 @@ function defineAllStates(data, sitename) {
                     alert("Deleted: " + hostname + " / " + servicename);
                     $(this).closest("tr").remove();
                 }.bind(this),
-                error: function(xhr) {
-                    alert("Error: " + xhr.responseText);
+                error: function(xhr, status, error) {
+                    showAjaxWarning(
+                        "Failed to load deltas",
+                        `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+                    );
+                    console.error("AJAX error:", status, xhr.responseText);
                 },
             });
         });

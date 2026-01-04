@@ -47,6 +47,13 @@ function deltaStates(deltaID, sitename, saveObj) {
         dataType: "json",
         data: {},
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(json) {
             tableAdd(json, ["id", "deltaid", "insertdate", "state"], saveObj);
         },
@@ -63,8 +70,11 @@ function forceCommit(deltaID, sitename) {
             alert("Force Commit Done for Delta ID: " + deltaID);
         },
         error: function(xhr, status, error) {
-            alert("Force Commit failed: " + error);
-            console.error("Error details:", status, xhr.responseText);
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
         },
     });
 }
@@ -75,6 +85,13 @@ function loadDelta(deltaID, sitename) {
         dataType: "json",
         data: {},
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(json) {
             json = json[0];
             model = $("<div><\/div>");
@@ -195,6 +212,13 @@ function load_data() {
         dataType: "json",
         data: {},
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(json) {
             defineAllDeltas(json, sitename);
         },

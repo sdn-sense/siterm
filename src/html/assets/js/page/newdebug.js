@@ -29,19 +29,12 @@ function collectInputs(tagName) {
                 params,
             );
         },
-        error: function(jqXHR, textStatus, errorThrown) {
-            newAlert(
-                "Error: " +
-                textStatus +
-                " - " +
-                errorThrown +
-                " - Status: " +
-                jqXHR.status +
-                " - Response: " +
-                jqXHR.responseText,
-                params,
-                "alert-danger",
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
             );
+            console.error("AJAX error:", status, xhr.responseText);
         },
     });
 }
@@ -53,6 +46,13 @@ function doSiteUpdate(ids) {
         dataType: "json",
         data: {},
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(json) {
             for (j = 0; j < json.length; j++) {
                 addDropDown(json[j]["hostname"], $("#" + ids + "hostname"));
@@ -81,6 +81,13 @@ function doDTNUpdate(ids, ipkeys, intkeys) {
         dataType: "json",
         data: {},
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(json) {
             for (j = 0; j < json.length; j++) {
                 if (strDTN === json[j]["hostname"]) {

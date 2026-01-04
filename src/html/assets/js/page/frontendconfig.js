@@ -28,9 +28,11 @@ function deletehost(hostname) {
             newAlert("Host delete sent: " + JSON.stringify(result), params);
         },
         error: function(xhr, status, error) {
-            newAlert("Host delete failed: " + error, {
-                type: hostname.replace(/\./g, "_"),
-            });
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
         },
     });
 }
@@ -68,10 +70,17 @@ function load_data() {
     defineSites(configdata);
     defineSitesConfig(configdata, sitename);
     $.ajax({
-        url: "/api/" + sitename + "/hosts?limit=100",
+        url: "/api/" + sitename + "/hosts?details=true&limit=100",
         dataType: "json",
         data: {},
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(dataout) {
             for (j = 0; j < dataout.length; j++) {
                 defineDTNConfig(dataout[j], sitename, dataout[j]["hostname"]);

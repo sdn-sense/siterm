@@ -110,9 +110,7 @@ class NodeInfo:
         self._addNodeMetadata(hostname=nodeDict["hostname"], nodeDict=nodeDict)
 
         # Node General description
-
         self._nmlLiteral(hosturi, "hostname", nodeDict["hostname"])
-        self._nmlLiteral(hosturi, "insertdate", nodeDict["insertdate"])
         # Provide location information about site Frontend
         try:
             self._nmlLiteral(hosturi, "latitude", self.config.get(self.sitename, "latitude"))

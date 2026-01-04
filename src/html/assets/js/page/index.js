@@ -11,6 +11,13 @@ if (configdata) {
         url: "/api/" + sitename + "/topo/gettopology",
         dataType: "json",
         async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
         success: function(json) {
             for (j = 0; j < json.length; j++) {
                 var myObject = (0, eval)("(" + json[j]["hostinfo"] + ")");

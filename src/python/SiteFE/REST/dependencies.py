@@ -221,6 +221,7 @@ def apiAdminDeps(
     user=Depends(depAuthenticate),
     authHandler=Depends(depGetAuthHandler),
     stateMachine=Depends(depGetStateMachine),
+    _creds: HTTPAuthorizationCredentials = Depends(BEARER_SCHEME),
 ):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["admin"])
