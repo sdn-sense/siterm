@@ -300,9 +300,7 @@ function defineHostButtons(data, sitename, hostname) {
 
 function defineDTNConfig(data, sitename, hostname) {
     htmlhostname = hostname.replace(/\./g, "_");
-    menCol = $(
-        '<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"></div>',
-    );
+    menCol = $('<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"></div>');
     cntDiv = $('<div class="tab-content" id="v-pills-tabContent"></div>');
     for (var key in data["hostinfo"]) {
         if (key === "Summary") {
@@ -518,6 +516,7 @@ function fetchConfig() {
 }
 
 async function fetchStatus() {
+    if (!window.__layoutReady) return;
     // Fire them independently; no shared failure modes
     fetchAndUpdate({
         url: "/api/alive",

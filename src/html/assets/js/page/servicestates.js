@@ -89,7 +89,7 @@ function defineAllStates(data, sitename) {
 function load_data() {
     var configdata = fetchConfig();
     var sitename = configdata["general"]["sitename"];
-    defineSites(data, false);
+    defineSites(configdata, false);
     $.ajax({
         url: "/api/" + sitename + "/servicestates",
         dataType: "json",

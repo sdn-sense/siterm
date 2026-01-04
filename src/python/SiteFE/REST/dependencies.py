@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Union
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic_core import core_schema
 from SiteFE.PolicyService import stateMachine as ST
 from SiteRMLibs.CustomExceptions import (
@@ -40,6 +41,8 @@ DEP_CONFIG = getGitConfig()
 DEP_DBOBJ = getDBConnObj()
 DEP_STATE_MACHINE = ST.StateMachine(DEP_CONFIG)
 AUTH_HANDLER = AuthHandler()
+
+BEARER_SCHEME = HTTPBearer(scheme_name="BearerAuth", description="JWT Bearer token obtained from /auth/login")
 
 DEFAULT_RESPONSES = {
     401: {
@@ -181,6 +184,7 @@ def apiReadDeps(
     user=Depends(depAuthenticate),
     authHandler=Depends(depGetAuthHandler),
     stateMachine=Depends(depGetStateMachine),
+    _creds: HTTPAuthorizationCredentials = Depends(BEARER_SCHEME),
 ):
     """Dependency to get all necessary objects for the REST API."""
     return {
@@ -198,6 +202,7 @@ def apiWriteDeps(
     user=Depends(depAuthenticate),
     authHandler=Depends(depGetAuthHandler),
     stateMachine=Depends(depGetStateMachine),
+    _creds: HTTPAuthorizationCredentials = Depends(BEARER_SCHEME),
 ):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["write", "admin"])

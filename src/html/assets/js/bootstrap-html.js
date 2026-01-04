@@ -1,35 +1,4 @@
-$(document).ready(async function() {
-    SiteRMAuth.setupAjaxAuth();
-    SiteRMAuth.setupGlobal401Handler();
-
-    $("#loginBtn").on("click", async function() {
-        try {
-            await SiteRMAuth.login(
-                $("#loginUser").val(),
-                $("#loginPass").val()
-            );
-            window.location.reload();
-        } catch (e) {
-            console.log(e);
-            SiteRMAuth.showLoginError(e.message);
-        }
-    });
-
-    $("#logoutLink").on("click", function(e) {
-        e.preventDefault();
-        SiteRMAuth.logout();
-    });
-
-    await SiteRMAuth.checkSession();
-
-    fetchStatus();
-    setInterval(fetchStatus, 10000);
-});
-
-$("#myTab a").click(function(e) {
-    e.preventDefault();
-    $(this).tab("show");
-});
+window.__layoutReady = false;
 
 (async function() {
     async function loadTemplates() {
@@ -72,4 +41,38 @@ $("#myTab a").click(function(e) {
 
     mountTemplate("header-template", "header-slot");
     mountTemplate("sidebar-template", "sidebar-slot");
+    window.__layoutReady = true;
 })();
+
+$(document).ready(async function() {
+    SiteRMAuth.setupAjaxAuth();
+    SiteRMAuth.setupGlobal401Handler();
+
+    $("#loginBtn").on("click", async function() {
+        try {
+            await SiteRMAuth.login(
+                $("#loginUser").val(),
+                $("#loginPass").val()
+            );
+            window.location.reload();
+        } catch (e) {
+            console.log(e);
+            SiteRMAuth.showLoginError(e.message);
+        }
+    });
+
+    $("#logoutLink").on("click", function(e) {
+        e.preventDefault();
+        SiteRMAuth.logout();
+    });
+
+    await SiteRMAuth.checkSession();
+
+    fetchStatus();
+    setInterval(fetchStatus, 5000);
+});
+
+$("#myTab a").click(function(e) {
+    e.preventDefault();
+    $(this).tab("show");
+});

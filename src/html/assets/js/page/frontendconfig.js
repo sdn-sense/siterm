@@ -65,8 +65,8 @@ function reloadconfig(hostname) {
 function load_data() {
     var configdata = fetchConfig();
     var sitename = configdata["general"]["sitename"];
-    defineSites(data);
-    defineSitesConfig(data, sitename);
+    defineSites(configdata);
+    defineSitesConfig(configdata, sitename);
     $.ajax({
         url: "/api/" + sitename + "/hosts?limit=100",
         dataType: "json",
