@@ -13,7 +13,7 @@ if (configdata) {
         async: false,
         error: function(xhr, status, error) {
             showAjaxWarning(
-                "Failed to load deltas",
+                "Failed to load topology",
                 `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
             );
             console.error("AJAX error:", status, xhr.responseText);

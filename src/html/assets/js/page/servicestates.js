@@ -81,7 +81,7 @@ function defineAllStates(data, sitename) {
                 }.bind(this),
                 error: function(xhr, status, error) {
                     showAjaxWarning(
-                        "Failed to load deltas",
+                        "Failed to delete service state",
                         `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
                     );
                     console.error("AJAX error:", status, xhr.responseText);
@@ -101,6 +101,11 @@ function load_data() {
         async: false,
         success: function(json) {
             defineAllStates(json, sitename);
+        },
+        error: function(xhr, status, error) {
+            showAjaxWarning("Failed to load service states",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`);
+                console.error("AJAX error:", status, xhr.responseText);
         },
     });
 }

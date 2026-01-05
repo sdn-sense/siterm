@@ -14,7 +14,7 @@ import time
 from datetime import datetime, timezone
 
 from rdflib import Graph
-from rdflib.compare import isomorphic
+from rdflib.compare import isomorphic, graph_diff
 from SiteFE.LookUpService.modules.deltainfo import DeltaInfo
 from SiteFE.LookUpService.modules.nodeinfo import NodeInfo
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper
@@ -213,6 +213,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             self.logger.error("Current model or graph is empty. Cannot compare.")
             return False, None
         newGraph = parseRDFFile(saveName)
+        modequal = isomorphic(currentGraph, newGraph)
+        if not modequal:
+            _, removed, added = graph_diff(currentGraph, newGraph)
+            self.logger.info("Model differences detected. Added: %s, Removed: %s", added, removed)
         return isomorphic(currentGraph, newGraph), currentModel
 
     def getModelSavePath(self):

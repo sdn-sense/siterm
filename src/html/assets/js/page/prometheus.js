@@ -4,32 +4,40 @@ $(document).ready(function() {
 });
 
 function load_data() {
-    var configdata = fetchConfig();
-    var sitename = configdata["general"]["sitename"];
+    const configdata = fetchConfig();
+    const sitename = configdata["general"]["sitename"];
+
     $.ajax({
         url: "/api/" + sitename + "/monitoring/prometheus/metrics",
-        dataType: "json",
-        data: {},
-        async: false,
-        error: function(xhr, status, error) {
+        dataType: "text",          // <-- this is the key change
+        async: true,               // don't block the browser
+        error: function (xhr, status, error) {
             showAjaxWarning(
-                "Failed to load deltas",
+                "Failed to load Prometheus metrics",
                 `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
             );
             console.error("AJAX error:", status, xhr.responseText);
         },
-        success: function(json) {
-            json = json[0];
-            prometheusOutput = $("<div><\/div>");
-            // Loop line by line and add this
-            for (var key in json) {
-                if (json.hasOwnProperty(key)) {
+        success: function (text) {
+            const prometheusOutput = $("<div></div>");
+
+            // Prometheus format is line-based
+            text.split("\n").forEach(line => {
+                if (!line.trim()) return;
+
+                // Comments start with #
+                if (line.startsWith("#")) {
                     prometheusOutput.append(
-                        '<div class="row"><b>' + key + ': <\/b>' + json[key] + "<\/div>"
+                        `<div class="text-muted small">${escapeHtml(line)}</div>`
+                    );
+                } else {
+                    prometheusOutput.append(
+                        `<div><code>${escapeHtml(line)}</code></div>`
                     );
                 }
-            }
-            $("#prometheus-metrics").html(prometheusOutput);
+            });
+
+            $("#prometheus-metrics").empty().append(prometheusOutput);
         }
     });
 }

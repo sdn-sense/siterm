@@ -29,7 +29,7 @@ function deletehost(hostname) {
         },
         error: function(xhr, status, error) {
             showAjaxWarning(
-                "Failed to load deltas",
+                "Failed to delete host",
                 `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
             );
             console.error("AJAX error:", status, xhr.responseText);
@@ -69,22 +69,4 @@ function load_data() {
     var sitename = configdata["general"]["sitename"];
     defineSites(configdata);
     defineSitesConfig(configdata, sitename);
-    $.ajax({
-        url: "/api/" + sitename + "/hosts?details=true&limit=100",
-        dataType: "json",
-        data: {},
-        async: false,
-        error: function(xhr, status, error) {
-            showAjaxWarning(
-                "Failed to load deltas",
-                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
-            );
-            console.error("AJAX error:", status, xhr.responseText);
-        },
-        success: function(dataout) {
-            for (j = 0; j < dataout.length; j++) {
-                defineDTNConfig(dataout[j], sitename, dataout[j]["hostname"]);
-            }
-        },
-    });
 }

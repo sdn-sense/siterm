@@ -197,7 +197,7 @@ function defineSites(data, definehosts = true) {
     nName = sitename;
     // FE Config
     sitesTab.append(
-        '<li class="nav-item" role="presentation"><a class="nav-link active" data-toggle="tab" aria-controls="' +
+        '<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="' +
         nName +
         '" aria-selected="false" id="tab_fe_' +
         nName +
@@ -219,28 +219,79 @@ function defineSites(data, definehosts = true) {
         $.ajax({
             url: "/api/" + sitename + "/hosts?details=false&limit=100",
             dataType: "json",
-            data: "",
             async: false,
-            error: function(xhr, status, error) {
+            error: function (xhr, status, error) {
                 showAjaxWarning(
-                    "Failed to load deltas",
+                    "Failed to load hosts",
                     `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
                 );
                 console.error("AJAX error:", status, xhr.responseText);
             },
-            success: function(json) {
-                for (j = 0; j < json.length; j++) {
-                    hostname = json[j]["hostname"];
-                    htmlhostname = hostname.replace(/\./g, "_");
-                    nName = sitename + "_" + htmlhostname;
-                    sitesTab.append(
-                        '<li class="nav-item" role="presentation"><a class="nav-link" data-toggle="tab" aria-controls="' +
-                        nName + '" aria-selected="false" id="tab_' + nName + '"  href="#view_' + nName + '">' + hostname + "</a></li>",
+            success: function (json) {
+                for (let j = 0; j < json.length; j++) {
+                    const hostname = json[j]["hostname"];
+                    const htmlhostname = hostname.replace(/\./g, "_");
+                    const nName = sitename + "_" + htmlhostname;
+
+                    // --- tab ---
+                    const tab = $(
+                        `<li class="nav-item" role="presentation">
+                            <a class="nav-link"
+                            data-toggle="tab"
+                            aria-controls="${nName}"
+                            aria-selected="false"
+                            id="tab_${nName}"
+                            href="#view_${nName}"
+                            data-hostname="${hostname}"
+                            data-loaded="false">
+                            ${hostname}
+                            </a>
+                        </li>`
                     );
+
+                    sitesTab.append(tab);
+
+                    // --- content pane ---
                     allSites.append(
-                        '<div class="tab-pane fade row" role="tabpanel" aria-labelledby="tab_' +
-                        nName + '" id="view_' + nName + '"></div>',
+                        `<div class="tab-pane fade row"
+                            role="tabpanel"
+                            aria-labelledby="tab_${nName}"
+                            id="view_${nName}">
+                        </div>`
                     );
+
+                    tab.find("a").one("shown.bs.tab", function () {
+                        const $link = $(this);
+                        const host = $link.data("hostname");
+                        const target = $("#view_" + nName);
+
+                        $.ajax({url: "/api/" + sitename + "/hosts?details=true&limit=1&hostname=" +encodeURIComponent(host),
+                            dataType: "json",
+                            success: function (dataout) {
+                                if (!dataout || !dataout.length) {
+                                    target.html(
+                                        '<div class="col-12 text-warning">No data returned</div>'
+                                    );
+                                    return;
+                                }
+
+                                defineDTNConfig(
+                                    dataout[0],
+                                    sitename,
+                                    dataout[0]["hostname"]
+                                );
+                            },
+                            error: function (xhr, status, error) {
+                                showAjaxWarning(
+                                    "Failed to load host details",
+                                    `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+                                );
+                                target.html(
+                                    '<div class="col-12 text-danger">Failed to load host details</div>'
+                                );
+                            },
+                        });
+                    });
                 }
             },
         });

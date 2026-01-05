@@ -30,7 +30,7 @@ function loadModel(sitename) {
         async: false,
         error: function(xhr, status, error) {
             showAjaxWarning(
-                "Failed to load deltas",
+                "Failed to load active deltas",
                 `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
             );
             console.error("AJAX error:", status, xhr.responseText);
