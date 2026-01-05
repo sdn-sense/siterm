@@ -409,7 +409,7 @@ async def getDebugActionsList(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the debug actions list for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -457,7 +457,7 @@ async def getDebugActionInfo(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the debug action information for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     action: str = Query(..., description="The debug action to retrieve information for."),
     deps=Depends(apiReadDeps),
@@ -511,7 +511,7 @@ async def getDynamicFromRanges(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the dynamicfrom ranges for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -558,7 +558,7 @@ async def getDebugActions(
     sitename: str = Path(
         ...,
         description="The site name to get the debug action information for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     debugvar: Optional[str] = Query(None, description="The debug action ID to retrieve information for."),
     limit: int = Query(
@@ -631,7 +631,7 @@ async def getDebugInfo(
     sitename: str = Path(
         ...,
         description="The site name to get the debug action information for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     debugvar: str = Path(..., description="The debug action ID to retrieve information for."),
     limit: int = Query(
@@ -704,7 +704,7 @@ async def updatedebug(
     sitename: str = Path(
         ...,
         description="The site name to get the debug action information for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     debugvar: str = Path(..., description="The debug action ID to update information for."),
     deps=Depends(apiWriteDeps),
@@ -758,7 +758,7 @@ async def deletedebug(
     sitename: str = Path(
         ...,
         description="The site name to get the debug action information for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     debugvar: str = Path(..., description="The debug action ID to delete information for."),
     deps=Depends(apiWriteDeps),
@@ -816,7 +816,7 @@ async def submitdebug(
     sitename: str = Path(
         ...,
         description="The site name to get the debug action information for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),

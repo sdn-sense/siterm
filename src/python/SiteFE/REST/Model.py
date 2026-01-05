@@ -78,7 +78,7 @@ async def getModelInfo(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the model information for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     current: StrictBool = Query(False, description="Whether to return the current model. Defaults to False."),
     summary: StrictBool = Query(True, description="Whether to return a summary of the model. Defaults to True."),
@@ -195,7 +195,7 @@ async def getModelByID(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the model information for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     modelID: str = Path(..., description="The ID of the model to retrieve."),
     summary: StrictBool = Query(

@@ -154,7 +154,7 @@ async def getservice(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the service for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: HOSTSERVICEENUMALL = Query(default=None, description="Service name to filter by"),
@@ -196,7 +196,7 @@ async def createservice(
     sitename: str = Path(
         ...,
         description="The site name to create the service for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -231,7 +231,7 @@ async def updateservice(
     sitename: str = Path(
         ...,
         description="The site name to update the service for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -275,7 +275,7 @@ async def deleteservice(
     sitename: str = Path(
         ...,
         description="The site name to delete the service for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     hostname: constr(strip_whitespace=True, min_length=1, max_length=255) = Query(default=None, description="Hostname to filter by"),
     servicename: HOSTSERVICEENUMALL = Query(default=None, description="Service name to filter by"),
@@ -357,7 +357,7 @@ async def getservicestates(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the service states for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("limit")),
@@ -398,7 +398,7 @@ async def addservicestate(
     sitename: str = Path(
         ...,
         description="The site name to add/update the service state for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -459,7 +459,7 @@ async def deleteservicestate(
     sitename: str = Path(
         ...,
         description="The site name to delete the service state for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     hostname: str = Query(..., description="Hostname of the service state to delete"),
     servicename: HOSTSERVICEENUMALL = Query(..., description="Service name of the service state to delete"),
@@ -525,7 +525,7 @@ async def getserviceaction(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the service action for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: HOSTSERVICEENUMALL = Query(default=None, description="Service name to filter by"),
@@ -578,7 +578,7 @@ async def serviceaction(
     sitename: str = Path(
         ...,
         description="The site name to record the service action for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -655,7 +655,7 @@ async def deleteserviceaction(
     _sitename: str = Path(
         ...,
         description="The site name to delete the service action for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     hostname: constr(strip_whitespace=True, min_length=1, max_length=255) = Query(default=None, description="Hostname to filter by"),
     servicename: HOSTSERVICEENUMALL = Query(default=None, description="Service name to filter by"),
@@ -739,7 +739,7 @@ async def setinstancestartend(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the instance start and end time for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),

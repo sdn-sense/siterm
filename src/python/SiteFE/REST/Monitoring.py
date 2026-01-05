@@ -70,7 +70,7 @@ async def getprommetrics(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the service metrics for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -119,7 +119,7 @@ async def prometheuspassthrough(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the Prometheus passthrough for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     hostname: str = Path(..., description="The hostname to retrieve the Prometheus passthrough for."),
     deps=Depends(apiReadDeps),
@@ -208,7 +208,7 @@ async def getmonitoringstats(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the monitoring statistics for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("limit")),
@@ -241,7 +241,7 @@ async def postmonitoringstats(
     sitename: str = Path(
         ...,
         description="The site name to post the monitoring statistics for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),

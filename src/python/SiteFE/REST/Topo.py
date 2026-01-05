@@ -123,7 +123,7 @@ async def gettopology(
     sitename: str = Path(
         ...,
         description="The site name whose topology is requested.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams()),

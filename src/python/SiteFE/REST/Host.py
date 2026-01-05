@@ -146,7 +146,7 @@ async def gethosts(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the hosts for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     hostname: str = Query(None, description="Filter by hostname."),
     details: StrictBool = Query(
@@ -222,7 +222,7 @@ async def addhost(
     sitename: str = Path(
         ...,
         description="The site name to add or update the host for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -296,7 +296,7 @@ async def updatehost(
     sitename: str = Path(
         ...,
         description="The site name to update the host for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -364,7 +364,7 @@ async def deletehost(
     sitename: str = Path(
         ...,
         description="The site name to delete the host for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiAdminDeps),
     _forbid=Depends(forbidExtraQueryParams()),

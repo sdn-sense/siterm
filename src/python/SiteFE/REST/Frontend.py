@@ -529,7 +529,7 @@ async def getswitchdata(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the switch data for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     limit: int = Query(
         LIMIT_DEFAULT,
@@ -592,7 +592,7 @@ async def getactivedeltas(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the active deltas for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -640,7 +640,7 @@ async def getqosdata(
     sitename: str = Path(
         ...,
         description="The site name to retrieve the QoS data for.",
-        example=startupConfig.get("SITENAME", "default"),
+        examples=[startupConfig.get("SITENAME", "default")],
     ),
     limit: int = Query(
         LIMIT_DEFAULT,
