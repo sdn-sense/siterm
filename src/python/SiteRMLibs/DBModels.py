@@ -276,7 +276,7 @@ class User(Base):
     username = Column(String(128), unique=True, nullable=False)
     password_hash = Column(LONGTEXT, nullable=False)
     display_name = Column(String(255))
-    is_admin = Column(Boolean, default=False)
+    permissions = Column(Integer, nullable=False)
     disabled = Column(Boolean, default=False)
     created_at = Column(Integer, nullable=False)
     updated_at = Column(Integer, nullable=False)
@@ -288,11 +288,13 @@ class RefreshToken(Base):
 
     __tablename__ = "refresh_tokens"
 
+    id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(36), nullable=False)
     client_ip = Column(String(64), nullable=False)
     token_hash = Column(String(64), primary_key=True)
     session_id = Column(String(64), nullable=False)
     expires_at = Column(Integer, nullable=False)
+    permissions = Column(Integer, nullable=False)
     revoked = Column(Boolean, default=False)
     rotated_from = Column(String(64))
 

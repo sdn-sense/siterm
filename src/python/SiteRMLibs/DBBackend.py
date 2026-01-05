@@ -102,24 +102,30 @@ class DBBackend:
         Base.metadata.create_all(self.engine)
 
     def upgradedb(self, directory):
-        """Upgrade database schema to latest Alembic revision (head)."""
+        """Initialize Alembic if needed, then always upgrade DB to head."""
         loadEnvFile()
-        # Load Alembic configuration
         cfg = Config("/etc/alembic.ini")
         cfg.set_main_option("sqlalchemy.url", self.database_url)
         cfg.set_main_option("script_location", str(directory))
 
+        versionsDir = os.path.join(directory, "versions")
+
         try:
+            if not os.path.isdir(versionsDir):
+                print(f"Initializing Alembic in {directory}")
+                command.init(cfg, directory)
             with self.engine.connect() as conn:
                 context = MigrationContext.configure(conn)
                 current = context.get_current_revision()
+            if current is None:
+                print("Database not stamped, stamping to base")
+                command.stamp(cfg, "base")
+            print(f"Upgrading database (current={current}) → head")
             command.upgrade(cfg, "head")
             return current
-
-        except Exception as exc:
+        except Exception:
             print("Database upgrade failed")
             print(traceback.format_exc())
-            print("Exception:", exc)
             raise
 
     def executeRaw(self, sql):

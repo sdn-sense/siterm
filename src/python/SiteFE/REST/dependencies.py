@@ -35,7 +35,7 @@ from SiteRMLibs.MainUtilities import (
     getDBConnObj,
     getUTCnow,
 )
-from SiteRMLibs.x509 import AuthHandler
+from SiteRMLibs.Auth import AuthHandler, PERMISSION_ORDER
 
 DEP_CONFIG = getGitConfig()
 DEP_DBOBJ = getDBConnObj()
@@ -192,8 +192,7 @@ def apiReadDeps(
         "dbI": dbI,
         "user": user,
         "authHandler": authHandler,
-        "stateMachine": stateMachine,
-    }
+        "stateMachine": stateMachine}
 
 
 def apiWriteDeps(
@@ -211,8 +210,7 @@ def apiWriteDeps(
         "dbI": dbI,
         "user": user,
         "authHandler": authHandler,
-        "stateMachine": stateMachine,
-    }
+        "stateMachine": stateMachine}
 
 
 def apiAdminDeps(
@@ -230,8 +228,7 @@ def apiAdminDeps(
         "dbI": dbI,
         "user": user,
         "authHandler": authHandler,
-        "stateMachine": stateMachine,
-    }
+        "stateMachine": stateMachine}
 
 
 def apiPublicDeps(

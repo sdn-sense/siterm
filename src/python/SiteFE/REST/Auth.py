@@ -75,12 +75,10 @@ async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depend
         if not auth_handler.verify_password(user[0]["password_hash"], item.password):
             raise BadRequestError("Invalid username or password")
 
-        # Opportunistic rehash
         if auth_handler.needs_rehash(user[0]["password_hash"]):
             deps["dbI"].update("users", search=[["id", user[0]["id"]]], update={"password_hash": auth_handler.hash_password(item.password)})
 
-        # Issue tokens
-        access_token = auth_handler.getAccessToken(user[0]["username"])
+        access_token = auth_handler.getAccessToken(user[0]["username"], extra_claims={"perm": user[0]["permissions"]})
 
         response = APIResponse.genResponse(
             request,
@@ -163,7 +161,7 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
         if clientIP != refreshRecord[0]["client_ip"]:
             raise BadRequestError("Refresh token is being used from a different IP address")
         # Get new token, new refresh token, delete old refresh token
-        access_token = deps["authHandler"].getAccessToken(refreshRecord[0]["username"])
+        access_token = deps["authHandler"].getAccessToken(refreshRecord[0]["username"], extra_claims={"perm": refreshRecord[0]["permissions"]})
         new_refresh_token = deps["authHandler"].getRefreshToken()
         deps["dbI"].delete("refresh_tokens", [["token_hash", deps["authHandler"].hash_token(item.refresh_token)]])
         out = {
@@ -172,6 +170,7 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
             "token_hash": deps["authHandler"].hash_token(new_refresh_token),
             "session_id": item.session_id,
             "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
+            "permissions": refreshRecord[0]["permissions"],
             "revoked": False,
             "rotated_from": refreshRecord[0]["token_hash"],
         }
@@ -216,7 +215,7 @@ async def token_challenge(
         clientIP = request.client.host if request.client else "unknown"
 
 
-        access_token = deps["authHandler"].getAccessToken(user["permissions"]["username"])
+        access_token = deps["authHandler"].getAccessToken(user["permissions"]["username"], extra_claims={"perm": user["permissions"]["permissions"]})
         refresh_token = deps["authHandler"].getRefreshToken()
         out = {
             "username": user["permissions"]["username"],
@@ -224,6 +223,7 @@ async def token_challenge(
             "token_hash": deps["authHandler"].hash_token(refresh_token),
             "session_id": challenge_id,
             "expires_at": getUTCnow() + deps["authHandler"].refresh_token_ttl,
+            "permissions": user["permissions"]["permissions"],
             "revoked": False,
             "rotated_from": None,
         }

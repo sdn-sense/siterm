@@ -27,9 +27,9 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from cryptography.hazmat.primitives.hashes import Hash
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
+from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509.oid import NameOID
 from OpenSSL import crypto
-from cryptography.hazmat.primitives.serialization import Encoding
 from jwt.algorithms import RSAAlgorithm
 from SiteRMLibs.CustomExceptions import (
     BadRequestError,
@@ -72,6 +72,7 @@ def name_to_openssl(name: x509.Name) -> str:
 
 
 def load_ca_store(ca_dir):
+    """Load all CA certificates from a directory into an X509Store."""
     store = crypto.X509Store()
     for fname in os.listdir(ca_dir):
         if not fname.endswith(".pem"):
@@ -153,6 +154,18 @@ def generate_jwk_from_public_pem(public_pem: str, alg: str = "RS256") -> dict:
     jwk = {"kty": "RSA", "alg": alg, "use": "sig", "n": n, "e": e}
     jwk["kid"] = jwk_thumbprint({"kty": jwk["kty"], "n": jwk["n"], "e": jwk["e"]})
     return jwk
+
+
+PERMISSION_ORDER = {"r": 1, "read": 1,
+                    "w": 2, "write": 2,
+                    "rw": 3, "readwrite": 3, "read-write": 3,
+                    "a": 4, "admin": 4}
+
+def normPermissions(permission):
+    """ Normalize permission flags into one of number levels"""
+    if permission not in PERMISSION_ORDER:
+        raise IssuesWithAuth(f"Unknown permission flag: {permission}")
+    return PERMISSION_ORDER[permission]
 
 
 class AuthHandler:
@@ -458,12 +471,20 @@ class AuthHandler:
                 for user, userinfo in list(self.gitConf.config.get("AUTH", {}).items()):
                     self.allowedCerts.setdefault(userinfo["full_dn"], {})
                     self.allowedCerts[userinfo["full_dn"]]["username"] = user
-                    self.allowedCerts[userinfo["full_dn"]]["permissions"] = userinfo["permissions"]
+                    try:
+                        self.allowedCerts[userinfo["full_dn"]]["permissions"] = normPermissions(userinfo["permissions"])
+                    except IssuesWithAuth as ex:
+                        del self.allowedCerts[userinfo["full_dn"]]
+                        print(f"Error normalizing permissions for user {user}: {ex}")
             if self.gitConf.config.get("AUTH_RE", {}):
                 for user, userinfo in list(self.gitConf.config.get("AUTH_RE", {}).items()):
                     self.allowedWCerts.setdefault(userinfo["full_dn"], {})
                     self.allowedWCerts[userinfo["full_dn"]]["username"] = user
-                    self.allowedWCerts[userinfo["full_dn"]]["permissions"] = userinfo["permissions"]
+                    try:
+                        self.allowedWCerts[userinfo["full_dn"]]["permissions"] = normPermissions(userinfo["permissions"])
+                    except IssuesWithAuth as ex:
+                        del self.allowedWCerts[userinfo["full_dn"]]
+                        print(f"Error normalizing permissions for user {user}: {ex}")
             print(f"Allowed Certs: {pprint.pformat(self.allowedCerts)}")
             print(f"Allowed Wildcard Certs: {pprint.pformat(self.allowedWCerts)}")
 
