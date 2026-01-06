@@ -412,7 +412,7 @@ class AuthHandler:
             private_key = f.read()
 
         token = jwt.encode(payload, private_key, algorithm=self.oidc_algorithm, headers=headers)
-        return token
+        return token, int(now), int(exp-now)
 
     @staticmethod
     def hash_token(token: str):
