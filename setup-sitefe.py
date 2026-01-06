@@ -23,6 +23,7 @@ SCRIPTS = [
     "packaging/general/siterm-log-archiver",
     "packaging/siterm-site-fe/scripts/siterm-fe-helper",
     "packaging/siterm-site-fe/scripts/siterm-ansible-runner",
+    "packaging/siterm-site-fe/scripts/siterm-usertool",
     "packaging/siterm-site-fe/scripts/SwitchWorker",
     "packaging/siterm-site-fe/scripts/DBCleaner-service",
 ]

@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+"""
+Standalone user management for SiteRM Frontend
+
+Supports:
+  - create user (with Argon2 hash)
+  - list users
+  - disable/enable user
+  - delete user
+  - set password
+"""
+import argparse
+import os
+import sys
+import uuid
+import getpass
+from typing import Optional
+
+from sqlalchemy import select, delete
+from sqlalchemy.orm import Session
+
+try:
+    from SiteRMLibs.DBModels import User  # type: ignore
+    from SiteRMLibs.DBBackend import DBBackend, getUTCnow, loadEnvFile
+except Exception as exc:
+    print(f"ERROR: Could not import SiteRMLibs DB components: {exc}", file=sys.stderr)
+    sys.exit(2)
+
+from argon2 import PasswordHasher
+
+loadEnvFile()
+
+PERMISSION_ORDER = {
+    "r": 1, "read": 1,
+    "w": 2, "write": 2,
+    "rw": 3, "readwrite": 3, "read-write": 3,
+    "a": 4, "admin": 4,
+}
+
+
+def normalize_permission(value: str) -> int:
+    """Normalize a permission string to its corresponding integer value."""
+    if value is None:
+        return PERMISSION_ORDER["r"]
+    key = value.lower()
+    if key not in PERMISSION_ORDER:
+        raise ValueError(
+            f"Invalid permission '{value}'. "
+            f"Allowed: {', '.join(sorted(set(PERMISSION_ORDER.keys())))}"
+        )
+    return PERMISSION_ORDER[key]
+
+
+def permission_name(level: int) -> str:
+    """Get the permission name corresponding to the given integer level."""
+    for k, v in PERMISSION_ORDER.items():
+        if v == level and len(k) > 1:
+            return k
+    return str(level)
+
+
+def get_hasher() -> PasswordHasher:
+    """Get the Argon2 password hasher with configured parameters."""
+    return PasswordHasher(
+        time_cost=int(os.environ.get("ARGON2_TIME_COST", "3")),
+        memory_cost=int(os.environ.get("ARGON2_MEMORY_COST", "65536")),
+        parallelism=int(os.environ.get("ARGON2_PARALLELISM", "4")),
+        hash_len=int(os.environ.get("ARGON2_HASH_LEN", "32")))
+
+
+def cmd_list(session: Session, show_disabled: bool) -> int:
+    """List all users, optionally including disabled users."""
+    stmt = select(User).order_by(User.username.asc())
+    rows = session.execute(stmt).scalars().all()
+
+    if not rows:
+        print("No users found.")
+        return 0
+
+    header = ["id", "username", "display_name",
+              "permission", "permission_level",
+              "disabled", "created_at", "updated_at", "password_changed_at"]
+    print("\t".join(header))
+
+    for u in rows:
+        if not show_disabled and u.disabled:
+            continue
+        print("\t".join([str(u.id),
+                         u.username,
+                         u.display_name or "",
+                         permission_name(u.permissions),
+                         str(u.permissions),
+                         str(bool(u.disabled)),
+                         str(u.created_at),
+                         str(u.updated_at),
+                         str(u.password_changed_at)]))
+    return 0
+
+
+def cmd_create(
+    session: Session,
+    username: str,
+    password: Optional[str],
+    display_name: Optional[str],
+    permission: str,
+    disabled: bool,
+) -> int:
+    """Create a new user with the specified parameters."""
+    if not username or len(username) > 128:
+        print("ERROR: username must be 1..128 characters", file=sys.stderr)
+        return 2
+
+    if session.execute(select(User).where(User.username == username)).scalar_one_or_none():
+        print(f"ERROR: user '{username}' already exists", file=sys.stderr)
+        return 2
+
+    if password is None:
+        pw1 = getpass.getpass("Password: ")
+        pw2 = getpass.getpass("Password (again): ")
+        if pw1 != pw2:
+            print("ERROR: passwords do not match", file=sys.stderr)
+            return 2
+        password = pw1
+
+    if len(password) < 12:
+        print("ERROR: password must be at least 12 characters", file=sys.stderr)
+        return 2
+
+    try:
+        perm_value = normalize_permission(permission)
+    except ValueError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 2
+
+    hasher = get_hasher()
+    ts = getUTCnow()
+
+    user = User(
+        id=str(uuid.uuid4()),
+        username=username,
+        password_hash=hasher.hash(password),
+        display_name=display_name,
+        permissions=perm_value,
+        disabled=bool(disabled),
+        created_at=ts,
+        updated_at=ts,
+        password_changed_at=ts,
+    )
+
+    session.add(user)
+    session.commit()
+
+    print(
+        f"Created user '{username}' "
+        f"(permission={permission_name(perm_value)}, disabled={disabled})"
+    )
+    return 0
+
+
+def cmd_disable(session: Session, username: str, disabled: bool) -> int:
+    """Disable or enable a user."""
+    u = session.execute(select(User).where(User.username == username)).scalar_one_or_none()
+    if not u:
+        print(f"ERROR: user '{username}' not found", file=sys.stderr)
+        return 2
+
+    u.disabled = bool(disabled)
+    u.updated_at = getUTCnow()
+    session.commit()
+
+    print(f"{'Disabled' if disabled else 'Enabled'} user '{username}'.")
+    return 0
+
+
+def cmd_delete(session: Session, username: str, yes: bool) -> int:
+    """Delete a user."""
+    if not yes:
+        print("Refusing to delete without --yes (safety first).", file=sys.stderr)
+        return 2
+
+    res = session.execute(delete(User).where(User.username == username))
+    if res.rowcount == 0:
+        print(f"ERROR: user '{username}' not found", file=sys.stderr)
+        return 2
+
+    session.commit()
+    print(f"Deleted user '{username}'.")
+    return 0
+
+
+def cmd_set_password(session: Session, username: str) -> int:
+    """Set a new password for a user."""
+    u = session.execute(select(User).where(User.username == username)).scalar_one_or_none()
+    if not u:
+        print(f"ERROR: user '{username}' not found", file=sys.stderr)
+        return 2
+
+    pw1 = getpass.getpass("New password: ")
+    pw2 = getpass.getpass("New password (again): ")
+    if pw1 != pw2:
+        print("ERROR: passwords do not match", file=sys.stderr)
+        return 2
+
+    if len(pw1) < 12:
+        print("ERROR: password must be at least 12 characters", file=sys.stderr)
+        return 2
+
+    hasher = get_hasher()
+    ts = getUTCnow()
+
+    u.password_hash = hasher.hash(pw1)
+    u.updated_at = ts
+    u.password_changed_at = ts
+    session.commit()
+
+    print(f"Updated password for '{username}'.")
+    return 0
+
+
+def main() -> int:
+    """Main entry point for the user management tool."""
+    p = argparse.ArgumentParser(description="SiteFE user management")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    p_list = sub.add_parser("list")
+    p_list.add_argument("--show-disabled", action="store_true")
+
+    p_create = sub.add_parser("create")
+    p_create.add_argument("username")
+    p_create.add_argument("--password")
+    p_create.add_argument("--display-name")
+    p_create.add_argument("--permission", default="read", help="Permission: r, w, rw, a (default: read)")
+    p_create.add_argument("--disabled", action="store_true")
+
+    p_disable = sub.add_parser("disable")
+    p_disable.add_argument("username")
+
+    p_enable = sub.add_parser("enable")
+    p_enable.add_argument("username")
+
+    p_delete = sub.add_parser("delete")
+    p_delete.add_argument("username")
+    p_delete.add_argument("--yes", action="store_true")
+
+    p_pw = sub.add_parser("set-password")
+    p_pw.add_argument("username")
+
+    args = p.parse_args()
+    db = DBBackend()
+
+    with db.session() as session:
+        if args.cmd == "list":
+            return cmd_list(session, args.show_disabled)
+        if args.cmd == "create":
+            return cmd_create(
+                session,
+                args.username,
+                args.password,
+                args.display_name,
+                args.permission,
+                args.disabled,
+            )
+        if args.cmd == "disable":
+            return cmd_disable(session, args.username, True)
+        if args.cmd == "enable":
+            return cmd_disable(session, args.username, False)
+        if args.cmd == "delete":
+            return cmd_delete(session, args.username, args.yes)
+        if args.cmd == "set-password":
+            return cmd_set_password(session, args.username)
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

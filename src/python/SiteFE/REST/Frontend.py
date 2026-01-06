@@ -108,6 +108,33 @@ async def checkAPIReady(
     return APIResponse.genResponse(request, {"status": "ready"})
 
 
+# ==========================================================
+# /api/authentication-method
+# ==========================================================
+@router.get(
+    "/authentication-method",
+    summary="Get Authentication Method",
+    description=("Returns the authentication method used by the frontend (X509 or OIDC)."),
+    tags=["Frontend"],
+    responses={
+        **{
+            200: {"description": "Authentication method successfully returned.", "content": {"application/json": {"example": {"auth_method": "X509"}}}},
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps), _forbid=Depends(forbidExtraQueryParams())):
+    """
+    Get the authentication method used by the frontend.
+    - Returns the authentication method in use (X509 or OIDC).
+    """
+    # Starting from 1.6.XX Release, default is two auth methods
+    # M2M and User/PASS - that issues token for further communications.
+    openid_config = deps["authHandler"].getOpenIDConfiguration()
+    return APIResponse.genResponse(request, [{"auth_method": "M2M", "auth_endpoint": f"{openid_config['issuer']}/m2m/token"},
+                                             {"auth_method": "USERPASS", "auth_endpoint": f"{openid_config['issuer']}/auth/login"}])
+
+
 # =========================================================
 # /api/liveness
 # =========================================================
