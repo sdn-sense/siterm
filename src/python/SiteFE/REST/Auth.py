@@ -171,7 +171,6 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
             "token_hash": deps["authHandler"].hash_token(new_refresh_token),
             "session_id": item.session_id,
             "expires_at": expires_at,
-            "expires_in": expires_in,
             "permissions": refreshRecord[0]["permissions"],
             "revoked": False,
             "rotated_from": refreshRecord[0]["token_hash"],
@@ -184,6 +183,8 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
                 "access_token": access_token,
                 "refresh_token": new_refresh_token,
                 "token_type": "Bearer",
+                "expires_at": expires_at,
+                "expires_in": expires_in,
             },
         )
     except BadRequestError as e:
@@ -225,7 +226,6 @@ async def token_challenge(
             "token_hash": deps["authHandler"].hash_token(refresh_token),
             "session_id": challenge_id,
             "expires_at": expires_at,
-            "expires_in": expires_in,
             "permissions": user["permissions"]["permissions"],
             "revoked": False,
             "rotated_from": None,
@@ -238,6 +238,8 @@ async def token_challenge(
                 "session_id": challenge_id,
                 "access_token": access_token,
                 "refresh_token": refresh_token,
+                "expires_at": expires_at,
+                "expires_in": expires_in,
                 "token_type": "Bearer",
             },
         )
