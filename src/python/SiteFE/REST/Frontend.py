@@ -131,7 +131,7 @@ async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps), _forbid=D
     # Starting from 1.6.XX Release, default is two auth methods
     # M2M and User/PASS - that issues token for further communications.
     openid_config = deps["authHandler"].getOpenIDConfiguration()
-    return APIResponse.genResponse(request, [{"auth_method": "M2M", "auth_endpoint": f"{openid_config['issuer']}/m2m/token"},
+    return APIResponse.genResponse(request, [{"auth_method": "M2M", "auth_endpoint": f"{openid_config['issuer']}/m2m/token", "refresh_endpoint": f"{openid_config['issuer']}/m2m/token/refresh"},
                                              {"auth_method": "USERPASS", "auth_endpoint": f"{openid_config['issuer']}/auth/login"}])
 
 
