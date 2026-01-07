@@ -24,7 +24,7 @@ TOKEN_ENDPOINT = "/m2m/token"
 REFRESH_ENDPOINT = "/m2m/token/refresh"
 
 TIMEOUT = 30
-
+LIMIT_PRINT = 200 # Limit print of models call to 200 characters
 
 # ============================
 # helpers
@@ -101,7 +101,8 @@ def main():
         # --------------------------------------------------
         print("== preflight (unauthenticated) ==")
         models = preflight(client)
-        print(json.dumps(models, indent=2))
+        print(f'Print only first {LIMIT_PRINT} chars for model call')
+        print(json.dumps(models, indent=2)[:LIMIT_PRINT])
 
         # --------------------------------------------------
         # 2. request challenge
@@ -127,7 +128,8 @@ def main():
         # 4. preflight before token exchange
         # --------------------------------------------------
         print("\n== preflight (before token exchange) ==")
-        preflight(client)
+        models = preflight(client)
+        print(json.dumps(models, indent=2))
 
         # --------------------------------------------------
         # 5. exchange signature for tokens
@@ -149,7 +151,9 @@ def main():
         # 6. preflight with Bearer token
         # --------------------------------------------------
         print("\n== preflight (authenticated) ==")
-        preflight(client)
+        models = preflight(client)
+        print(f'Print only first {LIMIT_PRINT} chars for model call')
+        print(json.dumps(models, indent=2)[:LIMIT_PRINT])
 
         # --------------------------------------------------
         # 7. refresh token
@@ -164,6 +168,7 @@ def main():
         )
         r.raise_for_status()
         refreshed = r.json()
+        print(json.dumps(refreshed, indent=2))
 
         client.headers["Authorization"] = f"Bearer {refreshed['access_token']}"
 
@@ -171,7 +176,9 @@ def main():
         # 8. preflight with refreshed Bearer token
         # --------------------------------------------------
         print("\n== preflight (authenticated with refreshed token) ==")
-        preflight(client)
+        models = preflight(client)
+        print(f'Print only first {LIMIT_PRINT} chars for model call')
+        print(json.dumps(models, indent=2)[:LIMIT_PRINT])
 
 if __name__ == "__main__":
     main()
