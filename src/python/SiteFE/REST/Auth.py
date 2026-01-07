@@ -131,7 +131,7 @@ async def token(request: Request, item: X509LoginItem, deps: Dict[str, Any] = De
         return APIResponse.genResponse(request, challenge)
     except Exception as e:
         print(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==========================================================
@@ -154,13 +154,13 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
             ],
         )
         if not refreshRecord:
-            raise BadRequestError("Refresh token is invalid or expired")
+            raise IssuesWithAuth("Refresh token is invalid or expired")
         # Check if the refresh token has expired or been revoked
         if refreshRecord[0]["revoked"] or refreshRecord[0]["expires_at"] < getUTCnow():
-            raise BadRequestError("Refresh token is invalid or expired")
+            raise IssuesWithAuth("Refresh token is invalid or expired")
         clientIP = request.client.host if request.client else "unknown"
         if clientIP != refreshRecord[0]["client_ip"]:
-            raise BadRequestError("Refresh token is being used from a different IP address")
+            raise IssuesWithAuth("Refresh token is being used from a different IP address")
         # Get new token, new refresh token, delete old refresh token
         access_token, expires_at, expires_in = deps["authHandler"].getAccessToken(refreshRecord[0]["username"], extra_claims={"perm": refreshRecord[0]["permissions"]})
         new_refresh_token = deps["authHandler"].getRefreshToken()
@@ -189,6 +189,8 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
         )
     except BadRequestError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except IssuesWithAuth as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
     except Exception as e:
         print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
