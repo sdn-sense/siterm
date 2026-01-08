@@ -167,6 +167,7 @@ class DBBackend:
             if not services:
                 dbobj.insert("servicestates", [dbOut])
             else:
+                dbOut["id"] = services[0]["id"]
                 dbobj.update("servicestates", [dbOut])
         except Exception:
             excType, excValue = sys.exc_info()[:2]

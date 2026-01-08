@@ -299,8 +299,6 @@ class Switch(Node):
                 if not memberData:
                     self.logger.debug(f"Channel member {member} data not found for port {switch}{port}")
                     continue
-                self.logger.debug(f"Channel member {member} data: {memberData}")
-                print(f"Channel member {member} of port {switch}{port} is not up. Line protocol: {memberData.get('lineprotocol', '')}, Oper status: {memberData.get('operstatus', '')}")
                 if memberData.get("lineprotocol", "") != "up" or memberData.get("operstatus", "") not in ["up", "connected"]:
                     msg = f"Channel member {member} of port {switch}{port} is not up. Line protocol: {memberData.get('lineprotocol', '')}, Oper status: {memberData.get('operstatus', '')}"
                     self.logger.warning(msg)
