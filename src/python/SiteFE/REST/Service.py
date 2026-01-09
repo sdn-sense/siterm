@@ -428,6 +428,7 @@ async def addservicestate(
         if services:
             deps["dbI"].update("servicestates", [dbOut])
         else:
+            dbOut["id"] = services[0]["id"]
             deps["dbI"].insert("servicestates", [dbOut])
     except Exception as ex:
         print(f"Full traceback: {traceback.format_exc()}")

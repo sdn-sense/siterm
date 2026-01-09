@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Database cleaner"""
 
+import os
 import traceback
+from datetime import timedelta
 
 import pymysql
 from SiteRMLibs.GitConfig import getGitConfig
@@ -28,6 +30,21 @@ class DBCleaner:
         """Call to refresh thread for this specific class and reset parameters"""
         # Just a place holder (no need to change anything for DBCleaner)
         return
+
+    def cleanAuth(self):
+        """Clean refresh_tokens"""
+        olderthan = timedelta(days=int(os.environ.get("REFRESH_TOKEN_TTL_DAYS", "7"))).total_seconds()
+        timestamp = getUTCnow() - olderthan
+        self.logger.info(f"Cleaning refresh_tokens older than {timestamp}")
+        try:
+            data = self.dbI.get("refresh_tokens", limit=10, orderby=["expires_at", "ASC"])
+        except pymysql.OperationalError as ex:
+            self.logger.error(f"Operational error while cleaning refresh_tokens: {ex}")
+            return
+        for item in data:
+            if item["expires_at"] < timestamp:
+                self.logger.info(f"Deleting refresh_token {item['id']}")
+                self.dbI.delete("refresh_tokens", [["id", item["id"]]])
 
     def clean(self, dbtable, olderthan):
         """Clean the database"""
@@ -70,6 +87,7 @@ class DBCleaner:
             "activeDeltas",
             "instancestartend",
             "deltasusertracking",
+            "debugworkers"
         ]:
             self.logger.info(f"Cleaning {table}")
             try:
@@ -77,6 +95,7 @@ class DBCleaner:
             except Exception as e:
                 self.logger.error(f"Error cleaning {table}: {e}")
                 self.logger.error(f"Full traceback: {traceback.format_exc()}")
+        self.cleanAuth()
         self.logger.info("Cleaner finished")
 
 
