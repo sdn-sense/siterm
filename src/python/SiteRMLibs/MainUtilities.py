@@ -303,6 +303,9 @@ def execute(command, logger, raiseError=True):
         return False
     return True
 
+def getTempDir():
+    """Get the temporary directory."""
+    return tempfile.gettempdir()
 
 def createDirs(fullDirPath):
     """Create Directories on fullDirPath."""
