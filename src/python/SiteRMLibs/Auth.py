@@ -431,6 +431,10 @@ class AuthHandler:
 
     def validateToken(self, token):
         """Validate OIDC claims and extract user identity & permissions."""
+        if not token:
+            raise IssuesWithAuth("Unauthorized: Missing Bearer token")
+        if token.count(".") != 2:
+            raise IssuesWithAuth("Invalid token format")
         try:
             unverified_header = jwt.get_unverified_header(token)
             kid = unverified_header.get("kid")

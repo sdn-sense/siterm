@@ -48,7 +48,7 @@ class X509LoginItem(BaseModel):
     """X509 Login Item Model."""
 
     # pylint: disable=too-few-public-methods
-    certificate: constr(strip_whitespace=True, min_length=1, max_length=4096)
+    certificate: constr(strip_whitespace=True, min_length=1, max_length=16384)
 
 
 class M2MChallengeItem(BaseModel):

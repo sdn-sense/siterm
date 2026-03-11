@@ -273,9 +273,11 @@ class Requests:
                                 self._logMessage("Successfully obtained new Bearer token.")
                 else:
                     self._logMessage(f"Failed to obtain new Bearer token from {auth_info}: {response.status_code} {response.reason_phrase}")
+                    raise HTTPException(f"Failed to obtain new Bearer token from {auth_info}: {response.status_code} {response.reason_phrase}")
             except Exception as ex:
                 self._logMessage(f"Failed to obtain new Bearer token from {auth_info}: {ex}")
                 self._logMessage(f"Full traceback: {traceback.format_exc()}")
+                raise HTTPException(f"Failed to obtain new Bearer token from {auth_info}: {ex}") from ex
 
     def _renewBearerToken(self, auth_info):
         """Renew the Bearer token using the refresh token or by obtaining a new token via challenge."""
