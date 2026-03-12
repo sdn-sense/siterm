@@ -346,7 +346,6 @@ class Requests:
 
     def __makeSiteRMHTTPCall(self, url, verb, **kwargs):
         """Make an HTTP request to the SiteRM Frontend."""
-
         if not self.bearertoken or self._expiredBearerToken():
             response = self.session.request(method="GET", url=urllib.parse.urljoin(self.host, "/.well-known/openid-configuration"))
             if response.status_code == 200:
@@ -381,12 +380,13 @@ class Requests:
         kwargs.setdefault("SiteRMHTTPCall", True)
         if kwargs.get("useragent"):
             self.http_extendUserAgent(kwargs["useragent"])
-        kwargs["headers"] = {**self.default_headers, **kwargs["headers"], **dict()}
+        kwargs.setdefault("headers", {})
+        kwargs["headers"] = {**self.default_headers, **kwargs["headers"]}
         url = urllib.parse.urljoin(self.host, self._stripHostFromUrl(uri))
         try:
             if kwargs["SiteRMHTTPCall"]:
                 response = self.__makeSiteRMHTTPCall(url, verb, **kwargs)
-            # The only implementation of nonFESession is to fetch github config files
+            # The only implementation of nonFEEsession is to fetch github config files
             # We are not passing headers or json data here
             else:
                 response = self.notFEsession.request(method=verb, url=url)

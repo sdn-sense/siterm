@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Helper script to test token exchange and refresh flow."""
 import sys
 import json
 import base64
@@ -15,7 +16,7 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 # ============================
 SERVER = sys.argv[1]                 # https://
 CERT_PATH = Path(sys.argv[2])        # public cert (pem)
-PRIVATE_KEY_PATH = Path(sys.argv[3]) # private key (pem)
+PRIVATE_KEY_PATH = Path(sys.argv[3])  # private key (pem)
 
 MODELS_ENDPOINT = "/api/T2_US_SDSC_DEV/models?current=true&summary=false&encode=false"
 
@@ -24,7 +25,8 @@ TOKEN_ENDPOINT = "/m2m/token"
 REFRESH_ENDPOINT = "/m2m/token/refresh"
 
 TIMEOUT = 30
-LIMIT_PRINT = 200 # Limit print of models call to 200 characters
+LIMIT_PRINT = 200  # Limit print of models call to 200 characters
+
 
 # ============================
 # helpers
@@ -45,6 +47,7 @@ def whoami(client: httpx.Client) -> dict:
         print(f"Error during whoami: {ex}")
         return {}
 
+
 def preflight(client: httpx.Client) -> dict:
     """
     Mandatory call before every auth transition.
@@ -59,6 +62,7 @@ def preflight(client: httpx.Client) -> dict:
     except httpx.HTTPError as ex:
         print(f"Error during preflight: {ex}")
         return {}
+
 
 def sign_challenge(challenge_b64: str, private_key_pem: bytes) -> str:
     """
@@ -91,6 +95,7 @@ def sign_challenge(challenge_b64: str, private_key_pem: bytes) -> str:
 # main flow
 # ============================
 def main():
+    """Main function to execute the token exchange and refresh flow."""
     cert_text = CERT_PATH.read_text(encoding="utf-8")
     private_key_bytes = PRIVATE_KEY_PATH.read_bytes()
 
@@ -179,6 +184,7 @@ def main():
         models = preflight(client)
         print(f'Print only first {LIMIT_PRINT} chars for model call')
         print(json.dumps(models, indent=2)[:LIMIT_PRINT])
+
 
 if __name__ == "__main__":
     main()

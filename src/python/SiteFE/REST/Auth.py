@@ -221,7 +221,6 @@ async def token_challenge(
 
         clientIP = request.client.host if request.client else "unknown"
 
-
         access_token, expires_at, expires_in = deps["authHandler"].getAccessToken(user["permissions"]["username"], extra_claims={"perm": user["permissions"]["permissions"]})
         refresh_token = deps["authHandler"].getRefreshToken()
         out = {

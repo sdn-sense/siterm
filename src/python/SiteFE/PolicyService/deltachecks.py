@@ -322,10 +322,10 @@ class ConflictChecker(Timing, BWService):
                 remainingBW = int(maxHostBW) - portIP.get("bandwidth", 0) - usedBW
                 self.logger.debug(f"BW on {hostname} {portIP['interface']} after applying new delta. Max: {maxHostBW}, Used: {usedBW}, Remaining: {remainingBW} Mbps")
                 if remainingBW < 0:
-                    self.logger.error(f"Insufficient bandwidth on {hostname} {portIP['interface']}. Remaining: {remainingBW} Mbps")
-                    raise OverlapException(
-                        f"Insufficient bandwidth on {hostname} {portIP['interface']}. After all checks, remaining: {remainingBW} Mbps. Max: {maxHostBW} Mbps, Used: {usedBW} Mbps, Requested: {portIP.get('bandwidth', 0)} Mbps"
-                    )
+                    msg = f"Insufficient bandwidth on {hostname} {portIP['interface']}. After all checks, remaining BW: {maxHostBW - usedBW} Mbps;"
+                    msg += f" After applying delta: {remainingBW} Mbps; Max available: {maxHostBW} Mbps; Used: {usedBW} Mbps; Requested: {portIP.get('bandwidth', 0)} Mbps"
+                    self.logger.error(msg)
+                    raise OverlapException(msg)
             # SWITCH Check
             elif portData := polcls.switch.getSwitchPort(hostname, portIP["interface"]):
                 if "bandwidth" not in portData:
@@ -335,7 +335,8 @@ class ConflictChecker(Timing, BWService):
                 remainingBW -= usedBW
                 self.logger.debug(f"BW on {hostname} {portIP['interface']} after applying new delta. Max: {portData['bandwidth']}, Used: {usedBW}, Remaining: {remainingBW} Mbps")
                 if remainingBW < 0:
-                    msg = f"Insufficient bandwidth on {hostname} {portIP['interface']}. After all checks, remaining BW: {portData.get('bandwidth', 0) - usedBW} Mbps; After applying delta: {remainingBW} Mbps; Max available: {portData.get('bandwidth', 0)} Mbps; Used: {usedBW} Mbps; Requested: {portIP.get('bandwidth', 0)} Mbps"
+                    msg = f"Insufficient bandwidth on {hostname} {portIP['interface']}. After all checks, remaining BW: {portData.get('bandwidth', 0) - usedBW} Mbps;"
+                    msg += f" After applying delta: {remainingBW} Mbps; Max available: {portData.get('bandwidth', 0)} Mbps; Used: {usedBW} Mbps; Requested: {portIP.get('bandwidth', 0)} Mbps"
                     self.logger.error(msg)
                     raise OverlapException(msg)
             # Unknown Host/Switch/Device

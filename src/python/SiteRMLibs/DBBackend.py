@@ -137,7 +137,6 @@ class DBBackend:
             conn.commit()
             return result
 
-
     def cleandb(self):
         """Delete all rows from all tables."""
         with self.session() as session:

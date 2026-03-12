@@ -524,8 +524,7 @@ def convertTSToDatetime(inputTS):
 
 
 def httpdate(timestamp):
-    """Return a string representation of a date according to RFC 1123
-    (HTTP/1.1)."""
+    """Return a string representation of a date according to RFC 1123 (HTTP/1.1)."""
     # pylint: disable=consider-using-f-string
     dat = datetime.datetime.fromtimestamp(int(timestamp))
     weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][dat.weekday()]
@@ -747,11 +746,13 @@ def timedhourcheck(lockname, hours=1):
 
 
 def tryConvertToNumeric(value):
-    """Convert str to float or int.
+    """
+    Convert str to float or int.
 
     Returns what should be expected, t.y.: if str is float, int will
     fail and float will be returned; if str is int, float and int will
-    succeed, returns int; if any of these fail, returns value."""
+    succeed, returns int; if any of these fail, returns value.
+    """
     floatVal = None
     intVal = None
     try:

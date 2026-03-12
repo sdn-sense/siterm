@@ -164,18 +164,23 @@ def checkSite(deps, sitename: str):
     if sitename not in deps["config"]["MAIN"]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Site '{sitename}' is not configured in the system. Please check the request and configuration.",
-        )
-
+            detail=f"Site '{sitename}' is not configured in the system. Please check the request and configuration.")
 
 def checkPermissions(userinfo, required_perms: List[str]):
     """Check if the user has the required permissions."""
-    print("Checking permissions for user:", userinfo)
-    print("Required permissions:", required_perms)
-    # user_perms = userinfo.get("user_info", {}).get("permissions", [])
-    # if not any(perm in user_perms for perm in required_perms):
-    #    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access to this resource is forbidden due to insufficient permissions.")
-    # TODO: Implement permission checking logic and also add permissions inside the token
+
+    user_perm = userinfo.get("user_info", {}).get("perm", 0)
+
+    required_levels = []
+    for perm in required_perms:
+        if perm not in PERMISSION_ORDER:
+            raise ValueError(f"Unknown permission flag: {perm}")
+        required_levels.append(PERMISSION_ORDER[perm])
+
+    if not any(user_perm >= level for level in required_levels):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: insufficient permissions")
 
 
 def apiReadDeps(
@@ -354,8 +359,10 @@ def rateLimitIp(
     """
 
     def decorator(func):
+        """Decorator to apply rate limiting to a function based on client IP."""
         @wraps(func)
         async def wrapper(*args, **kwargs):
+            """Wrapper function to enforce rate limiting based on client IP."""
             request: Request | None = None
 
             # 1. Look in kwargs

@@ -34,7 +34,7 @@ def getdeltaAll(sitename):
         print("-" * 20)
         print("Delta times")
         for deltatimes in dbobj.get("states", search=[["deltaid", delta["uid"]]]):
-            print("State: %s Date: %s" % (deltatimes["state"], deltatimes["insertdate"]))
+            print(f"State: {deltatimes['state']} Date: {deltatimes['insertdate']}")
 
 
 if __name__ == "__main__":

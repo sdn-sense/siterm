@@ -90,6 +90,7 @@ def load_ca_store(ca_dir):
             continue
     return store
 
+
 def verify_cert_chain(cert, ca_store):
     """
     cert  : leaf cryptography.x509.Certificate
@@ -101,6 +102,7 @@ def verify_cert_chain(cert, ca_store):
     )
     ctx = crypto.X509StoreContext(ca_store, openssl_cert)
     ctx.verify_certificate()  # raises on failure
+
 
 def load_cert_info(cert):
     """Load certificate information into a dictionary."""
@@ -161,6 +163,7 @@ PERMISSION_ORDER = {"r": 1, "read": 1,
                     "rw": 3, "readwrite": 3, "read-write": 3,
                     "a": 4, "admin": 4}
 
+
 def normPermissions(permission):
     """ Normalize permission flags into one of number levels"""
     if permission not in PERMISSION_ORDER:
@@ -189,10 +192,10 @@ class AuthHandler:
         self.oidc_token_lifetime_minutes = int(os.environ.get("OIDC_TOKEN_LIFETIME_MINUTES", "60"))
         self.refresh_token_ttl = timedelta(days=int(os.environ.get("REFRESH_TOKEN_TTL_DAYS", "7"))).total_seconds()
         self.oidc_leeway = int(os.environ.get("OIDC_LEEWAY", "60"))
-        self.oidc_public_key = os.environ.get("OIDC_PUBLIC_KEY", None)
-        self.oidc_private_key = os.environ.get("OIDC_PRIVATE_KEY", None)
-        self.oidc_prev_public_key = os.environ.get("OIDC_PREV_PUBLIC_KEY", None)
-        self.oidc_prev_private_key = os.environ.get("OIDC_PREV_PRIVATE_KEY", None)
+        self.oidc_public_key = os.environ.get("OIDC_PUBLIC_KEY")
+        self.oidc_private_key = os.environ.get("OIDC_PRIVATE_KEY")
+        self.oidc_prev_public_key = os.environ.get("OIDC_PREV_PUBLIC_KEY")
+        self.oidc_prev_private_key = os.environ.get("OIDC_PREV_PRIVATE_KEY")
         self.oidc_ca_store = load_ca_store(os.environ.get("OIDC_CA_DIR", "/etc/grid-security/truststore/"))
         self.oidc_kid = None
         self.__startup__()
@@ -391,7 +394,8 @@ class AuthHandler:
         """Get JWKS."""
         return self.jwks
 
-    def getRefreshToken(self, **_kwargs) -> str:
+    @staticmethod
+    def getRefreshToken(**_kwargs) -> str:
         """Get a refresh token for the specified user."""
         # This returns unique uuid for the refresh token
         return secrets.token_urlsafe(32)
@@ -425,7 +429,8 @@ class AuthHandler:
         """Hash refresh token for DB storage (SHA-256 hex)."""
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
-    def extractToken(self, request):
+    @staticmethod
+    def extractToken(request):
         """Extract the Bearer token from the request."""
         auth_header = request.headers.get("Authorization", "")
         if not auth_header or not auth_header.startswith("Bearer "):
