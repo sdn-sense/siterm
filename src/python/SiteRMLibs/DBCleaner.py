@@ -34,36 +34,26 @@ class DBCleaner:
     def cleanAuth(self):
         """Clean refresh_tokens"""
         olderthan = timedelta(days=int(os.environ.get("REFRESH_TOKEN_TTL_DAYS", "7"))).total_seconds()
-        timestamp = getUTCnow() - olderthan
+        timestamp = int(getUTCnow() - olderthan)
         self.logger.info(f"Cleaning refresh_tokens older than {timestamp}")
         try:
-            data = self.dbI.get("refresh_tokens", limit=10, orderby=["expires_at", "ASC"])
+            self.dbI.delete_comp("refresh_tokens", "expires_at", "<", timestamp)
         except pymysql.OperationalError as ex:
             self.logger.error(f"Operational error while cleaning refresh_tokens: {ex}")
             return
-        for item in data:
-            if item["expires_at"] < timestamp:
-                self.logger.info(f"Deleting refresh_token {item['id']}")
-                self.dbI.delete("refresh_tokens", [["id", item["id"]]])
 
     def clean(self, dbtable, olderthan):
         """Clean the database"""
         self.logger.info(f"Cleaning {dbtable} for {self.sitename}")
-        try:
-            data = self.dbI.get(dbtable, limit=10, orderby=["insertdate", "ASC"])
-        except pymysql.OperationalError:
-            data = self.dbI.get(dbtable, limit=10, orderby=["updatedate", "ASC"])
-        for item in data:
-            if "updatedate" in item:
-                if item["updatedate"] < int(getUTCnow() - olderthan):
-                    self.logger.info(f"Deleting {item['id']} from {dbtable}")
-                    self.dbI.delete(dbtable, [["id", item["id"]]])
-            elif "insertdate" in item:
-                if item["insertdate"] < int(getUTCnow() - olderthan):
-                    self.logger.info(f"Deleting {item['id']} from {dbtable}")
-                    self.dbI.delete(dbtable, [["id", item["id"]]])
-            else:
-                self.logger.info(f"Item {item['id']} from {dbtable} does not have timestamp. Ignoring")
+        time_collumn = self.dbI.get_timestamp_column(dbtable)
+        if not time_collumn:
+            self.logger.info(f"No timestamp column found for {dbtable}. Skipping.")
+            return
+
+        deleted = self.dbI.delete_comp(dbtable, time_collumn, "<", int(getUTCnow() - olderthan))
+
+        if deleted:
+            self.logger.info(f"Deleted {deleted} rows from {dbtable}")
 
     def startwork(self):
         """Start the cleaner"""
@@ -71,24 +61,10 @@ class DBCleaner:
             return
         self.nextRun = int(getUTCnow() + 360)  # Run every 5 minutes
         self.logger.info("Starting cleaner")
-        for table in [
-            "debugrequests",
-            "deltas",
-            "deltatimestates",
-            "hosts",
-            "models",
-            "servicestates",
-            "states",
-            "hoststates",
-            "hoststateshistory",
-            "switch",
-            "snmpmon",
-            "serviceaction",
-            "activeDeltas",
-            "instancestartend",
-            "deltasusertracking",
-            "debugworkers"
-        ]:
+        for table in ["debugrequests", "deltas", "deltatimestates", "hosts",
+                      "models", "servicestates", "states", "hoststates",
+                      "hoststateshistory", "switch", "snmpmon", "serviceaction",
+                      "activeDeltas", "instancestartend", "deltasusertracking", "debugworkers"]:
             self.logger.info(f"Cleaning {table}")
             try:
                 self.clean(table, 7 * 86400)

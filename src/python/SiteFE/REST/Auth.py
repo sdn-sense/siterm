@@ -129,9 +129,11 @@ async def token(request: Request, item: X509LoginItem, deps: Dict[str, Any] = De
         openid_config = deps["authHandler"].getOpenIDConfiguration()
         challenge["ref_url"] = f"{openid_config['issuer']}/m2m/token/{challenge['challenge_id']}"
         return APIResponse.genResponse(request, challenge)
+    except IssuesWithAuth as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
     except Exception as e:
         print(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 # ==========================================================

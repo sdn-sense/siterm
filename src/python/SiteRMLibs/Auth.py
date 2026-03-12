@@ -236,6 +236,9 @@ class AuthHandler:
                 "challenge": challenge_b64,
                 "expires_at": expires_at,
             }
+        except IssuesWithAuth as ex:
+            print(f"Authentication error: {ex}")
+            raise
         except crypto.X509StoreContextError as ex:
             print(f"Certificate verification failed: {ex}")
             print(f"Full traceback: {traceback.format_exc()}")
@@ -279,6 +282,9 @@ class AuthHandler:
                     ),
                     hashes.SHA256(),
                 )
+        except IssuesWithAuth as ex:
+            print(f"Authentication error: {ex}")
+            return False, None
         except crypto.X509StoreContextError as ex:
             print(f"Certificate verification failed: {ex}")
             return False, None
@@ -501,7 +507,7 @@ class AuthHandler:
             if re.match(wildcarddn, certinfo["fullDN"]):
                 return userinfo
         print(f"User DN {certinfo['fullDN']} is not in authorized list. Full info: {certinfo}")
-        raise IssuesWithAuth("Issues with permissions. Check backend logs.")
+        raise IssuesWithAuth("Issues with permissions. Check frontend logs.")
 
     def validateCertificate(self, certinfo):
         """Validate certificate validity."""
@@ -509,15 +515,15 @@ class AuthHandler:
         for key in ["subject", "notAfter", "notBefore", "issuer", "fullDN"]:
             if key not in certinfo:
                 print(f"{key} not available in certificate retrieval")
-                raise IssuesWithAuth("Issues with permissions. Check backend logs.")
+                raise IssuesWithAuth("Issues with permissions. Check frontend logs.")
         # Check time before
         if certinfo["notBefore"] > timestamp:
             print(f"Certificate Invalid. Current Time: {timestamp} NotBefore: {certinfo['notBefore']}")
-            raise IssuesWithAuth("Issues with permissions. Check backend logs.")
+            raise IssuesWithAuth("Issues with permissions. Check frontend logs.")
         # Check time after
         if certinfo["notAfter"] < timestamp:
             print(f"Certificate Invalid. Current Time: {timestamp} NotAfter: {certinfo['notAfter']}")
-            raise IssuesWithAuth("Issues with permissions. Check backend logs.")
+            raise IssuesWithAuth("Issues with permissions. Check frontend logs.")
         # Check if reload of auth list is needed.
         self.loadAuthorized()
         # Check DN in authorized list

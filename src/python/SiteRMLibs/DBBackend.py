@@ -259,6 +259,37 @@ class dbinterface:
 
         return "OK", "", ""
 
+    def delete_comp(self, calltype, column, op, value):
+        """Delete rows with a comparison filter."""
+        model = REGISTRY.get(calltype)
+        if not model:
+            raise ValueError(f"Unknown table: {calltype}")
+
+        column_attr = getattr(model, column)
+
+        with self.db.session() as session:
+            q = session.query(model)
+
+            if op == "<":
+                q = q.filter(column_attr < value)
+            elif op == ">":
+                q = q.filter(column_attr > value)
+            elif op == "<=":
+                q = q.filter(column_attr <= value)
+            elif op == ">=":
+                q = q.filter(column_attr >= value)
+            elif op == "!=":
+                q = q.filter(column_attr != value)
+            elif op == "==":
+                q = q.filter(column_attr == value)
+            else:
+                raise ValueError(f"Unsupported operator {op}")
+
+            deleted = q.delete(synchronize_session=False)
+            session.commit()
+
+        return deleted
+
     def _clean(self, _calltype, _values):
         """Clean the entire database."""
         self.db.cleandb()
@@ -266,3 +297,17 @@ class dbinterface:
     def _cleantable(self, calltype, _values):
         """Clean a specific table in the database."""
         self.db.cleandbtable(calltype)
+
+    def get_timestamp_column(self, dbtable):
+        """Get the name of the timestamp column for a given table."""
+        model = REGISTRY.get(dbtable)
+        if not model:
+            return None
+
+        columns = model.__table__.columns.keys()
+
+        if "updatedate" in columns:
+            return "updatedate"
+        if "insertdate" in columns:
+            return "insertdate"
+        return None
