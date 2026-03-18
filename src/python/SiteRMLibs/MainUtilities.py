@@ -33,13 +33,15 @@ from enum import Enum
 
 import simplejson as json
 from rdflib import Graph
+from yaml import safe_load as yload
+
 from SiteRMLibs.CustomExceptions import (
     FailedInterfaceCommand,
     NotFoundError,
     WrongInputError,
 )
 from SiteRMLibs.DBBackend import dbinterface
-from yaml import safe_load as yload
+
 
 HOSTSERVICES = [
     "Agent",

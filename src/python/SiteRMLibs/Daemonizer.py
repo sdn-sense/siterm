@@ -18,6 +18,8 @@ import tracemalloc
 
 import psutil
 from deepdiff import DeepDiff
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
+
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import (
     HTTPServerNotReady,
@@ -43,7 +45,7 @@ from SiteRMLibs.MainUtilities import (
     loadEnvFile,
     timeout,
 )
-
+from SiteRMLibs.OpenTelemetry import init_otel
 
 def getParser(description):
     """Returns the argparse parser."""
@@ -277,6 +279,8 @@ class Daemon(DBBackend):
     def __init__(self, component, inargs, getGitConf=True):
         """Initialize the daemon."""
         loadEnvFile()
+        init_otel(component)
+        LoggingInstrumentor().instrument(set_logging_format=True)
         logType = "TimedRotatingFileHandler"
         if inargs.logtostdout:
             logType = "StreamLogger"

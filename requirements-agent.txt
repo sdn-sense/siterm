@@ -23,3 +23,8 @@ cryptography
 gitpython
 sqlalchemy>=2.0,<3.0
 alembic
+opentelemetry-api>=1.39.1,<1.40.0
+opentelemetry-sdk>=1.39.1,<1.40.0
+opentelemetry-instrumentation-fastapi>=0.60b1,<0.61b0
+opentelemetry-instrumentation-logging>=0.60b1,<0.61b0
+opentelemetry-exporter-otlp>=1.39.1,<1.40.0
