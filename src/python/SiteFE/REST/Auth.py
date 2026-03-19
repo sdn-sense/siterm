@@ -165,6 +165,9 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
             raise IssuesWithAuth("Refresh token is being used from a different IP address")
         # Get new token, new refresh token, delete old refresh token
         access_token, expires_at, expires_in = deps["authHandler"].getAccessToken(refreshRecord[0]["username"], extra_claims={"perm": refreshRecord[0]["permissions"]})
+        print(f"Generated new access token for user {refreshRecord[0]['username']} with permissions {refreshRecord[0]['permissions']}")
+        print(f"Access token expires at {expires_at} (in {expires_in} seconds)")
+        print(access_token) # TODO: Remove, only to debug token generation
         new_refresh_token = deps["authHandler"].getRefreshToken()
         deps["dbI"].delete("refresh_tokens", [["token_hash", deps["authHandler"].hash_token(item.refresh_token)]])
         out = {
@@ -222,6 +225,9 @@ async def token_challenge(
         clientIP = request.client.host if request.client else "unknown"
 
         access_token, expires_at, expires_in = deps["authHandler"].getAccessToken(user["permissions"]["username"], extra_claims={"perm": user["permissions"]["permissions"]})
+        print(f"Generated access token for user {user['permissions']['username']} with permissions {user['permissions']['permissions']}")
+        print(f"Access token expires at {expires_at} (in {expires_in} seconds)")
+        print(access_token) # TODO: Remove, only to debug token generation
         refresh_token = deps["authHandler"].getRefreshToken()
         out = {
             "username": user["permissions"]["username"],
