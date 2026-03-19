@@ -94,6 +94,15 @@ def loadEnvFile(filepath="/etc/environment"):
         print(f"Full traceback: {traceback.format_exc()}")
 
 
+def envBool(name: str, default: bool = True) -> bool:
+    """Get boolean value from environment variable."""
+    val = os.getenv(name)
+    if val is None:
+        return default
+    val = val.strip('"').strip("'").lower()
+    return val in {"1", "true", "yes", "on"}
+
+
 def dictSearch(key, var, ret, ignoreKeys=None):
     """Search item in dictionary"""
     if isinstance(var, dict):

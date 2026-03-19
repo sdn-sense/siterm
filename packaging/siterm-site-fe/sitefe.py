@@ -22,19 +22,21 @@ from SiteFE.REST.Model import router as model_router
 from SiteFE.REST.Monitoring import router as monitoring_router
 from SiteFE.REST.Service import router as service_router
 from SiteFE.REST.Topo import router as topo_router
-from SiteRMLibs.MainUtilities import loadEnvFile
+from SiteRMLibs.MainUtilities import loadEnvFile, envBool
 from SiteRMLibs.OpenTelemetry import init_otel
 
 loadEnvFile()
 
 app = FastAPI()
 
-OTEL_ENABLED = os.getenv("OPENTELEMETRY_ENABLED", "true").lower() == "true"
+OTEL_ENABLED = envBool("OTEL_ENABLED", True)
 
 if OTEL_ENABLED:
     init_otel("siterm-site-fe")
     FastAPIInstrumentor.instrument_app(app,
-                                       http_capture_headers_server_request=["user-agent", "if-modified-since", "accept", "sense-request-host", "sense-request-email", "sense-request-fullname", "sense-request-organization"],
+                                       http_capture_headers_server_request=["user-agent", "if-modified-since", "accept",
+                                                                            "sense-request-host", "sense-request-email",
+                                                                            "sense-request-fullname", "sense-request-organization"],
                                        http_capture_headers_server_response=["content-type", "content-length", "cache-control"])
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -63,7 +65,6 @@ async def exception_capture(request: Request, call_next):
                 span.record_exception(exc)
                 span.set_status(Status(StatusCode.ERROR))
         raise
-
 
 
 @app.middleware("http")
@@ -105,6 +106,7 @@ async def observability_middleware(request: Request, call_next):
             span.record_exception(exc)
             span.set_status(Status(StatusCode.ERROR))
             raise
+
 
 def logdetails(request: Request, status_code: int, message: str = ""):
     """Helper function to log detailed request information"""
