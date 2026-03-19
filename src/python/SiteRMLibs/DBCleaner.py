@@ -33,7 +33,7 @@ class DBCleaner:
 
     def cleanAuth(self):
         """Clean refresh_tokens"""
-        olderthan = timedelta(days=int(os.environ.get("REFRESH_TOKEN_TTL_DAYS", "7"))).total_seconds()
+        olderthan = timedelta(hours=int(os.environ.get("REFRESH_TOKEN_TTL_HOURS", "12"))).total_seconds()
         timestamp = int(getUTCnow() - olderthan)
         self.logger.info(f"Cleaning refresh_tokens older than {timestamp}")
         try:
