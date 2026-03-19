@@ -9,10 +9,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-
 from opentelemetry import trace
-from opentelemetry.trace import Status, StatusCode
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.trace import Status, StatusCode
 from SiteFE.REST.Auth import router as auth_router
 from SiteFE.REST.Debug import router as debug_router
 from SiteFE.REST.Delta import router as delta_router
@@ -22,7 +21,7 @@ from SiteFE.REST.Model import router as model_router
 from SiteFE.REST.Monitoring import router as monitoring_router
 from SiteFE.REST.Service import router as service_router
 from SiteFE.REST.Topo import router as topo_router
-from SiteRMLibs.MainUtilities import loadEnvFile, envBool
+from SiteRMLibs.MainUtilities import envBool, loadEnvFile
 from SiteRMLibs.OpenTelemetry import init_otel
 
 loadEnvFile()
@@ -33,11 +32,11 @@ OTEL_ENABLED = envBool("OTEL_ENABLED", False)
 
 if OTEL_ENABLED:
     init_otel("siterm-site-fe")
-    FastAPIInstrumentor.instrument_app(app,
-                                       http_capture_headers_server_request=["user-agent", "if-modified-since", "accept",
-                                                                            "sense-request-host", "sense-request-email",
-                                                                            "sense-request-fullname", "sense-request-organization"],
-                                       http_capture_headers_server_response=["content-type", "content-length", "cache-control"])
+    FastAPIInstrumentor.instrument_app(
+        app,
+        http_capture_headers_server_request=["user-agent", "if-modified-since", "accept", "sense-request-host", "sense-request-email", "sense-request-fullname", "sense-request-organization"],
+        http_capture_headers_server_response=["content-type", "content-length", "cache-control"],
+    )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
@@ -52,6 +51,7 @@ app.include_router(monitoring_router, prefix="/api")
 app.include_router(service_router, prefix="/api")
 
 app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="ui")
+
 
 @app.middleware("http")
 async def exception_capture(request: Request, call_next):
@@ -78,7 +78,6 @@ async def observability_middleware(request: Request, call_next):
     start_time = time.time()
 
     with tracer.start_as_current_span(f"{request.method} {request.url.path}") as span:
-
         # request info
         span.set_attribute("http.method", request.method)
         span.set_attribute("http.target", request.url.path)

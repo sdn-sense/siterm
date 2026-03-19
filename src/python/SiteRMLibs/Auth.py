@@ -12,10 +12,10 @@ import base64
 import hashlib
 import json
 import os
+import pprint
 import re
 import secrets
 import traceback
-import pprint
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -26,11 +26,10 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from cryptography.hazmat.primitives.hashes import Hash
-from cryptography.hazmat.primitives.serialization import load_pem_public_key
-from cryptography.hazmat.primitives.serialization import Encoding
+from cryptography.hazmat.primitives.serialization import Encoding, load_pem_public_key
 from cryptography.x509.oid import NameOID
-from OpenSSL import crypto
 from jwt.algorithms import RSAAlgorithm
+from OpenSSL import crypto
 from SiteRMLibs.CustomExceptions import (
     BadRequestError,
     IssuesWithAuth,
@@ -158,14 +157,11 @@ def generate_jwk_from_public_pem(public_pem: str, alg: str = "RS256") -> dict:
     return jwk
 
 
-PERMISSION_ORDER = {"r": 1, "read": 1,
-                    "w": 2, "write": 2,
-                    "rw": 3, "readwrite": 3, "read-write": 3,
-                    "a": 4, "admin": 4}
+PERMISSION_ORDER = {"r": 1, "read": 1, "w": 2, "write": 2, "rw": 3, "readwrite": 3, "read-write": 3, "a": 4, "admin": 4}
 
 
 def normPermissions(permission):
-    """ Normalize permission flags into one of number levels"""
+    """Normalize permission flags into one of number levels"""
     if permission not in PERMISSION_ORDER:
         raise IssuesWithAuth(f"Unknown permission flag: {permission}")
     return PERMISSION_ORDER[permission]
@@ -422,7 +418,7 @@ class AuthHandler:
             private_key = f.read()
 
         token = jwt.encode(payload, private_key, algorithm=self.oidc_algorithm, headers=headers)
-        return token, int(exp), int(exp-now)
+        return token, int(exp), int(exp - now)
 
     @staticmethod
     def hash_token(token: str):

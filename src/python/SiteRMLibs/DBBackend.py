@@ -8,12 +8,12 @@ import traceback
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
+from alembic import command
+from alembic.config import Config
+from alembic.runtime.migration import MigrationContext
 from SiteRMLibs.DBModels import REGISTRY, Base
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from alembic.config import Config
-from alembic import command
-from alembic.runtime.migration import MigrationContext
 
 # ==========================================================
 #  Utilities
@@ -297,7 +297,8 @@ class dbinterface:
         """Clean a specific table in the database."""
         self.db.cleandbtable(calltype)
 
-    def get_timestamp_column(self, dbtable):
+    @staticmethod
+    def get_timestamp_column(dbtable):
         """Get the name of the timestamp column for a given table."""
         model = REGISTRY.get(dbtable)
         if not model:

@@ -1,20 +1,26 @@
-""" OpenTelemetry initialization and utilities. """
+"""OpenTelemetry initialization and utilities."""
+
 import os
-from SiteRMLibs.MainUtilities import loadEnvFile, envBool
-from SiteRMLibs import __version__
 
 from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter, BatchSpanProcessor, SimpleSpanProcessor
-from opentelemetry.sdk.trace.sampling import TraceIdRatioBased, ParentBased
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    ConsoleSpanExporter,
+    SimpleSpanProcessor,
+)
+from opentelemetry.sdk.trace.sampling import ParentBased, TraceIdRatioBased
+from SiteRMLibs import __version__
+from SiteRMLibs.MainUtilities import envBool, loadEnvFile
 
 loadEnvFile()
 OTEL_ENABLED = envBool("OPENTELEMETRY_ENABLED", False)
 
+
 def init_otel(service_name):
-    """ Initializes OpenTelemetry tracing with the given service name. """
+    """Initializes OpenTelemetry tracing with the given service name."""
     if not OTEL_ENABLED:
         return
 

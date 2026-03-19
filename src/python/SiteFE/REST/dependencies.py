@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic_core import core_schema
 from SiteFE.PolicyService import stateMachine as ST
+from SiteRMLibs.Auth import PERMISSION_ORDER, AuthHandler
 from SiteRMLibs.CustomExceptions import (
     IssuesWithAuth,
     ModelNotFound,
@@ -35,7 +36,6 @@ from SiteRMLibs.MainUtilities import (
     getDBConnObj,
     getUTCnow,
 )
-from SiteRMLibs.Auth import AuthHandler, PERMISSION_ORDER
 
 DEP_CONFIG = getGitConfig()
 DEP_DBOBJ = getDBConnObj()
@@ -103,6 +103,7 @@ def loguseraction(request, userinfo):
     }
     # TODO: DB Write.
 
+
 async def depAuthenticate(request: Request):
     """Dependency to authenticate the user via certificate or OIDC."""
     auth_handler = AUTH_HANDLER
@@ -161,9 +162,8 @@ def checkReadyState(deps):
 def checkSite(deps, sitename: str):
     """Check if the site is configured in the system."""
     if sitename not in deps["config"]["MAIN"]:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Site '{sitename}' is not configured in the system. Please check the request and configuration.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Site '{sitename}' is not configured in the system. Please check the request and configuration.")
+
 
 def checkPermissions(userinfo, required_perms: List[str]):
     """Check if the user has the required permissions."""
@@ -177,9 +177,7 @@ def checkPermissions(userinfo, required_perms: List[str]):
         required_levels.append(PERMISSION_ORDER[perm])
 
     if not any(user_perm >= level for level in required_levels):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access forbidden: insufficient permissions")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden: insufficient permissions")
 
 
 def apiReadDeps(
@@ -191,12 +189,7 @@ def apiReadDeps(
     _creds: HTTPAuthorizationCredentials = Depends(BEARER_SCHEME),
 ):
     """Dependency to get all necessary objects for the REST API."""
-    return {
-        "config": config,
-        "dbI": dbI,
-        "user": user,
-        "authHandler": authHandler,
-        "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
 def apiWriteDeps(
@@ -209,12 +202,7 @@ def apiWriteDeps(
 ):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["write", "admin"])
-    return {
-        "config": config,
-        "dbI": dbI,
-        "user": user,
-        "authHandler": authHandler,
-        "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
 def apiAdminDeps(
@@ -227,12 +215,7 @@ def apiAdminDeps(
 ):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["admin"])
-    return {
-        "config": config,
-        "dbI": dbI,
-        "user": user,
-        "authHandler": authHandler,
-        "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
 def apiPublicDeps(
@@ -359,6 +342,7 @@ def rateLimitIp(
 
     def decorator(func):
         """Decorator to apply rate limiting to a function based on client IP."""
+
         @wraps(func)
         async def wrapper(*args, **kwargs):
             """Wrapper function to enforce rate limiting based on client IP."""

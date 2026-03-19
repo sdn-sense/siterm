@@ -19,7 +19,6 @@ import tracemalloc
 import psutil
 from deepdiff import DeepDiff
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
-
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import (
     HTTPServerNotReady,
@@ -46,6 +45,7 @@ from SiteRMLibs.MainUtilities import (
     timeout,
 )
 from SiteRMLibs.OpenTelemetry import init_otel
+
 
 def getParser(description):
     """Returns the argparse parser."""
