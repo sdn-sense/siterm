@@ -169,7 +169,7 @@ def checkPermissions(userinfo, required_perms: List[str]):
     """Check if the user has the required permissions."""
 
     user_perm = userinfo.get("user_info", {}).get("perm", 0)
-
+    print(f"User permissions: {user_perm}, Required permissions: {required_perms}")
     required_levels = []
     for perm in required_perms:
         if perm not in PERMISSION_ORDER:
