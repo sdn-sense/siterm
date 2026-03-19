@@ -11,7 +11,7 @@ from opentelemetry.sdk.trace.sampling import TraceIdRatioBased, ParentBased
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
 loadEnvFile()
-OTEL_ENABLED = envBool("OPENTELEMETRY_ENABLED", True)
+OTEL_ENABLED = envBool("OPENTELEMETRY_ENABLED", False)
 
 def init_otel(service_name):
     """ Initializes OpenTelemetry tracing with the given service name. """

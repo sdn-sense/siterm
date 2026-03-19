@@ -29,7 +29,7 @@ loadEnvFile()
 
 app = FastAPI()
 
-OTEL_ENABLED = envBool("OTEL_ENABLED", True)
+OTEL_ENABLED = envBool("OTEL_ENABLED", False)
 
 if OTEL_ENABLED:
     init_otel("siterm-site-fe")

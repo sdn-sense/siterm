@@ -101,8 +101,7 @@ def loguseraction(request, userinfo):
         "url": url,
         "userinfo": userinfo,
     }
-    print(f"User Action Log: {log_entry}")
-
+    # TODO: DB Write.
 
 async def depAuthenticate(request: Request):
     """Dependency to authenticate the user via certificate or OIDC."""
