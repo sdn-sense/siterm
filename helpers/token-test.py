@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Helper script to test token exchange and refresh flow."""
+
 import sys
 import json
 import base64
@@ -14,8 +15,8 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 # ============================
 # configuration / inputs
 # ============================
-SERVER = sys.argv[1]                 # https://
-CERT_PATH = Path(sys.argv[2])        # public cert (pem)
+SERVER = sys.argv[1]  # https://
+CERT_PATH = Path(sys.argv[2])  # public cert (pem)
 PRIVATE_KEY_PATH = Path(sys.argv[3])  # private key (pem)
 
 MODELS_ENDPOINT = "/api/T2_US_SDSC_DEV/models?current=true&summary=false&encode=false"
@@ -100,13 +101,12 @@ def main():
     private_key_bytes = PRIVATE_KEY_PATH.read_bytes()
 
     with httpx.Client(timeout=TIMEOUT) as client:
-
         # --------------------------------------------------
         # 1. preflight (unauthenticated)
         # --------------------------------------------------
         print("== preflight (unauthenticated) ==")
         models = preflight(client)
-        print(f'Print only first {LIMIT_PRINT} chars for model call')
+        print(f"Print only first {LIMIT_PRINT} chars for model call")
         print(json.dumps(models, indent=2)[:LIMIT_PRINT])
 
         # --------------------------------------------------
@@ -157,7 +157,7 @@ def main():
         # --------------------------------------------------
         print("\n== preflight (authenticated) ==")
         models = preflight(client)
-        print(f'Print only first {LIMIT_PRINT} chars for model call')
+        print(f"Print only first {LIMIT_PRINT} chars for model call")
         print(json.dumps(models, indent=2)[:LIMIT_PRINT])
 
         # --------------------------------------------------
@@ -182,7 +182,7 @@ def main():
         # --------------------------------------------------
         print("\n== preflight (authenticated with refreshed token) ==")
         models = preflight(client)
-        print(f'Print only first {LIMIT_PRINT} chars for model call')
+        print(f"Print only first {LIMIT_PRINT} chars for model call")
         print(json.dumps(models, indent=2)[:LIMIT_PRINT])
 
 

@@ -7,20 +7,23 @@ Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
+
 import sys
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
 from SiteRMLibs.MainUtilities import getSiteNameFromConfig
+
 try:
     from SiteRMAgent.Debugger import Debugger
 except (ImportError, ModuleNotFoundError):
     from SiteFE.Debugger import Debugger
 
-COMPONENT = 'Debugger'
+COMPONENT = "Debugger"
 DESCRIPTION = "Debugger start's debug process, like ping, iperf, tcpdump, arp on the agent node"
 DAEMON = None
 
+
 class MyDaemon(Daemon):
-    """ My own Deamon override """
+    """My own Deamon override"""
 
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
@@ -29,6 +32,7 @@ class MyDaemon(Daemon):
             debAgent = Debugger.Debugger(self.config, sitename)
             self.runThreads[sitename] = debAgent
         self.runThreads[sitename].refreshthread()
+
 
 if __name__ == "__main__":
     parser = getParser(DESCRIPTION)

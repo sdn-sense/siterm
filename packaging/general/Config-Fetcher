@@ -7,20 +7,22 @@ Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
+
 import sys
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
 from SiteRMLibs.ConfigFetcher import ConfigFetcher
 
-COMPONENT = 'ConfigFetcher'
+COMPONENT = "ConfigFetcher"
 DESCRIPTION = "Config fetcher from Github"
 DAEMON = None
 
+
 class MyDaemon(Daemon):
-    """ My own Deamon override """
+    """My own Deamon override"""
 
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
-        for callType in ['MAIN']:
+        for callType in ["MAIN"]:
             if callType not in self.runThreads:
                 self.runThreads[callType] = ConfigFetcher(self.logger)
             self.runThreads[callType].refreshthread()

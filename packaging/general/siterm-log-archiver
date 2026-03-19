@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Log archiver script for SiteRM Site Agent and Frontend. Creates archive of log files in
-    /var/log/siterm-agent and /var/log/siterm-site-fe directories."""
+/var/log/siterm-agent and /var/log/siterm-site-fe directories."""
+
 import os
 import tarfile
 from datetime import datetime
 from SiteRMLibs.MainUtilities import getTempDir
+
 
 def logArchiver():
     """Create tar.gz archive of log files in /var/log/siterm-agent and /var/log/siterm-site-fe directories."""
@@ -16,8 +18,7 @@ def logArchiver():
         return
     # Check if the directory exists
     with tarfile.open(target_file, "w:gz") as tar:
-        for dirname in ["/var/log/siterm-agent/", "/var/log/siterm-site-fe/",
-                        "/var/log/httpd/", "/var/log/supervisor"]:
+        for dirname in ["/var/log/siterm-agent/", "/var/log/siterm-site-fe/", "/var/log/httpd/", "/var/log/supervisor"]:
             if os.path.isdir(dirname):
                 print(f"Archiving logs from {dirname}...")
                 tar.add(dirname, arcname=os.path.basename(dirname))
@@ -25,6 +26,7 @@ def logArchiver():
             else:
                 print(f"Warning: {dir} does not exist. Exiting.")
     os.remove(target_file)
+
 
 if __name__ == "__main__":
     logArchiver()

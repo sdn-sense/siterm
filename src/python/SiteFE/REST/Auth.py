@@ -88,7 +88,7 @@ async def login(request: Request, item: LoginItem, deps: Dict[str, Any] = Depend
                 "access_token": access_token,
                 "token_type": "Bearer",
                 "expires_in": expires_in,
-                "expires_at": expires_at
+                "expires_at": expires_at,
             },
         )
         return response
