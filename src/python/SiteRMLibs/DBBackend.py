@@ -218,10 +218,18 @@ class dbinterface:
         if not model:
             raise ValueError(f"Unknown table: {calltype}")
 
+        allowed = set(model.__table__.columns.keys())
+
         last_id = None
         with self.db.session() as session:
             for val in values:
-                obj = model(**val)
+                excluded = {k: v for k, v in val.items() if k not in allowed}
+                clean_val = {k: v for k, v in val.items() if k in allowed}
+
+                if excluded:
+                    print(f"[DB INSERT WARNING] Table '{calltype}' ignored fields: {list(excluded.keys())}")
+
+                obj = model(**clean_val)
                 session.add(obj)
                 session.flush()
                 last_id = getattr(obj, "id", None)
@@ -234,12 +242,21 @@ class dbinterface:
         if not model:
             raise ValueError(f"Unknown table: {calltype}")
 
+        allowed = set(model.__table__.columns.keys())
+
         with self.db.session() as session:
             for val in values:
                 obj = session.get(model, val.get("id"))
                 if not obj:
                     continue
-                for key, value in val.items():
+
+                excluded = {k: v for k, v in val.items() if k not in allowed}
+                clean_val = {k: v for k, v in val.items() if k in allowed}
+
+                if excluded:
+                    print(f"[DB UPDATE WARNING] Table '{calltype}' ignored fields: {list(excluded.keys())}")
+
+                for key, value in clean_val.items():
                     setattr(obj, key, value)
 
         return "OK", "", ""
@@ -250,19 +267,30 @@ class dbinterface:
         if not model:
             raise ValueError(f"Unknown table: {calltype}")
 
+        allowed = set(model.__table__.columns.keys())
+
         with self.db.session() as session:
             q = session.query(model)
             for col, val in values:
+                if col not in allowed:
+                    print(f"[DB DELETE WARNING] Ignored invalid column '{col}' for table '{calltype}'")
+                    continue
                 q = q.filter(getattr(model, col) == val)
             q.delete(synchronize_session=False)
 
         return "OK", "", ""
+
 
     def delete_comp(self, calltype, column, op, value):
         """Delete rows with a comparison filter."""
         model = REGISTRY.get(calltype)
         if not model:
             raise ValueError(f"Unknown table: {calltype}")
+
+        allowed = set(model.__table__.columns.keys())
+
+        if column not in allowed:
+            raise ValueError(f"Invalid column '{column}' for table '{calltype}'")
 
         column_attr = getattr(model, column)
 
@@ -285,7 +313,6 @@ class dbinterface:
                 raise ValueError(f"Unsupported operator {op}")
 
             deleted = q.delete(synchronize_session=False)
-            session.commit()
 
         return deleted
 

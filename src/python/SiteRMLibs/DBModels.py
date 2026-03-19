@@ -42,6 +42,7 @@ class Delta(Base):
     content = Column(LONGTEXT, nullable=False)
     modelid = Column(String(255), nullable=False)
     modadd = Column(String(64))
+    error = Column(LONGTEXT, nullable=True)
 
 
 class DeltaConnection(Base):
