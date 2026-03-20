@@ -392,8 +392,10 @@ class AuthHandler:
 
     def getUserPermissions(self, username):
         """Get current permissions for a user from git config."""
+        print(f"Retrieving permissions for user {username} from git config")
         self.gitConf = getGitConfig()
         for user, userinfo in list(self.gitConf.config.get("AUTH", {}).items()):
+            print(f"Checking user {user} in AUTH config")
             if user == username:
                 try:
                     return normPermissions(userinfo["permissions"])
@@ -401,14 +403,15 @@ class AuthHandler:
                     print(f"Error normalizing permissions for user {user}: {ex}")
                     return 0
         for user, userinfo in list(self.gitConf.config.get("AUTH_RE", {}).items()):
-            if re.match(userinfo["full_dn"], username):
+            print(f"Checking user {user} in AUTH_RE config")
+            if user == username:
                 try:
                     return normPermissions(userinfo["permissions"])
                 except IssuesWithAuth as ex:
                     print(f"Error normalizing permissions for user {user}: {ex}")
                     return 0
         print(f"User {username} not found in AUTH or AUTH_RE config")
-        return 0
+        raise IssuesWithAuth(f"User {username} not found in config")
 
     @staticmethod
     def getRefreshToken(**_kwargs) -> str:
