@@ -48,15 +48,16 @@ class StateMachine:
         """Model State change."""
         tNow = getUTCnow()
         dbObj.update(
-            "deltasmod",
+            "deltas",
             [{"uid": kwargs["uid"], "modadd": newState, "updatedate": tNow}],
         )
 
     def modelstatecancel(self, dbObj, **kwargs):
         """Cancel Model addition."""
-        if kwargs["modadd"] in ["idle"]:
+        modadd = kwargs.get("modadd")
+        if modadd in ["idle"]:
             self.modelstatechanger(dbObj, "removed", **kwargs)
-        elif kwargs["modadd"] in ["add", "added"]:
+        elif modadd in ["add", "added"]:
             self.modelstatechanger(dbObj, "remove", **kwargs)
 
     def _newdelta(self, dbObj, delta, state):
@@ -69,7 +70,7 @@ class StateMachine:
             "deltat": str(delta["Type"]),
             "content": json.dumps(delta["content"]),
             "modelid": str(delta["modelId"]),
-            "modadd": str(delta["modadd"]),
+            "modadd": str(delta.get("modadd", "idle")),
             "error": "" if "Error" not in list(delta.keys()) else str(delta["Error"]),
         }
         dbObj.insert("deltas", [dbOut])
@@ -102,12 +103,16 @@ class StateMachine:
         """Committing state Check."""
         # it should change state only if there are no activating deltas right now
         # Otherwise print message that I have to wait
-        for delta in dbObj.get("deltas", search=[["state", "activating"]]):
+        activating_deltas = dbObj.get("deltas", search=[["state", "activating"]])
+
+        for delta in activating_deltas:
             if delta["updatedate"] < int(getUTCnow() - 180):
-                msg = f"Not able to accept new deltas. Delta {delta['uid']} is still in state activating after 3 minutes. Will not commit anything until it is done"
-                return msg
-            self.logger.info("There are deltas still in activating state. Will not commit anything until it is done")
+                return (f"Not able to accept new deltas. Delta {delta['uid']} is still in state activating after 3 minutes.")
+
+        if activating_deltas:
+            self.logger.info("There are deltas still in activating state.")
             return None
+
         for delta in dbObj.get("deltas", search=[["state", "committing"]]):
             self.stateChangerDelta(dbObj, "committed", **delta)
             self.modelstatechanger(dbObj, "add", **delta)
@@ -120,15 +125,16 @@ class StateMachine:
     def activating(self, dbObj):
         """Check on all deltas in state activating."""
         for delta in dbObj.get("deltas", search=[["state", "activating"]]):
-            if delta["modadd"] in ["added", "removed"]:
+            modadd = delta.get("modadd")
+            if modadd in ["added", "removed"]:
                 self.stateChangerDelta(dbObj, "activated", **delta)
-            if delta["modadd"] == "failed":
+            if modadd == "failed":
                 self.stateChangerDelta(dbObj, "failed", **delta)
 
     def activated(self, dbObj):
         """Check on all activated state deltas."""
         for delta in dbObj.get("deltas", search=[["state", "activated"]]):
-            if delta["modadd"] == "removed":
+            if delta.get("modadd") == "removed":
                 self.stateChangerDelta(dbObj, "remove", **delta)
 
     def remove(self, dbObj):
@@ -141,8 +147,8 @@ class StateMachine:
                 ["updatedate", "<", int(getUTCnow() - DELTA_REMOVE_TIMEOUT)],
             ],
         ):
-            self.stateChangerDelta(dbObj, "removed", **delta)
             self.modelstatecancel(dbObj, **delta)
+            self.stateChangerDelta(dbObj, "removed", **delta)
 
     @staticmethod
     def removed(dbObj):
