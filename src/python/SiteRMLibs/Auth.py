@@ -114,8 +114,13 @@ def load_cert_info(cert):
     return out
 
 
+_CHALLENGE_ID_RE = re.compile(r"^[0-9a-f]{32}$")
+
+
 def get_challenge_record(challenge_id: str):
     """Retrieve a challenge record by its ID."""
+    if not _CHALLENGE_ID_RE.match(challenge_id):
+        return None
     tempfile = f"{getTempDir()}/m2m/{challenge_id}.json"
     if not os.path.exists(tempfile):
         return None
@@ -454,7 +459,7 @@ class AuthHandler:
         auth_header = request.headers.get("Authorization", "")
         if not auth_header or not auth_header.startswith("Bearer "):
             raise RequestWithoutCert("Unauthorized: Missing or invalid Bearer token")
-        token = auth_header.replace("Bearer ", "")
+        token = auth_header[7:].strip()
         if not token:
             raise RequestWithoutCert("Unauthorized: Missing or invalid Bearer token")
         return token

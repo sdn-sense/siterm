@@ -61,6 +61,34 @@ router = APIRouter()
 
 startupConfig = getstartupconfig()
 
+_SENSE_REQUEST_HEADERS = [
+    "sense-request-email",
+    "sense-request-fullname",
+    "sense-request-host",
+    "sense-request-organization",
+]
+
+
+def _extract_sense_headers(request):
+    """Extract SENSE caller identity headers from the HTTP request."""
+    return {hdr: request.headers.get(hdr, "") for hdr in _SENSE_REQUEST_HEADERS}
+
+
+def _record_delta_action(dbI, username, delta_id, action, sense_headers):
+    """Write a delta user-tracking record to deltasusertracking."""
+    dbI.insert(
+        "deltasusertracking",
+        [
+            {
+                "username": username,
+                "insertdate": getUTCnow(),
+                "deltaid": delta_id,
+                "useraction": action,
+                "otherinfo": jsondumps(sense_headers),
+            }
+        ],
+    )
+
 
 def _getdeltas(dbI, **kwargs):
     """Get delta from database."""
@@ -349,6 +377,7 @@ async def submitDelta(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to accept delta. Error Message: {outContent['Error']}.",
         )
+    _record_delta_action(deps["dbI"], deps["user"]["user_info"]["sub"], item.id, "submit", _extract_sense_headers(request))
     return APIResponse.genResponse(request, outContent, status_code=status.HTTP_201_CREATED)
 
 
@@ -517,6 +546,7 @@ async def performActionOnDelta(
         # Commit or force commit the delta
         deps["stateMachine"].stateChangerDelta(deps["dbI"], "committed", **delta)
         deps["stateMachine"].modelstatechanger(deps["dbI"], "add", **delta)
+        _record_delta_action(deps["dbI"], deps["user"]["user_info"]["sub"], delta_id, action, _extract_sense_headers(request))
         return APIResponse.genResponse(request, {"result": "Action completed successfully"})
     if action == "forceapply":
         # Force apply the delta

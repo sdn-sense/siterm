@@ -10,6 +10,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 
+import secrets
 import traceback
 from typing import Any, Dict
 
@@ -200,7 +201,7 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
     except Exception as e:
         print(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error") from e
 
 
 @router.post("/m2m/token/{challenge_id}", responses=DEFAULT_RESPONSES)
@@ -225,6 +226,7 @@ async def token_challenge(
             raise BadRequestError("User information is incomplete")
 
         clientIP = request.client.host if request.client else "unknown"
+        session_id = secrets.token_urlsafe(32)
 
         access_token, expires_at, expires_in = deps["authHandler"].getAccessToken(user["permissions"]["username"], extra_claims={"perm": user["permissions"]["permissions"]})
         refresh_token = deps["authHandler"].getRefreshToken()
@@ -232,7 +234,7 @@ async def token_challenge(
             "username": user["permissions"]["username"],
             "client_ip": clientIP,
             "token_hash": deps["authHandler"].hash_token(refresh_token),
-            "session_id": challenge_id,
+            "session_id": session_id,
             "expires_at": expires_at,
             "permissions": user["permissions"]["permissions"],
             "revoked": False,
@@ -243,7 +245,7 @@ async def token_challenge(
         return APIResponse.genResponse(
             request,
             {
-                "session_id": challenge_id,
+                "session_id": session_id,
                 "access_token": access_token,
                 "refresh_token": refresh_token,
                 "expires_at": expires_at,
@@ -255,7 +257,7 @@ async def token_challenge(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
     except Exception as e:
         print(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error") from e
 
 
 # ==========================================================
