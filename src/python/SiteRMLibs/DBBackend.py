@@ -246,9 +246,17 @@ class dbinterface:
 
         with self.db.session() as session:
             for val in values:
-                obj = session.get(model, val.get("id"))
+                obj = None
+
+                # Prefer id (fast PK lookup), fallback to uid
+                if val.get("id") is not None:
+                    obj = session.get(model, val.get("id"))
+                elif "uid" in val and hasattr(model, "uid"):
+                    obj = session.query(model).filter_by(uid=val.get("uid")).first()
+
                 if not obj:
-                    continue
+                    print(f"[DB UPDATE WARNING] No row found for update in '{calltype}': {val}")
+                    raise ValueError(f"No row found for update in '{calltype}': {val} with id or uid")
 
                 excluded = {k: v for k, v in val.items() if k not in allowed}
                 clean_val = {k: v for k, v in val.items() if k in allowed}
