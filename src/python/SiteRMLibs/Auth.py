@@ -471,6 +471,7 @@ class AuthHandler:
         if token.count(".") != 2:
             raise IssuesWithAuth("Invalid token format")
         try:
+            print(f"Validating token TODO: REMOVE: {token}")
             unverified_header = jwt.get_unverified_header(token)
             kid = unverified_header.get("kid")
             if not kid:

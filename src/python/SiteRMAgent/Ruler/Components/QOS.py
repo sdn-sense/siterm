@@ -171,7 +171,7 @@ class QOS:
             fractReq = self.reqRatio(intfMax, reqRate, totalAll)
             reqRate = fractReq
         # Min for QoS we use 1Gb/s.
-        reqRate = max(int(nodeThrgShare), 1000)
+        reqRate = max(int(reqRate), 1000)
         return {"reqRate": reqRate, "reserved": reserved}
 
     @staticmethod
@@ -241,7 +241,7 @@ class QOS:
                 newThrg["uri"] = uri
                 newThrg["bwDict"] = bwDict
                 intfKey = bwDict["master_intf"] if useMasterIntf else intf
-                allQoS.setdefault(intf, {"items": [], "total": 0, "reserved": 0})
+                allQoS.setdefault(intfKey, {"items": [], "total": 0, "reserved": 0})
                 allQoS[intfKey]["total"] += newThrg["reqRate"]
                 allQoS[intfKey]["reserved"] = newThrg["reserved"]
                 allQoS[intfKey]["master_intf"] = bwDict["master_intf"]
@@ -258,7 +258,7 @@ class QOS:
         if any our range is with-in network namespace, we add QoS as defined for RST
         """
         if self.qosPolicy == "privatens":
-            self._calculateQoS(tmpFD)
+            self._calculateQoS(tmpFD, useMasterIntf=True)
         elif self.qosPolicy == "hostlevel":
             self._calculateQoS(tmpFD)
         elif self.qosPolicy == "default-not-set":
