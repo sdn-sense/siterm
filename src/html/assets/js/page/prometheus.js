@@ -12,11 +12,28 @@ function load_data() {
         dataType: "text",          // <-- this is the key change
         async: true,               // don't block the browser
         error: function (xhr, status, error) {
+            const url = "/api/" + sitename + "/monitoring/prometheus/metrics";
+
+            const details = `
+        HTTP ${xhr.status} – ${error}
+        URL: ${url}
+        Response: ${xhr.responseText || "<empty>"}
+        Headers: ${xhr.getAllResponseHeaders?.() || "<none>"}
+            `.trim();
+
             showAjaxWarning(
                 "Failed to load Prometheus metrics",
-                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+                details
             );
-            console.error("AJAX error:", status, xhr.responseText);
+
+            console.error("AJAX ERROR DETAILS:", {
+                url: url,
+                status: xhr.status,
+                statusText: xhr.statusText,
+                error: error,
+                response: xhr.responseText,
+                headers: xhr.getAllResponseHeaders?.()
+            });
         },
         success: function (text) {
             const prometheusOutput = $("<div></div>");

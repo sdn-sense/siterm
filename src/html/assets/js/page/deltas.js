@@ -163,43 +163,38 @@ function loadDelta(deltaID, sitename) {
 }
 
 function defineAllDeltas(data, sitename) {
-    menCol = $(
-        '<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"><\/div>',
+    let menCol = $(
+        '<div class="nav flex-column nav-pills" role="tablist"></div>'
     );
-    cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
-    latest = true;
-    for (var key in data["deltas"][sitename]) {
-        if ($.isPlainObject(data["deltas"][sitename][key])) {
-            modID = data["deltas"][sitename][key]["id"];
-            tagName = modID;
+    let cntDiv = $('<div class="tab-content"></div>');
+
+    for (let i = 0; i < data.length; i++) {
+        const delta = data[i];
+
+        if ($.isPlainObject(delta)) {
+            const modID = delta["id"];
+
             menCol.append(
-                '<a class="nav-link" id="v-pills-' +
+                '<a class="nav-link" ' +
+                'id="v-pills-' + modID + '-tab" ' +
+                'data-toggle="pill" ' +
+                'onclick="loadDelta(\'' + modID + "', '" + sitename + '\')" ' +
+                'href="#v-pills-' + modID + '" role="tab">' +
                 modID +
-                '-tab" data-toggle="pill" onclick="loadDelta(\'' +
-                modID +
-                "', '" +
-                sitename +
-                '\')" href="#v-pills-' +
-                modID +
-                '" role="tab" aria-controls="v-pills-' +
-                modID +
-                '" aria-selected="true">' +
-                tagName +
-                "<\/a>",
+                "</a>"
             );
+
             cntDiv.append(
-                '<div class="tab-pane fade" id="v-pills-' +
-                modID +
-                '" role="tabpanel" aria-labelledby="v-pills-' +
-                modID +
-                '-tab"><\/div>',
+                '<div class="tab-pane fade" ' +
+                'id="v-pills-' + modID + '" role="tabpanel"></div>'
             );
         }
     }
-    nRow = $('<div class="row">');
-    menCol = $('<div class="col-3">').append(menCol);
-    cntDiv = $('<div class="col-9">').append(cntDiv);
-    nRow.append(menCol).append(cntDiv);
+
+    const nRow = $('<div class="row">')
+        .append($('<div class="col-3">').append(menCol))
+        .append($('<div class="col-9">').append(cntDiv));
+
     $("#view_fe_" + sitename).append(nRow);
 }
 

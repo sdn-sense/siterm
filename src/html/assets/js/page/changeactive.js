@@ -62,17 +62,16 @@ function loadModel(sitename) {
 }
 
 function submitForm(formId) {
-    docObj = document.getElementById(formId);
-    var params = {};
-    for (var i = 0; i < docObj.elements.length; i++) {
-        var fieldName = docObj.elements[i].name;
-        var fieldValue = docObj.elements[i].value;
+    const docObj = document.getElementById(formId);
+    const params = {};
+
+    for (let i = 0; i < docObj.elements.length; i++) {
+        const fieldName = docObj.elements[i].name;
+        const fieldValue = docObj.elements[i].value;
+
         if (fieldName) {
-            if (
-                fieldName === "starttimestamp" ||
-                fieldName === "endtimestamp"
-            ) {
-                var date = new Date(fieldValue);
+            if (fieldName === "starttimestamp" || fieldName === "endtimestamp") {
+                const date = new Date(fieldValue);
                 params[fieldName] = Math.floor(date.getTime() / 1000);
             } else {
                 params[fieldName] = fieldValue;
@@ -80,33 +79,26 @@ function submitForm(formId) {
         }
     }
 
-    fetch("/api/" + params["sitename"] + "/setinstancestartend", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(params),
-        })
-        .then((response) => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                throw new Error(
-                    `HTTP ${response.status}: ${response.statusText}`,
-                );
-            }
-        })
-        .then((result) => {
+    $.ajax({
+        url: "/api/" + params["sitename"] + "/setinstancestartend",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(params),
+        success: function(result) {
             params["type"] = "main";
             newAlert(
                 "New change action request submitted: " + JSON.stringify(result),
-                params,
+                params
             );
-        })
-        .catch((error) => {
-            params["type"] = "main";
-            newAlert("Error: " + error.message, params, "alert-danger");
-        });
+        },
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to submit change action request",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
+    });
 }
 
 function load_data() {

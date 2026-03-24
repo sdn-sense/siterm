@@ -40,6 +40,7 @@ function deletehost(hostname) {
 function reloadconfig(hostname) {
     const docObj = document.getElementById("rel-" + hostname);
     const params = {};
+
     for (let i = 0; i < docObj.elements.length; i++) {
         const fieldName = docObj.elements[i].name;
         const fieldValue = docObj.elements[i].value;
@@ -47,21 +48,40 @@ function reloadconfig(hostname) {
             params[fieldName] = fieldValue;
         }
     }
-    fetch("/api/" + params["sitename"] + "/serviceaction", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(params),
-        })
-        .then((response) => response.json())
-        .then((result) => {
-            params["type"] = hostname.replace(/\./g, "_");
-            newAlert(
-                "Service action submitted:" + JSON.stringify(result),
-                params,
-            );
-        });
+
+    SiteRMAuth.authFetch("/api/" + params["sitename"] + "/serviceaction", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(params),
+    })
+    .then(async (response) => {
+        const text = await response.text();
+
+        if (!response.ok) {
+            throw {
+                status: response.status,
+                message: text,
+            };
+        }
+
+        return text ? JSON.parse(text) : {};
+    })
+    .then((result) => {
+        params["type"] = hostname.replace(/\./g, "_");
+        newAlert(
+            "Service action submitted: " + JSON.stringify(result),
+            params,
+        );
+    })
+    .catch((err) => {
+        showAjaxWarning(
+            "Failed to reload config",
+            `HTTP ${err.status || "?"} – ${err.message || err}`
+        );
+        console.error("Fetch error:", err);
+    });
 }
 
 function load_data() {
