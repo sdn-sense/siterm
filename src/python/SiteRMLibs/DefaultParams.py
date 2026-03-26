@@ -8,6 +8,7 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+
 # Default parameters for SiteRM libraries
 # Defaults for limit queries (used in most of them)
 # These are used in various parts of the code to limit the number of results returned from database

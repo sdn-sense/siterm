@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """List Active configuration"""
-import sys
+
 import pprint
-from SiteRMLibs.MainUtilities import getVal, evaldict
-from SiteRMLibs.MainUtilities import getDBConn
+import sys
+
+from SiteRMLibs.MainUtilities import evaldict, getDBConn, getVal
 
 
 def listActive(sitename):

@@ -6,10 +6,12 @@ Authors:
 
 Date: 2022/12/23
 """
+
 import pprint
+
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.MainUtilities import getLoggingObject
 from SiteRMLibs.hostcert import HostCertHandler
+from SiteRMLibs.MainUtilities import getLoggingObject
 
 
 class CertInfo:
@@ -17,16 +19,12 @@ class CertInfo:
 
     def __init__(self, config=None, logger=None):
         self.config = config if config else getGitConfig()
-        self.logger = (
-            logger if logger else getLoggingObject(config=self.config, service="Agent")
-        )
+        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
         self.certHandler = HostCertHandler()
 
     def get(self, **_kwargs):
         """Get certificate info."""
-        certInfo = self.certHandler.validateHostCertKey(
-            "/etc/grid-security/hostcert.pem", "/etc/grid-security/hostkey.pem"
-        )
+        certInfo = self.certHandler.validateHostCertKey("/etc/grid-security/hostcert.pem", "/etc/grid-security/hostkey.pem")
         exitCode, msg = self.certHandler.runChecks(certInfo)
         if exitCode:
             self.logger.error(f"Failed to validate host certificate: {msg}")

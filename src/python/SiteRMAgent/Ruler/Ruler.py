@@ -8,8 +8,10 @@ Authors:
 
 Date: 2022/01/20
 """
+
 import os
 
+from SiteRMAgent.Ruler.Components.DSCP import DSCP
 from SiteRMAgent.Ruler.Components.QOS import QOS
 from SiteRMAgent.Ruler.Components.Routing import Routing
 from SiteRMAgent.Ruler.Components.VInterfaces import VInterfaces
@@ -18,7 +20,6 @@ from SiteRMLibs.BWService import BWService
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.HTTPLibrary import Requests
-
 from SiteRMLibs.MainUtilities import (
     contentDB,
     createDirs,
@@ -33,7 +34,7 @@ from SiteRMLibs.timing import Timing
 COMPONENT = "Ruler"
 
 
-class Ruler(QOS, OverlapLib, BWService, Timing):
+class Ruler(DSCP, QOS, OverlapLib, BWService, Timing):
     """Ruler class to create interfaces on the system."""
 
     def __init__(self, config, sitename):
@@ -51,6 +52,7 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
         self.activeFromFE = {}
         self.activeNew = {}
         self.activeNow = {}
+        DSCP.__init__(self)
         QOS.__init__(self)
         OverlapLib.__init__(self)
         # L2,L3 move it to Class Imports at top.
@@ -175,10 +177,10 @@ class Ruler(QOS, OverlapLib, BWService, Timing):
                 self.startqos()
             else:
                 self.logger.info("QoS is not configured to be applied")
+            self.startdscp()
         else:
             self.logger.info("Agent is not configured to apply rules")
         self.logger.info("Ended function start")
-        self.logger.info("Started IP Consistency Check")
 
 
 def execute(config=None):

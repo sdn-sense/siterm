@@ -2,6 +2,7 @@
 # pylint: disable=W0611
 # W0611 - Unused import (We skip this, because we want to have submodules inside module1)
 """DTN RM Site FE init."""
+
 __all__ = ["LookUpService", "ProvisioningService", "REST"]
 # IMPORTANT Be aware if you update version here, please update it also in:
 # setupUtilities.py
@@ -9,4 +10,4 @@ __all__ = ["LookUpService", "ProvisioningService", "REST"]
 # src/python/SiteFE/__init__.py
 # src/python/SiteRMAgent/__init__.py
 # src/python/SiteRMLibs/__init__.py
-__version__ = '1.5.64-dev'
+__version__ = "1.5.64-dev"

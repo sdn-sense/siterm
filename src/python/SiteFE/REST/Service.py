@@ -9,11 +9,13 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+
 import os
+import traceback
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
-from pydantic import BaseModel, constr, Field
+from pydantic import BaseModel, Field, constr
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
@@ -22,7 +24,6 @@ from SiteFE.REST.dependencies import (
     checkSite,
     forbidExtraQueryParams,
 )
-from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.DefaultParams import (
     LIMIT_DEFAULT,
     LIMIT_MAX,
@@ -32,8 +33,8 @@ from SiteRMLibs.DefaultParams import (
     LIMIT_SERVICE_MIN,
 )
 from SiteRMLibs.MainUtilities import (
-    HOSTSERVICES,
     HOSTSERVICEENUMALL,
+    HOSTSERVICES,
     dumpFileContentAsJson,
     evaldict,
     getstartupconfig,
@@ -150,7 +151,11 @@ class ServiceItem(BaseModel):
 )
 async def getservice(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the service for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the service for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: HOSTSERVICEENUMALL = Query(default=None, description="Service name to filter by"),
     deps=Depends(apiReadDeps),
@@ -177,7 +182,10 @@ async def getservice(
     tags=["Service States"],
     responses={
         **{
-            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "TODO",
+                "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
@@ -185,7 +193,11 @@ async def getservice(
 async def createservice(
     request: Request,
     item: ServiceItem,
-    sitename: str = Path(..., description="The site name to create the service for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to create the service for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -205,7 +217,10 @@ async def createservice(
     tags=["Service States"],
     responses={
         **{
-            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "TODO",
+                "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
@@ -213,7 +228,11 @@ async def createservice(
 async def updateservice(
     request: Request,
     item: ServiceItem,
-    sitename: str = Path(..., description="The site name to update the service for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to update the service for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -235,16 +254,29 @@ async def updateservice(
     tags=["Service States"],
     responses={
         **{
-            200: {"description": "Service successfully deleted", "content": {"application/json": {"example": {"Status": "DELETED <hostname>"}}}},
-            400: {"description": "Bad Request", "content": {"application/json": {"example": {"detail": "At least one of 'hostname' or 'servicename' query parameters must be provided."}}}},
-            404: {"description": "Service not found", "content": {"application/json": {"example": {"detail": "Service with hostname 'example' and servicename 'example' not found."}}}},
+            200: {
+                "description": "Service successfully deleted",
+                "content": {"application/json": {"example": {"Status": "DELETED <hostname>"}}},
+            },
+            400: {
+                "description": "Bad Request",
+                "content": {"application/json": {"example": {"detail": "At least one of 'hostname' or 'servicename' query parameters must be provided."}}},
+            },
+            404: {
+                "description": "Service not found",
+                "content": {"application/json": {"example": {"detail": "Service with hostname 'example' and servicename 'example' not found."}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def deleteservice(
     request: Request,
-    sitename: str = Path(..., description="The site name to delete the service for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to delete the service for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     hostname: constr(strip_whitespace=True, min_length=1, max_length=255) = Query(default=None, description="Hostname to filter by"),
     servicename: HOSTSERVICEENUMALL = Query(default=None, description="Service name to filter by"),
     deps=Depends(apiWriteDeps),
@@ -266,7 +298,10 @@ async def deleteservice(
         search.append(["servicename", servicename.value])
     host = deps["dbI"].get("services", limit=1, search=search)
     if not host:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service with hostname '{hostname}' and servicename '{servicename.value}' not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Service with hostname '{hostname}' and servicename '{servicename.value}' not found.",
+        )
     # Delete from services
     deps["dbI"].delete("services", [["id", host[0]["id"]]])
     return APIResponse.genResponse(request, {"Status": f"DELETED {host[0]['hostname']}"})
@@ -289,6 +324,7 @@ class ServiceStateItem(BaseModel):
     version: constr(strip_whitespace=True, min_length=1, max_length=50) = "UNSET"  # Version of the service, default is "UNSET"
     exc: constr(strip_whitespace=True, min_length=1, max_length=4096) = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
 
+
 # GET
 # ---------------------------------------------------------
 @router.get(
@@ -298,16 +334,31 @@ class ServiceStateItem(BaseModel):
     tags=["Service States"],
     responses={
         **{
-            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
-            404: {"description": "Service States not found", "content": {"application/json": {"example": {"detail": "No service states found in the database."}}}}
+            200: {
+                "description": "TODO",
+                "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
+            404: {
+                "description": "Service States not found",
+                "content": {"application/json": {"example": {"detail": "No service states found in the database."}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def getservicestates(
     request: Request,
-    limit: int = Query(LIMIT_SERVICE_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_SERVICE_DEFAULT}.", ge=LIMIT_SERVICE_MIN, le=LIMIT_SERVICE_MAX),
-    sitename: str = Path(..., description="The site name to retrieve the service states for.", example=startupConfig.get("SITENAME", "default")),
+    limit: int = Query(
+        LIMIT_SERVICE_DEFAULT,
+        description=f"The maximum number of results to return. Defaults to {LIMIT_SERVICE_DEFAULT}.",
+        ge=LIMIT_SERVICE_MIN,
+        le=LIMIT_SERVICE_MAX,
+    ),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the service states for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("limit")),
 ):
@@ -316,7 +367,10 @@ async def getservicestates(
     - Returns a list of service states with their information.
     """
     checkSite(deps, sitename)
-    return APIResponse.genResponse(request, deps["dbI"].get("servicestates", orderby=["updatedate", "DESC"], limit=limit))
+    return APIResponse.genResponse(
+        request,
+        deps["dbI"].get("servicestates", orderby=["updatedate", "DESC"], limit=limit),
+    )
 
 
 # add/update (POST)
@@ -330,7 +384,10 @@ async def getservicestates(
     tags=["Service States"],
     responses={
         **{
-            200: {"description": "TODO", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "TODO",
+                "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
@@ -338,7 +395,11 @@ async def getservicestates(
 async def addservicestate(
     request: Request,
     item: ServiceStateItem,
-    sitename: str = Path(..., description="The site name to add/update the service state for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to add/update the service state for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -357,12 +418,21 @@ async def addservicestate(
             "updatedate": getUTCnow(),
             "exc": str(item.exc)[:4095],
         }
-        services = deps["dbI"].get("servicestates", search=[["hostname", item.hostname], ["servicename", item.servicename.value]])
+        services = deps["dbI"].get(
+            "servicestates",
+            search=[
+                ["hostname", item.hostname],
+                ["servicename", item.servicename.value],
+            ],
+        )
         if services:
+            dbOut["id"] = services[0]["id"]
+            del dbOut["insertdate"]
             deps["dbI"].update("servicestates", [dbOut])
         else:
             deps["dbI"].insert("servicestates", [dbOut])
     except Exception as ex:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise Exception(f"Error details in reportServiceStatus. Exc: {str(ex)}") from ex
     return APIResponse.genResponse(request, {"Status": "Updated"})
 
@@ -374,15 +444,25 @@ async def addservicestate(
     tags=["Service States"],
     responses={
         **{
-            200: {"description": "Service State deleted successfully", "content": {"application/json": {"example": {"Status": "Deleted"}}}},
-            404: {"description": "Service State not found", "content": {"application/json": {"example": {"detail": "Service state for hostname 'example' and servicename 'example' not found."}}}},
+            200: {
+                "description": "Service State deleted successfully",
+                "content": {"application/json": {"example": {"Status": "Deleted"}}},
+            },
+            404: {
+                "description": "Service State not found",
+                "content": {"application/json": {"example": {"detail": "Service state for hostname 'example' and servicename 'example' not found."}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def deleteservicestate(
     request: Request,
-    sitename: str = Path(..., description="The site name to delete the service state for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to delete the service state for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     hostname: str = Query(..., description="Hostname of the service state to delete"),
     servicename: HOSTSERVICEENUMALL = Query(..., description="Service name of the service state to delete"),
     deps=Depends(apiWriteDeps),
@@ -393,12 +473,22 @@ async def deleteservicestate(
     """
     checkSite(deps, sitename)
     try:
-        services = deps["dbI"].get("servicestates", search=[["hostname", hostname], ["servicename", servicename.value]])
+        services = deps["dbI"].get(
+            "servicestates",
+            search=[["hostname", hostname], ["servicename", servicename.value]],
+        )
         if services:
-            deps["dbI"].delete("servicestates", [["hostname", hostname], ["servicename", servicename.value]])
+            deps["dbI"].delete(
+                "servicestates",
+                [["hostname", hostname], ["servicename", servicename.value]],
+            )
         else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service state for hostname '{hostname}' and servicename '{servicename.value}' not found.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Service state for hostname '{hostname}' and servicename '{servicename.value}' not found.",
+            )
     except Exception as ex:
+        print(f"Full traceback: {traceback.format_exc()}")
         raise Exception(f"Error details in deleteservicestate. Exc: {str(ex)}") from ex
     return APIResponse.genResponse(request, {"Status": "Deleted"})
 
@@ -423,16 +513,30 @@ class ServiceActionItem(BaseModel):
     description=("Retrieves service actions from the database."),
     tags=["Service Actions"],
     responses={
-        **{200: {"description": "Service actions retrieved successfully.", "content": {"application/json": {"example": {"Status": "Retrieved <actions>"}}}}},
+        **{
+            200: {
+                "description": "Service actions retrieved successfully.",
+                "content": {"application/json": {"example": {"Status": "Retrieved <actions>"}}},
+            }
+        },
         **DEFAULT_RESPONSES,
     },
 )
 async def getserviceaction(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the service action for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the service action for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     hostname: str = Query(default=None, description="Hostname to filter by"),
     servicename: HOSTSERVICEENUMALL = Query(default=None, description="Service name to filter by"),
-    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
+    limit: int = Query(
+        LIMIT_DEFAULT,
+        description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.",
+        ge=LIMIT_MIN,
+        le=LIMIT_MAX,
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("hostname", "servicename", "limit")),
 ):
@@ -458,7 +562,10 @@ async def getserviceaction(
     tags=["Service Actions"],
     responses={
         **{
-            200: {"description": "Service action recorded successfully.", "content": {"application/json": {"example": {"Status": "Recorded <hostname> <servicename> <action>"}}}},
+            200: {
+                "description": "Service action recorded successfully.",
+                "content": {"application/json": {"example": {"Status": "Recorded <hostname> <servicename> <action>"}}},
+            },
             400: {
                 "description": "Bad Request",
                 "content": {"application/json": {"example": {"detail": "No Services identified for params: {'servicename': 'ALL', 'action': 'start', 'hostname': 'ALL'}"}}},
@@ -470,7 +577,11 @@ async def getserviceaction(
 async def serviceaction(
     request: Request,
     item: ServiceActionItem,
-    sitename: str = Path(..., description="The site name to record the service action for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to record the service action for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -493,7 +604,14 @@ async def serviceaction(
             elif item.hostname == "ALL":
                 add = True
             else:
-                statein = deps["dbI"].get("serviceaction", search=[["hostname", service["hostname"]], ["servicename", service["servicename"]], ["serviceaction", item.action]])
+                statein = deps["dbI"].get(
+                    "serviceaction",
+                    search=[
+                        ["hostname", service["hostname"]],
+                        ["servicename", service["servicename"]],
+                        ["serviceaction", item.action],
+                    ],
+                )
                 if statein:
                     add = True
         if add:
@@ -506,7 +624,10 @@ async def serviceaction(
             deps["dbI"].insert("serviceaction", [dbOut])
             dbOuts.append(dbOut)
     if not dbOuts:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"No Services identified for params: {item}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No Services identified for params: {item}",
+        )
     return APIResponse.genResponse(request, {"Status": "Recorded", "DB": dbOuts})
 
 
@@ -519,15 +640,25 @@ async def serviceaction(
     tags=["Service Actions"],
     responses={
         **{
-            200: {"description": "Service action deleted successfully.", "content": {"application/json": {"example": {"Status": "Deleted <hostname> <servicename> <action>"}}}},
-            404: {"description": "Service action not found.", "content": {"application/json": {"example": {"detail": "Service action not found for the given parameters."}}}},
+            200: {
+                "description": "Service action deleted successfully.",
+                "content": {"application/json": {"example": {"Status": "Deleted <hostname> <servicename> <action>"}}},
+            },
+            404: {
+                "description": "Service action not found.",
+                "content": {"application/json": {"example": {"detail": "Service action not found for the given parameters."}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def deleteserviceaction(
     request: Request,
-    _sitename: str = Path(..., description="The site name to delete the service action for.", example=startupConfig.get("SITENAME", "default")),
+    _sitename: str = Path(
+        ...,
+        description="The site name to delete the service action for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     hostname: constr(strip_whitespace=True, min_length=1, max_length=255) = Query(default=None, description="Hostname to filter by"),
     servicename: HOSTSERVICEENUMALL = Query(default=None, description="Service name to filter by"),
     action: constr(strip_whitespace=True, min_length=1, max_length=50) = Query(default=None, description="Action to filter by"),
@@ -544,10 +675,16 @@ async def deleteserviceaction(
     if action:
         search.append(["serviceaction", action])
     if not search:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No hostname or servicename provided to delete service action.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No hostname or servicename provided to delete service action.",
+        )
     actions = deps["dbI"].get("serviceaction", search=search)
     if not actions:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service action not found for the given parameters.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Service action not found for the given parameters.",
+        )
     deps["dbI"].delete("serviceaction", search)
     return APIResponse.genResponse(request, {"Status": f"Deleted {hostname} {servicename.value} {action}"})
 
@@ -565,6 +702,7 @@ class InstanceStartEndItem(BaseModel):
     - Sets the start and end time for a specific instance.
     - Requires instance ID in the input data.
     """
+
     instanceid: str
     starttimestamp: int
     endtimestamp: int
@@ -577,9 +715,12 @@ class InstanceStartEndItem(BaseModel):
     tags=["Service Actions"],
     responses={
         **{
-            200: {"description": "Instance start and end time successfully set.", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "Instance start and end time successfully set.",
+                "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system\n" " - No active deltas found.\n" " - No instance found.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system\n - No active deltas found.\n - No instance found.",
                 "content": {
                     "application/json": {
                         "example": {
@@ -597,7 +738,11 @@ class InstanceStartEndItem(BaseModel):
 async def setinstancestartend(
     request: Request,
     item: InstanceStartEndItem,
-    sitename: str = Path(..., description="The site name to retrieve the instance start and end time for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the instance start and end time for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -618,7 +763,10 @@ async def setinstancestartend(
         if item.instanceid in activeDeltas.get("output", {}).get(key, {}):
             found = True
     if not found:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Instance ID {item.instanceid} is not found in activeDeltas.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Instance ID {item.instanceid} is not found in activeDeltas.",
+        )
     # Insert start and end time in instancestartend table
     out = {
         "instanceid": item.instanceid,

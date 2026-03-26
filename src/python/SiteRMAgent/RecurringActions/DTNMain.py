@@ -6,9 +6,11 @@ Authors:
 
 Date: 2022/01/29
 """
+
 import copy
 import socket
 import sys
+import traceback
 
 from deepdiff import DeepDiff
 from SiteRMAgent import __version__
@@ -79,11 +81,28 @@ class RecurringAction:
         self.memDiskStats.reset()
         self.memDiskStats.updateStorageInfo()
         self.memDiskStats.updateMemStats(["sitermagent-update", "siterm-ruler", "Config-Fetcher"], 1)
-        out = {"hostname": f"hostnamemem-{self.hostname}-Agent", "output": self.memDiskStats.getMemMonitor()}
-        self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Agent")
+        out = {
+            "hostname": f"hostnamemem-{self.hostname}-Agent",
+            "output": self.memDiskStats.getMemMonitor(),
+        }
+        self.requestHandler.makeHttpCall(
+            "POST",
+            f"/api/{self.sitename}/monitoring/stats",
+            data=out,
+            retries=1,
+            raiseEx=False,
+            useragent="Agent",
+        )
         out["hostname"] = f"hostnamedisk-{self.hostname}-Agent"
         out["output"] = self.memDiskStats.getStorageInfo()
-        self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Agent")
+        self.requestHandler.makeHttpCall(
+            "POST",
+            f"/api/{self.sitename}/monitoring/stats",
+            data=out,
+            retries=1,
+            raiseEx=False,
+            useragent="Agent",
+        )
         self.logger.info("Memory and disk statistics reported successfully.")
 
     def prepareJsonOut(self):
@@ -118,18 +137,20 @@ class RecurringAction:
                 raiseError = True
             except Exception as ex:
                 excType, excValue = sys.exc_info()[:2]
+                exmsg = f"{str(excType.__name__)}: {str(excValue)}, {str(ex)}. Full traceback: {traceback.format_exc()}"
                 outputDict[tmpName] = {
                     "errorType": str(excType.__name__),
                     "errorNo": -6,
                     "errMsg": str(excValue),
-                    "exception": str(ex),
+                    "exception": str(exmsg),
                 }
                 excMsg += f" {str(excType.__name__)}: {str(excValue)}"
                 self.logger.critical(
-                    "%s received %s. Exception details: %s",
+                    "%s received %s. Exception details: %s. Full traceback: %s",
                     tmpName,
                     outputDict[tmpName]["errorType"],
                     outputDict[tmpName],
+                    traceback.format_exc(),
                 )
         # Post processing of output (allows any class to modify output based on other Plugins output)
         for tmpName, method in self.classes.items():
@@ -195,18 +216,45 @@ class RecurringAction:
             self.agent.dumpFileContentAsJson(workDir + "/latest-out.json", dic)
             # No need to send same data again, we just update timestamp.
             self.logger.info("Will Inform FE that Agent is alive.")
-            tmpdic = {"hostname": dic["hostname"], "ip": dic["ip"], "updatedate": dic["updatedate"], "insertdate": dic["insertdate"], "nodatachange": True}
-            outVals = self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/hosts", data=tmpdic, retries=1, raiseEx=False, useragent="Agent")
+            tmpdic = {
+                "hostname": dic["hostname"],
+                "ip": dic["ip"],
+                "updatedate": dic["updatedate"],
+                "insertdate": dic["insertdate"],
+                "nodatachange": True,
+            }
+            outVals = self.requestHandler.makeHttpCall(
+                "PUT",
+                f"/api/{self.sitename}/hosts",
+                data=tmpdic,
+                retries=1,
+                raiseEx=False,
+                useragent="Agent",
+            )
             if outVals[1] == 200:
                 self.logger.info("FE informed that Agent is alive.")
             else:
                 diffFromLast = True  # If we could not update timestamp, we will try to send full data again.
         if diffFromLast:
             self.logger.info("Will try to publish information to SiteFE")
-            outVals = self.requestHandler.makeHttpCall("PUT", f"/api/{self.sitename}/hosts", data=dic, retries=1, raiseEx=False, useragent="Agent")
+            outVals = self.requestHandler.makeHttpCall(
+                "PUT",
+                f"/api/{self.sitename}/hosts",
+                data=dic,
+                retries=1,
+                raiseEx=False,
+                useragent="Agent",
+            )
             self.logger.info("Update Host result %s", outVals)
             if outVals[1] != 200:
-                outValsAdd = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/hosts", data=dic, retries=1, raiseEx=False, useragent="Agent")
+                outValsAdd = self.requestHandler.makeHttpCall(
+                    "POST",
+                    f"/api/{self.sitename}/hosts",
+                    data=dic,
+                    retries=1,
+                    raiseEx=False,
+                    useragent="Agent",
+                )
                 self.logger.info("Insert Host result %s", outValsAdd)
                 if outValsAdd[1] != 200:
                     excMsg += " Could not publish to SiteFE Frontend."

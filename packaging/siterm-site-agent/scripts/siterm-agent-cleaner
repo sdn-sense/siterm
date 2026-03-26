@@ -46,6 +46,8 @@ def generateVlanRemove(config, active_vlans):
 
 def main():
     """Main function"""
+    # TODO: Implement cleanup logic for SENSE VLANs and QoS rules
+    # using the new Git fetch mechanism
     config = read_yaml('/tmp/siterm-link-Agent-main.yaml')
     active_vlans = get_active_vlans()
     commands = generateVlanRemove(config, active_vlans)

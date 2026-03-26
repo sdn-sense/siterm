@@ -6,13 +6,15 @@ Authors:
 
 Date: 2022/12/23
 """
+
 import pprint
+
 from kubernetes import client
 from kubernetes import config as k8sconfig
-from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.CustomExceptions import PluginFatalException
+from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.ipaddr import replaceSpecialSymbols
+from SiteRMLibs.MainUtilities import getLoggingObject
 
 
 class KubeInfo:
@@ -20,9 +22,7 @@ class KubeInfo:
 
     def __init__(self, config=None, logger=None):
         self.config = config if config else getGitConfig()
-        self.logger = (
-            logger if logger else getLoggingObject(config=self.config, service="Agent")
-        )
+        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
         self.hostname = self.config.get("agent", "hostname")
         self.allLabels = {}
         self.failedLabels = {}
@@ -59,38 +59,21 @@ class KubeInfo:
             # Check if we have this interface in NetInfo
             if data.get("NetInfo", {}).get("interfaces", {}).get(key, {}):
                 # if isAlias is defined - than it is an issue which one to use. Leave one from NetInfo
-                if (
-                    data.get("NetInfo", {})
-                    .get("interfaces", {})
-                    .get(key, {})
-                    .get("isAlias")
-                ):
+                if data.get("NetInfo", {}).get("interfaces", {}).get(key, {}).get("isAlias"):
                     alarm = f"Interface {key} already has isAlias in git config (and we get it from Kube Labels. Which one is right?"
                     alarm += f"NetInfo: {data.get('NetInfo', {}).get('interfaces', {}).get(key, {}).get('isAlias')}"
                     alarm += f"KubeInfo: {self._identifyKubeLabelsisAlias(key)}"
                     raise PluginFatalException(alarm)
                 data["NetInfo"]["interfaces"][key]["isAlias"] = val
                 # if switch_port is defined - than it is an issue which one to use. Leave one from NetInfo
-                if (
-                    data.get("NetInfo", {})
-                    .get("interfaces", {})
-                    .get(key, {})
-                    .get("switch_port")
-                ):
+                if data.get("NetInfo", {}).get("interfaces", {}).get(key, {}).get("switch_port"):
                     alarm = f"Interface {key} already has switch port in git config (and we get it from Kube Labels. Which one is right?"
                     alarm += f"NetInfo: {data.get('NetInfo', {}).get('interfaces', {}).get(key, {}).get('switch_port')}"
                     alarm += f"KubeInfo: {self._identifyKubeLabelsisAlias(key)}"
                     raise PluginFatalException(alarm)
-                data["NetInfo"]["interfaces"][key]["switch_port"] = (
-                    replaceSpecialSymbols(port, reverse=True)
-                )
+                data["NetInfo"]["interfaces"][key]["switch_port"] = replaceSpecialSymbols(port, reverse=True)
                 # if port is defined - than it is an issue which one to use. Leave one from NetInfo
-                if (
-                    data.get("NetInfo", {})
-                    .get("interfaces", {})
-                    .get(key, {})
-                    .get("switch")
-                ):
+                if data.get("NetInfo", {}).get("interfaces", {}).get(key, {}).get("switch"):
                     alarm = f"Interface {key} already has switch in git config (and we get it from Kube Labels. Which one is right?"
                     alarm += f"NetInfo: {data.get('NetInfo', {}).get('interfaces', {}).get(key, {}).get('switch')}"
                     alarm += f"KubeInfo: {self._identifyKubeLabelsisAlias(key)}"
@@ -145,9 +128,7 @@ class KubeInfo:
             if "multus" in kubeLabels:
                 multusLabel = f"{kubeLabels['multus']}"
                 if multusLabel in self.allLabels:
-                    out.setdefault("multus", {}).setdefault(
-                        intf, self.allLabels[multusLabel]
-                    )
+                    out.setdefault("multus", {}).setdefault(intf, self.allLabels[multusLabel])
             else:
                 self.failedLabels["multus"] = True
         return out

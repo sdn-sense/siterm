@@ -7,13 +7,21 @@ Authors:
 
 Date: 2021/01/20
 """
+
 import copy
 import os
 import os.path
-import time
+import shutil
+import traceback
 
+from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
-from SiteRMLibs.MainUtilities import generateMD5, getHostname, getstartupconfig
+from SiteRMLibs.MainUtilities import (
+    generateMD5,
+    getHostname,
+    getstartupconfig,
+    getTempDir,
+)
 from yaml import safe_load as yload
 
 
@@ -22,42 +30,43 @@ class GitConfig:
 
     def __init__(self):
         self.config = {}
+        self.cachedir = f"{getTempDir()}/git_config"
         self.defaults = {
             "SITENAME": {"optional": False},
             "GIT_REPO": {"optional": True, "default": "sdn-sense/rm-configs"},
-            "GIT_URL": {"optional": True, "default": "https://raw.githubusercontent.com/"},
+            "GIT_URL": {"optional": True, "default": "https://github.com/"},
             "GIT_BRANCH": {"optional": True, "default": "master"},
             "MD5": {"optional": True, "default": generateMD5(getHostname())},
         }
+        self.getLocalConfig()
 
-    @staticmethod
-    def gitConfigCache(name, raiseEx=False):
-        """Get Config file from tmp dir"""
-        filename = f"/tmp/siterm-link-{name}.yaml"
-        output = {}
-        retries = 3
-        while retries > 0:
-            if os.path.isfile(filename):
-                with open(filename, "r", encoding="utf-8") as fd:
-                    output = yload(fd.read())
-                break
-            if retries < 0 and raiseEx:
-                raise Exception(f"Config file {filename} does not exist.")
-            retries -= 1
-            time.sleep(5)
-        return output
+    def getGitRepo(self):
+        """Get or initialize Git repository safely."""
+        gitrepourl = self.config["GIT_URL"] + self.config["GIT_REPO"]
+        if not gitrepourl.endswith(".git"):
+            gitrepourl += ".git"
+        try:
+            repo = Repo(self.cachedir)
+            repo.git.fetch("--all")
 
-    def getFullGitUrl(self, customAdds=None, refhead=False):
-        """Get Full Git URL."""
-        urlJoinList = []
-        if refhead:
-            urlJoinList = [self.config["GIT_URL"], self.config["GIT_REPO"], "refs/heads", self.config["GIT_BRANCH"], self.config["SITENAME"]]
-        else:
-            urlJoinList = [self.config["GIT_URL"], self.config["GIT_REPO"], self.config["GIT_BRANCH"], self.config["SITENAME"]]
-        if customAdds:
-            for item in customAdds:
-                urlJoinList.append(item)
-        return "/".join(urlJoinList)
+        except (InvalidGitRepositoryError, NoSuchPathError):
+            if os.path.exists(self.cachedir):
+                shutil.rmtree(self.cachedir)
+            os.makedirs(self.cachedir, exist_ok=True)
+            repo = Repo.clone_from(gitrepourl, self.cachedir)
+        except Exception as ex:
+            print(f"Full traceback: {traceback.format_exc()}")
+            raise ex
+
+        branch = self.config["GIT_BRANCH"]
+
+        try:
+            repo.git.checkout(branch)
+        except Exception:
+            print(f"Full traceback: {traceback.format_exc()}")
+            repo.git.checkout("-b", branch, f"origin/{branch}")
+        repo.git.pull("origin", branch)
+        return repo
 
     def getLocalConfig(self):
         """Get local config for info where all configs are kept in git."""
@@ -69,6 +78,64 @@ class GitConfig:
                     print(f"Configuration /etc/siterm.yaml missing non optional config parameter {key}")
                     raise Exception(f"Configuration /etc/siterm.yaml missing non optional config parameter {key}")
                 self.config[key] = requirement["default"]
+
+    def _getGitMapping(self):
+        """Get Site mapping from Local Git Repository."""
+        # Based on site, get mapping.yaml file
+        mappingFile = f"{self.cachedir}/{self.config['SITENAME']}/mapping.yaml"
+        if not os.path.exists(mappingFile):
+            raise Exception(f"Mapping file {mappingFile} does not exist.")
+        with open(mappingFile, "r", encoding="utf-8") as fd:
+            mapping = yload(fd)
+        return mapping
+
+    def _getAgentConfig(self):
+        """Get Agent configuration from Local Git Repository."""
+        mappings = self._getGitMapping()
+        if self.config["MD5"] not in mappings:
+            raise Exception(f"MD5 {self.config['MD5']} not found in mappings.")
+        agentConfFile = f"{self.cachedir}/{self.config['SITENAME']}/{mappings[self.config['MD5']]['config']}/main.yaml"
+        if not os.path.exists(agentConfFile):
+            raise Exception(f"Agent configuration file {agentConfFile} does not exist.")
+        with open(agentConfFile, "r", encoding="utf-8") as fd:
+            agentConfig = yload(fd)
+        return agentConfig
+
+    def _getFrontendConfig(self):
+        """Get Frontend configuration from Local Git Repository."""
+        mappings = self._getGitMapping()
+        if self.config["MD5"] not in mappings:
+            raise Exception(f"MD5 {self.config['MD5']} not found in mappings.")
+        frontendConfFile = f"{self.cachedir}/{self.config['SITENAME']}/{mappings[self.config['MD5']]['config']}/main.yaml"
+        if not os.path.exists(frontendConfFile):
+            raise Exception(f"Frontend configuration file {frontendConfFile} does not exist.")
+        with open(frontendConfFile, "r", encoding="utf-8") as fd:
+            frontendConfig = yload(fd)
+        return frontendConfig
+
+    def _getFrontendAuth(self):
+        """Get Frontend authentication configuration from Local Git Repository."""
+        mappings = self._getGitMapping()
+        if self.config["MD5"] not in mappings:
+            raise Exception(f"MD5 {self.config['MD5']} not found in mappings.")
+        frontendAuthFile = f"{self.cachedir}/{self.config['SITENAME']}/{mappings[self.config['MD5']]['config']}/auth.yaml"
+        if not os.path.exists(frontendAuthFile):
+            raise Exception(f"Frontend authentication file {frontendAuthFile} does not exist.")
+        with open(frontendAuthFile, "r", encoding="utf-8") as fd:
+            frontendAuth = yload(fd)
+        return frontendAuth
+
+    def _getFrontendAuthRe(self):
+        """Get Frontend authentication refresh configuration from Local Git Repository."""
+        mappings = self._getGitMapping()
+        if self.config["MD5"] not in mappings:
+            raise Exception(f"MD5 {self.config['MD5']} not found in mappings.")
+        frontendAuthReFile = f"{self.cachedir}/{self.config['SITENAME']}/{mappings[self.config['MD5']]['config']}/auth-re.yaml"
+        if os.path.exists(frontendAuthReFile):
+            with open(frontendAuthReFile, "r", encoding="utf-8") as fd:
+                frontendAuthRe = yload(fd)
+            return frontendAuthRe
+        return {}
 
     @staticmethod
     def __valReplacer(val, keyword, replacement):
@@ -192,7 +259,7 @@ class GitConfig:
     def getGitAgentConfig(self):
         """Get Git Agent Config."""
         if self.config["MAPPING"]["type"] == "Agent":
-            self.config["MAIN"] = self.gitConfigCache("Agent-main")
+            self.config["MAIN"] = self._getAgentConfig()
             self.presetAgentDefaultConfigs()
 
     @staticmethod
@@ -277,7 +344,12 @@ class GitConfig:
                     "logDir": "/var/log/siterm-site-fe/",
                     "logLevel": "INFO",
                     "privatedir": "/opt/siterm/config/",
-                    "probes": ["https_v4_siterm_2xx", "icmp_v4", "icmp_v6", "https_v6_siterm_2xx"],
+                    "probes": [
+                        "https_v4_siterm_2xx",
+                        "icmp_v4",
+                        "icmp_v6",
+                        "https_v6_siterm_2xx",
+                    ],
                 },
                 "ansible": {
                     "private_data_dir": "/opt/siterm/config/ansible/sense/",
@@ -306,20 +378,91 @@ class GitConfig:
                     "ansible_runtime_retry": 3,
                     "ansible_runtime_retry_delay": 5,
                 },
-                "daemoncontrols": {"ProvisioningService": {"failedretry": True, "failedretrycount": 10, "failedretrytimeout": 60}},
+                "daemoncontrols": {
+                    "ProvisioningService": {
+                        "failedretry": True,
+                        "failedretrycount": 10,
+                        "failedretrytimeout": 60,
+                    }
+                },
                 "debuggers": {
-                    "iperf-server": {"deftime": 600, "maxruntime": 86400, "minport": 40000, "maxports": 2000, "defaults": {"onetime": True}},
-                    "iperf-client": {"deftime": 600, "maxruntime": 86400, "minstreams": 1, "maxstreams": 16, "defaults": {"onetime": True, "streams": 1}},
-                    "fdt-client": {"deftime": 600, "maxruntime": 86400, "minstreams": 1, "maxstreams": 16, "defaults": {"onetime": True, "streams": 1}},
-                    "fdt-server": {"deftime": 600, "maxruntime": 86400, "minport": 42000, "maxports": 2000, "defaults": {"onetime": True}},
-                    "ethr-server": {"deftime": 600, "maxruntime": 86400, "minport": 44000, "maxports": 2000, "defaults": {"onetime": True}},
-                    "ethr-client": {"deftime": 600, "maxruntime": 86400, "minstreams": 1, "maxstreams": 16, "defaults": {"onetime": True, "streams": 1}},
-                    "rapid-ping": {"deftime": 600, "maxruntime": 86400, "maxmtu": 9000, "mininterval": 0.2, "maxtimeout": 3600, "defaults": {"packetsize": 64}},
-                    "rapid-pingnet": {"deftime": 600, "maxruntime": 86400, "maxtimeout": 600, "maxcount": 100, "defaults": {"onetime": True, "count": 10, "timeout": 5}},
-                    "arp-table": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
-                    "tcpdump": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
-                    "traceroute": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
-                    "traceroutenet": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
+                    "iperf-server": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minport": 40000,
+                        "maxports": 2000,
+                        "defaults": {"onetime": True},
+                    },
+                    "iperf-client": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minstreams": 1,
+                        "maxstreams": 16,
+                        "defaults": {"onetime": True, "streams": 1},
+                    },
+                    "fdt-client": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minstreams": 1,
+                        "maxstreams": 16,
+                        "defaults": {"onetime": True, "streams": 1},
+                    },
+                    "fdt-server": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minport": 42000,
+                        "maxports": 2000,
+                        "defaults": {"onetime": True},
+                    },
+                    "ethr-server": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minport": 44000,
+                        "maxports": 2000,
+                        "defaults": {"onetime": True},
+                    },
+                    "ethr-client": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "minstreams": 1,
+                        "maxstreams": 16,
+                        "defaults": {"onetime": True, "streams": 1},
+                    },
+                    "rapid-ping": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "maxmtu": 9000,
+                        "mininterval": 0.2,
+                        "maxtimeout": 3600,
+                        "defaults": {"packetsize": 64},
+                    },
+                    "rapid-pingnet": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "maxtimeout": 600,
+                        "maxcount": 100,
+                        "defaults": {"onetime": True, "count": 10, "timeout": 5},
+                    },
+                    "arp-table": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "defaults": {"onetime": True},
+                    },
+                    "tcpdump": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "defaults": {"onetime": True},
+                    },
+                    "traceroute": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "defaults": {"onetime": True},
+                    },
+                    "traceroutenet": {
+                        "deftime": 600,
+                        "maxruntime": 86400,
+                        "defaults": {"onetime": True},
+                    },
                 },
                 "prefixes": {
                     "mrs": "http://schemas.ogf.org/mrs/2013/12/topology#",
@@ -419,7 +562,16 @@ class GitConfig:
             },
         }
         switchDefaults = {
-            "qos_policy": {"traffic_classes": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7}, "max_policy_rate": "268000", "burst_size": "256"},
+            "qos_policy": {
+                "traffic_classes": {
+                    "default": 1,
+                    "bestEffort": 2,
+                    "softCapped": 4,
+                    "guaranteedCapped": 7,
+                },
+                "max_policy_rate": "268000",
+                "burst_size": "256",
+            },
             "rate_limit": False,
             "vsw": "%%SWITCHNAME%%",
             "vswmp": "%%SWITCHNAME%%_mp",
@@ -439,21 +591,21 @@ class GitConfig:
     def getGitFEConfig(self):
         """Get Git FE Config."""
         if self.config["MAPPING"]["type"] == "FE":
-            self.config["MAIN"] = self.gitConfigCache("FE-main")
-            self.config["AUTH"] = self.gitConfigCache("FE-auth")
-            self.config["AUTH_RE"] = self.gitConfigCache("FE-auth-re", False)
+            self.config["MAIN"] = self._getFrontendConfig()
+            self.config["AUTH"] = self._getFrontendAuth()
+            self.config["AUTH_RE"] = self._getFrontendAuthRe()
             self.presetFEDefaultConfigs()
 
     def getGitConfig(self):
         """Get git config from configured github repo."""
         if not self.config:
             self.getLocalConfig()
-        mapping = self.gitConfigCache("mapping")
-        if self.config["MD5"] not in list(mapping.keys()):
+        self.config["MAPPING"] = self._getGitMapping()
+        if self.config["MD5"] not in list(self.config["MAPPING"].keys()):
             msg = f"Configuration is not available for this MD5 {self.config['MD5']} tag in GIT REPO {self.config['GIT_REPO']}"
             print(msg)
             raise Exception(msg)
-        self.config["MAPPING"] = copy.deepcopy(mapping[self.config["MD5"]])
+        self.config["MAPPING"] = copy.deepcopy(self.config["MAPPING"][self.config["MD5"]])
         self.getGitFEConfig()
         self.getGitAgentConfig()
 

@@ -7,6 +7,7 @@ Authors:
 
 Date: 2021/01/20
 """
+
 import base64
 import copy
 import datetime
@@ -25,20 +26,22 @@ import socket
 import subprocess
 import tempfile
 import time
+import traceback
 import uuid
 from contextlib import contextmanager
 from enum import Enum
-from pathlib import Path
 
 import simplejson as json
 from rdflib import Graph
+from yaml import safe_load as yload
+
 from SiteRMLibs.CustomExceptions import (
     FailedInterfaceCommand,
     NotFoundError,
     WrongInputError,
 )
 from SiteRMLibs.DBBackend import dbinterface
-from yaml import safe_load as yload
+
 
 HOSTSERVICES = [
     "Agent",
@@ -88,6 +91,16 @@ def loadEnvFile(filepath="/etc/environment"):
                 os.environ[key.strip()] = value.strip()
     except Exception as ex:  # pylint: disable=broad-except
         print(f"Failed to load environment file {filepath}. Error: {ex}")
+        print(f"Full traceback: {traceback.format_exc()}")
+
+
+def envBool(name: str, default: bool = True) -> bool:
+    """Get boolean value from environment variable."""
+    val = os.getenv(name)
+    if val is None:
+        return default
+    val = val.strip('"').strip("'").lower()
+    return val in {"1", "true", "yes", "on"}
 
 
 def dictSearch(key, var, ret, ignoreKeys=None):
@@ -285,7 +298,10 @@ def externalCommand(command, communicate=True):
 def externalCommandStdOutErr(command, stdout, stderr):
     """Execute External Commands and return stdout and stderr."""
     command = shlex.split(str(command))
-    with open(stdout, "w", encoding="utf-8") as outFD, open(stderr, "w", encoding="utf-8") as errFD:
+    with (
+        open(stdout, "w", encoding="utf-8") as outFD,
+        open(stderr, "w", encoding="utf-8") as errFD,
+    ):
         with subprocess.Popen(command, stdout=outFD, stderr=errFD, text=True) as proc:
             return proc.communicate()
 
@@ -322,23 +338,29 @@ def createDirs(fullDirPath):
     return
 
 
+def getTempDir():
+    """Get the temporary directory."""
+    return tempfile.gettempdir()
+
+
 def firstRunCheck(firstRun, servicename):
     """Check if it is first run."""
     if firstRun:
-        fname = Path(tempfile.gettempdir()) / "siterm" / f"{servicename.lower()}-first-run"
-        fname.parent.mkdir(parents=True, exist_ok=True)
-        if not fname.exists():
-            fname.write_text(f"This is first run of {servicename}. Do not remove this file.")
+        fname = f"{getTempDir()}/siterm/{servicename.lower()}-first-run"
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        if not os.path.exists(fname):
+            with open(fname, "w", encoding="utf-8") as fd:
+                fd.write(f"This is first run of {servicename}. Do not remove this file.")
     else:
-        fname = Path(tempfile.gettempdir()) / "siterm" / f"{servicename.lower()}-first-run"
-        if fname.exists():
-            fname.unlink()
+        fname = f"{getTempDir()}/siterm/{servicename.lower()}-first-run"
+        if os.path.exists(fname):
+            os.unlink(fname)
 
 
 def firstRunFinished(servicename):
     """Check if first Run finished for a service."""
-    fname = Path(tempfile.gettempdir()) / "siterm" / f"{servicename.lower()}-first-run"
-    if fname.exists():
+    fname = f"{getTempDir()}/siterm/{servicename.lower()}-first-run"
+    if os.path.exists(fname):
         return False
     return True
 
@@ -516,8 +538,7 @@ def convertTSToDatetime(inputTS):
 
 
 def httpdate(timestamp):
-    """Return a string representation of a date according to RFC 1123
-    (HTTP/1.1)."""
+    """Return a string representation of a date according to RFC 1123 (HTTP/1.1)."""
     # pylint: disable=consider-using-f-string
     dat = datetime.datetime.fromtimestamp(int(timestamp))
     weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][dat.weekday()]
@@ -594,7 +615,6 @@ def getDBConn(serviceName="", cls=None):
 
 def getDBConnObj():
     """Get database connection object (no class)"""
-    # TOOD: All the rest should remove use of those params
     return dbinterface()
 
 
@@ -611,7 +631,8 @@ def parseRDFFile(modelFile):
             return graph
         except Exception as ex:  # pylint: disable=broad-except
             exclist.append(f"Failed to parse with format: {fmt}. Error: {ex}")
-    raise NotFoundError(f"Model file {modelFile} could not be parsed with any format: {formats}. " f"Please check the file format or content. All exceptions: {exclist}")
+            print(f"Full traceback: {traceback.format_exc()}")
+    raise NotFoundError(f"Model file {modelFile} could not be parsed with any format: {formats}. Please check the file format or content. All exceptions: {exclist}")
 
 
 def getCurrentModel(cls, raiseException=False):
@@ -718,7 +739,7 @@ def getArpVals():
 
 def timedhourcheck(lockname, hours=1):
     """Timed Lock for file."""
-    filename = f"/tmp/siterm-timed-lock-{lockname}"
+    filename = f"{getTempDir()}/siterm-timed-lock-{lockname}"
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as fd:
             timestamp = fd.read()
@@ -739,11 +760,13 @@ def timedhourcheck(lockname, hours=1):
 
 
 def tryConvertToNumeric(value):
-    """Convert str to float or int.
+    """
+    Convert str to float or int.
 
     Returns what should be expected, t.y.: if str is float, int will
     fail and float will be returned; if str is int, float and int will
-    succeed, returns int; if any of these fail, returns value."""
+    succeed, returns int; if any of these fail, returns value.
+    """
     floatVal = None
     intVal = None
     try:
@@ -779,10 +802,13 @@ def withTimeout(timeout_seconds=60):
 
     def decorator(func):
         """Decorator that applies a timeout to the function"""
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             """Wrapper function that applies a timeout to the decorated function"""
             with timeout(timeout_seconds):
                 return func(*args, **kwargs)
+
         return wrapper
+
     return decorator

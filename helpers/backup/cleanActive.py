@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Clean up all active deltas and make it empty"""
-import sys
+
 import pprint
+import sys
+
 from SiteRMLibs.FECalls import getDBConn
-from SiteRMLibs.MainUtilities import getVal, evaldict, getUTCnow
+from SiteRMLibs.MainUtilities import evaldict, getUTCnow, getVal
 
 
 def cleanup(sitename):

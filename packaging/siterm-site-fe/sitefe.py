@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 # pylint: disable=no-name-in-module
 """FastAPI application for SiteFE REST API."""
+
 import os
+import time
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from opentelemetry import trace
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.trace import Status, StatusCode
+from SiteFE.REST.Auth import router as auth_router
 from SiteFE.REST.Debug import router as debug_router
 from SiteFE.REST.Delta import router as delta_router
 from SiteFE.REST.Frontend import router as fe_router
@@ -15,14 +21,26 @@ from SiteFE.REST.Model import router as model_router
 from SiteFE.REST.Monitoring import router as monitoring_router
 from SiteFE.REST.Service import router as service_router
 from SiteFE.REST.Topo import router as topo_router
-from SiteRMLibs.MainUtilities import loadEnvFile
+from SiteRMLibs.MainUtilities import envBool, loadEnvFile
+from SiteRMLibs.OpenTelemetry import init_otel
 
 loadEnvFile()
 
 app = FastAPI()
 
+OTEL_ENABLED = envBool("OTEL_ENABLED", False)
+
+if OTEL_ENABLED:
+    init_otel("siterm-site-fe")
+    FastAPIInstrumentor.instrument_app(
+        app,
+        http_capture_headers_server_request=["user-agent", "if-modified-since", "accept", "sense-request-host", "sense-request-email", "sense-request-fullname", "sense-request-organization"],
+        http_capture_headers_server_response=["content-type", "content-length", "cache-control"],
+    )
+
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+app.include_router(auth_router)
 app.include_router(fe_router, prefix="/api")
 app.include_router(host_router, prefix="/api")
 app.include_router(model_router, prefix="/api")
@@ -33,6 +51,60 @@ app.include_router(monitoring_router, prefix="/api")
 app.include_router(service_router, prefix="/api")
 
 app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="ui")
+
+
+@app.middleware("http")
+async def exception_capture(request: Request, call_next):
+    """Middleware to capture exceptions and record them in OpenTelemetry spans."""
+    try:
+        return await call_next(request)
+    except Exception as exc:
+        if OTEL_ENABLED:
+            span = trace.get_current_span()
+            if span:
+                span.record_exception(exc)
+                span.set_status(Status(StatusCode.ERROR))
+        raise
+
+
+@app.middleware("http")
+async def observability_middleware(request: Request, call_next):
+    """Middleware to capture request and response details for observability."""
+    if not OTEL_ENABLED:
+        return await call_next(request)
+
+    tracer = trace.get_tracer("siterm.api")
+
+    start_time = time.time()
+
+    with tracer.start_as_current_span(f"{request.method} {request.url.path}") as span:
+        # request info
+        span.set_attribute("http.method", request.method)
+        span.set_attribute("http.target", request.url.path)
+        span.set_attribute("http.client_ip", request.client.host if request.client else "unknown")
+
+        try:
+            # capture request body (optional)
+            body = await request.body()
+            if body:
+                try:
+                    span.set_attribute("http.request.body", body.decode("utf-8")[:4096])
+                except Exception:
+                    span.set_attribute("http.request.body", "<binary>")
+
+            response = await call_next(request)
+
+            latency = time.time() - start_time
+
+            span.set_attribute("http.status_code", response.status_code)
+            span.set_attribute("http.latency_ms", int(latency * 1000))
+
+            return response
+
+        except Exception as exc:
+            span.record_exception(exc)
+            span.set_status(Status(StatusCode.ERROR))
+            raise
 
 
 def logdetails(request: Request, status_code: int, message: str = ""):
@@ -93,7 +165,11 @@ async def custom_405_handler(request: Request, exc: HTTPException):
     logdetails(request, 405, str(exc))
     # Add allowed methods header to the response based on RFC 9110
     headers = {"Allow": "GET, POST, PUT, DELETE"}
-    return JSONResponse(status_code=405, content={"detail": f"Method Not Allowed. Exception: {exc}"}, headers=headers)
+    return JSONResponse(
+        status_code=405,
+        content={"detail": f"Method Not Allowed. Exception: {exc}"},
+        headers=headers,
+    )
 
 
 @app.exception_handler(500)

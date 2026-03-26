@@ -7,6 +7,7 @@ Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
+
 import argparse
 import atexit
 import os
@@ -17,6 +18,7 @@ import tracemalloc
 
 import psutil
 from deepdiff import DeepDiff
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import (
     HTTPServerNotReady,
@@ -36,11 +38,13 @@ from SiteRMLibs.MainUtilities import (
     getHostname,
     getLoggingObject,
     getSiteNameFromConfig,
+    getTempDir,
     getUTCnow,
     getVal,
     loadEnvFile,
     timeout,
 )
+from SiteRMLibs.OpenTelemetry import init_otel
 
 
 def getParser(description):
@@ -165,6 +169,7 @@ class DBBackend:
             if not services:
                 dbobj.insert("servicestates", [dbOut])
             else:
+                dbOut["id"] = services[0]["id"]
                 dbobj.update("servicestates", [dbOut])
         except Exception:
             excType, excValue = sys.exc_info()[:2]
@@ -187,10 +192,16 @@ class DBBackend:
                 "version": runningVersion,
                 "exc": kwargs.get("exc", "No Exception provided by service")[:4095],
             }
-            self.handlers[kwargs["sitename"]].makeHttpCall("POST", f"/api/{kwargs['sitename']}/servicestates", data=dic, useragent="Daemonizer")
+            self.handlers[kwargs["sitename"]].makeHttpCall(
+                "POST",
+                f"/api/{kwargs['sitename']}/servicestates",
+                data=dic,
+                useragent="Daemonizer",
+            )
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in pubStateRemote. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
+            print(f"Full traceback: {traceback.format_exc()}")
 
     def _autoRefreshDB(self, **kwargs):
         """Auto Refresh if there is a DB request to do so."""
@@ -226,7 +237,11 @@ class DBBackend:
                 self.logger.debug("No service actions found for %s", kwargs["sitename"])
                 return False
             if actions[1] != 200:
-                self.logger.error("Failed to get service actions for %s: %s", kwargs["sitename"], actions[0])
+                self.logger.error(
+                    "Failed to get service actions for %s: %s",
+                    kwargs["sitename"],
+                    actions[0],
+                )
                 return False
             if self.component == "ConfigFetcher":
                 return True
@@ -234,7 +249,16 @@ class DBBackend:
                 self.logger.debug("No actions found for %s", kwargs["sitename"])
                 return False
             for action in actions[0]:
-                self.handlers[kwargs["sitename"]].makeHttpCall("DELETE", url, data={"id": action["id"], "servicename": self.component, "action": action["action"]}, useragent="Daemonizer")
+                self.handlers[kwargs["sitename"]].makeHttpCall(
+                    "DELETE",
+                    url,
+                    data={
+                        "id": action["id"],
+                        "servicename": self.component,
+                        "action": action["action"],
+                    },
+                    useragent="Daemonizer",
+                )
                 refresh = True
         except Exception:
             exc = traceback.format_exc()
@@ -255,6 +279,8 @@ class Daemon(DBBackend):
     def __init__(self, component, inargs, getGitConf=True):
         """Initialize the daemon."""
         loadEnvFile()
+        init_otel(component)
+        LoggingInstrumentor().instrument(set_logging_format=True)
         logType = "TimedRotatingFileHandler"
         if inargs.logtostdout:
             logType = "StreamLogger"
@@ -262,9 +288,9 @@ class Daemon(DBBackend):
         self.inargs = inargs
         self.dbI = None
         self.runCount = 0
-        self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}.pid"
+        self.pidfile = f"{getTempDir()}/end-site-rm-{component}-{self.inargs.runnum}.pid"
         if self.inargs.devicename:
-            self.pidfile = f"/tmp/end-site-rm-{component}-{self.inargs.runnum}-{self.inargs.devicename}.pid"
+            self.pidfile = f"{getTempDir()}/end-site-rm-{component}-{self.inargs.runnum}-{self.inargs.devicename}.pid"
         self.config = None
         self.logger = None
         self.firstInitDone = False
@@ -322,16 +348,16 @@ class Daemon(DBBackend):
         retval = True
         if self.inargs.bypassstartcheck:
             return retval
-        if os.path.exists("/tmp/siterm-mariadb-init"):
+        if os.path.exists(f"{getTempDir()}/siterm-mariadb-init"):
             try:
                 self.logger.info("Database init/upgrade started at:")
-                with open("/tmp/siterm-mariadb-init", "r", encoding="utf-8") as fd:
+                with open(f"{getTempDir()}/siterm-mariadb-init", "r", encoding="utf-8") as fd:
                     self.logger.info(fd.read())
             except IOError:
                 pass
             self.logger.info("Database not ready. See details above. If continous, check the mariadb and mariadb_init process.")
             retval = False
-        if not os.path.exists("/tmp/config-fetcher-ready") and not self.firstInitDone:
+        if not os.path.exists(f"{getTempDir()}/config-fetcher-ready") and not self.firstInitDone:
             self.logger.info("Config Fetcher not ready. See details above. If continous, check the config-fetcher process.")
             retval = False
         return retval
@@ -525,10 +551,10 @@ class Daemon(DBBackend):
                 exc=exc,
             )
             # Log state also to local file
-            createDirs("/tmp/siterm-states/")
-            fname = f"/tmp/siterm-states/{self.component}.json"
+            createDirs(f"{getTempDir()}/siterm-states/")
+            fname = f"{getTempDir()}/siterm-states/{self.component}.json"
             if self.inargs.devicename:
-                fname = f"/tmp/siterm-states/{self.component}-{self.inargs.devicename}.json"
+                fname = f"{getTempDir()}/siterm-states/{self.component}-{self.inargs.devicename}.json"
             self.contentDB.dumpFileContentAsJson(
                 fname,
                 {
@@ -565,6 +591,7 @@ class Daemon(DBBackend):
         except Exception:
             excType, excValue = sys.exc_info()[:2]
             print(f"Error details in autoRefreshDB. ErrorType: {str(excType.__name__)}, ErrMsg: {excValue}")
+            print(f"Full traceback: {traceback.format_exc()}")
             return refresh
         return refresh
 
@@ -679,7 +706,6 @@ class Daemon(DBBackend):
                 sys.exit(0)
             if refresh:
                 self.logger.info("Re-initiating Service with new configuration from GIT. Forced by DB")
-                self.cleaner()
                 self._refreshConfig()
                 self.refreshThreads()
             self.logger.debug("Daemonizer main loop end. Run count: %s", self.runCount)
@@ -688,14 +714,6 @@ class Daemon(DBBackend):
     def getThreads():
         """Overwrite this then Daemonized in your own class"""
         return {}
-
-    @staticmethod
-    def cleaner():
-        """Clean files from /tmp/ directory"""
-        # Only one service overrides it, and it is ConfigFetcher
-        # So if anyone else calls it - we sleep for 30 seconds
-        print("Due to DB Refresh - sleep for 30 seconds until ConfigFetcher is done")
-        time.sleep(30)
 
     @staticmethod
     def preRunThread(_sitename, _rthread):

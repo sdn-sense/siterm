@@ -9,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
+
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
@@ -19,7 +20,7 @@ from SiteFE.REST.dependencies import (
     apiReadDeps,
     checkReadyState,
     checkSite,
-    forbidExtraQueryParams
+    forbidExtraQueryParams,
 )
 from SiteRMLibs.DefaultParams import (
     LIMIT_DEFAULT,
@@ -31,6 +32,7 @@ from SiteRMLibs.MainUtilities import (
     evaldict,
     getFileContentAsJson,
     getstartupconfig,
+    getTempDir,
     getUTCnow,
 )
 
@@ -49,12 +51,19 @@ router = APIRouter()
     tags=["Frontend"],
     responses={
         **{
-            200: {"description": "API is alive.", "content": {"application/json": {"example": {"status": "alive"}}}},
+            200: {
+                "description": "API is alive.",
+                "content": {"application/json": {"example": {"status": "alive"}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
-async def checkAPIHealth(request: Request, _deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
+async def checkAPIHealth(
+    request: Request,
+    _deps=Depends(apiPublicDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Check the health of the API.
     """
@@ -71,77 +80,32 @@ async def checkAPIHealth(request: Request, _deps=Depends(apiReadDeps), _forbid=D
     tags=["Frontend"],
     responses={
         **{
-            200: {"description": "API is ready.", "content": {"application/json": {"example": {"status": "ready"}}}},
-            503: {"description": "API is not ready to serve requests.", "content": {"application/json": {"example": {"detail": "API is not ready to serve requests."}}}},
+            200: {
+                "description": "API is ready.",
+                "content": {"application/json": {"example": {"status": "ready"}}},
+            },
+            503: {
+                "description": "API is not ready to serve requests.",
+                "content": {"application/json": {"example": {"detail": "API is not ready to serve requests."}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
-async def checkAPIReady(request: Request, deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
+async def checkAPIReady(
+    request: Request,
+    deps=Depends(apiPublicDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Check the readiness of the API.
     """
     if not checkReadyState(deps):
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="API is not ready to serve requests.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="API is not ready to serve requests.",
+        )
     return APIResponse.genResponse(request, {"status": "ready"})
-
-
-# =========================================================
-# /api/liveness
-# =========================================================
-@router.get(
-    "/liveness",
-    summary="Check API Liveness Status",
-    description=("Checks if the API Liveness is functioning correctly. Possible values: ok, error, disabled, unknown."),
-    tags=["Frontend"],
-    responses={
-        **{
-            200: {"description": "Liveness status", "content": {"application/json": {"example": {"status": "ok"}}}},
-        },
-        **DEFAULT_RESPONSES,
-    },
-)
-async def checkAPILiveness(request: Request, _deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
-    """
-    Check the health of the API.
-    """
-    if os.path.exists("/tmp/siterm-liveness-disabled"):
-        return APIResponse.genResponse(request, {"status": "disabled"})
-    if os.path.exists("/tmp/siterm-liveness"):
-        with open("/tmp/siterm-liveness", "r", encoding="utf-8") as fd:
-            code = fd.read().strip()
-            if code == "0":
-                return APIResponse.genResponse(request, {"status": "ok"})
-            return APIResponse.genResponse(request, {"status": "error", "code": code})
-    return APIResponse.genResponse(request, {"status": "unknown", "code": "liveness file not found"})
-
-
-# =========================================================
-# /api/readiness
-# =========================================================
-@router.get(
-    "/readiness",
-    summary="Check API Readiness",
-    description=("Checks if the API is ready to serve requests. Possible values: ok, error, disabled, unknown."),
-    tags=["Frontend"],
-    responses={
-        **{200: {"description": "API is ready.", "content": {"application/json": {"example": {"status": "ok"}}}}},
-        **DEFAULT_RESPONSES,
-    },
-)
-async def checkAPIReadiness(request: Request, _deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
-    """
-    Check the readiness of the API.
-    """
-    if os.path.exists("/tmp/siterm-readiness-disabled"):
-        return APIResponse.genResponse(request, {"status": "disabled"})
-    if os.path.exists("/tmp/siterm-readiness"):
-        with open("/tmp/siterm-readiness", "r", encoding="utf-8") as fd:
-            code = fd.read().strip()
-            if code == "0":
-                return APIResponse.genResponse(request, {"status": "ok"})
-            return APIResponse.genResponse(request, {"status": "error", "code": code})
-    return APIResponse.genResponse(request, {"status": "unknown", "code": "readiness file not found"})
 
 
 # ==========================================================
@@ -164,9 +128,90 @@ async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps), _forbid=D
     Get the authentication method used by the frontend.
     - Returns the authentication method in use (X509 or OIDC).
     """
-    oidc = deps["config"]["MAIN"].get("general", {}).get("oidc", False)
-    auth_method = "OIDC" if oidc else "X509"
-    return APIResponse.genResponse(request, {"auth_method": auth_method, "auth_endpoint": os.environ.get("OIDC_REDIRECT_URI", "") if auth_method == "OIDC" else ""})
+    # Starting from 1.6.XX Release, default is two auth methods
+    # M2M and User/PASS - that issues token for further communications.
+    openid_config = deps["authHandler"].getOpenIDConfiguration()
+    return APIResponse.genResponse(
+        request,
+        [
+            {"auth_method": "M2M", "auth_endpoint": f"{openid_config['issuer']}/m2m/token", "refresh_endpoint": f"{openid_config['issuer']}/m2m/token/refresh"},
+            {"auth_method": "USERPASS", "auth_endpoint": f"{openid_config['issuer']}/auth/login"},
+        ],
+    )
+
+
+# =========================================================
+# /api/liveness
+# =========================================================
+@router.get(
+    "/liveness",
+    summary="Check API Liveness Status",
+    description=("Checks if the API Liveness is functioning correctly. Possible values: ok, error, disabled, unknown."),
+    tags=["Frontend"],
+    responses={
+        **{
+            200: {
+                "description": "Liveness status",
+                "content": {"application/json": {"example": {"status": "ok"}}},
+            },
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def checkAPILiveness(
+    request: Request,
+    _deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
+    """
+    Check the health of the API.
+    """
+    if os.path.exists(f"{getTempDir()}/siterm-liveness-disabled"):
+        return APIResponse.genResponse(request, {"status": "disabled"})
+    if os.path.exists(f"{getTempDir()}/siterm-liveness"):
+        with open(f"{getTempDir()}/siterm-liveness", "r", encoding="utf-8") as fd:
+            code = fd.read().strip()
+            if code == "0":
+                return APIResponse.genResponse(request, {"status": "ok"})
+            return APIResponse.genResponse(request, {"status": "error", "code": code})
+    return APIResponse.genResponse(request, {"status": "unknown", "code": "liveness file not found"})
+
+
+# =========================================================
+# /api/readiness
+# =========================================================
+@router.get(
+    "/readiness",
+    summary="Check API Readiness",
+    description=("Checks if the API is ready to serve requests. Possible values: ok, error, disabled, unknown."),
+    tags=["Frontend"],
+    responses={
+        **{
+            200: {
+                "description": "API is ready.",
+                "content": {"application/json": {"example": {"status": "ok"}}},
+            }
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def checkAPIReadiness(
+    request: Request,
+    _deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
+    """
+    Check the readiness of the API.
+    """
+    if os.path.exists(f"{getTempDir()}/siterm-readiness-disabled"):
+        return APIResponse.genResponse(request, {"status": "disabled"})
+    if os.path.exists(f"{getTempDir()}/siterm-readiness"):
+        with open(f"{getTempDir()}/siterm-readiness", "r", encoding="utf-8") as fd:
+            code = fd.read().strip()
+            if code == "0":
+                return APIResponse.genResponse(request, {"status": "ok"})
+            return APIResponse.genResponse(request, {"status": "error", "code": code})
+    return APIResponse.genResponse(request, {"status": "unknown", "code": "readiness file not found"})
 
 
 # ==========================================================
@@ -179,22 +224,38 @@ async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps), _forbid=D
     tags=["Frontend"],
     responses={
         **{
-            200: {"description": "Site name successfully returned.", "content": {"application/json": {"example": ["T1_US_ESnet"]}}},
-            404: {"description": "No site configured in the system.", "content": {"application/json": {"example": {"detail": "No site configured in the system."}}}},
+            200: {
+                "description": "Site name successfully returned.",
+                "content": {"application/json": {"example": ["T1_US_ESnet"]}},
+            },
+            404: {
+                "description": "No site configured in the system.",
+                "content": {"application/json": {"example": {"detail": "No site configured in the system."}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
-async def getAllSites(request: Request, deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
+async def getAllSites(
+    request: Request,
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Get a site name configured in the system.
     - Returns a site name in a list.
     """
     if not deps["config"]["MAIN"].get("general", {}).get("sitename", []):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No site configured in the system.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No site configured in the system.",
+        )
     out = deps["config"]["MAIN"].get("general", {}).get("sitename", [])
     if not out:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No site configured in the system.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No site configured in the system.",
+        )
     return APIResponse.genResponse(request, [out])
 
 
@@ -229,23 +290,72 @@ async def getAllSites(request: Request, deps=Depends(apiReadDeps), _forbid=Depen
                                         "isAlias": "urn:ogf:network:sense-isAlias-sdn-sense.dev:2025:switchname2:PortChannel500",
                                         "wanlink": True,
                                         "vlan_range": ["3611-3619"],
-                                        "vlan_range_list": [3616, 3617, 3618, 3619, 3611, 3612, 3613, 3614, 3615],
+                                        "vlan_range_list": [
+                                            3616,
+                                            3617,
+                                            3618,
+                                            3619,
+                                            3611,
+                                            3612,
+                                            3613,
+                                            3614,
+                                            3615,
+                                        ],
                                     },
                                     "Pc502": {
                                         "capacity": 400000,
                                         "isAlias": "urn:ogf:network:sense-isAlias-sdn-sense.dev:2025:switchname2:Port-Channel502",
                                         "wanlink": True,
                                         "vlan_range": ["3611-3619"],
-                                        "vlan_range_list": [3616, 3617, 3618, 3619, 3611, 3612, 3613, 3614, 3615],
+                                        "vlan_range_list": [
+                                            3616,
+                                            3617,
+                                            3618,
+                                            3619,
+                                            3611,
+                                            3612,
+                                            3613,
+                                            3614,
+                                            3615,
+                                        ],
                                     },
                                 },
                                 "vlan_range": ["3611-3619"],
                                 "vsw": "switchname1",
                                 "vswmp": "switchname1_mp",
-                                "qos_policy": {"traffic_classes": {"default": 1, "bestEffort": 2, "softCapped": 4, "guaranteedCapped": 7}, "max_policy_rate": "268000", "burst_size": "256"},
+                                "qos_policy": {
+                                    "traffic_classes": {
+                                        "default": 1,
+                                        "bestEffort": 2,
+                                        "softCapped": 4,
+                                        "guaranteedCapped": 7,
+                                    },
+                                    "max_policy_rate": "268000",
+                                    "burst_size": "256",
+                                },
                                 "rate_limit": False,
-                                "vlan_range_list": [3616, 3617, 3618, 3619, 3611, 3612, 3613, 3614, 3615],
-                                "all_vlan_range_list": [3616, 3617, 3618, 3619, 3611, 3612, 3613, 3614, 3615],
+                                "vlan_range_list": [
+                                    3616,
+                                    3617,
+                                    3618,
+                                    3619,
+                                    3611,
+                                    3612,
+                                    3613,
+                                    3614,
+                                    3615,
+                                ],
+                                "all_vlan_range_list": [
+                                    3616,
+                                    3617,
+                                    3618,
+                                    3619,
+                                    3611,
+                                    3612,
+                                    3613,
+                                    3614,
+                                    3615,
+                                ],
                             },
                             "general": {
                                 "logLevel": "DEBUG",
@@ -265,16 +375,64 @@ async def getAllSites(request: Request, deps=Depends(apiReadDeps), _forbid=Depen
                                 "debug": False,
                             },
                             "debuggers": {
-                                "iperf-server": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True, "port": 5201}},
-                                "iperf-client": {"deftime": 600, "maxruntime": 86400, "minstreams": 1, "maxstreams": 16, "defaults": {"onetime": True, "streams": 1}},
-                                "fdt-client": {"deftime": 600, "maxruntime": 86400, "minstreams": 1, "maxstreams": 16, "defaults": {"onetime": True, "streams": 1}},
-                                "fdt-server": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True, "port": 54321}},
-                                "rapid-ping": {"deftime": 600, "maxruntime": 86400, "maxmtu": 9000, "mininterval": 0.2, "maxtimeout": 30},
-                                "rapid-pingnet": {"deftime": 600, "maxruntime": 86400, "maxtimeout": 30, "maxcount": 100, "defaults": {"onetime": True}},
-                                "arp-table": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
-                                "tcpdump": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
-                                "traceroute": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
-                                "traceroutenet": {"deftime": 600, "maxruntime": 86400, "defaults": {"onetime": True}},
+                                "iperf-server": {
+                                    "deftime": 600,
+                                    "maxruntime": 86400,
+                                    "defaults": {"onetime": True, "port": 5201},
+                                },
+                                "iperf-client": {
+                                    "deftime": 600,
+                                    "maxruntime": 86400,
+                                    "minstreams": 1,
+                                    "maxstreams": 16,
+                                    "defaults": {"onetime": True, "streams": 1},
+                                },
+                                "fdt-client": {
+                                    "deftime": 600,
+                                    "maxruntime": 86400,
+                                    "minstreams": 1,
+                                    "maxstreams": 16,
+                                    "defaults": {"onetime": True, "streams": 1},
+                                },
+                                "fdt-server": {
+                                    "deftime": 600,
+                                    "maxruntime": 86400,
+                                    "defaults": {"onetime": True, "port": 54321},
+                                },
+                                "rapid-ping": {
+                                    "deftime": 600,
+                                    "maxruntime": 86400,
+                                    "maxmtu": 9000,
+                                    "mininterval": 0.2,
+                                    "maxtimeout": 30,
+                                },
+                                "rapid-pingnet": {
+                                    "deftime": 600,
+                                    "maxruntime": 86400,
+                                    "maxtimeout": 30,
+                                    "maxcount": 100,
+                                    "defaults": {"onetime": True},
+                                },
+                                "arp-table": {
+                                    "deftime": 600,
+                                    "maxruntime": 86400,
+                                    "defaults": {"onetime": True},
+                                },
+                                "tcpdump": {
+                                    "deftime": 600,
+                                    "maxruntime": 86400,
+                                    "defaults": {"onetime": True},
+                                },
+                                "traceroute": {
+                                    "deftime": 600,
+                                    "maxruntime": 86400,
+                                    "defaults": {"onetime": True},
+                                },
+                                "traceroutenet": {
+                                    "deftime": 600,
+                                    "maxruntime": 86400,
+                                    "defaults": {"onetime": True},
+                                },
                             },
                             "prefixes": {
                                 "mrs": "http://schemas.ogf.org/mrs/2013/12/topology#",
@@ -321,18 +479,28 @@ async def getAllSites(request: Request, deps=Depends(apiReadDeps), _forbid=Depen
                     }
                 },
             },
-            404: {"description": "Frontend configuration file not found", "content": {"application/json": {"example": {"detail": "Frontend configuration file not found for site"}}}},
+            404: {
+                "description": "Frontend configuration file not found",
+                "content": {"application/json": {"example": {"detail": "Frontend configuration file not found for site"}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
-async def getfeconfig(request: Request, deps=Depends(apiReadDeps), _forbid=Depends(forbidExtraQueryParams())):
+async def getfeconfig(
+    request: Request,
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
     """
     Get frontend configuration in JSON format for the given site.
     - Returns frontend configuration as JSON if found, else 404 if file is missing.
     """
     if not deps.get("config", {}).getraw("MAIN"):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Frontend configuration file not found for site")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Frontend configuration file not found for site",
+        )
     return APIResponse.genResponse(request, deps["config"]["MAIN"])
 
 
@@ -374,7 +542,7 @@ async def getfeconfig(request: Request, deps=Depends(apiReadDeps), _forbid=Depen
                 },
             },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system\n" " - No switch data available for the specified site.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system\n - No switch data available for the specified site.",
                 "content": {
                     "application/json": {
                         "example": {
@@ -390,8 +558,17 @@ async def getfeconfig(request: Request, deps=Depends(apiReadDeps), _forbid=Depen
 )
 async def getswitchdata(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the switch data for.", example=startupConfig.get("SITENAME", "default")),
-    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the switch data for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
+    limit: int = Query(
+        LIMIT_DEFAULT,
+        description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.",
+        ge=LIMIT_MIN,
+        le=LIMIT_MAX,
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("limit")),
 ):
@@ -423,19 +600,32 @@ async def getswitchdata(
                             "id": 1,
                             "insertdate": 1752198423,
                             "updatedate": 1753031057,
-                            "output": {"singleport": {}, "vsw": {}, "rst": {}, "usedIPs": {"deltas": {}, "system": {}}, "usedVLANs": {"deltas": {}, "system": {}}},
+                            "output": {
+                                "singleport": {},
+                                "vsw": {},
+                                "rst": {},
+                                "usedIPs": {"deltas": {}, "system": {}},
+                                "usedVLANs": {"deltas": {}, "system": {}},
+                            },
                         }
                     }
                 },
             },
-            404: {"description": "No site configured in the system.", "content": {"application/json": {"example": {"detail": "No site configured in the system."}}}},
+            404: {
+                "description": "No site configured in the system.",
+                "content": {"application/json": {"example": {"detail": "No site configured in the system."}}},
+            },
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def getactivedeltas(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the active deltas for.", example=startupConfig.get("SITENAME", "default")),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the active deltas for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
@@ -465,9 +655,12 @@ async def getactivedeltas(
     tags=["Frontend"],
     responses={
         **{
-            200: {"description": "QoS data successfully returned.", "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}}},
+            200: {
+                "description": "QoS data successfully returned.",
+                "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
             404: {
-                "description": "Not Found. Possible Reasons:\n" " - No sites configured in the system.",
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.",
                 "content": {"application/json": {"example": {"no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."}}}},
             },
         },
@@ -476,8 +669,17 @@ async def getactivedeltas(
 )
 async def getqosdata(
     request: Request,
-    sitename: str = Path(..., description="The site name to retrieve the QoS data for.", example=startupConfig.get("SITENAME", "default")),
-    limit: int = Query(LIMIT_DEFAULT, description=f"The maximum number of hosts to lookup. Defaults to {LIMIT_DEFAULT}.", ge=LIMIT_MIN, le=LIMIT_MAX),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the QoS data for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
+    limit: int = Query(
+        LIMIT_DEFAULT,
+        description=f"The maximum number of hosts to lookup. Defaults to {LIMIT_DEFAULT}.",
+        ge=LIMIT_MIN,
+        le=LIMIT_MAX,
+    ),
     deps=Depends(apiReadDeps),
     _forbid=Depends(forbidExtraQueryParams("limit")),
 ):

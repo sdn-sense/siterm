@@ -8,8 +8,8 @@ Authors:
 
 Date: 2021/12/01
 """
-from SiteRMLibs.MainUtilities import evaldict, getFileContentAsJson
-from SiteRMLibs.MainUtilities import getAllHosts
+
+from SiteRMLibs.MainUtilities import evaldict, getAllHosts, getFileContentAsJson
 
 
 class Node:
@@ -24,9 +24,7 @@ class Node:
             output = self.output
         for _, nodeDict in list(nodesInfo.items()):
             hostinfo = getFileContentAsJson(nodeDict["hostinfo"])
-            for intfKey, intfDict in list(
-                hostinfo.get("NetInfo", {}).get("interfaces", {}).items()
-            ):
+            for intfKey, intfDict in list(hostinfo.get("NetInfo", {}).get("interfaces", {}).items()):
                 breakLoop = False
                 for key in [
                     "switch_port",
@@ -39,9 +37,7 @@ class Node:
                 if breakLoop:
                     continue
                 if intfDict["switch"] in list(output["ports"].keys()):
-                    if intfDict["switch_port"] not in list(
-                        output["ports"][intfDict["switch"]].keys()
-                    ):
+                    if intfDict["switch_port"] not in list(output["ports"][intfDict["switch"]].keys()):
                         self.logger.debug(
                             "Frontend Config is not configured to use this Port %s",
                             intfDict["switch_port"],

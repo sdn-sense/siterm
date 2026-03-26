@@ -7,35 +7,25 @@ Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
+
 import sys
-import time
 from SiteRMLibs.Daemonizer import Daemon, getParser, validateArgs
 from SiteRMLibs.ConfigFetcher import ConfigFetcher
 
-COMPONENT = 'ConfigFetcher'
+COMPONENT = "ConfigFetcher"
 DESCRIPTION = "Config fetcher from Github"
 DAEMON = None
 
+
 class MyDaemon(Daemon):
-    """ My own Deamon override """
+    """My own Deamon override"""
 
     def getThreads(self):
         """Multi threading. Allow multiple sites under single FE"""
-        for callType in ['MAIN']:
+        for callType in ["MAIN"]:
             if callType not in self.runThreads:
                 self.runThreads[callType] = ConfigFetcher(self.logger)
             self.runThreads[callType].refreshthread()
-
-    def cleaner(self):
-        """Clean files from /tmp/ directory"""
-        # Override of Daemonizer cleaner
-        for _, rthread in list(self.runThreads.items()):
-            try:
-                rthread.cleaner()
-            except Exception as e:
-                print(f"Error cleaning thread {rthread}: {e}")
-                continue
-        time.sleep(60)
 
     def postRunThread(self, _sitename, rthread):
         """Call after thread runtime in case something needed to be done by Daemon"""
@@ -43,7 +33,6 @@ class MyDaemon(Daemon):
             rthread.gitObj.getGitConfig()
             self.config = rthread.gitObj
             self._loadDB(self.component)
-
 
 
 if __name__ == "__main__":

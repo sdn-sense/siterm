@@ -2,17 +2,6 @@
 # pylint: disable=W0212
 # pylint: disable=line-too-long
 """Provisioning service is provision everything on the switches;
-
-Copyright 2021 California Institute of Technology
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-       http://www.apache.org/licenses/LICENSE-2.0
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
 Title                   : siterm
 Author                  : Justas Balcas
 Email                   : jbalcas (at) es (dot) net
@@ -20,6 +9,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2017/09/26
 UpdateDate              : 2022/05/09
 """
+
 import copy
 import sys
 
@@ -314,7 +304,12 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         # Check all that have failed to apply, and retry if needed
         self.retryFailedChecker()
 
-        for acttype, actcalls in {"vsw": {"interface": self.compareVsw}, "rst": {"sense_bgp": self.compareBGP}, "singleport": {"interface": self.compareVsw}, "qos": {"qos": self.compareQoS}}.items():
+        for acttype, actcalls in {
+            "vsw": {"interface": self.compareVsw},
+            "rst": {"sense_bgp": self.compareBGP},
+            "singleport": {"interface": self.compareVsw},
+            "qos": {"qos": self.compareQoS},
+        }.items():
             scannedUUIDs.setdefault(acttype, [])
             self.acttype = acttype
             uuidDict = self.yamlconfuuidActive.get(acttype, {})

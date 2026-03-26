@@ -19,15 +19,15 @@ class Helper:
 
     def __init__(self):
         self.commands = {
-            "print-help": {"desc": "Print all available commands", "call": self.printhelp},
-            "print-active": {"desc": "Print all active resources in SiteRM.", "call": self.printactive},
-            "print-active-uuids": {"desc": "Print all active resource UUIDs in SiteRM.", "call": self.printactiveuuids},
-            "print-hosts": {"desc": "Print all hosts information in Frontend", "call": self.printhosts},
-            "change-delta": {"desc": "Change Delta State", "call": self.changedeltastate},
-            "cancel-resource": {"desc": "Cancel resource in SiteRM.", "call": self.cancelresource},
-            "cancel-all": {"desc": "Cancel all active resources in SiteRM.", "call": self.cancelall},
-            "exit": {"desc": "Exit helper script.", "call": self.exithelper},
-        }
+                "print-help": {"desc": "Print all available commands", "call": self.printhelp},
+                "print-active": {"desc": "Print all active resources in SiteRM.", "call": self.printactive},
+                "print-active-uuids": {"desc": "Print all active resource UUIDs in SiteRM.", "call": self.printactiveuuids},
+                "print-hosts": {"desc": "Print all hosts information in Frontend", "call": self.printhosts},
+                "change-delta": {"desc": "Change Delta State", "call": self.changedeltastate},
+                "cancel-resource": {"desc": "Cancel resource in SiteRM.", "call": self.cancelresource},
+                "cancel-all": {"desc": "Cancel all active resources in SiteRM.", "call": self.cancelall},
+                "exit": {"desc": "Exit helper script.", "call": self.exithelper}
+            }
         self.config = getGitConfig()
         self.sitename = getSiteNameFromConfig(self.config)
         self.dbI = getVal(getDBConn("List", self), **{"sitename": self.sitename})
@@ -176,11 +176,11 @@ class Helper:
 
     def printhelp(self):
         """Print Help and all available commands, descriptions"""
-        print("-" * 50)
+        print("=" * 50)
         print("Available commands:")
-        print("-" * 50)
+        print("=" * 50)
         for cmd, cmddict in self.commands.items():
-            print(f"{cmd} : {cmddict['desc']}")
+            print(f"  {cmd} : {cmddict['desc']}")
         print("-" * 50)
         print("Which command you want to execute? ")
 

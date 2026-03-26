@@ -37,7 +37,7 @@ class QualityOfService:
         qosPolicy = portDict.get("hasService", {}).get("type", {})
         qosPolicy = qosPolicy if qosPolicy else "default"
         if qosPolicy not in self.getConfigValue(host, "qos_policy").get("traffic_classes", {}):
-            self.logger.warning(f"QoS policy {qosPolicy} is not defined in config. " "Using default instead.")
+            self.logger.warning(f"QoS policy {qosPolicy} is not defined in config. Using default instead.")
             qosPolicy = "default"
             return self.getConfigValue(host, "qos_policy").get("traffic_classes", {}).get(qosPolicy, 1)
         return self.getConfigValue(host, "qos_policy").get("traffic_classes", {}).get(qosPolicy, 1)
@@ -51,7 +51,7 @@ class QualityOfService:
             return
         resvRate, resvUnit = self.convertToRate(portDict.get("hasService", {}))
         if resvRate == 0:
-            self.logger.debug(f"QoS is enabled for {host} {port} {portDict}. " "Rate is 0, so not adding to ansible yaml")
+            self.logger.debug(f"QoS is enabled for {host} {port} {portDict}. Rate is 0, so not adding to ansible yaml")
             # Should we still add this to 1?
             return
 
@@ -62,7 +62,10 @@ class QualityOfService:
         vlanD.setdefault("vlan", vlan)
         vlanD.setdefault("min_rate", resvRate)
         vlanD.setdefault("unit", resvUnit)
-        vlanD.setdefault("burst_size", int(self.getConfigValue(host, "qos_policy").get("burst_size", "100")))
+        vlanD.setdefault(
+            "burst_size",
+            int(self.getConfigValue(host, "qos_policy").get("burst_size", "100")),
+        )
         vlanD.setdefault("qosnumber", self.__getQoSPolicyNumber(host, portDict))
         vlanD.setdefault("qosname", portDict.get("hasService", {}).get("type", "default"))
         vlanD.setdefault("state", "present")

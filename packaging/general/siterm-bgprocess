@@ -7,6 +7,7 @@ Changes applied to this code:
     Dedention (Justas Balcas 07/12/2017)
     pylint fixes: with open, split imports, var names, old style class (Justas Balcas 07/12/2017)
 """
+
 import os
 import sys
 
@@ -97,7 +98,7 @@ class MyDaemon(Daemon):
             # Here need to check what type of worker we are running
             # And is it available for a specific type of worker
             if backgConfig["requestdict"].get("type", {}) not in WORKERS:
-                raise Exception(f'Worker type {backgConfig["requestdict"]["type"]} is not available for {WORKERTYPE}. Exiting.')
+                raise Exception(f"Worker type {backgConfig['requestdict']['type']} is not available for {WORKERTYPE}. Exiting.")
             worker = WORKERS[backgConfig["requestdict"]["type"]]
             workerDm = worker(self.config, sitename, backgConfig)
             self.runThreads[sitename] = workerDm

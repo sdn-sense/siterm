@@ -198,5 +198,6 @@ class ServiceNotReady(ExceptionTemplate):
 class HTTPServerNotReady(ExceptionTemplate):
     """HTTP Server Not Ready Error."""
 
+
 class HTTPException(ExceptionTemplate):
     """HTTP Exception."""

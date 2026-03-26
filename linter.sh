@@ -10,6 +10,8 @@ for fname in $(git diff --name-only); do
         isort  --settings-path src/python --profile black "$fname"
         pylint "$fname" --rcfile standarts/pylintrc
         pyink -l 200 "$fname"
+        uvx ruff format --line-length 200 "$fname"
+        uvx ruff check "$fname"
     fi
     if [[ $fname == *.yaml || $fname == *.yml ]]
     then
@@ -21,9 +23,14 @@ for fname in $(git diff --name-only); do
         echo "Checking $fname with bash linter"
         bashlint "$fname"
     fi
-    if [[ $fname == *.html || $fname == *.js ]]
+    if [[ $fname == *.html ]]
     then
-        echo "Checking $fname with prettier linters"
-         prettier -w "$fname"
+        echo "Checking $fname with js-beautify linters"
+        js-beautify -r --type html "$fname"
+    fi
+    if [[ $fname == *.js ]]
+    then
+        echo "Checking $fname with js-beautify linters"
+        js-beautify -r --type js "$fname"
     fi
 done

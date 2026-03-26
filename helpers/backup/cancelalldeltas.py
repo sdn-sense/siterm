@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Cancel all deltas in Site Frontend."""
-from __future__ import print_function
-import sys
-from SiteRMLibs.MainUtilities import getVal
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import getConfig
-from SiteRMLibs.FECalls import getDBConn
-from SiteFE.PolicyService.stateMachine import StateMachine
 
+from __future__ import print_function
+
+import sys
+
+from SiteFE.PolicyService.stateMachine import StateMachine
+from SiteRMLibs.FECalls import getDBConn
+from SiteRMLibs.MainUtilities import getConfig, getLoggingObject, getVal
 
 CONFIG = getConfig()
 LOGGER = getLoggingObject(config=CONFIG, service="Helpers")

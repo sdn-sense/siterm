@@ -8,6 +8,7 @@ Authors:
 
 Date: 2021/12/01
 """
+
 from rdflib.namespace import XSD
 from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.MainUtilities import convertTSToDatetime

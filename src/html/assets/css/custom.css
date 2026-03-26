@@ -16,3 +16,15 @@ pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
 .boolean { color: blue; }
 .null { color: magenta; }
 .key { color: red; }
+
+#loginOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  z-index: 9999;
+}
+#loginCard {
+  max-width: 420px;
+  margin: 10vh auto;
+}

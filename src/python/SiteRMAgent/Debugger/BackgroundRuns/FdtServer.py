@@ -7,6 +7,7 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2025/05/30
 """
+
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 
@@ -25,7 +26,7 @@ class FdtServer(BaseDebugAction):
     def main(self):
         """Main FdtServer work. Run FDT Server."""
         self.logMessage(f"Running FdtServer background run. Input requestdict: {self.requestdict}")
-        command = f'timeout {self.requestdict["time"]} java -jar /opt/fdt.jar -p {self.requestdict["port"]}'
+        command = f"timeout {self.requestdict['time']} java -jar /opt/fdt.jar -p {self.requestdict['port']}"
         if self.requestdict["onetime"] == "True":
             command += " -S"
         self.logMessage(f"Running command: {command}")

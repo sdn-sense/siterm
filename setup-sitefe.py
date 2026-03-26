@@ -7,7 +7,8 @@ Date: 2022/05/20
 """
 
 from setuptools import setup
-from setupUtilities import list_packages, get_py_modules, collect_files, VERSION
+
+from setupUtilities import VERSION, collect_files, get_py_modules, list_packages
 
 # Cronjobs which are running also have to be prepared with correct timing.
 # Also another cronjob, which monitors config file and modifies cronjobs if needed.
@@ -22,6 +23,7 @@ SCRIPTS = [
     "packaging/general/siterm-log-archiver",
     "packaging/siterm-site-fe/scripts/siterm-fe-helper",
     "packaging/siterm-site-fe/scripts/siterm-ansible-runner",
+    "packaging/siterm-site-fe/scripts/siterm-usertool",
     "packaging/siterm-site-fe/scripts/SwitchWorker",
     "packaging/siterm-site-fe/scripts/DBCleaner-service",
 ]
@@ -44,8 +46,7 @@ setup(
     download_url=f"https://github.com/sdn-sense/siterm/archive/refs/tags/{VERSION}.tar.gz",
     keywords=["End Site-RM", "system", "monitor", "SDN", "end-to-end"],
     package_dir={"": "src/python/"},
-    packages=["SiteFE", "SiteRMLibs"]
-    + list_packages(["src/python/SiteFE/", "src/python/SiteRMLibs/"]),
+    packages=["SiteFE", "SiteRMLibs"] + list_packages(["src/python/SiteFE/", "src/python/SiteRMLibs/"]),
     install_requires=[],
     py_modules=get_py_modules(["src/python/SiteFE/", "src/python/SiteRMLibs"]),
     scripts=SCRIPTS,

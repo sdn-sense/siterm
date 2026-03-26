@@ -8,6 +8,8 @@ Authors:
 
 Date: 2022/01/20
 """
+
+import traceback
 from dataclasses import dataclass
 
 from pyroute2 import IPRoute
@@ -47,7 +49,14 @@ def publishState(reqHandler, item: PublishStateInput):
             "hostport": item.vlan["destport"],
             "uuidstate": item.state,
         }
-        reqHandler.makeHttpCall("POST", f"/api/{item.sitename}/deltas/{item.uuid}/timestates", data=out, retries=1, raiseEx=False, useragent="Ruler")
+        reqHandler.makeHttpCall(
+            "POST",
+            f"/api/{item.sitename}/deltas/{item.uuid}/timestates",
+            data=out,
+            retries=1,
+            raiseEx=False,
+            useragent="Ruler",
+        )
 
 
 def getDefaultMTU(config, intfKey):
@@ -64,6 +73,7 @@ def getDefaultMTU(config, intfKey):
         defaultMTU = ifstats[intfKey].mtu
     except Exception as ex:
         print(f"Failed to get mtu for {intfKey}. Error: {ex}. Use default 1500.")
+        print(f"Full traceback: {traceback.format_exc()}")
     return defaultMTU
 
 
@@ -83,6 +93,7 @@ def getDefaultTXQ(config, intfKey):
         defaultTXQ = getInterfaceTxQueueLen(intfKey)
     except Exception as ex:
         print(f"Failed to get txqueuelen for {intfKey}. Error: {ex}. Use default 1000.")
+        print(f"Full traceback: {traceback.format_exc()}")
     return defaultTXQ
 
 
@@ -204,7 +215,7 @@ class VInterfaces:
             if not vlan["vlan"]:
                 self.logger.error(f"VLAN ID is not set for {key}. Skipping this interface. All info: {inParams}")
                 continue
-            if uri.endswith(f'{self.hostname}:{key}:vlanport+{vlan["vlan"]}'):
+            if uri.endswith(f"{self.hostname}:{key}:vlanport+{vlan['vlan']}"):
                 continue
             vlans.append(vlan)
         return vlans
@@ -222,9 +233,22 @@ class VInterfaces:
                     self._setup(vlan, True)
                 if not intfUp(f"vlan.{vlan['vlan']}"):
                     self._start(vlan, True)
-                publishState(self.requestHandler, PublishStateInput(vlan, inParams, uuid, self.hostname, "activated", self.sitename))
+                publishState(
+                    self.requestHandler,
+                    PublishStateInput(vlan, inParams, uuid, self.hostname, "activated", self.sitename),
+                )
             except FailedInterfaceCommand:
-                publishState(self.requestHandler, PublishStateInput(vlan, inParams, uuid, self.hostname, "activate-error", self.sitename))
+                publishState(
+                    self.requestHandler,
+                    PublishStateInput(
+                        vlan,
+                        inParams,
+                        uuid,
+                        self.hostname,
+                        "activate-error",
+                        self.sitename,
+                    ),
+                )
         return vlans
 
     def terminate(self, inParams, uuid):
@@ -235,9 +259,29 @@ class VInterfaces:
                 if self._statusvlan(vlan, False):
                     self._stop(vlan, False)
                     self._remove(vlan, False)
-                publishState(self.requestHandler, PublishStateInput(vlan, inParams, uuid, self.hostname, "deactivated", self.sitename))
+                publishState(
+                    self.requestHandler,
+                    PublishStateInput(
+                        vlan,
+                        inParams,
+                        uuid,
+                        self.hostname,
+                        "deactivated",
+                        self.sitename,
+                    ),
+                )
             except FailedInterfaceCommand:
-                publishState(self.requestHandler, PublishStateInput(vlan, inParams, uuid, self.hostname, "deactivate-error", self.sitename))
+                publishState(
+                    self.requestHandler,
+                    PublishStateInput(
+                        vlan,
+                        inParams,
+                        uuid,
+                        self.hostname,
+                        "deactivate-error",
+                        self.sitename,
+                    ),
+                )
         return vlans
 
     def modify(self, oldParams, newParams, uuid):

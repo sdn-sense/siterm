@@ -6,8 +6,10 @@ Authors:
 
 Date: 2022/05/20
 """
+
 from setuptools import setup
-from setupUtilities import list_packages, get_py_modules, VERSION
+
+from setupUtilities import VERSION, get_py_modules, list_packages
 
 setup(
     name="SiteRMAgent",
@@ -19,8 +21,7 @@ setup(
     download_url=f"https://github.com/sdn-sense/siterm/archive/refs/tags/{VERSION}.tar.gz",
     keywords=["SiteRM", "system", "monitor", "SDN", "end-to-end"],
     package_dir={"": "src/python/"},
-    packages=["SiteRMAgent", "SiteRMLibs"]
-    + list_packages(["src/python/SiteRMAgent/", "src/python/SiteRMLibs/"]),
+    packages=["SiteRMAgent", "SiteRMLibs"] + list_packages(["src/python/SiteRMAgent/", "src/python/SiteRMLibs/"]),
     install_requires=[],
     py_modules=get_py_modules(["src/python/SiteRMAgent", "src/python/SiteRMLibs"]),
     scripts=[

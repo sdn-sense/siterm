@@ -8,6 +8,7 @@ Authors:
 
 Date: 2021/12/01
 """
+
 import time
 
 from SiteRMLibs.Backends.Ansible import Switch as Ansible
@@ -81,7 +82,17 @@ class Switch(Node):
     def _cleanOutput(self):
         """Clean output"""
         self.warnings = []
-        self.output = {"switches": {}, "ports": {}, "vlans": {}, "routes": {}, "lldp": {}, "info": {}, "portMapping": {}, "nametomac": {}, "mactable": {}}
+        self.output = {
+            "switches": {},
+            "ports": {},
+            "vlans": {},
+            "routes": {},
+            "lldp": {},
+            "info": {},
+            "portMapping": {},
+            "nametomac": {},
+            "mactable": {},
+        }
 
     def deviceUpdate(self, site=None, device=None):
         """Update all devices information."""
@@ -288,13 +299,10 @@ class Switch(Node):
                 if not memberData:
                     self.logger.debug(f"Channel member {member} data not found for port {switch}{port}")
                     continue
-                self.logger.debug(f"Channel member {member} data: {memberData}")
-                print(f"Channel member {member} of port {switch}{port} is not up. Line protocol: {memberData.get('lineprotocol', '')}, Oper status: {memberData.get('operstatus', '')}")
-                if memberData.get("lineprotocol", "") != "up" or memberData.get("operstatus", "") != "up":
+                if memberData.get("lineprotocol", "") != "up" or memberData.get("operstatus", "") not in ["up", "connected"]:
                     msg = f"Channel member {member} of port {switch}{port} is not up. Line protocol: {memberData.get('lineprotocol', '')}, Oper status: {memberData.get('operstatus', '')}"
                     self.logger.warning(msg)
                     self.warnings.append(msg)
-
 
     def _mergeYamlAndSwitch(self, switch):
         """Merge yaml and Switch Info. Yaml info overwrites

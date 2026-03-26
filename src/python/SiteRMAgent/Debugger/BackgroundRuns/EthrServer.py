@@ -7,6 +7,7 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2025/05/30
 """
+
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 
@@ -25,7 +26,7 @@ class EthrServer(BaseDebugAction):
     def main(self):
         """Main EthrServer work. Run Ethr Server."""
         self.logMessage(f"Running EthrServer background run. Input requestdict: {self.requestdict}")
-        command = f'timeout {self.requestdict["time"]} /opt/ethr -s -port {self.requestdict["port"]}'
+        command = f"timeout {self.requestdict['time']} /opt/ethr -s -port {self.requestdict['port']}"
         self.logMessage(f"Running command: {command}")
         externalCommandStdOutErr(command, self.outfiles["stdout"], self.outfiles["stderr"])
         self.jsonout["exitCode"] = 0

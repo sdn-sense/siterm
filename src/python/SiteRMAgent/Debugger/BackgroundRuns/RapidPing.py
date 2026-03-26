@@ -7,9 +7,10 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2024 Justas Balcas
 Date                    : 2024/02/26
 """
-from SiteRMLibs.MainUtilities import externalCommandStdOutErr
+
 from SiteRMLibs.BaseDebugAction import BaseDebugAction
 from SiteRMLibs.ipaddr import getInterfaces
+from SiteRMLibs.MainUtilities import externalCommandStdOutErr
 
 
 class RapidPing(BaseDebugAction):
@@ -25,9 +26,7 @@ class RapidPing(BaseDebugAction):
 
     def main(self):
         """Return arptable for specific vlan"""
-        self.logMessage(
-            f"Running RapidPing background run. Input requestdict: {self.requestdict}"
-        )
+        self.logMessage(f"Running RapidPing background run. Input requestdict: {self.requestdict}")
         ipaddr = self.requestdict["ip"].split("/")[0]
         command = f"ping -i {self.requestdict.get('interval', 1)} -w {self.requestdict['time']} {ipaddr} -s {self.requestdict['packetsize']}"
         if self.requestdict.get("interface"):
@@ -36,8 +35,6 @@ class RapidPing(BaseDebugAction):
                 return
             command += f" -I {self.requestdict['interface']}"
         self.logMessage(f"Running command: {command}")
-        externalCommandStdOutErr(
-            command, self.outfiles["stdout"], self.outfiles["stderr"]
-        )
+        externalCommandStdOutErr(command, self.outfiles["stdout"], self.outfiles["stderr"])
         self.jsonout["exitCode"] = 0
         self.logMessage("RapidPing background run finished successfully.")

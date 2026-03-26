@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Change delta state to activating."""
+
 import ast
 import sys
 import tempfile

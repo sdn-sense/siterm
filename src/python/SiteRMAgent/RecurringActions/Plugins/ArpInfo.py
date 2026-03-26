@@ -2,11 +2,11 @@
 """
 ArpInfo Plugin to report arp information to FE
 """
+
 import pprint
 
-from SiteRMLibs.MainUtilities import getLoggingObject
-from SiteRMLibs.MainUtilities import getArpVals
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import getArpVals, getLoggingObject
 
 
 class ArpInfo:
@@ -14,9 +14,7 @@ class ArpInfo:
 
     def __init__(self, config=None, logger=None):
         self.config = config if config else getGitConfig()
-        self.logger = (
-            logger if logger else getLoggingObject(config=self.config, service="Agent")
-        )
+        self.logger = logger if logger else getLoggingObject(config=self.config, service="Agent")
 
     @staticmethod
     def get(**_kwargs):

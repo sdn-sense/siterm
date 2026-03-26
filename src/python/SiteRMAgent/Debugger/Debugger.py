@@ -17,6 +17,7 @@ Email                   : jbalcas (at) es (dot) net
 @Copyright              : Copyright (C) 2021 California Institute of Technology
 Date                    : 2021/03/12
 """
+
 import argparse
 import ipaddress
 import os
@@ -88,14 +89,31 @@ class Debugger(DebugService):
         self.memDiskStats.reset()
         self.memDiskStats.updateStorageInfo()
         self.memDiskStats.updateMemStats(["Config-Fetcher", "siterm-debugger"], 1)
-        out = {"hostname": f"hostnamemem-{self.hostname}-Debugger", "output": self.memDiskStats.getMemMonitor()}
-        postout = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Debugger")
+        out = {
+            "hostname": f"hostnamemem-{self.hostname}-Debugger",
+            "output": self.memDiskStats.getMemMonitor(),
+        }
+        postout = self.requestHandler.makeHttpCall(
+            "POST",
+            f"/api/{self.sitename}/monitoring/stats",
+            data=out,
+            retries=1,
+            raiseEx=False,
+            useragent="Debugger",
+        )
         if postout[1] != 200:
             warnings.append(f"Failed to report memory statistics: {postout[2]} HTTP Code: {postout[1]}")
             self.logger.warning("Failed to report memory statistics: %s", warnings[-1])
         out["hostname"] = f"hostnamedisk-{self.hostname}-Debugger"
         out["output"] = self.memDiskStats.getStorageInfo()
-        postout = self.requestHandler.makeHttpCall("POST", f"/api/{self.sitename}/monitoring/stats", data=out, retries=1, raiseEx=False, useragent="Debugger")
+        postout = self.requestHandler.makeHttpCall(
+            "POST",
+            f"/api/{self.sitename}/monitoring/stats",
+            data=out,
+            retries=1,
+            raiseEx=False,
+            useragent="Debugger",
+        )
         if postout[1] != 200:
             warnings.append(f"Failed to report disk statistics: {postout[2]} HTTP Code: {postout[1]}")
             self.logger.warning("Failed to report disk statistics: %s", warnings[-1])

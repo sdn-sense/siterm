@@ -9,13 +9,20 @@ Email                   : jbalcas (at) es (dot) net
 @License                : Apache License, Version 2.0
 Date                    : 2025/07/14
 """
-import os
+
+import asyncio
+import time
+import traceback
+from collections import defaultdict, deque
+from functools import wraps
 from typing import Any, Dict, List, Union
-from pydantic_core import core_schema
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic_core import core_schema
 from SiteFE.PolicyService import stateMachine as ST
+from SiteRMLibs.Auth import PERMISSION_ORDER, AuthHandler
 from SiteRMLibs.CustomExceptions import (
     IssuesWithAuth,
     ModelNotFound,
@@ -27,20 +34,37 @@ from SiteRMLibs.MainUtilities import (
     firstRunFinished,
     getAllFileContent,
     getDBConnObj,
-    getUTCnow
+    getUTCnow,
 )
-from SiteRMLibs.x509 import CertHandler, OIDCHandler
 
 DEP_CONFIG = getGitConfig()
 DEP_DBOBJ = getDBConnObj()
 DEP_STATE_MACHINE = ST.StateMachine(DEP_CONFIG)
+AUTH_HANDLER = AuthHandler()
+
+BEARER_SCHEME = HTTPBearer(scheme_name="BearerAuth", description="JWT Bearer token obtained from /auth/login")
 
 DEFAULT_RESPONSES = {
-    401: {"description": "Unauthorized", "content": {"application/json": {"example": {"detail": "Not authorized to access this resource"}}}},
-    403: {"description": "Forbidden", "content": {"application/json": {"example": {"detail": "Access to this resource is forbidden"}}}},
-    422: {"description": "Unprocessable Entity", "content": {"application/json": {"example": {"detail": "Request parameters are invalid"}}}},
-    500: {"description": "Internal Server Error", "content": {"application/json": {"example": {"detail": "Internal server error"}}}},
-    503: {"description": "Service Unavailable", "content": {"application/json": {"example": {"detail": "Service temporarily unavailable"}}}},
+    401: {
+        "description": "Unauthorized",
+        "content": {"application/json": {"example": {"detail": "Not authorized to access this resource"}}},
+    },
+    403: {
+        "description": "Forbidden",
+        "content": {"application/json": {"example": {"detail": "Access to this resource is forbidden"}}},
+    },
+    422: {
+        "description": "Unprocessable Entity",
+        "content": {"application/json": {"example": {"detail": "Request parameters are invalid"}}},
+    },
+    500: {
+        "description": "Internal Server Error",
+        "content": {"application/json": {"example": {"detail": "Internal server error"}}},
+    },
+    503: {
+        "description": "Service Unavailable",
+        "content": {"application/json": {"example": {"detail": "Service temporarily unavailable"}}},
+    },
 }
 
 
@@ -59,47 +83,48 @@ def depGetStateMachine():
     return DEP_STATE_MACHINE
 
 
+def depGetAuthHandler():
+    """Dependency to get the authentication handler object."""
+    return AUTH_HANDLER
+
+
 def loguseraction(request, userinfo):
     """Print user action to log."""
     client_host = request.client.host if request.client else "unknown"
     method = request.method
     url = str(request.url)
     timestamp = getUTCnow()
-    log_entry = {"timestamp": timestamp, "client_host": client_host, "method": method, "url": url, "userinfo": userinfo}
-    print(f"User Action Log: {log_entry}")
+    log_entry = {
+        "timestamp": timestamp,
+        "client_host": client_host,
+        "method": method,
+        "url": url,
+        "userinfo": userinfo,
+    }
+    # TODO: DB Write.
 
 
 async def depAuthenticate(request: Request):
     """Dependency to authenticate the user via certificate or OIDC."""
-    # X509 handler
-    checkauthmethod()
-    if os.environ.get("AUTH_SUPPORT", "X509").upper() == "X509":
-        cert_handler = CertHandler()
-        try:
-            certInfo = cert_handler.getCertInfo(request)
-            userInfo = cert_handler.validateCertificate(request)
-            loguseraction(request, {"cert_info": certInfo, "user_info": userInfo})
-            return {"cert_info": certInfo, "user_info": userInfo}
-        except (RequestWithoutCert, IssuesWithAuth) as ex:
-            loguseraction(request, {"exception": str(ex)})
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access. Please provide valid credentials or check with your administrator.") from ex
-    # OIDC handler
-    if os.environ.get("AUTH_SUPPORT", "X509").upper() == "OIDC":
-        oidc_handler = OIDCHandler()
-        try:
-            userInfo = oidc_handler.validateOIDCInfo(request)
-            loguseraction(request, {"user_info": userInfo})
-            return {"user_info": userInfo}
-        except (RequestWithoutCert, IssuesWithAuth) as ex:
-            loguseraction(request, {"exception": str(ex)})
-            # Pass back WWW-Authenticate header for OIDC
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Unauthorized access. Please provide valid credentials or check with your administrator.",
-                headers={"WWW-Authenticate": os.environ.get("OIDC_REDIRECT_URI", "")},
-            ) from ex
-    else:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication method is not properly configured.")
+    auth_handler = AUTH_HANDLER
+    try:
+        token = auth_handler.extractToken(request)
+        userInfo = auth_handler.validateToken(token)
+        loguseraction(request, {"user_info": userInfo})
+        return {"user_info": userInfo}
+    except (IssuesWithAuth, RequestWithoutCert) as ex:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from ex
+    except Exception as ex:
+        loguseraction(request, {"exception": str(ex)})
+        print(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from ex
 
 
 def depGetModelContent(dbentry, **kwargs):
@@ -108,8 +133,8 @@ def depGetModelContent(dbentry, **kwargs):
     if rettype not in ["json-ld", "ntriples", "turtle"]:
         raise ModelNotFound(f"Model type {rettype} is not supported. Supported: json-ld, ntriples, turtle")
     if kwargs.get("encode", False):
-        return encodebase64(getAllFileContent(f'{dbentry["fileloc"]}.{rettype}'))
-    return getAllFileContent(f'{dbentry["fileloc"]}.{rettype}')
+        return encodebase64(getAllFileContent(f"{dbentry['fileloc']}.{rettype}"))
+    return getAllFileContent(f"{dbentry['fileloc']}.{rettype}")
 
 
 def depGetModel(dbI, **kwargs):
@@ -142,65 +167,101 @@ def checkSite(deps, sitename: str):
 
 def checkPermissions(userinfo, required_perms: List[str]):
     """Check if the user has the required permissions."""
-    print("Checking permissions for user:", userinfo)
-    print("Required permissions:", required_perms)
-    # user_perms = userinfo.get("user_info", {}).get("permissions", [])
-    # if not any(perm in user_perms for perm in required_perms):
-    #    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access to this resource is forbidden due to insufficient permissions.")
 
-def checkauthmethod():
-    """Check if auth method is configured correctly."""
-    config = depGetConfig()
-    auth_method = os.environ.get("AUTH_SUPPORT", "X509").upper()
-    if auth_method not in ["X509", "OIDC"]:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication method is not properly configured.")
-    if auth_method == "OIDC":
-        if not all(k in os.environ for k in ["OIDC_AUDIENCE", "OIDC_ISSUER", "OIDC_JWKS", "OIDC_REDIRECT_URI"]):
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="OIDC authentication is not properly configured. Missing environment variables.")
-    # Also check if config has  section
-    oidc = config["MAIN"].get("general", {}).get("oidc", False)
-    auth_method_conf = "OIDC" if oidc else "X509"
-    if auth_method != auth_method_conf:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication method mismatch between configuration and environment variable.")
+    user_perm = userinfo.get("user_info", {}).get("perm", 0)
+    print(f"User permissions: {user_perm}, Required permissions: {required_perms}")
+    required_levels = []
+    for perm in required_perms:
+        if perm not in PERMISSION_ORDER:
+            raise ValueError(f"Unknown permission flag: {perm}")
+        required_levels.append(PERMISSION_ORDER[perm])
+
+    if not any(user_perm >= level for level in required_levels):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access forbidden: insufficient permissions")
 
 
-def apiReadDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
+def apiReadDeps(
+    config=Depends(depGetConfig),
+    dbI=Depends(depGetDBObj),
+    user=Depends(depAuthenticate),
+    authHandler=Depends(depGetAuthHandler),
+    stateMachine=Depends(depGetStateMachine),
+    _creds: HTTPAuthorizationCredentials = Depends(BEARER_SCHEME),
+):
     """Dependency to get all necessary objects for the REST API."""
-    return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
-def apiWriteDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
+def apiWriteDeps(
+    config=Depends(depGetConfig),
+    dbI=Depends(depGetDBObj),
+    user=Depends(depAuthenticate),
+    authHandler=Depends(depGetAuthHandler),
+    stateMachine=Depends(depGetStateMachine),
+    _creds: HTTPAuthorizationCredentials = Depends(BEARER_SCHEME),
+):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["write", "admin"])
-    return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
 
-def apiAdminDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), user=Depends(depAuthenticate), stateMachine=Depends(depGetStateMachine)):
+def apiAdminDeps(
+    config=Depends(depGetConfig),
+    dbI=Depends(depGetDBObj),
+    user=Depends(depAuthenticate),
+    authHandler=Depends(depGetAuthHandler),
+    stateMachine=Depends(depGetStateMachine),
+    _creds: HTTPAuthorizationCredentials = Depends(BEARER_SCHEME),
+):
     """Dependency to get all necessary objects for the REST API."""
     checkPermissions(user, ["admin"])
-    return {"config": config, "dbI": dbI, "user": user, "stateMachine": stateMachine}
+    return {"config": config, "dbI": dbI, "user": user, "authHandler": authHandler, "stateMachine": stateMachine}
 
-def apiPublicDeps(config=Depends(depGetConfig), dbI=Depends(depGetDBObj), stateMachine=Depends(depGetStateMachine)):
+
+def apiPublicDeps(
+    config=Depends(depGetConfig),
+    authHandler=Depends(depGetAuthHandler),
+    dbI=Depends(depGetDBObj),
+    stateMachine=Depends(depGetStateMachine),
+):
     """Dependency to get all necessary objects for the public REST API."""
-    checkauthmethod()
-    return {"config": config, "dbI": dbI, "stateMachine": stateMachine}
+    return {
+        "config": config,
+        "dbI": dbI,
+        "authHandler": authHandler,
+        "stateMachine": stateMachine,
+    }
+
 
 # pylint: disable=too-few-public-methods
 class APIResponse:
     """API Response class to handle API responses."""
 
     @staticmethod
-    def genResponse(request: Request, data: Union[Dict[str, Any], List[Any]], headers: Dict[str, str] = None, status_code: int = 200):
+    def genResponse(
+        request: Request,
+        data: Union[Dict[str, Any], List[Any]],
+        headers: Dict[str, str] = None,
+        status_code: int = 200,
+    ):
         """Generate a response based on the request and data."""
         if not isinstance(data, (dict, list)):
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Data must be a dictionary or a list. Received: {type(data)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Data must be a dictionary or a list. Received: {type(data)}",
+            )
         accept_header = request.headers.get("accept", "application/json").lower()
         headers = headers or {}
         if "application/json" in accept_header or "*/*" in accept_header:
             return JSONResponse(content=data, headers=headers, status_code=status_code)
         if "text/plain" in accept_header:
             # Handle plain text response if needed
-            return Response(content=str(data), media_type="text/plain", headers=headers, status_code=status_code)
+            return Response(
+                content=str(data),
+                media_type="text/plain",
+                headers=headers,
+                status_code=status_code,
+            )
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
             detail=f"Unsupported Accept header: {accept_header}. Supported: application/json, text/plain, */*",
@@ -218,15 +279,26 @@ def forbidExtraQueryParams(*allowedParams: str):
         allowed = set(allowedParams)
         unknown = incoming - allowed
         if unknown:
-            raise HTTPException(status_code=422,
-                                detail=[{"type": "extra_forbidden", "loc": ["query", param], "msg": f"Unexpected query parameter: {param}"} for param in unknown])
+            raise HTTPException(
+                status_code=422,
+                detail=[
+                    {
+                        "type": "extra_forbidden",
+                        "loc": ["query", param],
+                        "msg": f"Unexpected query parameter: {param}",
+                    }
+                    for param in unknown
+                ],
+            )
+
     return checker
 
-#pylint: disable=unused-argument
+
+# pylint: disable=unused-argument
 class StrictBool:
     """Strict boolean:
-       - Accepts: real booleans, 'true', 'false'
-       - Rejects everything else.
+    - Accepts: real booleans, 'true', 'false'
+    - Rejects everything else.
     """
 
     @classmethod
@@ -251,5 +323,63 @@ class StrictBool:
     def __get_pydantic_json_schema__(cls, schema, handler):
         return {
             "type": "boolean",
-            "description": "Strict boolean. Only true/false allowed (bool or string)."
+            "description": "Strict boolean. Only true/false allowed (bool or string).",
         }
+
+
+_RATE_LIMIT_BUCKETS: dict[str, deque] = defaultdict(deque)
+_RATE_LIMIT_LOCK = asyncio.Lock()
+
+
+def rateLimitIp(
+    maxRequests: int = 60,
+    windowSeconds: int = 60,
+):
+    """
+    Rate limit decorator based on client IP.
+    Example: 60 requests per 60 seconds per IP
+    """
+
+    def decorator(func):
+        """Decorator to apply rate limiting to a function based on client IP."""
+
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            """Wrapper function to enforce rate limiting based on client IP."""
+            request: Request | None = None
+
+            # 1. Look in kwargs
+            for value in kwargs.values():
+                if isinstance(value, Request):
+                    request = value
+                    break
+
+            # 2. Fallback: look in args
+            if request is None:
+                for arg in args:
+                    if isinstance(arg, Request):
+                        request = arg
+                        break
+
+            if request is None:
+                raise RuntimeError("rate_limit_ip requires Request parameter")
+            client_ip = request.client.host if request.client else "unknown"
+            now = time.time()
+            async with _RATE_LIMIT_LOCK:
+                bucket = _RATE_LIMIT_BUCKETS[client_ip]
+                while bucket and bucket[0] <= now - windowSeconds:
+                    bucket.popleft()
+                if len(bucket) >= maxRequests:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail=f"Rate limit exceeded: {maxRequests}/{windowSeconds}s",
+                        headers={
+                            "Retry-After": str(windowSeconds),
+                        },
+                    )
+                bucket.append(now)
+            return await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

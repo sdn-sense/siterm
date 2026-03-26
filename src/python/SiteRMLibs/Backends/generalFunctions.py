@@ -8,6 +8,7 @@ Authors:
 
 Date: 2021/12/01
 """
+
 import copy
 
 
@@ -30,9 +31,7 @@ def cleanupEmpty(output):
             del tmpOut["switches"][swn]
             continue
         for swp, swpVal in list(output["switches"][swn].items()):
-            if not swpVal and not output.get("ports", {}).get(swn, {}).get(swp, {}).get(
-                "isAlias"
-            ):
+            if not swpVal and not output.get("ports", {}).get(swn, {}).get(swp, {}).get("isAlias"):
                 del tmpOut["switches"][swn][swp]
                 continue
     return tmpOut
