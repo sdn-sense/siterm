@@ -1,36 +1,131 @@
-# SiteRM 1.5.63 Bug fix release
+## SiteRM 1.6.0 Pre-Production Release
 
-## New features and fixes
-- Increase Daemonizer logging for Configuration refresh
-- Break loop during alive/readiness check if service is fully ready
-- Add version information inside the model
-- Clean ServiceStates if host is deleted from Frontend (previously raised False Alarms)
-- Fix bug that allows fake ports specified, if allports is set to True.
+⚠️ **Breaking Release — Authentication system fully replaced.**
+Sites upgrading from 1.5.63 must follow the upgrade steps below before starting the new image.
 
-## 🔧 Supported OS Releases
+### 🔐  New Authentication System (auth-new)
+
+The most significant change in this release is a **complete replacement of the authentication layer**. The previous X.509-certificate-only authentication for the REST API has been superseded by a multi-method system supporting human users (username/password + JWT), machine-to-machine services (X.509 certificate challenge-response + JWT), and standard token refresh flows.
+
+**New authentication methods:**
+
+- **Username/password login** (`POST /auth/login`) — for human users and the Web UI. Passwords are stored with Argon2 hashing. Returns a short-lived Bearer token (60 minutes) and a 12-hour refresh token.
+- **X.509 certificate M2M** (`POST /m2m/token` → `POST /m2m/token/{challenge_id}`) — for Agents, Debuggers, and automated services. The server issues a challenge; the client signs it with its private key; the signed challenge is verified against the certificate and returns tokens. Supports both RSA (PSS/SHA-256) and EC (ECDSA/SHA-256) keys.
+- **Token refresh** (`POST /m2m/token/refresh`) — tokens are refreshed using a session-bound refresh token. Refresh tokens are rotated on each use and bound to the client IP address.
+- **JWKS / OpenID Configuration** — `GET /.well-known/jwks.json` and `GET /.well-known/openid-configuration` endpoints enable standard OIDC-compatible token verification by third-party tools.
+
+**User management:**
+
+A new command-line tool `siterm-usertool` is included in the Frontend container for managing local user accounts:
+
+```bash
+siterm-usertool --action create --username admin --permissions admin
+siterm-usertool --action list
+siterm-usertool --action disable --username someuser
+siterm-usertool --action setpassword --username someuser
+```
+
+Permission levels: `read` (1), `write` (2), `readwrite` (3), `admin` (4). Minimum password length is 12 characters.
+
+**JWT key generation:**
+
+The Frontend container now auto-generates an RSA-3072 key pair for JWT signing at startup (`/opt/siterm/jwt_secrets/`). Apache HTTPD uses these keys to sign and verify tokens. No manual key setup is needed for new deployments.
+
+**Trust store:**
+
+A new `build-keystore.py` script builds a minimal CA trust store from `/etc/grid-security/certificates`, filtering to only allowed issuers (Let's Encrypt, InCommon RSA, CERN Grid CAs by default). Sites can override the allowed issuers via `/etc/grid-security/allowed_truststore.yaml`. Only CAs in this trust store are accepted for X.509 M2M authentication.
+
+**New database tables:**
+
+Two new tables are added via Alembic migration: `users` (local user accounts) and `refresh_tokens` (active sessions with IP binding and rotation tracking). The migration runs automatically on Frontend startup.
+
+See the full documentation: [Authentication Configuration](/customization/authentication/)
+
+### 🔧  Other Changes
+
+**Security & Hardening:**
+- HTTP methods are now restricted at the Apache HTTPD level — only `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`, `HEAD` are allowed
+- Rate limiting on auth endpoints: 1 request/second per client; 429 responses are caught and held with random backoff
+- Certificate field length increased; token input is validated on receipt
+- OpenTelemetry distributed tracing support added (disabled by default; enable via `OPENTELEMETRY_ENABLED=true`)
+
+**Web UI:**
+- Swagger UI now shows a login button; Bearer tokens are sent automatically after login
+- Bootstrap JS/CSS updated
+- Ajax error handling improved across all pages
+- Token-based authentication is used for all Web UI API calls
+
+**Bug Fixes:**
+- State machine: model-add transition now correctly handled
+- SQLAlchemy: field type enforcement on all model updates
+- Policy service: accepted deltas are correctly included in delta comparison
+- FRR router: VLAN identification now resolves correctly for sub-interface naming
+- BGP templates: duplicate route-map keys no longer cause silent drops
+- Bandwidth calendar: overlap detection and scheduling fixes
+- Token expiry: `expires_at` and `expires_in` values now correctly computed and returned
+- DB cleanup: auth queries reduced from ~30 calls to 1 per request
+
+**Build & Container:**
+- **EL8 (AlmaLinux 8) removed from Frontend build** — AlmaLinux 8 reached end-of-active-support May 2024
+- Debugger now has an EL10 Dockerfile
+- Gunicorn worker startup rate increased for faster container readiness
+- Kubernetes HTTPD config split into a dedicated `sitefe-httpd-kube.conf` file
+- DSCP marking via `nftables`/`iptables` added to startup scripts
+- OSG CA certificates updated to the osg-25 release
+- Agent and Debugger containers **no longer require a host certificate** — they authenticate to the Frontend using the new M2M token flow
+- Log rotation: all processes write to log files capped at 2 files × 25 MB
+- VPP monitoring rewritten as a Python process (resolves single-thread issue)
+- **Certificate mount path changed** — host/grid certificates for Docker and Kubernetes are now mounted under `/etc/secret-mount/` (previously `/etc/grid-security/`). Certificate files are renamed: `hostcert.pem` → `tls.crt`, `hostkey.pem` → `tls.key`. This enables automatic certificate rotation without a service restart.
+- Kubernetes Helm deployments: certificates are also expected under `/etc/secret-mount/` (`tls.crt` / `tls.key`)
+
+**Helm Chart Changes:**
+- `siterm-fe`: `ssl-passthrough` annotation removed from `values.yaml` — it is not required and caused confusion
+- `siterm-agent`: clarified that `NET_ADMIN` capability **must be uncommented** for the agent to create VLAN interfaces and apply QoS rules
+- `siterm-agent`: corrected LLDPD socket path documentation — Ubuntu systems use `/var/run/lldpd.socket` (`.socket` suffix), not `/var/run/lldpd.sock`
+
+**Ansible Collections:**
+- `sense-aristaeos-collection`: MAC address normalization fix for LLDP parsing
+
+### 🚨  Upgrade Instructions
+
+1. **Cancel all SENSE Services. Contact SENSE team to clean up your site**
+
+2. **Database migration runs automatically** on Frontend startup, but new release requires full removal of /opt/siterm/config/mysql. In futurem, no manual SQL changes are needed.
+
+3. **Review your trust store** if your site uses X.509 M2M auth with non-standard CAs. Check `/etc/grid-security/allowed_truststore.yaml` (or create it) to ensure your site's CA is included.
+
+4. **Docker users: update certificate mount paths.** Certificates are now read from `/etc/secret-mount/` instead of `/etc/grid-security/` (or `/etc/httpd/certs/`). Rename your files: `hostcert.pem` → `tls.crt`, `hostkey.pem` → `tls.key`, and update your `docker run` or `docker-compose` volume mounts accordingly.
+
+5. **Helm users:** Update image tags. The `ssl-passthrough` annotation has been removed from `siterm-fe/values.yaml`. If you had overridden this annotation locally, remove it from your site values. Also verify that `NET_ADMIN` is uncommented in your agent values if it was not already set.
+
+### 🔧  Supported OS Releases
+
 - **Frontend (x86_64)**
   - EL9
 - **Agent (x86_64)**
-  - EL8
   - EL9
   - EL10 **Default for release**
   - U22
 - **Debugger (x86_64)**
   - EL10
 
+> **Note:** EL8 is no longer supported for the Frontend. Agent EL8 images are also discontinued from this release.
 
-## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
-- **Recommended Version:** Always use `latest`. 
-- If enforcing a specific version is needed, refer to the following details for tag or chart version below.
-- This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.63`).
+### 📥  Installation Details
+
+- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗  **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
+- **Recommended Version:** Always use `latest`.
+- This particular release is `pre-<el9|el10|u22>` version (`1.6.0`).
 
 ### Docker Versions
-- **Agent:** `sdnsense/siterm-agent:latest-20251204-<el8|el9|el10|u22>` *(or use `latest`)*, optionally, can specify os version *`latest-<el8|el9|el10|u22>`*
-- **Debugger:** `sdnsense/siterm-debugger:latest-20251204-el10` *(or use `latest`)*
-- **Frontend:** `sdnsense/siterm-fe:latest-20251204` *(or use `latest`)*
+
+- **Agent:** `sdnsense/siterm-agent:pre-20260326-<el9|el10|u22>` *(or use `latest`)*
+- **Debugger:** `sdnsense/siterm-debugger:pre-20260326-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:pre-20260326` *(or use `latest`)*
 
 ### Helm versions
-- **Agent:** Chart version siterm/siterm-agent 1.5.63
-- **Debugger:** Chart version siterm/siterm-debugger 1.5.63
-- **Frontend:** Chart version siterm/siterm-fe 1.5.63
+
+- **Agent:** Chart version siterm/siterm-agent 1.6.0
+- **Debugger:** Chart version siterm/siterm-debugger 1.6.0
+- **Frontend:** Chart version siterm/siterm-fe 1.6.0
