@@ -89,7 +89,7 @@ disable=raw-checker-failed,
         use-symbolic-message-instead,
         broad-exception-raised,
         broad-exception-caught,
-        C0103, E0401, R0801
+        C0103, R0801
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -511,45 +511,6 @@ min-public-methods=2
 
 
 [IMPORTS]
-
-# List of modules that can be imported at any level, not just the top level
-# one.
-allow-any-import-level=
-
-# Allow wildcard imports from modules that define __all__.
-allow-wildcard-with-all=no
-
-# Analyse import fallback blocks. This can be used to support both Python 2 and
-# 3 compatible code, which means that the block might have code that exists
-# only in one or another interpreter, leading to false positives when analysed.
-analyse-fallback-blocks=no
-
-# Deprecated modules which should not be used, separated by a comma.
-deprecated-modules=
-
-# Output a graph (.gv or any supported image format) of external dependencies
-# to the given file (report RP0402 must not be disabled).
-ext-import-graph=
-
-# Output a graph (.gv or any supported image format) of all (i.e. internal and
-# external) dependencies to the given file (report RP0402 must not be
-# disabled).
-import-graph=
-
-# Output a graph (.gv or any supported image format) of internal dependencies
-# to the given file (report RP0402 must not be disabled).
-int-import-graph=
-
-# Force import order to recognize a module as part of the standard
-# compatibility libraries.
-known-standard-library=
-
-# Force import order to recognize a module as part of a third party library.
-known-third-party=enchant
-
-# Couples of modules and preferred modules, separated by a comma.
-preferred-modules=
-
 
 [CLASSES]
 

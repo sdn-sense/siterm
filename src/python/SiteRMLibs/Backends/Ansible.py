@@ -295,6 +295,8 @@ class Switch:
             return int(port[4:])
         if port[-4:].isdigit():
             return int(port[-4:])
+        if port.split(".")[-1].isdigit():
+            return int(port.split(".")[-1])
         return port
 
     def getvlandata(self, inData, vlan):
