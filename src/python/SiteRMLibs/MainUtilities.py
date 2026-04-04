@@ -338,11 +338,6 @@ def createDirs(fullDirPath):
     return
 
 
-def getTempDir():
-    """Get the temporary directory."""
-    return tempfile.gettempdir()
-
-
 def firstRunCheck(firstRun, servicename):
     """Check if it is first run."""
     if firstRun:
@@ -582,17 +577,34 @@ def getModTime(headers):
 
 
 def encodebase64(inputStr, encodeFlag=True):
-    """Encode str to base64."""
-    if encodeFlag and inputStr:
-        return base64.b64encode(bytestoStr(inputStr))
-    return inputStr
+    """Encode inputStr to base64."""
+    if not encodeFlag or not inputStr:
+        return inputStr
+    if isinstance(inputStr, bytes):
+        input_bytes = inputStr
+    elif isinstance(inputStr, str):
+        input_bytes = inputStr.encode("utf-8")
+    else:
+        raise TypeError(f"Unsupported type: {type(inputStr)}")
+
+    return base64.b64encode(input_bytes).decode("utf-8")
+
 
 
 def decodebase64(inputStr, decodeFlag=True):
-    """Decode base64 to real format."""
-    if decodeFlag and inputStr:
-        return base64.b64decode(inputStr)
-    return inputStr
+    """Decode base64 to original format."""
+    if not decodeFlag or not inputStr:
+        return inputStr
+
+    if isinstance(inputStr, str):
+        input_bytes = inputStr.encode("utf-8")
+    elif isinstance(inputStr, bytes):
+        input_bytes = inputStr
+    else:
+        raise TypeError(f"Unsupported type: {type(inputStr)}")
+
+    decoded_bytes = base64.b64decode(input_bytes)
+    return decoded_bytes
 
 
 def getDBConn(serviceName="", cls=None):
