@@ -863,7 +863,7 @@ async def submitdebug(
             "debuginfo": requestfname,
             "outputinfo": outputfname,
         }
-        insOut = deps["dbI"].update("debugrequestsfull", [out])
+        insOut = deps["dbI"].update("debugrequests", [out])
         return APIResponse.genResponse(request, {"Status": insOut[0], "ID": dummyIns[2]})
     except Exception as exc:  # pylint: disable=broad-except
         print(f"Full traceback: {traceback.format_exc()}")

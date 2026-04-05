@@ -75,7 +75,7 @@ class Debugger(DebugService):
             "hostname": kwargs["hostname"],
             "updatedate": getUTCnow(),
         }
-        self.dbI.update("debugrequestsworker", [out])
+        self.dbI.update("debugrequests", [out])
 
     def getFullData(self, hostname, item):
         """Get full data from DB."""

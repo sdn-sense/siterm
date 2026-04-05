@@ -265,7 +265,8 @@ class dbinterface:
                     print(f"[DB UPDATE WARNING] Table '{calltype}' ignored fields: {list(excluded.keys())}")
 
                 for key, value in clean_val.items():
-                    setattr(obj, key, value)
+                    if value is not None:
+                        setattr(obj, key, value)
 
         return "OK", "", ""
 
