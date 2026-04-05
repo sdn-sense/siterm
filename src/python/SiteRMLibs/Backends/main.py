@@ -251,15 +251,19 @@ class Switch(Node):
             }
             if switch not in self.switches["output"]:
                 out["insertdate"] = getUTCnow()
+                out["output"] = "{}"
                 self.logger.debug(f"No switches {switch} in database. Calling to add error.")
                 self.logger.debug(f"Error: {errmsg}")
-                self.dbI.insert("switch_error", [out])
+                self.dbI.insert("switch", [out])
             else:
                 # Get ID from DB and update
                 out["id"] = self.switches["output"][switch]["dbinfo"]["id"]
+                data = dict(self.switches["output"][switch])
+                data.pop("dbinfo", None)
+                out["output"] = jsondumps(data)
                 self.logger.debug(f"Update switch {switch} in database with error.")
                 self.logger.debug(f"Error: {errmsg}")
-                self.dbI.update("switch_error", [out])
+                self.dbI.update("switch", [out])
         # Once updated, inserted. Update var from db
         self._getDBOut()
 
