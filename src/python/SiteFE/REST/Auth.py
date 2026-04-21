@@ -21,6 +21,7 @@ from SiteFE.REST.dependencies import (
     APIResponse,
     apiPublicDeps,
     apiReadDeps,
+    getClientIP,
     rateLimitIp,
 )
 from SiteRMLibs.CustomExceptions import BadRequestError, IssuesWithAuth
@@ -126,7 +127,8 @@ async def token(request: Request, item: X509LoginItem, deps: Dict[str, Any] = De
     Request new token challenge
     """
     try:
-        challenge = deps["authHandler"].generate_challenge(item.certificate)
+        clientIP = getClientIP(request)
+        challenge = deps["authHandler"].generate_challenge(item.certificate, client_ip=clientIP)
         openid_config = deps["authHandler"].getOpenIDConfiguration()
         challenge["ref_url"] = f"{openid_config['issuer']}/m2m/token/{challenge['challenge_id']}"
         return APIResponse.genResponse(request, challenge)
@@ -161,9 +163,11 @@ async def token_refresh(request: Request, item: M2MLoginItem, deps: Dict[str, An
         # Check if the refresh token has expired or been revoked
         if refreshRecord[0]["revoked"] or refreshRecord[0]["expires_at"] < getUTCnow():
             raise IssuesWithAuth("Refresh token is invalid or expired")
-        clientIP = request.client.host if request.client else "unknown"
+        clientIP = getClientIP(request)
         if clientIP != refreshRecord[0]["client_ip"]:
             raise IssuesWithAuth("Refresh token is being used from a different IP address")
+        current_allowed_ips = deps["authHandler"].getUserAllowedIPs(refreshRecord[0]["username"])
+        deps["authHandler"].validateAllowedIP({"permissions": {"username": refreshRecord[0]["username"], "allowed_ips": current_allowed_ips}}, clientIP)
         # Get new token, new refresh token, delete old refresh token
         current_perms = deps["authHandler"].getUserPermissions(refreshRecord[0]["username"])
         if current_perms != refreshRecord[0]["permissions"]:
@@ -216,7 +220,8 @@ async def token_challenge(
     Challenge reply
     """
     try:
-        verified, user = deps["authHandler"].verify_challenge(challenge_id, item.signature)
+        clientIP = getClientIP(request)
+        verified, user = deps["authHandler"].verify_challenge(challenge_id, item.signature, client_ip=clientIP)
 
         if not verified:
             raise BadRequestError("Invalid challenge outcome")
@@ -225,7 +230,6 @@ async def token_challenge(
         if not user or "permissions" not in user or "username" not in user["permissions"]:
             raise BadRequestError("User information is incomplete")
 
-        clientIP = request.client.host if request.client else "unknown"
         session_id = secrets.token_urlsafe(32)
 
         access_token, expires_at, expires_in = deps["authHandler"].getAccessToken(user["permissions"]["username"], extra_claims={"perm": user["permissions"]["permissions"]})

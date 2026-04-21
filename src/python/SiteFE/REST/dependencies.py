@@ -11,6 +11,7 @@ Date                    : 2025/07/14
 """
 
 import asyncio
+import ipaddress
 import time
 import traceback
 from collections import defaultdict, deque
@@ -88,9 +89,53 @@ def depGetAuthHandler():
     return AUTH_HANDLER
 
 
+def normalizeClientIP(value):
+    """Normalize a forwarded client IP header value."""
+    if not value:
+        return None
+    candidate = value.strip().strip('"')
+    if not candidate or candidate.lower() == "unknown":
+        return None
+    if candidate.startswith("[") and "]" in candidate:
+        candidate = candidate[1 : candidate.index("]")]
+    elif candidate.count(":") == 1 and "." in candidate:
+        candidate = candidate.rsplit(":", 1)[0]
+    try:
+        return str(ipaddress.ip_address(candidate))
+    except ValueError:
+        return None
+
+
+def getClientIP(request):
+    """Get the real client IP from proxy headers, falling back to the socket peer."""
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        for candidate in x_forwarded_for.split(","):
+            client_ip = normalizeClientIP(candidate)
+            if client_ip:
+                return client_ip
+
+    for header in ("x-real-ip", "x-client-ip"):
+        client_ip = normalizeClientIP(request.headers.get(header))
+        if client_ip:
+            return client_ip
+
+    forwarded = request.headers.get("forwarded")
+    if forwarded:
+        for forwarded_item in forwarded.split(","):
+            for part in forwarded_item.split(";"):
+                key, sep, value = part.strip().partition("=")
+                if sep and key.lower() == "for":
+                    client_ip = normalizeClientIP(value)
+                    if client_ip:
+                        return client_ip
+
+    return normalizeClientIP(request.client.host if request.client else None) or "unknown"
+
+
 def loguseraction(request, userinfo):
     """Print user action to log."""
-    client_host = request.client.host if request.client else "unknown"
+    client_host = getClientIP(request)
     method = request.method
     url = str(request.url)
     timestamp = getUTCnow()
@@ -363,7 +408,7 @@ def rateLimitIp(
 
             if request is None:
                 raise RuntimeError("rate_limit_ip requires Request parameter")
-            client_ip = request.client.host if request.client else "unknown"
+            client_ip = getClientIP(request)
             now = time.time()
             async with _RATE_LIMIT_LOCK:
                 bucket = _RATE_LIMIT_BUCKETS[client_ip]

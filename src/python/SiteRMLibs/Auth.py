@@ -10,6 +10,7 @@ Date                    : 2019/10/01
 
 import base64
 import hashlib
+import ipaddress
 import json
 import os
 import pprint
@@ -173,6 +174,27 @@ def normPermissions(permission):
     return PERMISSION_ORDER[permission]
 
 
+def client_ip_allowed(client_ip, allowed_ips):
+    """Return True when client_ip is inside one of the allowed CIDR ranges.
+
+    Missing allowed_ips is intentionally unrestricted for backwards compatibility.
+    """
+    if not allowed_ips:
+        return True
+    try:
+        ip_addr = ipaddress.ip_address(client_ip)
+    except ValueError as ex:
+        raise IssuesWithAuth("Client IP address is invalid") from ex
+
+    for allowed_ip in allowed_ips:
+        try:
+            if ip_addr in ipaddress.ip_network(allowed_ip, strict=False):
+                return True
+        except ValueError as ex:
+            raise IssuesWithAuth(f"Invalid allowed_ips entry: {allowed_ip}") from ex
+    return False
+
+
 class AuthHandler:
     """Authentication handler to manage user/pass and token-based authentication."""
 
@@ -210,7 +232,7 @@ class AuthHandler:
         self.loadAuthorized()
         self.gitConf = getGitConfig()
 
-    def generate_challenge(self, input_cert: str):
+    def generate_challenge(self, input_cert: str, client_ip: str = "unknown"):
         """Generate a challenge for the given certificate."""
         # Challenge storage is filesystem-based (tmp), that breaks if multiple instances are running
         # or if container is restarted
@@ -218,7 +240,8 @@ class AuthHandler:
             cert = load_cert(input_cert)
             verify_cert_chain(cert, self.oidc_ca_store)
             certinfo = load_cert_info(cert)
-            self.validateCertificate(certinfo)
+            user = self.validateCertificate(certinfo)
+            self.validateAllowedIP(user, client_ip)
 
             challenge_b64 = base64.b64encode(secrets.token_bytes(32)).decode("utf-8")
 
@@ -233,6 +256,7 @@ class AuthHandler:
                     "challenge_id": challenge_id,
                     "challenge": challenge_b64,
                     "input_cert": input_cert,
+                    "client_ip": client_ip,
                     "expires_at": expires_at,
                 },
             )
@@ -253,7 +277,7 @@ class AuthHandler:
             print(f"Full traceback: {traceback.format_exc()}")
             raise BadRequestError("Failed to generate challenge") from e
 
-    def verify_challenge(self, challenge_id: str, signature_b64: str):
+    def verify_challenge(self, challenge_id: str, signature_b64: str, client_ip: str = "unknown"):
         """Verify a challenge using the provided signature."""
         record = get_challenge_record(challenge_id)
         if not record:
@@ -267,6 +291,9 @@ class AuthHandler:
             verify_cert_chain(cert, self.oidc_ca_store)
             certinfo = load_cert_info(cert)
             user = self.validateCertificate(certinfo)
+            self.validateAllowedIP(user, client_ip)
+            if record.get("client_ip") and record["client_ip"] != client_ip:
+                raise IssuesWithAuth("Challenge is being completed from a different IP address")
             public_key = cert.public_key()
             challenge = base64.b64decode(record["challenge"])
             signature = base64.b64decode(signature_b64)
@@ -419,6 +446,19 @@ class AuthHandler:
         print(f"User {username} not found in AUTH or AUTH_RE config")
         raise IssuesWithAuth(f"User {username} not found in config")
 
+    def getUserAllowedIPs(self, username):
+        """Get current allowed_ips for a user from git config."""
+        print(f"Retrieving allowed_ips for user {username} from git config")
+        self.gitConf = getGitConfig()
+        for user, userinfo in list(self.gitConf.config.get("AUTH", {}).items()):
+            if user == username:
+                return userinfo.get("allowed_ips", [])
+        for user, userinfo in list(self.gitConf.config.get("AUTH_RE", {}).items()):
+            if user == username:
+                return userinfo.get("allowed_ips", [])
+        print(f"User {username} not found in AUTH or AUTH_RE config")
+        raise IssuesWithAuth(f"User {username} not found in config")
+
     @staticmethod
     def getRefreshToken(**_kwargs) -> str:
         """Get a refresh token for the specified user."""
@@ -512,6 +552,7 @@ class AuthHandler:
                 for user, userinfo in list(self.gitConf.config.get("AUTH", {}).items()):
                     self.allowedCerts.setdefault(userinfo["full_dn"], {})
                     self.allowedCerts[userinfo["full_dn"]]["username"] = user
+                    self.allowedCerts[userinfo["full_dn"]]["allowed_ips"] = userinfo.get("allowed_ips", [])
                     try:
                         self.allowedCerts[userinfo["full_dn"]]["permissions"] = normPermissions(userinfo["permissions"])
                     except IssuesWithAuth as ex:
@@ -521,6 +562,7 @@ class AuthHandler:
                 for user, userinfo in list(self.gitConf.config.get("AUTH_RE", {}).items()):
                     self.allowedWCerts.setdefault(userinfo["full_dn"], {})
                     self.allowedWCerts[userinfo["full_dn"]]["username"] = user
+                    self.allowedWCerts[userinfo["full_dn"]]["allowed_ips"] = userinfo.get("allowed_ips", [])
                     try:
                         self.allowedWCerts[userinfo["full_dn"]]["permissions"] = normPermissions(userinfo["permissions"])
                     except IssuesWithAuth as ex:
@@ -539,6 +581,22 @@ class AuthHandler:
                 return userinfo
         print(f"User DN {certinfo['fullDN']} is not in authorized list. Full info: {certinfo}")
         raise IssuesWithAuth("Issues with permissions. Check frontend logs.")
+
+    @staticmethod
+    def validateAllowedIP(user, client_ip):
+        """Validate request client IP against optional auth allowed_ips.
+
+        If allowed_ips is not configured for the credential, any client IP is allowed.
+        """
+        userinfo = user.get("permissions", {}) if user else {}
+        allowed_ips = userinfo.get("allowed_ips", [])
+        if not allowed_ips:
+            return
+        if not client_ip or client_ip == "unknown":
+            raise IssuesWithAuth("Client IP address is required for this credential")
+        if not client_ip_allowed(client_ip, allowed_ips):
+            print(f"Client IP {client_ip} is not allowed for user {userinfo.get('username', 'unknown')}. Allowed IPs: {allowed_ips}")
+            raise IssuesWithAuth("Client IP address is not allowed for this credential")
 
     def validateCertificate(self, certinfo):
         """Validate certificate validity."""
