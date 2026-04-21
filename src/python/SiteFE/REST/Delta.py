@@ -37,7 +37,7 @@ from SiteFE.REST.dependencies import (
     depGetModel,
     forbidExtraQueryParams,
 )
-from SiteRMLibs.CustomExceptions import ModelNotFound
+from SiteRMLibs.CustomExceptions import ModelNotFound, WrongInputError
 from SiteRMLibs.DefaultParams import (
     DELTA_COMMIT_TIMEOUT,
     LIMIT_DEFAULT,
@@ -88,6 +88,43 @@ def _record_delta_action(dbI, username, delta_id, action, sense_headers):
             }
         ],
     )
+
+
+def _parse_delta_tracking_record(record):
+    """Return a delta user-tracking record with parsed request metadata."""
+    current = dict(record)
+    try:
+        current["otherinfo"] = evaldict(current.get("otherinfo", {}))
+    except WrongInputError:
+        current["otherinfo"] = {}
+    return current
+
+
+def _get_delta_request_info(dbI, delta_id, limit=LIMIT_DEFAULT):
+    """Get requestor and tracking information for a delta."""
+    tracking = [
+        _parse_delta_tracking_record(record)
+        for record in dbI.get(
+            "deltasusertracking",
+            search=[["deltaid", delta_id]],
+            orderby=["insertdate", "ASC"],
+            limit=limit,
+        )
+    ]
+    submit_record = next((record for record in tracking if record.get("useraction") == "submit"), None)
+    request_record = submit_record or (tracking[0] if tracking else {})
+    request_headers = request_record.get("otherinfo", {}) if request_record else {}
+    request_info = {
+        "username": request_record.get("username", ""),
+        "insertdate": request_record.get("insertdate", ""),
+        "useraction": request_record.get("useraction", ""),
+        "email": request_headers.get("sense-request-email", ""),
+        "fullname": request_headers.get("sense-request-fullname", ""),
+        "host": request_headers.get("sense-request-host", ""),
+        "organization": request_headers.get("sense-request-organization", ""),
+        "otherinfo": request_headers,
+    }
+    return {"requestInfo": request_info, "userTracking": tracking}
 
 
 def _getdeltas(dbI, **kwargs):
@@ -457,7 +494,88 @@ async def getDeltaByID(
         delta["reduction"] = content.get("reduction", {})
     else:
         del delta["content"]
+    delta.update(_get_delta_request_info(deps["dbI"], delta_id))
     return APIResponse.genResponse(request, [delta], headers=headers)
+
+
+# =========================================================
+# /api/{sitename}/deltas/{delta_id}/requestinfo
+# =========================================================
+@router.get(
+    "/{sitename}/deltas/{delta_id}/requestinfo",
+    summary="Get Delta Request Information",
+    description=("Retrieves the requester and user-tracking information recorded for the specified delta ID."),
+    tags=["Deltas"],
+    responses={
+        **{
+            200: {
+                "description": "Delta request information retrieved successfully",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "requestInfo": {
+                                "username": "senseoprod",
+                                "insertdate": 1775310535,
+                                "useraction": "submit",
+                                "email": "tlehman@es.net",
+                                "fullname": "Thomas Lehman",
+                                "host": "https://sense-o.es.net:8443",
+                                "organization": "",
+                                "otherinfo": {
+                                    "sense-request-email": "tlehman@es.net",
+                                    "sense-request-fullname": "Thomas Lehman",
+                                    "sense-request-host": "https://sense-o.es.net:8443",
+                                    "sense-request-organization": "",
+                                },
+                            },
+                            "userTracking": [],
+                        }
+                    }
+                },
+            },
+            404: {
+                "description": "Not Found. Possible Reasons:\n - No sites configured in the system.\n - Delta not found in the database.",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "no_sites": {"detail": "Site <sitename> is not configured in the system. Please check the request and configuration."},
+                            "delta_not_found": {"detail": "Delta not found in the database."},
+                        }
+                    }
+                },
+            },
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def getDeltaRequestInfo(
+    request: Request,
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the delta request information for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
+    delta_id: str = Path(..., description="The ID of the delta to retrieve request information for."),
+    limit: int = Query(
+        LIMIT_DEFAULT,
+        description=f"The maximum number of tracking records to return. Defaults to {LIMIT_DEFAULT}.",
+        ge=LIMIT_MIN,
+        le=LIMIT_MAX,
+    ),
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("limit")),
+):
+    """
+    Get requestor and user-tracking information for the specified delta ID.
+    """
+    checkSite(deps, sitename)
+    delta = _getdeltas(deps["dbI"], deltaID=delta_id)
+    if not delta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Delta not found in the database.",
+        )
+    return APIResponse.genResponse(request, _get_delta_request_info(deps["dbI"], delta_id, limit=limit))
 
 
 # =========================================================

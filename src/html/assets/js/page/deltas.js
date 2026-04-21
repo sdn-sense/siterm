@@ -60,6 +60,46 @@ function deltaStates(deltaID, sitename, saveObj) {
     });
 }
 
+function appendInfoRow(saveObj, label, value) {
+    const row = $('<div class="row"></div>');
+    row.append($("<b></b>").text(label + ": "));
+    row.append(document.createTextNode(value || ""));
+    saveObj.append(row);
+}
+
+function appendDeltaRequestInfo(requestData, saveObj) {
+    const requestInfo = requestData["requestInfo"] || {};
+    const requestor = requestInfo["fullname"] || requestInfo["email"] || requestInfo["username"] || "Not recorded";
+
+    saveObj.append('<div class="row"><b>Request Information:<\/b><\/div>');
+    saveObj.append('<div class="row">============================================<\/div>');
+    appendInfoRow(saveObj, "Requestor", requestor);
+    appendInfoRow(saveObj, "Email", requestInfo["email"]);
+    appendInfoRow(saveObj, "Organization", requestInfo["organization"]);
+    appendInfoRow(saveObj, "Request Host", requestInfo["host"]);
+    appendInfoRow(saveObj, "Recorded User", requestInfo["username"]);
+}
+
+function loadDeltaRequestInfo(deltaID, sitename, saveObj) {
+    $.ajax({
+        url: "/api/" + sitename + "/deltas/" + deltaID + "/requestinfo",
+        dataType: "json",
+        data: {},
+        async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load delta request information",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+            appendDeltaRequestInfo({}, saveObj);
+        },
+        success: function(json) {
+            appendDeltaRequestInfo(json, saveObj);
+        },
+    });
+}
+
 function forceCommit(deltaID, sitename) {
     $.ajax({
         url: "/api/" + sitename + "/deltas/" + deltaID + "/actions/forcecommit",
@@ -128,6 +168,7 @@ function loadDelta(deltaID, sitename) {
                 json["modelid"] +
                 "<\/div>",
             );
+            loadDeltaRequestInfo(deltaID, sitename, model);
             // Delta Info From Orchestrator
             model.append(
                 '<div class="row"><b>Full Delta Information From Orhestrator:<\/b><\/div>',
