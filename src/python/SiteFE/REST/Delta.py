@@ -379,6 +379,7 @@ async def submitDelta(
         f"{item.id}.json",
     )
     saveContent(fname, outContent)
+    _record_delta_action(deps["dbI"], deps["user"]["user_info"]["sub"], item.id, "submit", _extract_sense_headers(request))
 
     # This is a blocking call, better approach is to reply and ask to check later.
     # But for now, we will block until we get output from PolicyService.
@@ -414,7 +415,6 @@ async def submitDelta(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to accept delta. Error Message: {outContent['Error']}.",
         )
-    _record_delta_action(deps["dbI"], deps["user"]["user_info"]["sub"], item.id, "submit", _extract_sense_headers(request))
     return APIResponse.genResponse(request, outContent, status_code=status.HTTP_201_CREATED)
 
 
