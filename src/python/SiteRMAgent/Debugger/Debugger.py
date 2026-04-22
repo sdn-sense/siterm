@@ -25,6 +25,8 @@ import socket
 import subprocess
 import sys
 
+import psutil
+
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE, PluginException
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig
@@ -38,7 +40,27 @@ COMPONENT = "Debugger"
 def getAllIps():
     """Get all visible IPs of this host."""
     result = {}
-    output = subprocess.check_output(["ip", "-o", "addr"], encoding="utf-8")
+    try:
+        output = subprocess.check_output(["ip", "-o", "addr"], encoding="utf-8")
+    except FileNotFoundError:
+        for iface, addresses in psutil.net_if_addrs().items():
+            for addr in addresses:
+                if addr.family == socket.AF_INET:
+                    family = "inet"
+                    ipCidr = f"{addr.address}/32"
+                elif addr.family == socket.AF_INET6:
+                    family = "inet6"
+                    ip = addr.address.split("%", 1)[0]
+                    if ipaddress.IPv6Address(ip).is_link_local:
+                        continue
+                    ipCidr = f"{ip}/128"
+                else:
+                    continue
+                if ipaddress.ip_address(ipCidr.split("/")[0]).is_loopback:
+                    continue
+                result.setdefault(family, {})
+                result[family].setdefault(ipCidr, iface)
+        return result
     for line in output.strip().split("\n"):
         parts = line.split()
         iface = parts[1]

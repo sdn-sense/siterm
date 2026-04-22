@@ -23,7 +23,7 @@ class ConfigFetcher:
         self.logger = logger
         self.gitObj = GitConfig()
         self.config = None
-        self.failedCounter = "/dev/shm/config-fetcher-counter"
+        self.failedCounter = os.getenv("CONFIG_FETCHER_COUNTER", "/dev/shm/config-fetcher-counter")
         self.FetcherReadyFile = f"{getTempDir()}/config-fetcher-ready"
         self.lastFetchTime = None
 
@@ -31,11 +31,18 @@ class ConfigFetcher:
         """Call to refresh thread for this specific class and reset parameters"""
         self.gitObj = GitConfig()
         self.config = None
-        self.failedCounter = "/dev/shm/config-fetcher-counter"
+        self.failedCounter = os.getenv("CONFIG_FETCHER_COUNTER", "/dev/shm/config-fetcher-counter")
         self.FetcherReadyFile = f"{getTempDir()}/config-fetcher-ready"
+
+    def _ensureCounterDir(self):
+        """Ensure the failure counter directory exists."""
+        counterDir = os.path.dirname(self.failedCounter)
+        if counterDir:
+            os.makedirs(counterDir, exist_ok=True)
 
     def _resetCounter(self):
         """Reset Counter that informs other services about failures"""
+        self._ensureCounterDir()
         with open(self.failedCounter, "w", encoding="utf-8") as fd:
             fd.write("0")
 
@@ -53,6 +60,7 @@ class ConfigFetcher:
         """Increment Counter that informs other services about failures"""
         self.logger.info("Incrementing failure counter")
         currentval = self._getCounter()
+        self._ensureCounterDir()
         with open(self.failedCounter, "w", encoding="utf-8") as fd:
             fd.write(str(currentval + 1))
 

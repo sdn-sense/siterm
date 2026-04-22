@@ -58,12 +58,15 @@ class RecurringAction:
 
     def _loadClasses(self):
         """Load all classes"""
+        disabledPlugins = self.config.get("agent", "disabled_plugins", [])
         for name, plugin in {
             "CertInfo": CertInfo,
             "KubeInfo": KubeInfo,
             "NetInfo": NetInfo,
             "ArpInfo": ArpInfo,
         }.items():
+            if name in disabledPlugins:
+                continue
             self.classes[name] = plugin(self.config, self.logger)
 
     def refreshthread(self):

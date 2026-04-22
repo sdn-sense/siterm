@@ -50,7 +50,7 @@ app.include_router(topo_router, prefix="/api")
 app.include_router(monitoring_router, prefix="/api")
 app.include_router(service_router, prefix="/api")
 
-app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="ui")
+app.mount("/", StaticFiles(directory=os.getenv("SITERM_STATIC_DIR", "/var/www/html"), html=True), name="ui")
 
 
 @app.middleware("http")

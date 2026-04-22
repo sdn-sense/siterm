@@ -65,6 +65,7 @@ HOSTSERVICEENUMALL = Enum("HOSTSERVICEENUMA", {name: name for name in HOSTSERVIC
 
 def getstartupconfig(conffile="/etc/siterm.yaml"):
     """Get local config for info where all configs are kept in git."""
+    conffile = os.getenv("SITERM_CONFIG_FILE", conffile)
     if not os.path.isfile(conffile):
         print(f"Config file {conffile} does not exist.")
         raise Exception(f"Config file {conffile} does not exist.")

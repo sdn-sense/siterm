@@ -32,7 +32,7 @@ def parseStorageInfo(tmpOut, storageInfo):
                 localOut["Keys"] = line.split()
             else:
                 newList = [tryConvertToNumeric(x) for x in line.split()]
-                if newList:
+                if newList and len(newList) == len(localOut["Keys"]):
                     localOut["Values"].append(newList)
     for oneLine in localOut["Values"]:
         storageInfo["Values"].setdefault(oneLine[0], {})
@@ -82,6 +82,8 @@ class MemDiskStats:
         outStorage = {"FileSystems": {}, "total_gb": 0, "app": "FileSystem"}
         totalSum = 0
         for mountName, mountVals in storageInfo["Values"].items():
+            if "Avail_gb" not in mountVals:
+                continue
             outStorage["FileSystems"][mountName] = mountVals["Avail_gb"]
             totalSum += int(mountVals["Avail_gb"])
         outStorage["total_gb"] = totalSum
@@ -121,6 +123,15 @@ class MemDiskStats:
                 pass
             except psutil.ZombieProcess:
                 pass
+            except psutil.AccessDenied:
+                pass
 
-        for proc in psutil.process_iter(attrs=None, ad_value=None):
-            procWrapper(proc, services, lookupid)
+        try:
+            procs = psutil.process_iter(attrs=None, ad_value=None)
+        except (psutil.AccessDenied, PermissionError):
+            return
+        try:
+            for proc in procs:
+                procWrapper(proc, services, lookupid)
+        except (psutil.AccessDenied, PermissionError):
+            return
