@@ -37,11 +37,34 @@ class GitConfig:
             "GIT_URL": {"optional": True, "default": "https://github.com/"},
             "GIT_BRANCH": {"optional": True, "default": "master"},
             "MD5": {"optional": True, "default": generateMD5(getHostname())},
+            "MAIN_CONFIG_FILE": {"optional": True, "default": ""},
+            "AUTH_CONFIG_FILE": {"optional": True, "default": ""},
+            "AUTH_RE_CONFIG_FILE": {"optional": True, "default": ""},
+            "MAPPING_TYPE": {"optional": True, "default": ""},
         }
         self.getLocalConfig()
 
+    def manualConfigEnabled(self):
+        """Return True when local configuration files should be used instead of Git."""
+        return bool(self.config.get("MAIN_CONFIG_FILE"))
+
+    def _getYamlFile(self, filepath, description, optional=False):
+        """Load YAML configuration from a local file."""
+        if not filepath:
+            if optional:
+                return {}
+            raise Exception(f"{description} is not configured.")
+        if not os.path.exists(filepath):
+            if optional:
+                return {}
+            raise Exception(f"{description} file {filepath} does not exist.")
+        with open(filepath, "r", encoding="utf-8") as fd:
+            return yload(fd) or {}
+
     def getGitRepo(self):
         """Get or initialize Git repository safely."""
+        if self.manualConfigEnabled():
+            return None
         gitrepourl = self.config["GIT_URL"] + self.config["GIT_REPO"]
         if not gitrepourl.endswith(".git"):
             gitrepourl += ".git"
@@ -71,6 +94,9 @@ class GitConfig:
     def getLocalConfig(self):
         """Get local config for info where all configs are kept in git."""
         self.config = getstartupconfig()
+        for key in ["MAIN_CONFIG_FILE", "AUTH_CONFIG_FILE", "AUTH_RE_CONFIG_FILE", "MAPPING_TYPE"]:
+            if os.getenv(key):
+                self.config[key] = os.getenv(key)
         for key, requirement in list(self.defaults.items()):
             if key not in list(self.config.keys()):
                 # Check if it is optional or not;
@@ -78,6 +104,8 @@ class GitConfig:
                     print(f"Configuration /etc/siterm.yaml missing non optional config parameter {key}")
                     raise Exception(f"Configuration /etc/siterm.yaml missing non optional config parameter {key}")
                 self.config[key] = requirement["default"]
+        if self.config["MAIN_CONFIG_FILE"] and self.config["MAPPING_TYPE"] not in ["", "FE", "Agent"]:
+            raise Exception("MAPPING_TYPE must be one of FE or Agent when MAIN_CONFIG_FILE is configured.")
 
     def _getGitMapping(self):
         """Get Site mapping from Local Git Repository."""
@@ -136,6 +164,26 @@ class GitConfig:
                 frontendAuthRe = yload(fd)
             return frontendAuthRe
         return {}
+
+    def _getManualConfigType(self):
+        """Get manual configuration type from startup config or infer it from auth file presence."""
+        if self.config["MAPPING_TYPE"]:
+            return self.config["MAPPING_TYPE"]
+        if self.config["AUTH_CONFIG_FILE"] or self.config["AUTH_RE_CONFIG_FILE"]:
+            return "FE"
+        return "Agent"
+
+    def _getManualMainConfig(self):
+        """Get main configuration from a manually supplied file."""
+        return self._getYamlFile(self.config["MAIN_CONFIG_FILE"], "Manual main configuration")
+
+    def _getManualAuth(self):
+        """Get frontend authentication configuration from a manually supplied file."""
+        return self._getYamlFile(self.config["AUTH_CONFIG_FILE"], "Manual frontend authentication")
+
+    def _getManualAuthRe(self):
+        """Get frontend authentication refresh configuration from a manually supplied file."""
+        return self._getYamlFile(self.config["AUTH_RE_CONFIG_FILE"], "Manual frontend authentication refresh", optional=True)
 
     @staticmethod
     def __valReplacer(val, keyword, replacement):
@@ -259,7 +307,10 @@ class GitConfig:
     def getGitAgentConfig(self):
         """Get Git Agent Config."""
         if self.config["MAPPING"]["type"] == "Agent":
-            self.config["MAIN"] = self._getAgentConfig()
+            if self.manualConfigEnabled():
+                self.config["MAIN"] = self._getManualMainConfig()
+            else:
+                self.config["MAIN"] = self._getAgentConfig()
             self.presetAgentDefaultConfigs()
 
     @staticmethod
@@ -591,21 +642,29 @@ class GitConfig:
     def getGitFEConfig(self):
         """Get Git FE Config."""
         if self.config["MAPPING"]["type"] == "FE":
-            self.config["MAIN"] = self._getFrontendConfig()
-            self.config["AUTH"] = self._getFrontendAuth()
-            self.config["AUTH_RE"] = self._getFrontendAuthRe()
+            if self.manualConfigEnabled():
+                self.config["MAIN"] = self._getManualMainConfig()
+                self.config["AUTH"] = self._getManualAuth()
+                self.config["AUTH_RE"] = self._getManualAuthRe()
+            else:
+                self.config["MAIN"] = self._getFrontendConfig()
+                self.config["AUTH"] = self._getFrontendAuth()
+                self.config["AUTH_RE"] = self._getFrontendAuthRe()
             self.presetFEDefaultConfigs()
 
     def getGitConfig(self):
         """Get git config from configured github repo."""
         if not self.config:
             self.getLocalConfig()
-        self.config["MAPPING"] = self._getGitMapping()
-        if self.config["MD5"] not in list(self.config["MAPPING"].keys()):
-            msg = f"Configuration is not available for this MD5 {self.config['MD5']} tag in GIT REPO {self.config['GIT_REPO']}"
-            print(msg)
-            raise Exception(msg)
-        self.config["MAPPING"] = copy.deepcopy(self.config["MAPPING"][self.config["MD5"]])
+        if self.manualConfigEnabled():
+            self.config["MAPPING"] = {"type": self._getManualConfigType(), "config": "manual"}
+        else:
+            self.config["MAPPING"] = self._getGitMapping()
+            if self.config["MD5"] not in list(self.config["MAPPING"].keys()):
+                msg = f"Configuration is not available for this MD5 {self.config['MD5']} tag in GIT REPO {self.config['GIT_REPO']}"
+                print(msg)
+                raise Exception(msg)
+            self.config["MAPPING"] = copy.deepcopy(self.config["MAPPING"][self.config["MD5"]])
         self.getGitFEConfig()
         self.getGitAgentConfig()
 

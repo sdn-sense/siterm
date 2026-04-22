@@ -58,7 +58,10 @@ class ConfigFetcher:
 
     def _main(self):
         """Start Config Fetcher Service."""
-        self.gitObj.getGitRepo()
+        if self.gitObj.manualConfigEnabled():
+            self.logger.info("Manual configuration files are configured. Skipping Git config fetch.")
+        else:
+            self.gitObj.getGitRepo()
         self.gitObj.getGitConfig()
         # Create tmp file that fetcher is done. {tmpdir}/config-fetcher-ready
         if not os.path.isfile(self.FetcherReadyFile):
