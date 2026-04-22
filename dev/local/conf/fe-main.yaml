@@ -1,0 +1,16 @@
+---
+general:
+  sitename: T0_US_LOCALDEV
+  webdomain: http://127.0.0.1:8080
+  logDir: dev/local/logs/sitefe
+  logLevel: DEBUG
+  privatedir: dev/local/state/fe
+T0_US_LOCALDEV:
+  domain: localhost
+  latitude: 0
+  longitude: 0
+  plugin: raw
+  privatedir: dev/local/state/fe/T0_US_LOCALDEV
+  year: "2026"
+  switch: []
+  vlan_range: "100-110"

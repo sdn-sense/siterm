@@ -1,0 +1,4 @@
+---
+SITENAME: T0_US_LOCALDEV
+MAPPING_TYPE: Agent
+MAIN_CONFIG_FILE: dev/local/conf/debugger-main.yaml

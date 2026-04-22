@@ -1,0 +1,6 @@
+---
+SITENAME: T0_US_LOCALDEV
+MAPPING_TYPE: FE
+MAIN_CONFIG_FILE: dev/local/conf/fe-main.yaml
+AUTH_CONFIG_FILE: dev/local/conf/fe-auth.yaml
+AUTH_RE_CONFIG_FILE: dev/local/conf/fe-auth-re.yaml
