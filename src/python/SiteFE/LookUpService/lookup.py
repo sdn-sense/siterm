@@ -430,7 +430,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             # If models are different, we need to update all devices information
             self.switch.deviceUpdate(self.sitename)
             speedup = True
-        elif self.warningstart and self.warningstart >= getUTCnow() + 3600:  # If warnings raise an hour ago - refresh
+        elif self.warningstart and self.warningstart <= getUTCnow() - 3600:  # If warnings raise an hour ago - refresh
             self.warningstart = 0
             self.logger.info("Warnings were raised more than 1hr ago. Informing to renew all devices state")
             self.switch.deviceUpdate(self.sitename)

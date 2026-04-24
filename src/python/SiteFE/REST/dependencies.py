@@ -198,7 +198,7 @@ def depGetModel(dbI, **kwargs):
 
 def checkReadyState(deps):
     """Check if the system is ready for delta and model operations."""
-    if not (firstRunFinished("LookUpService") or firstRunFinished("ProvisioningService")):
+    if not (firstRunFinished("LookUpService") and firstRunFinished("ProvisioningService")):
         return False
     # Check database connection.
     return deps["dbI"].isDBReady()

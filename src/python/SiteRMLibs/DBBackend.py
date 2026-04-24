@@ -12,7 +12,7 @@ from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from SiteRMLibs.DBModels import REGISTRY, Base
-from sqlalchemy import create_engine, text
+from sqlalchemy import URL, create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 # ==========================================================
@@ -65,7 +65,15 @@ def buildDatabaseURL() -> str:
     database = os.getenv("MARIA_DB_DATABASE", "sitefe")
     charset = os.getenv("MARIA_DB_CHARSET", "utf8mb4")
 
-    return f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}?charset={charset}"
+    return URL.create(
+        "mysql+pymysql",
+        username=user,
+        password=password,
+        host=host,
+        port=int(port),
+        database=database,
+        query={"charset": charset},
+    ).render_as_string(hide_password=False)
 
 
 # ==========================================================

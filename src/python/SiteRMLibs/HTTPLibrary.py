@@ -306,6 +306,7 @@ class Requests:
                     self._logMessage("Failed to find access_token in the response while renewing Bearer token using refresh token.")
                     self._logMessage(f"Full response: {response.text}")
                     raise HTTPException(f"Failed to find access_token in the response while renewing Bearer token using refresh token. Full response: {response.text}")
+                return
             if response.status_code == 401:
                 # Unauthorized, possibly refresh token expired or invalid
                 self._logMessage("Refresh token unauthorized, obtaining new Bearer token.")

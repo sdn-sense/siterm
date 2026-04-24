@@ -13,7 +13,6 @@ import hashlib
 import ipaddress
 import json
 import os
-import pprint
 import re
 import secrets
 import traceback
@@ -512,7 +511,6 @@ class AuthHandler:
         if token.count(".") != 2:
             raise IssuesWithAuth("Invalid token format")
         try:
-            print(f"Validating token TODO: REMOVE: {token}")
             unverified_header = jwt.get_unverified_header(token)
             kid = unverified_header.get("kid")
             if not kid:
@@ -568,8 +566,6 @@ class AuthHandler:
                     except IssuesWithAuth as ex:
                         del self.allowedWCerts[userinfo["full_dn"]]
                         print(f"Error normalizing permissions for user {user}: {ex}")
-            print(f"Allowed Certs: {pprint.pformat(self.allowedCerts)}")
-            print(f"Allowed Wildcard Certs: {pprint.pformat(self.allowedWCerts)}")
 
     def checkAuthorized(self, certinfo):
         """Check if user is authorized."""
