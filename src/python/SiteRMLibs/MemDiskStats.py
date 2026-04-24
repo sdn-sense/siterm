@@ -119,9 +119,9 @@ class MemDiskStats:
             """Process Wrapper to catch exited process or zombie process"""
             try:
                 self._processStats(proc, services, lookupid)
-            except psutil.NoSuchProcess:
-                pass
             except psutil.ZombieProcess:
+                pass
+            except psutil.NoSuchProcess:
                 pass
             except psutil.AccessDenied:
                 pass

@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """Helper script to test token exchange and refresh flow."""
 
-import sys
-import json
 import base64
+import json
+import sys
 from pathlib import Path
 
 import httpx
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import rsa, ec, padding
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
-
 
 # ============================
 # configuration / inputs

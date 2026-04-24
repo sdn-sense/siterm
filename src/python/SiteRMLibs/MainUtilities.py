@@ -33,15 +33,13 @@ from enum import Enum
 
 import simplejson as json
 from rdflib import Graph
-from yaml import safe_load as yload
-
 from SiteRMLibs.CustomExceptions import (
     FailedInterfaceCommand,
     NotFoundError,
     WrongInputError,
 )
 from SiteRMLibs.DBBackend import dbinterface
-
+from yaml import safe_load as yload
 
 HOSTSERVICES = [
     "Agent",
@@ -320,9 +318,11 @@ def execute(command, logger, raiseError=True):
         return False
     return True
 
+
 def getTempDir():
     """Get the temporary directory."""
     return tempfile.gettempdir()
+
 
 def createDirs(fullDirPath):
     """Create Directories on fullDirPath."""
@@ -589,7 +589,6 @@ def encodebase64(inputStr, encodeFlag=True):
         raise TypeError(f"Unsupported type: {type(inputStr)}")
 
     return base64.b64encode(input_bytes).decode("utf-8")
-
 
 
 def decodebase64(inputStr, decodeFlag=True):

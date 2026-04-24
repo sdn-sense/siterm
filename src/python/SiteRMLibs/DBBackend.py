@@ -297,7 +297,6 @@ class dbinterface:
 
         return "OK", "", ""
 
-
     def delete_comp(self, calltype, column, op, value):
         """Delete rows with a comparison filter."""
         model = REGISTRY.get(calltype)

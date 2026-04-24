@@ -46,8 +46,8 @@ COMPONENT = "DSCP"
 #   byte1 = (TC & 0x0f) << 4   (lower nibble of TC, upper nibble of Flow Label)
 _DSCP_CLASSES = {
     "guaranteedCapped": {"dscp": 46, "ipv4_tos": 0xB8, "ipv6_b0": 0x6B, "ipv6_b1": 0x80, "ipv4_prio": 1, "ipv6_prio": 11},
-    "softCapped":       {"dscp": 18, "ipv4_tos": 0x48, "ipv6_b0": 0x64, "ipv6_b1": 0x80, "ipv4_prio": 2, "ipv6_prio": 12},
-    "bestEffort":       {"dscp":  0, "ipv4_tos": 0x00, "ipv6_b0": 0x60, "ipv6_b1": 0x00, "ipv4_prio": 3, "ipv6_prio": 13},
+    "softCapped": {"dscp": 18, "ipv4_tos": 0x48, "ipv6_b0": 0x64, "ipv6_b1": 0x80, "ipv4_prio": 2, "ipv6_prio": 12},
+    "bestEffort": {"dscp": 0, "ipv4_tos": 0x00, "ipv6_b0": 0x60, "ipv6_b1": 0x00, "ipv4_prio": 3, "ipv6_prio": 13},
 }
 
 
@@ -124,9 +124,7 @@ class DSCP:
         cls = _DSCP_CLASSES[svc_type]
         # IPv4: overwrite TOS byte
         execute(
-            f"tc filter add dev {dev} parent 1: protocol ip prio {cls['ipv4_prio']} "
-            f"u32 match u32 0 0 "
-            f"action pedit munge ip tos set {hex(cls['ipv4_tos'])} action ok",
+            f"tc filter add dev {dev} parent 1: protocol ip prio {cls['ipv4_prio']} u32 match u32 0 0 action pedit munge ip tos set {hex(cls['ipv4_tos'])} action ok",
             self.logger,
             raiseError=False,
         )

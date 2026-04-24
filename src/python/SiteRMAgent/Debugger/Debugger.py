@@ -26,7 +26,6 @@ import subprocess
 import sys
 
 import psutil
-
 from SiteRMLibs.CustomExceptions import FailedGetDataFromFE, PluginException
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.GitConfig import getGitConfig

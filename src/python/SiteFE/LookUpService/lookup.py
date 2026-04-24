@@ -14,7 +14,7 @@ import time
 from datetime import datetime, timezone
 
 from rdflib import Graph
-from rdflib.compare import isomorphic, graph_diff
+from rdflib.compare import graph_diff, isomorphic
 from SiteFE.LookUpService.modules.deltainfo import DeltaInfo
 from SiteFE.LookUpService.modules.nodeinfo import NodeInfo
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper

@@ -107,7 +107,7 @@ class StateMachine:
 
         for delta in activating_deltas:
             if delta["updatedate"] < int(getUTCnow() - 180):
-                return (f"Not able to accept new deltas. Delta {delta['uid']} is still in state activating after 3 minutes.")
+                return f"Not able to accept new deltas. Delta {delta['uid']} is still in state activating after 3 minutes."
 
         if activating_deltas:
             self.logger.info("There are deltas still in activating state.")

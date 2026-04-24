@@ -135,15 +135,11 @@ def getClientIP(request):
 
 def loguseraction(request, userinfo):
     """Print user action to log."""
-    client_host = getClientIP(request)
-    method = request.method
-    url = str(request.url)
-    timestamp = getUTCnow()
-    log_entry = {
-        "timestamp": timestamp,
-        "client_host": client_host,
-        "method": method,
-        "url": url,
+    _ = {
+        "timestamp": getUTCnow(),
+        "client_host": getClientIP(request),
+        "method": request.method,
+        "url": str(request.url),
         "userinfo": userinfo,
     }
     # TODO: DB Write.
