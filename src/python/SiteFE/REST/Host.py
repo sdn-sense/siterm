@@ -113,6 +113,7 @@ class HostItem(BaseModel):
                                             "hostname": "node-2-7.sdsc.optiputer.net",
                                             "interfaces": ["enp65s0f1np1"],
                                             "noqos": True,
+                                            "nodscp": False,
                                             "norules": False,
                                             "rsts_enabled": "ipv4,ipv6",
                                         },

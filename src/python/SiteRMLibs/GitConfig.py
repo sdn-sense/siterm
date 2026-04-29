@@ -244,6 +244,7 @@ class GitConfig:
                     "norules": False,
                     "rsts_enabled": "ipv4,ipv6",
                     "noqos": False,
+                    "nodscp": False,
                 },
                 "qos": {
                     "policy": "hostlevel",

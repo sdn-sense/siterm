@@ -177,7 +177,10 @@ class Ruler(DSCP, QOS, OverlapLib, BWService, Timing):
                 self.startqos()
             else:
                 self.logger.info("QoS is not configured to be applied")
-            self.startdscp()
+            if not self.config.getboolean("agent", "nodscp"):
+                self.startdscp()
+            else:
+                self.logger.info("DSCP is not configured to be applied")
         else:
             self.logger.info("Agent is not configured to apply rules")
         self.logger.info("Ended function start")
