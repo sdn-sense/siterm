@@ -28,3 +28,4 @@ opentelemetry-sdk>=1.39.1,<1.40.0
 opentelemetry-instrumentation-fastapi>=0.60b1,<0.61b0
 opentelemetry-instrumentation-logging>=0.60b1,<0.61b0
 opentelemetry-exporter-otlp>=1.39.1,<1.40.0
+lxml>=6.1.0 # not directly required, pinned by Snyk to avoid a vulnerability
