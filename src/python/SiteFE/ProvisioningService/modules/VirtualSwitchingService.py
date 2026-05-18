@@ -95,7 +95,14 @@ class VirtualSwitchingService:
         """Default yaml dict setup"""
         tmpD = self._getdefaultIntf(host, self.acttype)
         vlan = self._getVlanID(host, port, portDict)
-        vlanName = f"Vlan{vlan}"
+        # Junos MX/PTX virtual-switch mode uses `VLAN-<id>` naming on-device
+        # (routing-instances <ri> bridge-domains|vlans VLAN-<id>); standard mode
+        # and all other vendors keep the legacy `Vlan<id>` naming.
+        ansible_params = self.config["MAIN"].get(host, {}).get("ansible_params", {}) or {}
+        if ansible_params.get("vlanmode") in ("mx", "ptx"):
+            vlanName = f"VLAN-{vlan}"
+        else:
+            vlanName = f"Vlan{vlan}"
         vlanDict = tmpD.setdefault(vlanName, {})
         vlanDict.setdefault("name", vlanName)
         vlanDict.setdefault("vlanid", vlan)

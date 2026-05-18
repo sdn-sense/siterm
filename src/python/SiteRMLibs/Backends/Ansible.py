@@ -293,6 +293,11 @@ class Switch:
             return int(port[5:])
         if port.startswith("Vlan"):
             return int(port[4:])
+        # Junos MX/PTX virtual-switch naming: VLAN-<id>
+        if port.startswith("VLAN-"):
+            suffix = port[5:]
+            if suffix.isdigit():
+                return int(suffix)
         if port[-4:].isdigit():
             return int(port[-4:])
         if port.split(".")[-1].isdigit():
