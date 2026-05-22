@@ -679,16 +679,16 @@ class GitConfig:
         """Custom get from dictionary in a way like configparser"""
         try:
             if key not in self.config["MAIN"]:
-                if default:
+                if default is not None:
                     return default
                 raise NoSectionError(f"{key} is not available in configuration.")
             if subkey not in self.config["MAIN"][key]:
-                if default:
+                if default is not None:
                     return default
                 raise NoOptionError(f"{subkey} is not available under {key} section in configuration.")
             return self.config["MAIN"].get(key, {}).get(subkey, {})
         except AttributeError as ex:
-            if default:
+            if default is not None:
                 return default
             raise ex
 
