@@ -23,6 +23,15 @@ class HostCertHandler:
         self.gitConf = getGitConfig()
 
     @staticmethod
+    def loadCertChain(certcontent):
+        """Load all certificates from a PEM file (leaf + any embedded intermediates)."""
+        certs = []
+        for block in certcontent.split("-----BEGIN CERTIFICATE-----")[1:]:
+            pem = "-----BEGIN CERTIFICATE-----" + block.split("-----END CERTIFICATE-----")[0] + "-----END CERTIFICATE-----"
+            certs.append(crypto.load_certificate(crypto.FILETYPE_PEM, pem))
+        return certs
+
+    @staticmethod
     def loadCACerts(capath):
         """Load CA certificates."""
         # Load CA certificates from /etc/grid-security/certificates
@@ -52,7 +61,9 @@ class HostCertHandler:
             with open(keypath, "r", encoding="utf-8") as fd:
                 keycontent = fd.read()
 
-            cert = crypto.load_certificate(crypto.FILETYPE_PEM, certcontent)
+            certchain = self.loadCertChain(certcontent)
+            cert = certchain[0]
+            intermediates = certchain[1:]
             key = crypto.load_privatekey(crypto.FILETYPE_PEM, keycontent)
             castore = self.loadCACerts("/etc/grid-security/certificates")
 
@@ -64,7 +75,7 @@ class HostCertHandler:
             out["fullDN"] = f"{out['issuer']}{out['subject']}"
 
             try:
-                context = crypto.X509StoreContext(castore, cert)
+                context = crypto.X509StoreContext(castore, cert, chain=intermediates)
                 context.verify_certificate()
                 if cert.get_pubkey().to_cryptography_key().public_numbers() != key.to_cryptography_key().public_key().public_numbers():
                     out["failure"] = "Certificate and private key do not match!"
