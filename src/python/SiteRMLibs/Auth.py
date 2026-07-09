@@ -26,7 +26,7 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from cryptography.hazmat.primitives.hashes import Hash
-from cryptography.hazmat.primitives.serialization import Encoding, load_pem_public_key
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from cryptography.x509.oid import NameOID
 from jwt.algorithms import RSAAlgorithm
 from OpenSSL import crypto
@@ -91,16 +91,22 @@ def load_ca_store(ca_dir):
     return store
 
 
-def verify_cert_chain(cert, ca_store):
+def load_cert_chain(cert_pem: str):
+    """Load all certificates from a PEM string (leaf + any embedded intermediates)."""
+    certs = []
+    for block in cert_pem.split("-----BEGIN CERTIFICATE-----")[1:]:
+        pem = "-----BEGIN CERTIFICATE-----" + block.split("-----END CERTIFICATE-----")[0] + "-----END CERTIFICATE-----"
+        certs.append(crypto.load_certificate(crypto.FILETYPE_PEM, pem))
+    return certs
+
+
+def verify_cert_chain(cert_pem: str, ca_store):
     """
-    cert  : leaf cryptography.x509.Certificate
+    cert_pem : PEM-encoded certificate string (leaf, optionally followed by intermediates)
     ca_store : OpenSSL.crypto.X509Store
     """
-    openssl_cert = crypto.load_certificate(
-        crypto.FILETYPE_PEM,
-        cert.public_bytes(Encoding.PEM),
-    )
-    ctx = crypto.X509StoreContext(ca_store, openssl_cert)
+    certchain = load_cert_chain(cert_pem)
+    ctx = crypto.X509StoreContext(ca_store, certchain[0], chain=certchain[1:])
     ctx.verify_certificate()  # raises on failure
 
 
@@ -237,7 +243,7 @@ class AuthHandler:
         # or if container is restarted
         try:
             cert = load_cert(input_cert)
-            verify_cert_chain(cert, self.oidc_ca_store)
+            verify_cert_chain(input_cert, self.oidc_ca_store)
             certinfo = load_cert_info(cert)
             user = self.validateCertificate(certinfo)
             self.validateAllowedIP(user, client_ip)
@@ -287,7 +293,7 @@ class AuthHandler:
             return False, None
         try:
             cert = load_cert(record["input_cert"])
-            verify_cert_chain(cert, self.oidc_ca_store)
+            verify_cert_chain(record["input_cert"], self.oidc_ca_store)
             certinfo = load_cert_info(cert)
             user = self.validateCertificate(certinfo)
             self.validateAllowedIP(user, client_ip)
