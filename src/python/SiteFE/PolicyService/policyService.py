@@ -32,6 +32,7 @@ from SiteRMLibs.CustomExceptions import (
     OverlapException,
     ServiceNotReady,
     WrongIPAddress,
+    exceptionCode,
 )
 from SiteRMLibs.DefaultParams import DELTA_COMMIT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
@@ -58,21 +59,15 @@ from SiteRMLibs.timing import Timing
 
 
 def getError(ex):
-    """Get Error from Exception."""
-    errors = {
-        IOError: -1,
-        KeyError: -2,
-        AttributeError: -3,
-        IndentationError: -4,
-        ValueError: -5,
-        BadSyntax: -6,
-        OverlapException: -7,
-        WrongIPAddress: -8,
-    }
+    """Get Error from Exception.
+
+    Delegates code lookup to the canonical exceptionCode() in CustomExceptions.
+    BadSyntax (rdflib) is passed by class; the fallback -100 is returned when
+    no explicit mapping exists, keeping the behaviour identical to before.
+    """
     out = {"errType": "Unrecognized", "errNo": -100, "errMsg": "Unset"}
     out["errType"] = str(ex.__class__)
-    if ex.__class__ in errors:
-        out["errNo"] = str(errors[ex.__class__])
+    out["errNo"] = str(exceptionCode(ex.__class__))
     if hasattr(ex, "message"):
         out["errMsg"] = ex.message
     else:

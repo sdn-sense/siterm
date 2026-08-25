@@ -532,10 +532,22 @@ class PromOut:
             labelnames=["servicename", "hostname"],
             registry=registry,
         )
+        # siterm_error_events: exposes the stable numeric error code for each
+        # service. Value is the exccode integer (-100 = unknown, 0 = no error
+        # when state is OK). Labels never carry a raw exception string.
+        errorEvents = Gauge(
+            "siterm_error_events",
+            "Stable machine-readable error code for the last service event "
+            "(see error-codes documentation). 0 when state is OK, "
+            "negative integer otherwise.",
+            ["servicename", "hostname", "exccode"],
+            registry=registry,
+        )
         services = self.dbI.get("servicestates")
         for service in services:
             state = "UNKNOWN"
             runtime = -1
+            exccode = service.get("exccode", -100)
             if service["servicename"] in ["SNMPMonitoring", "ProvisioningService", "LookUpService"] and service.get("hostname", "UNSET") != "default":
                 continue
             if int(self.timenow - service["updatedate"]) < SERVICE_DEAD_TIMEOUT:
@@ -549,6 +561,13 @@ class PromOut:
             serviceState.labels(**labels).state(state)
             infoState.labels(**labels).info({"version": service["version"]})
             runtimeInfo.labels(**labels).set(runtime)
+            # Report error code: 0 when OK (no error), exccode otherwise.
+            event_exccode = 0 if state == "OK" else exccode
+            errorEvents.labels(
+                servicename=service["servicename"],
+                hostname=service.get("hostname", "UNSET"),
+                exccode=str(event_exccode),
+            ).set(event_exccode)
         self.__getSNMPData(registry)
         self.__getAgentData(registry)
         self.__memStats(registry)

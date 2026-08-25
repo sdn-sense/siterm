@@ -10,7 +10,16 @@ Date: 2021/12/01
 
 
 def exceptionCode(excName):
-    """Return Exception code."""
+    """Return a stable, machine-readable error code for an exception class or
+    a named non-exception sentinel string (e.g. 'SNMP_TIMEOUT').
+
+    Codes are **permanent**: once assigned a number is never reused or changed.
+
+    Exception-class codes  : -1   …  -99  (negative, grouped by domain)
+    Non-exception sentinels: -101 … -199  (SNMP, Ansible, etc.)
+    Unknown / fallback     : -100
+    """
+    # --- Exception-class codes (-1 … -99) ---
     exCodes = {
         IOError: -1,
         KeyError: -2,
@@ -47,9 +56,32 @@ def exceptionCode(excName):
         ServiceNotReady: -33,
         HTTPServerNotReady: -34,
         HTTPException: -35,
+        # Codes -36 … -99 reserved for future exception classes.
+        # NOTE: WrongIPAddress and OverSubscribeException intentionally omitted
+        # from the original map are assigned here.
+        WrongIPAddress: -36,
+        OverSubscribeException: -37,
+        FailedGetDataFromFE: -38,
+        SwitchException: -39,
+        RequestWithoutCert: -40,
+        IssuesWithAuth: -41,
     }
+
+    # --- Named non-exception sentinel codes (-101 … -199) ---
+    # These cover infrastructure events that do not map to a Python exception.
+    sentinelCodes = {
+        "SNMP_TIMEOUT": -101,
+        "SNMP_UNKNOWN_OID": -102,
+        "ANSIBLE_UNREACHABLE": -103,
+        "ANSIBLE_PLAYBOOK_FAILED": -104,
+        "SERVICE_DEAD": -105,
+        "SERVICE_DOWN": -106,
+    }
+
     if excName in exCodes:
         return exCodes[excName]
+    if excName in sentinelCodes:
+        return sentinelCodes[excName]
     return -100
 
 

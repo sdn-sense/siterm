@@ -323,6 +323,7 @@ class ServiceStateItem(BaseModel):
     runtime: int = Field(default=-1, ge=-1)  # Runtime in seconds, default is -1
     version: constr(strip_whitespace=True, min_length=1, max_length=50) = "UNSET"  # Version of the service, default is "UNSET"
     exc: constr(strip_whitespace=True, min_length=1, max_length=4096) = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
+    exccode: int = Field(default=-100)  # Stable machine-readable error code (see CustomExceptions.exceptionCode). -100 = unknown.
 
 
 # GET
@@ -417,6 +418,7 @@ async def addservicestate(
             "insertdate": getUTCnow(),
             "updatedate": getUTCnow(),
             "exc": str(item.exc)[:4095],
+            "exccode": item.exccode,
         }
         services = deps["dbI"].get(
             "servicestates",

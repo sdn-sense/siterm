@@ -25,6 +25,7 @@ from SiteRMLibs.CustomExceptions import (
     NoOptionError,
     NoSectionError,
     ServiceWarning,
+    exceptionCode,
 )
 from SiteRMLibs.DefaultParams import GIT_CONFIG_REFRESH_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
@@ -157,6 +158,7 @@ class DBBackend:
                 "insertdate": getUTCnow(),
                 "updatedate": getUTCnow(),
                 "exc": str(kwargs.get("exc", "No Exception provided by service"))[:4095],
+                "exccode": kwargs.get("exccode", -100),
             }
             dbobj = getVal(self.dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
             services = dbobj.get(
@@ -191,6 +193,7 @@ class DBBackend:
                 "hostname": getHostname(self.config, self.component),
                 "version": runningVersion,
                 "exc": kwargs.get("exc", "No Exception provided by service")[:4095],
+                "exccode": kwargs.get("exccode", -100),
             }
             self.handlers[kwargs["sitename"]].makeHttpCall(
                 "POST",
@@ -537,11 +540,22 @@ class Daemon(DBBackend):
             sys.exit(2)
         sys.exit(0)
 
-    def reporter(self, state, sitename, stwork, exc=None):
-        """Report Service State to FE"""
+    def reporter(self, state, sitename, stwork, exc=None, excType=None):
+        """Report Service State to FE.
+
+        Args:
+            state:    Service state string (OK / WARNING / FAILED / …).
+            sitename: Site name.
+            stwork:   UTC epoch second when the work unit started.
+            exc:      Human-readable exception string (may be truncated for storage).
+            excType:  The exception *class* (or a sentinel string such as
+                      'SNMP_TIMEOUT') passed to exceptionCode() to produce a
+                      stable numeric error code stored as ``exccode``.
+        """
         if not self.inargs.noreporting:
             runtime = int(getUTCnow()) - stwork
             exc = exc if exc else "No Exception provided by service"
+            exccode = exceptionCode(excType) if excType is not None else -100
             self._pubStateRemote(
                 servicename=self.component,
                 servicestate=state,
@@ -549,6 +563,7 @@ class Daemon(DBBackend):
                 version=runningVersion,
                 runtime=runtime,
                 exc=exc,
+                exccode=exccode,
             )
             # Log state also to local file
             createDirs(f"{getTempDir()}/siterm-states/")
@@ -564,6 +579,7 @@ class Daemon(DBBackend):
                     "runtime": runtime,
                     "version": runningVersion,
                     "exc": exc,
+                    "exccode": exccode,
                 },
             )
 
@@ -672,7 +688,7 @@ class Daemon(DBBackend):
                         self.reporter("OK", sitename, stwork)
                     except ServiceWarning as ex:
                         exc = traceback.format_exc()
-                        self.reporter("WARNING", sitename, stwork, str(ex))
+                        self.reporter("WARNING", sitename, stwork, str(ex), excType=type(ex))
                         self.logger.warning("Service Warning!!! Error details:  %s", ex)
                         self.logger.warning("Service Warning!!! Traceback details:  %s", exc)
                         self.logger.warning("It is not fatal error. Continue to run normally.")
@@ -683,7 +699,7 @@ class Daemon(DBBackend):
                         self.logger.error("Look at SiteRM Frontend logs for more details.")
                     except Exception as ex:
                         hadFailure = True
-                        self.reporter("FAILED", sitename, stwork, str(ex))
+                        self.reporter("FAILED", sitename, stwork, str(ex), excType=type(ex))
                         exc = traceback.format_exc()
                         self.logger.critical(f"Exception!!! Error details:  {ex}. Traceback details: {exc}")
                     finally:

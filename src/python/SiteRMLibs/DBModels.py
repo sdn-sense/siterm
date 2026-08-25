@@ -147,6 +147,9 @@ class ServiceState(Base):
     insertdate = Column(Integer, nullable=False)
     updatedate = Column(Integer, nullable=False)
     exc = Column(String(4096), nullable=False)
+    # exccode: stable machine-readable error code (see CustomExceptions.exceptionCode).
+    # -100 = unknown/unclassified. Permanent: codes are never reused.
+    exccode = Column(Integer, nullable=False, server_default="-100")
 
 
 class DebugWorker(Base):
