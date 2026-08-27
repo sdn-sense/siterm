@@ -150,6 +150,11 @@ class ServiceState(Base):
     # exccode: stable machine-readable error code (see CustomExceptions.exceptionCode).
     # -100 = unknown/unclassified. Permanent: codes are never reused.
     exccode = Column(Integer, nullable=False, server_default="-100")
+    # exccodes: full list of exccode values reported this cycle (a WARNING
+    # state can batch several distinct causes together); exccode above is
+    # always exccodes[0]. Nullable/no default: existing rows predate this
+    # column and are simply absent until their next report.
+    exccodes = Column(JSON, nullable=True)
 
 
 class DebugWorker(Base):

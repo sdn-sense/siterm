@@ -10,7 +10,11 @@ Authors:
 Date: 2021/12/01
 """
 
-from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
+from SiteRMLibs.CustomExceptions import (
+    SWITCH_VLAN_RANGE_EXHAUSTED,
+    NoOptionError,
+    NoSectionError,
+)
 from SiteRMLibs.ipaddr import validMRMLName
 from SiteRMLibs.MainUtilities import strtolist
 
@@ -59,7 +63,7 @@ class SwitchInfo:
                 )
                 vlanRange = self.filterOutAvailbVlans(switchName, portSwitch["vlan_range_list"])
                 if not vlanRange:
-                    self.addWarning(f"VLAN Range for {switchName}:{portName} is not available or remaining vlans is empty.")
+                    self.addWarning(f"VLAN Range for {switchName}:{portName} is not available or remaining vlans is empty.", code=SWITCH_VLAN_RANGE_EXHAUSTED)
                 # Generate host alias or adds' isAlias
                 self._addIsAlias(
                     uri=newuri,

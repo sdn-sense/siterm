@@ -23,7 +23,12 @@ from SiteFE.PolicyService.policyService import PolicyService
 from SiteFE.ProvisioningService.provisioningService import ProvisioningService
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.BWService import BWService
-from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
+from SiteRMLibs.CustomExceptions import (
+    MODEL_UPDATE_LOOP_SUSPECTED,
+    VLAN_MANUAL_CONFIG_MISMATCH,
+    NoOptionError,
+    NoSectionError,
+)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.MainUtilities import (
@@ -309,10 +314,15 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 all_vlan_range_list = self.config.config.get("MAIN", {}).get(host, {}).get("all_vlan_range_list", [])
                 for vlan in vlans:
                     if vlan in all_vlan_range_list and vlan not in self.usedVlans["deltas"].get(host, []):
-                        self.addWarning(f"Vlan {vlan} is configured manually on {host}. It comes not from delta.Either deletion did not happen or was manually configured.")
+                        self.addWarning(
+                            f"Vlan {vlan} is configured manually on {host}. It comes not from delta.Either deletion did not happen or was manually configured.",
+                            code=VLAN_MANUAL_CONFIG_MISMATCH,
+                        )
         # Add switchwarnings (in case any exists)
         # pylint: disable=E1101
-        self.warnings += self.switch.getWarnings()
+        for msg, code in self.switch.getWarnings():
+            self.warnings.append(msg)
+            self.warningcodes.append(code)
 
     def cleanModelDirectory(self):
         """Clean Model Directory."""
@@ -410,7 +420,10 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 os.unlink(saveName)
                 # Check if model difference counter is more than 60 - if yes, then raise warning
                 if self.modelDiffCounter >= 60:
-                    self.addWarning("Model has updated more than 60 times. Please check LookupService/PolicyService for possible issues.")
+                    self.addWarning(
+                        "Model has updated more than 60 times. Please check LookupService/PolicyService for possible issues.",
+                        code=MODEL_UPDATE_LOOP_SUSPECTED,
+                    )
         else:
             updateNeeded = True
             self.logger.info("Models are different. Update DB")

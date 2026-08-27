@@ -10,7 +10,7 @@ Authors:
 Date: 2021/12/01
 """
 
-from SiteRMLibs.CustomExceptions import NoOptionError
+from SiteRMLibs.CustomExceptions import NODE_VLAN_RANGE_EXHAUSTED, NoOptionError
 from SiteRMLibs.MainUtilities import getAllHosts, getFileContentAsJson, strtolist
 
 
@@ -184,7 +184,7 @@ class NodeInfo:
             )
             vlanRange = self.filterOutAvailbVlans(hostname, intfDict["vlan_range_list"])
             if not vlanRange:
-                self.addWarning(f"VLAN Range for {hostname}:{intf} is not available or remaining vlans is empty.")
+                self.addWarning(f"VLAN Range for {hostname}:{intf} is not available or remaining vlans is empty.", code=NODE_VLAN_RANGE_EXHAUSTED)
 
         self.shared = "notshared"
         if "shared" in intfDict and intfDict["shared"]:

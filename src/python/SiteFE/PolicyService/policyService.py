@@ -62,8 +62,10 @@ def getError(ex):
     """Get Error from Exception.
 
     Delegates code lookup to the canonical exceptionCode() in CustomExceptions.
-    BadSyntax (rdflib) is passed by class; the fallback -100 is returned when
-    no explicit mapping exists, keeping the behaviour identical to before.
+    Note this changes the codes previously returned by this function's own
+    local map for OverlapException (was -7, now -9) and WrongIPAddress (was
+    -8, now -36); BadSyntax keeps a dedicated code (-42) rather than falling
+    back to the -100 unknown code.
     """
     out = {"errType": "Unrecognized", "errNo": -100, "errMsg": "Unset"}
     out["errType"] = str(ex.__class__)

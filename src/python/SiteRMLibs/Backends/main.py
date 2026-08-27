@@ -20,6 +20,10 @@ from SiteRMLibs.Backends.generalFunctions import (
 )
 from SiteRMLibs.Backends.NodeInfo import Node
 from SiteRMLibs.Backends.Raw import Switch as Raw
+from SiteRMLibs.CustomExceptions import (
+    SWITCH_CHANNEL_MEMBER_DOWN,
+    SWITCH_PORT_NOT_SWITCHPORT,
+)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.MainUtilities import (
@@ -63,7 +67,7 @@ class Switch(Node):
             raise Exception(f"Plugin {self.config[site]['plugin']} is not supported. Contact Support")
 
     def getWarnings(self):
-        """Get Warnings"""
+        """Get Warnings as a list of (message, code) tuples."""
         return self.warnings
 
     def mainCall(self, stateCall, inputDict, actionState):
@@ -306,7 +310,7 @@ class Switch(Node):
                 if memberData.get("lineprotocol", "") != "up" or memberData.get("operstatus", "") not in ["up", "connected"]:
                     msg = f"Channel member {member} of port {switch}{port} is not up. Line protocol: {memberData.get('lineprotocol', '')}, Oper status: {memberData.get('operstatus', '')}"
                     self.logger.warning(msg)
-                    self.warnings.append(msg)
+                    self.warnings.append((msg, SWITCH_CHANNEL_MEMBER_DOWN))
 
     def _mergeYamlAndSwitch(self, switch):
         """Merge yaml and Switch Info. Yaml info overwrites
@@ -331,7 +335,7 @@ class Switch(Node):
                 self.logger.debug(warning)
                 # Only add warning if allports flag is False.
                 if not self.config.config["MAIN"].get(switch, {}).get("allports", False):
-                    self.warnings.append(warning)
+                    self.warnings.append((warning, SWITCH_PORT_NOT_SWITCHPORT))
                 self._delPortFromOut(switch, port)
                 continue
             # Do check for port Members
