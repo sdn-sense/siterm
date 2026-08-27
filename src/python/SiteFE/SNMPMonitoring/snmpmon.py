@@ -27,6 +27,7 @@ from easysnmp import Session
 from easysnmp.exceptions import EasySNMPTimeoutError, EasySNMPUnknownObjectIDError
 from prometheus_client import CollectorRegistry, Enum, Gauge, Info, generate_latest
 from SiteRMLibs.Backends.main import Switch
+from SiteRMLibs.CustomExceptions import SNMP_TIMEOUT, SNMP_UNKNOWN_OID
 from SiteRMLibs.DefaultParams import SERVICE_DEAD_TIMEOUT, SERVICE_DOWN_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
@@ -532,10 +533,21 @@ class PromOut:
             labelnames=["servicename", "hostname"],
             registry=registry,
         )
+        # siterm_error_events: exposes the stable numeric error code for each
+        # service. Value is the exccode integer (-100 = unknown, 0 = no error
+        # when state is OK). exccode is only ever the gauge value, never a
+        # label, to avoid a new time series per distinct code value.
+        errorEvents = Gauge(
+            "siterm_error_events",
+            "Stable machine-readable error code for the last service event (see error-codes documentation). 0 when state is OK, negative integer otherwise.",
+            ["servicename", "hostname"],
+            registry=registry,
+        )
         services = self.dbI.get("servicestates")
         for service in services:
             state = "UNKNOWN"
             runtime = -1
+            exccode = service.get("exccode", -100)
             if service["servicename"] in ["SNMPMonitoring", "ProvisioningService", "LookUpService"] and service.get("hostname", "UNSET") != "default":
                 continue
             if int(self.timenow - service["updatedate"]) < SERVICE_DEAD_TIMEOUT:
@@ -549,6 +561,9 @@ class PromOut:
             serviceState.labels(**labels).state(state)
             infoState.labels(**labels).info({"version": service["version"]})
             runtimeInfo.labels(**labels).set(runtime)
+            # Report error code: 0 when OK (no error), exccode otherwise.
+            event_exccode = 0 if state == "OK" else exccode
+            errorEvents.labels(**labels).set(event_exccode)
         self.__getSNMPData(registry)
         self.__getAgentData(registry)
         self.__memStats(registry)
@@ -631,10 +646,10 @@ class SNMPMonitoring(Warnings):
         except EasySNMPUnknownObjectIDError as ex:
             ex = f"[{host}]: Got SNMP UnknownObjectID Exception for key {key}: {ex}"
             self.logger.warning(ex)
-            self.addWarning(ex)
+            self.addWarning(ex, code=SNMP_UNKNOWN_OID)
         except EasySNMPTimeoutError as ex:
             ex = f"[{host}]: Got SNMP Timeout Exception: {ex}"
-            self.addWarning(ex)
+            self.addWarning(ex, code=SNMP_TIMEOUT)
             self.logger.warning(ex)
         return []
 

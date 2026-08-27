@@ -21,7 +21,6 @@ import traceback
 import dictdiffer
 from dateutil import parser
 from rdflib import URIRef
-from rdflib.plugins.parsers.notation3 import BadSyntax
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to general
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
@@ -32,6 +31,7 @@ from SiteRMLibs.CustomExceptions import (
     OverlapException,
     ServiceNotReady,
     WrongIPAddress,
+    exceptionCode,
 )
 from SiteRMLibs.DefaultParams import DELTA_COMMIT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
@@ -58,21 +58,17 @@ from SiteRMLibs.timing import Timing
 
 
 def getError(ex):
-    """Get Error from Exception."""
-    errors = {
-        IOError: -1,
-        KeyError: -2,
-        AttributeError: -3,
-        IndentationError: -4,
-        ValueError: -5,
-        BadSyntax: -6,
-        OverlapException: -7,
-        WrongIPAddress: -8,
-    }
+    """Get Error from Exception.
+
+    Delegates code lookup to the canonical exceptionCode() in CustomExceptions.
+    Note this changes the codes previously returned by this function's own
+    local map for OverlapException (was -7, now -9) and WrongIPAddress (was
+    -8, now -36); BadSyntax keeps a dedicated code (-42) rather than falling
+    back to the -100 unknown code.
+    """
     out = {"errType": "Unrecognized", "errNo": -100, "errMsg": "Unset"}
     out["errType"] = str(ex.__class__)
-    if ex.__class__ in errors:
-        out["errNo"] = str(errors[ex.__class__])
+    out["errNo"] = str(exceptionCode(ex.__class__))
     if hasattr(ex, "message"):
         out["errMsg"] = ex.message
     else:

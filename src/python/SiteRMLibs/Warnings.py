@@ -18,6 +18,7 @@ class Warnings:
     def __init__(self):
         self.runcount = 0
         self.warnings = []
+        self.warningcodes = []
         self.warningstart = 0
         self.warningscounters = {}
         self.lastrunwarnings = []
@@ -28,6 +29,7 @@ class Warnings:
         self.runcount = 0
         self.warningscounters = {}
         self.warnings = []
+        self.warningcodes = []
         self.warningstart = 0
         self.lastrunwarnings = []
         self.lastrunid = 0
@@ -46,11 +48,12 @@ class Warnings:
         self.warningscounters.setdefault(warning, 0)
         self.warningscounters[warning] += 1
 
-    def addWarning(self, warning):
+    def addWarning(self, warning, code=None):
         """Record Alarm."""
         self.countWarnings(warning)
         if self.warningscounters[warning] >= 5:
             self.warnings.append(warning)
+            self.warningcodes.append(code)
 
     def checkAndRaiseWarnings(self):
         """Check and raise warnings in case there raised by Process"""
@@ -58,5 +61,9 @@ class Warnings:
             self.warningstart = self.warningstart if self.warningstart else getUTCnow()
             self.logger.warning("Warnings: %s", self.warnings)
             warnings = "\n".join(self.warnings)
+            codes = self.warningcodes
             self.warnings = []
-            raise ServiceWarning(warnings)
+            self.warningcodes = []
+            ex = ServiceWarning(warnings)
+            ex.codes = codes
+            raise ex

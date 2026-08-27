@@ -25,6 +25,7 @@ from SiteRMLibs.CustomExceptions import (
     NoOptionError,
     NoSectionError,
     ServiceWarning,
+    exceptionCode,
 )
 from SiteRMLibs.DefaultParams import GIT_CONFIG_REFRESH_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
@@ -157,6 +158,8 @@ class DBBackend:
                 "insertdate": getUTCnow(),
                 "updatedate": getUTCnow(),
                 "exc": str(kwargs.get("exc", "No Exception provided by service"))[:4095],
+                "exccode": kwargs.get("exccode", -100),
+                "exccodes": kwargs.get("exccodes", []),
             }
             dbobj = getVal(self.dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
             services = dbobj.get(
@@ -191,6 +194,8 @@ class DBBackend:
                 "hostname": getHostname(self.config, self.component),
                 "version": runningVersion,
                 "exc": kwargs.get("exc", "No Exception provided by service")[:4095],
+                "exccode": kwargs.get("exccode", -100),
+                "exccodes": kwargs.get("exccodes", []),
             }
             self.handlers[kwargs["sitename"]].makeHttpCall(
                 "POST",
@@ -537,11 +542,37 @@ class Daemon(DBBackend):
             sys.exit(2)
         sys.exit(0)
 
-    def reporter(self, state, sitename, stwork, exc=None):
-        """Report Service State to FE"""
+    def reporter(self, state, sitename, stwork, exc=None, excType=None, excTypes=None):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        """Report Service State to FE.
+
+        Args:
+            state:    Service state string (OK / WARNING / FAILED / …).
+            sitename: Site name.
+            stwork:   UTC epoch second when the work unit started.
+            exc:      Human-readable exception string (may be truncated for storage).
+            excType:  A single exception *class* (or a sentinel string such as
+                      'SNMP_TIMEOUT') passed to exceptionCode() to produce
+                      exccode/exccodes. Used for the OK/FAILED paths, where
+                      only one cause applies.
+            excTypes: A list of exception classes / sentinel strings (some
+                      entries may be None) when several distinct warnings
+                      fired in the same cycle -- see
+                      Warnings.checkAndRaiseWarnings()'s ServiceWarning.codes.
+                      exccode reports the first (primary) code; exccodes
+                      reports the full deduplicated list, in first-seen order.
+        """
         if not self.inargs.noreporting:
             runtime = int(getUTCnow()) - stwork
             exc = exc if exc else "No Exception provided by service"
+            rawCodes = excTypes if excTypes else ([excType] if excType is not None else [])
+            exccodes = []
+            for item in rawCodes:
+                code = exceptionCode(item)
+                if code not in exccodes:
+                    exccodes.append(code)
+            if not exccodes:
+                exccodes = [-100]
+            exccode = exccodes[0]
             self._pubStateRemote(
                 servicename=self.component,
                 servicestate=state,
@@ -549,6 +580,8 @@ class Daemon(DBBackend):
                 version=runningVersion,
                 runtime=runtime,
                 exc=exc,
+                exccode=exccode,
+                exccodes=exccodes,
             )
             # Log state also to local file
             createDirs(f"{getTempDir()}/siterm-states/")
@@ -564,6 +597,8 @@ class Daemon(DBBackend):
                     "runtime": runtime,
                     "version": runningVersion,
                     "exc": exc,
+                    "exccode": exccode,
+                    "exccodes": exccodes,
                 },
             )
 
@@ -672,7 +707,7 @@ class Daemon(DBBackend):
                         self.reporter("OK", sitename, stwork)
                     except ServiceWarning as ex:
                         exc = traceback.format_exc()
-                        self.reporter("WARNING", sitename, stwork, str(ex))
+                        self.reporter("WARNING", sitename, stwork, str(ex), excTypes=(getattr(ex, "codes", None) or [type(ex)]))
                         self.logger.warning("Service Warning!!! Error details:  %s", ex)
                         self.logger.warning("Service Warning!!! Traceback details:  %s", exc)
                         self.logger.warning("It is not fatal error. Continue to run normally.")
@@ -683,7 +718,7 @@ class Daemon(DBBackend):
                         self.logger.error("Look at SiteRM Frontend logs for more details.")
                     except Exception as ex:
                         hadFailure = True
-                        self.reporter("FAILED", sitename, stwork, str(ex))
+                        self.reporter("FAILED", sitename, stwork, str(ex), excType=type(ex))
                         exc = traceback.format_exc()
                         self.logger.critical(f"Exception!!! Error details:  {ex}. Traceback details: {exc}")
                     finally:

@@ -19,6 +19,7 @@ from SiteRMAgent.RecurringActions.Plugins.CertInfo import CertInfo
 from SiteRMAgent.RecurringActions.Plugins.KubeInfo import KubeInfo
 from SiteRMAgent.RecurringActions.Plugins.NetInfo import NetInfo
 from SiteRMLibs.CustomExceptions import (
+    AGENT_HOST_PUBLISH_FAILED,
     NotFoundError,
     PluginException,
     PluginFatalException,
@@ -269,7 +270,9 @@ class RecurringAction:
         if excMsg and raiseError:
             raise PluginException(excMsg)
         if excMsg:
-            raise ServiceWarning(excMsg)
+            ex = ServiceWarning(excMsg)
+            ex.codes = [AGENT_HOST_PUBLISH_FAILED]
+            raise ex
 
 
 def execute(config):

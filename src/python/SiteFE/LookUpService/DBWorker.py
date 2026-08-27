@@ -11,6 +11,7 @@ Date: 2024/06/10
 import os
 
 from SiteFE.PolicyService.policyService import PolicyService
+from SiteRMLibs.CustomExceptions import DELTA_STATE_TRANSITION_ERROR
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     getDBConn,
@@ -52,7 +53,7 @@ class DBWorker(Warnings):
             self.logger.debug("Start %s", job[0])
             errormsg = job[1](self.dbI)
             if errormsg:
-                self.addWarning(errormsg)
+                self.addWarning(errormsg, code=DELTA_STATE_TRANSITION_ERROR)
 
     def modelactions(self):
         """Clean up process to remove old data"""

@@ -12,7 +12,7 @@ Date                    : 2025/07/14
 
 import os
 import traceback
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel, Field, constr
@@ -323,6 +323,8 @@ class ServiceStateItem(BaseModel):
     runtime: int = Field(default=-1, ge=-1)  # Runtime in seconds, default is -1
     version: constr(strip_whitespace=True, min_length=1, max_length=50) = "UNSET"  # Version of the service, default is "UNSET"
     exc: constr(strip_whitespace=True, min_length=1, max_length=4096) = "Exc Not Provided"  # Exception message, default is "Exc Not Provided"
+    exccode: int = Field(default=-100, ge=-999, le=0)  # Stable machine-readable error code (see CustomExceptions.exceptionCode). -100 = unknown.
+    exccodes: List[int] = Field(default_factory=list, max_length=32)  # Full list of codes reported this cycle; exccode above is exccodes[0].
 
 
 # GET
@@ -417,6 +419,8 @@ async def addservicestate(
             "insertdate": getUTCnow(),
             "updatedate": getUTCnow(),
             "exc": str(item.exc)[:4095],
+            "exccode": item.exccode,
+            "exccodes": item.exccodes,
         }
         services = deps["dbI"].get(
             "servicestates",

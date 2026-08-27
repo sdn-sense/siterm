@@ -14,7 +14,13 @@ import os
 import sys
 
 from SiteRMLibs.Backends.main import Switch
-from SiteRMLibs.CustomExceptions import ServiceWarning
+from SiteRMLibs.CustomExceptions import (
+    LIVENESS_READINESS_DISABLED,
+    VALIDATOR_HOST_LLDP_MISMATCH,
+    VALIDATOR_PORT_NO_ANSIBLE_OUTPUT,
+    VALIDATOR_SWITCH_NO_ANSIBLE_OUTPUT,
+    ServiceWarning,
+)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     contentDB,
@@ -46,6 +52,7 @@ class Validator:
         self.switchInfo = {}
         self.activeDeltas = {}
         self.warnings = []
+        self.warningcodes = []
         self.warningstart = 0
         self.runcount = 0
         self.warningscounters = {}
@@ -56,6 +63,7 @@ class Validator:
         self.switch = Switch(self.config, self.sitename)
         self.switchInfo = {}
         self.warnings = []
+        self.warningcodes = []
         self.warningstart = 0
         self.runcount = 0
         self.warningscounters = {}
@@ -118,7 +126,7 @@ class Validator:
         # We check that config switchname is correctly defined under switch, and has full config;
         for swname in self.config.get(self.sitename, "switch"):
             if not self.switchInfo.get("ports", {}).get(swname, {}):
-                self.addWarning(f"Switch {swname} defined in configuration, but no output received from Ansible call.")
+                self.addWarning(f"Switch {swname} defined in configuration, but no output received from Ansible call.", code=VALIDATOR_SWITCH_NO_ANSIBLE_OUTPUT)
                 self._setwarningstart()
             # Check also all port information, that it is received from Ansible
             if not self.config.get(swname, "ports"):
@@ -127,7 +135,7 @@ class Validator:
                 if portinfo.get("realportname", ""):
                     portname = portinfo["realportname"]
                 if not self.switchInfo.get("ports", {}).get(swname, {}).get(portname, {}):
-                    self.addWarning(f"Switch {swname} port {portname} defined in configuration, but no output received from Ansible call.")
+                    self.addWarning(f"Switch {swname} port {portname} defined in configuration, but no output received from Ansible call.", code=VALIDATOR_PORT_NO_ANSIBLE_OUTPUT)
                     self._setwarningstart()
 
     def _validateHostSwitchInfo(self, hostinfo, switchlldp):
@@ -136,7 +144,7 @@ class Validator:
             return True
         if hostinfo.get("mac-address") == switchlldp.get("remote_chassis_id"):
             return True
-        self.addWarning(f"Host {hostinfo['hostname']} does not match lldp information. Host Info: {hostinfo}, Switch LLDP Info: {switchlldp}")
+        self.addWarning(f"Host {hostinfo['hostname']} does not match lldp information. Host Info: {hostinfo}, Switch LLDP Info: {switchlldp}", code=VALIDATOR_HOST_LLDP_MISMATCH)
         self._setwarningstart()
         return False
 
@@ -149,7 +157,7 @@ class Validator:
             if os.path.exists(fname):
                 msg = f"{name} check is disabled on Frontend. Please enable it to ensure proper operation."
                 self.logger.warning(msg)
-                self.addWarning(msg)
+                self.addWarning(msg, code=LIVENESS_READINESS_DISABLED)
                 self._setwarningstart()
 
     def _setwarningstart(self):
@@ -169,22 +177,29 @@ class Validator:
         self.warningscounters.setdefault(warning, 0)
         self.warningscounters[warning] += 1
 
-    def addWarning(self, warning):
-        """Record Alarm."""
+    def addWarning(self, warning, code=None):
+        """Record Alarm. See Warnings.addWarning() for the `code` contract."""
         self.countWarnings(warning)
         if self.warningscounters[warning] >= 5:
             self.warnings.append(warning)
+            self.warningcodes.append(code)
 
     def checkAndRaiseWarnings(self):
         """Check and raise warnings."""
         # Add switchwarnings (in case any exists)
-        self.warnings += self.switch.getWarnings()
+        for msg, code in self.switch.getWarnings():
+            self.warnings.append(msg)
+            self.warningcodes.append(code)
         if self.warnings:
             self.warningstart = self.warningstart if self.warningstart else getUTCnow()
             self.logger.warning("Warnings: %s", self.warnings)
             warnings = "\n".join(self.warnings)
+            codes = self.warningcodes
             self.warnings = []
-            raise ServiceWarning(warnings)
+            self.warningcodes = []
+            ex = ServiceWarning(warnings)
+            ex.codes = codes
+            raise ex
 
     def startwork(self):
         """Main run"""
