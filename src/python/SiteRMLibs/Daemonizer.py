@@ -360,10 +360,10 @@ class Daemon(DBBackend):
                     self.logger.info(fd.read())
             except IOError:
                 pass
-            self.logger.info("Database not ready. See details above. If continous, check the mariadb and mariadb_init process.")
+            self.logger.info("Database not ready. See details above. If continuous, check the mariadb and mariadb_init process.")
             retval = False
         if not os.path.exists(f"{getTempDir()}/config-fetcher-ready") and not self.firstInitDone:
-            self.logger.info("Config Fetcher not ready. See details above. If continous, check the config-fetcher process.")
+            self.logger.info("Config Fetcher not ready. See details above. If continuous, check the config-fetcher process.")
             retval = False
         return retval
 
@@ -658,7 +658,7 @@ class Daemon(DBBackend):
                 raise
             except (NoOptionError, NoSectionError) as ex:
                 exc = traceback.format_exc()
-                self.logger.critical(f"Exception!!! Traceback details: {exc}, Catched Exception: {ex}")
+                self.logger.critical(f"Exception!!! Traceback details: {exc}, Caught Exception: {ex}")
                 time.sleep(self.sleepTimers["failure"])
                 self._refreshConfigAfterFailure()
             except Exception as ex:

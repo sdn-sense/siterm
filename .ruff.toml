@@ -1,0 +1,4 @@
+# SiteRM uses a 200-character line limit (see  linter.sh, standarts/pylintrc).
+# Without this file super-linter's bundled ruff config defaults to 120 and flags
+# every long line as a formatting error.
+line-length = 200

@@ -769,9 +769,9 @@ class SNMPMonitoring(Warnings):
                     self.logger.error(f"[{host}]: Too many SNMP errors ({self.lastrunwarnings}), skipping further SNMP queries")
                     break
                 for item in allvals:
-                    indx = item.oid_index
-                    out.setdefault(indx, {})
-                    out[indx][key] = item.value.replace("\x00", "")
+                    index = item.oid_index
+                    out.setdefault(index, {})
+                    out[index][key] = item.value.replace("\x00", "")
             out["macs"] = macs[host]
             self._writeToDB(host, out)
         self.logger.info(f"[{self.sitename}]: SNMP Monitoring finished for {len(self.switches)} switches")

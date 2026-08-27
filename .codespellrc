@@ -1,0 +1,5 @@
+[codespell]
+# inport  -> domain term for "input port" used across PolicyService
+# graphin -> "graphIn" RDF graph-input parameter name
+ignore-words-list = inport,graphin
+skip = ./.git,./src/html/assets/fonts,./src/html/assets/js/bootstrap.js,./src/html/assets/js/bootstrap.bundle.js,./src/html/assets/js/bootstrap-html.js,./src/html/assets/js/multiselect.js,./src/html/assets/js/next.js,./src/html/assets/css/next.css,*.svg,*.min.js,*.min.css

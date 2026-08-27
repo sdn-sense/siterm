@@ -119,7 +119,7 @@ class MultiWorker:
                 continue
         # Mark as not first run, so if service stops, it uses restart
         if self.firstRun and restarted:
-            self.logger.info("First run is done. Marking as not first run. Also sleep 1 minute so that it get's all data from switches")
+            self.logger.info("First run is done. Marking as not first run. Also sleep 1 minute so that it gets all data from switches")
             time.sleep(60)
         self.firstRun = False
         self.needRestart = False
