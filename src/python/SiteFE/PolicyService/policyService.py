@@ -21,7 +21,6 @@ import traceback
 import dictdiffer
 from dateutil import parser
 from rdflib import URIRef
-from rdflib.plugins.parsers.notation3 import BadSyntax
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper  # TODO: Move to general
 from SiteFE.PolicyService.deltachecks import ConflictChecker
 from SiteFE.PolicyService.stateMachine import StateMachine
