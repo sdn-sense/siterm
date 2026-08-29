@@ -29,7 +29,6 @@ from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
     StrictBool,
-    apiAdminDeps,
     apiReadDeps,
     apiWriteDeps,
     checkReadyState,
@@ -314,7 +313,7 @@ async def submitDelta(
         description="The site name to submit the delta for.",
         examples=[startupConfig.get("SITENAME", "default")],
     ),
-    deps=Depends(apiAdminDeps),
+    deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
     """
@@ -628,7 +627,7 @@ async def performActionOnDelta(
     ),
     delta_id: str = Path(..., description="The ID of the delta to perform the action on."),
     action: Literal["commit", "forcecommit", "forceapply"] = Path(..., description="The action to perform on the delta."),
-    deps=Depends(apiAdminDeps),
+    deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
 ):
     """
