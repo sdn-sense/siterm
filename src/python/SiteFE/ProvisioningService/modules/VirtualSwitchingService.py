@@ -98,7 +98,9 @@ class VirtualSwitchingService:
         # Junos MX/PTX virtual-switch mode uses `VLAN-<id>` naming on-device
         # (routing-instances <ri> bridge-domains|vlans VLAN-<id>); standard mode
         # and all other vendors keep the legacy `Vlan<id>` naming.
-        ansible_params = self.config["MAIN"].get(host, {}).get("ansible_params", {}) or {}
+        # ansparams come from the prepared host_vars (sourced from
+        # /etc/ansible-conf.yaml) - same values the getfacts/test-runner path uses.
+        ansible_params = self.switch.getAnsibleParams(host) or {}
         if ansible_params.get("vlanmode") in ("mx", "ptx"):
             vlanName = f"VLAN-{vlan}"
         else:
@@ -204,6 +206,10 @@ class VirtualSwitchingService:
                 # set vlan to state: 'absent'. In case it is absent already
                 # we dont need to set it again. Switch is unhappy to apply
                 # same command if service is not present.
+                # `key`/`name` is the VLAN key as produced by _getdefaultVlan:
+                # `VLAN-<id>` for Junos MX/PTX (vlanmode mx|ptx), `Vlan<id>`
+                # otherwise. junos.j2 keys its delete branch off vlanmode too,
+                # so the two must stay in sync - see _getdefaultVlan.
                 tmpD.setdefault(key, {"state": "absent", "vlanid": val["vlanid"], "name": key})
                 different = True
             if val["state"] != "absent":

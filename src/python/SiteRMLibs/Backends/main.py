@@ -44,6 +44,7 @@ class Switch(Node):
         self.logger = getLoggingObject(config=self.config, service="SwitchBackends")
         self.site = site
         self.switches = {"output": {}}
+        self._ansparamscache = {}
         checkConfig(self.config, self.site)
         self.dbI = getDBConn("Switch", self)[self.site]
         self.warnings = []
@@ -201,8 +202,29 @@ class Switch(Node):
         return sysPort
 
     def getAnsibleParams(self, switchName):
-        """Get additional ansible parameters from configuration"""
-        return getConfigParams(self.config, switchName, self)[3]
+        """Get additional ansible parameters (ansparams) for a switch.
+
+        Source of truth is the prepared host_vars file - the same values the
+        getfacts playbook and the standalone test-runner use. That file is
+        written by ansible-prepare.py from /etc/ansible-conf.yaml (`ansparams`
+        per host). Any `ansible_params` set for the switch in the SiteRM git
+        config is layered on top as an explicit override.
+        """
+        if switchName in self._ansparamscache:
+            return self._ansparamscache[switchName]
+        params = {}
+        try:
+            hostcfg = self.plugin.getHostConfig(switchName)
+            hostans = hostcfg.get("ansparams") if isinstance(hostcfg, dict) else None
+            if isinstance(hostans, dict):
+                params.update(hostans)
+        except Exception as ex:
+            self.logger.debug(f"Could not read host_vars ansparams for {switchName}: {ex}")
+        gitans = getConfigParams(self.config, switchName, self)[3]
+        if isinstance(gitans, dict):
+            params.update(gitans)
+        self._ansparamscache[switchName] = params
+        return params
 
     def getAllSwitches(self, switchName=None):
         """Get All Switches"""
