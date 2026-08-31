@@ -29,6 +29,12 @@ SERVICE_DOWN_TIMEOUT = 300
 SERVICE_DEAD_TIMEOUT = 600
 # Auto refresh of git configuration if changes only every 15 minutes
 GIT_CONFIG_REFRESH_TIMEOUT = 900
+# Grace period for a continuously not-ready / not-alive SiteRM Frontend before
+# the daemon escalates it to a reported FAILED state (and thus an alert). Up to
+# this many seconds (10 minutes) of back-to-back HTTPServerNotReady is logged
+# only; past it the service reports FAILED so liveness/readiness and central
+# monitoring pick it up.
+HTTP_SERVER_NOT_READY_ALERT_TIMEOUT = 600
 # Time for delta to receive commit message (5 minutes)
 DELTA_COMMIT_TIMEOUT = 300
 # Time for delta to be removed from database (1 hour)

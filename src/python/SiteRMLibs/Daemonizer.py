@@ -27,7 +27,7 @@ from SiteRMLibs.CustomExceptions import (
     ServiceWarning,
     exceptionCode,
 )
-from SiteRMLibs.DefaultParams import GIT_CONFIG_REFRESH_TIMEOUT
+from SiteRMLibs.DefaultParams import GIT_CONFIG_REFRESH_TIMEOUT, HTTP_SERVER_NOT_READY_ALERT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.MainUtilities import (
@@ -293,6 +293,10 @@ class Daemon(DBBackend):
         self.inargs = inargs
         self.dbI = None
         self.runCount = 0
+        # Per-site UTC epoch second when the SiteRM Frontend first started
+        # returning not-ready / not-alive. Absent while the Frontend is
+        # reachable; used to escalate a persistent outage to a reported alert.
+        self.httpNotReadySince = {}
         self.pidfile = f"{getTempDir()}/end-site-rm-{component}-{self.inargs.runnum}.pid"
         if self.inargs.devicename:
             self.pidfile = f"{getTempDir()}/end-site-rm-{component}-{self.inargs.runnum}-{self.inargs.devicename}.pid"
@@ -639,6 +643,33 @@ class Daemon(DBBackend):
             return False
         return True
 
+    def _handleHTTPNotReady(self, sitename, stwork, ex, exc):
+        """Handle a worker HTTPServerNotReady.
+
+        Logs the outage and, once the SiteRM Frontend has been continuously
+        not-ready/not-alive for HTTP_SERVER_NOT_READY_ALERT_TIMEOUT seconds,
+        reports a FAILED state so liveness/readiness and central monitoring
+        raise an alert instead of the daemon silently retrying forever.
+        Returns True if it escalated to a reported failure.
+        """
+        firstSeen = self.httpNotReadySince.setdefault(sitename, stwork)
+        outageFor = int(getUTCnow()) - firstSeen
+        self.logger.error("HTTP Server Not Ready!!! Error details:  %s", ex)
+        self.logger.error("HTTP Server Not Ready!!! Traceback details:  %s", exc)
+        self.logger.error("Look at SiteRM Frontend logs for more details.")
+        self.logger.error("SiteRM Frontend has been not-ready/not-alive for %s seconds.", outageFor)
+        if outageFor < HTTP_SERVER_NOT_READY_ALERT_TIMEOUT:
+            return False
+        self.reporter(
+            "FAILED",
+            sitename,
+            stwork,
+            f"SiteRM Frontend not-ready/not-alive for {outageFor}s (>= {HTTP_SERVER_NOT_READY_ALERT_TIMEOUT}s): {ex}",
+            excType=type(ex),
+        )
+        self.logger.critical("SiteRM Frontend outage exceeded %s seconds. Reporting FAILED state.", HTTP_SERVER_NOT_READY_ALERT_TIMEOUT)
+        return True
+
     def timeToExit(self):
         """Return True if it is time to exit."""
         if self.totalRuntime > 0 and self.totalRuntime <= int(getUTCnow()):
@@ -686,7 +717,7 @@ class Daemon(DBBackend):
 
     def run(self):
         """Run main execution"""
-        # pylint: disable=W0702,too-many-branches
+        # pylint: disable=W0702,too-many-branches,too-many-statements
         self.refreshThreads()
         while self.runLoop():
             self.runCount += 1
@@ -704,18 +735,19 @@ class Daemon(DBBackend):
                         self.preRunThread(sitename, rthread)
                         with timeout(180):
                             speedup = self.__run(rthread)
+                        self.httpNotReadySince.pop(sitename, None)
                         self.reporter("OK", sitename, stwork)
                     except ServiceWarning as ex:
                         exc = traceback.format_exc()
+                        self.httpNotReadySince.pop(sitename, None)
                         self.reporter("WARNING", sitename, stwork, str(ex), excTypes=(getattr(ex, "codes", None) or [type(ex)]))
                         self.logger.warning("Service Warning!!! Error details:  %s", ex)
                         self.logger.warning("Service Warning!!! Traceback details:  %s", exc)
                         self.logger.warning("It is not fatal error. Continue to run normally.")
                     except HTTPServerNotReady as ex:
                         exc = traceback.format_exc()
-                        self.logger.error("HTTP Server Not Ready!!! Error details:  %s", ex)
-                        self.logger.error("HTTP Server Not Ready!!! Traceback details:  %s", exc)
-                        self.logger.error("Look at SiteRM Frontend logs for more details.")
+                        if self._handleHTTPNotReady(sitename, stwork, ex, exc):
+                            hadFailure = True
                     except Exception as ex:
                         hadFailure = True
                         self.reporter("FAILED", sitename, stwork, str(ex), excType=type(ex))
