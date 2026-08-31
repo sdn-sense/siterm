@@ -38,6 +38,7 @@ from SiteRMLibs.CustomExceptions import (
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     dumpFileContentAsJson,
+    envBool,
     getFileContentAsJson,
     getTempDir,
     getUTCnow,
@@ -200,6 +201,84 @@ def client_ip_allowed(client_ip, allowed_ips):
     return False
 
 
+class SensoKeycloakValidator:
+    # pylint: disable=too-few-public-methods,too-many-instance-attributes
+    """Trust access tokens issued by an external SENSE-O Keycloak realm.
+
+    When enabled, any caller presenting a valid, unexpired JWT signed by the
+    configured SENSE-O Keycloak issuer is accepted as an authenticated SITERM
+    user with a fixed permission level (default: read). This runs alongside the
+    built-in user/pass + local JWT flow, it does not replace it.
+
+    Configuration (env vars, with defaults matching the SENSE-O realm)::
+
+        SENSEO_AUTH_ENABLED             false
+        SENSEO_ISSUER                   https://sense-o.es.net:8543/realms/StackV
+        SENSEO_CLIENT_ID                Portal
+        SENSEO_REFRESH_JWKS_INTERVAL    3600
+        SENSEO_DEFAULT_PERMISSIONS      read
+        SENSEO_VERIFY_AUD              true
+    """
+
+    def __init__(self):
+        loadEnvFile()
+        self.enabled = envBool("SENSEO_AUTH_ENABLED", False)
+        self.issuer = os.environ.get("SENSEO_ISSUER", "https://sense-o.es.net:8543/realms/StackV").rstrip("/")
+        self.client_id = os.environ.get("SENSEO_CLIENT_ID", "Portal")
+        self.refresh_jwks_interval = int(os.environ.get("SENSEO_REFRESH_JWKS_INTERVAL", "3600"))
+        self.default_permissions = os.environ.get("SENSEO_DEFAULT_PERMISSIONS", "read")
+        self.algorithms = [alg.strip() for alg in os.environ.get("SENSEO_ALGORITHMS", "RS256").split(",") if alg.strip()]
+        self.verify_aud = envBool("SENSEO_VERIFY_AUD", True)
+        self.jwks_url = f"{self.issuer}/protocol/openid-connect/certs"
+        self._jwkclient = None
+        self._jwkclient_created = None
+        if self.enabled:
+            # Fail fast on an obviously broken permission flag rather than at request time.
+            normPermissions(self.default_permissions)
+
+    def _jwks_client(self):
+        """Return a cached PyJWKClient, refreshed on the configured interval."""
+        now = getUTCnow()
+        if self._jwkclient is None or (now - self._jwkclient_created) >= self.refresh_jwks_interval:
+            self._jwkclient = jwt.PyJWKClient(self.jwks_url, cache_keys=True, lifespan=self.refresh_jwks_interval)
+            self._jwkclient_created = now
+        return self._jwkclient
+
+    def validate(self, token):
+        """Validate a SENSE-O Keycloak token and return SITERM-shaped claims."""
+        if not self.enabled:
+            raise IssuesWithAuth("SENSE-O Keycloak authentication is disabled")
+        try:
+            signing_key = self._jwks_client().get_signing_key_from_jwt(token)
+            claims = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=self.algorithms,
+                audience=self.client_id if self.verify_aud else None,
+                issuer=self.issuer,
+                leeway=60,
+                options={"verify_aud": self.verify_aud},
+            )
+        except jwt.ExpiredSignatureError as ex:
+            raise IssuesWithAuth("SENSE-O token expired") from ex
+        except (jwt.InvalidTokenError, jwt.PyJWKClientError) as ex:
+            raise IssuesWithAuth(f"Invalid SENSE-O token: {ex}") from ex
+        except IssuesWithAuth:
+            raise
+        except Exception as ex:
+            print(f"Full traceback: {traceback.format_exc()}")
+            raise IssuesWithAuth(f"Failed to validate SENSE-O token: {ex}") from ex
+
+        username = claims.get("preferred_username") or claims.get("sub")
+        if not username:
+            raise IssuesWithAuth("preferred_username missing in SENSE-O token")
+        claims["sub"] = username
+        claims["preferred_username"] = username
+        claims["perm"] = normPermissions(self.default_permissions)
+        claims["senseo"] = True
+        return claims
+
+
 class AuthHandler:
     """Authentication handler to manage user/pass and token-based authentication."""
 
@@ -229,6 +308,9 @@ class AuthHandler:
         self.oidc_kid = None
         self.__startup__()
         self.__getjwks__()
+
+        # Optional: trust tokens issued by an external SENSE-O Keycloak realm.
+        self.senseoValidator = SensoKeycloakValidator()
 
         # Certificate handling
         self.allowedCerts = {}
@@ -511,16 +593,32 @@ class AuthHandler:
         return token
 
     def validateToken(self, token):
-        """Validate OIDC claims and extract user identity & permissions."""
+        """Validate a Bearer token and extract user identity & permissions.
+
+        Tries the local SITERM token issuer first. If that fails and SENSE-O
+        Keycloak trust is enabled, falls back to validating the token against
+        the configured SENSE-O Keycloak realm.
+        """
         if not token:
             raise IssuesWithAuth("Unauthorized: Missing Bearer token")
         if token.count(".") != 2:
             raise IssuesWithAuth("Invalid token format")
         try:
+            return self.__validateLocalToken__(token)
+        except IssuesWithAuth:
+            if self.senseoValidator.enabled:
+                return self.senseoValidator.validate(token)
+            raise
+
+    def __validateLocalToken__(self, token):
+        """Validate OIDC claims issued by the local SITERM token issuer."""
+        try:
             unverified_header = jwt.get_unverified_header(token)
             kid = unverified_header.get("kid")
             if not kid:
                 raise IssuesWithAuth("Missing kid in token header")
+        except IssuesWithAuth:
+            raise
         except Exception as ex:
             print(f"Full traceback: {traceback.format_exc()}")
             raise IssuesWithAuth(f"Invalid token header: {ex}") from ex
