@@ -184,9 +184,11 @@ class VirtualSwitchingService:
                     # This happens during modify, force apply;
                     self.logger.debug(f"Force applying {self.acttype} for {connID} as networkstatus is deactivated.")
                     self.forceapply.append(connID)
-                # If first run, we also force apply
-                if self.firstrun and connID not in self.forceapply:
-                    self.logger.debug(f"First run, will force apply {self.acttype} for {connID}.")
+                # First run: only force-apply everything when we could NOT get a
+                # live device baseline to diff against. With fresh facts,
+                # compareIndv's first-run fast path applies only real differences.
+                if self.firstrun and not self._firstRunFactsOK and connID not in self.forceapply:
+                    self.logger.debug(f"First run (no device facts), will force apply {self.acttype} for {connID}.")
                     self.forceapply.append(connID)
 
     def compareVsw(self, switch, runningConf, uuid):

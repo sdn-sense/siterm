@@ -128,12 +128,14 @@ class Switch(Node):
 
     @staticmethod
     def _notSwitchport(tmpData):
-        """Check if port is not switchport"""
-        if "switchport" not in tmpData:
-            return True
-        if tmpData["switchport"] not in ["yes", True, "true"]:
-            return True
-        return False
+        """Return True only when device data positively says this is not a switchport."""
+        if "switchport" in tmpData:
+            return tmpData["switchport"] not in ["yes", True, "true"]
+        # "switchport" absent: only trust that as a real answer when the entry
+        # carries no other physical-port attributes either (truly empty data).
+        if any(key in tmpData for key in ("operstatus", "lineprotocol", "mtu", "speed", "channel-member")):
+            return False
+        return True
 
     def _getDBOut(self):
         """Get Database output of all switches configs for site"""

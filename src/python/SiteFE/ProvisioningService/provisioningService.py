@@ -22,6 +22,7 @@ from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, SwitchException
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.MainUtilities import (
     createDirs,
     evaldict,
@@ -59,6 +60,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         self.activeDeltas = {"output": {}}
         self.forceapply = []
         self.firstrun = False
+        self._firstRunFactsOK = False
         self.acttype = None
         self.daemoncontrols = self.config.get("daemoncontrols", "ProvisioningService", {})
         self.activateretry = {}
@@ -71,6 +73,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         self.yamlconfuuidActive = {}
         self.forceapply = []
         self.firstrun = False
+        self._firstRunFactsOK = False
         self.daemoncontrols = self.config.get("daemoncontrols", "ProvisioningService", {})
         self.activateretry = {}
 
@@ -324,23 +327,39 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
                     if swname not in switches:
                         continue
                     for key, call in actcalls.items():
-                        if key in swdict and call:
-                            self.logger.info(f"Comparing {acttype} for {uuid} config with ansible config")
-                            curAct = self.yamlconfuuidActive.get(acttype, {}).get(uuid, {}).get(swname, {}).get(key, {})
-                            diff = call(swname, curAct, uuid)
-                            self.logger.info(f"Comparing {acttype} for {uuid}. Difference: {diff}")
-                            # In case curAct is empty and diff is False
-                            if not curAct and not diff:
-                                del self.yamlconfuuid[acttype][uuid]
+                        if key not in swdict or not call:
+                            continue
+                        # First-run fast path: with fresh device facts, skip the
+                        # per-delta Ansible apply for vsw/singleport deltas the
+                        # switch already carries. Forced deltas and missing facts
+                        # fall through to the normal compare below. BGP (rst) has
+                        # no device-side baseline and always takes the path below.
+                        if self.firstrun and self._firstRunFactsOK and acttype in ("vsw", "singleport"):
+                            if uuid not in self.forceapply and self._deviceRunningMatches(swname, uuid, acttype):
+                                self.logger.info(f"[FIRST-RUN] {acttype} {uuid} on {swname} already matches device config. Skipping apply.")
                                 continue
-                            if diff:
-                                changed = True
-                                self.applyIndvConfig(swname, uuid, key, acttype)
+                            self.logger.info(f"[FIRST-RUN] {acttype} {uuid} on {swname} differs from device (or forced). Applying.")
                             if uuid in self.forceapply:
-                                self.logger.debug(f"UUID {uuid} is in force apply list, will apply {acttype} for {swname} and delete from forceapply list.")
                                 self.forceapply.remove(uuid)
-                                changed = True
-                                self.applyIndvConfig(swname, uuid, key, acttype)
+                            changed = True
+                            self.applyIndvConfig(swname, uuid, key, acttype)
+                            continue
+                        self.logger.info(f"Comparing {acttype} for {uuid} config with ansible config")
+                        curAct = self.yamlconfuuidActive.get(acttype, {}).get(uuid, {}).get(swname, {}).get(key, {})
+                        diff = call(swname, curAct, uuid)
+                        self.logger.info(f"Comparing {acttype} for {uuid}. Difference: {diff}")
+                        # In case curAct is empty and diff is False
+                        if not curAct and not diff:
+                            del self.yamlconfuuid[acttype][uuid]
+                            continue
+                        if diff:
+                            changed = True
+                            self.applyIndvConfig(swname, uuid, key, acttype)
+                        if uuid in self.forceapply:
+                            self.logger.debug(f"UUID {uuid} is in force apply list, will apply {acttype} for {swname} and delete from forceapply list.")
+                            self.forceapply.remove(uuid)
+                            changed = True
+                            self.applyIndvConfig(swname, uuid, key, acttype)
             # We also want to apply any new ones asap (timed especially, which start at any time set)
             # TODO: Move to it's own function
             self.logger.info("Start check of all new applies")
@@ -380,21 +399,87 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
                     # delete from db
                     self.dbI.delete("forceapplyuuid", {"uuid": item["uuid"]})
 
+    def _refreshDeviceFacts(self):
+        """Force a fresh switch fact collection (getfacts for all devices)."""
+        try:
+            self.switch.getinfoNew()
+            return True
+        except Exception as ex:
+            self.logger.error(f"First-run switch fact refresh failed, falling back to blind apply: {ex}")
+            return False
+
+    def _deviceRunningMatches(self, swname, uuid, acttype):
+        """First-run only: check whether the device already carries every vlan,
+        tagged member and IP that this vsw/singleport delta expects.
+        """
+        expected = self.yamlconfuuid.get(acttype, {}).get(uuid, {}).get(swname, {}).get("interface", {})
+        if not expected:
+            return False
+        devVlans = self.switch.output.get("vlans", {}).get(swname, {})
+        devById = {}
+        for pdata in devVlans.values():
+            try:
+                devById[int(pdata.get("value"))] = pdata
+            except (TypeError, ValueError):
+                continue
+        for vlanExp in expected.values():
+            if not isinstance(vlanExp, dict) or vlanExp.get("state") == "absent":
+                continue
+            try:
+                vid = int(vlanExp.get("vlanid"))
+            except (TypeError, ValueError):
+                return False
+            dev = devById.get(vid)
+            if not dev:
+                return False
+            devTagged = {self.switch.getSystemValidPortName(p) for p in dev.get("tagged", []) or []}
+            for member in vlanExp.get("tagged_members", {}):
+                if self.switch.getSystemValidPortName(member) not in devTagged:
+                    return False
+            for ipkey in ("ipv4", "ipv6"):
+                expIPs = {normalizedip(ip) for ip in vlanExp.get(f"{ipkey}_address", {}) if ip}
+                if not expIPs:
+                    continue
+                devIPs = set()
+                for item in dev.get(ipkey, []) or []:
+                    if not isinstance(item, dict):
+                        continue
+                    addr = item.get("address", "")
+                    masklen = item.get("masklen", "")
+                    if addr and masklen != "":
+                        devIPs.add(normalizedip(f"{addr}/{masklen}"))
+                    elif addr:
+                        devIPs.add(normalizedip(addr))
+                if not expIPs.issubset(devIPs):
+                    return False
+        return True
+
     def startwork(self, firstrun=False):
         """Start Provisioning Service main worker."""
         self.firstrun = firstrun
+        self._firstRunFactsOK = False
         firstRunCheck(self.firstrun, "ProvisioningService")
         # Get current active config;
         self.__cleanup()
         self._getActive()
         # Get all for force apply
         self._getAllForceApply()
+        # On first run, refresh live switch facts BEFORE comparing so compareIndv
+        # can diff each delta against real device state and skip re-applying
+        # config the switch already carries (see compareIndv first-run fast path).
+        if self.firstrun:
+            self._firstRunFactsOK = self._refreshDeviceFacts()
         self.switch.getinfo()
         switches = self.switch.getAllSwitches()
         self.prepareYamlConf(self.activeDeltas["output"], switches)
 
         # Compare individual requests and report it's states
         configChanged = self.compareIndv(switches)
+        # On first run, if we applied anything, re-read the live switch config so
+        # downstream (LookUpService model build) sees post-apply state at once.
+        if self.firstrun and self._firstRunFactsOK and configChanged:
+            self._refreshDeviceFacts()
+            self.switch.getinfo()
         # Save individual uuid conf inside memory;
         self.logger.info("Saving current active configuration inside memory")
         self.logger.info(f"Current active configuration: {self.yamlconfuuid}")
