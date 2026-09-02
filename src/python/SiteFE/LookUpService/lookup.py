@@ -327,8 +327,18 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
     def cleanModelDirectory(self):
         """Clean Model Directory."""
         saveDir = f"{self.config.get(self.sitename, 'privatedir')}/LookUpService/"
+        # Never age-prune the model the DB currently points at (or its
+        # .turtle/.json-ld/.ntriples siblings) - the REST layer serves those
+        # files by absolute path, so deleting them 500s every model request
+        # until the next model-diff cycle rewrites them.
+        keepPrefix = ""
+        currentModel, _ = getCurrentModel(self, False)
+        if currentModel:
+            keepPrefix = os.path.basename(currentModel[0]["fileloc"])
         # Find out all files in the directory, older than 7 days
         for file in os.listdir(saveDir):
+            if keepPrefix and file.startswith(keepPrefix):
+                continue
             filePath = os.path.join(saveDir, file)
             if not os.path.isfile(filePath):
                 continue

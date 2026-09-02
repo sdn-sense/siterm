@@ -411,7 +411,18 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
     def _deviceRunningMatches(self, swname, uuid, acttype):
         """First-run only: check whether the device already carries every vlan,
         tagged member and IP that this vsw/singleport delta expects.
+
+        Any error or uncertainty returns False so the delta is still applied -
+        this optimisation must never abort the provisioning cycle.
         """
+        try:
+            return self._deviceRunningMatchesInner(swname, uuid, acttype)
+        except Exception as ex:
+            self.logger.error(f"_deviceRunningMatches failed for {acttype} {uuid} on {swname}, will apply: {ex}")
+            return False
+
+    def _deviceRunningMatchesInner(self, swname, uuid, acttype):
+        """Implementation for _deviceRunningMatches (see wrapper for contract)."""
         expected = self.yamlconfuuid.get(acttype, {}).get(uuid, {}).get(swname, {}).get("interface", {})
         if not expected:
             return False
