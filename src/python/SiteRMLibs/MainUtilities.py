@@ -319,8 +319,25 @@ def execute(command, logger, raiseError=True):
     return True
 
 
+_TEMP_DIR_CACHE = {}
+
+
 def getTempDir():
-    """Get the temporary directory."""
+    """Get a writable temporary directory (resolved once, then cached)."""
+    if _TEMP_DIR_CACHE.get("path"):
+        return _TEMP_DIR_CACHE["path"]
+    candidates = [os.environ[var] for var in ("TMPDIR", "TEMP", "TMP") if os.environ.get(var)]
+    candidates += ["/tmp", "/var/tmp", "/usr/tmp", os.path.join(os.getcwd(), ".siterm-tmp")]
+    for candidate in candidates:
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            testfd, testpath = tempfile.mkstemp(dir=candidate)
+            os.close(testfd)
+            os.unlink(testpath)
+            _TEMP_DIR_CACHE["path"] = candidate
+            return candidate
+        except OSError:
+            continue
     return tempfile.gettempdir()
 
 

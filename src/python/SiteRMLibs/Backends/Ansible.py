@@ -11,6 +11,7 @@ Authors:
 Date: 2021/12/01
 """
 
+import glob
 import json
 import os
 import random
@@ -21,7 +22,7 @@ import ansible_runner
 import yaml
 from SiteRMLibs.Backends import parsers
 from SiteRMLibs.CustomExceptions import ConfigException
-from SiteRMLibs.MainUtilities import getLoggingObject, withTimeout
+from SiteRMLibs.MainUtilities import getLoggingObject, getTempDir, withTimeout
 
 
 class Switch:
@@ -196,9 +197,39 @@ class Switch:
             retries = 0
         return ansOut, self.ansibleErrs
 
+    @staticmethod
+    def _cleanupStaleFactsFiles(logger=None, maxage=3600):
+        """Remove leaked ``ansible_facts_*.json`` temp files."""
+        now = time.time()
+        for fname in glob.glob(os.path.join(getTempDir(), "ansible_facts_*.json")):
+            try:
+                if now - os.path.getmtime(fname) > maxage:
+                    os.unlink(fname)
+            except OSError as ex:
+                if logger:
+                    logger.warning(f"Could not remove stale ansible facts file {fname}: {ex}")
+
+    def _readFactsFile(self, fname):
+        """Load an ``ansible_facts_file`` temp file and delete it afterwards."""
+        facts = {}
+        if not os.path.isfile(fname):
+            self.logger.error(f"Ansible facts file {fname} not available. There might be issues.")
+            return facts
+        try:
+            with open(fname, "r", encoding="utf-8") as fd:
+                facts = json.load(fd)
+        except (OSError, ValueError) as ex:
+            self.logger.error(f"Could not parse JSON from {fname}: {ex}")
+        try:
+            os.unlink(fname)
+        except OSError as ex:
+            self.logger.warning(f"Could not remove ansible facts file {fname}: {ex}")
+        return facts
+
     def _getFacts(self, hosts=None, subitem=""):
         """Get All Facts for all Ansible Hosts"""
         self.ansibleErrs = {}
+        self._cleanupStaleFactsFiles(self.logger)
         try:
             ansOut = self._executeAnsible("getfacts.yaml", hosts, subitem)
         except ValueError as ex:
@@ -214,18 +245,10 @@ class Switch:
                     self.logger.warning("Unsupported NOS. There might be issues. Contact dev team")
                 out[host] = host_events
                 host_events.setdefault("event_data", {}).setdefault("res", {}).setdefault("ansible_facts", {})
-                # Check if we got ansible_facts_file, that means output was too big and it is passed
-                # via file
+                # Output too big to inline is handed back as a temp file path instead.
                 if "ansible_facts_file" in host_events["event_data"]["res"]:
-                    fname = host_events["event_data"]["res"]["ansible_facts_file"]["file"]
-                    if os.path.isfile(fname):
-                        with open(fname, "r", encoding="utf-8") as fd:
-                            try:
-                                host_events["event_data"]["res"]["ansible_facts"] = json.load(fd)
-                            except json.JSONDecodeError as e:
-                                print(f"[ERROR] Could not parse JSON from {fname}: {e}")
-                    else:
-                        self.logger.error(f"Ansible facts file {fname} not available. There might be issues.")
+                    res = host_events["event_data"]["res"]
+                    res["ansible_facts"] = self._readFactsFile(res["ansible_facts_file"]["file"])
                 # If it still remains empty, we report error
                 if not host_events["event_data"]["res"]["ansible_facts"]:
                     msg = f"No facts available for {host}. There might be issues."
