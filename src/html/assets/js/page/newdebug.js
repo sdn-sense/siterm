@@ -5,28 +5,39 @@ $(document).ready(function() {
 
 function collectInputs(tagName) {
     docObj = document.getElementById(tagName);
-    var params = {};
+    var sitename = "";
+    var request = {};
     for (var i = 0; i < docObj.elements.length; i++) {
         var fieldName = docObj.elements[i].name;
         var fieldValue = docObj.elements[i].value;
-        if (fieldName) {
-            params[fieldName] = fieldValue;
+        if (!fieldName) {
+            continue;
         }
+        if (fieldName === "sitename") {
+            // Used only to build the request URL, not part of the debug request body.
+            sitename = fieldValue;
+            continue;
+        }
+        // Skip empty optional fields so the backend applies its own defaults.
+        if (fieldValue === "" || fieldValue === null) {
+            continue;
+        }
+        request[fieldName] = fieldValue;
     }
     var payload = {
-        hostname: params["hostname"],
-        request: params,
+        hostname: request["hostname"],
+        request: request,
     };
 
     $.ajax({
         type: "POST",
-        url: "/api/" + params["sitename"] + "/debug",
+        url: "/api/" + sitename + "/debug",
         contentType: "application/json",
         data: JSON.stringify(payload),
         success: function(result) {
             newAlert(
                 "New debug action submit state: " + JSON.stringify(result),
-                params,
+                request,
             );
         },
         error: function(xhr, status, error) {

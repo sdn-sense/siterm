@@ -41,6 +41,10 @@ def validateAddDefaults(config, dbid, inputDict):
     if inputDict["type"] in ["fdt-server", "iperf-server", "ethr-server"]:
         # This will wrap it between minport and maxports range, based on id (which is databse entry)
         inputDict["port"] = config["MAIN"]["debuggers"][inputDict["type"]]["minport"] + (dbid % config["MAIN"]["debuggers"][inputDict["type"]]["maxports"])
+    # Transfer clients require a streams value. Fall back to minstreams (or 1) if the
+    # request and the site defaults.streams both omit it, so the UI does not have to send it.
+    if inputDict["type"] in ["fdt-client", "iperf-client", "ethr-client"] and not inputDict.get("streams"):
+        inputDict["streams"] = config["MAIN"]["debuggers"][inputDict["type"]].get("minstreams", 1)
     return inputDict
 
 
@@ -61,10 +65,15 @@ def validateStreams(config, inputDict):
     """Validate streams is within configuration"""
     maxStreams = config["MAIN"]["debuggers"][inputDict["type"]]["maxstreams"]
     minStreams = config["MAIN"]["debuggers"][inputDict["type"]]["minstreams"]
-    if inputDict["streams"] > maxStreams:
-        raise BadRequestError(f"Requested streams is higher than allowed by Site Configuration. Requests is {inputDict['streams']}. Max allowed: {maxStreams}")
-    if inputDict["streams"] < minStreams:
-        raise BadRequestError(f"Requested streams is low than allowed by Site Configuration. Requests is {inputDict['streams']}. Min allowed: {minStreams}")
+    try:
+        streams = int(inputDict["streams"])
+    except (TypeError, ValueError) as exc:
+        raise BadRequestError(f"Requested streams {inputDict['streams']} is not an integer.") from exc
+    inputDict["streams"] = streams
+    if streams > maxStreams:
+        raise BadRequestError(f"Requested streams is higher than allowed by Site Configuration. Requests is {streams}. Max allowed: {maxStreams}")
+    if streams < minStreams:
+        raise BadRequestError(f"Requested streams is low than allowed by Site Configuration. Requests is {streams}. Min allowed: {minStreams}")
 
 
 def validateTraceRouteNet(config, inputDict):

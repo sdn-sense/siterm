@@ -147,7 +147,29 @@ class TestUtils(unittest.TestCase):
                 "exitCode": 0,
             }
             dataupd = {"state": "success", "output": json.dumps(outsuc)}
-        debugActions(self, data, dataupd)
+            debugActions(self, data, dataupd)
+
+    def test_debug_rapid_pingnet(self):
+        """Test Debug rapid-pingnet API (from network device)"""
+        hostdata = [
+            ["dellos9_s0", "switch", "rapid-pingnet"],
+        ]
+        for item in hostdata:
+            data = {
+                "type": item[2],
+                "sitename": "",
+                "hostname": item[0],
+                "ip": "1.2.3.4",
+                "count": "10",
+                "timeout": "5",
+            }
+            outsuc = {
+                "out": ["pingnet success", "from unittest"],
+                "err": "",
+                "exitCode": 0,
+            }
+            dataupd = {"state": "success", "output": json.dumps(outsuc)}
+            debugActions(self, data, dataupd)
 
     def test_debug_arptable(self):
         """Test Debug arptable API"""
@@ -204,6 +226,26 @@ class TestUtils(unittest.TestCase):
             }
             outsuc = {
                 "out": ["traceroute success", "from unittest"],
+                "err": "",
+                "exitCode": 0,
+            }
+            dataupd = {"state": "success", "output": json.dumps(outsuc)}
+            debugActions(self, data, dataupd)
+
+    def test_debug_traceroutenet(self):
+        """Test Debug traceroutenet API (from network device)"""
+        hostdata = [
+            ["dellos9_s0", "switch", "traceroutenet"],
+        ]
+        for item in hostdata:
+            data = {
+                "type": item[2],
+                "sitename": "",
+                "hostname": item[0],
+                "ip": "8.8.8.8",
+            }
+            outsuc = {
+                "out": ["traceroutenet success", "from unittest"],
                 "err": "",
                 "exitCode": 0,
             }
