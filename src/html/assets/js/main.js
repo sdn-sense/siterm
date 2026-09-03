@@ -16,10 +16,19 @@
     }
 
     function showLogin() {
-        $("#loginOverlay").show();
+        const overlay = document.getElementById("loginOverlay");
+        if (!overlay) {
+            // header-template not mounted yet; bootstrap-html.js replays this
+            // once the overlay exists.
+            window.__pendingShowLogin = true;
+            return;
+        }
+        window.__pendingShowLogin = false;
+        $(overlay).show();
     }
 
     function hideLogin() {
+        window.__pendingShowLogin = false;
         $("#loginOverlay").hide();
     }
 

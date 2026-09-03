@@ -75,6 +75,9 @@ function doSiteUpdate(ids) {
 function doSiteUpdateN(ids) {
     strSite = document.getElementById(ids + "sitename").value;
     var configdata = fetchConfig();
+    if (!configdata) {
+        return;
+    }
     var sitename = configdata["general"]["sitename"];
     if (strSite === sitename) {
         const switchArray = configdata[sitename]["switch"];
@@ -155,6 +158,9 @@ function addDropDown(dropdownVal, saveObj) {
 
 function load_data() {
     var configdata = fetchConfig();
+    if (!configdata) {
+        return;
+    }
     var sitename = configdata["general"]["sitename"];
     addDropDown(sitename, $("#f1_sitename"));
     addDropDown(sitename, $("#f2_sitename"));

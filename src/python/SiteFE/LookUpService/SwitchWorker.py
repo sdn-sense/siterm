@@ -32,6 +32,18 @@ class SwitchWorker:
         self.config = getGitConfig()
         self.switch = Switch(self.config, self.sitename)
 
+    def _clearFirstRunMarker(self):
+        """Remove the first-run marker (if any) once data has been pulled from
+        the device, so the LookUpService MultiWorker knows it can proceed
+        instead of waiting on a blind sleep."""
+        fname = f"{self.config.get(self.sitename, 'privatedir')}/SwitchWorker/{self.device}.firstrun"
+        if os.path.isfile(fname):
+            try:
+                os.unlink(fname)
+                self.logger.info(f"Cleared first-run marker {fname}")
+            except OSError as ex:
+                self.logger.error(f"Got OS Error removing {fname}. {ex}")
+
     def startwork(self):
         """Start Switch Worker Service."""
         self.logger.info(f"Starting Switch Worker for {self.device}")
@@ -47,8 +59,10 @@ class SwitchWorker:
             self.logger.info(f"Renew needed for {self.device}. Renewing {self.renewsNeeded} times.")
             self.switch.getinfoNew(self.device)
             self.renewsNeeded -= 1
+            self._clearFirstRunMarker()
         else:
             self.logger.info(f"No renew needed for {self.device}")
+            self._clearFirstRunMarker()
 
 
 if __name__ == "__main__":

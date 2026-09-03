@@ -6,6 +6,9 @@ $(document).ready(function() {
 // Function to prefill the site dropdown
 function prefillSites() {
     var configdata = fetchConfig();
+    if (!configdata) {
+        return;
+    }
     const dropdown = document.getElementById("f0_sitename");
     sitename = configdata["general"]["sitename"];
     const opt = document.createElement("option");

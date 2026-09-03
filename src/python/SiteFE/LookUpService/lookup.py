@@ -59,6 +59,10 @@ class MultiWorker:
         self.logger = logger
         self.firstRun = True
         self.needRestart = False
+        # Max time (seconds) to wait for freshly started SwitchWorkers to pull
+        # their first data set from the switches before the LookUpService
+        # proceeds anyway. Bounded so an unreachable device cannot block forever.
+        self.firstRunWaitTimeout = 300
 
     @staticmethod
     def _runCmd(action, device, foreground=False):
@@ -81,10 +85,45 @@ class MultiWorker:
         self.config = getGitConfig()
         self.needRestart = True
 
+    def _firstRunMarker(self, sitename, device):
+        """Path of the per-device first-run marker consumed by SwitchWorker."""
+        return f"{self.config.get(sitename, 'privatedir')}/SwitchWorker/{device}.firstrun"
+
+    def _setFirstRunMarker(self, sitename, device):
+        """Drop a marker telling a freshly started SwitchWorker to clear it once
+        it has pulled data from the device. Written before the worker starts so
+        there is no race with its first loop iteration."""
+        fname = self._firstRunMarker(sitename, device)
+        try:
+            with open(fname, "w", encoding="utf-8") as fd:
+                fd.write(str(getUTCnow()))
+        except OSError as ex:
+            self.logger.error(f"Got OS Error writing {fname}. {ex}")
+
+    def _waitForSwitchData(self, sitename, devices):
+        """Wait until every started SwitchWorker has cleared its first-run marker
+        (i.e. fetched data from the switch). Bounded by firstRunWaitTimeout so a
+        dead device cannot block the LookUpService forever."""
+        deadline = getUTCnow() + self.firstRunWaitTimeout
+        pending = list(devices)
+        while pending and getUTCnow() < deadline:
+            pending = [dev for dev in pending if os.path.isfile(self._firstRunMarker(sitename, dev))]
+            if not pending:
+                break
+            self.logger.info(f"Waiting for SwitchWorker first data pull from: {pending}")
+            time.sleep(5)
+        if pending:
+            self.logger.warning(f"SwitchWorker first data pull did not finish within {self.firstRunWaitTimeout}s. Still pending: {pending}. Continuing anyway.")
+            for dev in pending:
+                try:
+                    os.unlink(self._firstRunMarker(sitename, dev))
+                except OSError:
+                    pass
+
     def startwork(self):
         """Multiworker main process"""
         self.logger.info("Started MultiWorker work to check switch processes")
-        restarted = False
+        startedDevices = []
         siteName = getSiteNameFromConfig(self.config)
         for dev in self.config.get(siteName, "switch"):
             # Check status
@@ -92,35 +131,36 @@ class MultiWorker:
             # If status failed, and first run, start it
             if retOut["exitCode"] != 0 and self.firstRun:
                 self.logger.info(f"Starting SwitchWorker for {dev}")
+                self._setFirstRunMarker(siteName, dev)
                 retOut = self._runCmd("start", dev, True)
                 self.logger.info(f"Starting SwitchWorker for {dev} - {retOut}")
-                restarted = True
+                startedDevices.append(dev)
                 continue
             # If status failed, and not first run, restart it
             if retOut["exitCode"] != 0 and not self.firstRun:
                 self.logger.error(f"SwitchWorker for {dev} failed: {retOut}")
                 retOut = self._runCmd("restart", dev, True)
                 self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
-                restarted = True
                 continue
             # If status is OK, and needRestart flag set - restart it
             if retOut["exitCode"] == 0 and self.needRestart:
                 self.logger.info(f"Restarting SwitchWorker for {dev} as it is instructed by config change")
                 retOut = self._runCmd("restart", dev, True)
                 self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
-                restarted = True
                 continue
             # If status is OK, and needRestart flag set - restart it
             if retOut["exitCode"] != 0 and self.needRestart:
                 self.logger.info(f"Restarting Failed SwitchWorker for {dev} as it is instructed by config change")
                 retOut = self._runCmd("restart", dev, True)
                 self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
-                restarted = True
                 continue
-        # Mark as not first run, so if service stops, it uses restart
-        if self.firstRun and restarted:
-            self.logger.info("First run is done. Marking as not first run. Also sleep 1 minute so that it gets all data from switches")
-            time.sleep(60)
+        # Mark as not first run, so if service stops, it uses restart.
+        # Instead of sleeping blindly, wait for the SwitchWorkers we just
+        # started to clear their first-run markers - they remove them once
+        # they have pulled data from the switches.
+        if self.firstRun and startedDevices:
+            self.logger.info(f"First run is done. Marking as not first run. Waiting (up to {self.firstRunWaitTimeout}s) for SwitchWorkers to pull data from: {startedDevices}")
+            self._waitForSwitchData(siteName, startedDevices)
         self.firstRun = False
         self.needRestart = False
 

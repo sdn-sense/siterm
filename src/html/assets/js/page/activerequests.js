@@ -62,6 +62,9 @@ function defineAllModels(sitename) {
 
 function load_data() {
     var configdata = fetchConfig();
+    if (!configdata) {
+        return;
+    }
     var sitename = configdata["general"]["sitename"];
     defineSites(configdata, false);
     defineAllModels(sitename);

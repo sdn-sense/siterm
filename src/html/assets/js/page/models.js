@@ -126,6 +126,9 @@ function defineAllModels(data, sitename) {
 
 function load_data() {
     var configdata = fetchConfig();
+    if (!configdata) {
+        return;
+    }
     defineSites(configdata, false);
     var sitename = configdata["general"]["sitename"];
     $.ajax({

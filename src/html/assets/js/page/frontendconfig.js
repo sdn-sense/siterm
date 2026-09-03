@@ -86,6 +86,9 @@ function reloadconfig(hostname) {
 
 function load_data() {
     var configdata = fetchConfig();
+    if (!configdata) {
+        return;
+    }
     var sitename = configdata["general"]["sitename"];
     defineSites(configdata);
     defineSitesConfig(configdata, sitename);

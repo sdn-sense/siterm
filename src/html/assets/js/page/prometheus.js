@@ -5,6 +5,9 @@ $(document).ready(function() {
 
 function load_data() {
     const configdata = fetchConfig();
+    if (!configdata) {
+        return;
+    }
     const sitename = configdata["general"]["sitename"];
 
     $.ajax({

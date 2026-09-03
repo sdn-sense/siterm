@@ -23,8 +23,14 @@ from SiteRMLibs.CustomExceptions import (
 from SiteRMLibs.DefaultParams import SERVICE_NOACCEPT_TIMEOUT
 from SiteRMLibs.ipaddr import checkOverlap as incheckOverlap
 from SiteRMLibs.ipaddr import ipOverlap as inipOverlap
+from SiteRMLibs.ipaddr import ipVersion as inipVersion
 from SiteRMLibs.MainUtilities import getLoggingObject, getUTCnow
 from SiteRMLibs.timing import Timing
+
+# Minimum IPv6 prefix length SiteRM accepts from a delta (L2, L3 or BGP).
+# Anything more specific than a /64 (e.g. /72, /110, /128) is rejected - SENSE
+# provisioned IPv6 must be at least a /64.
+IPV6_MIN_PREFIXLEN = 64
 
 
 def _normalize_ip(ip):
@@ -191,6 +197,25 @@ class ConflictChecker(Timing, BWService):
                 )
         else:
             raise OverlapException(f"(2) Hostname {hostname} not available in this Frontend.")
+
+    def _checkIPv6MinPrefix(self, *ipvals):
+        """Reject any IPv6 address/prefix more specific than IPV6_MIN_PREFIXLEN.
+
+        Accepts one or more raw values (str or list). Non-IPv6 values, and
+        values without an explicit prefix length, are ignored.
+        """
+        for ipval in ipvals:
+            for ip in _normalize_ip(ipval):
+                if not ip or "/" not in str(ip):
+                    continue
+                if inipVersion(ip) != 6:
+                    continue
+                try:
+                    prefixlen = int(str(ip).split("/")[1])
+                except (ValueError, IndexError):
+                    continue
+                if prefixlen > IPV6_MIN_PREFIXLEN:
+                    raise WrongIPAddress(f"IPv6 {ip} uses /{prefixlen}, which is more specific than the minimum allowed /{IPV6_MIN_PREFIXLEN}. Request {self.newid} not allowed.")
 
     def _checkIfVlanOverlap(self, vlan1, vlan2):
         """Check if Vlan equal. Raise error if True"""
@@ -519,6 +544,8 @@ class ConflictChecker(Timing, BWService):
                 nStats = self._getVlanIPs(hostitems)
                 self._checkDuplicateIPs(nStats)
                 for item in nStats:
+                    # Reject IPv6 addresses more specific than the minimum /64
+                    self._checkIPv6MinPrefix(item.get("ipv6-address", ""))
                     if newDelta:
                         self._checkSystemIPOverlap(item, hostname, oldConfig)
                     # Check if vlan is in allowed list;
@@ -606,6 +633,12 @@ class ConflictChecker(Timing, BWService):
                 if hostname == "_params":
                     continue
                 nStats = self._getRSTIPs(hostitems)
+                # Reject IPv6 next-hop / route prefixes more specific than the minimum /64
+                self._checkIPv6MinPrefix(
+                    nStats.get("ipv6", {}).get("nextHop", ""),
+                    nStats.get("ipv6", {}).get("routeFrom", ""),
+                    nStats.get("ipv6", {}).get("routeTo", ""),
+                )
                 # Check if vlan is in allowed list;
                 self._checkVlanInRange(cls, nStats, hostname)
                 # check if ip address with-in available ranges
