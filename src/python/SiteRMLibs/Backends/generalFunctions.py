@@ -51,11 +51,14 @@ def getConfigParams(config, switch, cls=None):
     """
     Get config params from yaml. like what ports allowed to use
     and which to ignore, which vlans for port, or what default vlan range to use
+
+    Note: ansible params (ansparams) are NOT sourced here. They live solely in
+    /etc/ansible-conf.yaml and reach SiteRM via the prepared host_vars file
+    (see Switch.getAnsibleParams).
     """
     ports = []
     vlanRange = ""
     portsIgnore = []
-    ansibleParams = {}
     if config.has_option(switch, "allports") and config.get(switch, "allports"):
         if switch in cls.switches["output"]:
             ports = cls.plugin.getports(cls.switches["output"][switch])
@@ -65,6 +68,4 @@ def getConfigParams(config, switch, cls=None):
         vlanRange = config.get(switch, "vlan_range_list")
     if config.has_option(switch, "ports_ignore"):
         portsIgnore = config.get(switch, "ports_ignore")
-    if config.has_option(switch, "ansible_params"):
-        ansibleParams = config.get(switch, "ansible_params")
-    return ports, vlanRange, portsIgnore, ansibleParams
+    return ports, vlanRange, portsIgnore

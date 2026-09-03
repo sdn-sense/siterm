@@ -206,11 +206,11 @@ class Switch(Node):
     def getAnsibleParams(self, switchName):
         """Get additional ansible parameters (ansparams) for a switch.
 
-        Source of truth is the prepared host_vars file - the same values the
-        getfacts playbook and the standalone test-runner use. That file is
-        written by ansible-prepare.py from /etc/ansible-conf.yaml (`ansparams`
-        per host). Any `ansible_params` set for the switch in the SiteRM git
-        config is layered on top as an explicit override.
+        The only source is the prepared host_vars file, written by
+        ansible-prepare.py from /etc/ansible-conf.yaml (`ansparams` per host) -
+        the same values the getfacts playbook and the standalone test-runner
+        read. `ansible_params` is deliberately NOT read from the SiteRM git
+        config; ansparams live solely in /etc/ansible-conf.yaml.
         """
         if switchName in self._ansparamscache:
             return self._ansparamscache[switchName]
@@ -222,9 +222,6 @@ class Switch(Node):
                 params.update(hostans)
         except Exception as ex:
             self.logger.debug(f"Could not read host_vars ansparams for {switchName}: {ex}")
-        gitans = getConfigParams(self.config, switchName, self)[3]
-        if isinstance(gitans, dict):
-            params.update(gitans)
         self._ansparamscache[switchName] = params
         return params
 
@@ -236,7 +233,7 @@ class Switch(Node):
 
     def getAllAllowedPorts(self, switchName):
         """Get All Allowed Ports for switch"""
-        ports, _, portIgnore, _ = getConfigParams(self.config, switchName, self)
+        ports, _, portIgnore = getConfigParams(self.config, switchName, self)
         return ports if not portIgnore else [x for x in ports if x not in portIgnore]
 
     def getPortMembers(self, switchName, portName):
@@ -339,7 +336,7 @@ class Switch(Node):
     def _mergeYamlAndSwitch(self, switch):
         """Merge yaml and Switch Info. Yaml info overwrites
         any parameter in switch  configuration."""
-        ports, defVlans, portsIgn, _ = getConfigParams(self.config, switch, self)
+        ports, defVlans, portsIgn = getConfigParams(self.config, switch, self)
         if switch not in self.switches["output"]:
             return
         vlans = self.plugin.getvlans(self.switches["output"][switch])

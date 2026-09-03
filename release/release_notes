@@ -3,7 +3,7 @@
 ### 🚀 New Features
 
 **Junos MX/PTX support**
-- `SiteFE/ProvisioningService/modules/VirtualSwitchingService.py`, `SiteRMLibs/Backends/Ansible.py`: Added support for Junos MX/PTX virtual-switch mode, which names VLANs on-device as `VLAN-<id>` instead of the standard `Vlan<id>`. Enabled per-host via `ansible_params.vlanmode: mx|ptx`.
+- `SiteFE/ProvisioningService/modules/VirtualSwitchingService.py`, `SiteRMLibs/Backends/Ansible.py`: Added support for Junos MX/PTX virtual-switch mode, which names VLANs on-device as `VLAN-<id>` instead of the standard `Vlan<id>`. Enabled per-host via the `ansparams.vlanmode: mx|ptx` entry in `/etc/ansible-conf.yaml`.
 
 **Per-agent DSCP control flag**
 - `SiteFE/REST/Host.py`, `SiteRMAgent/Ruler/Ruler.py`, `SiteRMLibs/GitConfig.py`: Added a `nodscp` host flag (alongside the existing `noqos`) to allow disabling DSCP rule application per agent.
@@ -60,6 +60,7 @@
 
 **Misc**
 - Removed a stray debug log line that printed raw token content during token validation (`SiteRMLibs/Auth.py`).
+- `SiteRMLibs/Backends/main.py`, `SiteRMLibs/Backends/generalFunctions.py`: Ansible per-host params (`ansparams`) are now read only from the prepared host_vars (sourced from `/etc/ansible-conf.yaml`); the undocumented `ansible_params` key in the SiteRM git switch config is no longer consulted. Move any such settings into `/etc/ansible-conf.yaml`.
 
 ### 🔧 Supported OS Releases
 
