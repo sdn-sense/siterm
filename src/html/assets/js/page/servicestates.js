@@ -7,7 +7,7 @@ $(document).ready(function() {
 function defineAllStates(data, sitename) {
     cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
     cntDiv.append(
-        '<table class="table table-striped table-bordered table-hover" id="data-table-states"><thead class="thead-light"><tr><th>ID</th><th>Hostname</th><th>Service Name</th><th>Service State</th><th>Runtime</th><th>Version</th><th>Insert Date</th><th>Update Date</th><th>Exception</th></th><th>Refresh</th></tr></thead><tbody></tbody></table>',
+        '<table class="table table-striped table-bordered table-hover" id="data-table-states"><thead class="thead-light"><tr><th>ID</th><th>Hostname</th><th>Service Name</th><th>Service State</th><th>Runtime</th><th>Version</th><th>Insert Date</th><th>Update Date</th><th>Exception</th><th>Refresh</th></tr></thead><tbody></tbody></table>',
     );
     nRow = $('<div class="row">');
     nRow.append(cntDiv);

@@ -462,64 +462,6 @@ function defineSitesConfig(data, sitename) {
         .append(sitesConfig);
 }
 
-function doSiteUpdate(ids) {
-    strSite = document.getElementById(ids + "sitename").value;
-    $.ajax({
-        url: "/api/frontend/gethosts",
-        dataType: "json",
-        data: "",
-        async: false,
-        error: function(xhr, status, error) {
-            showAjaxWarning(
-                "Failed to load deltas",
-                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
-            );
-            console.error("AJAX error:", status, xhr.responseText);
-        },
-        success: function(json) {
-            for (j = 0; j < json.length; j++) {
-                addDropDown(json[j]["hostname"], $("#" + ids + "dtn"));
-            }
-        },
-    });
-}
-
-function doDTNUpdate(ids) {
-    strDTN = document.getElementById(ids + "dtn").value;
-    strSite = document.getElementById(ids + "sitename").value;
-    $.ajax({
-        url: "/api/frontend/gethosts",
-        dataType: "json",
-        data: "",
-        async: false,
-        error: function(xhr, status, error) {
-            showAjaxWarning(
-                "Failed to load deltas",
-                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
-            );
-            console.error("AJAX error:", status, xhr.responseText);
-        },
-        success: function(json) {
-            for (j = 0; j < json.length; j++) {
-                if (strDTN == json[j]["hostname"]) {
-                    var myObject = (0, eval)("(" + json[j]["hostinfo"] + ")");
-                    for (const [key, value] of Object.entries(
-                            myObject["NetInfo"]["interfaces"],
-                        )) {
-                        if (!$.isEmptyObject(value["vlans"])) {
-                            for (const [key1, value1] of Object.entries(value["vlans"])) {
-                                if (value1["provisioned"]) {
-                                    addDropDown(key1, $("#" + ids + "interface"));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-    });
-}
-
 function addDropDown(dropdownVal, saveObj) {
     saveObj.append("<option>" + dropdownVal + "</option>");
 }

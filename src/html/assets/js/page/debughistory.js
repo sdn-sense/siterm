@@ -83,6 +83,13 @@ function loadDebug(debugID, sitename) {
             console.error("AJAX error:", status, xhr.responseText);
         },
         success: function(json) {
+            if (!json || !json.length) {
+                showAjaxWarning(
+                    "Failed to load debug details",
+                    "No data returned for debug " + debugID
+                );
+                return;
+            }
             json = json[0];
             model = $("<div><\/div>");
             model.append(

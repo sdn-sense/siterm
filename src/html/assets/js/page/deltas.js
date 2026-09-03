@@ -133,6 +133,13 @@ function loadDelta(deltaID, sitename) {
             console.error("AJAX error:", status, xhr.responseText);
         },
         success: function(json) {
+            if (!json || !json.length) {
+                showAjaxWarning(
+                    "Failed to load deltas",
+                    "No data returned for delta " + deltaID
+                );
+                return;
+            }
             json = json[0];
             model = $("<div><\/div>");
             model.append(

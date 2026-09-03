@@ -19,10 +19,6 @@ if (configdata) {
             console.error("AJAX error:", status, xhr.responseText);
         },
         success: function(json) {
-            for (j = 0; j < json.length; j++) {
-                var myObject = (0, eval)("(" + json[j]["hostinfo"] + ")");
-                json[j]["hostinfo"] = myObject;
-            }
             data = json;
         },
     });
