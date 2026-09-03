@@ -77,12 +77,12 @@ def validateTraceRoute(config, inputDict):
     """Validate traceroute debug request."""
     validateKeys(inputDict, ["ip"])
     validateIP(config, inputDict)
-    # One of these must be present:
+    # One of these must be present (and non-empty):
     optional = False
     for key in ["from_interface", "from_ip"]:
-        if key in inputDict:
+        if inputDict.get(key):
             optional = True
-        if key == "from_ip" and inputDict["from_ip"] and ipVersion(inputDict["from_ip"]) == -1:
+        if key == "from_ip" and inputDict.get("from_ip") and ipVersion(inputDict["from_ip"]) == -1:
             raise BadRequestError(f"Soure IP {inputDict['from_ip']} does not appear to be an IPv4 or IPv6")
     if not optional:
         raise BadRequestError("One of these keys must be present: from_interface, from_ip")
@@ -146,7 +146,7 @@ def validator(config, dbid, inputDict):
         raise BadRequestError("Debug type not specified in debug request.")
     inputDict = validateAddDefaults(config, dbid, inputDict)
     inputDict["action"] = debugType
-    if debugType == "traceroute-net":
+    if debugType == "traceroutenet":
         validateTraceRouteNet(config, inputDict)
     elif debugType == "traceroute":
         validateTraceRoute(config, inputDict)

@@ -302,12 +302,12 @@ def getactionkeys(config, action):
                 "description": "Network interface to get the ARP table for",
                 "default": None,
                 "required": True,
-                "onetime": {
-                    "description": "If set, only a single ARP table is retrieved",
-                    "default": defaults.get("defaults", {}).get("onetime", None),
-                    "required": not defaults.get("defaults", {}).get("onetime", None),
-                },
-            }
+            },
+            "onetime": {
+                "description": "If set, only a single ARP table is retrieved",
+                "default": defaults.get("defaults", {}).get("onetime", None),
+                "required": not defaults.get("defaults", {}).get("onetime", None),
+            },
         },
         "tcpdump": {
             "interface": {
@@ -343,7 +343,7 @@ def getactionkeys(config, action):
                 "required": not defaults.get("defaults", {}).get("onetime", None),
             },
         },
-        "traceroute-net": {
+        "traceroutenet": {
             "ip": {
                 "description": "IP address to traceroute to",
                 "default": None,
