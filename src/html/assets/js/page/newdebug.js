@@ -66,7 +66,7 @@ function doSiteUpdateN(ids) {
     var configdata = fetchConfig();
     var sitename = configdata["general"]["sitename"];
     if (strSite === sitename) {
-        const switchArray = data[sitename]["switch"];
+        const switchArray = configdata[sitename]["switch"];
         switchArray.forEach((name, index) => {
             addDropDown(name, $("#" + ids + "hostname"));
         });
