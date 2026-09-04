@@ -1,66 +1,87 @@
-## SiteRM 1.6.2 Release
+## SiteRM 1.6.3-pre Pre-Production Release
+
+Changes since `1.6.2` (2026-08-10 → 2026-09-04), across `siterm` and related repositories.
 
 ### 🚀 New Features
 
-**Junos MX/PTX support**
-- `SiteFE/ProvisioningService/modules/VirtualSwitchingService.py`, `SiteRMLibs/Backends/Ansible.py`: Added support for Junos MX/PTX virtual-switch mode, which names VLANs on-device as `VLAN-<id>` instead of the standard `Vlan<id>`. Enabled per-host via the `ansparams.vlanmode: mx|ptx` entry in `/etc/ansible-conf.yaml`.
+**Debugger: ethr and expanded transfer-test options**
+- `SiteFE/REST/Frontend.py`, `SiteRMLibs/Validator.py`, `src/html/newdebug.html`: Added `ethr-server`/`ethr-client` debug actions (with a `streams` field, validated against site min/max and defaulted from site config when omitted). `iperf-server`/`fdt-server`/`ethr-server` now allocate ports from a configurable `minport`/`maxports` range instead of one fixed port. `rapid-ping`/`rapid-pingnet` gain higher `maxtimeout` ceilings and saner defaults (`packetsize`, `count`, `timeout`).
 
-**Per-agent DSCP control flag**
-- `SiteFE/REST/Host.py`, `SiteRMAgent/Ruler/Ruler.py`, `SiteRMLibs/GitConfig.py`: Added a `nodscp` host flag (alongside the existing `noqos`) to allow disabling DSCP rule application per agent.
+**Delta submit/commit open to Write permission (was Admin-only)**
+- `SiteFE/REST/Delta.py`: `POST .../deltas` (submit) and the `commit`/`forcecommit`/`forceapply` delta actions now require `write` (or `admin`) permission instead of `admin` only. This lets a write-level credential (e.g. the SENSE Orchestrator) submit and act on deltas directly. ⚠️ Review your site's credential permission levels if you were relying on `admin`-only being required here.
 
-**Manual configuration files (bypass GitHub)**
-- `SiteRMLibs/ConfigFetcher.py`, `SiteRMLibs/GitConfig.py`: Frontend/Agent main, auth, and auth-refresh configuration can now be supplied from local YAML files instead of a Git repository, via `MAIN_CONFIG_FILE`, `AUTH_CONFIG_FILE`, `AUTH_RE_CONFIG_FILE`, and `MAPPING_TYPE` (env var or `/etc/siterm.yaml`). When `MAIN_CONFIG_FILE` is set, the Git fetch/mapping lookup is skipped entirely.
+**SENSE-O Keycloak token trust (read access)**
+- `SiteRMLibs/Auth.py`: New optional validator accepts access tokens issued by an external SENSE-O Keycloak realm as authenticated SiteRM users with a fixed (default: `read`) permission level, alongside the existing local user/pass + JWT flow. Configured via `SENSEO_AUTH_ENABLED`, `SENSEO_ISSUER`, `SENSEO_CLIENT_ID`, and related env vars.
 
-**Per-credential allowed IP restrictions**
-- `SiteRMLibs/Auth.py`, `SiteFE/REST/Auth.py`, `SiteFE/REST/dependencies.py`: X.509 M2M credentials (DNs) can now be restricted to a set of CIDR ranges via a new `allowed_ips` config entry. Enforced on challenge generation, challenge verification, and token refresh; the real client IP is resolved from `X-Forwarded-For` (falling back to the socket peer) so this works correctly behind a proxy. Credentials without `allowed_ips` configured remain unrestricted.
+**Stable, machine-readable service error codes (`exccode`)**
+- `SiteRMLibs/CustomExceptions.py`, `DBModels.py`, `Daemonizer.py`, `SiteFE/REST/Service.py`, plus call sites across `LookUpService`, `Validator`, `SNMPMonitoring`, `Backends`, and `SiteRMAgent`: Service state reporting now carries a permanent numeric `exccode` (and the full `exccodes` list for a cycle) alongside the existing free-text exception message, exposed via a new `siterm_error_events` Prometheus gauge (`servicename`/`hostname` labels). (Contributed by `kvasu20`, PR #1002.)
 
-**Delta requestor information**
-- `SiteFE/REST/Delta.py`, `src/html/assets/js/page/deltas.js`: New `GET /api/{sitename}/deltas/{delta_id}/requestinfo` endpoint returns the requestor (name/email/organization/host) and full user-tracking history for a delta. The Web UI delta view now displays this information.
+**HTTP outage escalation**
+- `SiteRMLibs/Daemonizer.py`, `DefaultParams.py`: A daemon that keeps getting `HTTPServerNotReady` from the Frontend now escalates to a reported `FAILED` state after 10 minutes of continuous outage (`HTTP_SERVER_NOT_READY_ALERT_TIMEOUT`), instead of logging and retrying silently forever.
 
-**DOMAIN_COMPONENT DN support**
-- `SiteRMLibs/Auth.py`: Added `NameOID.DOMAIN_COMPONENT` (`DC`) to the certificate subject/issuer short-name mapping, so DNs containing DC components are parsed correctly.
+**Faster first-run provisioning using live device facts**
+- `SiteFE/ProvisioningService/provisioningService.py`, `modules/VirtualSwitchingService.py`: On first run, ProvisioningService now refreshes live switch facts up front and skips re-applying `vsw`/`singleport` deltas the device already carries (VLAN, tagged members, IPs all match), instead of force-applying every delta blindly. Falls back to force-apply on any error or missing facts.
 
-**Multiarch / portability improvements**
-- `SiteRMAgent/Debugger/Debugger.py`: Falls back to `psutil`-based interface enumeration when the `ip` binary is not available (e.g. non-Linux images).
-- `packaging/siterm-site-fe/sitefe.py`: Static UI directory is now configurable via `SITERM_STATIC_DIR`.
-- `SiteRMLibs/MainUtilities.py`, `SiteRMLibs/ConfigFetcher.py`: Config file path (`SITERM_CONFIG_FILE`) and config-fetcher failure-counter path (`CONFIG_FETCHER_COUNTER`) are now overridable via env vars; the counter directory is created if missing.
-- `SiteRMAgent/RecurringActions/DTNMain.py`: Added `agent.disabled_plugins` config option to skip loading specific recurring-action plugins (CertInfo, KubeInfo, NetInfo, ArpInfo).
+**IPv6 minimum prefix enforcement**
+- `SiteFE/PolicyService/deltachecks.py`: Deltas requesting an IPv6 address or route prefix (L2, L3, or BGP next-hop/routeFrom/routeTo) more specific than `/64` are now rejected at conflict-check time.
 
-**Documentation**
-- Added Node Exporter installation and security hardening guides (passthrough via Frontend to avoid exposing `/debug/pprof` on agents) to the installation docs.
+**SwitchWorker first-run handshake (replaces blind sleep)**
+- `SiteFE/LookUpService/lookup.py`, `SwitchWorker.py`: When starting a SwitchWorker for the first time, LookUpService now waits (bounded, up to 5 minutes) for the worker to signal it has actually pulled data from the device, instead of unconditionally sleeping 60 seconds.
+
+**Web UI login reliability**
+- `src/html/assets/js/bootstrap-html.js`, `main.js`: The login overlay is now guaranteed to show on every page — previously a page whose scripts asked for it before the header template had mounted could silently miss it. Login/logout/tab click handlers are delegated so they survive template remounts.
 
 ### 🐛 Bug Fixes
 
-**Certificate chain verification**
-- `SiteRMLibs/Auth.py`, `SiteRMLibs/hostcert.py`: Certificate verification now validates the full chain (leaf + embedded intermediates) instead of the leaf certificate only. Previously, host certificates issued with an intermediate CA could fail chain validation even though the chain was valid.
+**Model-update warning never cleared**
+- `SiteFE/LookUpService/lookup.py`: `modelDiffCounter` only ever reset via an unrelated "refresh DB after 1h idle" branch, so once 60+ real model updates landed in a burst, the `"Model has updated more than 60 times"` `WARNING` (with traceback) fired on every LookUpService loop — sometimes for up to an hour — even though the model itself had stabilized. The counter now tracks diffs within a rolling 1-hour window and self-clears.
 
-**Token refresh could be reported as failed after succeeding**
-- `SiteRMLibs/HTTPLibrary.py`: Fixed a missing `return` after a successful token refresh; the code could fall through and treat a successful renewal as an error.
+**`newdebug` page: ReferenceErrors and dead code**
+- `src/html/assets/js/main.js`, `page/newdebug.js`: Fixed `ReferenceError: data is not defined` in `doSiteUpdateN` (used `configdata`). Removed dead/unreachable `doSiteUpdate`/`doDTNUpdate` functions that referenced undefined globals and ran `eval()` on server JSON. Removed a similar stray `eval()` in `page/index.js`. Delta/debug detail pages now show a warning instead of throwing when the API returns no data.
 
-**Stale device state never refreshed**
-- `SiteFE/LookUpService/lookup.py`: Fixed an inverted time comparison (`>=` instead of `<=`) that prevented the "warnings raised more than 1 hour ago" path from ever triggering a device state refresh.
+**`traceroutenet` debug action always rejected**
+- `SiteFE/REST/Debug.py`, `SiteRMLibs/Validator.py`: The action was registered as `traceroute-net` in `getactionkeys`/the validator, but the REST endpoint and Web UI used `traceroutenet`, so every request was rejected. Also fixed an incorrectly nested `onetime` key under the `arp-table` action schema.
 
-**System readiness check used OR instead of AND**
-- `SiteFE/REST/dependencies.py`: `checkReadyState` now requires both `LookUpService` and `ProvisioningService` to have completed their first run before reporting the API ready, instead of either one.
+**Debug submit hardening**
+- `src/html/assets/js/page/newdebug.js`, `SiteRMLibs/Validator.py`: `streams` is now coerced to `int` with a clear `BadRequestError` on invalid input (was a silent comparison against a string). Empty optional fields in the debug submit form are no longer sent as empty strings, so backend defaults apply. The request payload is built from validated fields only, separate from the `sitename` used for the URL.
 
-**Falsy default values ignored in config lookups**
-- `SiteRMLibs/GitConfig.py`: `get()` treated any falsy default (`False`, `[]`, `0`) as "no default provided" and raised instead of returning it. Now correctly checks `default is not None`.
+**Leaking `ansible_facts_*.json` temp files**
+- `SiteRMLibs/Backends/Ansible.py`, `MainUtilities.py`: Large ansible-facts output (handed back via a temp file) was never deleted after being read. `_getFacts` now cleans up stale (>1h) leftover files on each call and deletes the file immediately after parsing it. `getTempDir()` now tries a list of candidate directories (`TMPDIR`/`TEMP`/`TMP` env vars, `/tmp`, `/var/tmp`, `/usr/tmp`, a local fallback) and verifies each is actually writable, rather than assuming `/tmp` always works.
 
-**Delta global state default**
-- `SiteFE/PolicyService/policyService.py`: Default delta global state changed from `activated` to `deactivated` when no sub-delta states are present.
+**Model directory cleanup could delete the live model**
+- `SiteFE/LookUpService/lookup.py`: `cleanModelDirectory()`'s 7-day age-based pruning could delete the model file(s) the database currently points at (served by the REST API), forcing repeated regeneration. The current model (and its turtle/json-ld/n-triples siblings) is now excluded from pruning.
 
-**Delta submit tracking recorded too late**
-- `SiteFE/REST/Delta.py`: The delta `submit` action is now recorded before processing instead of after, so the audit trail is preserved even if processing subsequently fails.
+**First-run provisioning could abort on error**
+- `SiteFE/ProvisioningService/provisioningService.py`: `_deviceRunningMatches` (the first-run "already matches device" check) now catches any exception and falls back to applying the delta, instead of letting an unexpected error abort the whole provisioning cycle.
 
-**Database URL construction**
-- `SiteRMLibs/DBBackend.py`: Database connection URL is now built via SQLAlchemy's `URL.create()` instead of an f-string, so usernames/passwords containing special characters are correctly escaped.
+**Switchport misdetection when `switchport` field is absent**
+- `SiteRMLibs/Backends/main.py`: A device port with no explicit `switchport` field but with real physical-port data (`operstatus`, `lineprotocol`, `mtu`, `speed`, `channel-member`) is no longer misclassified as "not a switchport" and dropped from the model.
 
-**Host stats collection hardening**
-- `SiteRMLibs/MemDiskStats.py`: Guards against malformed `df` output rows, filesystems missing an `Avail_gb` value, and `psutil.AccessDenied` errors when enumerating processes, instead of raising.
+**Log archiver**
+- `packaging/general/siterm-log-archiver`: Fixed `tarfile.add()` producing a broken `arcname` due to a trailing slash, and stopped deleting the archive immediately after creating it.
 
 **Misc**
-- Removed a stray debug log line that printed raw token content during token validation (`SiteRMLibs/Auth.py`).
-- `SiteRMLibs/Backends/main.py`, `SiteRMLibs/Backends/generalFunctions.py`: Ansible per-host params (`ansparams`) are now read only from the prepared host_vars (sourced from `/etc/ansible-conf.yaml`); the undocumented `ansible_params` key in the SiteRM git switch config is no longer consulted. Move any such settings into `/etc/ansible-conf.yaml`.
+- Log message typo fixes (`continous` → `continuous`, `Catched` → `Caught`, `get's` → `gets`).
+
+### ⚠️ Breaking / Upgrade Notes
+
+- **`ansible_params` git config key removed.** Per-switch `ansparams` are now read exclusively from the prepared `host_vars` file (sourced from `/etc/ansible-conf.yaml`) — the undocumented `ansible_params` key previously supported in the SiteRM git switch config is no longer consulted at all. If any site relied on that key, move the settings into `/etc/ansible-conf.yaml` before upgrading.
+- **Delta submit/commit/forceapply now accept `write` credentials**, not just `admin`. If your deployment depends on this being admin-gated, review credential permission levels before upgrading (see above).
+
+### 🔗 Related Repository Changes
+
+**Ansible Collections & Templates** (facts-collection performance + Junos MX/PTX follow-through)
+- `sense-junos-collection`, `sense-cisconx9-collection`, `sense-dellos10-collection`: Facts modules accept a new `ansparams.subset_config` to request a specific, deterministic subset of device facts (reduces `getfacts` runtime); `dumpFactsToTmp` now honors `$TMPDIR` instead of a hardcoded `/tmp`.
+- `sense-junos-collection`: Junos MX/PTX Flexible-Ethernet ports are now detected as switchports; MAC table collection is skipped on PTX (not available on that platform); `junos_facts` now fails loudly (logging the raw device response) on unparsable output instead of silently returning empty facts.
+- `ansible-templates`: `getfacts` playbooks pass `ansparams.subset_config` through to the Dell/Arista/Cisco/Junos facts modules; `junos.j2` gains an opt-in `vstp-per-vlan` flag for MX; test-runner supports test-topology VLAN create/delete; `host_vars` example updated to reflect that `ansparams` comes only from `/etc/ansible-conf.yaml` (matches the SiteRM-side change above).
+
+**Monitoring**
+- `autogole-monitoring`: Grafana/monitoring templates updated to surface the new SiteRM `exccode` error codes end-to-end.
+
+**Helm Charts**
+- `helm-charts`: Fixed the `giturl` example in chart documentation.
+
+> Site-specific configuration/deployment repositories (`rm-configs`, `vpp-frr`, `helm-deployments`) and unrelated-org projects (`esnet/sense-rtmon`) were checked but intentionally excluded from this list as they carry per-site data rather than SiteRM software changes.
 
 ### 🔧 Supported OS Releases
 
@@ -80,16 +101,16 @@
 - 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
-- This particular release is `latest-<el9|el10|u22>` version (`1.6.2`).
+- This particular release is `pre-<el9|el10|u22>` version (`1.6.3-pre`).
 
 ### Docker Versions
 
-- **Agent:** `sdnsense/siterm-agent:latest-<YYYYMMDD>-<el9|el10|u22>` *(or use `latest`)*
-- **Debugger:** `sdnsense/siterm-debugger:latest-<YYYYMMDD>-el10` *(or use `latest`)*
-- **Frontend:** `sdnsense/siterm-fe:latest-<YYYYMMDD>` *(or use `latest`)*
+- **Agent:** `sdnsense/siterm-agent:pre-<YYYYMMDD>-<el9|el10|u22>` *(or use `latest`)*
+- **Debugger:** `sdnsense/siterm-debugger:pre-<YYYYMMDD>-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:pre-<YYYYMMDD>` *(or use `latest`)*
 
 ### Helm versions
 
-- **Agent:** Chart version siterm/siterm-agent 1.6.2
-- **Debugger:** Chart version siterm/siterm-debugger 1.6.2
-- **Frontend:** Chart version siterm/siterm-fe 1.6.2
+- **Agent:** Chart version siterm/siterm-agent 1.6.3-pre
+- **Debugger:** Chart version siterm/siterm-debugger 1.6.3-pre
+- **Frontend:** Chart version siterm/siterm-fe 1.6.3-pre
