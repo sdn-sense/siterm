@@ -193,6 +193,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.firstRun = True
         self._addedTriples = set()
         self.modelDiffCounter = 0
+        self.modelDiffCounterStart = 0
 
     def __clean(self):
         """Clean params of LookUpService"""
@@ -463,6 +464,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 self.saveModel(saveName)
                 self.dbI.insert("models", [lastKnownModel])
                 self.modelDiffCounter = 0
+                self.modelDiffCounterStart = 0
                 speedup = True
             else:
                 self.logger.info("Models are equal.")
@@ -477,6 +479,14 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         else:
             updateNeeded = True
             self.logger.info("Models are different. Update DB")
+            now = getUTCnow()
+            # modelDiffCounter tracks diffs within a rolling 1h window so the
+            # >=60 warning below reflects a recent update-loop, not a lifetime
+            # total that only ever gets reset by the unrelated hourly DB-refresh
+            # branch above (which never runs while the model keeps changing).
+            if not self.modelDiffCounterStart or now - self.modelDiffCounterStart > 3600:
+                self.modelDiffCounterStart = now
+                self.modelDiffCounter = 0
             self.modelDiffCounter += 1
             self.saveModel(saveName)
             self.dbI.insert("models", [lastKnownModel])
