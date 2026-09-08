@@ -1,6 +1,8 @@
 name: "Build Debugger EL10"
 
 on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branch selection
+  push:
+    branches: [master]
   workflow_dispatch:
     inputs:
       buildtag:
@@ -19,9 +21,17 @@ on: # checkov:skip=CKV_GHA_7 User input is controlled and intended for tag/branc
 permissions:
   contents: read
 
+concurrency:
+  group: build-debugger-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      buildtag: ${{ github.event.inputs.buildtag || 'dev' }}
+      branch: ${{ github.event.inputs.branch || 'master' }}
+      startupbranch: ${{ github.event.inputs.startupbranch || 'master' }}
     steps:
 
     - name: Checkout tools repo
@@ -29,7 +39,7 @@ jobs:
       with:
         repository: sdn-sense/siterm-startup
         path: siterm-startup
-        ref: ${{ github.event.inputs.startupbranch }}
+        ref: ${{ env.startupbranch }}
 
     - name: docker login
       env:
@@ -47,55 +57,55 @@ jobs:
       run: | 
         cd siterm-startup/helpers/base_images/agent/
         docker build . --file Dockerfile-el10 \
-          --tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }} \
-          --tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-el10 \
-          --tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) \
-          --tag sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10 \
-          --tag quay.io/sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }} \
-          --tag quay.io/sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-el10 \
-          --tag quay.io/sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) \
-          --tag quay.io/sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
+          --tag sdnsense/sitermdebugbase:${{ env.buildtag }} \
+          --tag sdnsense/sitermdebugbase:${{ env.buildtag }}-el10 \
+          --tag sdnsense/sitermdebugbase:${{ env.buildtag }}-$(date +%Y%m%d) \
+          --tag sdnsense/sitermdebugbase:${{ env.buildtag }}-$(date +%Y%m%d)-el10 \
+          --tag quay.io/sdnsense/sitermdebugbase:${{ env.buildtag }} \
+          --tag quay.io/sdnsense/sitermdebugbase:${{ env.buildtag }}-el10 \
+          --tag quay.io/sdnsense/sitermdebugbase:${{ env.buildtag }}-$(date +%Y%m%d) \
+          --tag quay.io/sdnsense/sitermdebugbase:${{ env.buildtag }}-$(date +%Y%m%d)-el10
 
 
     - name: Push BASE image to DockerHub
       run: |
-        docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-el10
-        docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
-        docker push sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
+        docker push sdnsense/sitermdebugbase:${{ env.buildtag }}
+        docker push sdnsense/sitermdebugbase:${{ env.buildtag }}-el10
+        docker push sdnsense/sitermdebugbase:${{ env.buildtag }}-$(date +%Y%m%d)
+        docker push sdnsense/sitermdebugbase:${{ env.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Push BASE image to Quay.io
       run: |
-        docker push quay.io/sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}
-        docker push quay.io/sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-el10
-        docker push quay.io/sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
-        docker push quay.io/sdnsense/sitermdebugbase:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
+        docker push quay.io/sdnsense/sitermdebugbase:${{ env.buildtag }}
+        docker push quay.io/sdnsense/sitermdebugbase:${{ env.buildtag }}-el10
+        docker push quay.io/sdnsense/sitermdebugbase:${{ env.buildtag }}-$(date +%Y%m%d)
+        docker push quay.io/sdnsense/sitermdebugbase:${{ env.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Build the Debugger Service Docker image
       run: |
         cd siterm-startup/debugger/container-build-files/
         docker build . --file Dockerfile-el10 \
-          --build-arg RELEASE=${{ github.event.inputs.buildtag }} \
-          --build-arg GITBR=${{ github.event.inputs.branch }} \
-          --tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }} \
-          --tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-el10 \
-          --tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) \
-          --tag sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10 \
-          --tag quay.io/sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }} \
-          --tag quay.io/sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-el10 \
-          --tag quay.io/sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d) \
-          --tag quay.io/sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
+          --build-arg RELEASE=${{ env.buildtag }} \
+          --build-arg GITBR=${{ env.branch }} \
+          --tag sdnsense/siterm-debugger:${{ env.buildtag }} \
+          --tag sdnsense/siterm-debugger:${{ env.buildtag }}-el10 \
+          --tag sdnsense/siterm-debugger:${{ env.buildtag }}-$(date +%Y%m%d) \
+          --tag sdnsense/siterm-debugger:${{ env.buildtag }}-$(date +%Y%m%d)-el10 \
+          --tag quay.io/sdnsense/siterm-debugger:${{ env.buildtag }} \
+          --tag quay.io/sdnsense/siterm-debugger:${{ env.buildtag }}-el10 \
+          --tag quay.io/sdnsense/siterm-debugger:${{ env.buildtag }}-$(date +%Y%m%d) \
+          --tag quay.io/sdnsense/siterm-debugger:${{ env.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Push Debugger image to DockerHub
       run: |
-        docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}
-        docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-el10
-        docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
-        docker push sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
+        docker push sdnsense/siterm-debugger:${{ env.buildtag }}
+        docker push sdnsense/siterm-debugger:${{ env.buildtag }}-el10
+        docker push sdnsense/siterm-debugger:${{ env.buildtag }}-$(date +%Y%m%d)
+        docker push sdnsense/siterm-debugger:${{ env.buildtag }}-$(date +%Y%m%d)-el10
 
     - name: Push Debugger image to Quay.io
       run: |
-        docker push quay.io/sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}
-        docker push quay.io/sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-el10
-        docker push quay.io/sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)
-        docker push quay.io/sdnsense/siterm-debugger:${{ github.event.inputs.buildtag }}-$(date +%Y%m%d)-el10
+        docker push quay.io/sdnsense/siterm-debugger:${{ env.buildtag }}
+        docker push quay.io/sdnsense/siterm-debugger:${{ env.buildtag }}-el10
+        docker push quay.io/sdnsense/siterm-debugger:${{ env.buildtag }}-$(date +%Y%m%d)
+        docker push quay.io/sdnsense/siterm-debugger:${{ env.buildtag }}-$(date +%Y%m%d)-el10
