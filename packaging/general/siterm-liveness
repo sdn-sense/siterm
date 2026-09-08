@@ -10,15 +10,12 @@ import sys
 from datetime import datetime
 
 from SiteRMLibs.hostcert import HostCertHandler
-from SiteRMLibs.MainUtilities import timedhourcheck, getTempDir
+from SiteRMLibs.MainUtilities import getTempDir
 
 
 def certCheker():
     """Check if certificates are valid and ready to use."""
-    if timedhourcheck("siterm-liveness", 1):
-        return 0
-    certHandler = HostCertHandler()
-    return certHandler.externalCertChecker()
+    return HostCertHandler.probeCertChecker("siterm-liveness")
 
 
 def checkServices(onlyservices=None):

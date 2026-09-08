@@ -122,6 +122,45 @@ def load_cert_info(cert):
     return out
 
 
+def _fmt_ts(timestamp):
+    """Render a UTC epoch-second value as an ISO-8601 string for logs."""
+    try:
+        return datetime.fromtimestamp(int(timestamp), tz=timezone.utc).isoformat()
+    except (TypeError, ValueError, OSError):
+        return str(timestamp)
+
+
+def describe_cert_failure(ex, leaf_cert=None, client_ip="unknown"):
+    """Return a single-line, log-safe description of an X.509 chain failure.
+
+    Adds the requestor identity (leaf DN, validity window, serial) and, when the
+    rejection happened deeper in the chain, the specific offending certificate
+    OpenSSL reported. Never raises - diagnostics must not mask the real error.
+    Only metadata already present in a public certificate is emitted; no key
+    material or PEM body.
+    """
+    parts = [f"reason={getattr(ex, 'errors', None) or ex}", f"client_ip={client_ip}"]
+    if leaf_cert is not None:
+        try:
+            info = load_cert_info(leaf_cert)
+            parts.append(f"requestor_dn={info['fullDN']}")
+            parts.append(f"requestor_notBefore={_fmt_ts(info['notBefore'])}")
+            parts.append(f"requestor_notAfter={_fmt_ts(info['notAfter'])}")
+            parts.append(f"requestor_serial={leaf_cert.serial_number:x}")
+        except Exception as sub_ex:  # pylint: disable=broad-except
+            parts.append(f"requestor_parse_error={sub_ex}")
+    offending = getattr(ex, "certificate", None)
+    if offending is not None:
+        try:
+            off = offending.to_cryptography()
+            parts.append(f"offending_subject={name_to_openssl(off.subject)}")
+            parts.append(f"offending_issuer={name_to_openssl(off.issuer)}")
+            parts.append(f"offending_notAfter={off.not_valid_after_utc.isoformat()}")
+        except Exception as sub_ex:  # pylint: disable=broad-except
+            parts.append(f"offending_parse_error={sub_ex}")
+    return " ".join(parts)
+
+
 _CHALLENGE_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 
 
@@ -323,6 +362,7 @@ class AuthHandler:
         """Generate a challenge for the given certificate."""
         # Challenge storage is filesystem-based (tmp), that breaks if multiple instances are running
         # or if container is restarted
+        cert = None
         try:
             cert = load_cert(input_cert)
             verify_cert_chain(input_cert, self.oidc_ca_store)
@@ -356,9 +396,9 @@ class AuthHandler:
             print(f"Authentication error: {ex}")
             raise
         except crypto.X509StoreContextError as ex:
-            print(f"Certificate verification failed: {ex}")
+            print(f"Certificate verification failed: {describe_cert_failure(ex, cert, client_ip)}")
             print(f"Full traceback: {traceback.format_exc()}")
-            raise IssuesWithAuth("Certificate verification failed") from ex
+            raise IssuesWithAuth(f"Certificate verification failed: {ex}") from ex
         except Exception as e:
             print(f"Error generating challenge: {e}")
             print(f"Full traceback: {traceback.format_exc()}")
@@ -373,6 +413,7 @@ class AuthHandler:
         if record["expires_at"] < getUTCnow():
             print(f"Challenge {challenge_id} has expired")
             return False, None
+        cert = None
         try:
             cert = load_cert(record["input_cert"])
             verify_cert_chain(record["input_cert"], self.oidc_ca_store)
@@ -405,7 +446,7 @@ class AuthHandler:
             print(f"Authentication error: {ex}")
             return False, None
         except crypto.X509StoreContextError as ex:
-            print(f"Certificate verification failed: {ex}")
+            print(f"Certificate verification failed: {describe_cert_failure(ex, cert, client_ip)}")
             return False, None
         except InvalidSignature as ex:
             print(f"Invalid signature: {ex}")
@@ -707,11 +748,11 @@ class AuthHandler:
                 raise IssuesWithAuth("Issues with permissions. Check frontend logs.")
         # Check time before
         if certinfo["notBefore"] > timestamp:
-            print(f"Certificate Invalid. Current Time: {timestamp} NotBefore: {certinfo['notBefore']}")
+            print(f"Certificate not yet valid. Current Time: {_fmt_ts(timestamp)} NotBefore: {_fmt_ts(certinfo['notBefore'])} DN: {certinfo.get('fullDN')} subject: {certinfo.get('subject')}")
             raise IssuesWithAuth("Issues with permissions. Check frontend logs.")
         # Check time after
         if certinfo["notAfter"] < timestamp:
-            print(f"Certificate Invalid. Current Time: {timestamp} NotAfter: {certinfo['notAfter']}")
+            print(f"Certificate expired. Current Time: {_fmt_ts(timestamp)} NotAfter: {_fmt_ts(certinfo['notAfter'])} DN: {certinfo.get('fullDN')} subject: {certinfo.get('subject')}")
             raise IssuesWithAuth("Issues with permissions. Check frontend logs.")
         # Check if reload of auth list is needed.
         self.loadAuthorized()

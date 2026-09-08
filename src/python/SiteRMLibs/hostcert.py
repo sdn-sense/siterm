@@ -9,10 +9,11 @@ Date                    : 2019/10/01
 
 import os.path
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 
 from OpenSSL import crypto
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.MainUtilities import getTempDir, timedhourcheck
 
 
 class HostCertHandler:
@@ -88,25 +89,36 @@ class HostCertHandler:
         return out
 
     @staticmethod
+    def _fmtts(epoch):
+        """Format an epoch timestamp as a human readable UTC string."""
+        return datetime.fromtimestamp(epoch, timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+    @staticmethod
     def runChecks(certinfo):
-        """Run certificate checks"""
+        """Run certificate checks.
+
+        Returns (exitCode, msg). A non-zero exitCode means the certificate is
+        unusable (bad key match, expired, or not yet valid) and the caller
+        (liveness/readiness probe) must fail so the pod gets restarted.
+        """
         exitCode = 0
         msg = ""
+        subject = certinfo.get("subject", "unknown")
         timestampnow = int(datetime.now().timestamp())
         if certinfo.get("failure", False):
-            msg = f"Certificate check failed. Error: {certinfo['failure']}"
+            msg = f"Certificate check failed for {subject}. Error: {certinfo['failure']}"
             print(msg)
             exitCode = 2
         if "notAfter" in certinfo and certinfo["notAfter"] < timestampnow:
-            msg = f"Certificate expired. Expired at: {certinfo['notAfter']}"
+            msg = f"Certificate {subject} expired at {HostCertHandler._fmtts(certinfo['notAfter'])}"
             print(msg)
             exitCode = 3
-        if "notBefore" in certinfo and certinfo["notBefore"] > timestampnow:
-            msg = f"Certificate not valid yet. Not valid before: {certinfo['notBefore']}"
+        elif "notBefore" in certinfo and certinfo["notBefore"] > timestampnow:
+            msg = f"Certificate {subject} not valid yet. Not valid before {HostCertHandler._fmtts(certinfo['notBefore'])}"
             print(msg)
             exitCode = 4
-        if "notAfter" in certinfo and certinfo["notAfter"] - timestampnow < 1209600:
-            msg = f"Certificate will expire in less than 14 days. Expires at: {certinfo['notAfter']}"
+        elif "notAfter" in certinfo and certinfo["notAfter"] - timestampnow < 1209600:
+            msg = f"Certificate {subject} will expire in less than 14 days (expires {HostCertHandler._fmtts(certinfo['notAfter'])})"
             print(msg)
         return exitCode, msg
 
@@ -118,7 +130,32 @@ class HostCertHandler:
             ("/etc/httpd/certs/cert.pem", "/etc/httpd/certs/privkey.pem"),
         ]:
             certCheck = self.validateHostCertKey(cert, key)
-            tmpExitCode, _msg = self.runChecks(certCheck)
-            if max(exitCode, tmpExitCode):
-                exitCode = tmpExitCode
+            tmpExitCode, msg = self.runChecks(certCheck)
+            if tmpExitCode:
+                print(f"[FAILED] Certificate check for {cert}: {msg}")
+            exitCode = max(exitCode, tmpExitCode)
         return exitCode
+
+    @staticmethod
+    def probeCertChecker(name):
+        """Throttled certificate validity check for liveness/readiness probes.
+
+        The full check (which loads the whole CA store) runs at most once per
+        hour. Between runs the last exit code is replayed from a cache file, so
+        an already-detected bad certificate keeps failing the probe on every
+        call - Kubernetes needs consecutive failures before it restarts a pod.
+        """
+        cacheFile = f"{getTempDir()}/siterm-{name}-certrc"
+        if timedhourcheck(name, 1):
+            try:
+                with open(cacheFile, "r", encoding="utf-8") as fd:
+                    return int(fd.read().strip() or "0")
+            except (OSError, ValueError):
+                return 0
+        rc = HostCertHandler().externalCertChecker()
+        try:
+            with open(cacheFile, "w", encoding="utf-8") as fd:
+                fd.write(str(rc))
+        except OSError as ex:
+            print(f"Could not cache cert check result: {ex}")
+        return rc

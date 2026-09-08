@@ -11,15 +11,12 @@ from datetime import datetime
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.hostcert import HostCertHandler
 from SiteRMLibs.HTTPLibrary import Requests
-from SiteRMLibs.MainUtilities import getFileContentAsJson, getFullUrl, timedhourcheck, getTempDir
+from SiteRMLibs.MainUtilities import getFileContentAsJson, getFullUrl, getTempDir
 
 
 def certCheker():
     """Check if certificates are valid and ready to use."""
-    if timedhourcheck("siterm-readiness", 1):
-        return 0
-    certHandler = HostCertHandler()
-    return certHandler.externalCertChecker()
+    return HostCertHandler.probeCertChecker("siterm-readiness")
 
 
 def getStates():

@@ -767,25 +767,29 @@ def getArpVals():
 
 
 def timedhourcheck(lockname, hours=1):
-    """Timed Lock for file."""
+    """Rate-limit a periodic check to at most once per ``hours``.
+
+    Returns True when the check already ran within the last ``hours`` and the
+    caller should skip it. Returns False when the caller should run the check
+    now; the timestamp is refreshed on that path so the next ``hours`` window
+    starts from this run.
+    """
     filename = f"{getTempDir()}/siterm-timed-lock-{lockname}"
+    now = datetime.datetime.now()
     if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as fd:
-            timestamp = fd.read()
-            timestamp = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-            now = datetime.datetime.now()
-            diff = now - timestamp
-            if diff.days < hours:
-                return False
-    else:
         try:
-            with open(filename, "w", encoding="utf-8") as fd:
-                timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                fd.write(timestamp)
-        except OSError as ex:
-            print(f"Error creating timestamp file: {ex}. Will return False for timedhourcheck")
-            return False
-    return True
+            with open(filename, "r", encoding="utf-8") as fd:
+                timestamp = datetime.datetime.strptime(fd.read().strip(), "%Y-%m-%d %H:%M:%S")
+            if now - timestamp < datetime.timedelta(hours=hours):
+                return True
+        except (OSError, ValueError):
+            pass
+    try:
+        with open(filename, "w", encoding="utf-8") as fd:
+            fd.write(now.strftime("%Y-%m-%d %H:%M:%S"))
+    except OSError as ex:
+        print(f"Error creating timestamp file: {ex}. Will return False for timedhourcheck")
+    return False
 
 
 def tryConvertToNumeric(value):
