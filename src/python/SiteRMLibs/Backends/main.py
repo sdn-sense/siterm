@@ -336,17 +336,17 @@ class Switch(Node):
                     self.warnings.append((msg, SWITCH_CHANNEL_MEMBER_DOWN))
 
     def _checkPortOperStatus(self, switch, port, portData):
-        """Warn when a port enabled in SiteRM config is not operationally up."""
+        """Return True when the port may stay in the model, False to exclude it."""
         if not portData:
-            return
-        if port not in self.config.config["MAIN"].get(switch, {}).get("ports", {}):
-            return
+            return True
         healthy, operstatus, lineprotocol = operStatusHealthy(portData)
         if healthy:
-            return
-        msg = f"Port {switch}{port} is enabled in SiteRM config but operstatus is '{operstatus}' (lineprotocol '{lineprotocol}'); expected connected/up."
-        self.logger.warning(msg)
-        self.warnings.append((msg, SWITCH_PORT_OPER_DOWN))
+            return True
+        if port in self.config.config["MAIN"].get(switch, {}).get("ports", {}):
+            msg = f"Port {switch}{port} is enabled in SiteRM config but operstatus is '{operstatus}' (lineprotocol '{lineprotocol}'); excluded from the model. Expected connected/up."
+            self.logger.warning(msg)
+            self.warnings.append((msg, SWITCH_PORT_OPER_DOWN))
+        return False
 
     def _mergeYamlAndSwitch(self, switch):
         """Merge yaml and Switch Info. Yaml info overwrites
@@ -374,10 +374,13 @@ class Switch(Node):
                     self.warnings.append((warning, SWITCH_PORT_NOT_SWITCHPORT))
                 self._delPortFromOut(switch, port)
                 continue
+            # Exclude non-operational ports/port-channels from the model
+            if port not in vlans and not port.lower().startswith("vlan"):
+                if not self._checkPortOperStatus(switch, port, tmpData):
+                    self._delPortFromOut(switch, port)
+                    continue
             # Do check for port Members
             self._checkPortChannel(switch, port, tmpData)
-            if port not in vlans and not port.lower().startswith("vlan"):
-                self._checkPortOperStatus(switch, port, tmpData)
             if port in vlans:
                 tmpData = self.plugin.getvlandata(self.switches["output"][switch], port)
                 vlansDict = self.output["vlans"][switch].setdefault(port, tmpData)
