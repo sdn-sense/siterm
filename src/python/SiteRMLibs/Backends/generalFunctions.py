@@ -37,6 +37,19 @@ def cleanupEmpty(output):
     return tmpOut
 
 
+def operStatusHealthy(portData):
+    """Return (healthy, operstatus, lineprotocol) for a switch port."""
+    healthyset = ("up", "connected")
+    operstatus = str(portData.get("operstatus", "") or "").strip()
+    lineprotocol = str(portData.get("lineprotocol", "") or "").strip()
+    if not operstatus:
+        return True, operstatus, lineprotocol
+    healthy = operstatus.lower() in healthyset
+    if lineprotocol and lineprotocol.lower() not in healthyset:
+        healthy = False
+    return healthy, operstatus, lineprotocol
+
+
 def getValFromConfig(config, switch, port, key):
     """Get value from config."""
     tmpVal = config["MAIN"].get(switch, {}).get("ports", {}).get(port, {}).get(key, "")

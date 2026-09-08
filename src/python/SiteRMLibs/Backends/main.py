@@ -17,12 +17,14 @@ from SiteRMLibs.Backends.generalFunctions import (
     cleanupEmpty,
     getConfigParams,
     getValFromConfig,
+    operStatusHealthy,
 )
 from SiteRMLibs.Backends.NodeInfo import Node
 from SiteRMLibs.Backends.Raw import Switch as Raw
 from SiteRMLibs.CustomExceptions import (
     SWITCH_CHANNEL_MEMBER_DOWN,
     SWITCH_PORT_NOT_SWITCHPORT,
+    SWITCH_PORT_OPER_DOWN,
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
@@ -333,6 +335,19 @@ class Switch(Node):
                     self.logger.warning(msg)
                     self.warnings.append((msg, SWITCH_CHANNEL_MEMBER_DOWN))
 
+    def _checkPortOperStatus(self, switch, port, portData):
+        """Warn when a port enabled in SiteRM config is not operationally up."""
+        if not portData:
+            return
+        if port not in self.config.config["MAIN"].get(switch, {}).get("ports", {}):
+            return
+        healthy, operstatus, lineprotocol = operStatusHealthy(portData)
+        if healthy:
+            return
+        msg = f"Port {switch}{port} is enabled in SiteRM config but operstatus is '{operstatus}' (lineprotocol '{lineprotocol}'); expected connected/up."
+        self.logger.warning(msg)
+        self.warnings.append((msg, SWITCH_PORT_OPER_DOWN))
+
     def _mergeYamlAndSwitch(self, switch):
         """Merge yaml and Switch Info. Yaml info overwrites
         any parameter in switch  configuration."""
@@ -361,6 +376,8 @@ class Switch(Node):
                 continue
             # Do check for port Members
             self._checkPortChannel(switch, port, tmpData)
+            if port not in vlans and not port.lower().startswith("vlan"):
+                self._checkPortOperStatus(switch, port, tmpData)
             if port in vlans:
                 tmpData = self.plugin.getvlandata(self.switches["output"][switch], port)
                 vlansDict = self.output["vlans"][switch].setdefault(port, tmpData)
