@@ -25,7 +25,7 @@ from SiteRMLibs.CustomExceptions import (
     NoOptionError,
     NoSectionError,
     ServiceWarning,
-    exceptionCode,
+    exceptionCodes,
 )
 from SiteRMLibs.DefaultParams import GIT_CONFIG_REFRESH_TIMEOUT, HTTP_SERVER_NOT_READY_ALERT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
@@ -569,13 +569,7 @@ class Daemon(DBBackend):
             runtime = int(getUTCnow()) - stwork
             exc = exc if exc else "No Exception provided by service"
             rawCodes = excTypes if excTypes else ([excType] if excType is not None else [])
-            exccodes = []
-            for item in rawCodes:
-                code = exceptionCode(item)
-                if code not in exccodes:
-                    exccodes.append(code)
-            if not exccodes:
-                exccodes = [-100]
+            exccodes = exceptionCodes(rawCodes)
             exccode = exccodes[0]
             self._pubStateRemote(
                 servicename=self.component,
@@ -654,7 +648,8 @@ class Daemon(DBBackend):
         """
         firstSeen = self.httpNotReadySince.setdefault(sitename, stwork)
         outageFor = int(getUTCnow()) - firstSeen
-        self.logger.error("HTTP Server Not Ready!!! Error details:  %s", ex)
+        code = exceptionCodes([type(ex)])[0]
+        self.logger.error("HTTP Server Not Ready!!! Error code: %s. Error details:  %s", code, ex)
         self.logger.error("HTTP Server Not Ready!!! Traceback details:  %s", exc)
         self.logger.error("Look at SiteRM Frontend logs for more details.")
         self.logger.error("SiteRM Frontend has been not-ready/not-alive for %s seconds.", outageFor)
@@ -689,12 +684,14 @@ class Daemon(DBBackend):
                 raise
             except (NoOptionError, NoSectionError) as ex:
                 exc = traceback.format_exc()
-                self.logger.critical(f"Exception!!! Traceback details: {exc}, Caught Exception: {ex}")
+                code = exceptionCodes([type(ex)])[0]
+                self.logger.critical(f"Exception!!! Error code: {code}. Traceback details: {exc}, Caught Exception: {ex}")
                 time.sleep(self.sleepTimers["failure"])
                 self._refreshConfigAfterFailure()
             except Exception as ex:
                 exc = traceback.format_exc()
-                self.logger.critical(f"Exception!!! Error details: {ex}. Traceback details: {exc}")
+                code = exceptionCodes([type(ex)])[0]
+                self.logger.critical(f"Exception!!! Error code: {code}. Error details: {ex}. Traceback details: {exc}")
                 time.sleep(self.sleepTimers["failure"])
 
     def __run(self, rthread):
@@ -740,8 +737,10 @@ class Daemon(DBBackend):
                     except ServiceWarning as ex:
                         exc = traceback.format_exc()
                         self.httpNotReadySince.pop(sitename, None)
-                        self.reporter("WARNING", sitename, stwork, str(ex), excTypes=(getattr(ex, "codes", None) or [type(ex)]))
-                        self.logger.warning("Service Warning!!! Error details:  %s", ex)
+                        rawCodes = getattr(ex, "codes", None) or [type(ex)]
+                        codes = exceptionCodes(rawCodes)
+                        self.reporter("WARNING", sitename, stwork, str(ex), excTypes=rawCodes)
+                        self.logger.warning("Service Warning!!! Error codes: %s. Error details:  %s", codes, ex)
                         self.logger.warning("Service Warning!!! Traceback details:  %s", exc)
                         self.logger.warning("It is not fatal error. Continue to run normally.")
                     except HTTPServerNotReady as ex:
@@ -752,7 +751,8 @@ class Daemon(DBBackend):
                         hadFailure = True
                         self.reporter("FAILED", sitename, stwork, str(ex), excType=type(ex))
                         exc = traceback.format_exc()
-                        self.logger.critical(f"Exception!!! Error details:  {ex}. Traceback details: {exc}")
+                        code = exceptionCodes([type(ex)])[0]
+                        self.logger.critical(f"Exception!!! Error code: {code}. Error details:  {ex}. Traceback details: {exc}")
                     finally:
                         self.postRunThread(sitename, rthread)
                         self.logger.debug("Finished worker for %s site", sitename)

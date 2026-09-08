@@ -128,6 +128,17 @@ def exceptionCode(excName):
     return -100
 
 
+def exceptionCodes(rawCodes):
+    """Normalize an iterable of exception classes / sentinel strings / None into
+    a deduplicated list of numeric codes, in first-seen order."""
+    exccodes = []
+    for item in rawCodes or []:
+        code = exceptionCode(item)
+        if code not in exccodes:
+            exccodes.append(code)
+    return exccodes or [-100]
+
+
 class ExceptionTemplate(Exception):
     """Exception template."""
 
