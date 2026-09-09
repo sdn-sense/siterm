@@ -146,7 +146,7 @@ def loguseraction(request, userinfo):
 
 
 async def depAuthenticate(request: Request):
-    """Dependency to authenticate the user via certificate or OIDC."""
+    """Dependency to authenticate the caller via the bearer token issued by the frontend."""
     auth_handler = AUTH_HANDLER
     try:
         token = auth_handler.extractToken(request)

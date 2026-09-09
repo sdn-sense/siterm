@@ -114,19 +114,19 @@ async def checkAPIReady(
 @router.get(
     "/authentication-method",
     summary="Get Authentication Method",
-    description=("Returns the authentication method used by the frontend (X509 or OIDC)."),
+    description=("Returns the token-issuing authentication methods offered by the frontend (M2M and USERPASS)."),
     tags=["Frontend"],
     responses={
         **{
-            200: {"description": "Authentication method successfully returned.", "content": {"application/json": {"example": {"auth_method": "X509"}}}},
+            200: {"description": "Authentication method successfully returned.", "content": {"application/json": {"example": {"auth_method": "M2M"}}}},
         },
         **DEFAULT_RESPONSES,
     },
 )
 async def getAuthMethod(request: Request, deps=Depends(apiPublicDeps), _forbid=Depends(forbidExtraQueryParams())):
     """
-    Get the authentication method used by the frontend.
-    - Returns the authentication method in use (X509 or OIDC).
+    Get the authentication methods used by the frontend.
+    - Returns the token-issuing methods in use: M2M (X.509 cert-challenge) and USERPASS.
     """
     # Starting from 1.6.XX Release, default is two auth methods
     # M2M and User/PASS - that issues token for further communications.
