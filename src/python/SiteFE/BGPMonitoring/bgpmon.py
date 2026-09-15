@@ -23,14 +23,13 @@
        delta change to react to, or the ceiling has elapsed, whichever
        comes first.
 
-    Only devices with BGP/L3 routing service actually enabled in site
-    config are ever considered, independent of active-delta state --
-    see _isBgpEnabled(), which mirrors the same rst/private_asn/
-    rsts_enabled check LookUpService.switchinfo.py already uses to
-    decide whether a switch participates in the routing service at all.
-    The VRF used for the ansible command is likewise read from that same
-    static site config (self.config.get(host, "vrf")), not solely from
-    the transient sense_bgp mirror.
+    Only devices with a `private_asn` configured are ever considered,
+    independent of active-delta state -- see _isBgpEnabled(), which
+    checks the same field RoutingService._getDefaultBGP itself requires
+    before including a device's ASN in sense_bgp at all. The VRF (and,
+    as an optimization, which address families to check) is likewise
+    read from that same static site config (self.config.get(host, "vrf")
+    / "rsts_enabled"), not solely from the transient sense_bgp mirror.
 
     Runs the same bgpsummary.yaml playbook used by the on-demand BGP
     summary debug action, but against a dedicated "_bgpmon" ansible
@@ -114,18 +113,24 @@ class BGPMonitoring:
         return changed
 
     def _isBgpEnabled(self, host):
-        """Whether BGP/L3 routing service is enabled for this device in
-        site config at all, independent of whether it currently has an
-        active delta. Mirrors the rst/private_asn/rsts_enabled check
-        SiteFE.LookUpService.modules.switchinfo already uses to decide
-        whether a switch participates in the routing service."""
+        """Whether BGP is enabled for this device in site config at all,
+        independent of whether it currently has an active delta.
+
+        NOTE: an earlier revision of this also required a "rst" config
+        key, copying SiteFE.LookUpService.modules.switchinfo's
+        rst/private_asn/rsts_enabled check -- that turned out to be the
+        wrong reference: "rst" there gates that module's own narrower
+        subnet-pool-advertisement feature, not general BGP capability,
+        and real site config (confirmed live) never sets it for devices
+        that otherwise fully participate in BGP. "private_asn" is the
+        actual, correct gate -- it's the one field RoutingService itself
+        requires before including a device's ASN in sense_bgp at all
+        (see RoutingService._getDefaultBGP)."""
         try:
-            rst = self.config.get(host, "rst")
             privateasn = self.config.get(host, "private_asn")
-            enabledrsts = strtolist(self.config.get(host, "rsts_enabled"), ",")
         except (NoOptionError, NoSectionError):
             return False
-        return bool(rst and privateasn and enabledrsts)
+        return bool(privateasn)
 
     def _getConfiguredVrf(self, host):
         """VRF as configured for this device in site config. Preferred
@@ -136,6 +141,19 @@ class BGPMonitoring:
             return self.config.get(host, "vrf")
         except (NoOptionError, NoSectionError):
             return ""
+
+    def _getConfiguredAfis(self, host):
+        """Address families to check for this device, from its
+        `rsts_enabled` site config (e.g. "ipv6" or "ipv4,ipv6"). Purely
+        an optimization -- narrows which AFI-scoped ansible calls actually
+        run instead of always requesting "both" -- so any missing/unset
+        value just falls back to "both" rather than blocking the check."""
+        try:
+            enabled = strtolist(self.config.get(host, "rsts_enabled"), ",")
+        except (NoOptionError, NoSectionError):
+            enabled = []
+        enabled = [a for a in enabled if a in ("ipv4", "ipv6")]
+        return "both" if not enabled or len(enabled) == 2 else enabled[0]
 
     def _findBGPHosts(self):
         """Find switches with BGP enabled in site config that also have
@@ -157,7 +175,7 @@ class BGPMonitoring:
                 # No active BGP delta on this host right now -- nothing to check.
                 continue
             vrf = self._getConfiguredVrf(host) or sensebgp.get("vrf", "")
-            out[host] = {"vrf": vrf}
+            out[host] = {"vrf": vrf, "type": self._getConfiguredAfis(host)}
         return out
 
     def _writeBgpmonInventory(self, hosts):
@@ -169,7 +187,7 @@ class BGPMonitoring:
             hostconfig = self.switch.plugin.getHostConfig(host)
             hostconfig["bgp_summary"] = {
                 "vrf": params["vrf"],
-                "type": "both",
+                "type": params["type"],
                 "detail": True,
             }
             self.switch.plugin._writeHostConfig(host, hostconfig, "_bgpmon")
