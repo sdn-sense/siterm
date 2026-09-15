@@ -392,6 +392,69 @@ class PromOut:
                     labels = {"errortype": errorkey, "hostname": item["device"]}
                     switchErrorsGauge.labels(**labels).set(len(errors))
 
+    def __getBGPData(self, registry):
+        """Add BGP Monitoring Data (BGPMonitoring service) to prometheus output.
+        Reads the "bgpmon" table, populated hourly by
+        SiteFE.BGPMonitoring.bgpmon against every switch with an active
+        BGP delta. Each row's output is the normalized
+        {"vrf", "afi_checked", "peers": [...]} schema (see
+        docs/plans/bgp-monitoring.md in this repo)."""
+        bgpData = self.dbI.get("bgpmon")
+        if not bgpData:
+            return
+        labelnames = ["hostname", "vrf", "peer", "iptype", "local_asn", "remote_asn"]
+        bgpState = Enum(
+            "bgp_session_state",
+            "BGP session state for a peer",
+            labelnames=labelnames,
+            states=["established", "idle", "active", "connect", "opensent", "openconfirm", "unknown"],
+            registry=registry,
+        )
+        bgpReceived = Gauge(
+            "bgp_prefixes_received",
+            "Number of prefixes received from a BGP peer",
+            labelnames,
+            registry=registry,
+        )
+        bgpAdvertised = Gauge(
+            "bgp_prefixes_advertised",
+            "Number of prefixes advertised to a BGP peer",
+            labelnames,
+            registry=registry,
+        )
+        bgpUptime = Gauge(
+            "bgp_session_uptime_seconds",
+            "Seconds since a BGP session last entered its current Established state",
+            labelnames,
+            registry=registry,
+        )
+        for item in bgpData:
+            if int(self.timenow - item["updatedate"]) > SERVICE_DOWN_TIMEOUT:
+                self.logger.warning(f"BGP monitoring for {item['hostname']} did not update in the last {SERVICE_DOWN_TIMEOUT // 60} minutes. Skipping.")
+                continue
+            out = evaldict(item.get("output", {}))
+            vrf = out.get("vrf") or ""
+            for peer in out.get("peers", []):
+                labels = {
+                    "hostname": item["hostname"],
+                    "vrf": vrf,
+                    "peer": peer.get("peer", ""),
+                    "iptype": peer.get("iptype", ""),
+                    "local_asn": str(peer.get("local_asn") or ""),
+                    "remote_asn": str(peer.get("remote_asn") or ""),
+                }
+                bgpState.labels(**labels).state(peer.get("state", "unknown"))
+                if peer.get("prefixes_received") is not None:
+                    bgpReceived.labels(**labels).set(peer["prefixes_received"])
+                # Only report advertised/uptime when the platform actually
+                # supplied them -- an absent series is the correct way to
+                # represent "unknown", not a fabricated 0 (see the
+                # advertised_known note in docs/plans/bgp-monitoring.md).
+                if peer.get("advertised_known") and peer.get("prefixes_advertised") is not None:
+                    bgpAdvertised.labels(**labels).set(peer["prefixes_advertised"])
+                if peer.get("uptime_seconds") is not None:
+                    bgpUptime.labels(**labels).set(peer["uptime_seconds"])
+
     def __getSNMPData(self, registry):
         """Add SNMP Data to prometheus output"""
         # Here get info from DB for switch snmp details
@@ -570,6 +633,7 @@ class PromOut:
         self.__diskStats(registry)
         self.__getSwitchErrors(registry)
         self.__getActiveQoSStates(registry)
+        self.__getBGPData(registry)
 
     def metrics(self):
         """Return all available Hosts, where key is IP address."""

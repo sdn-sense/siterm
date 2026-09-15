@@ -30,6 +30,7 @@ SCRIPTS = [
 for sectionName in [
     "LookUpService",
     "SNMPMonitoring",
+    "BGPMonitoring",
     "DBWorker",
     "PolicyService",
     "Validator",

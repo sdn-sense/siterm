@@ -425,6 +425,18 @@ class GitConfig:
                     "ignore_logging_debug": False,
                     "verbosity_debug": 0,
                     "debug_debug": False,
+                    # Dedicated inventory subtree for the periodic BGPMonitoring
+                    # service, kept separate from "_debug" (used by on-demand
+                    # debug actions) so the hourly sweep can never race with a
+                    # concurrent human-triggered debug request over the same
+                    # host_vars/inventory files.
+                    "private_data_dir_bgpmon": "/opt/siterm/config/ansible/sense/",
+                    "inventory_bgpmon": "/opt/siterm/config/ansible/sense/inventory_bgpmon/inventory.yaml",
+                    "inventory_host_vars_dir_bgpmon": "/opt/siterm/config/ansible/sense/inventory_bgpmon/host_vars/",
+                    "rotate_artifacts_bgpmon": 100,
+                    "ignore_logging_bgpmon": False,
+                    "verbosity_bgpmon": 0,
+                    "debug_bgpmon": False,
                     "ansible_runtime_job_timeout": 300,
                     "ansible_runtime_idle_timeout": 300,
                     "ansible_runtime_retry": 3,

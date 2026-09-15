@@ -207,6 +207,20 @@ class SNMPMon(Base):
     output = Column(JSON, nullable=False)
 
 
+class BGPMon(Base):
+    """BGPMon table. One row per host, output is the normalized
+    {"vrf": ..., "afi_checked": [...], "peers": [...]} schema produced by
+    the bgpsummary.yaml ansible playbook (see docs/plans/bgp-monitoring.md)."""
+
+    __tablename__ = "bgpmon"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    hostname = Column(String(255), nullable=False)
+    insertdate = Column(Integer, nullable=False)
+    updatedate = Column(Integer, nullable=False)
+    output = Column(JSON, nullable=False)
+
+
 class DeltaTimeState(Base):
     """DeltaTimeState table."""
 
@@ -323,6 +337,7 @@ REGISTRY = {
     "debugrequests": DebugRequest,
     "activeDeltas": ActiveDelta,
     "snmpmon": SNMPMon,
+    "bgpmon": BGPMon,
     "deltatimestates": DeltaTimeState,
     "serviceaction": ServiceAction,
     "forceapplyuuid": ForceApplyUUID,
