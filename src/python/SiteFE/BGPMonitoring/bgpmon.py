@@ -112,13 +112,22 @@ class BGPMonitoring(Timing):
         return peersbyhost
 
     @staticmethod
+    def _bareIP(addr):
+        """Normalized IP with any /mask stripped, so a CIDR value (activeDeltas)
+        and a bare address (device output) compare equal."""
+        if not addr:
+            return None
+        norm = normalizedip(addr)
+        return norm.split("/")[0] if norm else None
+
+    @staticmethod
     def _peerAddrsFromRoutes(rFullDict):
         """Normalized nextHop peer addresses for one activeDeltas rst host/iptype entry."""
         addrs = set()
         for rDict in rFullDict.get("hasRoute", {}).values():
             for iptype in ("ipv4", "ipv6"):
                 addr = rDict.get("nextHop", {}).get(f"{iptype}-address", {}).get("value")
-                norm = normalizedip(addr) if addr else None
+                norm = BGPMonitoring._bareIP(addr)
                 if norm:
                     addrs.add(norm)
         return addrs
@@ -127,7 +136,7 @@ class BGPMonitoring(Timing):
     def _filterToActivePeers(bgpsummary, activepeers):
         """Keep only the peers that are part of an active BGP delta."""
         filtered = dict(bgpsummary)
-        filtered["peers"] = [peer for peer in bgpsummary.get("peers", []) if normalizedip(peer.get("peer", "")) in activepeers]
+        filtered["peers"] = [peer for peer in bgpsummary.get("peers", []) if BGPMonitoring._bareIP(peer.get("peer", "")) in activepeers]
         return filtered
 
     def _getConfiguredAfis(self, host):
