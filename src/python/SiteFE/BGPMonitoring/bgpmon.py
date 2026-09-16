@@ -273,7 +273,9 @@ class BGPMonitoring:
             self.logger.info(f"[{self.sitename}]: No hosts with an active BGP delta found. Nothing to check.")
             return
         self._writeBgpmonInventory(hosts)
-        ansOut = self.switch.plugin._applyNewConfig(list(hosts.keys()), "_bgpmon", templateName="bgpsummary.yaml")
+        ansOut, failures = self.switch.plugin._applyNewConfig(list(hosts.keys()), "_bgpmon", templateName="bgpsummary.yaml")
+        if failures:
+            self.logger.warning(f"[{self.sitename}]: Ansible failures during BGP check: {failures}")
         checked = 0
         for host in hosts:
             bgpsummary = self._extractBgpSummary(ansOut, host)
