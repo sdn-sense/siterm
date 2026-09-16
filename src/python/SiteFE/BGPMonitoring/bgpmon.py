@@ -8,12 +8,16 @@
     PromOut.__getBGPData) to pick up.
 
     "Based on active deltas" means two things:
-    1. Only switches whose live ansible host_vars currently has a
-       `sense_bgp.neighbor` entry are checked. That key is only present
-       while there is at least one active BGP delta for that host (see
-       SiteFE.ProvisioningService.modules.RoutingService._getDefaultBGP)
-       -- so a host with no active BGP peering is skipped rather than
-       producing an empty/irrelevant check.
+    1. Only switches that currently appear under the site's activeDeltas
+       "rst" (routing service) map are checked -- see
+       _hostsWithActiveBGPDelta(), which reads that DB row directly.
+       This is NOT the same as checking `sense_bgp` on a host's live main
+       host_vars: ProvisioningService.applyIndvConfig only ever writes
+       sense_bgp into the transient "_singleapply" scratch subtree for
+       the duration of one delta's own push -- it's never persisted into
+       the main host_vars, confirmed live (comes back {} even right
+       after a full container restart). activeDeltas itself is the only
+       durable source for "does this host have an active BGP delta."
     2. A check also runs immediately whenever the site's `activeDeltas`
        row changes (a delta was added/removed/modified), rather than
        only on the fixed MAX_CHECK_INTERVAL ceiling -- see
@@ -27,9 +31,9 @@
     independent of active-delta state -- see _isBgpEnabled(), which
     checks the same field RoutingService._getDefaultBGP itself requires
     before including a device's ASN in sense_bgp at all. The VRF (and,
-    as an optimization, which address families to check) is likewise
-    read from that same static site config (self.config.get(host, "vrf")
-    / "rsts_enabled"), not solely from the transient sense_bgp mirror.
+    as an optimization, which address families to check) is read from
+    that same static site config (self.config.get(host, "vrf") /
+    "rsts_enabled").
 
     Runs the same bgpsummary.yaml playbook used by the on-demand BGP
     summary debug action, but against a dedicated "_bgpmon" ansible
@@ -133,14 +137,44 @@ class BGPMonitoring:
         return bool(privateasn)
 
     def _getConfiguredVrf(self, host):
-        """VRF as configured for this device in site config. Preferred
-        over the transient sense_bgp.vrf mirror (which only exists while
-        a delta is active) since this is the authoritative, static
-        source RoutingService itself reads the value from."""
+        """VRF as configured for this device in site config -- the
+        authoritative, static source RoutingService itself reads the
+        value from."""
         try:
             return self.config.get(host, "vrf")
         except (NoOptionError, NoSectionError):
             return ""
+
+    def _hostsWithActiveBGPDelta(self):
+        """Which hosts currently appear anywhere under activeDeltas'
+        "rst" (routing service) map -- i.e. have at least one active
+        BGP-related delta right now.
+
+        NOTE: an earlier revision of this checked
+        getHostConfig(host).get("sense_bgp") on a host's live *main*
+        host_vars instead. That turned out to be structurally wrong, not
+        just stale: ProvisioningService.applyIndvConfig only ever writes
+        sense_bgp into the transient "_singleapply" scratch subtree for
+        the duration of that one delta's own ansible push (see its own
+        _writeHostConfig(swname, curActiveConf, "_singleapply") call) --
+        it is never persisted into the main host_vars this service (or
+        anything else) reads from, confirmed live: it comes back {} even
+        immediately after a full container restart. The only durable
+        source for "does this host have an active BGP delta" is the raw
+        activeDeltas row itself -- the same structure
+        RoutingService.addrst() walks. Its shape (confirmed live) is
+        {route-or-table-uri: {hostname: {iptype: {...}}}}; a full replay
+        of RoutingService's own neighbor/prefix-list parsing isn't needed
+        here since bgpsummary.yaml's "show bgp summary" already returns
+        every peer for a VRF/AFI in one call -- we just need to know
+        which hosts to run it against."""
+        activedeltas = getActiveDeltas(self)
+        rst = activedeltas.get("output", {}).get("rst", {})
+        hosts = set()
+        for hostmap in rst.values():
+            if isinstance(hostmap, dict):
+                hosts.update(hostmap.keys())
+        return hosts
 
     def _getConfiguredAfis(self, host):
         """Address families to check for this device, from its
@@ -158,24 +192,18 @@ class BGPMonitoring:
     def _findBGPHosts(self):
         """Find switches with BGP enabled in site config that also have
         an active BGP delta right now."""
+        activehosts = self._hostsWithActiveBGPDelta()
         out = {}
         for host in self.switches:
+            if host not in activehosts:
+                # No active BGP delta on this host right now -- nothing to check.
+                continue
             networkos = self.switch.plugin.getAnsNetworkOS(host)
             if networkos not in BGP_CAPABLE_NETWORK_OS:
                 continue
             if not self._isBgpEnabled(host):
                 continue
-            try:
-                hostconfig = self.switch.plugin.getHostConfig(host)
-            except Exception as ex:  # pylint: disable=broad-except
-                self.logger.warning(f"[{host}]: Unable to read host config, skipping. Exception: {ex}")
-                continue
-            sensebgp = hostconfig.get("sense_bgp", {}) or {}
-            if not sensebgp.get("neighbor"):
-                # No active BGP delta on this host right now -- nothing to check.
-                continue
-            vrf = self._getConfiguredVrf(host) or sensebgp.get("vrf", "")
-            out[host] = {"vrf": vrf, "type": self._getConfiguredAfis(host)}
+            out[host] = {"vrf": self._getConfiguredVrf(host), "type": self._getConfiguredAfis(host)}
         return out
 
     def _writeBgpmonInventory(self, hosts):
