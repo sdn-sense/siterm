@@ -402,7 +402,7 @@ class PromOut:
         bgpData = self.dbI.get("bgpmon")
         if not bgpData:
             return
-        labelnames = ["hostname", "vrf", "peer", "iptype", "local_asn", "remote_asn"]
+        labelnames = ["hostname", "vrf", "peer", "iptype", "local_asn", "remote_asn", "sense"]
         bgpState = Enum(
             "bgp_session_state",
             "BGP session state for a peer",
@@ -442,6 +442,7 @@ class PromOut:
                     "iptype": peer.get("iptype", ""),
                     "local_asn": str(peer.get("local_asn") or ""),
                     "remote_asn": str(peer.get("remote_asn") or ""),
+                    "sense": "true" if peer.get("sense") else "false",
                 }
                 bgpState.labels(**labels).state(peer.get("state", "unknown"))
                 if peer.get("prefixes_received") is not None:

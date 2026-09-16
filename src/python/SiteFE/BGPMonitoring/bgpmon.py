@@ -2,7 +2,7 @@
 # pylint: disable=E1101
 """
 BGPMonitoring periodically checks BGP session state for switches with an
-active SENSE BGP delta, keeps only SENSE-managed peers, and writes the
+active SENSE BGP delta, tags each peer sense=True/False, and writes the
 result to DB for the Prometheus exporter to pick up.
 
 Authors:
@@ -133,11 +133,11 @@ class BGPMonitoring(Timing):
         return addrs
 
     @staticmethod
-    def _filterToActivePeers(bgpsummary, activepeers):
-        """Keep only the peers that are part of an active BGP delta."""
-        filtered = dict(bgpsummary)
-        filtered["peers"] = [peer for peer in bgpsummary.get("peers", []) if BGPMonitoring._bareIP(peer.get("peer", "")) in activepeers]
-        return filtered
+    def _tagSensePeers(bgpsummary, activepeers):
+        """Tag every peer sense=True/False; keeps all peers, drops none."""
+        tagged = dict(bgpsummary)
+        tagged["peers"] = [{**peer, "sense": BGPMonitoring._bareIP(peer.get("peer", "")) in activepeers} for peer in bgpsummary.get("peers", [])]
+        return tagged
 
     def _getConfiguredAfis(self, host):
         """Address families to check for this device, from rsts_enabled site config."""
@@ -240,9 +240,9 @@ class BGPMonitoring(Timing):
             if bgpsummary is None:
                 self.logger.warning(f"[{host}]: No BGP summary result found in ansible output. Skipping DB write.")
                 continue
-            bgpsummary = self._filterToActivePeers(bgpsummary, params["activepeers"])
-            if not bgpsummary["peers"]:
-                self.logger.warning(f"[{host}]: Device's BGP summary did not include any peer matching this host's active BGP delta(s). Recording empty peer list.")
+            bgpsummary = self._tagSensePeers(bgpsummary, params["activepeers"])
+            if not any(peer.get("sense") for peer in bgpsummary["peers"]):
+                self.logger.warning(f"[{host}]: Device's BGP summary did not include any peer matching this host's active BGP delta(s).")
             self._writeToDB(host, bgpsummary)
             checked += 1
         self.logger.info(f"[{self.sitename}]: BGP Monitoring finished. Checked {checked}/{len(hosts)} hosts with an active BGP delta.")

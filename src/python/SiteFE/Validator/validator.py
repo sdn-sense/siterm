@@ -178,7 +178,8 @@ class Validator:
                 continue
             output = evaldict(bgpRows[0].get("output", {}))
             for peer in output.get("peers", []):
-                self._validateBGPPeer(host, peer)
+                if peer.get("sense"):
+                    self._validateBGPPeer(host, peer)
 
     def _validateHostSwitchInfo(self, hostinfo, switchlldp):
         """Validate Host and Switch information"""
