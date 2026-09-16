@@ -95,7 +95,7 @@ function load_data() {
     defineSites(configdata, false);
     var sitename = configdata["general"]["sitename"];
     $.ajax({
-        url: "/api/" + sitename + "/monitoring/bgpstats?limit=200",
+        url: "/api/" + sitename + "/monitoring/bgpstats?limit=100",
         dataType: "json",
         data: {},
         async: false,
