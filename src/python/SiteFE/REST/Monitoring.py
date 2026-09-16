@@ -278,11 +278,7 @@ async def postmonitoringstats(
 @router.get(
     "/{sitename}/monitoring/bgpstats",
     summary="Get BGP Monitoring Statistics for Site",
-    description=(
-        "Retrieves the latest BGP summary (session state, prefixes received/advertised, uptime) "
-        "recorded by the periodic BGPMonitoring service for every switch with an active BGP delta. "
-        "Written directly to the database by BGPMonitoring -- this endpoint is read-only."
-    ),
+    description=("Retrieves the latest BGP summary recorded by the periodic BGPMonitoring service."),
     tags=["Monitoring Metrics"],
     responses={
         **{

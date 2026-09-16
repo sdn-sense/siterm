@@ -1,46 +1,9 @@
 #!/usr/bin/env python3
 # pylint: disable=E1101
 """
-    BGPMonitoring periodically runs a BGP summary check (session state,
-    prefixes received/advertised, up/down) against every switch that
-    currently has an active BGP delta, and writes the normalized result
-    to the DB for the Prometheus exporter (see SNMPMonitoring/snmpmon.py's
-    PromOut.__getBGPData) to pick up.
-
-    "Based on active deltas" means two things:
-    1. Only switches that currently appear under the site's activeDeltas
-       "rst" (routing service) map are checked -- see
-       _hostsWithActiveBGPDelta(), which reads that DB row directly.
-       This is NOT the same as checking `sense_bgp` on a host's live main
-       host_vars: ProvisioningService.applyIndvConfig only ever writes
-       sense_bgp into the transient "_singleapply" scratch subtree for
-       the duration of one delta's own push -- it's never persisted into
-       the main host_vars, confirmed live (comes back {} even right
-       after a full container restart). activeDeltas itself is the only
-       durable source for "does this host have an active BGP delta."
-    2. A check also runs immediately whenever the site's `activeDeltas`
-       row changes (a delta was added/removed/modified), rather than
-       only on the fixed MAX_CHECK_INTERVAL ceiling -- see
-       _activeDeltasChanged()/startwork(). The Daemonizer loop calling
-       this still ticks frequently (short --sleeptimeok, e.g. 60s); the
-       expensive ansible sweep itself only actually runs when there's a
-       delta change to react to, or the ceiling has elapsed, whichever
-       comes first.
-
-    Only devices with a `private_asn` configured are ever considered,
-    independent of active-delta state -- see _isBgpEnabled(), which
-    checks the same field RoutingService._getDefaultBGP itself requires
-    before including a device's ASN in sense_bgp at all. The VRF (and,
-    as an optimization, which address families to check) is read from
-    that same static site config (self.config.get(host, "vrf") /
-    "rsts_enabled").
-
-    Runs the same bgpsummary.yaml playbook used by the on-demand BGP
-    summary debug action, but against a dedicated "_bgpmon" ansible
-    inventory subtree (its own private_data_dir/inventory/host_vars,
-    configured in GitConfig.py's ansible defaults) so this sweep can
-    never race with a concurrent human-triggered debug request over the
-    same inventory files.
+BGPMonitoring periodically checks BGP session state for switches with an
+active SENSE BGP delta, keeps only SENSE-managed peers, and writes the
+result to DB for the Prometheus exporter to pick up.
 
 Authors:
   Justas Balcas jbalcas (at) es (dot) net
@@ -52,6 +15,7 @@ import sys
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
 from SiteRMLibs.GitConfig import getGitConfig
+from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.MainUtilities import (
     contentDB,
     getActiveDeltas,
@@ -63,6 +27,7 @@ from SiteRMLibs.MainUtilities import (
     jsondumps,
     strtolist,
 )
+from SiteRMLibs.timing import Timing
 
 COMPONENT = "BGPMonitoring"
 
@@ -80,10 +45,11 @@ BGP_CAPABLE_NETWORK_OS = {
 }
 
 
-class BGPMonitoring:
+class BGPMonitoring(Timing):
     """BGP Monitoring main process"""
 
     def __init__(self, config, sitename):
+        super().__init__()
         self.config = config if config else getGitConfig()
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service=COMPONENT)
@@ -102,10 +68,7 @@ class BGPMonitoring:
         self.switch = Switch(self.config, self.sitename)
 
     def _activeDeltasChanged(self):
-        """Whether the site's activeDeltas row has changed since the last
-        time this was called. writeActiveDeltas() bumps `updatedate` on
-        every write, so it's a cheap, reliable change marker -- no need
-        to diff the (potentially large) `output` content itself."""
+        """Whether the site's activeDeltas row has changed since the last check."""
         activedeltas = getActiveDeltas(self)
         marker = activedeltas.get("updatedate", activedeltas.get("insertdate"))
         changed = marker != self._lastactivedeltasupdate
@@ -113,19 +76,7 @@ class BGPMonitoring:
         return changed
 
     def _isBgpEnabled(self, host):
-        """Whether BGP is enabled for this device in site config at all,
-        independent of whether it currently has an active delta.
-
-        NOTE: an earlier revision of this also required a "rst" config
-        key, copying SiteFE.LookUpService.modules.switchinfo's
-        rst/private_asn/rsts_enabled check -- that turned out to be the
-        wrong reference: "rst" there gates that module's own narrower
-        subnet-pool-advertisement feature, not general BGP capability,
-        and real site config (confirmed live) never sets it for devices
-        that otherwise fully participate in BGP. "private_asn" is the
-        actual, correct gate -- it's the one field RoutingService itself
-        requires before including a device's ASN in sense_bgp at all
-        (see RoutingService._getDefaultBGP)."""
+        """Whether BGP is enabled for this device in site config (private_asn set)."""
         try:
             privateasn = self.config.get(host, "private_asn")
         except (NoOptionError, NoSectionError):
@@ -133,51 +84,54 @@ class BGPMonitoring:
         return bool(privateasn)
 
     def _getConfiguredVrf(self, host):
-        """VRF as configured for this device in site config -- the
-        authoritative, static source RoutingService itself reads the
-        value from."""
+        """VRF configured for this device in site config."""
         try:
             return self.config.get(host, "vrf")
         except (NoOptionError, NoSectionError):
             return ""
 
-    def _hostsWithActiveBGPDelta(self):
-        """Which hosts currently appear anywhere under activeDeltas'
-        "rst" (routing service) map -- i.e. have at least one active
-        BGP-related delta right now.
-
-        NOTE: an earlier revision of this checked
-        getHostConfig(host).get("sense_bgp") on a host's live *main*
-        host_vars instead. That turned out to be structurally wrong, not
-        just stale: ProvisioningService.applyIndvConfig only ever writes
-        sense_bgp into the transient "_singleapply" scratch subtree for
-        the duration of that one delta's own ansible push (see its own
-        _writeHostConfig(swname, curActiveConf, "_singleapply") call) --
-        it is never persisted into the main host_vars this service (or
-        anything else) reads from, confirmed live: it comes back {} even
-        immediately after a full container restart. The only durable
-        source for "does this host have an active BGP delta" is the raw
-        activeDeltas row itself -- the same structure
-        RoutingService.addrst() walks. Its shape (confirmed live) is
-        {route-or-table-uri: {hostname: {iptype: {...}}}}; a full replay
-        of RoutingService's own neighbor/prefix-list parsing isn't needed
-        here since bgpsummary.yaml's "show bgp summary" already returns
-        every peer for a VRF/AFI in one call -- we just need to know
-        which hosts to run it against."""
+    def _activeBGPPeers(self):
+        """Map of host -> set of normalized peer addresses from currently
+        active BGP deltas (activeDeltas "rst" map, same fields RoutingService
+        uses to build sense_bgp)."""
         activedeltas = getActiveDeltas(self)
         rst = activedeltas.get("output", {}).get("rst", {})
-        hosts = set()
-        for hostmap in rst.values():
-            if isinstance(hostmap, dict):
-                hosts.update(hostmap.keys())
-        return hosts
+        peersbyhost = {}
+        for connDict in rst.values():
+            if not isinstance(connDict, dict):
+                continue
+            for host, hostDict in connDict.items():
+                if not isinstance(hostDict, dict):
+                    continue
+                for rFullDict in hostDict.values():
+                    if not isinstance(rFullDict, dict) or not self.checkIfStarted(rFullDict):
+                        continue
+                    peers = self._peerAddrsFromRoutes(rFullDict)
+                    if peers:
+                        peersbyhost.setdefault(host, set()).update(peers)
+        return peersbyhost
+
+    @staticmethod
+    def _peerAddrsFromRoutes(rFullDict):
+        """Normalized nextHop peer addresses for one activeDeltas rst host/iptype entry."""
+        addrs = set()
+        for rDict in rFullDict.get("hasRoute", {}).values():
+            for iptype in ("ipv4", "ipv6"):
+                addr = rDict.get("nextHop", {}).get(f"{iptype}-address", {}).get("value")
+                norm = normalizedip(addr) if addr else None
+                if norm:
+                    addrs.add(norm)
+        return addrs
+
+    @staticmethod
+    def _filterToActivePeers(bgpsummary, activepeers):
+        """Keep only the peers that are part of an active BGP delta."""
+        filtered = dict(bgpsummary)
+        filtered["peers"] = [peer for peer in bgpsummary.get("peers", []) if normalizedip(peer.get("peer", "")) in activepeers]
+        return filtered
 
     def _getConfiguredAfis(self, host):
-        """Address families to check for this device, from its
-        `rsts_enabled` site config (e.g. "ipv6" or "ipv4,ipv6"). Purely
-        an optimization -- narrows which AFI-scoped ansible calls actually
-        run instead of always requesting "both" -- so any missing/unset
-        value just falls back to "both" rather than blocking the check."""
+        """Address families to check for this device, from rsts_enabled site config."""
         try:
             enabled = strtolist(self.config.get(host, "rsts_enabled"), ",")
         except (NoOptionError, NoSectionError):
@@ -186,25 +140,23 @@ class BGPMonitoring:
         return "both" if not enabled or len(enabled) == 2 else enabled[0]
 
     def _findBGPHosts(self):
-        """Find switches with BGP enabled in site config that also have
-        an active BGP delta right now."""
-        activehosts = self._hostsWithActiveBGPDelta()
+        """Switches with BGP enabled and an active BGP delta, with their active peer sets."""
+        activepeers = self._activeBGPPeers()
         out = {}
         for host in self.switches:
-            if host not in activehosts:
-                # No active BGP delta on this host right now -- nothing to check.
+            peers = activepeers.get(host)
+            if not peers:
                 continue
             networkos = self.switch.plugin.getAnsNetworkOS(host)
             if networkos not in BGP_CAPABLE_NETWORK_OS:
                 continue
             if not self._isBgpEnabled(host):
                 continue
-            out[host] = {"vrf": self._getConfiguredVrf(host), "type": self._getConfiguredAfis(host)}
+            out[host] = {"vrf": self._getConfiguredVrf(host), "type": self._getConfiguredAfis(host), "activepeers": peers}
         return out
 
     def _writeBgpmonInventory(self, hosts):
-        """Write inventory + per-host host_vars (with bgp_summary injected)
-        into the dedicated _bgpmon inventory subtree."""
+        """Write inventory + host_vars (with bgp_summary) into the _bgpmon subtree."""
         inventory = self.switch.plugin._getInventoryInfo(list(hosts.keys()))
         self.switch.plugin._writeInventoryInfo(inventory, "_bgpmon")
         for host, params in hosts.items():
@@ -218,9 +170,7 @@ class BGPMonitoring:
 
     @staticmethod
     def _extractBgpSummary(ansOut, host):
-        """Pull the registered bgpsummary_result.bgp_summary dict out of
-        the ansible run's event stream for one host. Returns None if the
-        host has no such event (e.g. it was skipped inside the playbook)."""
+        """Pull bgp_summary from the ansible run's event stream for one host."""
         if not ansOut:
             return None
         for hostevent in ansOut.host_events(host):
@@ -247,18 +197,9 @@ class BGPMonitoring:
             self.dbI.insert("bgpmon", [out])
 
     def startwork(self):
-        """Scan all switches, check BGP summary for those with an active
-        BGP delta, and refresh their entry in the DB.
-
-        Called frequently by the Daemonizer loop (short --sleeptimeok),
-        but the actual (expensive) ansible sweep only runs when:
-        1. activeDeltas has changed since the last check -- and then again
-           on each of the next REPEAT_SCANS_ON_CHANGE - 1 ticks after that,
-           to give freshly-pushed sessions a few poll cycles to settle
-           before trusting a single snapshot of their state; or
-        2. MAX_CHECK_INTERVAL has elapsed since the last full check.
-        Whichever triggers first. A new change seen mid-burst restarts the
-        burst counter rather than layering on top of the old one."""
+        """Scan switches with an active BGP delta and refresh their bgpmon
+        DB entry. Runs 3x in a row on an activeDeltas change (one scan per
+        Daemonizer tick), or hourly, whichever comes first."""
         changed = self._activeDeltasChanged()
         now = getUTCnow()
         if changed:
@@ -285,11 +226,14 @@ class BGPMonitoring:
         if failures:
             self.logger.warning(f"[{self.sitename}]: Ansible failures during BGP check: {failures}")
         checked = 0
-        for host in hosts:
+        for host, params in hosts.items():
             bgpsummary = self._extractBgpSummary(ansOut, host)
             if bgpsummary is None:
                 self.logger.warning(f"[{host}]: No BGP summary result found in ansible output. Skipping DB write.")
                 continue
+            bgpsummary = self._filterToActivePeers(bgpsummary, params["activepeers"])
+            if not bgpsummary["peers"]:
+                self.logger.warning(f"[{host}]: Device's BGP summary did not include any peer matching this host's active BGP delta(s). Recording empty peer list.")
             self._writeToDB(host, bgpsummary)
             checked += 1
         self.logger.info(f"[{self.sitename}]: BGP Monitoring finished. Checked {checked}/{len(hosts)} hosts with an active BGP delta.")
