@@ -39,3 +39,5 @@ HTTP_SERVER_NOT_READY_ALERT_TIMEOUT = 600
 DELTA_COMMIT_TIMEOUT = 300
 # Time for delta to be removed from database (1 hour)
 DELTA_REMOVE_TIMEOUT = 3600
+# Mark BGP monitoring data as stale if not updated for 70 minutes (hourly cycle + margin)
+BGP_MONITORING_DOWN_TIMEOUT = 4200

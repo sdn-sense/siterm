@@ -28,7 +28,11 @@ from easysnmp.exceptions import EasySNMPTimeoutError, EasySNMPUnknownObjectIDErr
 from prometheus_client import CollectorRegistry, Enum, Gauge, Info, generate_latest
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import SNMP_TIMEOUT, SNMP_UNKNOWN_OID
-from SiteRMLibs.DefaultParams import SERVICE_DEAD_TIMEOUT, SERVICE_DOWN_TIMEOUT
+from SiteRMLibs.DefaultParams import (
+    BGP_MONITORING_DOWN_TIMEOUT,
+    SERVICE_DEAD_TIMEOUT,
+    SERVICE_DOWN_TIMEOUT,
+)
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     contentDB,
@@ -428,9 +432,16 @@ class PromOut:
             labelnames,
             registry=registry,
         )
+        bgpLastScan = Gauge(
+            "bgp_last_scan_timestamp",
+            "Unix timestamp of the last BGP scan recorded for this switch.",
+            ["hostname"],
+            registry=registry,
+        )
         for item in bgpData:
-            if int(self.timenow - item["updatedate"]) > SERVICE_DOWN_TIMEOUT:
-                self.logger.warning(f"BGP monitoring for {item['hostname']} did not update in the last {SERVICE_DOWN_TIMEOUT // 60} minutes. Skipping.")
+            bgpLastScan.labels(hostname=item["hostname"]).set(item["updatedate"])
+            if int(self.timenow - item["updatedate"]) > BGP_MONITORING_DOWN_TIMEOUT:
+                self.logger.warning(f"BGP monitoring for {item['hostname']} did not update in the last {BGP_MONITORING_DOWN_TIMEOUT // 60} minutes. Skipping.")
                 continue
             out = evaldict(item.get("output", {}))
             vrf = out.get("vrf") or ""
