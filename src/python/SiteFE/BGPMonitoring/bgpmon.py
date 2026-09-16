@@ -57,7 +57,7 @@ class BGPMonitoring(Timing):
         self.switches = {}
         self.diragent = contentDB()
         self.dbI = getVal(getDBConn(COMPONENT, self), **{"sitename": self.sitename})
-        self._lastactivedeltasupdate = None
+        self._lastActivePeers = None
         self._lastfullcheck = 0
         self._pendingRescans = 0
         self.logger.info(f"====== {COMPONENT} Start Work. Sitename: {self.sitename}")
@@ -67,12 +67,10 @@ class BGPMonitoring(Timing):
         self.config = getGitConfig()
         self.switch = Switch(self.config, self.sitename)
 
-    def _activeDeltasChanged(self):
-        """Whether the site's activeDeltas row has changed since the last check."""
-        activedeltas = getActiveDeltas(self)
-        marker = activedeltas.get("updatedate", activedeltas.get("insertdate"))
-        changed = marker != self._lastactivedeltasupdate
-        self._lastactivedeltasupdate = marker
+    def _activeBGPPeersChanged(self, activepeers):
+        """Whether the active BGP peer set has changed since the last check."""
+        changed = activepeers != self._lastActivePeers
+        self._lastActivePeers = activepeers
         return changed
 
     def _isBgpEnabled(self, host):
@@ -148,9 +146,8 @@ class BGPMonitoring(Timing):
         enabled = [a for a in enabled if a in ("ipv4", "ipv6")]
         return "both" if not enabled or len(enabled) == 2 else enabled[0]
 
-    def _findBGPHosts(self):
+    def _findBGPHosts(self, activepeers):
         """Switches with BGP enabled and an active BGP delta, with their active peer sets."""
-        activepeers = self._activeBGPPeers()
         out = {}
         for host in self.switches:
             peers = activepeers.get(host)
@@ -207,13 +204,14 @@ class BGPMonitoring(Timing):
 
     def startwork(self):
         """Scan switches with an active BGP delta and refresh their bgpmon
-        DB entry. Runs 3x in a row on an activeDeltas change (one scan per
+        DB entry. Runs 3x in a row on a BGP peer-set change (one scan per
         Daemonizer tick), or hourly, whichever comes first."""
-        changed = self._activeDeltasChanged()
+        activepeers = self._activeBGPPeers()
+        changed = self._activeBGPPeersChanged(activepeers)
         now = getUTCnow()
         if changed:
             self._pendingRescans = REPEAT_SCANS_ON_CHANGE - 1
-            reason = "activeDeltas changed"
+            reason = "active BGP peer set changed"
         elif self._pendingRescans > 0:
             self._pendingRescans -= 1
             reason = f"post-change re-check, {self._pendingRescans} more queued"
@@ -226,7 +224,7 @@ class BGPMonitoring(Timing):
 
         self.switch.getinfo()
         self.switches = self.switch.getAllSwitches()
-        hosts = self._findBGPHosts()
+        hosts = self._findBGPHosts(activepeers)
         if not hosts:
             self.logger.info(f"[{self.sitename}]: No hosts with an active BGP delta found. Nothing to check.")
             return
