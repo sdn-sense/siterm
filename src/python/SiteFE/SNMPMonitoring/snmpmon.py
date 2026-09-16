@@ -473,7 +473,16 @@ class PromOut:
             labelnames=["vlan", "hostname", "incr"],
             registry=registry,
         )
+        snmpLastScan = Gauge(
+            "snmp_last_scan_timestamp",
+            "Unix timestamp (seconds) of the last SNMP scan recorded for this switch. Reported even when the scan is stale -- use time() minus this to compute data age.",
+            ["hostname"],
+            registry=registry,
+        )
         for item in snmpData:
+            isPseudoHost = item["hostname"].startswith("hostnamemem-") or item["hostname"].startswith("hostnamedisk-")
+            if not isPseudoHost:
+                snmpLastScan.labels(hostname=item["hostname"]).set(item["updatedate"])
             if int(self.timenow - item["updatedate"]) > SERVICE_DOWN_TIMEOUT:
                 self.logger.warning(f"SNMP {item['hostname']} did not update in the last {SERVICE_DOWN_TIMEOUT // 60} minutes. Skipping.")
                 continue

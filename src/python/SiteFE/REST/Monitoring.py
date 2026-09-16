@@ -270,3 +270,48 @@ async def postmonitoringstats(
         updatestate = "INSERTED"
         deps["dbI"].insert("snmpmon", [out])
     return APIResponse.genResponse(request, {"Status": updatestate})
+
+
+# =========================================================
+# /{sitename}/monitoring/bgpstats
+# =========================================================
+@router.get(
+    "/{sitename}/monitoring/bgpstats",
+    summary="Get BGP Monitoring Statistics for Site",
+    description=(
+        "Retrieves the latest BGP summary (session state, prefixes received/advertised, uptime) "
+        "recorded by the periodic BGPMonitoring service for every switch with an active BGP delta. "
+        "Written directly to the database by BGPMonitoring -- this endpoint is read-only."
+    ),
+    tags=["Monitoring Metrics"],
+    responses={
+        **{
+            200: {
+                "description": "TODO",
+                "content": {"application/json": {"TODO": "ADD OUTPUT EXAMPLE HERE"}},
+            },
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def getbgpmonitoringstats(
+    request: Request,
+    limit: int = Query(
+        LIMIT_DEFAULT,
+        description=f"The maximum number of results to return. Defaults to {LIMIT_DEFAULT}.",
+        ge=LIMIT_MIN,
+        le=LIMIT_MAX,
+    ),
+    sitename: str = Path(
+        ...,
+        description="The site name to retrieve the BGP monitoring statistics for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("limit")),
+):
+    """
+    Get BGP monitoring statistics for a specific site.
+    """
+    checkSite(deps, sitename)
+    return APIResponse.genResponse(request, deps["dbI"].get("bgpmon", orderby=["updatedate", "DESC"], limit=limit))

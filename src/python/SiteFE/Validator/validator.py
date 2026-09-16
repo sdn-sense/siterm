@@ -16,6 +16,10 @@ import sys
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import (
     LIVENESS_READINESS_DISABLED,
+    VALIDATOR_BGP_NO_DATA,
+    VALIDATOR_BGP_SESSION_DOWN,
+    VALIDATOR_BGP_ZERO_PREFIXES_ADVERTISED,
+    VALIDATOR_BGP_ZERO_PREFIXES_RECEIVED,
     VALIDATOR_HOST_LLDP_MISMATCH,
     VALIDATOR_PORT_NO_ANSIBLE_OUTPUT,
     VALIDATOR_SWITCH_NO_ANSIBLE_OUTPUT,
@@ -25,6 +29,7 @@ from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     contentDB,
     createDirs,
+    evaldict,
     getActiveDeltas,
     getAllHosts,
     getDBConn,
@@ -138,6 +143,58 @@ class Validator:
                     self.addWarning(f"Switch {swname} port {portname} defined in configuration, but no output received from Ansible call.", code=VALIDATOR_PORT_NO_ANSIBLE_OUTPUT)
                     self._setwarningstart()
 
+    def _findBgpHosts(self):
+        """Hosts that currently appear anywhere under activeDeltas' "rst"
+        (routing service) map -- i.e. have at least one active BGP-related
+        delta right now. Same source BGPMonitoring.bgpmon reads (see that
+        module's docstring for why this, and not a host's live host_vars,
+        is the only durable source for this)."""
+        rst = self.activeDeltas.get("output", {}).get("rst", {})
+        hosts = set()
+        for hostmap in rst.values():
+            if isinstance(hostmap, dict):
+                hosts.update(hostmap.keys())
+        return hosts
+
+    def _validateBGPPeer(self, host, peer):
+        """Validate a single BGP peer's reported state. Only checks prefix
+        counts once a session is established -- a down session already
+        gets its own warning, and zero prefixes on a down session is
+        expected, not a separate finding."""
+        peerid = f"{host} peer {peer.get('peer', 'unknown')} ({peer.get('iptype', '')})"
+        state = peer.get("state", "unknown")
+        if state != "established":
+            self.addWarning(f"BGP session not active for {peerid}: state={state}.", code=VALIDATOR_BGP_SESSION_DOWN)
+            self._setwarningstart()
+            return
+        if peer.get("prefixes_received") == 0:
+            self.addWarning(f"BGP peer {peerid} is established but receiving 0 prefixes.", code=VALIDATOR_BGP_ZERO_PREFIXES_RECEIVED)
+            self._setwarningstart()
+        # advertised_known is false when the platform never reports an
+        # advertised count at all (see docs/plans/bgp-monitoring.md) --
+        # only flag a real reported zero, not an absent/unknown value.
+        if peer.get("advertised_known") and peer.get("prefixes_advertised") == 0:
+            self.addWarning(f"BGP peer {peerid} is established but advertising 0 prefixes.", code=VALIDATOR_BGP_ZERO_PREFIXES_ADVERTISED)
+            self._setwarningstart()
+
+    def _validateBGP(self):
+        """Validate BGP peering health for every switch with an active BGP
+        delta right now, using the same "bgpmon" data BGPMonitoring writes
+        hourly (or sooner, on an activeDeltas change -- see bgpmon.py).
+        Checks all peers bgpmon reported for the host, not just the one
+        implicated by the active delta, matching bgpmon.py's own
+        simplification (a single "show bgp summary" already returns every
+        peer for a VRF/AFI, so there is no cheaper way to isolate just one)."""
+        for host in self._findBgpHosts():
+            bgpRows = self.dbI.get("bgpmon", limit=1, search=[["hostname", host]])
+            if not bgpRows:
+                self.addWarning(f"No BGP monitoring data recorded yet for {host}, which has an active BGP delta.", code=VALIDATOR_BGP_NO_DATA)
+                self._setwarningstart()
+                continue
+            output = evaldict(bgpRows[0].get("output", {}))
+            for peer in output.get("peers", []):
+                self._validateBGPPeer(host, peer)
+
     def _validateHostSwitchInfo(self, hostinfo, switchlldp):
         """Validate Host and Switch information"""
         if hostinfo.get("mac-address") == switchlldp.get("remote_port_id"):
@@ -207,6 +264,7 @@ class Validator:
         self.activeDeltas = getActiveDeltas(self)
         self.switchInfo = self.switch.getinfo()
         self._validateSwichInfo()
+        self._validateBGP()
         for hostcheck in self.getAllHostIntfMacs():
             switchlldp = self._getSwitchLLDPInfo(hostcheck)
             if hostcheck and switchlldp:

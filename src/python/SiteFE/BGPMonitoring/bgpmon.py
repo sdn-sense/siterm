@@ -66,15 +66,10 @@ from SiteRMLibs.MainUtilities import (
 
 COMPONENT = "BGPMonitoring"
 
-# Ceiling on how long a host can go without a fresh check even if
-# activeDeltas never changes (e.g. a peer flapped without any delta
-# change) -- a delta change triggers a check well before this elapses.
 MAX_CHECK_INTERVAL = 3600
 
-# Matches the vendor branches actually present in ansible-templates'
-# bgpsummary.yaml -- Arista and FreeRTR have no branch there at all (BGP
-# summary is not supported on those platforms in this deployment), so
-# they are deliberately excluded here rather than attempted and skipped.
+REPEAT_SCANS_ON_CHANGE = 3
+
 BGP_CAPABLE_NETWORK_OS = {
     "sense.frr.frr",
     "sense.sonic.sonic",
@@ -98,6 +93,7 @@ class BGPMonitoring:
         self.dbI = getVal(getDBConn(COMPONENT, self), **{"sitename": self.sitename})
         self._lastactivedeltasupdate = None
         self._lastfullcheck = 0
+        self._pendingRescans = 0
         self.logger.info(f"====== {COMPONENT} Start Work. Sitename: {self.sitename}")
 
     def refreshthread(self):
@@ -255,14 +251,26 @@ class BGPMonitoring:
         BGP delta, and refresh their entry in the DB.
 
         Called frequently by the Daemonizer loop (short --sleeptimeok),
-        but the actual (expensive) ansible sweep only runs when
-        activeDeltas has changed since the last check, or MAX_CHECK_INTERVAL
-        has elapsed since the last full check -- whichever comes first."""
+        but the actual (expensive) ansible sweep only runs when:
+        1. activeDeltas has changed since the last check -- and then again
+           on each of the next REPEAT_SCANS_ON_CHANGE - 1 ticks after that,
+           to give freshly-pushed sessions a few poll cycles to settle
+           before trusting a single snapshot of their state; or
+        2. MAX_CHECK_INTERVAL has elapsed since the last full check.
+        Whichever triggers first. A new change seen mid-burst restarts the
+        burst counter rather than layering on top of the old one."""
         changed = self._activeDeltasChanged()
         now = getUTCnow()
-        if not changed and (now - self._lastfullcheck) < MAX_CHECK_INTERVAL:
+        if changed:
+            self._pendingRescans = REPEAT_SCANS_ON_CHANGE - 1
+            reason = "activeDeltas changed"
+        elif self._pendingRescans > 0:
+            self._pendingRescans -= 1
+            reason = f"post-change re-check, {self._pendingRescans} more queued"
+        elif (now - self._lastfullcheck) < MAX_CHECK_INTERVAL:
             return
-        reason = "activeDeltas changed" if changed else f"{MAX_CHECK_INTERVAL}s ceiling elapsed"
+        else:
+            reason = f"{MAX_CHECK_INTERVAL}s ceiling elapsed"
         self.logger.info(f"[{self.sitename}]: Running BGP check ({reason}).")
         self._lastfullcheck = now
 
