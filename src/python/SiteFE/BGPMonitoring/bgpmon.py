@@ -10,6 +10,7 @@ Authors:
 
 Date: 2026/09/15
 """
+
 import sys
 
 from SiteRMLibs.Backends.main import Switch
@@ -202,16 +203,27 @@ class BGPMonitoring(Timing):
         else:
             self.dbI.insert("bgpmon", [out])
 
+    def _forceRescanRequested(self):
+        """Whether a rescan was requested via the REST API; consumes the flag."""
+        rows = self.dbI.get("bgpforcerescan")
+        for row in rows:
+            self.dbI.delete("bgpforcerescan", [["id", row["id"]]])
+        return bool(rows)
+
     def startwork(self):
         """Scan switches with an active BGP delta and refresh their bgpmon
         DB entry. Runs 3x in a row on a BGP peer-set change (one scan per
-        Daemonizer tick), or hourly, whichever comes first."""
+        Daemonizer tick), hourly, or immediately when a rescan is forced via
+        the REST API, whichever comes first."""
         activepeers = self._activeBGPPeers()
         changed = self._activeBGPPeersChanged(activepeers)
         now = getUTCnow()
+        forced = self._forceRescanRequested()
         if changed:
             self._pendingRescans = REPEAT_SCANS_ON_CHANGE - 1
             reason = "active BGP peer set changed"
+        elif forced:
+            reason = "forced rescan requested via API"
         elif self._pendingRescans > 0:
             self._pendingRescans -= 1
             reason = f"post-change re-check, {self._pendingRescans} more queued"

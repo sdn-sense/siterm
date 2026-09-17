@@ -41,8 +41,48 @@ function loadBgpHost(idx, sitename) {
         .append(model);
 }
 
+function forceBgpRescan(sitename) {
+    SiteRMAuth.authFetch("/api/" + sitename + "/monitoring/bgpstats/rescan", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({}),
+        })
+        .then(async (response) => {
+            const text = await response.text();
+
+            if (!response.ok) {
+                throw {
+                    status: response.status,
+                    message: text,
+                };
+            }
+
+            return text ? JSON.parse(text) : {};
+        })
+        .then((result) => {
+            newAlert("BGP rescan requested: " + JSON.stringify(result), {
+                type: "main"
+            });
+        })
+        .catch((err) => {
+            showAjaxWarning(
+                "Failed to request BGP rescan",
+                `HTTP ${err.status || "?"} – ${err.message || err}`
+            );
+            console.error("Fetch error:", err);
+        });
+}
+
 function defineAllBgp(data, sitename) {
     bgpRows = data;
+    var rescanRow = $('<div class="row mb-2">').append(
+        '<div class="col-auto"><button type="button" class="btn btn-info" onclick="forceBgpRescan(\'' +
+        sitename +
+        '\')">Force BGP Rescan</button></div>',
+    );
+    $("#view_fe_" + sitename).append(rescanRow);
     var menCol = $(
         '<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"></div>',
     );

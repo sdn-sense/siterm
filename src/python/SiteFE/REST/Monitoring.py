@@ -311,3 +311,29 @@ async def getbgpmonitoringstats(
     """
     checkSite(deps, sitename)
     return APIResponse.genResponse(request, deps["dbI"].get("bgpmon", orderby=["updatedate", "DESC"], limit=limit))
+
+
+@router.post(
+    "/{sitename}/monitoring/bgpstats/rescan",
+    summary="Force an immediate BGP stats rescan",
+    description=("Signals BGPMonitoring to bypass its check interval and rescan BGP peers on its next cycle."),
+    tags=["Monitoring Metrics"],
+    responses={
+        **{200: {"description": "Rescan requested.", "content": {"application/json": {"example": {"Status": "Rescan requested"}}}}},
+        **DEFAULT_RESPONSES,
+    },
+)
+async def forcebgprescan(
+    request: Request,
+    sitename: str = Path(
+        ...,
+        description="The site name to request a BGP rescan for.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
+    deps=Depends(apiWriteDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
+    """Record a request to force an immediate BGP stats rescan."""
+    checkSite(deps, sitename)
+    deps["dbI"].insert("bgpforcerescan", [{"insertdate": getUTCnow()}])
+    return APIResponse.genResponse(request, {"Status": "Rescan requested"})

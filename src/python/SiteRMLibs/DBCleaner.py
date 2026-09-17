@@ -74,6 +74,7 @@ class DBCleaner:
             "switch",
             "snmpmon",
             "serviceaction",
+            "bgpforcerescan",
             "activeDeltas",
             "instancestartend",
             "deltasusertracking",

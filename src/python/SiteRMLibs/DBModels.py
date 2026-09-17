@@ -221,6 +221,16 @@ class BGPMon(Base):
     output = Column(JSON, nullable=False)
 
 
+class BGPForceRescan(Base):
+    """BGPForceRescan table. A row here signals BGPMonitoring.startwork() to
+    bypass its check-interval throttle and rescan immediately."""
+
+    __tablename__ = "bgpforcerescan"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    insertdate = Column(Integer, nullable=False)
+
+
 class DeltaTimeState(Base):
     """DeltaTimeState table."""
 
@@ -338,6 +348,7 @@ REGISTRY = {
     "activeDeltas": ActiveDelta,
     "snmpmon": SNMPMon,
     "bgpmon": BGPMon,
+    "bgpforcerescan": BGPForceRescan,
     "deltatimestates": DeltaTimeState,
     "serviceaction": ServiceAction,
     "forceapplyuuid": ForceApplyUUID,
