@@ -1,85 +1,55 @@
-## SiteRM 1.6.3-pre Pre-Production Release
+## SiteRM 1.6.4-pre Pre-Production Release
 
-Changes since `1.6.2` (2026-08-10 → 2026-09-04), across `siterm` and related repositories.
+Changes since `1.6.3` (2026-09-10 → 2026-09-21), across `siterm` and related repositories.
 
 ### 🚀 New Features
 
-**Debugger: ethr and expanded transfer-test options**
-- `SiteFE/REST/Frontend.py`, `SiteRMLibs/Validator.py`, `src/html/newdebug.html`: Added `ethr-server`/`ethr-client` debug actions (with a `streams` field, validated against site min/max and defaulted from site config when omitted). `iperf-server`/`fdt-server`/`ethr-server` now allocate ports from a configurable `minport`/`maxports` range instead of one fixed port. `rapid-ping`/`rapid-pingnet` gain higher `maxtimeout` ceilings and saner defaults (`packetsize`, `count`, `timeout`).
+**BGP Monitoring: new periodic service, REST API, and Web UI page**
+- `SiteFE/BGPMonitoring/bgpmon.py` (new service, registered in `setup-sitefe.py` and run via the new `BGPMonitoring-update` daemon script, wired into the FE container as the `bgp_monitoring` supervisord service in `siterm-startup`): scans every switch with an active SENSE BGP delta, tags each peer `sense=true/false` by matching the delta's next-hop addresses, and records a normalized `{vrf, afi_checked, peers: [...]}` summary per host in a new `bgpmon` DB table. Runs hourly, 3x in a row immediately after the active BGP peer set changes, or on demand.
+- New `GET /{sitename}/monitoring/bgpstats` and `POST /{sitename}/monitoring/bgpstats/rescan` REST endpoints (`SiteFE/REST/Monitoring.py`, the rescan backed by a new `bgpforcerescan` table) and a new `bgp.html` Web UI page (`assets/js/page/bgp.js`) listing per-host BGP summaries with a "Force BGP Rescan" button, linked from the main nav.
+- Per-vendor BGP-summary collection is implemented as a new shared `bgpsummary.yaml` Ansible playbook plus new vendor modules across `ansible-templates` and six device collections — see Related Repository Changes.
 
-**Delta submit/commit open to Write permission (was Admin-only)**
-- `SiteFE/REST/Delta.py`: `POST .../deltas` (submit) and the `commit`/`forcecommit`/`forceapply` delta actions now require `write` (or `admin`) permission instead of `admin` only. This lets a write-level credential (e.g. the SENSE Orchestrator) submit and act on deltas directly. ⚠️ Review your site's credential permission levels if you were relying on `admin`-only being required here.
+**BGP peering health now feeds the Validator's warning pipeline**
+- `SiteFE/Validator/validator.py`: for every host with an active BGP delta, the Validator now reads its latest `bgpmon` row and raises a warning when no monitoring data exists yet (`VALIDATOR_BGP_NO_DATA`, `-120`), a SENSE-tagged peer isn't `established` (`VALIDATOR_BGP_SESSION_DOWN`, `-121`), or an established peer is receiving (`-122`) or advertising (`-123`) zero prefixes — the advertised check only fires on platforms that actually report an advertised count. Documented in the error-codes and common-issues pages ahead of release (see Related Repository Changes).
 
-**SENSE-O Keycloak token trust (read access)**
-- `SiteRMLibs/Auth.py`: New optional validator accepts access tokens issued by an external SENSE-O Keycloak realm as authenticated SiteRM users with a fixed (default: `read`) permission level, alongside the existing local user/pass + JWT flow. Configured via `SENSEO_AUTH_ENABLED`, `SENSEO_ISSUER`, `SENSEO_CLIENT_ID`, and related env vars.
-
-**Stable, machine-readable service error codes (`exccode`)**
-- `SiteRMLibs/CustomExceptions.py`, `DBModels.py`, `Daemonizer.py`, `SiteFE/REST/Service.py`, plus call sites across `LookUpService`, `Validator`, `SNMPMonitoring`, `Backends`, and `SiteRMAgent`: Service state reporting now carries a permanent numeric `exccode` (and the full `exccodes` list for a cycle) alongside the existing free-text exception message, exposed via a new `siterm_error_events` Prometheus gauge (`servicename`/`hostname` labels). (Contributed by `kvasu20`, PR #1002.)
-
-**HTTP outage escalation**
-- `SiteRMLibs/Daemonizer.py`, `DefaultParams.py`: A daemon that keeps getting `HTTPServerNotReady` from the Frontend now escalates to a reported `FAILED` state after 10 minutes of continuous outage (`HTTP_SERVER_NOT_READY_ALERT_TIMEOUT`), instead of logging and retrying silently forever.
-
-**Faster first-run provisioning using live device facts**
-- `SiteFE/ProvisioningService/provisioningService.py`, `modules/VirtualSwitchingService.py`: On first run, ProvisioningService now refreshes live switch facts up front and skips re-applying `vsw`/`singleport` deltas the device already carries (VLAN, tagged members, IPs all match), instead of force-applying every delta blindly. Falls back to force-apply on any error or missing facts.
-
-**IPv6 minimum prefix enforcement**
-- `SiteFE/PolicyService/deltachecks.py`: Deltas requesting an IPv6 address or route prefix (L2, L3, or BGP next-hop/routeFrom/routeTo) more specific than `/64` are now rejected at conflict-check time.
-
-**SwitchWorker first-run handshake (replaces blind sleep)**
-- `SiteFE/LookUpService/lookup.py`, `SwitchWorker.py`: When starting a SwitchWorker for the first time, LookUpService now waits (bounded, up to 5 minutes) for the worker to signal it has actually pulled data from the device, instead of unconditionally sleeping 60 seconds.
-
-**Web UI login reliability**
-- `src/html/assets/js/bootstrap-html.js`, `main.js`: The login overlay is now guaranteed to show on every page — previously a page whose scripts asked for it before the header template had mounted could silently miss it. Login/logout/tab click handlers are delegated so they survive template remounts.
+**New BGP Prometheus metrics**
+- `SiteFE/SNMPMonitoring/snmpmon.py`: exports `bgp_session_state` (Enum), `bgp_prefixes_received`/`bgp_prefixes_advertised` (Gauge), `bgp_session_uptime_seconds`, and `bgp_last_scan_timestamp`, labeled by `hostname`/`vrf`/`peer`/`iptype`/`local_asn`/`remote_asn`/`sense`. A new `snmp_last_scan_timestamp` gauge gives the same "is this data fresh" signal for the pre-existing SNMP exporter.
 
 ### 🐛 Bug Fixes
 
-**Model-update warning never cleared**
-- `SiteFE/LookUpService/lookup.py`: `modelDiffCounter` only ever reset via an unrelated "refresh DB after 1h idle" branch, so once 60+ real model updates landed in a burst, the `"Model has updated more than 60 times"` `WARNING` (with traceback) fired on every LookUpService loop — sometimes for up to an hour — even though the model itself had stabilized. The counter now tracks diffs within a rolling 1-hour window and self-clears.
+**FE base image failing to build (`siterm-startup`)**
+- `helpers/base_images/fe/Dockerfile`: the MariaDB GPG key fetch (`https://yum.mariadb.org/RPM-GPG-KEY-MariaDB`) is dead; switched to `https://supplychain.mariadb.com/MariaDB-Server-GPG-KEY`. Anyone building the `siterm-fe` base image from source, rather than pulling `sdnsense/siterm-fe`, was affected.
 
-**`newdebug` page: ReferenceErrors and dead code**
-- `src/html/assets/js/main.js`, `page/newdebug.js`: Fixed `ReferenceError: data is not defined` in `doSiteUpdateN` (used `configdata`). Removed dead/unreachable `doSiteUpdate`/`doDTNUpdate` functions that referenced undefined globals and ran `eval()` on server JSON. Removed a similar stray `eval()` in `page/index.js`. Delta/debug detail pages now show a warning instead of throwing when the API returns no data.
+**`restart-new-image.sh` crashed when the network mode flag wasn't set (`siterm-startup`)**
+- Forwarding an empty `-u` made `run.sh`'s `getopts` fail with `option requires an argument -- u`. It now only forwards `-p`/`-u` when those values were actually set.
 
-**`traceroutenet` debug action always rejected**
-- `SiteFE/REST/Debug.py`, `SiteRMLibs/Validator.py`: The action was registered as `traceroute-net` in `getactionkeys`/the validator, but the REST endpoint and Web UI used `traceroutenet`, so every request was rejected. Also fixed an incorrectly nested `onetime` key under the `arp-table` action schema.
+**Ansible checkout could get stuck broken on the FE container (`siterm-startup`)**
+- `start-cleanup.sh`: a previous run killed mid-`git`-operation (OOM, pod eviction) could leave a stale `.git/index.lock` or a corrupted checkout that then failed forever on every subsequent startup. The script now clears a stale lock and, if the update sequence (`fetch`/`checkout`/`reset`/`pull`) still fails, wipes and re-clones the `ansible-templates` checkout from scratch instead of leaving the FE running on a broken/stale config. `REMOTE` is now always `origin` (previously mis-derived from `ANSIBLE_REPO`, which broke when `ANSIBLE_REPO` was a bare ref like `1.6.4` instead of `origin/1.6.4`), and a failing `ansible-prepare.py` now aborts startup instead of continuing with an invalid config.
 
-**Debug submit hardening**
-- `src/html/assets/js/page/newdebug.js`, `SiteRMLibs/Validator.py`: `streams` is now coerced to `int` with a clear `BadRequestError` on invalid input (was a silent comparison against a string). Empty optional fields in the debug submit form are no longer sent as empty strings, so backend defaults apply. The request payload is built from validated fields only, separate from the `sitename` used for the URL.
-
-**Leaking `ansible_facts_*.json` temp files**
-- `SiteRMLibs/Backends/Ansible.py`, `MainUtilities.py`: Large ansible-facts output (handed back via a temp file) was never deleted after being read. `_getFacts` now cleans up stale (>1h) leftover files on each call and deletes the file immediately after parsing it. `getTempDir()` now tries a list of candidate directories (`TMPDIR`/`TEMP`/`TMP` env vars, `/tmp`, `/var/tmp`, `/usr/tmp`, a local fallback) and verifies each is actually writable, rather than assuming `/tmp` always works.
-
-**Model directory cleanup could delete the live model**
-- `SiteFE/LookUpService/lookup.py`: `cleanModelDirectory()`'s 7-day age-based pruning could delete the model file(s) the database currently points at (served by the REST API), forcing repeated regeneration. The current model (and its turtle/json-ld/n-triples siblings) is now excluded from pruning.
-
-**First-run provisioning could abort on error**
-- `SiteFE/ProvisioningService/provisioningService.py`: `_deviceRunningMatches` (the first-run "already matches device" check) now catches any exception and falls back to applying the delta, instead of letting an unexpected error abort the whole provisioning cycle.
-
-**Switchport misdetection when `switchport` field is absent**
-- `SiteRMLibs/Backends/main.py`: A device port with no explicit `switchport` field but with real physical-port data (`operstatus`, `lineprotocol`, `mtu`, `speed`, `channel-member`) is no longer misclassified as "not a switchport" and dropped from the model.
-
-**Log archiver**
-- `packaging/general/siterm-log-archiver`: Fixed `tarfile.add()` producing a broken `arcname` due to a trailing slash, and stopped deleting the archive immediately after creating it.
+**`ansible-prepare.py` validation gaps (`siterm-startup`)**
+- An unknown or missing `network_os`, a host with neither `pass` nor `sshkey`, or a `sshkey` path that doesn't exist now fail loudly with a specific error instead of silently printing a warning and continuing with a broken host entry. A malformed `/etc/ansible-conf.yaml` now reports the actual line/column instead of a raw YAML traceback. A new `--check` mode (validates only, writes nothing) lets `run.sh` check the mounted `ansible-conf.yaml` from the host before starting the container — including a cross-check against the site's Git-managed switch list from `rm-configs` — and `run.sh` skips this pre-check gracefully (with a warning) against older image tags that don't support `--check` yet.
 
 **Misc**
-- Log message typo fixes (`continous` → `continuous`, `Catched` → `Caught`, `get's` → `gets`).
+- `siterm`: `README.MD` now points at the docs site instead of a stale "Stable release: 1.6.1" line (#1005).
 
 ### ⚠️ Breaking / Upgrade Notes
 
-- **`ansible_params` git config key removed.** Per-switch `ansparams` are now read exclusively from the prepared `host_vars` file (sourced from `/etc/ansible-conf.yaml`) — the undocumented `ansible_params` key previously supported in the SiteRM git switch config is no longer consulted at all. If any site relied on that key, move the settings into `/etc/ansible-conf.yaml` before upgrading.
-- **Delta submit/commit/forceapply now accept `write` credentials**, not just `admin`. If your deployment depends on this being admin-gated, review credential permission levels before upgrading (see above).
+- No manual upgrade steps required. BGP monitoring activates automatically for any host that already has `private_asn` configured (existing BGP-routing config) and an active BGP delta; the new `bgpmon`/`bgpforcerescan` tables are created automatically on Frontend startup.
+- If you build the `siterm-fe` base image yourself instead of pulling `sdnsense/siterm-fe`, pull the latest `siterm-startup` first — see the MariaDB GPG key fix above, without it the image build fails outright.
 
 ### 🔗 Related Repository Changes
 
-**Ansible Collections & Templates** (facts-collection performance + Junos MX/PTX follow-through)
-- `sense-junos-collection`, `sense-cisconx9-collection`, `sense-dellos10-collection`: Facts modules accept a new `ansparams.subset_config` to request a specific, deterministic subset of device facts (reduces `getfacts` runtime); `dumpFactsToTmp` now honors `$TMPDIR` instead of a hardcoded `/tmp`.
-- `sense-junos-collection`: Junos MX/PTX Flexible-Ethernet ports are now detected as switchports; MAC table collection is skipped on PTX (not available on that platform); `junos_facts` now fails loudly (logging the raw device response) on unparsable output instead of silently returning empty facts.
-- `ansible-templates`: `getfacts` playbooks pass `ansparams.subset_config` through to the Dell/Arista/Cisco/Junos facts modules; `junos.j2` gains an opt-in `vstp-per-vlan` flag for MX; test-runner supports test-topology VLAN create/delete; `host_vars` example updated to reflect that `ansparams` comes only from `/etc/ansible-conf.yaml` (matches the SiteRM-side change above).
+**Ansible Collections & Templates** (cross-vendor BGP summary collection, feeding the new BGPMonitoring service)
+- `ansible-templates`: New `project/bgpsummary.yaml` playbook (dispatched by `ansible_network_os`) renders new `frr_bgpsummary.j2`/`sonic_bgpsummary.j2` templates for FRR/SONiC, or calls a vendor `*_bgpsummary` module directly for Dell OS9/OS10, Cisco NX9, and Junos. `test-runner.py` gains a `bgp-summary` subcommand for standalone testing against a single host.
+- `sense-frr-collection`, `sense-sonic-collection`: New `bgpsummary` action in `frr_command`/`sonic_command` (`vtysh -c "show bgp [vrf ...] summary json"`, run with `sudo` on SONiC) sharing the same JSON normalization. `sense-frr-collection` also reworks interface-operstate collection for VPP-based FRR deployments (queries `vppctl`/`docker exec vpp vppctl` and maps linux-cp interface names to their VPP dataplane names) and adds a sysfs `carrier`-flag fallback for when Linux reports `operstate: unknown`.
+- `sense-junos-collection`, `sense-cisconx9-collection`: New `junos_bgpsummary`/`cisconx9_bgpsummary` modules. Neither platform's summary view reports per-peer advertised-prefix counts, so both make one extra detail call per *established* peer to backfill it (Junos also backfills local ASN this way). A same-day Junos follow-up fixes `parseBgpSummaryJson()` to accept the dict shape `run_commands()` actually returns — the original version silently produced zero peers for every host.
+- `sense-dellos10-collection`, `sense-dellos9-collection`: New `dellos10_bgpsummary`/`dellos9_bgpsummary` modules (XML and regex-parsed plain text respectively — OS9 has no structured BGP output at all). A follow-up on both fixes peer de-duplication: peers are now keyed by address instead of by which address-family command produced the row, which previously could double-count or mislabel a peer when `type: both`.
 
 **Monitoring**
-- `autogole-monitoring`: Grafana/monitoring templates updated to surface the new SiteRM `exccode` error codes end-to-end.
+- `autogole-monitoring`: The shared Grafana dashboard template (plus a new VPP-specific variant for FABRIC/UChicago sites) gained a "BGP Status" panel row — session state, prefixes received/advertised, and last-scan age — rolled out to 30 of 72 deployed site dashboards so far. No alerting rules were added yet for a down session or a stale scan; until that lands, the new Validator warnings above are the only automated signal.
 
-**Helm Charts**
-- `helm-charts`: Fixed the `giturl` example in chart documentation.
+**Documentation**
+- `sdn-sense.github.io`: Added error-codes entries for the four new `VALIDATOR_BGP_*` warning codes and a common-issues entry explaining the expected "BGP monitoring data stale" warning during normal hourly-cycle drift.
 
 > Site-specific configuration/deployment repositories (`rm-configs`, `vpp-frr`, `helm-deployments`) and unrelated-org projects (`esnet/sense-rtmon`) were checked but intentionally excluded from this list as they carry per-site data rather than SiteRM software changes.
 
@@ -101,7 +71,7 @@ Changes since `1.6.2` (2026-08-10 → 2026-09-04), across `siterm` and related r
 - 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
-- This particular release is `pre-<el9|el10|u22>` version (`1.6.3-pre`).
+- This particular release is `pre-<el9|el10|u22>` version (`1.6.4-pre`).
 
 ### Docker Versions
 
@@ -111,6 +81,6 @@ Changes since `1.6.2` (2026-08-10 → 2026-09-04), across `siterm` and related r
 
 ### Helm versions
 
-- **Agent:** Chart version siterm/siterm-agent 1.6.3-pre
-- **Debugger:** Chart version siterm/siterm-debugger 1.6.3-pre
-- **Frontend:** Chart version siterm/siterm-fe 1.6.3-pre
+- **Agent:** Chart version siterm/siterm-agent 1.6.4-pre
+- **Debugger:** Chart version siterm/siterm-debugger 1.6.4-pre
+- **Frontend:** Chart version siterm/siterm-fe 1.6.4-pre
