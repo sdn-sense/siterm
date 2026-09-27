@@ -244,6 +244,10 @@ class BGPMonitoring(Timing):
         ansOut, failures = self.switch.plugin._applyNewConfig(list(hosts.keys()), "_bgpmon", templateName="bgpsummary.yaml")
         if failures:
             self.logger.warning(f"[{self.sitename}]: Ansible failures during BGP check: {failures}")
+            # This service reports OK on its next tick, so hand the device to its SwitchWorker:
+            # it re-polls facts and keeps its state FAILED (failing readiness) until the device answers.
+            for host in failures:
+                self.switch.deviceUpdate(self.sitename, host)
         checked = 0
         for host, params in hosts.items():
             bgpsummary = self._extractBgpSummary(ansOut, host)

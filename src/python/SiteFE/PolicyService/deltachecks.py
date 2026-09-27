@@ -671,9 +671,10 @@ class ConflictChecker(Timing, BWService):
                 if self._ended(subnetdict):
                     cleaned.append(subnet)
                     newconf[key].pop(subnet, None)
-                    for host in subnetdict.keys():
-                        if newconf.get("SubnetMapping", {}).get(host, {}).get("providesSubnet", {}).get(subnet, None):
-                            newconf["SubnetMapping"][host]["providesSubnet"].pop(subnet, None)
+                    # Entries with no ports left have no host keys, so match mapping by subnet on every host.
+                    # A leftover mapping makes LookUpService re-add the subnet and PolicyService re-create it.
+                    for hostmap in newconf.get("SubnetMapping", {}).values():
+                        hostmap.get("providesSubnet", {}).pop(subnet, None)
         # RST Cleanup
         for rkey, rval in {
             "providesRoute": "RoutingMapping",

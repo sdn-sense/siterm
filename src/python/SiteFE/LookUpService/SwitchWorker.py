@@ -12,7 +12,7 @@ import os
 
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.GitConfig import getGitConfig
-from SiteRMLibs.MainUtilities import getLoggingObject, getSiteNameFromConfig
+from SiteRMLibs.MainUtilities import getLoggingObject, getSiteNameFromConfig, getUTCnow
 
 
 class SwitchWorker:
@@ -26,6 +26,7 @@ class SwitchWorker:
         self.switch = Switch(config, sitename)
         self.config = None
         self.renewsNeeded = 1
+        self.lastRenew = 0
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -55,10 +56,16 @@ class SwitchWorker:
                 os.unlink(fname)
             except OSError as ex:
                 self.logger.error(f"Got OS Error removing {fname}. {ex}")
+        # Nothing else re-polls an idle device, so an unreachable one would otherwise go unnoticed.
+        renewInterval = self.config.get("daemoncontrols", "SwitchWorker", {}).get("renewinterval", 600)
+        if not self.renewsNeeded and getUTCnow() - self.lastRenew >= renewInterval:
+            self.logger.info(f"Last successful renew for {self.device} is older than {renewInterval}s. Forcing renew.")
+            self.renewsNeeded = 1
         if self.renewsNeeded:
             self.logger.info(f"Renew needed for {self.device}. Renewing {self.renewsNeeded} times.")
             self.switch.getinfoNew(self.device)
             self.renewsNeeded -= 1
+            self.lastRenew = getUTCnow()
             self._clearFirstRunMarker()
         else:
             self.logger.info(f"No renew needed for {self.device}")

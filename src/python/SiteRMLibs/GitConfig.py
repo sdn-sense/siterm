@@ -447,7 +447,10 @@ class GitConfig:
                         "failedretry": True,
                         "failedretrycount": 10,
                         "failedretrytimeout": 60,
-                    }
+                    },
+                    "SwitchWorker": {
+                        "renewinterval": 3600,
+                    },
                 },
                 "debuggers": {
                     "iperf-server": {

@@ -123,12 +123,14 @@ class Switch:
         # As we might be running multiple workers, we need to make sure
         # cleanup process is done correctly.
         retryCount = self.config.getint("ansible", "ansible_runtime_retry")
+        limit = ",".join(hosts) if isinstance(hosts, (list, tuple, set)) else hosts
         while retryCount > 0:
             try:
                 ansOut = ansible_runner.run(
                     private_data_dir=self.config.get("ansible", "private_data_dir" + subitem),
                     inventory=self.config.get("ansible", "inventory" + subitem),
                     playbook=playbook,
+                    limit=limit or None,
                     rotate_artifacts=self._getRotateArtifacts(playbook, subitem),
                     debug=self.config.getboolean("ansible", "debug" + subitem),
                     verbosity=self.__getVerbosity(subitem),
