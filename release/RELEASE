@@ -1,3 +1,90 @@
+## SiteRM 1.6.4 Production Release
+
+Changes since `1.6.3` (2026-09-10 → 2026-09-21), across `siterm` and related repositories.
+
+### 🚀 New Features
+
+**BGP Monitoring: new periodic service, REST API, and Web UI page**
+- `SiteFE/BGPMonitoring/bgpmon.py` (new service, registered in `setup-sitefe.py` and run via the new `BGPMonitoring-update` daemon script, wired into the FE container as the `bgp_monitoring` supervisord service in `siterm-startup`): scans every switch with an active SENSE BGP delta, tags each peer `sense=true/false` by matching the delta's next-hop addresses, and records a normalized `{vrf, afi_checked, peers: [...]}` summary per host in a new `bgpmon` DB table. Runs hourly, 3x in a row immediately after the active BGP peer set changes, or on demand.
+- New `GET /{sitename}/monitoring/bgpstats` and `POST /{sitename}/monitoring/bgpstats/rescan` REST endpoints (`SiteFE/REST/Monitoring.py`, the rescan backed by a new `bgpforcerescan` table) and a new `bgp.html` Web UI page (`assets/js/page/bgp.js`) listing per-host BGP summaries with a "Force BGP Rescan" button, linked from the main nav.
+- Per-vendor BGP-summary collection is implemented as a new shared `bgpsummary.yaml` Ansible playbook plus new vendor modules across `ansible-templates` and six device collections — see Related Repository Changes.
+
+**BGP peering health now feeds the Validator's warning pipeline**
+- `SiteFE/Validator/validator.py`: for every host with an active BGP delta, the Validator now reads its latest `bgpmon` row and raises a warning when no monitoring data exists yet (`VALIDATOR_BGP_NO_DATA`, `-120`), a SENSE-tagged peer isn't `established` (`VALIDATOR_BGP_SESSION_DOWN`, `-121`), or an established peer is receiving (`-122`) or advertising (`-123`) zero prefixes — the advertised check only fires on platforms that actually report an advertised count. Documented in the error-codes and common-issues pages ahead of release (see Related Repository Changes).
+
+**New BGP Prometheus metrics**
+- `SiteFE/SNMPMonitoring/snmpmon.py`: exports `bgp_session_state` (Enum), `bgp_prefixes_received`/`bgp_prefixes_advertised` (Gauge), `bgp_session_uptime_seconds`, and `bgp_last_scan_timestamp`, labeled by `hostname`/`vrf`/`peer`/`iptype`/`local_asn`/`remote_asn`/`sense`. A new `snmp_last_scan_timestamp` gauge gives the same "is this data fresh" signal for the pre-existing SNMP exporter.
+
+### 🐛 Bug Fixes
+
+**FE base image failing to build (`siterm-startup`)**
+- `helpers/base_images/fe/Dockerfile`: the MariaDB GPG key fetch (`https://yum.mariadb.org/RPM-GPG-KEY-MariaDB`) is dead; switched to `https://supplychain.mariadb.com/MariaDB-Server-GPG-KEY`. Anyone building the `siterm-fe` base image from source, rather than pulling `sdnsense/siterm-fe`, was affected.
+
+**`restart-new-image.sh` crashed when the network mode flag wasn't set (`siterm-startup`)**
+- Forwarding an empty `-u` made `run.sh`'s `getopts` fail with `option requires an argument -- u`. It now only forwards `-p`/`-u` when those values were actually set.
+
+**Ansible checkout could get stuck broken on the FE container (`siterm-startup`)**
+- `start-cleanup.sh`: a previous run killed mid-`git`-operation (OOM, pod eviction) could leave a stale `.git/index.lock` or a corrupted checkout that then failed forever on every subsequent startup. The script now clears a stale lock and, if the update sequence (`fetch`/`checkout`/`reset`/`pull`) still fails, wipes and re-clones the `ansible-templates` checkout from scratch instead of leaving the FE running on a broken/stale config. `REMOTE` is now always `origin` (previously mis-derived from `ANSIBLE_REPO`, which broke when `ANSIBLE_REPO` was a bare ref like `1.6.4` instead of `origin/1.6.4`), and a failing `ansible-prepare.py` now aborts startup instead of continuing with an invalid config.
+
+**`ansible-prepare.py` validation gaps (`siterm-startup`)**
+- An unknown or missing `network_os`, a host with neither `pass` nor `sshkey`, or a `sshkey` path that doesn't exist now fail loudly with a specific error instead of silently printing a warning and continuing with a broken host entry. A malformed `/etc/ansible-conf.yaml` now reports the actual line/column instead of a raw YAML traceback. A new `--check` mode (validates only, writes nothing) lets `run.sh` check the mounted `ansible-conf.yaml` from the host before starting the container — including a cross-check against the site's Git-managed switch list from `rm-configs` — and `run.sh` skips this pre-check gracefully (with a warning) against older image tags that don't support `--check` yet.
+
+**Misc**
+- `siterm`: `README.MD` now points at the docs site instead of a stale "Stable release: 1.6.1" line (#1005).
+
+### ⚠️ Breaking / Upgrade Notes
+
+- No manual upgrade steps required. BGP monitoring activates automatically for any host that already has `private_asn` configured (existing BGP-routing config) and an active BGP delta; the new `bgpmon`/`bgpforcerescan` tables are created automatically on Frontend startup.
+- If you build the `siterm-fe` base image yourself instead of pulling `sdnsense/siterm-fe`, pull the latest `siterm-startup` first — see the MariaDB GPG key fix above, without it the image build fails outright.
+
+### 🔗 Related Repository Changes
+
+**Ansible Collections & Templates** (cross-vendor BGP summary collection, feeding the new BGPMonitoring service)
+- `ansible-templates`: New `project/bgpsummary.yaml` playbook (dispatched by `ansible_network_os`) renders new `frr_bgpsummary.j2`/`sonic_bgpsummary.j2` templates for FRR/SONiC, or calls a vendor `*_bgpsummary` module directly for Dell OS9/OS10, Cisco NX9, and Junos. `test-runner.py` gains a `bgp-summary` subcommand for standalone testing against a single host.
+- `sense-frr-collection`, `sense-sonic-collection`: New `bgpsummary` action in `frr_command`/`sonic_command` (`vtysh -c "show bgp [vrf ...] summary json"`, run with `sudo` on SONiC) sharing the same JSON normalization. `sense-frr-collection` also reworks interface-operstate collection for VPP-based FRR deployments (queries `vppctl`/`docker exec vpp vppctl` and maps linux-cp interface names to their VPP dataplane names) and adds a sysfs `carrier`-flag fallback for when Linux reports `operstate: unknown`.
+- `sense-junos-collection`, `sense-cisconx9-collection`: New `junos_bgpsummary`/`cisconx9_bgpsummary` modules. Neither platform's summary view reports per-peer advertised-prefix counts, so both make one extra detail call per *established* peer to backfill it (Junos also backfills local ASN this way). A same-day Junos follow-up fixes `parseBgpSummaryJson()` to accept the dict shape `run_commands()` actually returns — the original version silently produced zero peers for every host.
+- `sense-dellos10-collection`, `sense-dellos9-collection`: New `dellos10_bgpsummary`/`dellos9_bgpsummary` modules (XML and regex-parsed plain text respectively — OS9 has no structured BGP output at all). A follow-up on both fixes peer de-duplication: peers are now keyed by address instead of by which address-family command produced the row, which previously could double-count or mislabel a peer when `type: both`.
+
+**Monitoring**
+- `autogole-monitoring`: The shared Grafana dashboard template (plus a new VPP-specific variant for FABRIC/UChicago sites) gained a "BGP Status" panel row — session state, prefixes received/advertised, and last-scan age — rolled out to 30 of 72 deployed site dashboards so far. No alerting rules were added yet for a down session or a stale scan; until that lands, the new Validator warnings above are the only automated signal.
+
+**Documentation**
+- `sdn-sense.github.io`: Added error-codes entries for the four new `VALIDATOR_BGP_*` warning codes and a common-issues entry explaining the expected "BGP monitoring data stale" warning during normal hourly-cycle drift.
+
+> Site-specific configuration/deployment repositories (`rm-configs`, `vpp-frr`, `helm-deployments`) and unrelated-org projects (`esnet/sense-rtmon`) were checked but intentionally excluded from this list as they carry per-site data rather than SiteRM software changes.
+
+### 🔧 Supported OS Releases
+
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL9
+  - EL10 **Default for release**
+  - U22
+- **Debugger (x86_64)**
+  - EL10
+
+> **Note:** EL8 is no longer supported for the Frontend or Agent from 1.6.0 onwards.
+
+### 📥 Installation Details
+
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
+- **Recommended Version:** Always use `latest`.
+- This particular release is `pre-<el9|el10|u22>` version (`1.6.4`).
+
+### Docker Versions
+
+- **Agent:** `sdnsense/siterm-agent:pre-<YYYYMMDD>-<el9|el10|u22>` *(or use `latest`)*
+- **Debugger:** `sdnsense/siterm-debugger:pre-<YYYYMMDD>-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:pre-<YYYYMMDD>` *(or use `latest`)*
+
+### Helm versions
+
+- **Agent:** Chart version siterm/siterm-agent 1.6.4
+- **Debugger:** Chart version siterm/siterm-debugger 1.6.4
+- **Frontend:** Chart version siterm/siterm-fe 1.6.4
+
 ## SiteRM 1.6.3-pre Pre-Production Release
 
 Changes since `1.6.2` (2026-08-10 → 2026-09-04), across `siterm` and related repositories.
