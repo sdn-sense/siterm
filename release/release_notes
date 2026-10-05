@@ -1,4 +1,4 @@
-## SiteRM 1.6.4-pre Pre-Production Release
+## SiteRM 1.6.4 Production Release
 
 Changes since `1.6.3` (2026-09-10 → 2026-09-21), across `siterm` and related repositories.
 
@@ -71,7 +71,7 @@ Changes since `1.6.3` (2026-09-10 → 2026-09-21), across `siterm` and related r
 - 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
-- This particular release is `pre-<el9|el10|u22>` version (`1.6.4-pre`).
+- This particular release is `pre-<el9|el10|u22>` version (`1.6.4`).
 
 ### Docker Versions
 
@@ -81,6 +81,6 @@ Changes since `1.6.3` (2026-09-10 → 2026-09-21), across `siterm` and related r
 
 ### Helm versions
 
-- **Agent:** Chart version siterm/siterm-agent 1.6.4-pre
-- **Debugger:** Chart version siterm/siterm-debugger 1.6.4-pre
-- **Frontend:** Chart version siterm/siterm-fe 1.6.4-pre
+- **Agent:** Chart version siterm/siterm-agent 1.6.4
+- **Debugger:** Chart version siterm/siterm-debugger 1.6.4
+- **Frontend:** Chart version siterm/siterm-fe 1.6.4
