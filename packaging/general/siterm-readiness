@@ -141,6 +141,11 @@ if __name__ == "__main__":
         disableReadinessCheck(readinessFile)
         sys.exit(0)
 
+    if os.path.exists(f"{getTempDir()}/siterm-mariadb-init-failed"):
+        with open(f"{getTempDir()}/siterm-mariadb-init-failed", "r", encoding="utf-8") as fd:
+            print(f"[FAILED] Mariadb init failed: {fd.read().strip().rstrip('.')}. Check /var/log/supervisor/siterm_mariadb_init.log")
+        sys.exit(1)
+
     if os.path.exists(f"{getTempDir()}/siterm-mariadb-init"):
         print("Mariadb init is still running. Exiting. Check /var/log/supervisor/mariadb_* log files")
         sys.exit(0)

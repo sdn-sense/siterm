@@ -46,6 +46,21 @@ def loadEnvFile(filepath="/etc/environment"):
         print(f"Failed loading env file {filepath}. Error: {ex}. Trace: {exc}")
 
 
+# Characters the FE container cannot pass through intact: shell sourcing of /etc/environment,
+# and the sed substitution into the double-quoted SQL literal done by mariadb_init.sh.
+DB_PASSWORD_FORBIDDEN_CHARS = "\"'`\\/&$;|<>()"
+
+
+def validateDBPassword(password):
+    """Raise ValueError if the MariaDB password is unset, a template placeholder or has unsupported characters."""
+    if not password:
+        raise ValueError("MARIA_DB_PASSWORD is not set. Set it in the environment file.")
+    if "".join(ch for ch in password.upper() if ch.isalpha()) == "REPLACEME":
+        raise ValueError(f"MARIA_DB_PASSWORD is still the template placeholder ({password}). Set a real password in the environment file.")
+    if any(ch.isspace() or not ch.isprintable() or ch in DB_PASSWORD_FORBIDDEN_CHARS for ch in password):
+        raise ValueError(f"MARIA_DB_PASSWORD contains unsupported characters. Whitespace and any of {' '.join(DB_PASSWORD_FORBIDDEN_CHARS)} are not allowed.")
+
+
 def buildDatabaseURL() -> str:
     """
     Build SQLAlchemy DATABASE_URL for MariaDB/MySQL.
@@ -60,6 +75,7 @@ def buildDatabaseURL() -> str:
 
     user = os.getenv("MARIA_DB_USER", "root")
     password = os.getenv("MARIA_DB_PASSWORD", "")
+    validateDBPassword(password)
     host = os.getenv("MARIA_DB_HOST", "localhost")
     port = os.getenv("MARIA_DB_PORT", "3306")
     database = os.getenv("MARIA_DB_DATABASE", "sitefe")
@@ -113,7 +129,8 @@ class DBBackend:
         """Initialize Alembic if needed, then always upgrade DB to head."""
         loadEnvFile()
         cfg = Config("/etc/alembic.ini")
-        cfg.set_main_option("sqlalchemy.url", self.database_url)
+        # Alembic's ConfigParser interpolates '%', which URL.create emits for special password characters.
+        cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
         cfg.set_main_option("script_location", str(directory))
 
         versionsDir = os.path.join(directory, "versions")
