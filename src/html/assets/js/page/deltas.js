@@ -285,36 +285,6 @@ function defineAllDeltas(data, sitename) {
     $("#deltas_list_" + sitename).empty().append(nRow);
 }
 
-function deltaPager(sitename, offset, count, total) {
-    // total is null when the server did not send X-Total-Count; then Next relies on a full page.
-    const lastOffset = total ? Math.floor((total - 1) / DELTAS_PAGE_SIZE) * DELTAS_PAGE_SIZE : null;
-    const hasNext = total !== null ? offset + DELTAS_PAGE_SIZE < total : count === DELTAS_PAGE_SIZE;
-    const pages = $('<ul class="pagination mb-0"></ul>');
-    const addPage = (label, newOffset, disabled) => {
-        const link = $('<a class="page-link" href="#"></a>').text(label);
-        link.on("click", (e) => {
-            e.preventDefault();
-            if (!disabled) {
-                loadDeltasPage(sitename, newOffset);
-            }
-        });
-        pages.append($('<li class="page-item"></li>').toggleClass("disabled", disabled).append(link));
-    };
-    addPage("First", 0, offset === 0);
-    addPage("Previous", Math.max(offset - DELTAS_PAGE_SIZE, 0), offset === 0);
-    addPage("Next", offset + DELTAS_PAGE_SIZE, !hasNext);
-    if (lastOffset !== null) {
-        addPage("Last", lastOffset, offset >= lastOffset);
-    }
-    let info = count ? `Showing ${offset + 1}-${offset + count}` : "No deltas";
-    if (total !== null) {
-        info += ` of ${total}`;
-    }
-    return $('<nav class="d-flex align-items-center my-2" aria-label="Deltas pages"></nav>')
-        .append(pages)
-        .append($('<span class="ml-3 text-muted"></span>').text(info));
-}
-
 function loadDeltasPage(sitename, offset) {
     $.ajax({
         url: "/api/" + sitename + "/deltas",
@@ -337,11 +307,11 @@ function loadDeltasPage(sitename, offset) {
             console.error("AJAX error:", status, xhr.responseText);
         },
         success: function(json, status, xhr) {
-            const total = parseInt(xhr.getResponseHeader("X-Total-Count"), 10);
-            const totalOrNull = Number.isNaN(total) ? null : total;
+            const total = totalCountHeader(xhr);
+            const onPage = (newOffset) => loadDeltasPage(sitename, newOffset);
             defineAllDeltas(json, sitename);
-            $("#deltas_pager_top_" + sitename).empty().append(deltaPager(sitename, offset, json.length, totalOrNull));
-            $("#deltas_pager_bottom_" + sitename).empty().append(deltaPager(sitename, offset, json.length, totalOrNull));
+            $("#deltas_pager_top_" + sitename).empty().append(paginationNav(offset, DELTAS_PAGE_SIZE, json.length, total, onPage));
+            $("#deltas_pager_bottom_" + sitename).empty().append(paginationNav(offset, DELTAS_PAGE_SIZE, json.length, total, onPage));
         },
     });
 }

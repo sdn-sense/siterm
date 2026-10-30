@@ -182,7 +182,7 @@ def depGetModel(dbI, **kwargs):
     """Get all models."""
     orderby = kwargs.get("orderby", ["insertdate", "DESC"])
     if not kwargs.get("modelID"):
-        models = dbI.get("models", limit=kwargs.get("limit", 10), orderby=orderby)
+        models = dbI.get("models", limit=kwargs.get("limit", 10), offset=kwargs.get("offset", 0), orderby=orderby)
         if not models:
             raise ModelNotFound("No models in database. First time run?")
         return models

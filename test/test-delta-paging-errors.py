@@ -1,5 +1,5 @@
 # pylint: disable=line-too-long
-"""Unit tests for delta list pagination and delta error persistence.
+"""Unit tests for delta/model list pagination and delta error persistence.
 
 Self-contained: uses an in-memory SQLite database, no SiteFE instance required.
 
@@ -35,7 +35,7 @@ from SiteFE.PolicyService.stateMachine import StateMachine
 from SiteRMLibs.DBBackend import dbinterface
 from SiteRMLibs.DBModels import REGISTRY, Base
 
-# SiteFE.REST.Delta reads the startup config and SiteFE.REST.dependencies loads Git config, auth keys and DB at import; stub those.
+# SiteFE.REST.Delta/Model read the startup config and SiteFE.REST.dependencies loads Git config, auth keys and DB at import; stub those.
 with tempfile.NamedTemporaryFile("w", suffix=".yaml") as _conf:
     _conf.write("SITENAME: T0_TEST\n")
     _conf.flush()
@@ -46,7 +46,7 @@ with tempfile.NamedTemporaryFile("w", suffix=".yaml") as _conf:
         mock.patch("SiteFE.PolicyService.stateMachine.StateMachine"),
         mock.patch("SiteRMLibs.Auth.AuthHandler"),
     ):
-        from SiteFE.REST import Delta  # pylint: disable=ungrouped-imports
+        from SiteFE.REST import Delta, Model  # pylint: disable=ungrouped-imports
 
 SITENAME = "T0_TEST"
 ERROR = {"errType": "<class 'SiteRMLibs.CustomExceptions.OverlapException'>", "errNo": "-9", "errMsg": "VLAN 1433 already in use"}
@@ -64,7 +64,7 @@ class DBTestCase(unittest.TestCase):
 
     def setUp(self):
         self.dbI = dbinterface()
-        Base.metadata.create_all(self.dbI.db.engine, tables=[REGISTRY["deltas"].__table__, REGISTRY["states"].__table__])
+        Base.metadata.create_all(self.dbI.db.engine, tables=[REGISTRY[name].__table__ for name in ("deltas", "states", "models")])
 
 
 class DBInterfacePagingTest(DBTestCase):
@@ -117,6 +117,46 @@ class GetDeltasEndpointTest(DBTestCase):
         with self.assertRaises(HTTPException) as ctx:
             self._call(offset=10)
         self.assertEqual(ctx.exception.status_code, 404)
+
+
+class GetModelsEndpointTest(DBTestCase):
+    """GET /api/{sitename}/models pagination."""
+
+    def setUp(self):
+        super().setUp()
+        self.dbI.insert("models", [{"uid": f"m{i}", "insertdate": 1000, "fileloc": f"/tmp/m{i}"} for i in range(1, 6)])
+        self.deps = {"dbI": self.dbI, "config": {"MAIN": {SITENAME: {}}}}
+
+    def _call(self, **kwargs):
+        """Call getModelInfo and return (status, body, headers)."""
+        request = SimpleNamespace(headers={"accept": "application/json"}, base_url="http://fe/")
+        params = {"current": False, "summary": True, "encode": True, "limit": 2, "offset": 0, "rdfformat": "turtle", "deps": self.deps, "_forbid": None}
+        params.update(kwargs)
+        resp = asyncio.run(Model.getModelInfo(request, sitename=SITENAME, **params))
+        return resp.status_code, json.loads(resp.body), resp.headers
+
+    def test_pages_and_total(self):
+        """Pages are stable when insertdates tie and X-Total-Count reports all models."""
+        seen = []
+        for offset in (0, 2, 4):
+            code, body, headers = self._call(offset=offset)
+            self.assertEqual(code, 200)
+            self.assertEqual(headers["x-total-count"], "5")
+            seen.extend(item["id"] for item in body)
+        self.assertEqual(seen, ["m5", "m4", "m3", "m2", "m1"])
+
+    def test_offset_past_end(self):
+        """Offset beyond the last model returns 404 like an empty system."""
+        with self.assertRaises(HTTPException) as ctx:
+            self._call(offset=10)
+        self.assertEqual(ctx.exception.status_code, 404)
+
+    def test_current_ignores_offset(self):
+        """current=True still returns only the latest model, without X-Total-Count."""
+        code, body, headers = self._call(current=True, offset=4)
+        self.assertEqual(code, 200)
+        self.assertEqual(len(body), 1)
+        self.assertNotIn("x-total-count", headers)
 
 
 class DeltaErrorPersistenceTest(DBTestCase):

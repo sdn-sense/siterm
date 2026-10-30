@@ -74,18 +74,19 @@ function loadModel(modelID, sitename) {
     });
 }
 
-function defineAllModels(data, sitename) {
-    menCol = $(
+const MODELS_PAGE_SIZE = 50;
+
+function defineAllModels(data, sitename, offset) {
+    const menCol = $(
         '<div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical"><\/div>',
     );
-    cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
-    latest = true;
-    for (j = 0; j < data.length; j++) {
+    const cntDiv = $('<div class="tab-content" id="v-pills-tabContent"><\/div>');
+    for (let j = 0; j < data.length; j++) {
         if ($.isPlainObject(data[j])) {
-            modID = data[j]["id"];
-            tagName = modID;
-            if (latest) {
-                latest = false;
+            const modID = data[j]["id"];
+            let tagName = modID;
+            // Models are returned newest first, so only the first entry of the first page is the latest.
+            if (offset === 0 && j === 0) {
                 tagName += " LATEST";
             }
             // add creationTime
@@ -94,34 +95,54 @@ function defineAllModels(data, sitename) {
             }
 
             menCol.append(
-                '<a class="nav-link" id="v-pills-' +
-                modID +
-                '-tab" data-toggle="pill" onclick="loadModel(\'' +
-                modID +
-                "', '" +
-                sitename +
-                '\')" href="#v-pills-' +
-                modID +
-                '" role="tab" aria-controls="v-pills-' +
-                modID +
-                '" aria-selected="true">' +
-                tagName +
-                "<\/a>",
+                $('<a class="nav-link" data-toggle="pill" role="tab" aria-selected="true"></a>')
+                .attr("id", "v-pills-" + modID + "-tab")
+                .attr("href", "#v-pills-" + modID)
+                .attr("aria-controls", "v-pills-" + modID)
+                .on("click", () => loadModel(modID, sitename))
+                .text(tagName)
             );
             cntDiv.append(
-                '<div class="tab-pane fade" id="v-pills-' +
-                modID +
-                '" role="tabpanel" aria-labelledby="v-pills-' +
-                modID +
-                '-tab"><\/div>',
+                $('<div class="tab-pane fade" role="tabpanel"></div>')
+                .attr("id", "v-pills-" + modID)
+                .attr("aria-labelledby", "v-pills-" + modID + "-tab")
             );
         }
     }
-    nRow = $('<div class="row">');
-    menCol = $('<div class="col-3">').append(menCol);
-    cntDiv = $('<div class="col-9">').append(cntDiv);
-    nRow.append(menCol).append(cntDiv);
-    $("#view_fe_" + sitename).append(nRow);
+    const nRow = $('<div class="row">')
+        .append($('<div class="col-3">').append(menCol))
+        .append($('<div class="col-9">').append(cntDiv));
+    $("#models_list_" + sitename).empty().append(nRow);
+}
+
+function loadModelsPage(sitename, offset) {
+    $.ajax({
+        url: "/api/" + sitename + "/models",
+        dataType: "json",
+        data: {
+            limit: MODELS_PAGE_SIZE,
+            offset: offset
+        },
+        error: function(xhr, status, error) {
+            if (xhr.status === 404) {
+                $("#models_list_" + sitename).empty().append($('<div class="alert alert-info"></div>').text("No models found."));
+                $("#models_pager_top_" + sitename + ", #models_pager_bottom_" + sitename).empty();
+                return;
+            }
+            showAjaxWarning(
+                "Failed to load list of models",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
+        success: function(json, status, xhr) {
+            const total = totalCountHeader(xhr);
+            const onPage = (newOffset) => loadModelsPage(sitename, newOffset);
+            defineAllModels(json, sitename, offset);
+            $("#models_pager_top_" + sitename).empty().append(paginationNav(offset, MODELS_PAGE_SIZE, json.length, total, onPage));
+            $("#models_pager_bottom_" + sitename).empty().append(paginationNav(offset, MODELS_PAGE_SIZE, json.length, total, onPage));
+        },
+    });
 }
 
 function load_data() {
@@ -131,20 +152,10 @@ function load_data() {
     }
     defineSites(configdata, false);
     var sitename = configdata["general"]["sitename"];
-    $.ajax({
-        url: "/api/" + sitename + "/models?limit=100",
-        dataType: "json",
-        data: {},
-        async: false,
-        error: function(xhr, status, error) {
-            showAjaxWarning(
-                "Failed to load list of models",
-                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
-            );
-            console.error("AJAX error:", status, xhr.responseText);
-        },
-        success: function(json) {
-            defineAllModels(json, sitename);
-        },
-    });
+    $("#view_fe_" + sitename).append(
+        $("<div></div>").attr("id", "models_pager_top_" + sitename),
+        $("<div></div>").attr("id", "models_list_" + sitename),
+        $("<div></div>").attr("id", "models_pager_bottom_" + sitename),
+    );
+    loadModelsPage(sitename, 0);
 }

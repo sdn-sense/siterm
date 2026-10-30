@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=line-too-long, too-many-arguments
+# pylint: disable=line-too-long, too-many-arguments, too-many-positional-arguments
 """
 Model API Calls
 Title                   : siterm
@@ -52,12 +52,16 @@ startupConfig = getstartupconfig()
 @router.get(
     "/{sitename}/models",
     summary="Get Model Information",
-    description=("Retrieves model information for the given site name."),
+    description=(
+        "Retrieves model information for the given site name, newest first. Unless current is set, use limit and offset to page through results; "
+        "the X-Total-Count response header holds the total number of models."
+    ),
     tags=["Models"],
     responses={
         **{
             200: {
                 "description": "Model information retrieved successfully",
+                "headers": {"X-Total-Count": {"description": "Total number of models (ignoring limit and offset). Not sent when current is True.", "schema": {"type": "integer"}}},
                 "content": {"application/json": {"example": {"model": "example_model"}}},
             },
             404: {
@@ -89,9 +93,14 @@ async def getModelInfo(
         ge=LIMIT_MIN,
         le=LIMIT_MAX,
     ),
+    offset: int = Query(
+        0,
+        description="The number of models to skip before returning results. Defaults to 0. Only applies if current is False.",
+        ge=0,
+    ),
     rdfformat: Literal["turtle", "json-ld", "ntriples"] = Query("turtle", description="Model format: turtle, json-ld, ntriples."),
     deps=Depends(apiReadDeps),
-    _forbid=Depends(forbidExtraQueryParams("current", "summary", "encode", "limit", "rdfformat")),
+    _forbid=Depends(forbidExtraQueryParams("current", "summary", "encode", "limit", "offset", "rdfformat")),
 ):
     """
     Get model information for the given site name.
@@ -134,8 +143,9 @@ async def getModelInfo(
                 ],
                 headers=headers,
             )
-        # If current is not set, return all models (based on limit)
-        outmodels = depGetModel(deps["dbI"], limit=limit, orderby=["insertdate", "DESC"])
+        # If current is not set, return all models (based on limit/offset).
+        # Order by autoincrement id (same order as insertdate) so pages are stable when insertdates tie.
+        outmodels = depGetModel(deps["dbI"], limit=limit, offset=offset, orderby=["id", "DESC"])
         models = []
         for model in outmodels:
             tmpDict = {
@@ -146,7 +156,7 @@ async def getModelInfo(
             if not summary:
                 tmpDict["model"] = depGetModelContent(model, rdfformat=rdfformat, encode=encode)
             models.append(tmpDict)
-        return APIResponse.genResponse(request, models)
+        return APIResponse.genResponse(request, models, headers={"X-Total-Count": str(deps["dbI"].count("models"))})
     except ModelNotFound as ex:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

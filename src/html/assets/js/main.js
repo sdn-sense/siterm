@@ -199,6 +199,42 @@ function mrmlSaver(dataIn, saveObj) {
     saveObj.append(modCod);
 }
 
+function totalCountHeader(xhr) {
+    // Returns X-Total-Count as a number, or null if the server did not send it.
+    const total = parseInt(xhr.getResponseHeader("X-Total-Count"), 10);
+    return Number.isNaN(total) ? null : total;
+}
+
+function paginationNav(offset, pageSize, count, total, onPage) {
+    // Bootstrap pager; with total null, Next relies on the page being full and Last is hidden.
+    const lastOffset = total ? Math.floor((total - 1) / pageSize) * pageSize : null;
+    const hasNext = total !== null ? offset + pageSize < total : count === pageSize;
+    const pages = $('<ul class="pagination mb-0"></ul>');
+    const addPage = (label, newOffset, disabled) => {
+        const link = $('<a class="page-link" href="#"></a>').text(label);
+        link.on("click", (e) => {
+            e.preventDefault();
+            if (!disabled) {
+                onPage(newOffset);
+            }
+        });
+        pages.append($('<li class="page-item"></li>').toggleClass("disabled", disabled).append(link));
+    };
+    addPage("First", 0, offset === 0);
+    addPage("Previous", Math.max(offset - pageSize, 0), offset === 0);
+    addPage("Next", offset + pageSize, !hasNext);
+    if (lastOffset !== null) {
+        addPage("Last", lastOffset, offset >= lastOffset);
+    }
+    let info = count ? `Showing ${offset + 1}-${offset + count}` : "No results";
+    if (total !== null) {
+        info += ` of ${total}`;
+    }
+    return $('<nav class="d-flex align-items-center my-2" aria-label="Pages"></nav>')
+        .append(pages)
+        .append($('<span class="ml-3 text-muted"></span>').text(info));
+}
+
 function defineSites(data, definehosts = true) {
     sitesTab = $('<ul class="nav nav-pills" id="myTab" role="tablist"></ul>');
     allSites = $('<div id="sites" class="tab-content"></div>');
