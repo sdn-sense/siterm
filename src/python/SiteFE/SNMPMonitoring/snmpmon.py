@@ -81,7 +81,29 @@ class Topology:
             return indata.get("event_data", {}).get("res", {}).get("ansible_facts", {}).get(keys[0], {}).get(keys[1], {})
         return {}
 
-    def getWANLinks(self, incr):
+    @staticmethod
+    def _portChannels(intstats):
+        """Map port-channel member port -> port-channel name from ansible interface facts"""
+        out = {}
+        for port, vals in intstats.items():
+            if isinstance(vals, dict):
+                for member in vals.get("channel-member") or []:
+                    out[member] = port
+        return out
+
+    @staticmethod
+    def _errorCount(item):
+        """Number of errors from the last switch fetch (successful fetches reset the error column to {})"""
+        errors = evaldict(item.get("error"))
+        return len(errors) if isinstance(errors, (dict, list)) else int(bool(errors))
+
+    @staticmethod
+    def _lagInfo(workdata, device, port, field):
+        """Return {field: port-channel} when port is a port-channel member on a known switch, else {}"""
+        lag = workdata.get(device, {}).get("lags", {}).get(port)
+        return {field: lag} if lag else {}
+
+    def getWANLinks(self, incr, workdata):
         """Get WAN Links for visualization"""
         wan_links = {}
         sitename = getSiteNameFromConfig(self.config)
@@ -90,7 +112,8 @@ class Topology:
                 continue
             if not isinstance(self.config["MAIN"].get(sw, {}).get("ports", None), dict):
                 continue
-            for _, val in self.config["MAIN"].get(sw, {}).get("ports", {}).items():
+            intstats = workdata.get(sw, {}).get("intstats", {})
+            for portname, val in self.config["MAIN"].get(sw, {}).get("ports", {}).items():
                 if "wanlink" in val and val["wanlink"] and val.get("isAlias", None):
                     wan_links.setdefault(
                         f"wan{incr}",
@@ -100,7 +123,12 @@ class Topology:
                             "DeviceInfo": {"type": "cloud", "name": val["isAlias"]},
                         },
                     )
-                    wan_links[f"wan{incr}"]["topo"].setdefault(val["isAlias"].split(":")[-1], {"device": sw, "port": val})
+                    intf = intstats.get(portname) or {}
+                    link = {"device": sw, "port": val, "localport": portname, "bandwidth": intf.get("bandwidth", 0)}
+                    members = intf.get("channel-member") or []
+                    if members:
+                        link["members"] = {member: intstats.get(member, {}).get("bandwidth", 0) for member in members}
+                    wan_links[f"wan{incr}"]["topo"].setdefault(val["isAlias"].split(":")[-1], link)
                     incr += 1
         return wan_links
 
@@ -121,7 +149,7 @@ class Topology:
             if "output" not in item:
                 continue
             tmpdict = evaldict(item["output"])
-            workdata[item["device"]] = {"id": incr, "type": "switch"}
+            workdata[item["device"]] = {"id": incr, "type": "switch", "updatedate": item.get("updatedate", 0), "errors": self._errorCount(item)}
             incr += 1
             for dkey, keys in {
                 "macs": ["ansible_net_info", "macs"],
@@ -129,6 +157,7 @@ class Topology:
                 "intstats": ["ansible_net_interfaces"],
             }.items():
                 workdata[item["device"]][dkey] = self._getansdata(tmpdict, keys)
+            workdata[item["device"]]["lags"] = self._portChannels(workdata[item["device"]]["intstats"])
         # Now that we have specific data; lets loop over it and get nodes/links
         out = {}
         for switch, switchdata in workdata.items():
@@ -136,7 +165,7 @@ class Topology:
                 switch,
                 {
                     "topo": {},
-                    "DeviceInfo": {"type": "switch", "name": switch},
+                    "DeviceInfo": {"type": "switch", "name": switch, "updatedate": switchdata["updatedate"], "errors": switchdata["errors"]},
                     "_id": switchdata["id"],
                 },
             )
@@ -153,6 +182,8 @@ class Topology:
                             "bandwidth": bw,
                         },
                     )
+                    swout["topo"][key].update(self._lagInfo(workdata, switch, key, "portchannel"))
+                    swout["topo"][key].update(self._lagInfo(workdata, remSwitch["switch"], remPort, "remoteportchannel"))
                     print(swout["topo"][key])
         # Now lets get host information
         for host in self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100):
@@ -186,6 +217,7 @@ class Topology:
                                 "bandwidth": getHostPortSpeed(netinfo, intf),
                             },
                         )
+                        hout["topo"][intf].update(self._lagInfo(workdata, remSwitch["switch"], remPort, "remoteportchannel"))
                         print(hout["topo"][intf])
             else:
                 for intf in hostconfig.get("agent", {}).get("interfaces", []):
@@ -200,8 +232,9 @@ class Topology:
                                 "bandwidth": getHostPortSpeed(netinfo, intf),
                             },
                         )
+                        hout["topo"][intf].update(self._lagInfo(workdata, switch, swintf, "remoteportchannel"))
                         print(hout["topo"][intf])
-        out.update(self.getWANLinks(incr))
+        out.update(self.getWANLinks(incr, workdata))
         # Write new out to file
         fname = os.path.join(self.topodir, "topology.json")
         self.diragent.dumpFileContentAsJson(fname, out)

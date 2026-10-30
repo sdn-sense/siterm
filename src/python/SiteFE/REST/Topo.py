@@ -26,10 +26,18 @@ from SiteFE.REST.dependencies import (
 from SiteRMLibs.ArchifyTopology import (
     ArchifyRenderError,
     ArchifyUnavailable,
-    buildArchifyIR,
-    renderArchifyHTML,
+    activePath,
+    activePaths,
+    buildDiagram,
+    renderDiagramHTML,
+    summarizeServiceStates,
 )
-from SiteRMLibs.MainUtilities import getFileContentAsJson, getstartupconfig
+from SiteRMLibs.MainUtilities import (
+    evaldict,
+    getFileContentAsJson,
+    getstartupconfig,
+    getUTCnow,
+)
 
 router = APIRouter()
 
@@ -53,6 +61,12 @@ def loadTopology(deps, sitename):
             detail=f"Topology file not found for site '{sitename}'",
         )
     return getFileContentAsJson(topofname)
+
+
+def loadActiveDeltas(deps):
+    """Return the activeDeltas output (empty dict when there are none)."""
+    rows = deps["dbI"].get("activeDeltas", orderby=["insertdate", "DESC"], limit=1)
+    return evaldict(rows[0]["output"]) if rows else {}
 
 
 # =========================================================
@@ -208,8 +222,9 @@ async def getarchify(
     ),
     switch: Optional[List[str]] = Query(None, description="Only include these switches (repeatable)."),
     server: Optional[List[str]] = Query(None, description="Only include these servers (repeatable)."),
+    path: Optional[str] = Query(None, max_length=1024, description="Only show the devices and links of this active L2 connection id."),
     deps=Depends(apiReadDeps),
-    _forbid=Depends(forbidExtraQueryParams("switch", "server")),
+    _forbid=Depends(forbidExtraQueryParams("switch", "server", "path")),
 ):
     """
     Get topology rendered as an Archify HTML diagram.
@@ -218,16 +233,54 @@ async def getarchify(
     - **switch** / **server**: Optional device filters.
     """
     checkSite(deps, sitename)
-    archIR = buildArchifyIR(loadTopology(deps, sitename), sitename, switch, server)
-    if not archIR["components"]:
+    filters = {"switch": switch, "server": server}
+    if path:
+        filters["path"] = activePath(loadActiveDeltas(deps), path)
+        if filters["path"] is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Active connection '{path}' not found for site '{sitename}'")
+    health = summarizeServiceStates(deps["dbI"].get("servicestates"), getUTCnow())
+    diagram = buildDiagram(loadTopology(deps, sitename), sitename, filters, health)
+    if not diagram["ir"]["components"]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No topology devices match the selected filters for site '{sitename}'",
         )
     try:
-        html = await asyncio.to_thread(renderArchifyHTML, archIR)
+        html = await asyncio.to_thread(renderDiagramHTML, diagram)
     except ArchifyUnavailable as ex:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Archify renderer unavailable: {ex}") from ex
     except ArchifyRenderError as ex:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Archify failed to render topology: {ex}") from ex
     return HTMLResponse(content=html, headers=ARCHIFY_HEADERS)
+
+
+# =========================================================
+# /api/{sitename}/topo/paths
+# =========================================================
+
+
+@router.get(
+    "/{sitename}/topo/paths",
+    summary="List active L2 paths",
+    description="Lists active L2 connections (activeDeltas vsw) with their VLANs, state and devices, for the topology path filter.",
+    tags=["Topology"],
+    responses={
+        200: {"description": "Active L2 connections", "content": {"application/json": {"example": [{"id": "urn:...:conn+abc", "state": "activated", "vlans": [3610], "devices": ["sw1", "dtn1"]}]}}},
+        **DEFAULT_RESPONSES,
+    },
+)
+async def getpaths(
+    request: Request,
+    sitename: str = Path(
+        ...,
+        description="The site name whose active paths are requested.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams()),
+):
+    """
+    List active L2 connections for the topology path filter.
+    """
+    checkSite(deps, sitename)
+    return APIResponse.genResponse(request, activePaths(loadActiveDeltas(deps)))

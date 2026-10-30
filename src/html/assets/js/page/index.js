@@ -31,18 +31,59 @@ function loadFilters() {
     });
 }
 
+// Fill the active path filter from active L2 connections; ?path=<connection id> preselects one.
+function loadPaths() {
+    var wanted = new URLSearchParams(window.location.search).get("path");
+    $.ajax({
+        url: "/api/" + sitename + "/topo/paths",
+        dataType: "json",
+        async: false,
+        error: function(xhr, status, error) {
+            showAjaxWarning(
+                "Failed to load active paths",
+                escapeHtml(`HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`)
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
+        success: function(paths) {
+            paths.forEach(function(path) {
+                var vlans = path["vlans"].length ? "VLAN " + path["vlans"].join(", ") : "no VLAN";
+                $("#filterpath").append(
+                    $("<option>", {
+                        value: path["id"],
+                        text: vlans + " (" + (path["state"] || "unknown") + "): " + path["devices"].join(", "),
+                        title: path["id"],
+                    }),
+                );
+            });
+            var found = paths.some(function(path) {
+                return path["id"] === wanted;
+            });
+            if (wanted && found) {
+                $("#filterpath").val(wanted);
+            } else if (wanted) {
+                showAjaxWarning("Active path not found", escapeHtml(wanted));
+            }
+        },
+    });
+}
+
 // Render the Archify diagram server side and show it in the sandboxed iframe (no same-origin access to the JWT).
 function loadArchify() {
     if (archifyRequest) {
         archifyRequest.abort();
     }
+    var params = {
+        switch: $("#filterswitch").val() || [],
+        server: $("#filterserver").val() || [],
+    };
+    if ($("#filterpath").val()) {
+        params.path = $("#filterpath").val();
+    }
     $("#topo-status").text("Rendering topology...");
     archifyRequest = $.ajax({
         url: "/api/" + sitename + "/topo/archify",
-        data: {
-            switch: $("#filterswitch").val() || [],
-            server: $("#filterserver").val() || [],
-        },
+        data: params,
         traditional: true,
         dataType: "text",
         error: function(xhr, status, error) {
@@ -74,5 +115,6 @@ function scheduleArchifyLoad() {
 
 if (sitename) {
     loadFilters();
+    loadPaths();
     $(document).ready(loadArchify);
 }

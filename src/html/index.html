@@ -35,6 +35,10 @@
                         <select name="filterswitch" id="filterswitch" style="width: 220px" multiple multiselect-search="true" multiselect-select-all="true" multiselect-max-items="3" onchange="scheduleArchifyLoad()"></select>
                         <label>Filter Server</label>
                         <select name="filterserver" id="filterserver" style="width: 220px" multiple multiselect-search="true" multiselect-select-all="true" multiselect-max-items="3" onchange="scheduleArchifyLoad()"></select>
+                        <label for="filterpath">Active path</label>
+                        <select name="filterpath" id="filterpath" style="max-width: 420px" onchange="scheduleArchifyLoad()">
+                            <option value="">All links</option>
+                        </select>
                         <span id="topo-status" class="text-muted small ms-2"></span>
                         <iframe id="topo" class="topo-frame" title="Site topology" sandbox="allow-scripts allow-downloads"></iframe>
                     </div>
