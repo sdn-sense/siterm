@@ -811,7 +811,7 @@ class PolicyService(RDFHelper, Timing, BWService):
                 self.stateMachine.modelstatechanger(self.dbI, "added", **delta)
                 changesApplied = True
             except (OverlapException, WrongIPAddress, ServiceNotReady) as ex:
-                self.stateMachine.modelstatechanger(self.dbI, "failed", **delta)
+                self.stateMachine.modelstatechanger(self.dbI, "failed", errmsg=getError(ex), **delta)
                 # If delta apply failed we return right away without writing new Active config
                 self.logger.debug(f"There was failure applying delta. Failure {ex}")
                 # Overwrite back the model with original before failure.
@@ -819,7 +819,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             except Exception as ex:
                 self.logger.error(f"Unexpected error during delta application: {ex}")
                 self.logger.error(f"Full traceback: {traceback.format_exc()}")
-                self.stateMachine.modelstatechanger(self.dbI, "failed", **delta)
+                self.stateMachine.modelstatechanger(self.dbI, "failed", errmsg=getError(ex), **delta)
                 currentGraph = copy.deepcopy(gCopy)
 
         if not modelParseRan:

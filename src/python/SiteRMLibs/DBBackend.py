@@ -207,21 +207,24 @@ class dbinterface:
         """Execute raw SQL directly on the engine."""
         return self.db.executeRaw(sql)
 
-    def get(self, calltype, limit=None, search=None, orderby=None, mapping=True):
+    @staticmethod
+    def _filter(query, model, search):
+        """Apply search filters ([col, val] or [col, op, val]) to a query."""
+        for item in search or []:
+            if len(item) == 2:
+                query = query.filter(getattr(model, item[0]) == item[1])
+            elif len(item) == 3:
+                query = query.filter(getattr(model, item[0]).op(item[1])(item[2]))
+        return query
+
+    def get(self, calltype, limit=None, search=None, orderby=None, mapping=True, offset=None):
         """Retrieve rows from a specific table."""
         model = REGISTRY.get(calltype)
         if not model:
             raise ValueError(f"Unknown table: {calltype}")
 
         with self.db.session() as session:
-            q = session.query(model)
-
-            if search:
-                for item in search:
-                    if len(item) == 2:
-                        q = q.filter(getattr(model, item[0]) == item[1])
-                    elif len(item) == 3:
-                        q = q.filter(getattr(model, item[0]).op(item[1])(item[2]))
+            q = self._filter(session.query(model), model, search)
 
             if orderby:
                 col, direction = orderby
@@ -230,12 +233,24 @@ class dbinterface:
             if limit:
                 q = q.limit(limit)
 
+            if offset:
+                q = q.offset(offset)
+
             rows = q.all()
 
             if not mapping:
                 return rows
 
             return [{c.name: getattr(row, c.name) for c in row.__table__.columns} for row in rows]
+
+    def count(self, calltype, search=None):
+        """Count rows in a specific table matching search filters."""
+        model = REGISTRY.get(calltype)
+        if not model:
+            raise ValueError(f"Unknown table: {calltype}")
+
+        with self.db.session() as session:
+            return self._filter(session.query(model), model, search).count()
 
     def insert(self, calltype, values):
         """Insert rows into a specific table."""

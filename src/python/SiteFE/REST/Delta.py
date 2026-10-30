@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=line-too-long, too-many-arguments
+# pylint: disable=line-too-long, too-many-arguments, too-many-positional-arguments
 """
 Delta API Calls
 Title                   : siterm
@@ -126,18 +126,25 @@ def _get_delta_request_info(dbI, delta_id, limit=LIMIT_DEFAULT):
     return {"requestInfo": request_info, "userTracking": tracking}
 
 
-def _getdeltas(dbI, **kwargs):
-    """Get delta from database."""
+def _deltasearch(**kwargs):
+    """Build delta search filters from deltaID and updatedate."""
     search = []
     if kwargs.get("deltaID"):
         search.append(["uid", kwargs.get("deltaID")])
     if kwargs.get("updatedate"):
         search.append(["updatedate", ">", kwargs.get("updatedate")])
+    return search
+
+
+def _getdeltas(dbI, **kwargs):
+    """Get delta from database."""
+    # Order by autoincrement id (not insertdate) so limit/offset pages are stable when insertdates tie.
     out = dbI.get(
         "deltas",
-        search=search,
+        search=_deltasearch(**kwargs),
         limit=kwargs.get("limit", LIMIT_DEFAULT),
-        orderby=["insertdate", "DESC"],
+        offset=kwargs.get("offset", 0),
+        orderby=["id", "DESC"],
     )
     if out and kwargs.get("deltaID"):
         return out[0]
@@ -172,12 +179,13 @@ class DeltaTimeState(BaseModel):
 @router.get(
     "/{sitename}/deltas",
     summary="Get Delta information",
-    description=("Retrieves deltas from the specified site."),
+    description=("Retrieves deltas from the specified site, newest first. Use limit and offset to page through results; the X-Total-Count response header holds the total number of matching deltas."),
     tags=["Deltas"],
     responses={
         **{
             200: {
                 "description": "Deltas retrieved successfully",
+                "headers": {"X-Total-Count": {"description": "Total number of deltas matching the request (ignoring limit and offset).", "schema": {"type": "integer"}}},
                 "content": {
                     "application/json": {
                         "example": [
@@ -231,8 +239,13 @@ async def getDeltas(
         ge=LIMIT_MIN,
         le=LIMIT_MAX,
     ),
+    offset: int = Query(
+        0,
+        description="The number of deltas to skip before returning results. Defaults to 0.",
+        ge=0,
+    ),
     deps=Depends(apiReadDeps),
-    _forbid=Depends(forbidExtraQueryParams("limit", "summary")),
+    _forbid=Depends(forbidExtraQueryParams("limit", "summary", "offset")),
 ):
     """
     Get service deltas from the specified site.
@@ -240,7 +253,7 @@ async def getDeltas(
     checkSite(deps, sitename)
     retvals = []
     modTime = getModTime(request.headers)
-    deltas = _getdeltas(deps["dbI"], limit=limit, updatedate=modTime)
+    deltas = _getdeltas(deps["dbI"], limit=limit, offset=offset, updatedate=modTime)
     if not deltas:
         # return 404 Not Found if no deltas are found
         raise HTTPException(
@@ -261,7 +274,8 @@ async def getDeltas(
             current["addition"] = content.get("addition")
             current["reduction"] = content.get("reduction")
         retvals.append(current)
-    return APIResponse.genResponse(request, retvals)
+    total = deps["dbI"].count("deltas", search=_deltasearch(updatedate=modTime))
+    return APIResponse.genResponse(request, retvals, headers={"X-Total-Count": str(total)})
 
 
 @router.post(

@@ -100,6 +100,37 @@ function loadDeltaRequestInfo(deltaID, sitename, saveObj) {
     });
 }
 
+function deltaErrorText(rawError) {
+    // Stored as JSON {errType, errNo, errMsg}; older rows may hold plain text.
+    if (!rawError) {
+        return "";
+    }
+    let err;
+    try {
+        err = JSON.parse(rawError);
+    } catch (e) {
+        return String(rawError);
+    }
+    if (!$.isPlainObject(err)) {
+        return String(rawError);
+    }
+    const errMsg = typeof err["errMsg"] === "string" ? err["errMsg"] : JSON.stringify(err["errMsg"]);
+    const errType = String(err["errType"] || "Unknown").replace(/^<class '(.*)'>$/, "$1");
+    return `${errMsg}\n(Type: ${errType}, Code: ${err["errNo"]})`;
+}
+
+function appendDeltaError(rawError, saveObj) {
+    const errText = deltaErrorText(rawError);
+    if (!errText) {
+        return;
+    }
+    saveObj.append(
+        $('<div class="row alert alert-danger"></div>')
+        .append($("<b></b>").text("Delta Error: "))
+        .append($('<span style="white-space: pre-wrap;"></span>').text(errText))
+    );
+}
+
 function forceCommit(deltaID, sitename) {
     $.ajax({
         url: "/api/" + sitename + "/deltas/" + deltaID + "/actions/forcecommit",
@@ -150,6 +181,7 @@ function loadDelta(deltaID, sitename) {
                 json["state"] +
                 "<\/div>",
             );
+            appendDeltaError(json["error"], model);
             model.append(
                 '<div class="row"><b>Insert Date: <\/b>' +
                 json["insertdate"] +
@@ -210,6 +242,14 @@ function loadDelta(deltaID, sitename) {
     });
 }
 
+const DELTAS_PAGE_SIZE = 50;
+
+const DELTA_STATE_BADGES = {
+    activated: "badge-success",
+    accepted: "badge-info",
+    failed: "badge-danger",
+};
+
 function defineAllDeltas(data, sitename) {
     let menCol = $(
         '<div class="nav flex-column nav-pills" role="tablist"></div>'
@@ -221,20 +261,19 @@ function defineAllDeltas(data, sitename) {
 
         if ($.isPlainObject(delta)) {
             const modID = delta["id"];
+            const badge = DELTA_STATE_BADGES[delta["state"]] || "badge-secondary";
 
             menCol.append(
-                '<a class="nav-link" ' +
-                'id="v-pills-' + modID + '-tab" ' +
-                'data-toggle="pill" ' +
-                'onclick="loadDelta(\'' + modID + "', '" + sitename + '\')" ' +
-                'href="#v-pills-' + modID + '" role="tab">' +
-                modID +
-                "</a>"
+                $('<a class="nav-link" data-toggle="pill" role="tab"></a>')
+                .attr("id", "v-pills-" + modID + "-tab")
+                .attr("href", "#v-pills-" + modID)
+                .on("click", () => loadDelta(modID, sitename))
+                .text(modID)
+                .append($('<span class="badge ml-2"></span>').addClass(badge).text(delta["state"]))
             );
 
             cntDiv.append(
-                '<div class="tab-pane fade" ' +
-                'id="v-pills-' + modID + '" role="tabpanel"></div>'
+                $('<div class="tab-pane fade" role="tabpanel"></div>').attr("id", "v-pills-" + modID)
             );
         }
     }
@@ -243,7 +282,68 @@ function defineAllDeltas(data, sitename) {
         .append($('<div class="col-3">').append(menCol))
         .append($('<div class="col-9">').append(cntDiv));
 
-    $("#view_fe_" + sitename).append(nRow);
+    $("#deltas_list_" + sitename).empty().append(nRow);
+}
+
+function deltaPager(sitename, offset, count, total) {
+    // total is null when the server did not send X-Total-Count; then Next relies on a full page.
+    const lastOffset = total ? Math.floor((total - 1) / DELTAS_PAGE_SIZE) * DELTAS_PAGE_SIZE : null;
+    const hasNext = total !== null ? offset + DELTAS_PAGE_SIZE < total : count === DELTAS_PAGE_SIZE;
+    const pages = $('<ul class="pagination mb-0"></ul>');
+    const addPage = (label, newOffset, disabled) => {
+        const link = $('<a class="page-link" href="#"></a>').text(label);
+        link.on("click", (e) => {
+            e.preventDefault();
+            if (!disabled) {
+                loadDeltasPage(sitename, newOffset);
+            }
+        });
+        pages.append($('<li class="page-item"></li>').toggleClass("disabled", disabled).append(link));
+    };
+    addPage("First", 0, offset === 0);
+    addPage("Previous", Math.max(offset - DELTAS_PAGE_SIZE, 0), offset === 0);
+    addPage("Next", offset + DELTAS_PAGE_SIZE, !hasNext);
+    if (lastOffset !== null) {
+        addPage("Last", lastOffset, offset >= lastOffset);
+    }
+    let info = count ? `Showing ${offset + 1}-${offset + count}` : "No deltas";
+    if (total !== null) {
+        info += ` of ${total}`;
+    }
+    return $('<nav class="d-flex align-items-center my-2" aria-label="Deltas pages"></nav>')
+        .append(pages)
+        .append($('<span class="ml-3 text-muted"></span>').text(info));
+}
+
+function loadDeltasPage(sitename, offset) {
+    $.ajax({
+        url: "/api/" + sitename + "/deltas",
+        dataType: "json",
+        data: {
+            summary: true,
+            limit: DELTAS_PAGE_SIZE,
+            offset: offset
+        },
+        error: function(xhr, status, error) {
+            if (xhr.status === 404) {
+                $("#deltas_list_" + sitename).empty().append($('<div class="alert alert-info"></div>').text("No deltas found."));
+                $("#deltas_pager_top_" + sitename + ", #deltas_pager_bottom_" + sitename).empty();
+                return;
+            }
+            showAjaxWarning(
+                "Failed to load deltas",
+                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
+        success: function(json, status, xhr) {
+            const total = parseInt(xhr.getResponseHeader("X-Total-Count"), 10);
+            const totalOrNull = Number.isNaN(total) ? null : total;
+            defineAllDeltas(json, sitename);
+            $("#deltas_pager_top_" + sitename).empty().append(deltaPager(sitename, offset, json.length, totalOrNull));
+            $("#deltas_pager_bottom_" + sitename).empty().append(deltaPager(sitename, offset, json.length, totalOrNull));
+        },
+    });
 }
 
 function load_data() {
@@ -253,20 +353,10 @@ function load_data() {
     }
     defineSites(configdata, false);
     var sitename = configdata["general"]["sitename"];
-    $.ajax({
-        url: "/api/" + sitename + "/deltas?summary=true",
-        dataType: "json",
-        data: {},
-        async: false,
-        error: function(xhr, status, error) {
-            showAjaxWarning(
-                "Failed to load deltas",
-                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
-            );
-            console.error("AJAX error:", status, xhr.responseText);
-        },
-        success: function(json) {
-            defineAllDeltas(json, sitename);
-        },
-    });
+    $("#view_fe_" + sitename).append(
+        $("<div></div>").attr("id", "deltas_pager_top_" + sitename),
+        $("<div></div>").attr("id", "deltas_list_" + sitename),
+        $("<div></div>").attr("id", "deltas_pager_bottom_" + sitename),
+    );
+    loadDeltasPage(sitename, 0);
 }

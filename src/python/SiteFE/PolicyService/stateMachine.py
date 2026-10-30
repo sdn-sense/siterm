@@ -44,13 +44,13 @@ class StateMachine:
         )
 
     @staticmethod
-    def modelstatechanger(dbObj, newState, **kwargs):
-        """Model State change."""
+    def modelstatechanger(dbObj, newState, errmsg=None, **kwargs):
+        """Model State change; errmsg (if given) is stored as JSON in the delta error column."""
         tNow = getUTCnow()
-        dbObj.update(
-            "deltas",
-            [{"uid": kwargs["uid"], "modadd": newState, "updatedate": tNow}],
-        )
+        dbOut = {"uid": kwargs["uid"], "modadd": newState, "updatedate": tNow}
+        if errmsg:
+            dbOut["error"] = json.dumps(errmsg, default=str)
+        dbObj.update("deltas", [dbOut])
 
     def modelstatecancel(self, dbObj, **kwargs):
         """Cancel Model addition."""
@@ -71,7 +71,7 @@ class StateMachine:
             "content": json.dumps(delta["content"]),
             "modelid": str(delta["modelId"]),
             "modadd": str(delta.get("modadd", "idle")),
-            "error": "" if "Error" not in list(delta.keys()) else str(delta["Error"]),
+            "error": json.dumps(delta["Error"], default=str) if delta.get("Error") else "",
         }
         dbObj.insert("deltas", [dbOut])
         dbOut["state"] = delta["State"]
