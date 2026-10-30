@@ -10,9 +10,12 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 
+import asyncio
 import os
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi.responses import HTMLResponse
 from SiteFE.REST.dependencies import (
     DEFAULT_RESPONSES,
     APIResponse,
@@ -20,11 +23,37 @@ from SiteFE.REST.dependencies import (
     checkSite,
     forbidExtraQueryParams,
 )
+from SiteRMLibs.ArchifyTopology import (
+    ArchifyRenderError,
+    ArchifyUnavailable,
+    buildArchifyIR,
+    renderArchifyHTML,
+)
 from SiteRMLibs.MainUtilities import getFileContentAsJson, getstartupconfig
 
 router = APIRouter()
 
 startupConfig = getstartupconfig()
+
+# The rendered page runs its own scripts; force an opaque origin even if the URL is opened directly.
+ARCHIFY_HEADERS = {
+    "Content-Security-Policy": "sandbox allow-scripts allow-downloads",
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "no-store",
+}
+
+
+def loadTopology(deps, sitename):
+    """Load topology.json for the site or raise 404."""
+    topodir = os.path.join(deps["config"].get(sitename, "privatedir"), "Topology")
+    topofname = os.path.join(topodir, "topology.json")
+    if not os.path.isfile(topofname):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Topology file not found for site '{sitename}'",
+        )
+    return getFileContentAsJson(topofname)
+
 
 # =========================================================
 # /api/{sitename}/topo/gettopology
@@ -135,12 +164,70 @@ async def gettopology(
     - Returns topology as JSON if found, else 404 if file is missing.
     """
     checkSite(deps, sitename)
-    topodir = os.path.join(deps["config"].get(sitename, "privatedir"), "Topology")
-    topofname = os.path.join(topodir, "topology.json")
-    if not os.path.isfile(topofname):
+    return APIResponse.genResponse(request, loadTopology(deps, sitename))
+
+
+# =========================================================
+# /api/{sitename}/topo/archify
+# =========================================================
+
+
+@router.get(
+    "/{sitename}/topo/archify",
+    summary="Get Topology as Archify diagram",
+    description=(
+        "Renders the site topology as a self-contained Archify HTML diagram. "
+        "Optional repeated `switch` and `server` query parameters limit the diagram to those devices; WAN peers follow their switches."
+    ),
+    tags=["Topology"],
+    response_class=HTMLResponse,
+    responses={
+        **{
+            200: {"description": "Archify HTML diagram", "content": {"text/html": {}}},
+            404: {
+                "description": "Topology file not found or no devices match the filters",
+                "content": {"application/json": {"example": {"detail": "Topology file not found for site"}}},
+            },
+            500: {
+                "description": "Archify rejected or failed to render the diagram",
+                "content": {"application/json": {"example": {"detail": "Archify failed to render topology: ..."}}},
+            },
+            503: {
+                "description": "Archify renderer is not installed",
+                "content": {"application/json": {"example": {"detail": "Archify renderer unavailable: ..."}}},
+            },
+        },
+        **DEFAULT_RESPONSES,
+    },
+)
+async def getarchify(
+    sitename: str = Path(
+        ...,
+        description="The site name whose topology is requested.",
+        examples=[startupConfig.get("SITENAME", "default")],
+    ),
+    switch: Optional[List[str]] = Query(None, description="Only include these switches (repeatable)."),
+    server: Optional[List[str]] = Query(None, description="Only include these servers (repeatable)."),
+    deps=Depends(apiReadDeps),
+    _forbid=Depends(forbidExtraQueryParams("switch", "server")),
+):
+    """
+    Get topology rendered as an Archify HTML diagram.
+
+    - **sitename**: The site name whose topology is requested.
+    - **switch** / **server**: Optional device filters.
+    """
+    checkSite(deps, sitename)
+    archIR = buildArchifyIR(loadTopology(deps, sitename), sitename, switch, server)
+    if not archIR["components"]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Topology file not found for site '{sitename}'",
+            detail=f"No topology devices match the selected filters for site '{sitename}'",
         )
-    topo_data = getFileContentAsJson(topofname)
-    return APIResponse.genResponse(request, topo_data)
+    try:
+        html = await asyncio.to_thread(renderArchifyHTML, archIR)
+    except ArchifyUnavailable as ex:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Archify renderer unavailable: {ex}") from ex
+    except ArchifyRenderError as ex:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Archify failed to render topology: {ex}") from ex
+    return HTMLResponse(content=html, headers=ARCHIFY_HEADERS)

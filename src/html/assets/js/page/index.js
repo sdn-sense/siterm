@@ -1,12 +1,11 @@
-var data = {};
-var topologyData = {
-    nodes: [],
-    links: []
-};
 SiteRMAuth.setupAjaxAuth();
 var configdata = fetchConfig();
-if (configdata) {
-    var sitename = configdata["general"]["sitename"];
+var sitename = configdata ? configdata["general"]["sitename"] : null;
+var archifyRequest = null;
+var archifyTimer = null;
+
+// Fill the switch/server filters; runs synchronously so multiselect.js sees the options on window load.
+function loadFilters() {
     $.ajax({
         url: "/api/" + sitename + "/topo/gettopology",
         dataType: "json",
@@ -14,272 +13,66 @@ if (configdata) {
         error: function(xhr, status, error) {
             showAjaxWarning(
                 "Failed to load topology",
-                `HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`
+                escapeHtml(`HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`)
             );
             console.error("AJAX error:", status, xhr.responseText);
         },
         success: function(json) {
-            data = json;
+            Object.keys(json).sort().forEach(function(name) {
+                var devtype = (json[name]["DeviceInfo"] || {})["type"];
+                $("#filter" + devtype).append(
+                    $("<option>", {
+                        value: name,
+                        text: name,
+                    }),
+                );
+            });
         },
     });
 }
-for (
-    var x = Object.keys(data), i = 0; i < x.length, (key = x[i]), (value = data[key]); i++
-) {
-    topologyData["nodes"].push({
-        id: value["_id"],
-        name: key,
-        icontype: value["DeviceInfo"]["type"],
-    });
-    // Make sure device is in the select
-    $("#filter" + value["DeviceInfo"]["type"]).append(
-        $("<option>", {
-            value: key,
-            text: key,
-        }),
-    );
-}
 
-function normalizeKey(str) {
-    return str.toLowerCase().replace(/\s+/g, "");
-}
-
-function filterSelect(name) {
-    var input = [];
-    inputSelect = document.getElementById(name);
-    for (i = 0; i < inputSelect.length; i++) {
-        item = inputSelect[i];
-        if (item.selected) {
-            input.push(item.value);
-        }
+// Render the Archify diagram server side and show it in the sandboxed iframe (no same-origin access to the JWT).
+function loadArchify() {
+    if (archifyRequest) {
+        archifyRequest.abort();
     }
-    return input;
-}
-
-function filterAddItem(item, devtype, filterswitch, filterserver) {
-    if (devtype === "switch") {
-        if (filterswitch.length === 0) return true;
-        return filterswitch.includes(item);
-    }
-    if (devtype === "server") {
-        if (filterserver.length === 0) return true;
-        return filterserver.includes(item);
-    }
-    if (devtype === "cloud") {
-        return true;
-    }
-    return false;
-}
-
-function loadTopo(nx, data) {
-    filterswitch = filterSelect("filterswitch");
-    filterserver = filterSelect("filterserver");
-    var topologyData = {
-        nodes: [],
-        links: []
-    };
-    links = {};
-    tmpid = 0;
-    for (
-        var x = Object.keys(data), i = 0; i < x.length, (key = x[i]), (value = data[key]); i++
-    ) {
-        if (
-            filterAddItem(
-                key,
-                value["DeviceInfo"]["type"],
-                filterswitch,
-                filterserver,
-            )
-        ) {
-            tmpdata = {
-                id: value["_id"],
-                name: key,
-                icontype: value["DeviceInfo"]["type"],
+    $("#topo-status").text("Rendering topology...");
+    archifyRequest = $.ajax({
+        url: "/api/" + sitename + "/topo/archify",
+        data: {
+            switch: $("#filterswitch").val() || [],
+            server: $("#filterserver").val() || [],
+        },
+        traditional: true,
+        dataType: "text",
+        error: function(xhr, status, error) {
+            if (status === "abort") {
+                return;
+            }
+            $("#topo-status").text("");
+            showAjaxWarning(
+                "Failed to render topology",
+                escapeHtml(`HTTP ${xhr.status} – ${error} - xhr: ${xhr.responseText}`)
+            );
+            console.error("AJAX error:", status, xhr.responseText);
+        },
+        success: function(html) {
+            var frame = document.getElementById("topo");
+            $("#topo-status").text("Loading diagram...");
+            frame.onload = function() {
+                $("#topo-status").text("");
             };
-            if (value["DeviceInfo"]["type"] === "cloud") {
-                tmpdata["isAlias"] = value["DeviceInfo"]["name"];
-            }
-            topologyData["nodes"].push(tmpdata);
-
-            for (
-                var l = Object.keys(data[key]["topo"]), j = 0; j < x.length,
-                (intkey = l[j]),
-                (intval = data[key]["topo"][intkey]); j++
-            ) {
-                if (
-                    filterAddItem(
-                        intval["device"],
-                        "switch",
-                        filterswitch,
-                        filterserver,
-                    ) ||
-                    filterAddItem(
-                        intval["device"],
-                        "server",
-                        filterswitch,
-                        filterserver,
-                    )
-                ) {
-                    linkkey =
-                        key +
-                        " " +
-                        intkey +
-                        " " +
-                        intval["device"] +
-                        " " +
-                        intval["port"];
-                    linkkey = normalizeKey(linkkey);
-                    linkkey1 =
-                        intval["device"] +
-                        " " +
-                        intval["port"] +
-                        " " +
-                        key +
-                        " " +
-                        intkey;
-                    linkkey1 = normalizeKey(linkkey1);
-                    if (linkkey in links && linkkey1 in links) {
-                        linkid = links[linkkey];
-                    } else {
-                        links[linkkey] = tmpid;
-                        links[linkkey1] = tmpid;
-                        linkid = tmpid;
-                        tmpid++;
-                    }
-                    sourceid = value["_id"];
-                    targetid = data[intval["device"]]["_id"];
-                    ports =
-                        key +
-                        ":" +
-                        intkey +
-                        "<->" +
-                        intval["device"] +
-                        ":" +
-                        intval["port"];
-                    topologyData["links"].push({
-                        source: sourceid,
-                        target: targetid,
-                        id: tmpid,
-                        ports: ports,
-                    });
-                }
-            }
-        }
-    }
-
-    nx.define("SceneOverride", nx.graphic.Topology.DefaultScene, {
-        methods: {
-            enterLink: function(sender, link) {
-                this.inherited(sender, link);
-                link._oldcolor = link._color;
-                link.color("#FFFF00");
-            },
-            leaveLink: function(sender, link) {
-                this.inherited(sender, link);
-                if (link._oldcolor) {
-                    link.color(link._oldcolor);
-                } else {
-                    link.color(null);
-                }
-            },
-        },
-    });
-    nx.define("TopologyContainer", nx.ui.Component, {
-        // we use this trick to use this object as a nx.ui.Component and display topology at the same time
-        properties: {
-            topology: {
-                get: function() {
-                    return this.view("topology");
-                },
-            },
-        },
-        view: {
-            content: {
-                name: "topology",
-                type: "nx.graphic.Topology",
-                props: {
-                    adaptive: true,
-                    nodeConfig: {
-                        label: function(vertex) {
-                            return vertex.get("name");
-                        },
-                        iconType: function(vertex) {
-                            return vertex.get("icontype");
-                        },
-                    },
-                    linkConfig: {
-                        width: 3,
-                        linkType: "curve",
-                    },
-                    showIcon: true,
-                    data: topologyData,
-                    dataProcessor: "force",
-                    identityKey: "id",
-                },
-                events: {
-                    topologyGenerated: "{#_main}",
-                },
-            },
-        },
-        methods: {
-            _main: function(sender, event) {
-                var topo = sender;
-                topo.registerScene("myscene", "SceneOverride");
-                topo.activateScene("myscene");
-                //var pathLayer = sender.getLayer("paths");
-                //var links1 = [topo.getLink(1), topo.getLink(3), topo.getLink(7)];
-
-                //var i = 0;
-                //while (i < links1.length) {
-                //    links1[i].color('#f00');
-                //    i++;
-                // }
-                //var path1 = new nx.graphic.Topology.Path({
-                //    links: links1,
-                //    arrow: 'cap'
-                //});
-
-                //pathLayer.addPath(path1);
-            },
+            frame.srcdoc = html;
         },
     });
 }
 
-(function(nx, data) {
-    loadTopo(nx, data);
-})(nx, data);
-(function(nx) {
-    // initialize a new application instance
-    var app = new nx.ui.Application();
-    /* TopologyContainer is a nx.ui.Component object that can contain much more things than just a nx.graphic.Topology object.
-     */
-    var topologyContainer = new TopologyContainer();
-    // topology instance was made in TopologyContainer, but we can invoke its members through 'topology' variable for convenience
-    var topology = topologyContainer.topology();
-    //assign the app to the <div>
-    app.container(document.getElementById("topo"));
-    // pass topology's instance into action's bar instance
-    //actionBar.assignTopology(topology);
-    topology.attach(app);
-    // preload topology
-    //actionBar.updateTopology();
-})(nx);
+function scheduleArchifyLoad() {
+    clearTimeout(archifyTimer);
+    archifyTimer = setTimeout(loadArchify, 400);
+}
 
-function reload(nx, data) {
-    loadTopo(nx, data);
-    // initialize a new application instance
-    var app = new nx.ui.Application();
-    /* TopologyContainer is a nx.ui.Component object that can contain much more things than just a nx.graphic.Topology object.
-     */
-    var topologyContainer = new TopologyContainer();
-    // topology instance was made in TopologyContainer, but we can invoke its members through 'topology' variable for convenience
-    var topology = topologyContainer.topology();
-    //assign the app to the <div>
-    document.getElementById("topo").innerHTML = "";
-    app.container(document.getElementById("topo"));
-    // pass topology's instance into action's bar instance
-    //actionBar.assignTopology(topology);
-    topology.attach(app);
-    // preload topology
-    //actionBar.updateTopology();
+if (sitename) {
+    loadFilters();
+    $(document).ready(loadArchify);
 }

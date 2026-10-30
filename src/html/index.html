@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="assets/css/bootstrap.css" rel="stylesheet" />
     <link href="assets/css/custom.css" rel="stylesheet" />
-    <link rel="stylesheet" href="assets/css/next.css" />
     <script src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
         google.charts.load('current', {
@@ -29,13 +28,15 @@
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">Topology</h1>
                 </div>
+                <div class="row" id="maindiv"></div>
                 <div class="row">
                     <div class="col">
                         <label>Filter switch</label>
-                        <select name="filterswitch" id="filterswitch" style="width: 220px" multiple multiselect-search="true" multiselect-select-all="true" multiselect-max-items="3" onchange="reload(nx, data)"></select>
+                        <select name="filterswitch" id="filterswitch" style="width: 220px" multiple multiselect-search="true" multiselect-select-all="true" multiselect-max-items="3" onchange="scheduleArchifyLoad()"></select>
                         <label>Filter Server</label>
-                        <select name="filterserver" id="filterserver" style="width: 220px" multiple multiselect-search="true" multiselect-select-all="true" multiselect-max-items="3" onchange="reload(nx, data)"></select>
-                        <div class="next-app" id="topo"></div>
+                        <select name="filterserver" id="filterserver" style="width: 220px" multiple multiselect-search="true" multiselect-select-all="true" multiselect-max-items="3" onchange="scheduleArchifyLoad()"></select>
+                        <span id="topo-status" class="text-muted small ms-2"></span>
+                        <iframe id="topo" class="topo-frame" title="Site topology" sandbox="allow-scripts allow-downloads"></iframe>
                     </div>
                 </div>
             </main>
@@ -47,7 +48,6 @@
     <script src="assets/js/main.js"></script>
     <script src="assets/js/bootstrap-html.js"></script>
     <script src="assets/js/multiselect.js"></script>
-    <script src="assets/js/next.js"></script>
     <script src="assets/js/page/index.js"></script>
 </body>
 

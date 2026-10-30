@@ -28,3 +28,12 @@ pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
   max-width: 420px;
   margin: 10vh auto;
 }
+.topo-frame {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 220px);
+  min-height: 640px;
+  margin-top: 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+}
