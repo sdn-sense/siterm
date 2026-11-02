@@ -397,7 +397,7 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
                     self.logger.debug(f"Adding {item['uuid']} to force apply list as this was forced by external request.")
                     self.forceapply.append(item["uuid"])
                     # delete from db
-                    self.dbI.delete("forceapplyuuid", {"uuid": item["uuid"]})
+                    self.dbI.delete("forceapplyuuid", [["uuid", item["uuid"]]])
 
     def _refreshDeviceFacts(self):
         """Force a fresh switch fact collection (getfacts for all devices)."""

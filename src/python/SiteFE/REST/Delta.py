@@ -835,7 +835,7 @@ async def performActionOnDelta(
         return APIResponse.genResponse(request, {"result": "Action completed successfully"})
     if action == "forceapply":
         # Force apply the delta
-        deps["dpI"].insert("forceapplyuuid", [{"uuid": delta_id}])
+        deps["dbI"].insert("forceapplyuuid", [{"uuid": delta_id}])
         return APIResponse.genResponse(request, {"result": "Force apply action completed successfully"})
     if delta["state"] in ["accepted"] and action == "remove":
         # Remove delta from the database
