@@ -103,10 +103,17 @@ class Topology:
         lag = workdata.get(device, {}).get("lags", {}).get(port)
         return {field: lag} if lag else {}
 
-    def getWANLinks(self, incr, workdata):
-        """Get WAN Links for visualization"""
+    @staticmethod
+    def _isLocalAlias(alias, domain, localDevices):
+        """True if an isAlias URN (urn:ogf:network:<domain>:<year>:<device>:<port>) points to a device of this site"""
+        parts = str(alias).split(":")
+        return len(parts) >= 7 and parts[3] == domain and parts[-2] in localDevices
+
+    def getWANLinks(self, incr, workdata, localDevices):
+        """Get WAN Links for visualization: ports marked wanlink, and isAlias ports that lead outside the site"""
         wan_links = {}
         sitename = getSiteNameFromConfig(self.config)
+        domain = self.config["MAIN"].get(sitename, {}).get("domain", "")
         for sw in self.config["MAIN"].get(sitename, {}).get("switch", []):
             if not self.config["MAIN"].get(sw, {}):
                 continue
@@ -114,22 +121,26 @@ class Topology:
                 continue
             intstats = workdata.get(sw, {}).get("intstats", {})
             for portname, val in self.config["MAIN"].get(sw, {}).get("ports", {}).items():
-                if "wanlink" in val and val["wanlink"] and val.get("isAlias", None):
-                    wan_links.setdefault(
-                        f"wan{incr}",
-                        {
-                            "_id": incr,
-                            "topo": {},
-                            "DeviceInfo": {"type": "cloud", "name": val["isAlias"]},
-                        },
-                    )
-                    intf = intstats.get(portname) or {}
-                    link = {"device": sw, "port": val, "localport": portname, "bandwidth": intf.get("bandwidth", 0)}
-                    members = intf.get("channel-member") or []
-                    if members:
-                        link["members"] = {member: intstats.get(member, {}).get("bandwidth", 0) for member in members}
-                    wan_links[f"wan{incr}"]["topo"].setdefault(val["isAlias"].split(":")[-1], link)
-                    incr += 1
+                if not isinstance(val, dict) or not val.get("isAlias"):
+                    continue
+                # Aliases to this site's own switches or agent hosts are internal links, not WAN peers.
+                if not val.get("wanlink") and self._isLocalAlias(val["isAlias"], domain, localDevices):
+                    continue
+                wan_links.setdefault(
+                    f"wan{incr}",
+                    {
+                        "_id": incr,
+                        "topo": {},
+                        "DeviceInfo": {"type": "cloud", "name": val["isAlias"]},
+                    },
+                )
+                intf = intstats.get(portname) or {}
+                link = {"device": sw, "port": val, "localport": portname, "bandwidth": intf.get("bandwidth", 0)}
+                members = intf.get("channel-member") or []
+                if members:
+                    link["members"] = {member: intstats.get(member, {}).get("bandwidth", 0) for member in members}
+                wan_links[f"wan{incr}"]["topo"].setdefault(val["isAlias"].split(":")[-1], link)
+                incr += 1
         return wan_links
 
     def gettopology(self):
@@ -234,7 +245,7 @@ class Topology:
                         )
                         hout["topo"][intf].update(self._lagInfo(workdata, switch, swintf, "remoteportchannel"))
                         print(hout["topo"][intf])
-        out.update(self.getWANLinks(incr, workdata))
+        out.update(self.getWANLinks(incr, workdata, set(out)))
         # Write new out to file
         fname = os.path.join(self.topodir, "topology.json")
         self.diragent.dumpFileContentAsJson(fname, out)

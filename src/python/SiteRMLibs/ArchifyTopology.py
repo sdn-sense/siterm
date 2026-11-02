@@ -137,8 +137,12 @@ def _natural(text):
 
 
 def _portKey(port):
-    """Canonical port name, so LLDP names (Ethernet1/1) match model names (Ethernet1-1, hundredGigE_1-17)."""
-    return re.sub(r"[^a-z0-9]+", "_", str(port).lower()).strip("_")
+    """Canonical port name: Ethernet 1/1/13, ethernet1/1/13 and the model's Ethernet_1-1-13 all match.
+
+    Model names (replaceSpecialSymbols) turn " " into "_" and ":" into "__"; spaces are dropped, other separators kept.
+    """
+    name = str(port).lower().replace("__", ":")
+    return re.sub(r"[^a-z0-9]+", "_", re.sub(r"[\s_]+", "", name)).strip("_")
 
 
 def _remoteAlias(entry):
@@ -248,6 +252,20 @@ def activePaths(active):
     return sorted(out, key=lambda item: (item["vlans"], item["id"]))
 
 
+def _cloudOnPath(entry, path):
+    """Return True if a path uses a WAN peer: its alias is on the path, or the path uses the switch port (or a member) facing it."""
+    if _remoteAlias(entry) in path["aliases"]:
+        return True
+    for link in _field(entry, "topo").values():
+        device = link.get("device") if isinstance(link, dict) else None
+        if not isinstance(device, str) or device not in path["hops"]:
+            continue
+        members = link.get("members") if isinstance(link.get("members"), dict) else {}
+        if any(_portKey(port) in path["hops"][device] for port in [link.get("localport") or "", *members] if port):
+            return True
+    return False
+
+
 def _selectDevices(topology, switches, servers, path):
     """Return {name: devtype} for devices that pass the filters; WAN peers follow their switch, a path keeps only its devices."""
     selected = {}
@@ -263,34 +281,37 @@ def _selectDevices(topology, switches, servers, path):
             peers = [val.get("device") for val in _field(entry, "topo").values() if isinstance(val, dict)]
             if not any(isinstance(peer, str) and peer in switches for peer in peers):
                 continue
-        if path is not None and name not in path["hops"] and not (devtype == "cloud" and _remoteAlias(entry) in path["aliases"]):
+        if path is not None and name not in path["hops"] and not (devtype == "cloud" and _cloudOnPath(entry, path)):
             continue
         selected[str(name)] = devtype
     return selected
 
 
-def _end(port, lag=""):
-    """One end of a physical link."""
-    return {"port": str(port), "lag": str(lag or "")}
+def _end(port, lag="", local=False):
+    """One end of a physical link; local means the port name comes from the device itself (preferred for display)."""
+    return {"port": str(port), "lag": str(lag or ""), "local": local}
 
 
 def _physicalLinks(name, localPort, peer, remote):
     """Return [(ends, speed, alias)] for one topology entry; WAN port-channels expand into their member links."""
     port = remote.get("port")
     if not isinstance(port, dict):
-        ends = {name: _end(localPort, remote.get("portchannel")), peer: _end(port, remote.get("remoteportchannel"))}
+        ends = {name: _end(localPort, remote.get("portchannel"), True), peer: _end(port, remote.get("remoteportchannel"))}
         return [(ends, _int(remote.get("bandwidth")), "")]
     # WAN peer entry: name is the cloud device, localPort the remote port, remote["localport"] the switch port.
     alias = str(port.get("isAlias", ""))
     switchPort = str(remote.get("localport") or "")
     members = remote.get("members") if isinstance(remote.get("members"), dict) else {}
     if members:
-        return [({name: _end(localPort, localPort), peer: _end(member, switchPort)}, _int(speed), alias) for member, speed in members.items()]
-    return [({name: _end(localPort), peer: _end(switchPort)}, _int(remote.get("bandwidth")), alias)]
+        return [({name: _end(localPort, localPort), peer: _end(member, switchPort, True)}, _int(speed), alias) for member, speed in members.items()]
+    return [({name: _end(localPort), peer: _end(switchPort, local=True)}, _int(remote.get("bandwidth")), alias)]
 
 
 def _collectLinks(topology, devices):
-    """Return {(devA, devB): [link]} for physical links whose both ends are selected; a link reported from both sides is merged."""
+    """Return {(devA, devB): [link]} for physical links whose both ends are selected.
+
+    A link reported by both devices is merged even when they spell the ports differently (LLDP local vs remote names).
+    """
     merged = {}
     for name in devices:
         for localPort, remote in _field(topology[name], "topo").items():
@@ -300,9 +321,12 @@ def _collectLinks(topology, devices):
             if not isinstance(peer, str) or peer == name or peer not in devices:
                 continue
             for ends, speed, alias in _physicalLinks(name, str(localPort), peer, remote):
-                link = merged.setdefault(frozenset((dev, end["port"]) for dev, end in ends.items()), {"ends": ends, "speed": 0, "wan": alias})
+                link = merged.setdefault(frozenset((dev, _portKey(end["port"])) for dev, end in ends.items()), {"ends": ends, "speed": 0, "wan": alias})
                 for dev, end in ends.items():
-                    link["ends"][dev]["lag"] = link["ends"][dev]["lag"] or end["lag"]
+                    known = link["ends"][dev]
+                    if end["local"] and not known["local"]:
+                        known.update(port=end["port"], local=True)
+                    known["lag"] = known["lag"] or end["lag"]
                 link["speed"] = max(link["speed"], speed)
     pairs = {}
     for link in merged.values():
@@ -530,31 +554,38 @@ def _connections(ids, drawing, path):
     return connections, edges
 
 
-def buildDiagram(topology, sitename, filters=None, health=None):
+def _siteModel(topology, filters, health):
+    """Select devices and links, order the tiers and derive device health and sublabels."""
+    devices = _selectDevices(topology, set(filters.get("switch") or []), set(filters.get("server") or []), filters.get("path"))
+    pairs = _collectLinks(topology, devices)
+    states = _deviceStates(topology, devices, health) if health is not None else {}
+    return {"pairs": pairs, "tiers": _orderTiers(devices, pairs), "states": states, "sublabels": _sublabels(topology, devices, pairs, states)}
+
+
+def buildDiagram(topology, sitename, filters=None, health=None, cards=True):
     """Build {"ir": Archify IR, "edges": SiteRM link drawings, "marks": health marks} from topology.json content.
 
     filters may hold "switch"/"server" name lists and a "path" from activePath; health comes from summarizeServiceStates.
+    cards=False leaves out the legend, health, path and link cards (graph only, for embedding).
     """
     topology = topology if isinstance(topology, dict) else {}
     filters = filters or {}
-    devices = _selectDevices(topology, set(filters.get("switch") or []), set(filters.get("server") or []), filters.get("path"))
-    pairs = _collectLinks(topology, devices)
-    tiers = _orderTiers(devices, pairs)
-    states = _deviceStates(topology, devices, health) if health is not None else {}
-    sublabels = _sublabels(topology, devices, pairs, states)
-    drawing = _layoutPairs(tiers, pairs, sublabels)
-    ids, components = _components(tiers, drawing["layout"], sublabels)
+    model = _siteModel(topology, filters, health)
+    drawing = _layoutPairs(model["tiers"], model["pairs"], model["sublabels"])
+    ids, components = _components(model["tiers"], drawing["layout"], model["sublabels"])
     connections, edges = _connections(ids, drawing, filters.get("path"))
     archIR = {
         "schema_version": 1,
         "diagram_type": "architecture",
-        "meta": {"title": f"{sitename} topology", "subtitle": _subtitle(tiers, health, filters.get("path")), "output": "topology.html", "legend": LEGEND},
+        "meta": {"title": f"{sitename} topology", "subtitle": _subtitle(model["tiers"], health, filters.get("path")), "output": "topology.html", "legend": LEGEND},
         "components": components,
     }
     if connections:
         archIR["connections"] = connections
-    archIR["cards"] = _cards(topology, tiers, pairs, {"health": _healthCards(states, health) if health is not None else [], "path": filters.get("path")})
-    return {"ir": archIR, "edges": edges, "marks": _healthMarks(ids, drawing["layout"], states)}
+    if cards:
+        extras = {"health": _healthCards(model["states"], health) if health is not None else [], "path": filters.get("path")}
+        archIR["cards"] = _cards(topology, model["tiers"], model["pairs"], extras)
+    return {"ir": archIR, "edges": edges, "marks": _healthMarks(ids, drawing["layout"], model["states"])}
 
 
 def _styles(diagram):

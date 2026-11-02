@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long, too-many-arguments, too-many-positional-arguments
 """
 Topology API Calls
 Title                   : siterm
@@ -12,7 +12,7 @@ Date                    : 2025/07/14
 
 import asyncio
 import os
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from fastapi.responses import HTMLResponse
@@ -191,7 +191,8 @@ async def gettopology(
     summary="Get Topology as Archify diagram",
     description=(
         "Renders the site topology as a self-contained Archify HTML diagram. "
-        "Optional repeated `switch` and `server` query parameters limit the diagram to those devices; WAN peers follow their switches."
+        "Optional repeated `switch` and `server` query parameters limit the diagram to those devices; WAN peers follow their switches. "
+        "`path` limits it to one active L2 connection; `view=graph` returns the diagram without the legend, health and link cards."
     ),
     tags=["Topology"],
     response_class=HTMLResponse,
@@ -223,14 +224,16 @@ async def getarchify(
     switch: Optional[List[str]] = Query(None, description="Only include these switches (repeatable)."),
     server: Optional[List[str]] = Query(None, description="Only include these servers (repeatable)."),
     path: Optional[str] = Query(None, max_length=1024, description="Only show the devices and links of this active L2 connection id."),
+    view: Literal["full", "graph"] = Query("full", description="full: diagram with legend, health, path and link cards; graph: the diagram only (for embedding)."),
     deps=Depends(apiReadDeps),
-    _forbid=Depends(forbidExtraQueryParams("switch", "server", "path")),
+    _forbid=Depends(forbidExtraQueryParams("switch", "server", "path", "view")),
 ):
     """
     Get topology rendered as an Archify HTML diagram.
 
     - **sitename**: The site name whose topology is requested.
     - **switch** / **server**: Optional device filters.
+    - **path**: Optional active L2 connection id; **view**: full (default) or graph (diagram only).
     """
     checkSite(deps, sitename)
     filters = {"switch": switch, "server": server}
@@ -239,7 +242,7 @@ async def getarchify(
         if filters["path"] is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Active connection '{path}' not found for site '{sitename}'")
     health = summarizeServiceStates(deps["dbI"].get("servicestates"), getUTCnow())
-    diagram = buildDiagram(loadTopology(deps, sitename), sitename, filters, health)
+    diagram = buildDiagram(loadTopology(deps, sitename), sitename, filters, health, cards=view == "full")
     if not diagram["ir"]["components"]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
