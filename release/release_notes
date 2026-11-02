@@ -1,57 +1,57 @@
-## SiteRM 1.6.4 Production Release
+## SiteRM 1.6.5 Production Release
 
-Changes since `1.6.3` (2026-09-10 → 2026-09-21), across `siterm` and related repositories.
+Changes since `1.6.4` (2026-10-05 → 2026-11-02), across `siterm` and related repositories.
 
 ### 🚀 New Features
 
-**BGP Monitoring: new periodic service, REST API, and Web UI page**
-- `SiteFE/BGPMonitoring/bgpmon.py` (new service, registered in `setup-sitefe.py` and run via the new `BGPMonitoring-update` daemon script, wired into the FE container as the `bgp_monitoring` supervisord service in `siterm-startup`): scans every switch with an active SENSE BGP delta, tags each peer `sense=true/false` by matching the delta's next-hop addresses, and records a normalized `{vrf, afi_checked, peers: [...]}` summary per host in a new `bgpmon` DB table. Runs hourly, 3x in a row immediately after the active BGP peer set changes, or on demand.
-- New `GET /{sitename}/monitoring/bgpstats` and `POST /{sitename}/monitoring/bgpstats/rescan` REST endpoints (`SiteFE/REST/Monitoring.py`, the rescan backed by a new `bgpforcerescan` table) and a new `bgp.html` Web UI page (`assets/js/page/bgp.js`) listing per-host BGP summaries with a "Force BGP Rescan" button, linked from the main nav.
-- Per-vendor BGP-summary collection is implemented as a new shared `bgpsummary.yaml` Ansible playbook plus new vendor modules across `ansible-templates` and six device collections — see Related Repository Changes.
+**Topology page rebuilt on Archify (replaces the NeXt UI graph)**
+- `SiteRMLibs/ArchifyTopology.py`, `SiteRMLibs/ArchifyLayout.py` (new), `SiteFE/REST/Topo.py`: the Frontend now renders the site topology server side with [Archify](https://github.com/tt-a1i/archify) (pinned commit, run with Node.js) and serves it from the new `GET /{sitename}/topo/archify` endpoint (read permission; the page is served with `Content-Security-Policy: sandbox`). `index.html` shows it in a sandboxed iframe next to the switch/server filters. The Cisco NeXt UI library and its fonts were removed.
+- Links are colored and sized by speed (≤10G up to 800G+, with a legend), port-channel members are drawn as bundled parallel lines with a ring at each end, and every link attaches at its own point along a node edge with no two lines drawn on top of each other. A link reported by both switches with different port spellings (e.g. Dell OS10 `Ethernet 1/1/13` vs `ethernet1/1/13`) is drawn once.
+- Device health on the diagram: servers are outlined by their worst agent service state (reports older than 10 minutes count as UNKNOWN), switches by whether their last config fetch failed. Cards below the diagram list every link, WAN peer, Frontend service state and device issue.
+- Active path filter: the new `GET /{sitename}/topo/paths` lists active L2 connections (VLANs, state, devices). `GET /{sitename}/topo/archify?path=<connection id>` (the new "Active path" selector, or an `index.html?path=` link) limits the diagram to that connection's devices, highlights the links it uses, including the WAN peer it leaves through, and lists each hop with its VLAN.
+- `GET /{sitename}/topo/archify?view=graph` returns the diagram without the cards, for embedding (see Monitoring below).
+- `SiteFE/SNMPMonitoring/snmpmon.py`: `topology.json` now records port-channel membership on both ends of a link, WAN port speed and port-channel members, and per-switch fetch errors. WAN peers now include every `isAlias` port that leads outside the site (another domain, or a device that is not one of the site's switches or agent hosts), not only ports marked `wanlink`.
 
-**BGP peering health now feeds the Validator's warning pipeline**
-- `SiteFE/Validator/validator.py`: for every host with an active BGP delta, the Validator now reads its latest `bgpmon` row and raises a warning when no monitoring data exists yet (`VALIDATOR_BGP_NO_DATA`, `-120`), a SENSE-tagged peer isn't `established` (`VALIDATOR_BGP_SESSION_DOWN`, `-121`), or an established peer is receiving (`-122`) or advertising (`-123`) zero prefixes — the advertised check only fires on platforms that actually report an advertised count. Documented in the error-codes and common-issues pages ahead of release (see Related Repository Changes).
+**Delta submission: `Idempotency-Key` support**
+- `SiteFE/REST/Delta.py`: `POST /{sitename}/deltas` accepts an `Idempotency-Key` header, scoped per user and stored in the new `deltaidempotency` table. A retry with the same key replays the stored 201/400 response, waits for the original request if it is still in progress, or returns 409. Reusing a key for a different payload returns 422. A key still in progress after 5 minutes with no PolicyService result and no queued delta file is treated as lost, so a retry resubmits it.
+- The wait for PolicyService to accept a delta now uses `asyncio.sleep`; the previous `time.sleep` blocked the uvicorn worker for every other request.
 
-**New BGP Prometheus metrics**
-- `SiteFE/SNMPMonitoring/snmpmon.py`: exports `bgp_session_state` (Enum), `bgp_prefixes_received`/`bgp_prefixes_advertised` (Gauge), `bgp_session_uptime_seconds`, and `bgp_last_scan_timestamp`, labeled by `hostname`/`vrf`/`peer`/`iptype`/`local_asn`/`remote_asn`/`sense`. A new `snmp_last_scan_timestamp` gauge gives the same "is this data fresh" signal for the pre-existing SNMP exporter.
+**Paging for deltas and models (API + Web UI)**
+- `GET /{sitename}/deltas` and `GET /{sitename}/models` take an `offset` parameter and return the total number of matching items in an `X-Total-Count` header (models: only when `current` is not set). Deltas are ordered by id, so pages stay stable when insert times tie. The Deltas and Models pages share a new pager.
+- Delta failures are stored as JSON in the delta `error` column and shown on the Deltas page.
 
 ### 🐛 Bug Fixes
 
-**FE base image failing to build (`siterm-startup`)**
-- `helpers/base_images/fe/Dockerfile`: the MariaDB GPG key fetch (`https://yum.mariadb.org/RPM-GPG-KEY-MariaDB`) is dead; switched to `https://supplychain.mariadb.com/MariaDB-Server-GPG-KEY`. Anyone building the `siterm-fe` base image from source, rather than pulling `sdnsense/siterm-fe`, was affected.
+**`forceapply` delta action always failed**
+- `SiteFE/REST/Delta.py` wrote to `deps['dpI']` (KeyError, HTTP 500 on every call), and `ProvisioningService` removed the queued row with a malformed search that would have failed on every provisioning cycle once rows were queued.
 
-**`restart-new-image.sh` crashed when the network mode flag wasn't set (`siterm-startup`)**
-- Forwarding an empty `-u` made `run.sh`'s `getopts` fail with `option requires an argument -- u`. It now only forwards `-p`/`-u` when those values were actually set.
+**MariaDB password and init failures now fail clearly**
+- `SiteRMLibs/DBBackend.py`: the Frontend refuses to start when `MARIA_DB_PASSWORD` is unset, still the `REPLACEME` template value, or contains whitespace or any of `` " ' ` \ / & $ ; | < > ( ) `` (they break the container's environment sourcing and the SQL in `mariadb_init.sh`). A `%` in the password no longer breaks Alembic. `siterm-readiness` now reports a failed MariaDB initialization with its reason.
+- `mariadb_init.sh` (`siterm-startup`): a failed init or upgrade is recorded and reported by `docker-healthcheck.sh` and readiness, instead of supervisord rerunning the script and clearing the failure.
 
-**Ansible checkout could get stuck broken on the FE container (`siterm-startup`)**
-- `start-cleanup.sh`: a previous run killed mid-`git`-operation (OOM, pod eviction) could leave a stale `.git/index.lock` or a corrupted checkout that then failed forever on every subsequent startup. The script now clears a stale lock and, if the update sequence (`fetch`/`checkout`/`reset`/`pull`) still fails, wipes and re-clones the `ansible-templates` checkout from scratch instead of leaving the FE running on a broken/stale config. `REMOTE` is now always `origin` (previously mis-derived from `ANSIBLE_REPO`, which broke when `ANSIBLE_REPO` was a bare ref like `1.6.4` instead of `origin/1.6.4`), and a failing `ansible-prepare.py` now aborts startup instead of continuing with an invalid config.
-
-**`ansible-prepare.py` validation gaps (`siterm-startup`)**
-- An unknown or missing `network_os`, a host with neither `pass` nor `sshkey`, or a `sshkey` path that doesn't exist now fail loudly with a specific error instead of silently printing a warning and continuing with a broken host entry. A malformed `/etc/ansible-conf.yaml` now reports the actual line/column instead of a raw YAML traceback. A new `--check` mode (validates only, writes nothing) lets `run.sh` check the mounted `ansible-conf.yaml` from the host before starting the container — including a cross-check against the site's Git-managed switch list from `rm-configs` — and `run.sh` skips this pre-check gracefully (with a warning) against older image tags that don't support `--check` yet.
-
-**Misc**
-- `siterm`: `README.MD` now points at the docs site instead of a stale "Stable release: 1.6.1" line (#1005).
+**Container image builds failing (`siterm-startup`)**
+- Agent el9/el10 base images: `fetch-crl` is installed from EPEL by name. The pinned EPEL RPM URL returned 404, because EPEL only keeps the latest build.
+- FE image: `pip install --upgrade` failed with "Cannot uninstall python-dateutil … installed by rpm" once `python-dateutil` 3.0.0 was published. A pip-managed copy is now installed first.
 
 ### ⚠️ Breaking / Upgrade Notes
 
-- No manual upgrade steps required. BGP monitoring activates automatically for any host that already has `private_asn` configured (existing BGP-routing config) and an active BGP delta; the new `bgpmon`/`bgpforcerescan` tables are created automatically on Frontend startup.
-- If you build the `siterm-fe` base image yourself instead of pulling `sdnsense/siterm-fe`, pull the latest `siterm-startup` first — see the MariaDB GPG key fix above, without it the image build fails outright.
+- **MariaDB password:** check `MARIA_DB_PASSWORD` in your environment file before upgrading. If it is unset, still `REPLACEME`, or contains whitespace or any of the characters listed above, the Frontend will not start; change it first.
+- **Container restart policy:** the `siterm-startup` run scripts (Frontend, Agent, Debugger, node-exporter) now start containers with `--restart unless-stopped` instead of `always`, so a container you stop by hand stays stopped after a host or Docker restart.
+- **Frontend image:** the topology page needs the new Frontend image, which includes Node.js 22 and Archify. If you build the image yourself, pull the latest `siterm-startup` first (it also contains the build fixes above).
+- **Topology data:** port-channels, WAN speeds and members, switch health and the additional WAN peers appear once SNMPMonitoring regenerates `topology.json` after the upgrade; until then the diagram is drawn from the existing file.
+- The new `deltaidempotency` table is created automatically on Frontend startup. No other manual steps are required.
 
 ### 🔗 Related Repository Changes
 
-**Ansible Collections & Templates** (cross-vendor BGP summary collection, feeding the new BGPMonitoring service)
-- `ansible-templates`: New `project/bgpsummary.yaml` playbook (dispatched by `ansible_network_os`) renders new `frr_bgpsummary.j2`/`sonic_bgpsummary.j2` templates for FRR/SONiC, or calls a vendor `*_bgpsummary` module directly for Dell OS9/OS10, Cisco NX9, and Junos. `test-runner.py` gains a `bgp-summary` subcommand for standalone testing against a single host.
-- `sense-frr-collection`, `sense-sonic-collection`: New `bgpsummary` action in `frr_command`/`sonic_command` (`vtysh -c "show bgp [vrf ...] summary json"`, run with `sudo` on SONiC) sharing the same JSON normalization. `sense-frr-collection` also reworks interface-operstate collection for VPP-based FRR deployments (queries `vppctl`/`docker exec vpp vppctl` and maps linux-cp interface names to their VPP dataplane names) and adds a sysfs `carrier`-flag fallback for when Linux reports `operstate: unknown`.
-- `sense-junos-collection`, `sense-cisconx9-collection`: New `junos_bgpsummary`/`cisconx9_bgpsummary` modules. Neither platform's summary view reports per-peer advertised-prefix counts, so both make one extra detail call per *established* peer to backfill it (Junos also backfills local ASN this way). A same-day Junos follow-up fixes `parseBgpSummaryJson()` to accept the dict shape `run_commands()` actually returns — the original version silently produced zero peers for every host.
-- `sense-dellos10-collection`, `sense-dellos9-collection`: New `dellos10_bgpsummary`/`dellos9_bgpsummary` modules (XML and regex-parsed plain text respectively — OS9 has no structured BGP output at all). A follow-up on both fixes peer de-duplication: peers are now keyed by address instead of by which address-family command produced the row, which previously could double-count or mislabel a peer when `type: both`.
+**Container images (`siterm-startup`)**
+- FE base image installs Node.js 22 (`nodejs:22` module stream) for the Archify renderer, and the FE image clones Archify at a pinned commit into `/opt/archify`.
+- MariaDB init failure reporting, the `unless-stopped` restart policy and the image build fixes described above.
 
 **Monitoring**
-- `autogole-monitoring`: The shared Grafana dashboard template (plus a new VPP-specific variant for FABRIC/UChicago sites) gained a "BGP Status" panel row — session state, prefixes received/advertised, and last-scan age — rolled out to 30 of 72 deployed site dashboards so far. No alerting rules were added yet for a down session or a stale scan; until that lands, the new Validator warnings above are the only automated signal.
+- `autogole-monitoring`: every SiteRM site dashboard now starts with a collapsed "Topology" row that embeds the site's diagram (`/topo/archify?view=graph`). A new `siterm-topology` sidecar in the Prometheus pod fetches each site's page with the existing oidcgen tokens, using the rm-configs checkout oidcgen shares through a volume, and caches it for 5 minutes. Grafana reaches it only through the new "SiteRM Topology" data source, so only logged-in Grafana users see it, and Grafana serves the page without scripts (static view; zoom and export stay on the SiteRM web UI). `oidcgen` now follows rm-configs updates; it previously only fetched, so new sites got no token until a restart. `genConfig` follows the `external_snmp` URL scheme and only sends the token and TLS settings over https.
+- `nsi-snmpmon`: serves its metrics over plain HTTP inside the cluster; TLS and client-certificate auth were removed, as it is a private service.
 
-**Documentation**
-- `sdn-sense.github.io`: Added error-codes entries for the four new `VALIDATOR_BGP_*` warning codes and a common-issues entry explaining the expected "BGP monitoring data stale" warning during normal hourly-cycle drift.
-
-> Site-specific configuration/deployment repositories (`rm-configs`, `vpp-frr`, `helm-deployments`) and unrelated-org projects (`esnet/sense-rtmon`) were checked but intentionally excluded from this list as they carry per-site data rather than SiteRM software changes.
+> `sense-o-py-client` (SENSE-O client: instance principals, project submission, CI hardening) also changed in this period but is not SiteRM software. `ansible-templates`, the device collections and the docs site had no changes. Site-specific configuration repositories (`rm-configs`) are excluded as they carry per-site data.
 
 ### 🔧 Supported OS Releases
 
@@ -71,7 +71,7 @@ Changes since `1.6.3` (2026-09-10 → 2026-09-21), across `siterm` and related r
 - 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
-- This particular release is `pre-<el9|el10|u22>` version (`1.6.4`).
+- This particular release is `pre-<el9|el10|u22>` version (`1.6.5`).
 
 ### Docker Versions
 
@@ -81,6 +81,6 @@ Changes since `1.6.3` (2026-09-10 → 2026-09-21), across `siterm` and related r
 
 ### Helm versions
 
-- **Agent:** Chart version siterm/siterm-agent 1.6.4
-- **Debugger:** Chart version siterm/siterm-debugger 1.6.4
-- **Frontend:** Chart version siterm/siterm-fe 1.6.4
+- **Agent:** Chart version siterm/siterm-agent 1.6.5
+- **Debugger:** Chart version siterm/siterm-debugger 1.6.5
+- **Frontend:** Chart version siterm/siterm-fe 1.6.5

@@ -1,3 +1,90 @@
+## SiteRM 1.6.5 Production Release
+
+Changes since `1.6.4` (2026-10-05 → 2026-11-02), across `siterm` and related repositories.
+
+### 🚀 New Features
+
+**Topology page rebuilt on Archify (replaces the NeXt UI graph)**
+- `SiteRMLibs/ArchifyTopology.py`, `SiteRMLibs/ArchifyLayout.py` (new), `SiteFE/REST/Topo.py`: the Frontend now renders the site topology server side with [Archify](https://github.com/tt-a1i/archify) (pinned commit, run with Node.js) and serves it from the new `GET /{sitename}/topo/archify` endpoint (read permission; the page is served with `Content-Security-Policy: sandbox`). `index.html` shows it in a sandboxed iframe next to the switch/server filters. The Cisco NeXt UI library and its fonts were removed.
+- Links are colored and sized by speed (≤10G up to 800G+, with a legend), port-channel members are drawn as bundled parallel lines with a ring at each end, and every link attaches at its own point along a node edge with no two lines drawn on top of each other. A link reported by both switches with different port spellings (e.g. Dell OS10 `Ethernet 1/1/13` vs `ethernet1/1/13`) is drawn once.
+- Device health on the diagram: servers are outlined by their worst agent service state (reports older than 10 minutes count as UNKNOWN), switches by whether their last config fetch failed. Cards below the diagram list every link, WAN peer, Frontend service state and device issue.
+- Active path filter: the new `GET /{sitename}/topo/paths` lists active L2 connections (VLANs, state, devices). `GET /{sitename}/topo/archify?path=<connection id>` (the new "Active path" selector, or an `index.html?path=` link) limits the diagram to that connection's devices, highlights the links it uses, including the WAN peer it leaves through, and lists each hop with its VLAN.
+- `GET /{sitename}/topo/archify?view=graph` returns the diagram without the cards, for embedding (see Monitoring below).
+- `SiteFE/SNMPMonitoring/snmpmon.py`: `topology.json` now records port-channel membership on both ends of a link, WAN port speed and port-channel members, and per-switch fetch errors. WAN peers now include every `isAlias` port that leads outside the site (another domain, or a device that is not one of the site's switches or agent hosts), not only ports marked `wanlink`.
+
+**Delta submission: `Idempotency-Key` support**
+- `SiteFE/REST/Delta.py`: `POST /{sitename}/deltas` accepts an `Idempotency-Key` header, scoped per user and stored in the new `deltaidempotency` table. A retry with the same key replays the stored 201/400 response, waits for the original request if it is still in progress, or returns 409. Reusing a key for a different payload returns 422. A key still in progress after 5 minutes with no PolicyService result and no queued delta file is treated as lost, so a retry resubmits it.
+- The wait for PolicyService to accept a delta now uses `asyncio.sleep`; the previous `time.sleep` blocked the uvicorn worker for every other request.
+
+**Paging for deltas and models (API + Web UI)**
+- `GET /{sitename}/deltas` and `GET /{sitename}/models` take an `offset` parameter and return the total number of matching items in an `X-Total-Count` header (models: only when `current` is not set). Deltas are ordered by id, so pages stay stable when insert times tie. The Deltas and Models pages share a new pager.
+- Delta failures are stored as JSON in the delta `error` column and shown on the Deltas page.
+
+### 🐛 Bug Fixes
+
+**`forceapply` delta action always failed**
+- `SiteFE/REST/Delta.py` wrote to `deps['dpI']` (KeyError, HTTP 500 on every call), and `ProvisioningService` removed the queued row with a malformed search that would have failed on every provisioning cycle once rows were queued.
+
+**MariaDB password and init failures now fail clearly**
+- `SiteRMLibs/DBBackend.py`: the Frontend refuses to start when `MARIA_DB_PASSWORD` is unset, still the `REPLACEME` template value, or contains whitespace or any of `` " ' ` \ / & $ ; | < > ( ) `` (they break the container's environment sourcing and the SQL in `mariadb_init.sh`). A `%` in the password no longer breaks Alembic. `siterm-readiness` now reports a failed MariaDB initialization with its reason.
+- `mariadb_init.sh` (`siterm-startup`): a failed init or upgrade is recorded and reported by `docker-healthcheck.sh` and readiness, instead of supervisord rerunning the script and clearing the failure.
+
+**Container image builds failing (`siterm-startup`)**
+- Agent el9/el10 base images: `fetch-crl` is installed from EPEL by name. The pinned EPEL RPM URL returned 404, because EPEL only keeps the latest build.
+- FE image: `pip install --upgrade` failed with "Cannot uninstall python-dateutil … installed by rpm" once `python-dateutil` 3.0.0 was published. A pip-managed copy is now installed first.
+
+### ⚠️ Breaking / Upgrade Notes
+
+- **MariaDB password:** check `MARIA_DB_PASSWORD` in your environment file before upgrading. If it is unset, still `REPLACEME`, or contains whitespace or any of the characters listed above, the Frontend will not start; change it first.
+- **Container restart policy:** the `siterm-startup` run scripts (Frontend, Agent, Debugger, node-exporter) now start containers with `--restart unless-stopped` instead of `always`, so a container you stop by hand stays stopped after a host or Docker restart.
+- **Frontend image:** the topology page needs the new Frontend image, which includes Node.js 22 and Archify. If you build the image yourself, pull the latest `siterm-startup` first (it also contains the build fixes above).
+- **Topology data:** port-channels, WAN speeds and members, switch health and the additional WAN peers appear once SNMPMonitoring regenerates `topology.json` after the upgrade; until then the diagram is drawn from the existing file.
+- The new `deltaidempotency` table is created automatically on Frontend startup. No other manual steps are required.
+
+### 🔗 Related Repository Changes
+
+**Container images (`siterm-startup`)**
+- FE base image installs Node.js 22 (`nodejs:22` module stream) for the Archify renderer, and the FE image clones Archify at a pinned commit into `/opt/archify`.
+- MariaDB init failure reporting, the `unless-stopped` restart policy and the image build fixes described above.
+
+**Monitoring**
+- `autogole-monitoring`: every SiteRM site dashboard now starts with a collapsed "Topology" row that embeds the site's diagram (`/topo/archify?view=graph`). A new `siterm-topology` sidecar in the Prometheus pod fetches each site's page with the existing oidcgen tokens, using the rm-configs checkout oidcgen shares through a volume, and caches it for 5 minutes. Grafana reaches it only through the new "SiteRM Topology" data source, so only logged-in Grafana users see it, and Grafana serves the page without scripts (static view; zoom and export stay on the SiteRM web UI). `oidcgen` now follows rm-configs updates; it previously only fetched, so new sites got no token until a restart. `genConfig` follows the `external_snmp` URL scheme and only sends the token and TLS settings over https.
+- `nsi-snmpmon`: serves its metrics over plain HTTP inside the cluster; TLS and client-certificate auth were removed, as it is a private service.
+
+> `sense-o-py-client` (SENSE-O client: instance principals, project submission, CI hardening) also changed in this period but is not SiteRM software. `ansible-templates`, the device collections and the docs site had no changes. Site-specific configuration repositories (`rm-configs`) are excluded as they carry per-site data.
+
+### 🔧 Supported OS Releases
+
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL9
+  - EL10 **Default for release**
+  - U22
+- **Debugger (x86_64)**
+  - EL10
+
+> **Note:** EL8 is no longer supported for the Frontend or Agent from 1.6.0 onwards.
+
+### 📥 Installation Details
+
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
+- **Recommended Version:** Always use `latest`.
+- This particular release is `pre-<el9|el10|u22>` version (`1.6.5`).
+
+### Docker Versions
+
+- **Agent:** `sdnsense/siterm-agent:pre-<YYYYMMDD>-<el9|el10|u22>` *(or use `latest`)*
+- **Debugger:** `sdnsense/siterm-debugger:pre-<YYYYMMDD>-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:pre-<YYYYMMDD>` *(or use `latest`)*
+
+### Helm versions
+
+- **Agent:** Chart version siterm/siterm-agent 1.6.5
+- **Debugger:** Chart version siterm/siterm-debugger 1.6.5
+- **Frontend:** Chart version siterm/siterm-fe 1.6.5
+
 ## SiteRM 1.6.4 Production Release
 
 Changes since `1.6.3` (2026-09-10 → 2026-09-21), across `siterm` and related repositories.
