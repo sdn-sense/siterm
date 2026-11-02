@@ -78,6 +78,7 @@ class DBCleaner:
             "activeDeltas",
             "instancestartend",
             "deltasusertracking",
+            "deltaidempotency",
             "debugworkers",
         ]:
             self.logger.info(f"Cleaning {table}")

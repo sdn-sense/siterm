@@ -291,6 +291,24 @@ class DeltaUserTracking(Base):
     otherinfo = Column(LONGTEXT, nullable=False)
 
 
+class DeltaIdempotency(Base):
+    """DeltaIdempotency table: delta POST Idempotency-Key per user and its stored result."""
+
+    __tablename__ = "deltaidempotency"
+    __table_args__ = (UniqueConstraint("username", "idemkey"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(255), nullable=False)
+    idemkey = Column(String(255), nullable=False)
+    fingerprint = Column(String(64), nullable=False)
+    deltaid = Column(String(255), nullable=False)
+    insertdate = Column(Integer, nullable=False)
+    updatedate = Column(Integer, nullable=False)
+    # Null while the original request is still in progress
+    statuscode = Column(Integer, nullable=True)
+    response = Column(LONGTEXT, nullable=True)
+
+
 class DBVersion(Base):
     """DBVersion table."""
 
@@ -354,6 +372,7 @@ REGISTRY = {
     "forceapplyuuid": ForceApplyUUID,
     "instancestartend": InstanceStartEnd,
     "deltasusertracking": DeltaUserTracking,
+    "deltaidempotency": DeltaIdempotency,
     "dbversion": DBVersion,
     "users": User,
     "refresh_tokens": RefreshToken,

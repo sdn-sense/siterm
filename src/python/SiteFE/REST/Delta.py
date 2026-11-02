@@ -10,13 +10,16 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 
+import hashlib
 import os
-from time import sleep
+from asyncio import sleep
+from contextlib import suppress
 from typing import Literal, Optional
 
 from fastapi import (
     APIRouter,
     Depends,
+    Header,
     HTTPException,
     Path,
     Query,
@@ -38,7 +41,9 @@ from SiteFE.REST.dependencies import (
 )
 from SiteRMLibs.CustomExceptions import ModelNotFound, WrongInputError
 from SiteRMLibs.DefaultParams import (
+    DELTA_ACCEPT_TIMEOUT,
     DELTA_COMMIT_TIMEOUT,
+    IDEMPOTENCY_STALE_TIMEOUT,
     LIMIT_DEFAULT,
     LIMIT_MAX,
     LIMIT_MIN,
@@ -55,6 +60,7 @@ from SiteRMLibs.MainUtilities import (
     removeFile,
     saveContent,
 )
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter()
 
@@ -149,6 +155,169 @@ def _getdeltas(dbI, **kwargs):
     if out and kwargs.get("deltaID"):
         return out[0]
     return out
+
+
+_IDEMPOTENT_REPLAYED = {"Idempotent-Replayed": "true"}
+
+
+def _parseIdempotencyKey(rawKey):
+    """Return the Idempotency-Key header value without sf-string quotes, or None if not sent."""
+    if rawKey is None:
+        return None
+    key = rawKey.strip()
+    if len(key) >= 2 and key[0] == key[-1] == '"':
+        key = key[1:-1]
+    if not 1 <= len(key) <= 255 or not (key.isascii() and key.isprintable()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Idempotency-Key header. Expected 1-255 printable ASCII characters.",
+        )
+    return key
+
+
+def _deltaFingerprint(item):
+    """Return a SHA-256 fingerprint of the submitted delta payload."""
+    return hashlib.sha256(jsondumps(item.dict()).encode("utf-8")).hexdigest()
+
+
+def _deltaPaths(deps, sitename, deltaID):
+    """Return the PolicyService (httpnew, httpfinished) file paths for a delta."""
+    policyDir = os.path.join(deps["config"].get(sitename, "privatedir"), "PolicyService")
+    return os.path.join(policyDir, "httpnew", f"{deltaID}.json"), os.path.join(policyDir, "httpfinished", f"{deltaID}.json")
+
+
+def _getAcceptOutput(dbI, deltaID, since, paths):
+    """Return PolicyService accept output for a delta submitted at or after since, or None while still pending."""
+    newName, finishedName = paths
+    try:
+        out = getFileContentAsJson(finishedName)
+    except OSError:
+        # Another request waiting on the same delta removed the file between the existence check and the read.
+        out = {}
+    if out:
+        with suppress(FileNotFoundError):
+            removeFile(finishedName)
+        return out
+    if os.path.isfile(newName):
+        # Not picked up by PolicyService yet, so any deltas row is from an earlier submission.
+        return None
+    # PolicyService also records the result in the deltas table; use it when the result file was already consumed.
+    rows = dbI.get("deltas", search=[["uid", deltaID], ["insertdate", ">=", since]], orderby=["id", "DESC"], limit=1)
+    if not rows:
+        return None
+    row = rows[0]
+    out = {
+        "ID": row["uid"],
+        "insertdate": row["insertdate"],
+        "updatedate": row["insertdate"],
+        "content": evaldict(row["content"]),
+        "State": "failed" if row["state"] == "failed" else "accepted",
+        "modelId": row["modelid"],
+    }
+    if row.get("error"):
+        out["Error"] = evaldict(row["error"])
+    return out
+
+
+def _acceptResult(request, sitename, out):
+    """Return the delta POST (status code, body) for PolicyService accept output."""
+    body = {key: out.get(key) for key in ("ID", "insertdate", "updatedate", "content", "State", "modelId")}
+    body["id"] = out["ID"]
+    body["lastModified"] = convertTSToDatetime(out["updatedate"])
+    body["href"] = f"{request.base_url}api/{sitename}/deltas/{out['ID']}"
+    if body["State"] == "accepted":
+        return status.HTTP_201_CREATED, body
+    error = out.get("Error", f"Unknown Error. Error Message: None. Full dump: {jsondumps(out)}")
+    return status.HTTP_400_BAD_REQUEST, {"detail": f"Failed to accept delta. Error Message: {error}."}
+
+
+def _respond(request, statusCode, body, headers=None):
+    """Return the delta POST response, raising HTTPException for an error result."""
+    if statusCode >= 400:
+        raise HTTPException(status_code=statusCode, detail=body["detail"], headers=headers)
+    return APIResponse.genResponse(request, body, status_code=statusCode, headers=headers)
+
+
+def _getIdempotencyRecord(dbI, username, idemKey):
+    """Get the delta POST Idempotency-Key record of a user."""
+    rows = dbI.get("deltaidempotency", search=[["username", username], ["idemkey", idemKey]], limit=1)
+    return rows[0] if rows else None
+
+
+def _claimIdempotencyKey(dbI, username, idemKey, fingerprint, deltaID):
+    """Insert an in-progress record for the key; return its id, or None if another request already holds the key."""
+    now = getUTCnow()
+    record = {"username": username, "idemkey": idemKey, "fingerprint": fingerprint, "deltaid": deltaID, "insertdate": now, "updatedate": now}
+    try:
+        _, _, recordID = dbI.insert("deltaidempotency", [record])
+    except IntegrityError:
+        return None
+    return recordID
+
+
+def _storeIdempotentResult(dbI, recordID, statusCode, body):
+    """Save the final delta POST response of an Idempotency-Key record."""
+    dbI.update("deltaidempotency", [{"id": recordID, "statuscode": statusCode, "response": jsondumps(body), "updatedate": getUTCnow()}])
+
+
+async def _awaitIdempotentResult(request, deps, sitename, idemKey, fingerprint):
+    """Return the response of the request holding idemKey, waiting while it is in progress; None if no request holds it."""
+    dbI, username = deps["dbI"], deps["user"]["user_info"]["sub"]
+    for _ in range(DELTA_ACCEPT_TIMEOUT):
+        record = _getIdempotencyRecord(dbI, username, idemKey)
+        if not record:
+            return None
+        if record["fingerprint"] != fingerprint:
+            raise HTTPException(
+                status_code=422,
+                detail="Idempotency-Key was already used for a different delta request. Use a new key for a new request.",
+            )
+        if record["statuscode"] is not None:
+            return _respond(request, record["statuscode"], evaldict(record["response"]), _IDEMPOTENT_REPLAYED)
+        newName, finishedName = _deltaPaths(deps, sitename, record["deltaid"])
+        if out := _getAcceptOutput(dbI, record["deltaid"], record["insertdate"], (newName, finishedName)):
+            statusCode, body = _acceptResult(request, sitename, out)
+            _storeIdempotentResult(dbI, record["id"], statusCode, body)
+            return _respond(request, statusCode, body, _IDEMPOTENT_REPLAYED)
+        if getUTCnow() - record["insertdate"] > IDEMPOTENCY_STALE_TIMEOUT and not os.path.isfile(newName):
+            # Original submission was lost before PolicyService produced a result; let this request resubmit it.
+            dbI.delete("deltaidempotency", [["id", record["id"]]])
+            return None
+        await sleep(1)
+    raise _idempotencyInProgress()
+
+
+def _idempotencyInProgress():
+    """Return the 409 error for an Idempotency-Key whose original request is still in progress."""
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="A delta request with this Idempotency-Key is still being processed. Retry later with the same key.",
+        headers={"Retry-After": "10"},
+    )
+
+
+async def _submitToPolicyService(request, deps, sitename, item):
+    """Queue the delta for PolicyService and wait for its accept output; None on timeout."""
+    outContent = {
+        "ID": item.id,
+        "insertdate": getUTCnow(),
+        "updatedate": getUTCnow(),
+        "content": item.dict(),
+        "State": "accepting",
+        "modelId": item.modelId,
+    }
+    # Save item to disk; drop any result left behind by an earlier submission of this delta that timed out.
+    fname, finishedName = _deltaPaths(deps, sitename, item.id)
+    with suppress(FileNotFoundError):
+        removeFile(finishedName)
+    saveContent(fname, outContent)
+    _record_delta_action(deps["dbI"], deps["user"]["user_info"]["sub"], item.id, "submit", _extract_sense_headers(request))
+    # Wait (without blocking the event loop) for PolicyService to accept or reject the delta.
+    for _ in range(DELTA_ACCEPT_TIMEOUT):
+        if out := _getAcceptOutput(deps["dbI"], item.id, outContent["insertdate"], (fname, finishedName)):
+            return out
+        await sleep(1)
+    return None
 
 
 class DeltaItem(BaseModel):
@@ -281,7 +450,13 @@ async def getDeltas(
 @router.post(
     "/{sitename}/deltas",
     summary="Submit Delta",
-    description=("Submits a new delta for the specified site."),
+    description=(
+        "Submits a new delta for the specified site.\n\n"
+        "Send an `Idempotency-Key` header (1-255 characters, unique per request) to retry safely after a timeout or a lost response. "
+        "A retry with the same key and payload never submits the delta again: it returns the original result (with `Idempotent-Replayed: true`), "
+        "waits for the original request if it is still in progress, or returns 409 if it is still in progress after the wait. "
+        "Reusing a key with a different payload returns 422. Keys are scoped per user and kept for 7 days."
+    ),
     tags=["Deltas"],
     responses={
         **{
@@ -301,18 +476,27 @@ async def getDeltas(
                 },
             },
             400: {
-                "description": "Bad Request. Possible Reasons:\n - You did POST method, but nor reduction, nor addition is present.\n - Failed to accept delta.",
+                "description": "Bad Request. Possible Reasons:\n - You did POST method, but nor reduction, nor addition is present.\n - Failed to accept delta.\n - Invalid Idempotency-Key header.",
                 "content": {
                     "application/json": {
                         "example": {
                             "delta_missing": {"detail": "You did POST method, but nor reduction, nor addition is present."},
                             "delta_failed": {"detail": "Failed to accept delta. Error Message: <error_message>. Full dump: <full_dump>"},
+                            "invalid_key": {"detail": "Invalid Idempotency-Key header. Expected 1-255 printable ASCII characters."},
                         }
                     }
                 },
             },
+            409: {
+                "description": "Conflict. A request with the same Idempotency-Key is still being processed. Retry later with the same key (see Retry-After header).",
+                "content": {"application/json": {"example": {"detail": "A delta request with this Idempotency-Key is still being processed. Retry later with the same key."}}},
+            },
+            422: {
+                "description": "Unprocessable Content. The Idempotency-Key was already used with a different payload.",
+                "content": {"application/json": {"example": {"detail": "Idempotency-Key was already used for a different delta request. Use a new key for a new request."}}},
+            },
             504: {
-                "description": "Gateway Timeout. Possible Reasons:\n - Failed to accept delta. Timeout reached and output to accept delta is empty.",
+                "description": "Gateway Timeout. Possible Reasons:\n - Failed to accept delta. Timeout reached and output to accept delta is empty. With an Idempotency-Key, retry with the same key to get the result.",
                 "content": {"application/json": {"example": {"timeout": {"detail": "Failed to accept delta. Timeout reached and output to accept delta is empty. Please report to site admins."}}}},
             },
         },
@@ -326,6 +510,11 @@ async def submitDelta(
         ...,
         description="The site name to submit the delta for.",
         examples=[startupConfig.get("SITENAME", "default")],
+    ),
+    idempotencyKey: Optional[str] = Header(
+        None,
+        alias="Idempotency-Key",
+        description="Optional unique key to make retries of this request safe. Retries with the same key and payload return the original result instead of submitting the delta again.",
     ),
     deps=Depends(apiWriteDeps),
     _forbid=Depends(forbidExtraQueryParams()),
@@ -347,6 +536,12 @@ async def submitDelta(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You did POST method, but nor reduction, nor addition is present",
         )
+    idemKey = _parseIdempotencyKey(idempotencyKey)
+    # Fingerprint before modelId is defaulted below, so a retry of the same payload matches.
+    fingerprint = _deltaFingerprint(item)
+    # A retry must replay (or wait for) the original result before anything below touches the delta.
+    if idemKey and (replay := await _awaitIdempotentResult(request, deps, sitename, idemKey, fingerprint)):
+        return replay
     if delta := _getdeltas(deps["dbI"], deltaID=item.id):
         # If delta is not in a final state, we delete it from db, and will add new one.
         if delta["state"] not in [
@@ -370,65 +565,24 @@ async def submitDelta(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Model not found in the database. First time run?",
         ) from ex
-    outContent = {
-        "ID": item.id,
-        "insertdate": getUTCnow(),
-        "updatedate": getUTCnow(),
-        "content": item.dict(),
-        "State": "accepting",
-        "modelId": item.modelId,
-    }
-    # Save item to disk
-    fname = os.path.join(
-        deps["config"].get(sitename, "privatedir"),
-        "PolicyService",
-        "httpnew",
-        f"{item.id}.json",
-    )
-    finishedName = os.path.join(
-        deps["config"].get(sitename, "privatedir"),
-        "PolicyService",
-        "httpfinished",
-        f"{item.id}.json",
-    )
-    saveContent(fname, outContent)
-    _record_delta_action(deps["dbI"], deps["user"]["user_info"]["sub"], item.id, "submit", _extract_sense_headers(request))
-
-    # This is a blocking call, better approach is to reply and ask to check later.
-    # But for now, we will block until we get output from PolicyService.
-    # Loop for max 50seconds and check if we have file in finished directory.
-    out = {}
-    timer = 50
-    while timer > 0:
-        if os.path.isfile(finishedName):
-            out = getFileContentAsJson(finishedName)
-            removeFile(finishedName)
-            break
-        timer -= 1
-        sleep(1)
-    # If timer reached 0, we will not have file in finished directory
-    if timer == 0 and not out:
-        # Return failed http code
+    recordID = None
+    if idemKey:
+        recordID = _claimIdempotencyKey(deps["dbI"], deps["user"]["user_info"]["sub"], idemKey, fingerprint, item.id)
+        if recordID is None:
+            # A concurrent request with the same key claimed it first; wait for its result instead of submitting twice.
+            if replay := await _awaitIdempotentResult(request, deps, sitename, idemKey, fingerprint):
+                return replay
+            raise _idempotencyInProgress()
+    if not (out := await _submitToPolicyService(request, deps, sitename, item)):
+        # An Idempotency-Key record stays in progress, so a retry with the same key picks up the result instead of resubmitting.
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Failed to accept delta. Timeout reached and output to accept delta is empty.",
+            detail="Failed to accept delta. Timeout reached and output to accept delta is empty." + (" Retry with the same Idempotency-Key to get the result." if idemKey else ""),
         )
-    if not out:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to accept delta. Output is empty.",
-        )
-    outContent["State"] = out["State"]
-    outContent["id"] = item.id
-    outContent["lastModified"] = convertTSToDatetime(outContent["updatedate"])
-    outContent["href"] = f"{request.base_url}api/{sitename}/deltas/{item.id}"
-    if outContent["State"] not in ["accepted"]:
-        outContent["Error"] = out.get("Error", f"Unknown Error. Error Message: None. Full dump: {jsondumps(out)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to accept delta. Error Message: {outContent['Error']}.",
-        )
-    return APIResponse.genResponse(request, outContent, status_code=status.HTTP_201_CREATED)
+    result = _acceptResult(request, sitename, out)
+    if recordID is not None:
+        _storeIdempotentResult(deps["dbI"], recordID, *result)
+    return _respond(request, *result)
 
 
 # =========================================================

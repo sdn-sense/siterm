@@ -37,6 +37,11 @@ GIT_CONFIG_REFRESH_TIMEOUT = 900
 HTTP_SERVER_NOT_READY_ALERT_TIMEOUT = 600
 # Time for delta to receive commit message (5 minutes)
 DELTA_COMMIT_TIMEOUT = 300
+# Time a delta POST waits for PolicyService to accept or reject the delta
+DELTA_ACCEPT_TIMEOUT = 50
+# Delta POST Idempotency-Key still in progress without any PolicyService result after
+# this many seconds (and no queued delta file) is treated as lost, so a retry resubmits it (5 minutes)
+IDEMPOTENCY_STALE_TIMEOUT = 300
 # Time for delta to be removed from database (1 hour)
 DELTA_REMOVE_TIMEOUT = 3600
 # Mark BGP monitoring data as stale if not updated for 70 minutes (hourly cycle + margin)
