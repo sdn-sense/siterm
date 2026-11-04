@@ -48,7 +48,7 @@ Changes since `1.6.4` (2026-10-05 → 2026-11-02), across `siterm` and related r
 - MariaDB init failure reporting, the `unless-stopped` restart policy and the image build fixes described above.
 
 **Monitoring**
-- `autogole-monitoring`: every SiteRM site dashboard now starts with a collapsed "Topology" row that embeds the site's diagram (`/topo/archify?view=graph`). A new `siterm-topology` sidecar in the Prometheus pod fetches each site's page with the existing oidcgen tokens, using the rm-configs checkout oidcgen shares through a volume, and caches it for 5 minutes. Grafana reaches it only through the new "SiteRM Topology" data source, so only logged-in Grafana users see it, and Grafana serves the page without scripts (static view; zoom and export stay on the SiteRM web UI). `oidcgen` now follows rm-configs updates; it previously only fetched, so new sites got no token until a restart. `genConfig` follows the `external_snmp` URL scheme and only sends the token and TLS settings over https.
+- `autogole-monitoring`: every SiteRM site dashboard now starts with an expanded "Topology" row that embeds the site's diagram (`/topo/archify?view=graph`). A new `siterm-topology` sidecar in the Prometheus pod fetches each site's page with the existing oidcgen tokens, using the rm-configs checkout oidcgen shares through a volume, and caches it for 5 minutes. Grafana reaches it only through the new "SiteRM Topology" data source, so only logged-in Grafana users see it, and Grafana serves the page without scripts (static view; zoom and export stay on the SiteRM web UI). `oidcgen` now follows rm-configs updates; it previously only fetched, so new sites got no token until a restart. `genConfig` follows the `external_snmp` URL scheme and only sends the token and TLS settings over https.
 - `nsi-snmpmon`: serves its metrics over plain HTTP inside the cluster; TLS and client-certificate auth were removed, as it is a private service.
 
 > `sense-o-py-client` (SENSE-O client: instance principals, project submission, CI hardening) also changed in this period but is not SiteRM software. `ansible-templates`, the device collections and the docs site had no changes. Site-specific configuration repositories (`rm-configs`) are excluded as they carry per-site data.
@@ -71,13 +71,13 @@ Changes since `1.6.4` (2026-10-05 → 2026-11-02), across `siterm` and related r
 - 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
-- This particular release is `pre-<el9|el10|u22>` version (`1.6.5`).
+- This particular release is `1.6.5-<el9|el10|u22>` version (`1.6.5`).
 
 ### Docker Versions
 
-- **Agent:** `sdnsense/siterm-agent:pre-<YYYYMMDD>-<el9|el10|u22>` *(or use `latest`)*
-- **Debugger:** `sdnsense/siterm-debugger:pre-<YYYYMMDD>-el10` *(or use `latest`)*
-- **Frontend:** `sdnsense/siterm-fe:pre-<YYYYMMDD>` *(or use `latest`)*
+- **Agent:** `sdnsense/siterm-agent:1.6.5-<el9|el10|u22>` *(or use `latest`)*
+- **Debugger:** `sdnsense/siterm-debugger:1.6.5-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:1.6.5` *(or use `latest`)*
 
 ### Helm versions
 
