@@ -302,6 +302,7 @@ class NetInfo(BWService):
             if len(lldpOut) > 1 and lldpOut[1].strip():
                 self.logger.debug(f"lldpcli show neighbors -f json returned error: {lldpOut[1]}")
                 self.logger.debug("This is not a fatal error, just no LLDP information found or checked by SiteRM.")
+            _, ifStats = getIfAddrStats()
             out = {}
             for item in lldpObj.get("lldp", {}).get("interface", []):
                 for intf, vals in item.items():
@@ -321,6 +322,8 @@ class NetInfo(BWService):
                             "remote_chassis_id": mac,
                             "remote_port_id": remintf,
                             "local_port_id": intf,
+                            # LLDP runs on physical NICs; bond members are not in "interfaces", so this is their only speed report.
+                            "speed": ifStats[intf].speed if intf in ifStats else 0,
                         }
             return out
         except Exception as ex:

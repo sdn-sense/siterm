@@ -26,6 +26,7 @@ import sys
 from easysnmp import Session
 from easysnmp.exceptions import EasySNMPTimeoutError, EasySNMPUnknownObjectIDError
 from prometheus_client import CollectorRegistry, Enum, Gauge, Info, generate_latest
+from SiteRMLibs.Backends.generalFunctions import operStatusHealthy
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import SNMP_TIMEOUT, SNMP_UNKNOWN_OID
 from SiteRMLibs.DefaultParams import (
@@ -104,6 +105,15 @@ class Topology:
         return {field: lag} if lag else {}
 
     @staticmethod
+    def _downInfo(workdata, device, port):
+        """Return {"down": True} when a known switch reports the port down, else {}; an unknown state does not count as down"""
+        portData = workdata.get(device, {}).get("intstats", {}).get(port)
+        if not isinstance(portData, dict):
+            return {}
+        healthy, operstatus, lineprotocol = operStatusHealthy(portData)
+        return {} if healthy or "unknown" in (operstatus.lower(), lineprotocol.lower()) else {"down": True}
+
+    @staticmethod
     def _isLocalAlias(alias, domain, localDevices):
         """True if an isAlias URN (urn:ogf:network:<domain>:<year>:<device>:<port>) points to a device of this site"""
         parts = str(alias).split(":")
@@ -135,10 +145,11 @@ class Topology:
                     },
                 )
                 intf = intstats.get(portname) or {}
-                link = {"device": sw, "port": val, "localport": portname, "bandwidth": intf.get("bandwidth", 0)}
+                link = {"device": sw, "port": val, "localport": portname, "bandwidth": intf.get("bandwidth", 0), **self._downInfo(workdata, sw, portname)}
                 members = intf.get("channel-member") or []
                 if members:
                     link["members"] = {member: intstats.get(member, {}).get("bandwidth", 0) for member in members}
+                    link["membersdown"] = [member for member in members if self._downInfo(workdata, sw, member)]
                 wan_links[f"wan{incr}"]["topo"].setdefault(val["isAlias"].split(":")[-1], link)
                 incr += 1
         return wan_links
@@ -195,6 +206,7 @@ class Topology:
                     )
                     swout["topo"][key].update(self._lagInfo(workdata, switch, key, "portchannel"))
                     swout["topo"][key].update(self._lagInfo(workdata, remSwitch["switch"], remPort, "remoteportchannel"))
+                    swout["topo"][key].update(self._downInfo(workdata, switch, key))
                     print(swout["topo"][key])
         # Now lets get host information
         for host in self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100):
@@ -225,10 +237,11 @@ class Topology:
                             {
                                 "device": remSwitch["switch"],
                                 "port": remPort,
-                                "bandwidth": getHostPortSpeed(netinfo, intf),
+                                "bandwidth": getHostPortSpeed(netinfo, intf) or vals.get("speed", 0),
                             },
                         )
                         hout["topo"][intf].update(self._lagInfo(workdata, remSwitch["switch"], remPort, "remoteportchannel"))
+                        hout["topo"][intf].update(self._downInfo(workdata, remSwitch["switch"], remPort))
                         print(hout["topo"][intf])
             else:
                 for intf in hostconfig.get("agent", {}).get("interfaces", []):
@@ -244,6 +257,7 @@ class Topology:
                             },
                         )
                         hout["topo"][intf].update(self._lagInfo(workdata, switch, swintf, "remoteportchannel"))
+                        hout["topo"][intf].update(self._downInfo(workdata, switch, swintf))
                         print(hout["topo"][intf])
         out.update(self.getWANLinks(incr, workdata, set(out)))
         # Write new out to file

@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 import threading
 import unicodedata
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 
 from SiteRMLibs.ArchifyLayout import NODE_H, layoutDiagram, offsetPolyline, svgPath
 from SiteRMLibs.DefaultParams import SERVICE_DEAD_TIMEOUT
@@ -57,6 +57,8 @@ SPEED_CLASSES = (
     ("s800g", None, "800G+", 3.2),
 )
 UNKNOWN_SPEED = ("sunknown", "unknown", 1.3)
+# Overrides the speed class: some vendors keep reporting the configured speed on a down port. Drawn dotted so colour is not the only cue.
+DOWN_LINK = ("sdown", "down", 1.8)
 # Categorical slots 1-7 in fixed order (light, dark); validated for CVD separation on Archify's light and dark canvases.
 SPEED_COLOURS = {
     "s10g": ("#2a78d6", "#3987e5"),
@@ -167,6 +169,11 @@ def _speedText(speed):
     if speed >= 1000000:
         return f"{speed / 1000000:g}T"
     return f"{speed / 1000:g}G" if speed >= 1000 else f"{speed}M"
+
+
+def _linkState(link):
+    """Return "down" or the speed text of one physical link."""
+    return DOWN_LINK[1] if link["down"] else _speedText(link["speed"])
 
 
 def _state(value):
@@ -293,18 +300,32 @@ def _end(port, lag="", local=False):
 
 
 def _physicalLinks(name, localPort, peer, remote):
-    """Return [(ends, speed, alias)] for one topology entry; WAN port-channels expand into their member links."""
+    """Return [(ends, speed, alias, down)] for one topology entry; WAN port-channels expand into their member links."""
     port = remote.get("port")
+    down = remote.get("down") is True
     if not isinstance(port, dict):
         ends = {name: _end(localPort, remote.get("portchannel"), True), peer: _end(port, remote.get("remoteportchannel"))}
-        return [(ends, _int(remote.get("bandwidth")), "")]
+        return [(ends, _int(remote.get("bandwidth")), "", down)]
     # WAN peer entry: name is the cloud device, localPort the remote port, remote["localport"] the switch port.
     alias = str(port.get("isAlias", ""))
     switchPort = str(remote.get("localport") or "")
     members = remote.get("members") if isinstance(remote.get("members"), dict) else {}
     if members:
-        return [({name: _end(localPort, localPort), peer: _end(member, switchPort, True)}, _int(speed), alias) for member, speed in members.items()]
-    return [({name: _end(localPort), peer: _end(switchPort, local=True)}, _int(remote.get("bandwidth")), alias)]
+        membersDown = remote.get("membersdown") if isinstance(remote.get("membersdown"), list) else []
+        return [({name: _end(localPort, localPort), peer: _end(member, switchPort, True)}, _int(speed), alias, member in membersDown) for member, speed in members.items()]
+    return [({name: _end(localPort), peer: _end(switchPort, local=True)}, _int(remote.get("bandwidth")), alias, down)]
+
+
+def _mergeLink(merged, ends, speed, alias, down):
+    """Record one reported physical link, keeping the device's own port names, the highest speed and any down report."""
+    link = merged.setdefault(frozenset((dev, _portKey(end["port"])) for dev, end in ends.items()), {"ends": ends, "speed": 0, "wan": alias, "down": False})
+    for dev, end in ends.items():
+        known = link["ends"][dev]
+        if end["local"] and not known["local"]:
+            known.update(port=end["port"], local=True)
+        known["lag"] = known["lag"] or end["lag"]
+    link["speed"] = max(link["speed"], speed)
+    link["down"] = link["down"] or down
 
 
 def _collectLinks(topology, devices):
@@ -320,14 +341,8 @@ def _collectLinks(topology, devices):
             peer = remote.get("device")
             if not isinstance(peer, str) or peer == name or peer not in devices:
                 continue
-            for ends, speed, alias in _physicalLinks(name, str(localPort), peer, remote):
-                link = merged.setdefault(frozenset((dev, _portKey(end["port"])) for dev, end in ends.items()), {"ends": ends, "speed": 0, "wan": alias})
-                for dev, end in ends.items():
-                    known = link["ends"][dev]
-                    if end["local"] and not known["local"]:
-                        known.update(port=end["port"], local=True)
-                    known["lag"] = known["lag"] or end["lag"]
-                link["speed"] = max(link["speed"], speed)
+            for physical in _physicalLinks(name, str(localPort), peer, remote):
+                _mergeLink(merged, *physical)
     pairs = {}
     for link in merged.values():
         pairs.setdefault(tuple(sorted(link["ends"])), []).append(link)
@@ -344,10 +359,16 @@ def _onPath(link, path):
 
 
 def _linkText(link):
-    """Describe one physical link: ends, speed and port-channels."""
+    """Describe one physical link: ends, speed (or down) and port-channels."""
     ends = [f"{dev}:{end['port']}" if end["port"] else dev for dev, end in sorted(link["ends"].items())]
-    extras = [_speedText(link["speed"])] + sorted({end["lag"] for end in link["ends"].values() if end["lag"]})
+    extras = [_linkState(link)] + sorted({end["lag"] for end in link["ends"].values() if end["lag"]})
     return f"{ends[0]} <-> {ends[1]} ({', '.join(extras)})"
+
+
+def _bundleText(bundle):
+    """Summarize port-channel members with down members last, e.g. "3 x 100G, 1 x down"."""
+    counts = Counter(_linkState(link) for link in bundle)
+    return ", ".join(f"{counts[state]} x {state}" for state in sorted(counts, key=lambda state: state == DOWN_LINK[1]))
 
 
 def _orderTiers(devices, pairs):
@@ -440,7 +461,7 @@ def _rings(members, lags, bundle):
                 "cy": sum(point[1] for point in tips) / len(tips) + dirY * RING_DIST,
                 "rx": spanX / 2 + 4 if dirX == 0 else 3.5,
                 "ry": spanY / 2 + 4 if dirY == 0 else 3.5,
-                "title": f"{lag}: {len(bundle)} x {_speedText(bundle[0]['speed'])}",
+                "title": f"{lag}: {_bundleText(bundle)}",
             }
         )
     return rings
@@ -455,7 +476,7 @@ def _edgeDrawing(route, bundles, offsets, path):
         points = []
         for link in bundle:
             points.append(offsetPolyline(route["centreline"], next(members)))
-            cls, _, width = speedClass(link["speed"])
+            cls, _, width = DOWN_LINK if link["down"] else speedClass(link["speed"])
             lines.append({"d": svgPath(points[-1]), "cls": cls, "width": width, "title": _linkText(link), "off": path is not None and not _onPath(link, path)})
         lags = [bundle[0]["ends"][dev]["lag"] for dev in (route["upper"], route["lower"])]
         if any(lags):
@@ -508,7 +529,7 @@ def _pathCard(path):
 
 def _cards(topology, tiers, pairs, extras):
     """Return legend cards, the extra (health, path) cards, then every physical link and WAN peer alias."""
-    speedItems = [label for _, _, label, _ in SPEED_CLASSES] + [UNKNOWN_SPEED[1], "port-channel (ring)"]
+    speedItems = [label for _, _, label, _ in SPEED_CLASSES] + [UNKNOWN_SPEED[1], DOWN_LINK[1], "port-channel (ring)"]
     cards = [{"dot": "slate", "title": SPEED_CARD, "items": speedItems}]
     if extras["health"]:
         cards.append({"dot": "slate", "title": HEALTH_CARD, "items": [STATE_LEGEND[state] for state in STATES]})
@@ -597,6 +618,7 @@ def _styles(diagram):
         f"html[data-theme='light'] {{ {light} }}",
         "svg .st-link { fill: none; stroke-linecap: round; stroke-linejoin: round; }",
         "svg .st-sunknown { stroke: var(--text-dim); stroke-dasharray: 4 3; }",
+        f"svg .st-{DOWN_LINK[0]} {{ stroke: {STATE_COLOURS['FAILED']}; stroke-dasharray: 1 5; }}",
         "svg .st-off { opacity: 0.22; }",
         "svg .st-lag { fill: var(--mask); stroke: var(--text-muted); stroke-width: 1; }",
         "svg .st-dot { stroke: var(--mask); stroke-width: 1.5; pointer-events: none; }",
@@ -604,6 +626,7 @@ def _styles(diagram):
         ".card li.st-legend::before { display: none; }",
         ".st-swatch { flex: none; width: 24px; height: 0; border-top-style: solid; }",
         ".st-swatch.st-sunknown { border-top-style: dashed; border-color: var(--text-dim); }",
+        f".st-swatch.st-{DOWN_LINK[0]} {{ border-top-style: dotted; border-color: {STATE_COLOURS['FAILED']}; border-top-width: {DOWN_LINK[2]}px; }}",
         ".st-ring { flex: none; width: 14px; height: 7px; border: 1px solid var(--text-muted); border-radius: 50%; }",
         ".st-state { flex: none; width: 9px; height: 9px; border-radius: 50%; }",
     ]
@@ -637,7 +660,8 @@ def _legendList(title):
     """Return the swatch list that replaces the plain items of a legend card."""
     if title == SPEED_CARD:
         rows = [(f'<span class="st-swatch st-{cls}"></span>', label) for cls, _, label, _ in SPEED_CLASSES]
-        rows += [(f'<span class="st-swatch st-{UNKNOWN_SPEED[0]}"></span>', UNKNOWN_SPEED[1]), ('<span class="st-ring"></span>', "port-channel members")]
+        rows += [(f'<span class="st-swatch st-{style[0]}"></span>', style[1]) for style in (UNKNOWN_SPEED, DOWN_LINK)]
+        rows.append(('<span class="st-ring"></span>', "port-channel members"))
     else:
         rows = [(f'<span class="st-state st-state-{state}"></span>', STATE_LEGEND[state]) for state in STATES]
     return "<ul>" + "".join(f'<li class="st-legend">{swatch}{html.escape(label)}</li>' for swatch, label in rows) + "</ul>"
