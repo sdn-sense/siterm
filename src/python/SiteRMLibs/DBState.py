@@ -125,6 +125,16 @@ def loadSiteConfig(dbI):
     return current.get("config") if current else None
 
 
+def loadOrCreateJWTKey(dbI, generate):
+    """Return the JWT signing key (private PEM) shared by all frontends; the first caller stores generate() once."""
+    stored = dbI.kvget(NS_SYSTEM, "jwtkey")
+    if not stored:
+        # Atomic insert: when replicas race, one key wins and every caller returns that one.
+        dbI.kvadd(NS_SYSTEM, "jwtkey", {"private_key": generate(), "time": getUTCnow()})
+        stored = dbI.kvget(NS_SYSTEM, "jwtkey")
+    return stored["private_key"]
+
+
 # ==========================================================
 #  First run state and switch refresh requests
 # ==========================================================

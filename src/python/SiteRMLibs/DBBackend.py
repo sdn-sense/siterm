@@ -443,6 +443,21 @@ class dbinterface:
                 continue
         raise RuntimeError(f"Unable to store kvstore entry {namespace}/{name}")
 
+    def kvadd(self, namespace, name, value):
+        """Insert a JSON-encoded kvstore value only if the key does not exist yet; return True if inserted."""
+        now = getUTCnow()
+        # Own session: session() prints the traceback, with the statement parameters (the value, e.g. a key), on errors.
+        session = self.db.Session()
+        try:
+            session.add(KVStore(namespace=namespace, name=name, value=json.dumps(value), insertdate=now, updatedate=now))
+            session.commit()
+            return True
+        except IntegrityError:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
     def kvgetrow(self, namespace, name):
         """Return the kvstore row (value decoded) or None."""
         rows = self.get("kvstore", search=[["namespace", namespace], ["name", name]], limit=1)
