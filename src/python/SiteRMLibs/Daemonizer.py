@@ -27,17 +27,7 @@ from SiteRMLibs.CustomExceptions import (
     ServiceWarning,
     exceptionCodes,
 )
-from SiteRMLibs.DBState import (
-    LeaseKeeper,
-    dbConfigured,
-    feStartupState,
-    getInstanceName,
-)
-from SiteRMLibs.DefaultParams import (
-    FE_LEADER_COMPONENTS,
-    GIT_CONFIG_REFRESH_TIMEOUT,
-    HTTP_SERVER_NOT_READY_ALERT_TIMEOUT,
-)
+from SiteRMLibs.DefaultParams import GIT_CONFIG_REFRESH_TIMEOUT, HTTP_SERVER_NOT_READY_ALERT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.HTTPLibrary import Requests
 from SiteRMLibs.MainUtilities import (
@@ -160,7 +150,7 @@ class DBBackend:
         reported = True
         try:
             dbOut = {
-                "hostname": kwargs.get("hostname", getHostname(self.config, self.component)),
+                "hostname": kwargs.get("hostname", "default"),
                 "servicestate": kwargs.get("servicestate", "UNSET"),
                 "servicename": kwargs.get("servicename", "UNSET"),
                 "runtime": kwargs.get("runtime", -1),
@@ -219,23 +209,21 @@ class DBBackend:
             print(f"Full traceback: {traceback.format_exc()}")
 
     def _autoRefreshDB(self, **kwargs):
-        """Auto Refresh if a newer service action was requested for this component.
-
-        Rows are not deleted on read (every replica must see them); DBCleaner removes old ones."""
+        """Auto Refresh if there is a DB request to do so."""
+        search = [["hostname", "default"], ["servicename", self.component]]
+        if self.component == "ConfigFetcher":
+            search = [["hostname", "default"]]
         dbobj = getVal(self.dbI, **{"sitename": kwargs.get("sitename", "UNSET")})
-        newest = dbobj.get("serviceaction", orderby=["id", "DESC"], limit=1, columns=["id"])
-        newest = newest[0]["id"] if newest else 0
-        if self.lastActionID is None:
-            # Actions requested before this process started are already applied by the start itself.
-            self.lastActionID = newest
-            return False
-        search = [["id", ">", self.lastActionID], ["hostname", "in", ["default", getInstanceName()]]]
-        if self.component != "ConfigFetcher":
-            # Config Fetcher refreshes on any FE service action; others only on their own.
-            search.append(["servicename", self.component])
-        actions = dbobj.get("serviceaction", search=search, limit=1, columns=["id"])
-        self.lastActionID = newest
-        return bool(actions)
+        actions = dbobj.get("serviceaction", search=search)
+        if actions:
+            # Config Fetcher is not allowed to delete other services refresh.
+            if self.component == "ConfigFetcher":
+                return True
+            for action in actions:
+                dbOut = [["id", action["id"]]]
+                dbobj.delete("serviceaction", dbOut)
+            return True
+        return False
 
     def _autoRefreshAPI(self, **kwargs):
         """Auto Refresh via API check"""
@@ -318,10 +306,8 @@ class Daemon(DBBackend):
         self.runThreads = {}
         self.contentDB = contentDB()
         self.getGitConf = getGitConf
-        self.lastActionID = None
-        self.leader = None
         if self.getGitConf:
-            self._refreshConfig(wait=dbConfigured())
+            self._refreshConfig()
             self.logger = getLoggingObject(
                 config=self.config,
                 logfile=f"{self.config.get('general', 'logDir')}/{component}/",
@@ -343,9 +329,6 @@ class Daemon(DBBackend):
         self.totalRuntime = 0
         self.lastRefresh = getUTCnow()
         self._loadDB(component)
-        if self.dbI and component in FE_LEADER_COMPONENTS:
-            # Only one instance of this component may work at a time; others wait as standby.
-            self.leader = LeaseKeeper(logger=self.logger)
         self.memdebug = False
         if os.getenv("SITERM_MEMORY_DEBUG"):
             self.memdebug = True
@@ -374,7 +357,6 @@ class Daemon(DBBackend):
         retval = True
         if self.inargs.bypassstartcheck:
             return retval
-        # All-in-one image only: mariadb_init.sh in this same container has not finished yet.
         if os.path.exists(f"{getTempDir()}/siterm-mariadb-init"):
             try:
                 self.logger.info("Database init/upgrade started at:")
@@ -384,13 +366,7 @@ class Daemon(DBBackend):
                 pass
             self.logger.info("Database not ready. See details above. If continuous, check the mariadb and mariadb_init process.")
             retval = False
-        if dbConfigured():
-            # FE: the database records init/upgrade state; configuration was loaded at start.
-            state, msg = feStartupState(runningVersion, requireConfig=False)
-            if state != "ready":
-                self.logger.info(f"Startup not ready: {msg}")
-                retval = False
-        elif not os.path.exists(f"{getTempDir()}/config-fetcher-ready") and not self.firstInitDone:
+        if not os.path.exists(f"{getTempDir()}/config-fetcher-ready") and not self.firstInitDone:
             self.logger.info("Config Fetcher not ready. See details above. If continuous, check the config-fetcher process.")
             retval = False
         return retval
@@ -408,25 +384,10 @@ class Daemon(DBBackend):
             time.sleep(10)
             self.config = getGitConfig()
 
-    def _refreshConfig(self, wait=False):
-        """Config refresh call; with wait, retry until the configuration is available."""
-        if not self.getGitConf:
-            return
-        while True:
-            try:
-                self.config = getGitConfig()
-                return
-            except Exception as ex:  # pylint: disable=broad-except
-                if not wait:
-                    raise
-                print(f"Configuration not available yet ({ex}). Retrying in 10 seconds.")
-                time.sleep(10)
-
-    def isActiveInstance(self):
-        """Return True if this instance may work (always, unless the component is leader-elected)."""
-        if not self.leader:
-            return True
-        return self.leader.acquire(f"leader:{self.component}")
+    def _refreshConfig(self):
+        """Config refresh call"""
+        if self.getGitConf:
+            self.config = getGitConfig()
 
     def daemonize(self):
         """do the UNIX double-fork magic, see Stevens' "Advanced Programming in
@@ -766,9 +727,6 @@ class Daemon(DBBackend):
                 for sitename, rthread in list(self.runThreads.items()):
                     stwork = int(getUTCnow())
                     refresh = self.autoRefreshDB(**{"sitename": sitename})
-                    if not self.isActiveInstance():
-                        self.logger.info(f"Standby: another {self.component} instance holds the leader lease.")
-                        continue
                     self.logger.debug("Start worker for %s site", sitename)
                     try:
                         self.preRunThread(sitename, rthread)

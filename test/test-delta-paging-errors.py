@@ -124,7 +124,7 @@ class GetModelsEndpointTest(DBTestCase):
 
     def setUp(self):
         super().setUp()
-        self.dbI.insert("models", [{"uid": f"m{i}", "insertdate": 1000, "contentid": f"m{i}"} for i in range(1, 6)])
+        self.dbI.insert("models", [{"uid": f"m{i}", "insertdate": 1000, "fileloc": f"/tmp/m{i}"} for i in range(1, 6)])
         self.deps = {"dbI": self.dbI, "config": {"MAIN": {SITENAME: {}}}}
 
     def _call(self, **kwargs):

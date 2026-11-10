@@ -11,6 +11,7 @@ Date                    : 2025/07/14
 """
 
 import asyncio
+import os
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
@@ -31,9 +32,9 @@ from SiteRMLibs.ArchifyTopology import (
     renderDiagramHTML,
     summarizeServiceStates,
 )
-from SiteRMLibs.DBState import loadSnapshot
 from SiteRMLibs.MainUtilities import (
     evaldict,
+    getFileContentAsJson,
     getstartupconfig,
     getUTCnow,
 )
@@ -51,14 +52,15 @@ ARCHIFY_HEADERS = {
 
 
 def loadTopology(deps, sitename):
-    """Load the topology snapshot (written by SNMPMonitoring) or raise 404."""
-    snapshot = loadSnapshot(deps["dbI"], "topology")
-    if not snapshot or not snapshot.get("value"):
+    """Load topology.json for the site or raise 404."""
+    topodir = os.path.join(deps["config"].get(sitename, "privatedir"), "Topology")
+    topofname = os.path.join(topodir, "topology.json")
+    if not os.path.isfile(topofname):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Topology not available for site '{sitename}'",
+            detail=f"Topology file not found for site '{sitename}'",
         )
-    return snapshot["value"]
+    return getFileContentAsJson(topofname)
 
 
 def loadActiveDeltas(deps):

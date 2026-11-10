@@ -30,6 +30,7 @@ from SiteRMLibs.DefaultParams import (
 )
 from SiteRMLibs.MainUtilities import (
     evaldict,
+    getFileContentAsJson,
     getstartupconfig,
     getTempDir,
     getUTCnow,
@@ -716,7 +717,7 @@ async def getqosdata(
         if not host.get("hostinfo", ""):
             print(f"Host {host.get('hostname', 'null')} does not have hostinfo, skipping QoS data calculation for it.")
             continue
-        tmpH = evaldict(host.get("hostinfo", ""))
+        tmpH = getFileContentAsJson(host.get("hostinfo", ""))
         tmpInf = tmpH.get("Summary", {}).get("config", {}).get("qos", {}).get("interfaces", {})
         if not tmpInf:
             continue

@@ -37,6 +37,7 @@ from SiteRMLibs.DefaultParams import DELTA_COMMIT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     contentDB,
+    createDirs,
     decodebase64,
     dictSearch,
     evaldict,
@@ -44,11 +45,11 @@ from SiteRMLibs.MainUtilities import (
     getAllHosts,
     getCurrentModel,
     getDBConn,
+    getFileContentAsJson,
     getLoggingObject,
     getSiteNameFromConfig,
     getUTCnow,
     getVal,
-    jsondumps,
     normalizePipeStrings,
     parseRDFFile,
     writeActiveDeltas,
@@ -90,6 +91,8 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.stateMachine = StateMachine(self.config)
         self.switch = Switch(config, sitename)
         self.hosts = {}
+        workDir = os.path.join(self.config.get(sitename, "privatedir"), "PolicyService/")
+        createDirs(workDir)
         self.getSavedPrefixes()
         self.bidPorts = {}
         self.scannedPorts = {}
@@ -143,7 +146,7 @@ class PolicyService(RDFHelper, Timing, BWService):
             self.hosts.setdefault(host, hostDict)
             for key in hostDict:
                 if key == "hostinfo":
-                    self.hosts[host]["hostinfo"] = evaldict(hostDict["hostinfo"])
+                    self.hosts[host]["hostinfo"] = getFileContentAsJson(hostDict["hostinfo"])
                     continue
                 self.hosts[host][key] = hostDict[key]
         # Clean up hosts which are not in DB anymore
@@ -922,20 +925,26 @@ class PolicyService(RDFHelper, Timing, BWService):
         return changesApplied
 
     def startwork(self):
-        """Start Policy Service: accept queued delta submissions."""
+        """Start Policy Service."""
         self.logger.info("=" * 80)
         self.logger.info("Component PolicyService Started")
         speedup = False
-        for request in self.dbI.get("deltarequests", search=[["state", "new"]], orderby=["id", "ASC"], columns=["id", "deltaid"]):
-            # Claim it, so a second PolicyService instance never accepts the same submission twice.
-            if not self.dbI.updatewhere("deltarequests", {"state": "processing", "updatedate": getUTCnow()}, [["id", request["id"]], ["state", "new"]]):
+        fnewdir = os.path.join(self.config.get(self.sitename, "privatedir"), "PolicyService", "httpnew")
+        ffinishdir = os.path.join(
+            self.config.get(self.sitename, "privatedir"),
+            "PolicyService",
+            "httpfinished",
+        )
+        # Find all files in new directory (not ending with .tmp)
+        for fname in os.listdir(fnewdir):
+            if fname.endswith(".tmp"):
                 continue
-            rows = self.dbI.get("deltarequests", search=[["id", request["id"]]], limit=1)
-            if not rows:
-                continue
-            self.logger.info(f"Processing delta {request['deltaid']}")
-            out = self.acceptDelta(evaldict(rows[0]["payload"]))
-            self.dbI.updatewhere("deltarequests", {"state": "done", "result": jsondumps(out), "payload": "{}", "updatedate": getUTCnow()}, [["id", request["id"]]])
+            fullpath = os.path.join(fnewdir, fname)
+            self.logger.info(f"Processing delta {fullpath}")
+            out = self.acceptDelta(fullpath)
+            # Write output to a new file in finished directory
+            self.siteDB.saveContent(os.path.join(ffinishdir, fname), out)
+            self.siteDB.removeFile(fullpath)
             speedup = True
         self.logger.info("Component PolicyService Finished")
         return speedup
@@ -1000,8 +1009,8 @@ class PolicyService(RDFHelper, Timing, BWService):
                 currentGraph = self._addDeltasToModel(currentGraph, delta["content"])
         return currentGraph
 
-    def acceptDelta(self, delta):
-        """Accept delta (a submission dict, or a JSON file path for the CLI)."""
+    def acceptDelta(self, deltapath):
+        """Accept delta."""
         self._refreshHosts()
         currentGraph = self.deltaToModel(None, None, None)
         currentGraph = self._addAllPendingDeltas(currentGraph)
@@ -1012,12 +1021,9 @@ class PolicyService(RDFHelper, Timing, BWService):
         self.currentActive["output"]["usedIPs"] = activeDeltasDB["output"].get("usedIPs", {})
         self.currentActive["output"]["usedVLANs"] = activeDeltasDB["output"].get("usedVLANs", {})
         self.newActive = {"output": {}}
-        if isinstance(delta, dict):
-            fileContent = delta
-        else:
-            fileContent = self.siteDB.getFileContentAsJson(delta)
-            self.siteDB.removeFile(delta)
-        self.logger.info(f"Called Accept Delta. Delta ID: {fileContent.get('ID')}")
+        fileContent = self.siteDB.getFileContentAsJson(deltapath)
+        self.logger.info(f"Called Accept Delta. Content Location: {deltapath}")
+        self.siteDB.removeFile(deltapath)
         toDict = dict(fileContent)
         toDict["State"] = "accepting"
         toDict["Type"] = "submission"

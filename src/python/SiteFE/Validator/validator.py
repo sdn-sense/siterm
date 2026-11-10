@@ -11,7 +11,6 @@ Date: 2025/04/21
 
 import argparse
 import os
-import socket
 import sys
 
 from SiteRMLibs.Backends.main import Switch
@@ -26,14 +25,15 @@ from SiteRMLibs.CustomExceptions import (
     VALIDATOR_SWITCH_NO_ANSIBLE_OUTPUT,
     ServiceWarning,
 )
-from SiteRMLibs.DBState import disabledProbes
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     contentDB,
+    createDirs,
     evaldict,
     getActiveDeltas,
     getAllHosts,
     getDBConn,
+    getFileContentAsJson,
     getLoggingObject,
     getTempDir,
     getUTCnow,
@@ -52,6 +52,8 @@ class Validator:
         self.dbI = getVal(getDBConn("Validator", self), **{"sitename": self.sitename})
         self.switch = Switch(config, sitename)
         self.hosts = {}
+        workDir = os.path.join(self.config.get(sitename, "privatedir"), "Validator/")
+        createDirs(workDir)
         self.switchInfo = {}
         self.activeDeltas = {}
         self.warnings = []
@@ -103,7 +105,7 @@ class Validator:
         """Get all host and intf mac info"""
         jOut = getAllHosts(self.dbI)
         for _nodeHostname, nodeDict in list(jOut.items()):
-            nodeDict["hostinfo"] = evaldict(nodeDict["hostinfo"])
+            nodeDict["hostinfo"] = getFileContentAsJson(nodeDict["hostinfo"])
             # Get all interfaces in configuration and their mac addresses
             for intf in self._getHostInterfaces(nodeDict):
                 hostcheck = {"hostname": nodeDict["hostname"], "intf": intf}
@@ -190,21 +192,16 @@ class Validator:
         return False
 
     def _checkLivenessReadiness(self):
-        """Warn if liveness or readiness checks are disabled (in this container or any FE container)."""
-        disabled = []
+        """Check if liveness and readiness checks are disabled"""
         for name, fname in {
-            "liveness": f"{getTempDir()}/siterm-liveness-disabled",
-            "readiness": f"{getTempDir()}/siterm-readiness-disabled",
+            "Liveness": f"{getTempDir()}/siterm-liveness-disable",
+            "Readiness": f"{getTempDir()}/siterm-readiness-disable",
         }.items():
             if os.path.exists(fname):
-                disabled.append(f"{socket.gethostname()}:{name}")
-        # Probes in other containers record their disabled state in the database.
-        disabled = sorted(set(disabled) | set(disabledProbes(self.dbI)))
-        for entry in disabled:
-            msg = f"{entry} check is disabled on Frontend. Please enable it to ensure proper operation."
-            self.logger.warning(msg)
-            self.addWarning(msg, code=LIVENESS_READINESS_DISABLED)
-            self._setwarningstart()
+                msg = f"{name} check is disabled on Frontend. Please enable it to ensure proper operation."
+                self.logger.warning(msg)
+                self.addWarning(msg, code=LIVENESS_READINESS_DISABLED)
+                self._setwarningstart()
 
     def _setwarningstart(self):
         """Set warning start timestamp if not set"""

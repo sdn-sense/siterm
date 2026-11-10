@@ -10,6 +10,8 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel, constr
 from SiteFE.REST.dependencies import (
@@ -24,10 +26,11 @@ from SiteFE.REST.dependencies import (
 )
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
-    evaldict,
+    dumpFileContentAsJson,
+    getFileContentAsJson,
     getstartupconfig,
     getUTCnow,
-    jsondumps,
+    removeFile,
 )
 
 router = APIRouter()
@@ -171,8 +174,7 @@ async def gethosts(
         limit = 1
     if details:
         limit = 1
-    columns = None if details else ["id", "ip", "hostname", "insertdate", "updatedate"]
-    hosts = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=limit, search=search, columns=columns)
+    hosts = deps["dbI"].get("hosts", orderby=["updatedate", "DESC"], limit=limit, search=search)
     out = []
     if not hosts:
         raise HTTPException(
@@ -181,7 +183,7 @@ async def gethosts(
         )
     for host in hosts:
         if details:
-            host["hostinfo"] = evaldict(host.get("hostinfo", ""))
+            host["hostinfo"] = getFileContentAsJson(host.get("hostinfo", ""))
             out.append(host)
             break
         else:
@@ -232,15 +234,18 @@ async def addhost(
     - If the host exists, it will raise an exception.
     """
     checkSite(deps, sitename)
-    host = deps["dbI"].get("hosts", limit=1, search=[["ip", item.ip]], columns=["id"])
+    host = deps["dbI"].get("hosts", limit=1, search=[["ip", item.ip]])
     if not host:
+        fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "HostData")
+        fname = os.path.join(fpath, item.hostname, "hostinfo.json")
         out = {
             "hostname": item.hostname,
             "ip": item.ip,
             "insertdate": getUTCnow(),
             "updatedate": getUTCnow(),
-            "hostinfo": jsondumps(item.dict()),
+            "hostinfo": fname,
         }
+        dumpFileContentAsJson(fname, item.dict())
         deps["dbI"].insert("hosts", [out])
         return APIResponse.genResponse(request, {"status": "ADDED"})
     out = {
@@ -249,12 +254,13 @@ async def addhost(
         "ip": item.ip,
         "insertdate": getUTCnow(),
         "updatedate": getUTCnow(),
-        "hostinfo": jsondumps(item.dict()),
+        "hostinfo": host[0]["hostinfo"],
     }
     # Check if there is a data update
     if "nodatachange" in item.dict() and item.nodatachange:
         deps["dbI"].update("hosts", [{"id": host[0]["id"], "updatedate": getUTCnow()}])
     else:
+        dumpFileContentAsJson(host[0]["hostinfo"], item.dict())
         deps["dbI"].update("hosts", [out])
     return APIResponse.genResponse(request, {"status": "UPDATED"})
 
@@ -301,7 +307,7 @@ async def updatehost(
     - If the host does not exist, it will raise an exception.
     """
     checkSite(deps, sitename)
-    host = deps["dbI"].get("hosts", limit=1, search=[["ip", item.ip]], columns=["id"])
+    host = deps["dbI"].get("hosts", limit=1, search=[["ip", item.ip]])
     if host:
         out = {
             "id": host[0]["id"],
@@ -309,12 +315,13 @@ async def updatehost(
             "ip": item.ip,
             "insertdate": getUTCnow(),
             "updatedate": getUTCnow(),
-            "hostinfo": jsondumps(item.dict()),
+            "hostinfo": host[0]["hostinfo"],
         }
         # Check if there is a data update
         if "nodatachange" in item.dict() and item.nodatachange:
             deps["dbI"].update("hosts", [{"id": host[0]["id"], "updatedate": getUTCnow()}])
         else:
+            dumpFileContentAsJson(host[0]["hostinfo"], item.dict())
             deps["dbI"].update("hosts", [out])
     else:
         raise HTTPException(
@@ -371,8 +378,9 @@ async def deletehost(
     # Delete all servicestates related to this host (even host is not found, we need to clean servicestates)
     deps["dbI"].delete("servicestates", [["hostname", item.hostname]])
     # Delete host entries
-    host = deps["dbI"].get("hosts", limit=1, search=[["ip", item.ip], ["hostname", item.hostname]], columns=["id"])
+    host = deps["dbI"].get("hosts", limit=1, search=[["ip", item.ip], ["hostname", item.hostname]])
     if host:
+        removeFile(host[0].get("hostinfo", ""))
         deps["dbI"].delete("hosts", [["id", host[0]["id"]]])
     else:
         raise HTTPException(

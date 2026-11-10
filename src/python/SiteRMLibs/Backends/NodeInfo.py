@@ -9,7 +9,7 @@ Authors:
 Date: 2021/12/01
 """
 
-from SiteRMLibs.MainUtilities import evaldict, getAllHosts
+from SiteRMLibs.MainUtilities import evaldict, getAllHosts, getFileContentAsJson
 
 
 class Node:
@@ -23,7 +23,7 @@ class Node:
         if not output:
             output = self.output
         for _, nodeDict in list(nodesInfo.items()):
-            hostinfo = evaldict(nodeDict["hostinfo"])
+            hostinfo = getFileContentAsJson(nodeDict["hostinfo"])
             for intfKey, intfDict in list(hostinfo.get("NetInfo", {}).get("interfaces", {}).items()):
                 breakLoop = False
                 for key in [

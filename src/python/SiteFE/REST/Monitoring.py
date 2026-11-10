@@ -10,6 +10,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 
+import os
 import traceback
 from typing import Any, Dict
 
@@ -34,10 +35,9 @@ from SiteFE.REST.dependencies import (
     checkSite,
     forbidExtraQueryParams,
 )
-from SiteRMLibs.DBState import loadSnapshot
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
-    evaldict,
+    getFileContentAsJson,
     getstartupconfig,
     getUTCnow,
     jsondumps,
@@ -79,13 +79,16 @@ async def getprommetrics(
     Get service metrics from Prometheus.
     """
     checkSite(deps, sitename)
+    snmpdir = os.path.join(deps["config"].get(sitename, "privatedir"), "SNMPData")
+    fname = os.path.join(snmpdir, "snmpinfo.txt")
+    if not os.path.exists(fname):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Metrics are not available")
     try:
-        snapshot = loadSnapshot(deps["dbI"], "prometheus")
-        if not snapshot or not snapshot.get("value"):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Metrics are not available")
-        return Response(content=snapshot["value"].encode("utf-8"), media_type=CONTENT_TYPE_LATEST)
-    except HTTPException:
-        raise
+        with open(fname, "rb") as fd:
+            data = fd.read()
+        return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+    except FileNotFoundError as ex:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Metrics are not available") from ex
     except Exception as ex:
         print(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(
@@ -137,7 +140,7 @@ async def prometheuspassthrough(
     if not hostdata:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Host {hostname} not found")
     hostdata = hostdata[0]
-    hostdata["hostinfo"] = evaldict(hostdata.get("hostinfo", ""))
+    hostdata["hostinfo"] = getFileContentAsJson(hostdata.get("hostinfo", ""))
     nodeexporter = hostdata.get("hostinfo", {}).get("Summary", {}).get("config", {}).get("general", {}).get("node_exporter", "")
     nodeexporter_passthrough = hostdata.get("hostinfo", {}).get("Summary", {}).get("config", {}).get("general", {}).get("node_exporter_passthrough", False)
     if not nodeexporter or not nodeexporter_passthrough:

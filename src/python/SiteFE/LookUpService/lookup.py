@@ -9,7 +9,9 @@ Date: 2021/12/01
 """
 
 import copy
+import os
 import time
+from datetime import datetime, timezone
 
 from rdflib import Graph
 from rdflib.compare import graph_diff, isomorphic
@@ -18,6 +20,7 @@ from SiteFE.LookUpService.modules.nodeinfo import NodeInfo
 from SiteFE.LookUpService.modules.rdfhelper import RDFHelper
 from SiteFE.LookUpService.modules.switchinfo import SwitchInfo
 from SiteFE.PolicyService.policyService import PolicyService
+from SiteFE.ProvisioningService.provisioningService import ProvisioningService
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.CustomExceptions import (
@@ -26,11 +29,12 @@ from SiteRMLibs.CustomExceptions import (
     NoOptionError,
     NoSectionError,
 )
-from SiteRMLibs.DBState import firstRunDone, saveModelContent, setFirstRunState
-from SiteRMLibs.DefaultParams import FIRSTRUN_PROVISION_WAIT, FIRSTRUN_SWITCHDATA_WAIT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.MainUtilities import (
+    createDirs,
+    externalCommand,
+    firstRunCheck,
     generateHash,
     getActiveDeltas,
     getCurrentModel,
@@ -39,9 +43,126 @@ from SiteRMLibs.MainUtilities import (
     getSiteNameFromConfig,
     getUTCnow,
     getVal,
+    parseRDFFile,
 )
 from SiteRMLibs.timing import Timing
 from SiteRMLibs.Warnings import Warnings
+
+
+class MultiWorker:
+    """MultiWorker to launch Switch update workers"""
+
+    def __init__(self, config, sitename, logger):
+        super().__init__()
+        self.config = config
+        self.sitename = sitename
+        self.logger = logger
+        self.firstRun = True
+        self.needRestart = False
+        # Max time (seconds) to wait for freshly started SwitchWorkers to pull
+        # their first data set from the switches before the LookUpService
+        # proceeds anyway. Bounded so an unreachable device cannot block forever.
+        self.firstRunWaitTimeout = 300
+
+    @staticmethod
+    def _runCmd(action, device, foreground=False):
+        """Start execution of new SwitchWroker process"""
+        retOut = {"stdout": [], "stderr": [], "exitCode": -1}
+        command = f"SwitchWorker --action {action} --devicename {device}"
+        if action == "status":
+            command += " --forceremovepid"
+        if foreground:
+            command += " --foreground"
+        cmdOut = externalCommand(command, False)
+        out, err = cmdOut.communicate()
+        retOut["stdout"] += out.split("\n")
+        retOut["stderr"] += err.split("\n")
+        retOut["exitCode"] = cmdOut.returncode
+        return retOut
+
+    def refreshthread(self):
+        """Call to refresh thread for this specific class and reset parameters"""
+        self.config = getGitConfig()
+        self.needRestart = True
+
+    def _firstRunMarker(self, sitename, device):
+        """Path of the per-device first-run marker consumed by SwitchWorker."""
+        return f"{self.config.get(sitename, 'privatedir')}/SwitchWorker/{device}.firstrun"
+
+    def _setFirstRunMarker(self, sitename, device):
+        """Drop a marker telling a freshly started SwitchWorker to clear it once
+        it has pulled data from the device. Written before the worker starts so
+        there is no race with its first loop iteration."""
+        fname = self._firstRunMarker(sitename, device)
+        try:
+            with open(fname, "w", encoding="utf-8") as fd:
+                fd.write(str(getUTCnow()))
+        except OSError as ex:
+            self.logger.error(f"Got OS Error writing {fname}. {ex}")
+
+    def _waitForSwitchData(self, sitename, devices):
+        """Wait until every started SwitchWorker has cleared its first-run marker
+        (i.e. fetched data from the switch). Bounded by firstRunWaitTimeout so a
+        dead device cannot block the LookUpService forever."""
+        deadline = getUTCnow() + self.firstRunWaitTimeout
+        pending = list(devices)
+        while pending and getUTCnow() < deadline:
+            pending = [dev for dev in pending if os.path.isfile(self._firstRunMarker(sitename, dev))]
+            if not pending:
+                break
+            self.logger.info(f"Waiting for SwitchWorker first data pull from: {pending}")
+            time.sleep(5)
+        if pending:
+            self.logger.warning(f"SwitchWorker first data pull did not finish within {self.firstRunWaitTimeout}s. Still pending: {pending}. Continuing anyway.")
+            for dev in pending:
+                try:
+                    os.unlink(self._firstRunMarker(sitename, dev))
+                except OSError:
+                    pass
+
+    def startwork(self):
+        """Multiworker main process"""
+        self.logger.info("Started MultiWorker work to check switch processes")
+        startedDevices = []
+        siteName = getSiteNameFromConfig(self.config)
+        for dev in self.config.get(siteName, "switch"):
+            # Check status
+            retOut = self._runCmd("status", dev)
+            # If status failed, and first run, start it
+            if retOut["exitCode"] != 0 and self.firstRun:
+                self.logger.info(f"Starting SwitchWorker for {dev}")
+                self._setFirstRunMarker(siteName, dev)
+                retOut = self._runCmd("start", dev, True)
+                self.logger.info(f"Starting SwitchWorker for {dev} - {retOut}")
+                startedDevices.append(dev)
+                continue
+            # If status failed, and not first run, restart it
+            if retOut["exitCode"] != 0 and not self.firstRun:
+                self.logger.error(f"SwitchWorker for {dev} failed: {retOut}")
+                retOut = self._runCmd("restart", dev, True)
+                self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
+                continue
+            # If status is OK, and needRestart flag set - restart it
+            if retOut["exitCode"] == 0 and self.needRestart:
+                self.logger.info(f"Restarting SwitchWorker for {dev} as it is instructed by config change")
+                retOut = self._runCmd("restart", dev, True)
+                self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
+                continue
+            # If status is OK, and needRestart flag set - restart it
+            if retOut["exitCode"] != 0 and self.needRestart:
+                self.logger.info(f"Restarting Failed SwitchWorker for {dev} as it is instructed by config change")
+                retOut = self._runCmd("restart", dev, True)
+                self.logger.info(f"Restarting SwitchWorker for {dev} - {retOut}")
+                continue
+        # Mark as not first run, so if service stops, it uses restart.
+        # Instead of sleeping blindly, wait for the SwitchWorkers we just
+        # started to clear their first-run markers - they remove them once
+        # they have pulled data from the switches.
+        if self.firstRun and startedDevices:
+            self.logger.info(f"First run is done. Marking as not first run. Waiting (up to {self.firstRunWaitTimeout}s) for SwitchWorkers to pull data from: {startedDevices}")
+            self._waitForSwitchData(siteName, startedDevices)
+        self.firstRun = False
+        self.needRestart = False
 
 
 # pylint: disable=too-many-instance-attributes
@@ -60,14 +181,16 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.switch = Switch(config, sitename)
         self.prefixes = {}
         self.police = PolicyService(self.config, self.sitename, self.logger)
+        self.provision = ProvisioningService(self.config, self.sitename, self.logger)
         self.tmpout = {}
         self.activeDeltas = {}
+        self.multiworker = MultiWorker(self.config, self.sitename, self.logger)
         self.URIs = {"vlans": {}, "ips": {}}
         self.usedVlans = {"deltas": {}, "system": {}}
         self.usedIPs = {"deltas": {}, "system": {}}  # Reset used IPs.
+        for dirname in ["LookUpService", "SwitchWorker"]:
+            createDirs(f"{self.config.get(self.sitename, 'privatedir')}/{dirname}/")
         self.firstRun = True
-        self.firstRunStart = 0
-        self.switchDataRequested = 0
         self._addedTriples = set()
         self.modelDiffCounter = 0
         self.modelDiffCounterStart = 0
@@ -86,6 +209,8 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.config = getGitConfig()
         self.switch = Switch(self.config, self.sitename)
         self.police.refreshthread()
+        self.provision.refreshthread()
+        self.multiworker.refreshthread()
 
     def _getIPURIs(self, indict, host, iptype):
         """Get All IP URIs if any"""
@@ -127,19 +252,36 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                     self._getIPURIs(reqDict, host, "ipv4")
                     self._getIPURIs(reqDict, host, "ipv6")
 
-    def checkForModelDiff(self, serialized):
-        """Check if the new model (ntriples) differs from the latest model in the database."""
+    def checkForModelDiff(self, saveName):
+        """Check if models are different."""
         currentModel, currentGraph = getCurrentModel(self, False)
         if not currentModel or not currentGraph:
             self.logger.error("Current model or graph is empty. Cannot compare.")
             return False, None
-        newGraph = Graph()
-        newGraph.parse(data=serialized, format="ntriples")
+        newGraph = parseRDFFile(saveName)
         modequal = isomorphic(currentGraph, newGraph)
         if not modequal:
             _, removed, added = graph_diff(currentGraph, newGraph)
             self.logger.info("Model differences detected. Added: %s, Removed: %s", added, removed)
         return isomorphic(currentGraph, newGraph), currentModel
+
+    def getModelSavePath(self):
+        """Get Model Save Location."""
+        now = datetime.now(timezone.utc)
+        saveDir = f"{self.config.get(self.sitename, 'privatedir')}/LookUpService/"
+        version = f"{now.year}-{now.month}-{now.day}:{now.hour}:{now.minute}:{now.second}"
+        return f"{saveDir}/{version}.mrml"
+
+    def saveModel(self, saveName, onlymaster=False):
+        """Save Model."""
+        if not onlymaster:
+            for retmodeltype in ["json-ld", "ntriples", "turtle"]:
+                saveNameSub = f"{saveName}.{retmodeltype}"
+                with open(saveNameSub, "w", encoding="utf-8") as fd:
+                    fd.write(self.newGraph.serialize(format=retmodeltype))
+        # Save original file too
+        with open(saveName, "w", encoding="utf-8") as fd:
+            fd.write(self.newGraph.serialize(format="ntriples"))
 
     def _addTopTology(self):
         """Add Main Topology definition to Model."""
@@ -223,43 +365,44 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             self.warnings.append(msg)
             self.warningcodes.append(code)
 
-    def _devicesWithoutFreshData(self, since):
-        """Return configured devices whose switch data in the database is older than since."""
-        rows = self.dbI.get("switch", search=[["sitename", self.sitename]], columns=["device", "updatedate"])
-        fresh = {row["device"] for row in rows if row["updatedate"] >= since}
-        return [dev for dev in self.config.get(self.sitename, "switch") if dev not in fresh]
-
-    def _firstRunReady(self):
-        """Return True when the first model may be built: ProvisioningService first run done, then fresh switch data.
-
-        Non-blocking: returns False while waiting, the daemon calls again on its next cycle."""
-        now = getUTCnow()
-        if not self.firstRunStart:
-            self.firstRunStart = now
-            setFirstRunState(self.dbI, "LookUpService", "running")
-        if not self.switchDataRequested:
-            if not firstRunDone(self.dbI, "ProvisioningService") and now - self.firstRunStart < FIRSTRUN_PROVISION_WAIT:
-                self.logger.info("First run: waiting for ProvisioningService to finish its first run (applies active config to devices).")
-                return False
-            self.logger.info("First run: requesting fresh data from all devices.")
-            self.switchDataRequested = now
-            self.switch.deviceUpdate(self.sitename)
-        pending = self._devicesWithoutFreshData(self.switchDataRequested)
-        if pending and now - self.switchDataRequested < FIRSTRUN_SWITCHDATA_WAIT:
-            self.logger.info(f"First run: waiting for SwitchWorker data from: {pending}")
-            return False
-        if pending:
-            self.logger.warning(f"First run: no fresh switch data within {FIRSTRUN_SWITCHDATA_WAIT}s from {pending}. Continuing anyway.")
-        return True
+    def cleanModelDirectory(self):
+        """Clean Model Directory."""
+        saveDir = f"{self.config.get(self.sitename, 'privatedir')}/LookUpService/"
+        # Never age-prune the model the DB currently points at (or its
+        # .turtle/.json-ld/.ntriples siblings) - the REST layer serves those
+        # files by absolute path, so deleting them 500s every model request
+        # until the next model-diff cycle rewrites them.
+        keepPrefix = ""
+        currentModel, _ = getCurrentModel(self, False)
+        if currentModel:
+            keepPrefix = os.path.basename(currentModel[0]["fileloc"])
+        # Find out all files in the directory, older than 7 days
+        for file in os.listdir(saveDir):
+            if keepPrefix and file.startswith(keepPrefix):
+                continue
+            filePath = os.path.join(saveDir, file)
+            if not os.path.isfile(filePath):
+                continue
+            # Get file creation time
+            fileTime = os.path.getmtime(filePath)
+            if fileTime < getUTCnow() - 604800:
+                self.logger.info(f"Removing old model file {filePath}")
+                os.unlink(filePath)
 
     def startwork(self):
         """Main start."""
         # pylint: disable=too-many-statements
         speedup = False
         self.logger.info("Started LookupService work")
-        if self.firstRun and not self._firstRunReady():
-            return False
+        firstRunCheck(self.firstRun, "LookUpService")
         self.__clean()
+        stateChangedFirstRun = False
+        if self.firstRun:
+            self.logger.info("Because it is first run, we will start apply first to all devices individually")
+            self.logger.info("In case there are many resources, it might take a while. Check ProvisioningService logs for more information")
+            stateChangedFirstRun = self.provision.startwork(self.firstRun)
+            self.firstRun = False
+        self.multiworker.startwork()
         self.activeDeltas = getActiveDeltas(self)
         self.URIs = {"vlans": {}, "ips": {}}  # Reset URIs
         self.usedVlans = {"deltas": {}, "system": {}}  # Reset used vlans
@@ -301,22 +444,24 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
         self.activeDeltas = getActiveDeltas(self)
         self.addDeltaInfo()
 
+        saveName = self.getModelSavePath()
+        self.saveModel(saveName, onlymaster=True)
         serialized = self.newGraph.serialize(format="ntriples")
         hashNum = generateHash(serialized)
 
         self.logger.info("Checking if new model is different from previous")
-        modelsEqual, modelinDB = self.checkForModelDiff(serialized)
+        modelsEqual, modelinDB = self.checkForModelDiff(saveName)
         lastKnownModel = {
             "uid": hashNum,
             "insertdate": getUTCnow(),
-            "contentid": hashNum,
+            "fileloc": saveName,
         }
         updateNeeded = False
         if modelsEqual:
             if modelinDB[0]["insertdate"] < int(getUTCnow() - 3600):
-                # Force to update model every hour, Even there is no update; the content is shared with the previous model.
+                # Force to update model every hour, Even there is no update;
                 self.logger.info("Forcefully update model in db as it is older than 1h")
-                lastKnownModel["contentid"] = modelinDB[0]["contentid"]
+                self.saveModel(saveName)
                 self.dbI.insert("models", [lastKnownModel])
                 self.modelDiffCounter = 0
                 self.modelDiffCounterStart = 0
@@ -324,6 +469,7 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             else:
                 self.logger.info("Models are equal.")
                 lastKnownModel = modelinDB[0]
+                os.unlink(saveName)
                 # Check if model difference counter is more than 60 - if yes, then raise warning
                 if self.modelDiffCounter >= 60:
                     self.addWarning(
@@ -342,15 +488,17 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
                 self.modelDiffCounterStart = now
                 self.modelDiffCounter = 0
             self.modelDiffCounter += 1
-            saveModelContent(self.dbI, hashNum, self.newGraph)
+            self.saveModel(saveName)
             self.dbI.insert("models", [lastKnownModel])
             speedup = True
 
-        self.logger.debug(f"Last Known Model: {lastKnownModel['uid']}")
+        self.logger.debug(f"Last Known Model: {str(lastKnownModel['fileloc'])}")
 
-        # ProvisioningService runs as its own service: it applies activeDeltas and asks for device refresh itself.
+        # Start Provisioning Service and apply any config changes.
+        self.logger.info("Start Provisioning Service")
+        stateChanged = self.provision.startwork(self.firstRun)
         # pylint: disable=E1101,E0203,W0201
-        if updateNeeded:
+        if updateNeeded or stateChanged or stateChangedFirstRun:
             self.logger.info("Update is needed. Informing to renew all devices state")
             # If models are different, we need to update all devices information
             self.switch.deviceUpdate(self.sitename)
@@ -361,11 +509,9 @@ class LookUpService(SwitchInfo, NodeInfo, DeltaInfo, RDFHelper, BWService, Timin
             self.switch.deviceUpdate(self.sitename)
             speedup = True
         self.checkVlansWarnings()
-        if self.firstRun:
-            self.firstRun = False
-            setFirstRunState(self.dbI, "LookUpService", "done")
         if not speedup:
             self.checkAndRaiseWarnings()
+            self.cleanModelDirectory()
         return speedup
 
 

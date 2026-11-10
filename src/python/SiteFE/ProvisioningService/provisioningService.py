@@ -21,11 +21,12 @@ from SiteFE.ProvisioningService.modules.VirtualSwitchingService import (
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.BWService import BWService
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError, SwitchException
-from SiteRMLibs.DBState import setFirstRunState
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.MainUtilities import (
+    createDirs,
     evaldict,
+    firstRunCheck,
     getDBConn,
     getLoggingObject,
     getSiteNameFromConfig,
@@ -51,6 +52,8 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         self.sitename = sitename
         self.switch = Switch(config, sitename)
         self.dbI = getVal(getDBConn("ProvisioningService", self), **{"sitename": self.sitename})
+        workDir = self.config.get("general", "privatedir") + "/ProvisioningService/"
+        createDirs(workDir)
         self.yamlconfuuid = {}
         self.yamlconfuuidActive = {}
         self.connID = None
@@ -61,8 +64,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         self.acttype = None
         self.daemoncontrols = self.config.get("daemoncontrols", "ProvisioningService", {})
         self.activateretry = {}
-        # Daemon mode: the first cycle of this process applies everything to the devices.
-        self.pendingFirstRun = True
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -464,13 +465,11 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
                     return False
         return True
 
-    def startwork(self, firstrun=None):
-        """Start Provisioning Service main worker (the daemon calls it without arguments)."""
-        daemonRun = firstrun is None
-        self.firstrun = self.pendingFirstRun if daemonRun else firstrun
+    def startwork(self, firstrun=False):
+        """Start Provisioning Service main worker."""
+        self.firstrun = firstrun
         self._firstRunFactsOK = False
-        if daemonRun and self.firstrun:
-            setFirstRunState(self.dbI, "ProvisioningService", "running")
+        firstRunCheck(self.firstrun, "ProvisioningService")
         # Get current active config;
         self.__cleanup()
         self._getActive()
@@ -496,13 +495,6 @@ class ProvisioningService(RoutingService, VirtualSwitchingService, QualityOfServ
         self.logger.info("Saving current active configuration inside memory")
         self.logger.info(f"Current active configuration: {self.yamlconfuuid}")
         self.yamlconfuuidActive = copy.deepcopy(self.yamlconfuuid)
-        if daemonRun:
-            if configChanged:
-                self.logger.info("Configuration changed on devices. Asking SwitchWorkers to refresh device state.")
-                self.switch.deviceUpdate(self.sitename)
-            if self.firstrun:
-                self.pendingFirstRun = False
-                setFirstRunState(self.dbI, "ProvisioningService", "done")
         return configChanged
 
 

@@ -16,7 +16,6 @@ import traceback
 
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
-from SiteRMLibs.DBState import dbConfigured, getStateDB, loadSiteConfig
 from SiteRMLibs.MainUtilities import (
     generateMD5,
     getHostname,
@@ -31,7 +30,6 @@ class GitConfig:
 
     def __init__(self):
         self.config = {}
-        self.rawfe = {}
         self.cachedir = f"{getTempDir()}/git_config"
         self.defaults = {
             "SITENAME": {"optional": False},
@@ -657,46 +655,24 @@ class GitConfig:
         # Generate list vals - not in a str format. Needed in delta checks
         self.__generatevlaniplists()
 
-    def getGitFEConfig(self, published=None):
-        """Get FE config from the published database copy, manual files or the git checkout."""
+    def getGitFEConfig(self):
+        """Get Git FE Config."""
         if self.config["MAPPING"]["type"] == "FE":
-            if published:
-                raw = {key: published.get(key) or {} for key in ("MAIN", "AUTH", "AUTH_RE")}
-            elif self.manualConfigEnabled():
-                raw = {"MAIN": self._getManualMainConfig(), "AUTH": self._getManualAuth(), "AUTH_RE": self._getManualAuthRe()}
+            if self.manualConfigEnabled():
+                self.config["MAIN"] = self._getManualMainConfig()
+                self.config["AUTH"] = self._getManualAuth()
+                self.config["AUTH_RE"] = self._getManualAuthRe()
             else:
-                raw = {"MAIN": self._getFrontendConfig(), "AUTH": self._getFrontendAuth(), "AUTH_RE": self._getFrontendAuthRe()}
-            self.rawfe = copy.deepcopy(raw)
-            self.config.update(raw)
+                self.config["MAIN"] = self._getFrontendConfig()
+                self.config["AUTH"] = self._getFrontendAuth()
+                self.config["AUTH_RE"] = self._getFrontendAuthRe()
             self.presetFEDefaultConfigs()
 
-    def _getPublishedConfig(self):
-        """Return the FE config ConfigFetcher published to the database for this site and MD5, or None."""
-        if self.manualConfigEnabled() or not dbConfigured():
-            return None
-        try:
-            published = loadSiteConfig(getStateDB())
-        except Exception as ex:  # pylint: disable=broad-except
-            print(f"Unable to load published configuration from database: {ex}")
-            return None
-        if not published or published.get("MAPPING", {}).get("type") != "FE":
-            return None
-        if published.get("SITENAME") != self.config["SITENAME"] or published.get("MD5") != self.config["MD5"]:
-            return None
-        return published
-
-    def publishableConfig(self):
-        """Return the raw FE configuration ConfigFetcher publishes to the database."""
-        return {"SITENAME": self.config["SITENAME"], "MD5": self.config["MD5"], "MAPPING": copy.deepcopy(self.config["MAPPING"]), **copy.deepcopy(self.rawfe)}
-
-    def getGitConfig(self, fromdb=True):
-        """Get configuration; git-based FE services use the copy published to the database when available."""
+    def getGitConfig(self):
+        """Get git config from configured github repo."""
         if not self.config:
             self.getLocalConfig()
-        published = self._getPublishedConfig() if fromdb else None
-        if published:
-            self.config["MAPPING"] = copy.deepcopy(published["MAPPING"])
-        elif self.manualConfigEnabled():
+        if self.manualConfigEnabled():
             self.config["MAPPING"] = {"type": self._getManualConfigType(), "config": "manual"}
         else:
             self.config["MAPPING"] = self._getGitMapping()
@@ -705,7 +681,7 @@ class GitConfig:
                 print(msg)
                 raise Exception(msg)
             self.config["MAPPING"] = copy.deepcopy(self.config["MAPPING"][self.config["MD5"]])
-        self.getGitFEConfig(published)
+        self.getGitFEConfig()
         self.getGitAgentConfig()
 
     def __getitem__(self, item):
@@ -766,8 +742,3 @@ def getGitConfig():
     gitConf = GitConfig()
     gitConf.getGitConfig()
     return gitConf
-
-
-def publishedConfigRequired():
-    """Return True if FE services get their configuration from the database (git-based FE config)."""
-    return not GitConfig().manualConfigEnabled()

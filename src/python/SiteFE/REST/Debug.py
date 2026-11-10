@@ -10,6 +10,7 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 
+import os
 import traceback
 from typing import Any, Dict, Optional
 
@@ -26,13 +27,13 @@ from SiteFE.REST.dependencies import (
 )
 from SiteRMLibs import __version__ as runningVersion
 from SiteRMLibs.CustomExceptions import BadRequestError
-from SiteRMLibs.DBState import loadSnapshot
 from SiteRMLibs.DefaultParams import LIMIT_DEFAULT, LIMIT_MAX, LIMIT_MIN
 from SiteRMLibs.MainUtilities import (
-    evaldict,
+    dumpFileContentAsJson,
+    generateRandomUUID,
+    getFileContentAsJson,
     getstartupconfig,
     getUTCnow,
-    jsondumps,
 )
 from SiteRMLibs.Validator import validator
 
@@ -77,9 +78,7 @@ def getDebugEntry(
         search.append(["state", state])
     if action:
         search.append(["action", action])
-    # Request/output JSON can be large; load it only when details are asked for.
-    columns = None if details else ["id", "hostname", "state", "action", "insertdate", "updatedate"]
-    out = deps["dbI"].get("debugrequests", orderby=["insertdate", "DESC"], search=search, limit=limit, columns=columns)
+    out = deps["dbI"].get("debugrequests", orderby=["insertdate", "DESC"], search=search, limit=limit)
     if out is None or len(out) == 0:
         return []
     if details and debugvar != "ALL":
@@ -522,13 +521,14 @@ async def getDynamicFromRanges(
     - Returns a list of allowed dynamicfrom ranges.
     """
     checkSite(deps, sitename)
-    snapshot = loadSnapshot(deps["dbI"], "workers-ranges")
-    if not snapshot:
+    fpath = os.path.join(deps["config"].get(sitename, "privatedir"), "ServiceData", "workers-ranges.json")
+    if not os.path.isfile(fpath):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dynamic from ranges not available for site '{sitename}'.",
+            detail=f"Dynamic from ranges file not found for site '{sitename}'.",
         )
-    return APIResponse.genResponse(request, snapshot["value"])
+    out = getFileContentAsJson(fpath)
+    return APIResponse.genResponse(request, out)
 
 
 # =========================================================
@@ -605,8 +605,8 @@ async def getDebugActions(
 # =========================================================
 def _getdebuginfo(out):
     """Get Debug action information."""
-    out["requestdict"] = evaldict(out.pop("debuginfo", None))
-    out["output"] = evaldict(out.pop("outputinfo", None))
+    out["requestdict"] = getFileContentAsJson(out["debuginfo"])
+    out["output"] = getFileContentAsJson(out["outputinfo"])
     return out
 
 
@@ -714,16 +714,18 @@ async def updatedebug(
     - Updates the debug action information for the given debug ID.
     """
     checkSite(deps, sitename)
-    dbentry = deps["dbI"].get("debugrequests", search=[["id", debugvar]], columns=["id"])
+    dbentry = deps["dbI"].get("debugrequests", search=[["id", debugvar]])
     if not dbentry:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Debug request with ID {debugvar} not found.",
         )
-    # Update the state (and output, if set) in database.
-    out = {"id": debugvar, "state": item.state, "updatedate": getUTCnow()}
+    # ==================================
+    # Write output file if output is set
     if item.output:
-        out["outputinfo"] = jsondumps(item.output)
+        dumpFileContentAsJson(dbentry[0]["outputinfo"], item.output)
+    # Update the state in database.
+    out = {"id": debugvar, "state": item.state, "updatedate": getUTCnow()}
     updOut = deps["dbI"].update("debugrequests", [out])
     return APIResponse.genResponse(request, {"Status": updOut[0], "ID": debugvar})
 
@@ -766,13 +768,19 @@ async def deletedebug(
     - Deletes the debug action information for the given debug ID.
     """
     checkSite(deps, sitename)
-    dbentry = deps["dbI"].get("debugrequests", search=[["id", debugvar]], columns=["id"])
+    dbentry = deps["dbI"].get("debugrequests", search=[["id", debugvar]])
     if not dbentry:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Debug request with ID {debugvar} not found.",
         )
+    # ==================================
     updOut = deps["dbI"].delete("debugrequests", [["id", debugvar]])
+    if os.path.isfile(dbentry[0]["debuginfo"]):
+        os.remove(dbentry[0]["debuginfo"])
+    if os.path.isfile(dbentry[0]["outputinfo"]):
+        os.remove(dbentry[0]["outputinfo"])
+    # ==================================
     # Return the status and ID of the deleted debug request
     return APIResponse.genResponse(request, {"Status": updOut[0], "ID": updOut[2]})
 
@@ -828,8 +836,8 @@ async def submitdebug(
                 "action": "undefined",
                 "insertdate": getUTCnow(),
                 "updatedate": getUTCnow(),
-                "debuginfo": "{}",
-                "outputinfo": "{}",
+                "debuginfo": "undefined",
+                "outputinfo": "undefined",
             }
         ],
     )
@@ -840,6 +848,11 @@ async def submitdebug(
         deps["dbI"].delete("debugrequests", [["id", dummyIns[2]]])
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     try:
+        debugdir = os.path.join(deps["config"].get(sitename, "privatedir"), "DebugRequests")
+        randomuuid = generateRandomUUID()
+        requestfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "request.json")
+        outputfname = os.path.join(debugdir, inputDict["hostname"], randomuuid, "output.json")
+        dumpFileContentAsJson(requestfname, inputDict)
         out = {
             "id": dummyIns[2],
             "hostname": inputDict.get("hostname", "undefined"),
@@ -847,8 +860,8 @@ async def submitdebug(
             "action": inputDict["action"],
             "insertdate": getUTCnow(),
             "updatedate": getUTCnow(),
-            "debuginfo": jsondumps(inputDict),
-            "outputinfo": "{}",
+            "debuginfo": requestfname,
+            "outputinfo": outputfname,
         }
         insOut = deps["dbI"].update("debugrequests", [out])
         return APIResponse.genResponse(request, {"Status": insOut[0], "ID": dummyIns[2]})

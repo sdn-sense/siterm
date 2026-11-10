@@ -11,7 +11,7 @@ Date: 2021/12/01
 """
 
 from SiteRMLibs.CustomExceptions import NODE_VLAN_RANGE_EXHAUSTED, NoOptionError
-from SiteRMLibs.MainUtilities import evaldict, getAllHosts, strtolist
+from SiteRMLibs.MainUtilities import getAllHosts, getFileContentAsJson, strtolist
 
 
 def ignoreInterface(intfKey, intfDict, hostinfo):
@@ -62,7 +62,7 @@ class NodeInfo:
         """Add Agent Node Information"""
         jOut = getAllHosts(self.dbI)
         for _nodeHostname, nodeDict in list(jOut.items()):
-            nodeDict["hostinfo"] = evaldict(nodeDict["hostinfo"])
+            nodeDict["hostinfo"] = getFileContentAsJson(nodeDict["hostinfo"])
             # ==================================================================================
             # Record used vlans
             # ==================================================================================

@@ -15,7 +15,6 @@ import sys
 
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import NoOptionError, NoSectionError
-from SiteRMLibs.DBState import Sharder
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import normalizedip
 from SiteRMLibs.MainUtilities import (
@@ -62,9 +61,6 @@ class BGPMonitoring(Timing):
         self._lastActivePeers = None
         self._lastfullcheck = 0
         self._pendingRescans = 0
-        self.sharder = Sharder(COMPONENT, dbI=self.dbI, logger=self.logger)
-        # Rescan requests are read by every replica and removed by DBCleaner; remember the newest one seen.
-        self._lastRescanID = self._newestRescanID()
         self.logger.info(f"====== {COMPONENT} Start Work. Sitename: {self.sitename}")
 
     def refreshthread(self):
@@ -207,18 +203,12 @@ class BGPMonitoring(Timing):
         else:
             self.dbI.insert("bgpmon", [out])
 
-    def _newestRescanID(self):
-        """Return the id of the newest rescan request (0 if none)."""
-        rows = self.dbI.get("bgpforcerescan", orderby=["id", "DESC"], limit=1, columns=["id"])
-        return rows[0]["id"] if rows else 0
-
     def _forceRescanRequested(self):
-        """Whether a rescan was requested via the REST API since the last check."""
-        newest = self._newestRescanID()
-        if newest > self._lastRescanID:
-            self._lastRescanID = newest
-            return True
-        return False
+        """Whether a rescan was requested via the REST API; consumes the flag."""
+        rows = self.dbI.get("bgpforcerescan")
+        for row in rows:
+            self.dbI.delete("bgpforcerescan", [["id", row["id"]]])
+        return bool(rows)
 
     def startwork(self):
         """Scan switches with an active BGP delta and refresh their bgpmon
@@ -247,9 +237,6 @@ class BGPMonitoring(Timing):
         self.switch.getinfo()
         self.switches = self.switch.getAllSwitches()
         hosts = self._findBGPHosts(activepeers)
-        # Each replica checks only the devices it owns.
-        myhosts = self.sharder.myShare(sorted(self.switches))
-        hosts = {host: params for host, params in hosts.items() if host in myhosts}
         if not hosts:
             self.logger.info(f"[{self.sitename}]: No hosts with an active BGP delta found. Nothing to check.")
             return

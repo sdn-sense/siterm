@@ -11,7 +11,9 @@ Date                    : 2025/07/14
 """
 
 import hashlib
+import os
 from asyncio import sleep
+from contextlib import suppress
 from typing import Literal, Optional
 
 from fastapi import (
@@ -49,11 +51,14 @@ from SiteRMLibs.DefaultParams import (
 from SiteRMLibs.MainUtilities import (
     convertTSToDatetime,
     evaldict,
+    getFileContentAsJson,
     getModTime,
     getstartupconfig,
     getUTCnow,
     httpdate,
     jsondumps,
+    removeFile,
+    saveContent,
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -175,23 +180,28 @@ def _deltaFingerprint(item):
     return hashlib.sha256(jsondumps(item.dict()).encode("utf-8")).hexdigest()
 
 
-def _pendingSubmission(dbI, deltaID):
-    """Return True if the delta is queued and PolicyService did not pick it up yet."""
-    return bool(dbI.count("deltarequests", search=[["deltaid", deltaID], ["state", "new"]]))
+def _deltaPaths(deps, sitename, deltaID):
+    """Return the PolicyService (httpnew, httpfinished) file paths for a delta."""
+    policyDir = os.path.join(deps["config"].get(sitename, "privatedir"), "PolicyService")
+    return os.path.join(policyDir, "httpnew", f"{deltaID}.json"), os.path.join(policyDir, "httpfinished", f"{deltaID}.json")
 
 
-def _getAcceptOutput(dbI, deltaID, since):
+def _getAcceptOutput(dbI, deltaID, since, paths):
     """Return PolicyService accept output for a delta submitted at or after since, or None while still pending."""
-    rows = dbI.get("deltarequests", search=[["deltaid", deltaID]], orderby=["id", "DESC"], limit=1)
-    if rows and rows[0]["state"] == "new":
+    newName, finishedName = paths
+    try:
+        out = getFileContentAsJson(finishedName)
+    except OSError:
+        # Another request waiting on the same delta removed the file between the existence check and the read.
+        out = {}
+    if out:
+        with suppress(FileNotFoundError):
+            removeFile(finishedName)
+        return out
+    if os.path.isfile(newName):
         # Not picked up by PolicyService yet, so any deltas row is from an earlier submission.
         return None
-    # The result is read once; another request waiting on the same delta falls back to the deltas table.
-    if rows and rows[0]["state"] == "done" and dbI.deletesearch("deltarequests", [["id", rows[0]["id"]]]):
-        out = evaldict(rows[0]["result"])
-        if out:
-            return out
-    # PolicyService also records the result in the deltas table; use it when the queued result was already consumed.
+    # PolicyService also records the result in the deltas table; use it when the result file was already consumed.
     rows = dbI.get("deltas", search=[["uid", deltaID], ["insertdate", ">=", since]], orderby=["id", "DESC"], limit=1)
     if not rows:
         return None
@@ -264,11 +274,12 @@ async def _awaitIdempotentResult(request, deps, sitename, idemKey, fingerprint):
             )
         if record["statuscode"] is not None:
             return _respond(request, record["statuscode"], evaldict(record["response"]), _IDEMPOTENT_REPLAYED)
-        if out := _getAcceptOutput(dbI, record["deltaid"], record["insertdate"]):
+        newName, finishedName = _deltaPaths(deps, sitename, record["deltaid"])
+        if out := _getAcceptOutput(dbI, record["deltaid"], record["insertdate"], (newName, finishedName)):
             statusCode, body = _acceptResult(request, sitename, out)
             _storeIdempotentResult(dbI, record["id"], statusCode, body)
             return _respond(request, statusCode, body, _IDEMPOTENT_REPLAYED)
-        if getUTCnow() - record["insertdate"] > IDEMPOTENCY_STALE_TIMEOUT and not _pendingSubmission(dbI, record["deltaid"]):
+        if getUTCnow() - record["insertdate"] > IDEMPOTENCY_STALE_TIMEOUT and not os.path.isfile(newName):
             # Original submission was lost before PolicyService produced a result; let this request resubmit it.
             dbI.delete("deltaidempotency", [["id", record["id"]]])
             return None
@@ -285,7 +296,7 @@ def _idempotencyInProgress():
     )
 
 
-async def _submitToPolicyService(request, deps, item):
+async def _submitToPolicyService(request, deps, sitename, item):
     """Queue the delta for PolicyService and wait for its accept output; None on timeout."""
     outContent = {
         "ID": item.id,
@@ -295,17 +306,15 @@ async def _submitToPolicyService(request, deps, item):
         "State": "accepting",
         "modelId": item.modelId,
     }
-    # Queue the delta; drop any request or result left behind by an earlier submission of this delta that timed out.
-    dbI = deps["dbI"]
-    dbI.deletesearch("deltarequests", [["deltaid", item.id]])
-    dbI.insert(
-        "deltarequests",
-        [{"deltaid": item.id, "state": "new", "payload": jsondumps(outContent), "insertdate": outContent["insertdate"], "updatedate": outContent["insertdate"]}],
-    )
-    _record_delta_action(dbI, deps["user"]["user_info"]["sub"], item.id, "submit", _extract_sense_headers(request))
+    # Save item to disk; drop any result left behind by an earlier submission of this delta that timed out.
+    fname, finishedName = _deltaPaths(deps, sitename, item.id)
+    with suppress(FileNotFoundError):
+        removeFile(finishedName)
+    saveContent(fname, outContent)
+    _record_delta_action(deps["dbI"], deps["user"]["user_info"]["sub"], item.id, "submit", _extract_sense_headers(request))
     # Wait (without blocking the event loop) for PolicyService to accept or reject the delta.
     for _ in range(DELTA_ACCEPT_TIMEOUT):
-        if out := _getAcceptOutput(dbI, item.id, outContent["insertdate"]):
+        if out := _getAcceptOutput(deps["dbI"], item.id, outContent["insertdate"], (fname, finishedName)):
             return out
         await sleep(1)
     return None
@@ -564,7 +573,7 @@ async def submitDelta(
             if replay := await _awaitIdempotentResult(request, deps, sitename, idemKey, fingerprint):
                 return replay
             raise _idempotencyInProgress()
-    if not (out := await _submitToPolicyService(request, deps, item)):
+    if not (out := await _submitToPolicyService(request, deps, sitename, item)):
         # An Idempotency-Key record stays in progress, so a retry with the same key picks up the result instead of resubmitting.
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,

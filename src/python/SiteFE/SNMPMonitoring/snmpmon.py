@@ -20,6 +20,7 @@ Date: 2022/11/21
 """
 
 import copy
+import os
 import sys
 
 from easysnmp import Session
@@ -28,7 +29,6 @@ from prometheus_client import CollectorRegistry, Enum, Gauge, Info, generate_lat
 from SiteRMLibs.Backends.generalFunctions import operStatusHealthy
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import SNMP_TIMEOUT, SNMP_UNKNOWN_OID
-from SiteRMLibs.DBState import LeaseKeeper, Sharder, saveSnapshot
 from SiteRMLibs.DefaultParams import (
     BGP_MONITORING_DOWN_TIMEOUT,
     SERVICE_DEAD_TIMEOUT,
@@ -36,6 +36,7 @@ from SiteRMLibs.DefaultParams import (
 )
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
+    contentDB,
     evaldict,
     getActiveDeltas,
     getAllHosts,
@@ -59,6 +60,8 @@ class Topology:
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service="SNMPMonitoring")
         self.dbI = getVal(getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename})
+        self.diragent = contentDB()
+        self.topodir = os.path.join(self.config.get(sitename, "privatedir"), "Topology")
 
     @staticmethod
     def _findConnection(workdata, remMac):
@@ -207,7 +210,7 @@ class Topology:
                     print(swout["topo"][key])
         # Now lets get host information
         for host in self.dbI.get("hosts", orderby=["updatedate", "DESC"], limit=100):
-            parsedInfo = evaldict(host.get("hostinfo", ""))
+            parsedInfo = self.diragent.getFileContentAsJson(host.get("hostinfo", ""))
             hostconfig = parsedInfo.get("Summary", {}).get("config", {})
             netinfo = parsedInfo.get("NetInfo", {}).get("interfaces", {})
             hostname = hostconfig.get("agent", {}).get("hostname", "")
@@ -257,7 +260,9 @@ class Topology:
                         hout["topo"][intf].update(self._downInfo(workdata, switch, swintf))
                         print(hout["topo"][intf])
         out.update(self.getWANLinks(incr, workdata, set(out)))
-        saveSnapshot(self.dbI, "topology", out)
+        # Write new out to file
+        fname = os.path.join(self.topodir, "topology.json")
+        self.diragent.dumpFileContentAsJson(fname, out)
 
 
 class ActiveWrapper:
@@ -334,6 +339,7 @@ class PromOut:
         self.sitename = sitename
         self.logger = getLoggingObject(config=self.config, service="SNMPMonitoring")
         self.dbI = getVal(getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename})
+        self.diragent = contentDB()
         self.timenow = int(getUTCnow())
         self.activeAPI = ActiveWrapper()
         self.diskMonitor = {}
@@ -345,6 +351,7 @@ class PromOut:
             "IPaddress": "",
             "Hostname": "",
         }
+        self.snmpdir = os.path.join(self.config.get(sitename, "privatedir"), "SNMPData")
 
     @staticmethod
     def __cleanRegistry():
@@ -420,7 +427,7 @@ class PromOut:
             registry=registry,
         )
         for host, hostDict in getAllHosts(self.dbI).items():
-            hostDict["hostinfo"] = evaldict(hostDict["hostinfo"])
+            hostDict["hostinfo"] = self.diragent.getFileContentAsJson(hostDict["hostinfo"])
             if int(self.timenow - hostDict["updatedate"]) > SERVICE_DOWN_TIMEOUT:
                 self.logger.warning(f"Host {host} did not update in the last {SERVICE_DOWN_TIMEOUT // 60} minutes. Skipping.")
                 continue
@@ -714,7 +721,8 @@ class PromOut:
         self.__getServiceStates(registry)
         data = generate_latest(registry)
         del registry  # Explicit dereference of Collector Registry
-        saveSnapshot(self.dbI, "prometheus", data.decode("utf-8"))
+        fname = os.path.join(self.snmpdir, "snmpinfo.txt")
+        self.diragent.dumpFileContent(fname, data)
 
 
 class SNMPMonitoring(Warnings):
@@ -727,14 +735,13 @@ class SNMPMonitoring(Warnings):
         self.sitename = sitename
         self.switch = Switch(config, sitename)
         self.dbI = getVal(getDBConn("SNMPMonitoring", self), **{"sitename": self.sitename})
+        self.diragent = contentDB()
         self.switches = {}
         self.session = None
         self.prom = PromOut(config, sitename)
         self.topo = Topology(config, sitename)
         self.hostconf = {}
         self.memdisk = MemDiskStats()
-        self.sharder = Sharder("SNMPMonitoring", dbI=self.dbI, logger=self.logger)
-        self.aggregator = LeaseKeeper(dbI=self.dbI, logger=self.logger)
 
     def refreshthread(self):
         """Call to refresh thread for this specific class and reset parameters"""
@@ -892,8 +899,7 @@ class SNMPMonitoring(Warnings):
         """Scan all switches and get snmp data"""
         self._start()
         macs = {}
-        myswitches = self.sharder.myShare(sorted(self.switches))
-        for host in myswitches:
+        for host in self.switches:
             self._getSNMPSession(host)
             if not self.session:
                 continue
@@ -911,11 +917,7 @@ class SNMPMonitoring(Warnings):
                     out[index][key] = item.value.replace("\x00", "")
             out["macs"] = macs[host]
             self._writeToDB(host, out)
-        self.logger.info(f"[{self.sitename}]: SNMP Monitoring finished for {len(myswitches)}/{len(self.switches)} switches (others belong to other replicas)")
-        # Site-wide outputs (FE memory/disk, metrics, topology) are produced by one replica only.
-        if not self.aggregator.acquire("SNMPMonitoring:aggregate"):
-            self.logger.info(f"[{self.sitename}]: Another SNMPMonitoring replica produces metrics and topology.")
-            return
+        self.logger.info(f"[{self.sitename}]: SNMP Monitoring finished for {len(self.switches)} switches")
         # Get Memory and Disk Statistics
         self.getMemStats()
         self.logger.info(f"[{self.sitename}]: Memory statistics written to DB")
