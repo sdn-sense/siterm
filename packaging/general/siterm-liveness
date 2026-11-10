@@ -9,6 +9,9 @@ import subprocess
 import sys
 from datetime import datetime
 
+from SiteRMLibs import __version__ as runningVersion
+from SiteRMLibs.DBState import dbConfigured, feStartupState, recordProbeDisabled
+from SiteRMLibs.GitConfig import publishedConfigRequired
 from SiteRMLibs.hostcert import HostCertHandler
 from SiteRMLibs.MainUtilities import getTempDir
 
@@ -45,6 +48,7 @@ def enableLivenessCheck(statFile):
     if os.path.exists(statFile):
         try:
             os.remove(statFile)
+            recordProbeDisabled("liveness", False)
             print("Liveness check enabled. Removed disable file.")
         except OSError as e:
             print(f"Error removing disable file: {e}")
@@ -60,6 +64,7 @@ def disableLivenessCheck(statFile):
             with open(statFile, "w", encoding="utf-8") as fd:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 fd.write(f"Liveness check disabled at {timestamp} \n")
+            recordProbeDisabled("liveness", True)
             print("Liveness check disabled. Created disable file.")
         except OSError as e:
             print(f"Error creating disable file: {e}")
@@ -85,16 +90,31 @@ def runChecks():
 
 
 def checkConfigReady():
-    """Check if config fetcher is done."""
+    """Return -1 when startup is finished, otherwise the exit code to use."""
+    if dbConfigured():
+        # FE: startup state lives in the database (dbinit + published config).
+        state, msg = feStartupState(runningVersion, publishedConfigRequired())
+        if state == "failed":
+            print(f"[FAILED] {msg}")
+            return 1
+        if state == "waiting":
+            print(msg)
+            return checkFetcherCounter()
+        return -1
     if os.path.exists(f"{getTempDir()}/config-fetcher-ready"):
         return -1
     print("Config fetcher is still running. Check stdout/stderr.")
+    return checkFetcherCounter()
+
+
+def checkFetcherCounter():
+    """Return the failure counter of the local config fetcher if it gave up, else 0."""
     if os.path.exists("/dev/shm/config-fetcher-counter"):
         with open("/dev/shm/config-fetcher-counter", "r", encoding="utf-8") as fd:
             counter = fd.read().strip()
-            if int(counter) >= 10:
+            if counter.isdigit() and int(counter) >= 10:
                 print("Config fetcher failed counter:", counter)
-                return counter
+                return int(counter)
     return 0
 
 
@@ -127,6 +147,7 @@ if __name__ == "__main__":
         sys.exit(0 if checkServices(["mariadb", "mariadb_init"]) else 1)
 
     if os.path.exists(livenessFile) and not args.ignorelock:
+        recordProbeDisabled("liveness", True)
         print("Liveness check is disabled. Use --enable to enable or --ignorelock to run all checks and bypass this.")
         sys.exit(0)
 

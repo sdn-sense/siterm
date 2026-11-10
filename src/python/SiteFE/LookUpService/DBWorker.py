@@ -8,8 +8,6 @@ Authors:
 Date: 2024/06/10
 """
 
-import os
-
 from SiteFE.PolicyService.policyService import PolicyService
 from SiteRMLibs.CustomExceptions import DELTA_STATE_TRANSITION_ERROR
 from SiteRMLibs.GitConfig import getGitConfig
@@ -17,7 +15,6 @@ from SiteRMLibs.MainUtilities import (
     getDBConn,
     getLoggingObject,
     getSiteNameFromConfig,
-    getUTCnow,
     getVal,
 )
 from SiteRMLibs.Warnings import Warnings
@@ -55,25 +52,10 @@ class DBWorker(Warnings):
             if errormsg:
                 self.addWarning(errormsg, code=DELTA_STATE_TRANSITION_ERROR)
 
-    def modelactions(self):
-        """Clean up process to remove old data"""
-        # Clean Up old models (older than 24h.)
-        self.logger.debug("Start model actions and clean up old models")
-        for model in self.dbI.get("models", limit=10, orderby=["insertdate", "ASC"]):
-            if model["insertdate"] < int(getUTCnow() - 86400):
-                self.logger.debug("delete %s", model["fileloc"])
-                try:
-                    os.unlink(model["fileloc"])
-                except OSError as ex:
-                    self.logger.debug(f"Got OS Error removing this model {model['fileloc']}. Exc: {str(ex)}")
-                self.dbI.delete("models", [["id", model["id"]]])
-
     def startwork(self):
         """Database thread worker - to change delta states"""
-        # Run state actions
+        # Run state actions (old models are removed by DBCleaner)
         self.stateActions()
-        # Run model actions
-        self.modelactions()
         # Decrease counters
         self.checkAndRaiseWarnings()
 

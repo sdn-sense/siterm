@@ -8,9 +8,23 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2026/01/02
 """
 
-from sqlalchemy import JSON, Boolean, Column, Integer, String, UniqueConstraint
-from sqlalchemy.dialects.mysql import LONGTEXT
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    Index,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.dialects.mysql import LONGBLOB, LONGTEXT
 from sqlalchemy.orm import DeclarativeBase
+
+# LONGTEXT/LONGBLOB on MariaDB, plain TEXT/BLOB elsewhere (unit tests run on SQLite).
+LongText = Text().with_variant(LONGTEXT(), "mysql", "mariadb")
+LongBlob = LargeBinary().with_variant(LONGBLOB(), "mysql", "mariadb")
 
 
 class Base(DeclarativeBase):
@@ -18,14 +32,27 @@ class Base(DeclarativeBase):
 
 
 class Model(Base):
-    """Model table."""
+    """Model table. Content lives in modelcontent under contentid (shared by identical models)."""
 
     __tablename__ = "models"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     uid = Column(String(255), nullable=False)
     insertdate = Column(Integer, nullable=False)
-    fileloc = Column(String(4096), nullable=False)
+    contentid = Column(String(255), nullable=False)
+
+
+class ModelContent(Base):
+    """Compressed model serializations, keyed by models.contentid."""
+
+    __tablename__ = "modelcontent"
+    __table_args__ = (UniqueConstraint("uid", "fmt", name="uq_modelcontent_uid_fmt"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uid = Column(String(255), nullable=False)
+    fmt = Column(String(16), nullable=False)
+    content = Column(LongBlob, nullable=False)
+    insertdate = Column(Integer, nullable=False)
 
 
 class Delta(Base):
@@ -102,7 +129,7 @@ class Host(Base):
     hostname = Column(String(255), nullable=False)
     insertdate = Column(Integer, nullable=False)
     updatedate = Column(Integer, nullable=False)
-    hostinfo = Column(String(4096), nullable=False)
+    hostinfo = Column(LongText, nullable=False)
 
 
 class Service(Base):
@@ -116,7 +143,7 @@ class Service(Base):
     servicename = Column(String(50), nullable=False)
     insertdate = Column(Integer, nullable=False)
     updatedate = Column(Integer, nullable=False)
-    serviceinfo = Column(String(4096), nullable=False)
+    serviceinfo = Column(LongText, nullable=False)
 
 
 class Switch(Base):
@@ -178,8 +205,8 @@ class DebugRequest(Base):
     hostname = Column(String(255), nullable=False)
     state = Column(String(64), nullable=False)
     action = Column(String(64), nullable=False)
-    debuginfo = Column(String(4096), nullable=False)
-    outputinfo = Column(String(4096), nullable=False)
+    debuginfo = Column(LongText, nullable=False)
+    outputinfo = Column(LongText, nullable=False)
     insertdate = Column(Integer, nullable=False)
     updatedate = Column(Integer, nullable=False)
 
@@ -350,8 +377,53 @@ class RefreshToken(Base):
     rotated_from = Column(String(64))
 
 
+class KVStore(Base):
+    """Small shared state between FE components (flags, snapshots, published config), JSON encoded."""
+
+    __tablename__ = "kvstore"
+    __table_args__ = (UniqueConstraint("namespace", "name", name="uq_kvstore_namespace_name"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    namespace = Column(String(64), nullable=False)
+    name = Column(String(255), nullable=False)
+    value = Column(LongText, nullable=False)
+    insertdate = Column(Integer, nullable=False)
+    updatedate = Column(Integer, nullable=False)
+
+
+class Lease(Base):
+    """Time-limited ownership of a named resource (leader role, device, membership)."""
+
+    __tablename__ = "leases"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False, unique=True)
+    holder = Column(String(255), nullable=False)
+    expires_at = Column(Integer, nullable=False)
+    updatedate = Column(Integer, nullable=False)
+
+
+class DeltaRequest(Base):
+    """Delta submissions queued by REST for PolicyService, with the accept result."""
+
+    __tablename__ = "deltarequests"
+    __table_args__ = (Index("ix_deltarequests_deltaid", "deltaid"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    deltaid = Column(String(255), nullable=False)
+    state = Column(String(32), nullable=False)
+    payload = Column(LongText, nullable=False)
+    result = Column(LongText, nullable=True)
+    insertdate = Column(Integer, nullable=False)
+    updatedate = Column(Integer, nullable=False)
+
+
 REGISTRY = {
     "models": Model,
+    "modelcontent": ModelContent,
+    "kvstore": KVStore,
+    "leases": Lease,
+    "deltarequests": DeltaRequest,
     "deltas": Delta,
     "delta_connections": DeltaConnection,
     "states": State,

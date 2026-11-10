@@ -21,6 +21,7 @@ from SiteRMLibs.MainUtilities import (
     getFullUrl,
     getLoggingObject,
     getUTCnow,
+    jsondumps,
 )
 
 
@@ -42,17 +43,17 @@ class DebugService:
         """Publish debug runtime to FE"""
         # If dbI is defined, than we publish to DB directly.
         if hasattr(self, "dbI"):
-            item = self.dbI.get("debugrequests", search=[["id", inDic["id"]]])
+            item = self.dbI.get("debugrequests", search=[["id", inDic["id"]]], columns=["id"])
             if not item:
                 self.logger.error(f"Debug item {inDic['id']} not found in DB to update.")
                 return
-            self.diragent.dumpFileContentAsJson(item[0]["outputinfo"], inDic["output"])
             self.dbI.update(
                 "debugrequests",
                 [
                     {
                         "id": inDic["id"],
                         "state": inDic["state"],
+                        "outputinfo": jsondumps(inDic["output"]),
                         "updatedate": getUTCnow(),
                     }
                 ],

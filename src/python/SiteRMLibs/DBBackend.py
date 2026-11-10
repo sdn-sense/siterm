@@ -3,6 +3,7 @@
 DB Backend for communication with database.
 """
 
+import json
 import os
 import traceback
 from contextlib import contextmanager
@@ -11,8 +12,9 @@ from datetime import datetime, timezone
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
-from SiteRMLibs.DBModels import REGISTRY, Base
-from sqlalchemy import URL, create_engine, text
+from SiteRMLibs.DBModels import REGISTRY, Base, KVStore, Lease, Model, ModelContent
+from sqlalchemy import URL, create_engine, or_, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 # ==========================================================
@@ -209,22 +211,35 @@ class dbinterface:
 
     @staticmethod
     def _filter(query, model, search):
-        """Apply search filters ([col, val] or [col, op, val]) to a query."""
+        """Apply search filters ([col, val] or [col, op, val]; op may be 'in'/'notin' with a list) to a query."""
         for item in search or []:
             if len(item) == 2:
                 query = query.filter(getattr(model, item[0]) == item[1])
+            elif len(item) == 3 and str(item[1]).lower() == "in":
+                query = query.filter(getattr(model, item[0]).in_(item[2]))
+            elif len(item) == 3 and str(item[1]).lower() == "notin":
+                query = query.filter(getattr(model, item[0]).not_in(item[2]))
             elif len(item) == 3:
                 query = query.filter(getattr(model, item[0]).op(item[1])(item[2]))
         return query
 
-    def get(self, calltype, limit=None, search=None, orderby=None, mapping=True, offset=None):
-        """Retrieve rows from a specific table."""
+    @staticmethod
+    def _model(calltype):
+        """Return the ORM model for a table name."""
         model = REGISTRY.get(calltype)
         if not model:
             raise ValueError(f"Unknown table: {calltype}")
+        return model
+
+    def get(self, calltype, limit=None, search=None, orderby=None, mapping=True, offset=None, columns=None):
+        """Retrieve rows from a specific table; columns limits the loaded columns (skips large ones)."""
+        model = self._model(calltype)
 
         with self.db.session() as session:
-            q = self._filter(session.query(model), model, search)
+            if columns:
+                q = self._filter(session.query(*[getattr(model, col) for col in columns]), model, search)
+            else:
+                q = self._filter(session.query(model), model, search)
 
             if orderby:
                 col, direction = orderby
@@ -241,6 +256,8 @@ class dbinterface:
             if not mapping:
                 return rows
 
+            if columns:
+                return [dict(zip(columns, row)) for row in rows]
             return [{c.name: getattr(row, c.name) for c in row.__table__.columns} for row in rows]
 
     def count(self, calltype, search=None):
@@ -386,3 +403,143 @@ class dbinterface:
         if "insertdate" in columns:
             return "insertdate"
         return None
+
+    # ==========================================================
+    #  Shared state helpers (kvstore, leases, model content)
+    # ==========================================================
+
+    def updatewhere(self, calltype, values, search):
+        """Update columns on all rows matching search; return the number of rows changed."""
+        model = self._model(calltype)
+        allowed = set(model.__table__.columns.keys())
+        clean = {k: v for k, v in values.items() if k in allowed}
+        with self.db.session() as session:
+            return self._filter(session.query(model), model, search).update(clean, synchronize_session=False)
+
+    def deletesearch(self, calltype, search):
+        """Delete all rows matching search filters; return the number of rows deleted."""
+        model = self._model(calltype)
+        if not search:
+            raise ValueError("deletesearch requires at least one filter")
+        with self.db.session() as session:
+            return self._filter(session.query(model), model, search).delete(synchronize_session=False)
+
+    def kvset(self, namespace, name, value):
+        """Insert or replace a JSON-encoded kvstore value."""
+        encoded = json.dumps(value)
+        for _ in range(3):
+            now = getUTCnow()
+            try:
+                with self.db.session() as session:
+                    row = session.query(KVStore).filter_by(namespace=namespace, name=name).first()
+                    if row:
+                        row.value = encoded
+                        row.updatedate = now
+                    else:
+                        session.add(KVStore(namespace=namespace, name=name, value=encoded, insertdate=now, updatedate=now))
+                return
+            except IntegrityError:
+                # Another writer inserted the same key first; retry as an update.
+                continue
+        raise RuntimeError(f"Unable to store kvstore entry {namespace}/{name}")
+
+    def kvgetrow(self, namespace, name):
+        """Return the kvstore row (value decoded) or None."""
+        rows = self.get("kvstore", search=[["namespace", namespace], ["name", name]], limit=1)
+        if not rows:
+            return None
+        row = rows[0]
+        row["value"] = json.loads(row["value"]) if row["value"] else None
+        return row
+
+    def kvget(self, namespace, name, default=None):
+        """Return the decoded kvstore value or default."""
+        row = self.kvgetrow(namespace, name)
+        return default if row is None else row["value"]
+
+    def kvlist(self, namespace):
+        """Return {name: row} for all entries of a namespace (values decoded)."""
+        out = {}
+        for row in self.get("kvstore", search=[["namespace", namespace]]):
+            row["value"] = json.loads(row["value"]) if row["value"] else None
+            out[row["name"]] = row
+        return out
+
+    def kvdelete(self, namespace, name):
+        """Delete one kvstore entry; return True if it existed."""
+        return bool(self.deletesearch("kvstore", [["namespace", namespace], ["name", name]]))
+
+    def leaseacquire(self, name, holder, ttl):
+        """Take, or renew, a lease; return True if holder owns it afterwards."""
+        now = getUTCnow()
+        with self.db.session() as session:
+            renewed = (
+                session.query(Lease)
+                .filter(Lease.name == name, or_(Lease.holder == holder, Lease.expires_at < now))
+                .update({"holder": holder, "expires_at": now + ttl, "updatedate": now}, synchronize_session=False)
+            )
+            if renewed:
+                return True
+            if session.query(Lease.id).filter(Lease.name == name).first():
+                return False
+        try:
+            with self.db.session() as session:
+                session.add(Lease(name=name, holder=holder, expires_at=now + ttl, updatedate=now))
+            return True
+        except IntegrityError:
+            return False
+
+    def leaserelease(self, name, holder):
+        """Release a lease if holder owns it."""
+        return bool(self.deletesearch("leases", [["name", name], ["holder", holder]]))
+
+    def leaselive(self, prefix):
+        """Return unexpired leases whose name starts with prefix."""
+        return self.get("leases", search=[["name", "LIKE", f"{prefix}%"], ["expires_at", ">=", getUTCnow()]], orderby=["name", "asc"])
+
+    def modelcontentput(self, uid, fmt, content):
+        """Store compressed model content once per (uid, fmt)."""
+        with self.db.session() as session:
+            if session.query(ModelContent.id).filter_by(uid=uid, fmt=fmt).first():
+                return False
+        try:
+            with self.db.session() as session:
+                session.add(ModelContent(uid=uid, fmt=fmt, content=content, insertdate=getUTCnow()))
+            return True
+        except IntegrityError:
+            return False
+
+    def modelcontentget(self, uid, fmt):
+        """Return compressed model content bytes or None."""
+        rows = self.get("modelcontent", search=[["uid", uid], ["fmt", fmt]], limit=1, columns=["content"])
+        return rows[0]["content"] if rows else None
+
+    def modeltrim(self, keepseconds, maxcount):
+        """Delete models older than keepseconds or beyond maxcount; the latest model is always kept."""
+        deleted = 0
+        with self.db.session() as session:
+            latest = session.query(Model.id).order_by(Model.insertdate.desc(), Model.id.desc()).first()
+            if not latest:
+                return 0
+            deleted += session.query(Model).filter(Model.insertdate < getUTCnow() - keepseconds, Model.id != latest[0]).delete(synchronize_session=False)
+            extra = [row[0] for row in session.query(Model.id).order_by(Model.insertdate.desc(), Model.id.desc()).offset(maxcount).all()]
+            extra = [mid for mid in extra if mid != latest[0]]
+            if extra:
+                deleted += session.query(Model).filter(Model.id.in_(extra)).delete(synchronize_session=False)
+        return deleted
+
+    def modelcontentcleanup(self):
+        """Delete model content no models row refers to."""
+        with self.db.session() as session:
+            return session.query(ModelContent).filter(ModelContent.uid.not_in(select(Model.contentid))).delete(synchronize_session=False)
+
+    def optimizetables(self, tables):
+        """Rebuild tables to return space freed by deletes (MariaDB only)."""
+        if self.db.engine.dialect.name not in ("mysql", "mariadb"):
+            return []
+        done = []
+        for table in tables:
+            self._model(table)
+            self.executeRaw(f"OPTIMIZE TABLE `{table}`")
+            done.append(table)
+        return done

@@ -10,7 +10,6 @@ Email                   : jbalcas (at) es (dot) net
 Date                    : 2025/07/14
 """
 
-import os
 import traceback
 from typing import Any, Dict, List, Optional
 
@@ -35,10 +34,10 @@ from SiteRMLibs.DefaultParams import (
 from SiteRMLibs.MainUtilities import (
     HOSTSERVICEENUMALL,
     HOSTSERVICES,
-    dumpFileContentAsJson,
     evaldict,
     getstartupconfig,
     getUTCnow,
+    jsondumps,
 )
 
 router = APIRouter()
@@ -50,31 +49,27 @@ startupConfig = getstartupconfig()
 # =========================================================
 
 
-def __updateServiceData(item, sitename, dbI, config):
+def __updateServiceData(item, dbI):
     """Update service data in the database."""
     servicest = "Undefined"
-    fpath = os.path.join(config.get(sitename, "privatedir"), "ServiceData")
-    fname = os.path.join(fpath, item.hostname, "serviceinfo.json")
     out = {
         "hostname": item.hostname,
         "servicename": item.servicename.value,
         "insertdate": getUTCnow(),
         "updatedate": getUTCnow(),
-        "serviceinfo": fname,
+        "serviceinfo": jsondumps(item.model_dump(mode="json")),
     }
     search = []
     if item.hostname:
         search.append(["hostname", item.hostname])
     if item.servicename:
         search.append(["servicename", item.servicename.value])
-    host = dbI.get("services", limit=1, search=search)
+    host = dbI.get("services", limit=1, search=search, columns=["id"])
     if not host:
-        dumpFileContentAsJson(fname, item.model_dump(mode="json"))
         dbI.insert("services", [out])
         servicest = "ADDED"
     else:
         out["id"] = host[0]["id"]
-        dumpFileContentAsJson(fname, item.model_dump(mode="json"))
         dbI.update("services", [out])
         servicest = "UPDATED"
     return {"Status": servicest}
@@ -170,7 +165,10 @@ async def getservice(
         search.append(["hostname", hostname])
     if servicename:
         search.append(["servicename", servicename.value])
-    return APIResponse.genResponse(request, deps["dbI"].get("services", search=search))
+    services = deps["dbI"].get("services", search=search)
+    for service in services:
+        service["serviceinfo"] = evaldict(service.get("serviceinfo"))
+    return APIResponse.genResponse(request, services)
 
 
 # POST
@@ -205,7 +203,7 @@ async def createservice(
     Create a new service state in the database.
     """
     checkSite(deps, sitename)
-    return APIResponse.genResponse(request, __updateServiceData(item, sitename, deps["dbI"], deps["config"]))
+    return APIResponse.genResponse(request, __updateServiceData(item, deps["dbI"]))
 
 
 # PUT
@@ -240,7 +238,7 @@ async def updateservice(
     Update an existing service state in the database.
     """
     checkSite(deps, sitename)
-    return APIResponse.genResponse(request, __updateServiceData(item, sitename, deps["dbI"], deps["config"]))
+    return APIResponse.genResponse(request, __updateServiceData(item, deps["dbI"]))
 
 
 # DELETE

@@ -39,6 +39,7 @@ from SiteRMLibs.CustomExceptions import (
     WrongInputError,
 )
 from SiteRMLibs.DBBackend import dbinterface
+from SiteRMLibs.DBState import getInstanceName, loadModelGraph
 from yaml import safe_load as yload
 
 HOSTSERVICES = [
@@ -54,6 +55,8 @@ HOSTSERVICES = [
     "ValidatorService",
     "PolicyService",
     "SwitchWorker",
+    "SwitchManager",
+    "BGPMonitoring",
     "ConfigFetcher",
     "MonitoringService",
 ]
@@ -356,28 +359,6 @@ def createDirs(fullDirPath):
     return
 
 
-def firstRunCheck(firstRun, servicename):
-    """Check if it is first run."""
-    if firstRun:
-        fname = f"{getTempDir()}/siterm/{servicename.lower()}-first-run"
-        os.makedirs(os.path.dirname(fname), exist_ok=True)
-        if not os.path.exists(fname):
-            with open(fname, "w", encoding="utf-8") as fd:
-                fd.write(f"This is first run of {servicename}. Do not remove this file.")
-    else:
-        fname = f"{getTempDir()}/siterm/{servicename.lower()}-first-run"
-        if os.path.exists(fname):
-            os.unlink(fname)
-
-
-def firstRunFinished(servicename):
-    """Check if first Run finished for a service."""
-    fname = f"{getTempDir()}/siterm/{servicename.lower()}-first-run"
-    if os.path.exists(fname):
-        return False
-    return True
-
-
 def getFileContentAsJson(inputFile):
     """Get file content as json."""
     out = {}
@@ -522,9 +503,9 @@ def generateMD5(inText):
 
 def getHostname(config=None, service=None):
     """Return running server hostname"""
-    # In case of FE, we need to return hostname as default
+    # FE services report as "default", or as their instance name when running as a scaled replica
     if config and config.getraw("MAPPING").get("type", None) == "FE":
-        return "default"
+        return getInstanceName()
     # If service is Debugger, we return socket.gethostname() (as Debugger can run on multiple hosts)
     if service and service.lower() == "debugger":
         return socket.gethostname()
@@ -670,7 +651,7 @@ def getCurrentModel(cls, raiseException=False):
     currentGraph = None
     if currentModel:
         try:
-            currentGraph = parseRDFFile(currentModel[0]["fileloc"])
+            currentGraph = loadModelGraph(cls.dbI, currentModel[0]["contentid"])
         except NotFoundError as ex:
             if raiseException:
                 raise NotFoundError(f"Model failed to parse from DB. Error: {ex}") from NotFoundError

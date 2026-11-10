@@ -12,6 +12,7 @@ import os
 import time
 import traceback
 
+from SiteRMLibs.DBState import dbConfigured, getStateDB, publishSiteConfig
 from SiteRMLibs.GitConfig import GitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject, getTempDir, getUTCnow
 
@@ -33,6 +34,8 @@ class ConfigFetcher:
         self.config = None
         self.failedCounter = os.getenv("CONFIG_FETCHER_COUNTER", "/dev/shm/config-fetcher-counter")
         self.FetcherReadyFile = f"{getTempDir()}/config-fetcher-ready"
+        # A refresh means reload: fetch again on the next cycle.
+        self.lastFetchTime = None
 
     def _ensureCounterDir(self):
         """Ensure the failure counter directory exists."""
@@ -70,14 +73,32 @@ class ConfigFetcher:
             self.logger.info("Manual configuration files are configured. Skipping Git config fetch.")
         else:
             self.gitObj.getGitRepo()
-        self.gitObj.getGitConfig()
-        # Create tmp file that fetcher is done. {tmpdir}/config-fetcher-ready
+        self.gitObj.getGitConfig(fromdb=False)
+        # Create tmp file that fetcher is done (read by agent probes). {tmpdir}/config-fetcher-ready
         if not os.path.isfile(self.FetcherReadyFile):
             with open(self.FetcherReadyFile, "w", encoding="utf-8") as fd:
                 fd.write("Ready at: " + str(getUTCnow()))
 
+    def _publish(self):
+        """Publish git-based FE configuration to the database; other FE components load it from there."""
+        if not self.gitObj.config.get("MAPPING") or self.gitObj.config["MAPPING"].get("type") != "FE":
+            return
+        if self.gitObj.manualConfigEnabled() or not dbConfigured():
+            return
+        try:
+            if publishSiteConfig(getStateDB(), self.gitObj.publishableConfig()):
+                self.logger.info("Published new site configuration to the database.")
+        except Exception as ex:  # pylint: disable=broad-except
+            # Database may still be starting; retried on the next cycle without counting as a fetch failure.
+            self.logger.error(f"Unable to publish configuration to the database: {ex}")
+
     def startwork(self):
         """Start work of Config Fetcher."""
+        self._startwork()
+        self._publish()
+
+    def _startwork(self):
+        """Fetch configuration from git (at most every 30 minutes)."""
         count = self._getCounter()
         if count >= 10:
             self.logger.error("Got 10 consecutive failures. Will not try to fetch config anymore")

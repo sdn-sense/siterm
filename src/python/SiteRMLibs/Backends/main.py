@@ -9,8 +9,6 @@ Authors:
 Date: 2021/12/01
 """
 
-import time
-
 from SiteRMLibs.Backends.Ansible import Switch as Ansible
 from SiteRMLibs.Backends.generalFunctions import (
     checkConfig,
@@ -26,6 +24,7 @@ from SiteRMLibs.CustomExceptions import (
     SWITCH_PORT_NOT_SWITCHPORT,
     SWITCH_PORT_OPER_DOWN,
 )
+from SiteRMLibs.DBState import requestDeviceUpdate
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import replaceSpecialSymbols
 from SiteRMLibs.MainUtilities import (
@@ -110,17 +109,8 @@ class Switch(Node):
         for dev in self.config.get(sitename, "switch"):
             if device and dev != device:
                 continue
-            fname = f"{self.config.get(sitename, 'privatedir')}/SwitchWorker/{dev}.update"
-            self.logger.info(f"Set Update flag for device {dev} {sitename}, {fname}")
-            success = False
-            while not success:
-                try:
-                    with open(fname, "w", encoding="utf-8") as fd:
-                        fd.write(str(getUTCnow()))
-                        success = True
-                except OSError as ex:
-                    self.logger.error(f"Got OS Error writing {fname}. {ex}")
-                    time.sleep(1)
+            self.logger.info(f"Set Update flag for device {dev} {sitename}")
+            requestDeviceUpdate(self.dbI, dev)
 
     def _delPortFromOut(self, switch, portname):
         """Delete Port from Output"""

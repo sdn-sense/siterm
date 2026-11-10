@@ -22,9 +22,11 @@ SCRIPTS = [
     "packaging/general/siterm-readiness",
     "packaging/general/siterm-log-archiver",
     "packaging/siterm-site-fe/scripts/siterm-fe-helper",
+    "packaging/siterm-site-fe/scripts/siterm-traffic-map",
     "packaging/siterm-site-fe/scripts/siterm-ansible-runner",
     "packaging/siterm-site-fe/scripts/siterm-usertool",
     "packaging/siterm-site-fe/scripts/SwitchWorker",
+    "packaging/siterm-site-fe/scripts/SwitchManager",
     "packaging/siterm-site-fe/scripts/DBCleaner-service",
 ]
 for sectionName in [
@@ -33,6 +35,7 @@ for sectionName in [
     "BGPMonitoring",
     "DBWorker",
     "PolicyService",
+    "ProvisioningService",
     "Validator",
 ]:
     SCRIPTS.append(f"packaging/siterm-site-fe/scripts/{sectionName}-update")

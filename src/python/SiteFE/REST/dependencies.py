@@ -29,11 +29,10 @@ from SiteRMLibs.CustomExceptions import (
     ModelNotFound,
     RequestWithoutCert,
 )
+from SiteRMLibs.DBState import firstRunDone, loadModelContent
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
     encodebase64,
-    firstRunFinished,
-    getAllFileContent,
     getDBConnObj,
     getUTCnow,
 )
@@ -173,9 +172,10 @@ def depGetModelContent(dbentry, **kwargs):
     rettype = kwargs.get("rdfformat", "turtle")
     if rettype not in ["json-ld", "ntriples", "turtle"]:
         raise ModelNotFound(f"Model type {rettype} is not supported. Supported: json-ld, ntriples, turtle")
+    content = loadModelContent(DEP_DBOBJ, dbentry["contentid"], rettype)
     if kwargs.get("encode", False):
-        return encodebase64(getAllFileContent(f"{dbentry['fileloc']}.{rettype}"))
-    return getAllFileContent(f"{dbentry['fileloc']}.{rettype}")
+        return encodebase64(content)
+    return content
 
 
 def depGetModel(dbI, **kwargs):
@@ -194,10 +194,9 @@ def depGetModel(dbI, **kwargs):
 
 def checkReadyState(deps):
     """Check if the system is ready for delta and model operations."""
-    if not (firstRunFinished("LookUpService") and firstRunFinished("ProvisioningService")):
+    if not deps["dbI"].isDBReady():
         return False
-    # Check database connection.
-    return deps["dbI"].isDBReady()
+    return firstRunDone(deps["dbI"], "LookUpService") and firstRunDone(deps["dbI"], "ProvisioningService")
 
 
 def checkSite(deps, sitename: str):

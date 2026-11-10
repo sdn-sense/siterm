@@ -24,16 +24,19 @@ import sys
 
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import BadRequestError
+from SiteRMLibs.DBState import saveSnapshot
 from SiteRMLibs.DebugService import DebugService
 from SiteRMLibs.DefaultParams import SERVICE_NOACCEPT_TIMEOUT
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.ipaddr import checkoverlap, getsubnet, ipVersion
 from SiteRMLibs.MainUtilities import (
     contentDB,
+    evaldict,
     getDBConn,
     getLoggingObject,
     getUTCnow,
     getVal,
+    jsondumps,
 )
 
 COMPONENT = "Debugger"
@@ -53,7 +56,6 @@ class Debugger(DebugService):
         self.switch = Switch(self.config, self.sitename)
         self.switches = {}
         self.siteDB = contentDB()
-        self.debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
         self.dbI = getVal(getDBConn("DebuggerService", self), **{"sitename": self.sitename})
         self.logger.info("====== Debugger Start Work. Sitename: %s", self.sitename)
 
@@ -77,16 +79,11 @@ class Debugger(DebugService):
         }
         self.dbI.update("debugrequests", [out])
 
-    def getFullData(self, hostname, item):
+    def getFullData(self, _hostname, item):
         """Get full data from DB."""
-        debugdir = os.path.join(self.config.get(self.sitename, "privatedir"), "DebugRequests")
-        # Get Request JSON
-        requestfname = os.path.join(debugdir, hostname, str(item["id"]), "request.json")
-        if not self.siteDB.fileExists(requestfname):
-            requestfname = item["debuginfo"]
-        if not self.siteDB.fileExists(requestfname):
-            raise BadRequestError(f"Request file {requestfname} does not exist for item {item}")
-        item["requestdict"] = self.siteDB.getFileContentAsJson(requestfname)
+        item["requestdict"] = evaldict(item.get("debuginfo"))
+        if not item["requestdict"]:
+            raise BadRequestError(f"Request content is empty for debug item {item.get('id')}")
         return item
 
     def loadAllWorkers(self):
@@ -102,24 +99,17 @@ class Debugger(DebugService):
                         "servicename": service["servicename"],
                         "updatedate": service["updatedate"],
                     }
-                    # Load service information from file
-                    if service.get("serviceinfo"):
-                        if os.path.exists(service["serviceinfo"]):
-                            allinfo = self.siteDB.getFileContentAsJson(service["serviceinfo"])
-                            workers[service["hostname"]]["allinfo"] = allinfo
-                            workers[service["hostname"]]["serviceinfo"] = allinfo.get("serviceinfo", {})
-                        else:
-                            self.logger.warning(f"Service info file does not exist: {service}")
+                    allinfo = evaldict(service.get("serviceinfo"))
+                    if allinfo:
+                        workers[service["hostname"]]["allinfo"] = allinfo
+                        workers[service["hostname"]]["serviceinfo"] = allinfo.get("serviceinfo", {})
+                    else:
+                        self.logger.warning(f"Service info is empty: {service['hostname']}")
         self.logger.debug("Loaded workers: %s", workers)
         return workers
 
     def writeWorkerRanges(self, workers):
-        """Write worker ranges to a file."""
-        fpath = os.path.join(
-            self.config.get(self.sitename, "privatedir"),
-            "ServiceData",
-            "workers-ranges.json",
-        )
+        """Publish worker IP ranges (served by the REST dynamicfrom endpoint)."""
         out = {"ipv4": {}, "ipv6": {}}
         for _, workerd in workers.items():
             for iptype, ipoutname in [("inet", "ipv4"), ("inet6", "ipv6")]:
@@ -128,8 +118,8 @@ class Debugger(DebugService):
                     out.setdefault(ipoutname, {}).setdefault(subnet, [])
                     if key.split("/")[0] not in out[ipoutname][subnet]:
                         out[ipoutname][subnet].append(key.split("/")[0])
-        self.siteDB.dumpFileContentAsJson(fpath, out)
-        self.logger.debug(f"Wrote worker ranges to {fpath}")
+        saveSnapshot(self.dbI, "workers-ranges", out)
+        self.logger.debug("Published worker ranges to database")
 
     def _findRangeOverlap(self, item, workers):
         """Find range overlap for the item."""
@@ -173,7 +163,7 @@ class Debugger(DebugService):
                 item["requestdict"]["selectedip"] = ipf
                 item["requestdict"]["hostname"] = workername
                 try:
-                    self.siteDB.dumpFileContentAsJson(item["debuginfo"], item["requestdict"])
+                    self.dbI.update("debugrequests", [{"id": item["id"], "debuginfo": jsondumps(item["requestdict"])}])
                     self.updateDebugWorker(**{"id": item["id"], "state": "new", "hostname": workername})
                 except BadRequestError as ex:
                     errmsg = f"Received error during validate: {str(ex)}"
@@ -185,7 +175,7 @@ class Debugger(DebugService):
                     "jsonout": {},
                     "exitCode": -1,
                 }
-                self.siteDB.dumpFileContentAsJson(item["outputinfo"], retOut)
+                self.dbI.update("debugrequests", [{"id": item["id"], "outputinfo": jsondumps(retOut)}])
                 self.logger.error(f"Received an error to identify worker: {errmsg}")
                 self.updateDebugWorker(
                     **{

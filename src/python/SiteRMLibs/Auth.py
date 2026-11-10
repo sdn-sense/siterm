@@ -35,15 +35,12 @@ from SiteRMLibs.CustomExceptions import (
     IssuesWithAuth,
     RequestWithoutCert,
 )
+from SiteRMLibs.DBState import NS_M2M, getStateDB
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import (
-    dumpFileContentAsJson,
     envBool,
-    getFileContentAsJson,
-    getTempDir,
     getUTCnow,
     loadEnvFile,
-    removeFile,
 )
 
 OID_SHORT_NAMES = {
@@ -168,10 +165,8 @@ def get_challenge_record(challenge_id: str):
     """Retrieve a challenge record by its ID."""
     if not _CHALLENGE_ID_RE.match(challenge_id):
         return None
-    tempfile = f"{getTempDir()}/m2m/{challenge_id}.json"
-    if not os.path.exists(tempfile):
-        return None
-    return getFileContentAsJson(tempfile)
+    # Stored in the database so any frontend replica can verify a challenge issued by another.
+    return getStateDB().kvget(NS_M2M, challenge_id)
 
 
 def base64url_encode_nopad(b: bytes) -> str:
@@ -374,11 +369,11 @@ class AuthHandler:
 
             challenge_id = secrets.token_hex(16)
 
-            tempfile = f"{getTempDir()}/m2m/{challenge_id}.json"
             expires_at = getUTCnow() + 60
 
-            dumpFileContentAsJson(
-                tempfile,
+            getStateDB().kvset(
+                NS_M2M,
+                challenge_id,
                 {
                     "challenge_id": challenge_id,
                     "challenge": challenge_b64,
@@ -456,8 +451,8 @@ class AuthHandler:
             print(f"Full traceback: {traceback.format_exc()}")
             return False, None
         finally:
-            tempfile = f"{getTempDir()}/m2m/{challenge_id}.json"
-            removeFile(tempfile)
+            # Single use: delete whether verification succeeded or not.
+            getStateDB().kvdelete(NS_M2M, challenge_id)
         return True, user
 
     # =========================================================

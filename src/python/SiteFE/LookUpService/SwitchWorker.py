@@ -8,9 +8,8 @@ Authors:
 Date: 2022/05/19
 """
 
-import os
-
 from SiteRMLibs.Backends.main import Switch
+from SiteRMLibs.DBState import consumeDeviceUpdate
 from SiteRMLibs.GitConfig import getGitConfig
 from SiteRMLibs.MainUtilities import getLoggingObject, getSiteNameFromConfig, getUTCnow
 
@@ -33,29 +32,12 @@ class SwitchWorker:
         self.config = getGitConfig()
         self.switch = Switch(self.config, self.sitename)
 
-    def _clearFirstRunMarker(self):
-        """Remove the first-run marker (if any) once data has been pulled from
-        the device, so the LookUpService MultiWorker knows it can proceed
-        instead of waiting on a blind sleep."""
-        fname = f"{self.config.get(self.sitename, 'privatedir')}/SwitchWorker/{self.device}.firstrun"
-        if os.path.isfile(fname):
-            try:
-                os.unlink(fname)
-                self.logger.info(f"Cleared first-run marker {fname}")
-            except OSError as ex:
-                self.logger.error(f"Got OS Error removing {fname}. {ex}")
-
     def startwork(self):
         """Start Switch Worker Service."""
         self.logger.info(f"Starting Switch Worker for {self.device}")
-        fname = f"{self.config.get(self.sitename, 'privatedir')}/SwitchWorker/{self.device}.update"
-        if os.path.isfile(fname):
+        if consumeDeviceUpdate(self.switch.dbI, self.device):
             self.logger.info(f"Renew is needed for {self.device}")
             self.renewsNeeded = 1
-            try:
-                os.unlink(fname)
-            except OSError as ex:
-                self.logger.error(f"Got OS Error removing {fname}. {ex}")
         # Nothing else re-polls an idle device, so an unreachable one would otherwise go unnoticed.
         renewInterval = self.config.get("daemoncontrols", "SwitchWorker", {}).get("renewinterval", 600)
         if not self.renewsNeeded and getUTCnow() - self.lastRenew >= renewInterval:
@@ -66,10 +48,8 @@ class SwitchWorker:
             self.switch.getinfoNew(self.device)
             self.renewsNeeded -= 1
             self.lastRenew = getUTCnow()
-            self._clearFirstRunMarker()
         else:
             self.logger.info(f"No renew needed for {self.device}")
-            self._clearFirstRunMarker()
 
 
 if __name__ == "__main__":
