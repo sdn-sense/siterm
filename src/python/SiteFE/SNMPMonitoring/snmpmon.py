@@ -144,8 +144,10 @@ class Topology:
                         "DeviceInfo": {"type": "cloud", "name": val["isAlias"]},
                     },
                 )
-                intf = intstats.get(portname) or {}
-                link = {"device": sw, "port": val, "localport": portname, "bandwidth": intf.get("bandwidth", 0), **self._downInfo(workdata, sw, portname)}
+                # Config keys can be virtual names (e.g. "Ethernet1/12/1-wc362"); the device reports stats under realportname.
+                devport = val.get("realportname") or portname
+                intf = intstats.get(devport) or {}
+                link = {"device": sw, "port": val, "localport": portname, "bandwidth": intf.get("bandwidth", 0), **self._downInfo(workdata, sw, devport)}
                 members = intf.get("channel-member") or []
                 if members:
                     link["members"] = {member: intstats.get(member, {}).get("bandwidth", 0) for member in members}
