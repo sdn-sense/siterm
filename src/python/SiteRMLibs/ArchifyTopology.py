@@ -31,16 +31,19 @@ MAX_CARD_ITEMS = 200
 MIN_NODE_W = 140
 
 # Tier order is top to bottom on the canvas; each SiteRM device type maps to an Archify component type.
-TIERS = ("cloud", "switch", "server")
-COMPONENT_TYPES = {"cloud": "cloud", "switch": "messagebus", "server": "backend"}
+TIERS = ("cloud", "switch", "server", "lan")
+COMPONENT_TYPES = {"cloud": "cloud", "switch": "messagebus", "server": "backend", "lan": "external"}
 LEGEND = {
     "mode": "auto",
     "entries": {
         "cloud": {"label": "WAN peer"},
         "messagebus": {"label": "Switch"},
         "backend": {"label": "Server"},
+        "external": {"label": "LAN"},
     },
 }
+# Devices that exist only through a switch's configured ports: WAN peers (isAlias) and the per-switch LAN node (ports without a peer).
+PORT_PEERS = ("cloud", "lan")
 
 # Members of one port-channel sit MEMBER_GAP apart; separate links of one device pair LINK_GAP apart.
 MEMBER_GAP = 4
@@ -138,7 +141,7 @@ def _natural(text):
     return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", str(text))]
 
 
-def _portKey(port):
+def portKey(port):
     """Canonical port name: Ethernet 1/1/13, ethernet1/1/13 and the model's Ethernet_1-1-13 all match.
 
     Model names (replaceSpecialSymbols) turn " " into "_" and ":" into "__"; spaces are dropped, other separators kept.
@@ -236,7 +239,7 @@ def activePath(active, connid):
             if str(port).startswith("_") or not isinstance(vals, dict):
                 continue
             vlan = _field(vals, "hasLabel").get("value")
-            hops.setdefault(str(device), {})[_portKey(port)] = {
+            hops.setdefault(str(device), {})[portKey(port)] = {
                 "port": str(port),
                 "vlan": vlan if isinstance(vlan, int) else None,
                 "state": str(_field(vals, "_params").get("networkstatus", "")),
@@ -260,7 +263,7 @@ def activePaths(active):
 
 
 def _cloudOnPath(entry, path):
-    """Return True if a path uses a WAN peer: its alias is on the path, or the path uses the switch port (or a member) facing it."""
+    """Return True if a path uses a WAN peer or LAN node: its alias is on the path, or the path uses the switch port (or a member) facing it."""
     if _remoteAlias(entry) in path["aliases"]:
         return True
     for link in _field(entry, "topo").values():
@@ -268,13 +271,13 @@ def _cloudOnPath(entry, path):
         if not isinstance(device, str) or device not in path["hops"]:
             continue
         members = link.get("members") if isinstance(link.get("members"), dict) else {}
-        if any(_portKey(port) in path["hops"][device] for port in [link.get("localport") or "", *members] if port):
+        if any(portKey(port) in path["hops"][device] for port in [link.get("localport") or "", *members] if port):
             return True
     return False
 
 
 def _selectDevices(topology, switches, servers, path):
-    """Return {name: devtype} for devices that pass the filters; WAN peers follow their switch, a path keeps only its devices."""
+    """Return {name: devtype} for devices that pass the filters; WAN peers and LAN nodes follow their switch, a path keeps only its devices."""
     selected = {}
     for name, entry in topology.items():
         devtype = _field(entry, "DeviceInfo").get("type")
@@ -284,11 +287,11 @@ def _selectDevices(topology, switches, servers, path):
             continue
         if devtype == "server" and servers and name not in servers:
             continue
-        if devtype == "cloud" and switches:
+        if devtype in PORT_PEERS and switches:
             peers = [val.get("device") for val in _field(entry, "topo").values() if isinstance(val, dict)]
             if not any(isinstance(peer, str) and peer in switches for peer in peers):
                 continue
-        if path is not None and name not in path["hops"] and not (devtype == "cloud" and _cloudOnPath(entry, path)):
+        if path is not None and name not in path["hops"] and not (devtype in PORT_PEERS and _cloudOnPath(entry, path)):
             continue
         selected[str(name)] = devtype
     return selected
@@ -318,7 +321,7 @@ def _physicalLinks(name, localPort, peer, remote):
 
 def _mergeLink(merged, ends, speed, alias, down):
     """Record one reported physical link, keeping the device's own port names, the highest speed and any down report."""
-    link = merged.setdefault(frozenset((dev, _portKey(end["port"])) for dev, end in ends.items()), {"ends": ends, "speed": 0, "wan": alias, "down": False})
+    link = merged.setdefault(frozenset((dev, portKey(end["port"])) for dev, end in ends.items()), {"ends": ends, "speed": 0, "wan": alias, "down": False})
     for dev, end in ends.items():
         known = link["ends"][dev]
         if end["local"] and not known["local"]:
@@ -341,7 +344,8 @@ def _collectLinks(topology, devices):
             peer = remote.get("device")
             if not isinstance(peer, str) or peer == name or peer not in devices:
                 continue
-            for physical in _physicalLinks(name, str(localPort), peer, remote):
+            # A LAN node has no ports of its own; its topo keys only repeat the switch port names.
+            for physical in _physicalLinks(name, "" if devices[name] == "lan" else str(localPort), peer, remote):
                 _mergeLink(merged, *physical)
     pairs = {}
     for link in merged.values():
@@ -353,7 +357,7 @@ def _onPath(link, path):
     """Return True if the path uses this link: a port (or its port-channel) at either end is a hop, or it is the path's WAN link."""
     for dev, end in link["ends"].items():
         ports = path["hops"].get(dev, {})
-        if _portKey(end["port"]) in ports or (end["lag"] and _portKey(end["lag"]) in ports):
+        if portKey(end["port"]) in ports or (end["lag"] and portKey(end["lag"]) in ports):
             return True
     return bool(link["wan"]) and link["wan"] in path["aliases"]
 
@@ -384,8 +388,8 @@ def _orderTiers(devices, pairs):
         positions = [switchIndex[peer] for peer in neighbours.get(name, []) if peer in switchIndex]
         return (sum(positions) / len(positions) if positions else len(switchIndex), name)
 
-    tiers["cloud"].sort(key=rank)
-    tiers["server"].sort(key=rank)
+    for tier in ("cloud", "server", "lan"):
+        tiers[tier].sort(key=rank)
     return tiers
 
 

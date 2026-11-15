@@ -26,6 +26,7 @@ import sys
 from easysnmp import Session
 from easysnmp.exceptions import EasySNMPTimeoutError, EasySNMPUnknownObjectIDError
 from prometheus_client import CollectorRegistry, Enum, Gauge, Info, generate_latest
+from SiteRMLibs.ArchifyTopology import portKey
 from SiteRMLibs.Backends.generalFunctions import operStatusHealthy
 from SiteRMLibs.Backends.main import Switch
 from SiteRMLibs.CustomExceptions import SNMP_TIMEOUT, SNMP_UNKNOWN_OID
@@ -119,42 +120,87 @@ class Topology:
         parts = str(alias).split(":")
         return len(parts) >= 7 and parts[3] == domain and parts[-2] in localDevices
 
+    def _configPorts(self):
+        """Yield (switch, port name, port config) for every port in the site's switch configs."""
+        for sw in self.config["MAIN"].get(getSiteNameFromConfig(self.config), {}).get("switch", []):
+            ports = (self.config["MAIN"].get(sw) or {}).get("ports")
+            for portname, val in ports.items() if isinstance(ports, dict) else []:
+                if isinstance(val, dict):
+                    yield sw, portname, val
+
+    def _portLink(self, workdata, sw, portname, val):
+        """Return the topology link of one configured switch port, with speed and state from its device port."""
+        # Config keys can be virtual names (e.g. "Ethernet1/12/1-wc362"); the device reports stats under realportname.
+        devport = val.get("realportname") or portname
+        intstats = workdata.get(sw, {}).get("intstats", {})
+        intf = intstats.get(devport) or {}
+        link = {"device": sw, "port": val, "localport": portname, "bandwidth": intf.get("bandwidth", 0), **self._downInfo(workdata, sw, devport)}
+        members = intf.get("channel-member") or []
+        if members:
+            link["members"] = {member: intstats.get(member, {}).get("bandwidth", 0) for member in members}
+            link["membersdown"] = [member for member in members if self._downInfo(workdata, sw, member)]
+        return link
+
     def getWANLinks(self, incr, workdata, localDevices):
         """Get WAN Links for visualization: ports marked wanlink, and isAlias ports that lead outside the site"""
         wan_links = {}
-        sitename = getSiteNameFromConfig(self.config)
-        domain = self.config["MAIN"].get(sitename, {}).get("domain", "")
-        for sw in self.config["MAIN"].get(sitename, {}).get("switch", []):
-            if not self.config["MAIN"].get(sw, {}):
+        domain = self.config["MAIN"].get(getSiteNameFromConfig(self.config), {}).get("domain", "")
+        for sw, portname, val in self._configPorts():
+            if not val.get("isAlias"):
                 continue
-            if not isinstance(self.config["MAIN"].get(sw, {}).get("ports", None), dict):
+            # Aliases to this site's own switches or agent hosts are internal links, not WAN peers.
+            if not val.get("wanlink") and self._isLocalAlias(val["isAlias"], domain, localDevices):
                 continue
-            intstats = workdata.get(sw, {}).get("intstats", {})
-            for portname, val in self.config["MAIN"].get(sw, {}).get("ports", {}).items():
-                if not isinstance(val, dict) or not val.get("isAlias"):
-                    continue
-                # Aliases to this site's own switches or agent hosts are internal links, not WAN peers.
-                if not val.get("wanlink") and self._isLocalAlias(val["isAlias"], domain, localDevices):
-                    continue
-                wan_links.setdefault(
-                    f"wan{incr}",
-                    {
-                        "_id": incr,
-                        "topo": {},
-                        "DeviceInfo": {"type": "cloud", "name": val["isAlias"]},
-                    },
-                )
-                # Config keys can be virtual names (e.g. "Ethernet1/12/1-wc362"); the device reports stats under realportname.
-                devport = val.get("realportname") or portname
-                intf = intstats.get(devport) or {}
-                link = {"device": sw, "port": val, "localport": portname, "bandwidth": intf.get("bandwidth", 0), **self._downInfo(workdata, sw, devport)}
-                members = intf.get("channel-member") or []
-                if members:
-                    link["members"] = {member: intstats.get(member, {}).get("bandwidth", 0) for member in members}
-                    link["membersdown"] = [member for member in members if self._downInfo(workdata, sw, member)]
-                wan_links[f"wan{incr}"]["topo"].setdefault(val["isAlias"].split(":")[-1], link)
-                incr += 1
+            wan_links.setdefault(
+                f"wan{incr}",
+                {
+                    "_id": incr,
+                    "topo": {},
+                    "DeviceInfo": {"type": "cloud", "name": val["isAlias"]},
+                },
+            )
+            wan_links[f"wan{incr}"]["topo"].setdefault(val["isAlias"].split(":")[-1], self._portLink(workdata, sw, portname, val))
+            incr += 1
         return wan_links
+
+    @staticmethod
+    def _usedPorts(out, workdata, aliasPorts):
+        """Return {switch: {portKey}} of switch ports already linked to a switch, host or isAlias peer, with their port-channels and members."""
+        used = {}
+        for name, entry in out.items():
+            isSwitch = entry["DeviceInfo"]["type"] == "switch"
+            for localPort, link in entry["topo"].items():
+                if isSwitch:
+                    used.setdefault(name, set()).add(localPort)
+                used.setdefault(link["device"], set()).add(link["port"])
+        for sw, port in aliasPorts:
+            used.setdefault(sw, set()).add(port)
+        keys = {}
+        for sw, ports in used.items():
+            lags = workdata.get(sw, {}).get("lags", {})
+            intstats = workdata.get(sw, {}).get("intstats", {})
+            related = {lags[port] for port in ports if port in lags}
+            related.update(member for port in ports for member in (intstats.get(port) or {}).get("channel-member") or [])
+            keys[sw] = {portKey(port) for port in ports | related}
+        return keys
+
+    def getLANLinks(self, incr, workdata, out):
+        """Get one LAN node per switch, linked to each configured port that no switch, host or WAN link uses"""
+        aliasPorts = {(sw, val.get("realportname") or portname) for sw, portname, val in self._configPorts() if val.get("isAlias")}
+        used = self._usedPorts(out, workdata, aliasPorts)
+        lan_links = {}
+        for sw, portname, val in self._configPorts():
+            ignored = (self.config["MAIN"].get(sw) or {}).get("ports_ignore") or []
+            if val.get("isAlias") or portname in ignored:
+                continue
+            if used.get(sw, set()) & {portKey(portname), portKey(val.get("realportname") or portname)}:
+                continue
+            name = f"lan-{sw}"
+            if name not in lan_links:
+                lan_links[name] = {"_id": incr, "topo": {}, "DeviceInfo": {"type": "lan", "name": name}}
+                incr += 1
+            lan_links[name]["topo"][portname] = self._portLink(workdata, sw, portname, val)
+        return lan_links
 
     def gettopology(self):
         """Return all Switches information"""
@@ -261,7 +307,10 @@ class Topology:
                         hout["topo"][intf].update(self._lagInfo(workdata, switch, swintf, "remoteportchannel"))
                         hout["topo"][intf].update(self._downInfo(workdata, switch, swintf))
                         print(hout["topo"][intf])
-        out.update(self.getWANLinks(incr, workdata, set(out)))
+        wanLinks = self.getWANLinks(incr, workdata, set(out))
+        lanLinks = self.getLANLinks(incr + len(wanLinks), workdata, out)
+        out.update(wanLinks)
+        out.update(lanLinks)
         # Write new out to file
         fname = os.path.join(self.topodir, "topology.json")
         self.diragent.dumpFileContentAsJson(fname, out)
