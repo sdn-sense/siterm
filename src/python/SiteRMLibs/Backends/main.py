@@ -184,6 +184,8 @@ class Switch(Node):
                         self.output["portMapping"][switch][f"vlan{vlankey}"] = realportname
                     else:
                         self.output["portMapping"][switch][portKey] = realportname
+                        # Virtual ports (e.g. Ethernet23/1-wc411) arrive from the model as their sanitized config name.
+                        self.output["portMapping"][switch][self.getSystemValidPortName(portKey)] = realportname
                         self.output["portMapping"][switch][self.getSystemValidPortName(realportname)] = realportname
 
     def getSwitchPort(self, switchName, portName):
