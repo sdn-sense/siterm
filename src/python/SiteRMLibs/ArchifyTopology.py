@@ -31,12 +31,14 @@ MAX_CARD_ITEMS = 200
 MIN_NODE_W = 140
 
 # Tier order is top to bottom on the canvas; each SiteRM device type maps to an Archify component type.
-TIERS = ("cloud", "switch", "server", "lan")
-COMPONENT_TYPES = {"cloud": "cloud", "switch": "messagebus", "server": "backend", "lan": "external"}
+# "site" is a whole SiteRM site drawn as one node (multi-site views built outside SiteFE); a site's own topology.json never has one.
+TIERS = ("cloud", "site", "switch", "server", "lan")
+COMPONENT_TYPES = {"cloud": "cloud", "site": "frontend", "switch": "messagebus", "server": "backend", "lan": "external"}
 LEGEND = {
     "mode": "auto",
     "entries": {
         "cloud": {"label": "WAN peer"},
+        "frontend": {"label": "Site"},
         "messagebus": {"label": "Switch"},
         "backend": {"label": "Server"},
         "external": {"label": "LAN"},
@@ -551,7 +553,8 @@ def _cards(topology, tiers, pairs, extras):
 
 def _subtitle(tiers, health, path):
     """Return the diagram subtitle: device counts, frontend health and the selected path."""
-    parts = [", ".join(_plural(len(tiers[tier]), noun) for tier, noun in (("switch", "switch"), ("server", "server"), ("cloud", "WAN peer")))]
+    counts = ([("site", "site")] if tiers["site"] else []) + [("switch", "switch"), ("server", "server"), ("cloud", "WAN peer")]
+    parts = [", ".join(_plural(len(tiers[tier]), noun) for tier, noun in counts)]
     if health is not None:
         parts.append(f"frontend {_worst(entry['state'] for entry in health['frontend'])}")
     if path is not None:
