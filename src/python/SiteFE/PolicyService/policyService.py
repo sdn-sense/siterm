@@ -764,12 +764,23 @@ class PolicyService(RDFHelper, Timing, BWService):
                 self.logger.debug(f"Identified global state for {key} as {globst}. All states: {tmpstates}")
                 self.newActive["output"]["vsw"][key]["_params"]["networkstatus"] = globst
 
+    def _deltaStatePorts(self, hostEntry, hostname, hostport):
+        """Return active-delta port keys for a reported hostport; device ports map back to virtual (realportname) ports."""
+        if hostEntry.get(hostport):
+            return [hostport]
+        return [
+            port
+            for port, val in hostEntry.items()
+            if port != "_params" and isinstance(val, dict) and val and self.switch.getSystemValidPortName(self.switch.getSwitchPortName(hostname, port)) == hostport
+        ]
+
     def recordDeltaStates(self):
         """Record delta states in activeDeltas output"""
         changed = False
         for dbout in self.dbI.get("deltatimestates", limit=100, orderby=["insertdate", "DESC"]):
-            if self.newActive["output"].get(dbout["uuidtype"], {}).get(dbout["uuid"], {}).get(dbout["hostname"], {}).get(dbout["hostport"], {}):
-                actEntry = self.newActive["output"].setdefault(dbout["uuidtype"], {}).setdefault(dbout["uuid"], {}).setdefault(dbout["hostname"], {}).setdefault(dbout["hostport"], {})
+            hostEntry = self.newActive["output"].get(dbout["uuidtype"], {}).get(dbout["uuid"], {}).get(dbout["hostname"], {})
+            for port in self._deltaStatePorts(hostEntry, dbout["hostname"], dbout["hostport"]):
+                actEntry = hostEntry[port]
                 actEntry.setdefault("_params", {})
                 actEntry["_params"]["networkstatus"] = dbout["uuidstate"]
                 if "hasService" in actEntry:

@@ -60,6 +60,8 @@ from SiteRMLibs.ipaddr import getInterfaceSpeed
 from SiteRMLibs.MainUtilities import execute as executeCmd
 
 COMPONENT = "QOS"
+# Maps qos.shaping config value to the FireQOS interface direction keyword.
+SHAPING_DIRECTIONS = {"bidirectional": "bidirectional", "ingress": "input", "egress": "output"}
 
 
 class QOS:
@@ -71,6 +73,7 @@ class QOS:
         self.activeL2 = []
         self.params = {}
         self.qosPolicy = self.config.get("qos", "policy")
+        self._shapingDirection()
         self.qosparams = self.config.get("qos", "qos_params")
         self.classmax = self.config.get("qos", "class_max")
         self.qosTotals = []
@@ -84,6 +87,13 @@ class QOS:
     def getQoSTotals(self):
         """Get Delta information."""
         self.qosTotals = self.getData(f"/api/{self.sitename}/frontend/qosdata")
+
+    def _shapingDirection(self):
+        """Return FireQOS direction (bidirectional/input/output) for qos.shaping; raise if invalid."""
+        shaping = self.config.get("qos", "shaping", "bidirectional")
+        if shaping not in SHAPING_DIRECTIONS:
+            raise ConfigException(f"QoS shaping {shaping} is not supported. Use one of {list(SHAPING_DIRECTIONS)}.")
+        return SHAPING_DIRECTIONS[shaping]
 
     def _getvlanlistqos(self):
         """Get vlan qos dict"""
@@ -203,7 +213,10 @@ class QOS:
     def prepareQoSFileL3(self, tmpFD, allQoS):
         """Add L3 QoS TC Rules"""
         added = {}
+        direction = self._shapingDirection()
         for qosType, mtype in {"input": "src", "output": "dst"}.items():
+            if direction not in (qosType, "bidirectional"):
+                continue
             for intf, items in allQoS.items():
                 for item in items["items"]:
                     if intf not in added or added[intf][qosType] == 0:
@@ -273,7 +286,7 @@ class QOS:
         counter = 0
         for l2req in self.activeL2:
             interface = l2req["destport"]
-            name = f"{interface}-{l2req['vlan']}"
+            intfLine = f"interface vlan.{l2req['vlan']} {interface}-{l2req['vlan']} {self._shapingDirection()} rate"
             if not l2req["params"]:
                 self.logger.info(
                     "This specific vlan request did not provided any QOS. \
@@ -293,17 +306,17 @@ class QOS:
             outlines.append("# " + "-" * 80 + "\n")
             # In case it is: guaranteedCapped,softCapped,bestEffort - we add diff class
             if reqclass == "guaranteedCapped":
-                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n")
+                outlines.append(f"{intfLine} {outrate}{outtype}\n")
             elif reqclass == "softCapped":
-                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n")
+                outlines.append(f"{intfLine} ##REPLACEME##mbit\n")
                 outlines.append(f"  class default rate {outrate}{outtype}\n")
                 # interface vlan.2074 bond0-2074 bidirectional rate 20gbit
                 #   class default commit 100mbit
             elif reqclass == "bestEffort":
-                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate ##REPLACEME##mbit\n")
+                outlines.append(f"{intfLine} ##REPLACEME##mbit\n")
                 outlines.append(f"  class default rate {outrate}{outtype}\n")
             else:
-                outlines.append(f"interface vlan.{l2req['vlan']} {name} bidirectional rate {outrate}{outtype}\n")
+                outlines.append(f"{intfLine} {outrate}{outtype}\n")
                 outlines.append(f"  class default rate {outrate}{outtype}\n")
             outlines.append("# " + "-" * 80 + "\n\n")
             alllines[counter] = {

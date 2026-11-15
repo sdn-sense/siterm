@@ -128,6 +128,14 @@ class ConflictChecker(Timing, BWService):
             )
 
     @staticmethod
+    def _getConfPort(polcls, hostname, portName):
+        """Return switch port config for a model port name, matching raw or sanitized config keys."""
+        for confName, confPort in polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}).items():
+            if portName in (confName, polcls.switch.getSystemValidPortName(confName)):
+                return confPort
+        return {}
+
+    @staticmethod
     def _checkVlanInRange(polcls, vlan, hostname):
         """Check if VLAN in Allowed range"""
         if not vlan or not vlan.get("vlan", "") or not vlan.get("interface", ""):
@@ -152,13 +160,8 @@ class ConflictChecker(Timing, BWService):
         if hostname in rawConf:
             # Get Global vlan range for device
             vlanRange = rawConf.get(hostname, {}).get("vlan_range_list", [])
-            if rawConf[hostname].get("ports", {}).get(vlan["interface"], {}).get("realportname", ""):
-                # If port is a fake and it points to a real port, we check only fake port vlan range
-                vlanRange = rawConf.get(hostname, {}).get("ports", {}).get(vlan["interface"], {}).get("vlan_range_list", vlanRange)
-            else:
-                portName = polcls.switch.getSwitchPortName(hostname, vlan["interface"])
-                # If port has vlan range, use that. Means check is done at the port level.
-                vlanRange = rawConf.get(hostname, {}).get("ports", {}).get(portName, {}).get("vlan_range_list", vlanRange)
+            # Port level vlan range (physical or virtual realportname port) overrides the device range.
+            vlanRange = ConflictChecker._getConfPort(polcls, hostname, vlan["interface"]).get("vlan_range_list", vlanRange)
 
             if vlanRange and vlan["vlan"] not in vlanRange:
                 raise OverlapException(
@@ -497,14 +500,12 @@ class ConflictChecker(Timing, BWService):
         for intf, vals in hostitems.items():
             if "isAlias" in vals and vals["isAlias"]:
                 # If isAlias is set, check if it is in the configuration
-                realPortName = polcls.switch.getSwitchPortName(hostname, intf)
-                if realPortName in polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}):
-                    confAlias = polcls.config.getraw("MAIN").get(hostname, {}).get("ports", {}).get(realPortName, {}).get("isAlias", None)
-                    if confAlias and not vals["isAlias"].startswith(confAlias):
-                        raise OverlapException(
-                            f"Alias mismatch for {hostname} on {intf}. \
+                confAlias = ConflictChecker._getConfPort(polcls, hostname, intf).get("isAlias", None)
+                if confAlias and not vals["isAlias"].startswith(confAlias):
+                    raise OverlapException(
+                        f"Alias mismatch for {hostname} on {intf}. \
                                                 Config: {confAlias}, Request: {vals['isAlias']}"
-                        )
+                    )
 
     def _checkDuplicateIPs(self, nStats):
         """Check if duplicate IPs in request overlap"""

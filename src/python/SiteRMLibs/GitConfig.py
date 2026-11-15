@@ -248,6 +248,7 @@ class GitConfig:
                 },
                 "qos": {
                     "policy": "hostlevel",
+                    "shaping": "bidirectional",
                     "qos_params": "mtu 9000 mpu 9000 quantum 200000 burst 300000 cburst 300000 qdisc sfq balanced",
                     "class_max": True,
                     "interfaces": [],
