@@ -1,57 +1,68 @@
-## SiteRM 1.6.5 Production Release
+## SiteRM 1.6.7-pre1 Pre-Production Release
 
-Changes since `1.6.4` (2026-10-05 → 2026-11-02), across `siterm` and related repositories.
+Changes since `1.6.5` (2026-11-02 → 2026-11-15), across `siterm` and related repositories.
 
 ### 🚀 New Features
 
-**Topology page rebuilt on Archify (replaces the NeXt UI graph)**
-- `SiteRMLibs/ArchifyTopology.py`, `SiteRMLibs/ArchifyLayout.py` (new), `SiteFE/REST/Topo.py`: the Frontend now renders the site topology server side with [Archify](https://github.com/tt-a1i/archify) (pinned commit, run with Node.js) and serves it from the new `GET /{sitename}/topo/archify` endpoint (read permission; the page is served with `Content-Security-Policy: sandbox`). `index.html` shows it in a sandboxed iframe next to the switch/server filters. The Cisco NeXt UI library and its fonts were removed.
-- Links are colored and sized by speed (≤10G up to 800G+, with a legend), port-channel members are drawn as bundled parallel lines with a ring at each end, and every link attaches at its own point along a node edge with no two lines drawn on top of each other. A link reported by both switches with different port spellings (e.g. Dell OS10 `Ethernet 1/1/13` vs `ethernet1/1/13`) is drawn once.
-- Device health on the diagram: servers are outlined by their worst agent service state (reports older than 10 minutes count as UNKNOWN), switches by whether their last config fetch failed. Cards below the diagram list every link, WAN peer, Frontend service state and device issue.
-- Active path filter: the new `GET /{sitename}/topo/paths` lists active L2 connections (VLANs, state, devices). `GET /{sitename}/topo/archify?path=<connection id>` (the new "Active path" selector, or an `index.html?path=` link) limits the diagram to that connection's devices, highlights the links it uses, including the WAN peer it leaves through, and lists each hop with its VLAN.
-- `GET /{sitename}/topo/archify?view=graph` returns the diagram without the cards, for embedding (see Monitoring below).
-- `SiteFE/SNMPMonitoring/snmpmon.py`: `topology.json` now records port-channel membership on both ends of a link, WAN port speed and port-channel members, and per-switch fetch errors. WAN peers now include every `isAlias` port that leads outside the site (another domain, or a device that is not one of the site's switches or agent hosts), not only ports marked `wanlink`.
+**Agent QoS: choose which direction is shaped (`qos.shaping`)**
+- `SiteRMAgent/Ruler/Components/QOS.py`, `SiteRMLibs/GitConfig.py`: the Agent `qos` section takes a new optional `shaping` key: `bidirectional` (default, same as before), `ingress` or `egress`. It applies to both L2 VLAN shaping (FireQOS `interface vlan.X … bidirectional|input|output`) and L3 RST shaping (only the matching `interface46 … input|output` blocks are written). Any other value is a configuration error that stops the Agent Ruler from starting (no rules are applied); `rm-configs` validation rejects it.
+- `egress` writes no ingress shaping, so FireQOS adds no `ingress` qdisc and no IFB redirect on the VLAN interface. Use it on hosts where another tool needs a `clsact` qdisc on the same interface, such as SciTags `flowd-go` packet marking, which cannot start while an `ingress` qdisc is present.
 
-**Delta submission: `Idempotency-Key` support**
-- `SiteFE/REST/Delta.py`: `POST /{sitename}/deltas` accepts an `Idempotency-Key` header, scoped per user and stored in the new `deltaidempotency` table. A retry with the same key replays the stored 201/400 response, waits for the original request if it is still in progress, or returns 409. Reusing a key for a different payload returns 422. A key still in progress after 5 minutes with no PolicyService result and no queued delta file is treated as lost, so a retry resubmits it.
-- The wait for PolicyService to accept a delta now uses `asyncio.sleep`; the previous `time.sleep` blocked the uvicorn worker for every other request.
+```yaml
+qos:
+  policy: hostlevel
+  shaping: egress   # bidirectional (default) | ingress | egress
+  qos_params: "mtu 9000 mpu 9000 quantum 200000 burst 300000 cburst 300000 qdisc sfq balanced"
+  class_max: true
+```
 
-**Paging for deltas and models (API + Web UI)**
-- `GET /{sitename}/deltas` and `GET /{sitename}/models` take an `offset` parameter and return the total number of matching items in an `X-Total-Count` header (models: only when `current` is not set). Deltas are ordered by id, so pages stay stable when insert times tie. The Deltas and Models pages share a new pager.
-- Delta failures are stored as JSON in the delta `error` column and shown on the Deltas page.
+**`siterm-traffic-map`: per-port capacity and reservation report (Frontend)**
+- New read-only Frontend command (installed with the Frontend package). For every switch and host port it lists capacity, reservable capacity, bandwidth used by running reservations (all QoS types, like the delta admission check), the `guaranteedCapped` part, what is still available and free VLANs, followed by the active requests using each port. L3 (rst) services are listed per device.
+- Flags `UNKNOWN-PORT`, `NO-CAPACITY`, `OVERSUBSCRIBED`, `BAD-RATE` and `STALE` (host agent has not reported recently) point out ports needing attention.
+- Options: `--device <name>`, `--used-only`, `--at <epoch|ISO-8601>` to evaluate scheduled reservations at another time, and `--json` for the full report. It only reads the database, local configuration and host reports.
+
+**Topology diagram improvements**
+- **Down links:** a link whose switch port reports down is drawn as a red dotted "down" line (also in the legend and link cards), even when the switch still reports the configured speed. A port-channel ring now counts its members by state, e.g. `3 x 100G, 1 x down`. An unknown port state is not shown as down.
+- **LAN node per switch:** every configured switch port without a switch, host or WAN peer (and not in `ports_ignore`) is now linked to a `lan-<switch>` node, so the diagram shows all configured ports. Ports already in use, including port-channels and their members, are excluded. LAN nodes follow the switch filter and the active path filter like WAN peers.
+- **Bond member speed:** the Agent now reports the link speed of each LLDP neighbour interface. Host-to-switch links on bond members (which are not listed in the Agent `interfaces`) use it instead of showing an unknown speed.
+- **Virtual WAN ports:** WAN links configured on a virtual port name (e.g. `Ethernet1/12/1-wc362`) read speed, state and port-channel members from its `realportname`.
+- **Site node type:** `ArchifyTopology` accepts a `site` device type (drawn as one node per site), used by the multi-site topology page in `autogole-monitoring`. A site's own `topology.json` never contains one.
 
 ### 🐛 Bug Fixes
 
-**`forceapply` delta action always failed**
-- `SiteFE/REST/Delta.py` wrote to `deps['dpI']` (KeyError, HTTP 500 on every call), and `ProvisioningService` removed the queued row with a malformed search that would have failed on every provisioning cycle once rows were queued.
-
-**MariaDB password and init failures now fail clearly**
-- `SiteRMLibs/DBBackend.py`: the Frontend refuses to start when `MARIA_DB_PASSWORD` is unset, still the `REPLACEME` template value, or contains whitespace or any of `` " ' ` \ / & $ ; | < > ( ) `` (they break the container's environment sourcing and the SQL in `mariadb_init.sh`). A `%` in the password no longer breaks Alembic. `siterm-readiness` now reports a failed MariaDB initialization with its reason.
-- `mariadb_init.sh` (`siterm-startup`): a failed init or upgrade is recorded and reported by `docker-healthcheck.sh` and readiness, instead of supervisord rerunning the script and clearing the failure.
-
-**Container image builds failing (`siterm-startup`)**
-- Agent el9/el10 base images: `fetch-crl` is installed from EPEL by name. The pinned EPEL RPM URL returned 404, because EPEL only keeps the latest build.
-- FE image: `pip install --upgrade` failed with "Cannot uninstall python-dateutil … installed by rpm" once `python-dateutil` 3.0.0 was published. A pip-managed copy is now installed first.
+**Virtual ports (`realportname`) in delta validation, provisioning and state reporting**
+- The model refers to a virtual port such as `Ethernet23/1-wc411` by its sanitized name, which did not match the configured port name. As a result:
+  - VLAN range checks used the physical port's or the device's VLAN range instead of the virtual port's `vlan_range_list`;
+  - the `isAlias` consistency check was skipped;
+  - provisioning could not map the port back to its `realportname`;
+  - network status reported for the physical port was not recorded on the virtual port's delta.
+- `SiteFE/PolicyService/deltachecks.py`, `policyService.py`, `SiteRMLibs/Backends/main.py`: port configuration is now matched by either the raw or the sanitized name, and device ports are mapped back to the virtual ports that use them.
 
 ### ⚠️ Breaking / Upgrade Notes
 
-- **MariaDB password:** check `MARIA_DB_PASSWORD` in your environment file before upgrading. If it is unset, still `REPLACEME`, or contains whitespace or any of the characters listed above, the Frontend will not start; change it first.
-- **Container restart policy:** the `siterm-startup` run scripts (Frontend, Agent, Debugger, node-exporter) now start containers with `--restart unless-stopped` instead of `always`, so a container you stop by hand stays stopped after a host or Docker restart.
-- **Frontend image:** the topology page needs the new Frontend image, which includes Node.js 22 and Archify. If you build the image yourself, pull the latest `siterm-startup` first (it also contains the build fixes above).
-- **Topology data:** port-channels, WAN speeds and members, switch health and the additional WAN peers appear once SNMPMonitoring regenerates `topology.json` after the upgrade; until then the diagram is drawn from the existing file.
-- The new `deltaidempotency` table is created automatically on Frontend startup. No other manual steps are required.
+- **`qos.shaping`** is optional; without it Agents shape both directions as before. When a site changes it, the Agent rewrites `/etc/firehol/fireqos.conf` and restarts FireQOS once (`clear_all_qos` + `start`), which removes the old ingress qdisc and IFB redirect.
+- **Agent upgrade needed for bond member speeds:** the speed comes from the Agent's LLDP report, so it appears only after the host Agent is upgraded to 1.6.7-pre1.
+- **Topology data:** down links, LAN nodes and virtual WAN port speeds appear once SNMPMonitoring regenerates `topology.json` after the Frontend upgrade.
+- **Junos speeds:** Junos port speeds appear after the Frontend image picks up the updated `sense.junos` collection (see below).
+- No database schema changes and no new dependencies.
+- The Frontend split published as Helm charts `1.6.6-pre1`/`1.6.6-pre2` on 2026-11-10 was reverted and is **not** part of this release. Version `1.6.6` is skipped so those chart versions are not reused; sites that tried them should move to `1.6.7-pre1`.
 
 ### 🔗 Related Repository Changes
 
-**Container images (`siterm-startup`)**
-- FE base image installs Node.js 22 (`nodejs:22` module stream) for the Archify renderer, and the FE image clones Archify at a pinned commit into `/opt/archify`.
-- MariaDB init failure reporting, the `unless-stopped` restart policy and the image build fixes described above.
+**Monitoring (`autogole-monitoring`)**
+- `siterm-topology` sidecar: new combined all-sites topology page (`/global-topology`, `?view=network|full`) with its own dashboard and a Home dashboard panel. Sites start collapsed into one node each; click a site to expand it. The page is built in the background from each site's `topo/gettopology` and reuses SiteRM's diagram builder, so it needs a SiteRM version with the `site` node type.
+- Grafana topology panels: clicking a device or link opens a static details panel (device type and status, upstream/downstream reach, neighbours, physical links and port-channels). Grafana does not run scripts in proxied pages, so these panels are built without them.
+- `oidcgen`: replaces a site's cached token after 3 consecutive HTTP 401 responses (e.g. after the Frontend's signing keys change), instead of reusing it until it expires.
+- Blackbox exporter: probe modules for `NRM_SC26`; dashboard refresh across sites.
 
-**Monitoring**
-- `autogole-monitoring`: every SiteRM site dashboard now starts with an expanded "Topology" row that embeds the site's diagram (`/topo/archify?view=graph`). A new `siterm-topology` sidecar in the Prometheus pod fetches each site's page with the existing oidcgen tokens, using the rm-configs checkout oidcgen shares through a volume, and caches it for 5 minutes. Grafana reaches it only through the new "SiteRM Topology" data source, so only logged-in Grafana users see it, and Grafana serves the page without scripts (static view; zoom and export stay on the SiteRM web UI). `oidcgen` now follows rm-configs updates; it previously only fetched, so new sites got no token until a restart. `genConfig` follows the `external_snmp` URL scheme and only sends the token and TLS settings over https.
-- `nsi-snmpmon`: serves its metrics over plain HTTP inside the cluster; TLS and client-certificate auth were removed, as it is a private service.
+**Device collections**
+- `sense.junos`: port speed is now reported as `bandwidth`, the key SiteRM reads for every vendor. Junos port speeds previously showed as unknown.
+- `sense.cisconx9`: BGP summary parsing failed because `run_commands()` already returns the JSON reply parsed; both parsed and raw replies are now accepted.
 
-> `sense-o-py-client` (SENSE-O client: instance principals, project submission, CI hardening) also changed in this period but is not SiteRM software. `ansible-templates`, the device collections and the docs site had no changes. Site-specific configuration repositories (`rm-configs`) are excluded as they carry per-site data.
+**Documentation (`sdn-sense.github.io`)**
+- New L3 deployment example for 8 storage servers behind one `/60`, with a single gateway model and a per-`/64` routing-table model.
+
+> `siterm-startup`, `nsi-snmpmon`, `ansible-templates` and `sense-o-py-client` had no changes in this period. Site-specific configuration repositories (`rm-configs`, `helm-deployments`) are excluded as they carry per-site data.
 
 ### 🔧 Supported OS Releases
 
@@ -71,16 +82,16 @@ Changes since `1.6.4` (2026-10-05 → 2026-11-02), across `siterm` and related r
 - 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
-- This particular release is `1.6.5-<el9|el10|u22>` version (`1.6.5`).
+- This particular release is `pre-<el9|el10|u22>` version (`1.6.7-pre1`).
 
 ### Docker Versions
 
-- **Agent:** `sdnsense/siterm-agent:1.6.5-<el9|el10|u22>` *(or use `latest`)*
-- **Debugger:** `sdnsense/siterm-debugger:1.6.5-el10` *(or use `latest`)*
-- **Frontend:** `sdnsense/siterm-fe:1.6.5` *(or use `latest`)*
+- **Agent:** `sdnsense/siterm-agent:pre-<YYYYMMDD>-<el9|el10|u22>` *(or use `latest`)*
+- **Debugger:** `sdnsense/siterm-debugger:pre-<YYYYMMDD>-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:pre-<YYYYMMDD>` *(or use `latest`)*
 
 ### Helm versions
 
-- **Agent:** Chart version siterm/siterm-agent 1.6.5
-- **Debugger:** Chart version siterm/siterm-debugger 1.6.5
-- **Frontend:** Chart version siterm/siterm-fe 1.6.5
+- **Agent:** Chart version siterm/siterm-agent 1.6.7-pre1
+- **Debugger:** Chart version siterm/siterm-debugger 1.6.7-pre1
+- **Frontend:** Chart version siterm/siterm-fe 1.6.7-pre1

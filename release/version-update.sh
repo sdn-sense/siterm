@@ -50,8 +50,8 @@ sed -i .bak "s/.*__version__ = .*/__version__ = '$NEW_VERSION'/" $FDIR/../src/py
 rm -f $FDIR/../src/python/SiteRMAgent/__init__.py.bak
 
 echo "IMPORTANT: Please update release_notes file with changes from previous version"
-echo "Issue `git add` command and add all new version files"
-echo "Issue `git commit -m 'Release of $NEW_VERSION'`"
+echo "Issue 'git add' command and add all new version files"
+echo "Issue 'git commit -m \"Release of $NEW_VERSION\"'"
 
 echo "git tag -a $NEW_VERSION -F release_notes "
 echo "git push origin --tags "

@@ -1,3 +1,101 @@
+## SiteRM 1.6.7-pre1 Pre-Production Release
+
+Changes since `1.6.5` (2026-11-02 → 2026-11-15), across `siterm` and related repositories.
+
+### 🚀 New Features
+
+**Agent QoS: choose which direction is shaped (`qos.shaping`)**
+- `SiteRMAgent/Ruler/Components/QOS.py`, `SiteRMLibs/GitConfig.py`: the Agent `qos` section takes a new optional `shaping` key: `bidirectional` (default, same as before), `ingress` or `egress`. It applies to both L2 VLAN shaping (FireQOS `interface vlan.X … bidirectional|input|output`) and L3 RST shaping (only the matching `interface46 … input|output` blocks are written). Any other value is a configuration error that stops the Agent Ruler from starting (no rules are applied); `rm-configs` validation rejects it.
+- `egress` writes no ingress shaping, so FireQOS adds no `ingress` qdisc and no IFB redirect on the VLAN interface. Use it on hosts where another tool needs a `clsact` qdisc on the same interface, such as SciTags `flowd-go` packet marking, which cannot start while an `ingress` qdisc is present.
+
+```yaml
+qos:
+  policy: hostlevel
+  shaping: egress   # bidirectional (default) | ingress | egress
+  qos_params: "mtu 9000 mpu 9000 quantum 200000 burst 300000 cburst 300000 qdisc sfq balanced"
+  class_max: true
+```
+
+**`siterm-traffic-map`: per-port capacity and reservation report (Frontend)**
+- New read-only Frontend command (installed with the Frontend package). For every switch and host port it lists capacity, reservable capacity, bandwidth used by running reservations (all QoS types, like the delta admission check), the `guaranteedCapped` part, what is still available and free VLANs, followed by the active requests using each port. L3 (rst) services are listed per device.
+- Flags `UNKNOWN-PORT`, `NO-CAPACITY`, `OVERSUBSCRIBED`, `BAD-RATE` and `STALE` (host agent has not reported recently) point out ports needing attention.
+- Options: `--device <name>`, `--used-only`, `--at <epoch|ISO-8601>` to evaluate scheduled reservations at another time, and `--json` for the full report. It only reads the database, local configuration and host reports.
+
+**Topology diagram improvements**
+- **Down links:** a link whose switch port reports down is drawn as a red dotted "down" line (also in the legend and link cards), even when the switch still reports the configured speed. A port-channel ring now counts its members by state, e.g. `3 x 100G, 1 x down`. An unknown port state is not shown as down.
+- **LAN node per switch:** every configured switch port without a switch, host or WAN peer (and not in `ports_ignore`) is now linked to a `lan-<switch>` node, so the diagram shows all configured ports. Ports already in use, including port-channels and their members, are excluded. LAN nodes follow the switch filter and the active path filter like WAN peers.
+- **Bond member speed:** the Agent now reports the link speed of each LLDP neighbour interface. Host-to-switch links on bond members (which are not listed in the Agent `interfaces`) use it instead of showing an unknown speed.
+- **Virtual WAN ports:** WAN links configured on a virtual port name (e.g. `Ethernet1/12/1-wc362`) read speed, state and port-channel members from its `realportname`.
+- **Site node type:** `ArchifyTopology` accepts a `site` device type (drawn as one node per site), used by the multi-site topology page in `autogole-monitoring`. A site's own `topology.json` never contains one.
+
+### 🐛 Bug Fixes
+
+**Virtual ports (`realportname`) in delta validation, provisioning and state reporting**
+- The model refers to a virtual port such as `Ethernet23/1-wc411` by its sanitized name, which did not match the configured port name. As a result:
+  - VLAN range checks used the physical port's or the device's VLAN range instead of the virtual port's `vlan_range_list`;
+  - the `isAlias` consistency check was skipped;
+  - provisioning could not map the port back to its `realportname`;
+  - network status reported for the physical port was not recorded on the virtual port's delta.
+- `SiteFE/PolicyService/deltachecks.py`, `policyService.py`, `SiteRMLibs/Backends/main.py`: port configuration is now matched by either the raw or the sanitized name, and device ports are mapped back to the virtual ports that use them.
+
+### ⚠️ Breaking / Upgrade Notes
+
+- **`qos.shaping`** is optional; without it Agents shape both directions as before. When a site changes it, the Agent rewrites `/etc/firehol/fireqos.conf` and restarts FireQOS once (`clear_all_qos` + `start`), which removes the old ingress qdisc and IFB redirect.
+- **Agent upgrade needed for bond member speeds:** the speed comes from the Agent's LLDP report, so it appears only after the host Agent is upgraded to 1.6.7-pre1.
+- **Topology data:** down links, LAN nodes and virtual WAN port speeds appear once SNMPMonitoring regenerates `topology.json` after the Frontend upgrade.
+- **Junos speeds:** Junos port speeds appear after the Frontend image picks up the updated `sense.junos` collection (see below).
+- No database schema changes and no new dependencies.
+- The Frontend split published as Helm charts `1.6.6-pre1`/`1.6.6-pre2` on 2026-11-10 was reverted and is **not** part of this release. Version `1.6.6` is skipped so those chart versions are not reused; sites that tried them should move to `1.6.7-pre1`.
+
+### 🔗 Related Repository Changes
+
+**Monitoring (`autogole-monitoring`)**
+- `siterm-topology` sidecar: new combined all-sites topology page (`/global-topology`, `?view=network|full`) with its own dashboard and a Home dashboard panel. Sites start collapsed into one node each; click a site to expand it. The page is built in the background from each site's `topo/gettopology` and reuses SiteRM's diagram builder, so it needs a SiteRM version with the `site` node type.
+- Grafana topology panels: clicking a device or link opens a static details panel (device type and status, upstream/downstream reach, neighbours, physical links and port-channels). Grafana does not run scripts in proxied pages, so these panels are built without them.
+- `oidcgen`: replaces a site's cached token after 3 consecutive HTTP 401 responses (e.g. after the Frontend's signing keys change), instead of reusing it until it expires.
+- Blackbox exporter: probe modules for `NRM_SC26`; dashboard refresh across sites.
+
+**Device collections**
+- `sense.junos`: port speed is now reported as `bandwidth`, the key SiteRM reads for every vendor. Junos port speeds previously showed as unknown.
+- `sense.cisconx9`: BGP summary parsing failed because `run_commands()` already returns the JSON reply parsed; both parsed and raw replies are now accepted.
+
+**Documentation (`sdn-sense.github.io`)**
+- New L3 deployment example for 8 storage servers behind one `/60`, with a single gateway model and a per-`/64` routing-table model.
+
+> `siterm-startup`, `nsi-snmpmon`, `ansible-templates` and `sense-o-py-client` had no changes in this period. Site-specific configuration repositories (`rm-configs`, `helm-deployments`) are excluded as they carry per-site data.
+
+### 🔧 Supported OS Releases
+
+- **Frontend (x86_64)**
+  - EL9
+- **Agent (x86_64)**
+  - EL9
+  - EL10 **Default for release**
+  - U22
+- **Debugger (x86_64)**
+  - EL10
+
+> **Note:** EL8 is no longer supported for the Frontend or Agent from 1.6.0 onwards.
+
+### 📥 Installation Details
+
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
+- **Recommended Version:** Always use `latest`.
+- This particular release is `pre-<el9|el10|u22>` version (`1.6.7-pre1`).
+
+### Docker Versions
+
+- **Agent:** `sdnsense/siterm-agent:pre-<YYYYMMDD>-<el9|el10|u22>` *(or use `latest`)*
+- **Debugger:** `sdnsense/siterm-debugger:pre-<YYYYMMDD>-el10` *(or use `latest`)*
+- **Frontend:** `sdnsense/siterm-fe:pre-<YYYYMMDD>` *(or use `latest`)*
+
+### Helm versions
+
+- **Agent:** Chart version siterm/siterm-agent 1.6.7-pre1
+- **Debugger:** Chart version siterm/siterm-debugger 1.6.7-pre1
+- **Frontend:** Chart version siterm/siterm-fe 1.6.7-pre1
+
 ## SiteRM 1.6.5 Production Release
 
 Changes since `1.6.4` (2026-10-05 → 2026-11-02), across `siterm` and related repositories.
