@@ -331,15 +331,8 @@ class QOS:
         # Write everything into file
         for counter, l2req in alllines.items():
             maxintf = self.params[l2req["destport"]]["intf_max"] + l2req["outrate"]
-            # In case request is bestEffort, we want it to be lower than softCapped or guaranteedCapped
-            # So we check which ones evaluates first 1/10, 1/9, 1/8, 1/7, 1/6, 1/5, 1/4, 1/3, 1/2 (and last one is 1)
-            # and take the max
-            # Loop via range from 10 to 1
-            if l2req["reqclass"] == "bestEffort":
-                for i in range(10, 0, -1):
-                    maxintf = max(maxintf // i, l2req["outrate"])
-                    if maxintf > l2req["outrate"]:
-                        break
+            # Best effort keeps its small committed class but may use
+            # all remaining interface capacity.
             for line in l2req["outlines"]:
                 line = line.replace("##REPLACEME##", str(maxintf))
                 tmpFD.writelines(line)
