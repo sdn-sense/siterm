@@ -79,7 +79,7 @@ qos:
 
 ### 📥 Installation Details
 
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
 - This particular release is `pre-<el9|el10|u22>` version (`1.6.7-pre1`).

@@ -44,7 +44,7 @@ setup(
     long_description="End Site-RM Site installation",
     author="Justas Balcas",
     author_email="juztas@gmail.com",
-    url="https://sdn-sense.github.io",
+    url="https://sdn-sense.dev",
     download_url=f"https://github.com/sdn-sense/siterm/archive/refs/tags/{VERSION}.tar.gz",
     keywords=["End Site-RM", "system", "monitor", "SDN", "end-to-end"],
     package_dir={"": "src/python/"},

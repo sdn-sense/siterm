@@ -79,7 +79,7 @@ qos:
 
 ### 📥 Installation Details
 
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
 - This particular release is `pre-<el9|el10|u22>` version (`1.6.7-pre1`).
@@ -166,7 +166,7 @@ Changes since `1.6.4` (2026-10-05 → 2026-11-02), across `siterm` and related r
 
 ### 📥 Installation Details
 
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
 - This particular release is `1.6.5-<el9|el10|u22>` version (`1.6.5`).
@@ -253,7 +253,7 @@ Changes since `1.6.3` (2026-09-10 → 2026-09-21), across `siterm` and related r
 
 ### 📥 Installation Details
 
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
 - This particular release is `pre-<el9|el10|u22>` version (`1.6.4`).
@@ -370,7 +370,7 @@ Changes since `1.6.2` (2026-08-10 → 2026-09-04), across `siterm` and related r
 
 ### 📥 Installation Details
 
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - 🔗 **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
 - This particular release is `pre-<el9|el10|u22>` version (`1.6.3-pre`).
@@ -502,7 +502,7 @@ See the full documentation: [Authentication Configuration](/customization/authen
 
 ### 📥  Installation Details
 
-- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - 🔗  **Authentication Setup:** [Authentication Configuration](/customization/authentication/)
 - **Recommended Version:** Always use `latest`.
 - This particular release is `pre-<el9|el10|u22>` version (`1.6.0`).
@@ -541,7 +541,7 @@ See the full documentation: [Authentication Configuration](/customization/authen
 
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`. 
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 - This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.63`).
@@ -580,7 +580,7 @@ See the full documentation: [Authentication Configuration](/customization/authen
 
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`. 
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 - This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.62`).
@@ -614,7 +614,7 @@ See the full documentation: [Authentication Configuration](/customization/authen
 
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`. 
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 - This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.61`).
@@ -664,7 +664,7 @@ And all changes diff 1.5.52 and 1.5.60 releases in any of the repos: https://git
 
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`. 
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 - This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.60`).
@@ -700,7 +700,7 @@ And all changes diff 1.5.52 and 1.5.60 releases in any of the repos: https://git
 
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`. 
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 - This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.51`).
@@ -767,7 +767,7 @@ And all changes diff 1.5.52 and 1.5.60 releases in any of the repos: https://git
 
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`.
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 - This particular release is `latest-<el8|el9|el10|u22>` version (`1.5.50`).
@@ -801,7 +801,7 @@ And all changes diff 1.5.52 and 1.5.60 releases in any of the repos: https://git
 
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`.
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 - This particular release is `latest-<el8|el9|el10>` version (`1.5.43`) as candidate for production release.
@@ -835,7 +835,7 @@ And all changes diff 1.5.52 and 1.5.60 releases in any of the repos: https://git
 
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`. 
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 - This particular release is `latest-<el8|el9|el10>` version (`1.5.42`) as candidate for production release.
@@ -866,7 +866,7 @@ Production release after 1.5.40 pre-release validation
 
 
 ## 📥  Installation Details
-- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`.
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 - This particular release is `latest-<el8|el9|el10>` version (`1.5.41`) as candidate for production release.
@@ -938,7 +938,7 @@ Production release after 1.5.40 pre-release validation
 
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`.
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 - This particular release is `stage-<el8|el9|el10>` version (`1.5.40`) as candidate for production release.
@@ -976,7 +976,7 @@ Production release after 1.5.40 pre-release validation
 - **x86_64** ✅ (Stable)
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest`.
 - If enforcing a specific version is needed, refer to the following details for tag or chart version below.
 
@@ -1072,7 +1072,7 @@ Production release after 1.5.40 pre-release validation
 
 Please refer to the official documentation for upgrade or installation instructions:
 
-📖 **Documentation:** [SiteRM Documentation](https://sdn-sense.github.io)
+📖 **Documentation:** [SiteRM Documentation](https://sdn-sense.dev)
 
 All sites managed by the **SENSE Team** will be updated automatically.
 
@@ -1080,7 +1080,7 @@ All sites managed by the **SENSE Team** will be updated automatically.
 - **x86_64** ✅ (Stable)
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest` or `latest-ppc64le`.
 - If enforcing a specific version is needed, refer to the following details:
 
@@ -1098,7 +1098,7 @@ See: https://github.com/esnet/SENSE-Orchestrator/wiki/Modeling-Guide https://git
 
 Please refer to the official documentation for upgrade or installation instructions:
 
-📖  **Documentation:** [SiteRM Documentation](https://sdn-sense.github.io)
+📖  **Documentation:** [SiteRM Documentation](https://sdn-sense.dev)
 
 All sites managed by the **SENSE Team** will be updated automatically.
 
@@ -1107,7 +1107,7 @@ All sites managed by the **SENSE Team** will be updated automatically.
 - **ppc64le** ⚠️ (Beta)
 
 ## 📥  Installation Details
-- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest` or `latest-ppc64le`.
 - If enforcing a specific version is needed, refer to the following details:
 
@@ -1125,7 +1125,7 @@ See: https://github.com/esnet/SENSE-Orchestrator/wiki/Modeling-Guide https://git
 
 Please refer to the official documentation for upgrade or installation instructions:
 
-📖 **Documentation:** [SiteRM Documentation](https://sdn-sense.github.io)
+📖 **Documentation:** [SiteRM Documentation](https://sdn-sense.dev)
 
 All sites managed by the **SENSE Team** will be updated automatically.
 
@@ -1134,7 +1134,7 @@ All sites managed by the **SENSE Team** will be updated automatically.
 - **ppc64le** ⚠️ (Beta)
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest` or `latest-ppc64le`.
 - If enforcing a specific version is needed, refer to the following details:
 
@@ -1149,7 +1149,7 @@ We have identified new issue with scheduled allocations and excluding vlan from 
 
 Please refer to the official documentation for upgrade or installation instructions:
 
-📖  **Documentation:** [SiteRM Documentation](https://sdn-sense.github.io)
+📖  **Documentation:** [SiteRM Documentation](https://sdn-sense.dev)
 
 All sites managed by the **SENSE Team** will be updated automatically.
 
@@ -1158,7 +1158,7 @@ All sites managed by the **SENSE Team** will be updated automatically.
 - **ppc64le** ⚠️ (Beta)
 
 ## 📥  Installation Details
-- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗  **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest` or `latest-ppc64le`.
 - If enforcing a specific version is needed, refer to the following details:
 
@@ -1172,7 +1172,7 @@ All sites managed by the **SENSE Team** will be updated automatically.
 
 We are pleased to announce the release of **SiteRM 1.5.2** as a Stable Production version. Please refer to the official documentation for upgrade or installation instructions:
 
-📖 **Documentation:** [SiteRM Documentation](https://sdn-sense.github.io)
+📖 **Documentation:** [SiteRM Documentation](https://sdn-sense.dev)
 
 All sites managed by the **SENSE Team** will be updated automatically.
 
@@ -1228,7 +1228,7 @@ For a complete list of fixes and changes, check the detailed comparison:
 - **ppc64le** ⚠️ (Beta)
 
 ## 📥 Installation Details
-- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.github.io/Installation.html)
+- 🔗 **Installation Guide:** [Installation Instructions](https://sdn-sense.dev/install-quick-start/)
 - **Recommended Version:** Always use `latest` or `latest-ppc64le`.
 - If enforcing a specific version is needed, refer to the following details:
 
@@ -1264,7 +1264,7 @@ Agent 1.5.1 release:
 For all fixes and improvements, see the difference here: https://github.com/sdn-sense/siterm/compare/1.5.1...1.4.62
 
 Supported systems: x86_64 and ppc64le(beta)
-Installation details: https://sdn-sense.github.io/Installation.html
+Installation details: https://sdn-sense.dev/install-quick-start/
 
 Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
 Docker version for this release:
@@ -1287,7 +1287,7 @@ Agent 1.4.62 release:
   * Support Prometheus federate endpoints for Autogole monitoring (in case Site already run's Node Exporters and Prometheus)
 
 Supported systems: x86_64 and ppc64le(beta)
-Installation details: https://sdn-sense.github.io/Installation.html
+Installation details: https://sdn-sense.dev/install-quick-start/
 
 Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
 Docker version for this release:
@@ -1304,7 +1304,7 @@ SiteRM Frontend bugfix for 1.4.6 release:
   * Do not apply empty statements, unneeded ansible apply run;
 
 Supported systems: x86_64 and ppc64le(beta)
-Installation details: https://sdn-sense.github.io/Installation.html
+Installation details: https://sdn-sense.dev/install-quick-start/
 
 Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
 Docker version for this release:
@@ -1370,7 +1370,7 @@ SiteRM Frontend updates:
   * Support for Kubernetes yaml apply installation dropped. Please use HELM Charts for Frontend/Agent installation.
 
 Supported systems: x86_64 and ppc64le(beta)
-Installation details: https://sdn-sense.github.io/Installation.html
+Installation details: https://sdn-sense.dev/install-quick-start/
 
 Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
 Docker version for this release:
@@ -1432,7 +1432,7 @@ New way:
 
 
 SiteRM Improvements:
-SiteRM Agent Moved to HELM deployment. See here for details: https://sdn-sense.github.io/Installation.html
+SiteRM Agent Moved to HELM deployment. See here for details: https://sdn-sense.dev/install-quick-start/
 Web UI allows us to see the state of all SiteRM services. Can be seen under https://<url>/servicestates.html
 Web UI allows to refresh configuration, and or delete hosts from SiteRM's database.
 Report NetworkStatus with data plane type status inside the model. This allows Orchestrator/Admins/Users to identify and know dataplane activation status.
@@ -1449,7 +1449,7 @@ Default txqueulen/mtu same as the master interface, if not specified in the agen
 If the port is not switchport type - it will be ignored by SiteRM and will not be added to the model.
 Allow to control site which VLANs to put inside model. Parameter `allvlans: True|False` indicates if the device should model all VLANs or only SENSE VLANs inside the model; (Default False)
 Docker/Podman startup script updates: check certificates and configuration files for validity.
-Documentation for all SiteRM Frontend and Agent parameters. See https://sdn-sense.github.io/Configuration.html
+Documentation for all SiteRM Frontend and Agent parameters. See https://sdn-sense.dev/customization/configuration-layout/
 
 
 Network Device improvements:
@@ -1464,7 +1464,7 @@ Network Device improvements:
 (Dell OS9)(Beta feature) Support traffic police, based on service request if `rate_limit: True|False` is set under device port. (Default False)
 
 Supported systems: x86_64 and ppc64le(beta)
-Installation details: https://sdn-sense.github.io/Installation.html
+Installation details: https://sdn-sense.dev/install-quick-start/
 
 Sites are encouraged to always use the "latest" or "latest-ppc64le" version. If there is a need to enforce a specific version, please see the details below:
 Docker version for this release:
@@ -1479,7 +1479,7 @@ This release includes (highlight main items):
 IMPORTANT:
 There are changes required to run a new version. Please make sure you do the following:
 Ask SENSE team to cancel all provisioned services to your Site;
-Make sure you update your deployment scripts to use new way to define network devices: https://sdn-sense.github.io/NetControlAnsible.html
+Make sure you update your deployment scripts to use new way to define network devices: https://sdn-sense.dev/customization/enable-switch-control/
 Depending on your installation - use to update docker image or restart kubernetes with new configuration.
 
 SiteRM Improvements:
@@ -1492,7 +1492,7 @@ Report Network Status of any configuration (L2,L3,Server Vlan, IP, MTU, QoS). Re
 Report QoS Requests in a Prometheus output.
 Allow sites to control allvlans flag - either report all vlans from network/host devices or only controlled ones.
 WebUI improvements (delta show, topology map)
-Separation of Ansible-templates and simplification for sites to specific controlled devices. Please look documentation here https://sdn-sense.github.io/NetControlAnsible.html - for a new way to configure control of network devices.
+Separation of Ansible-templates and simplification for sites to specific controlled devices. Please look documentation here https://sdn-sense.dev/customization/enable-switch-control/ - for a new way to configure control of network devices.
 Before start docker container (either FE or Agent) check all Certificates, configuration files and make sure they are valid.
 FE and Agent use docker volume.
 Upgrade osg-ca-certs (Needed to support Incommon V3)
@@ -1506,7 +1506,7 @@ Code improvement:
 Any new code or modified code - requires to run linter.sh This includes for Python: black, isort, pylint. For yaml - yamllint, For bash - bashlint.
 
 Supported systems: x86_64 and ppc64le
-Installation details: https://sdn-sense.github.io/Installation.html
+Installation details: https://sdn-sense.dev/install-quick-start/
 
 Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
 Docker version for this release:
@@ -1526,7 +1526,7 @@ x86_64:
 -  Minimal support for Cisco NX 9 #291
 -Full list of issues solved are here: https://github.com/sdn-sense/siterm/issues?q=is%3Aissue+milestone%3A%221.3.0+Release%22+is%3Aclosed
  Supported systems: x86_64 and ppc64le
- Installation details: https://sdn-sense.github.io/Installation.html
+ Installation details: https://sdn-sense.dev/install-quick-start/
 
  Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
  Docker version for this release:
@@ -1561,7 +1561,7 @@ This release includes:
     Formatting 'f' use in ip rule commands, QoS fix (either list or str for IP range)
 
 Supported systems: x86_64 and ppc64le
-Installation details: https://sdn-sense.github.io/Installation.html
+Installation details: https://sdn-sense.dev/install-quick-start/
 
 Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
 Docker version for this release:
@@ -1582,7 +1582,7 @@ This release includes bugfixes for 1.1.0-dev release:
     Formatting 'f' use in ip rule commands, QoS fix (either list or str for IP range)
 
 Supported systems: x86_64 and ppc64le
-Installation details: https://sdn-sense.github.io/Installation.html
+Installation details: https://sdn-sense.dev/install-quick-start/
 
 Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
 Docker version for this release:
@@ -1611,7 +1611,7 @@ This release includes:
     Apply IPv6 Routing for BGP Requests (if DTN has IPv6 in range of BGP Requested override, it will add specific rules to redirect traffic to mavlan)
 
 Supported systems: x86_64 and ppc64le
-Installation details: https://sdn-sense.github.io/Installation.html
+Installation details: https://sdn-sense.dev/install-quick-start/
 
 Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
 Docker version for this release:
@@ -1630,7 +1630,7 @@ Code base moved to Python 3.8.
 Templates ready for Kubernetes and Docker installation. More details: https://github.com/sdn-sense/siterm-startup
 
 Supported systems: x86_64 and ppc64le
-Installation details: https://sdn-sense.github.io/Installation.html
+Installation details: https://sdn-sense.dev/install-quick-start/
 
 Sites are encouraged always use "latest" or "latest-ppc64le" version. If there is need to enforce specific version, please see details below:
 Docker version for this release:

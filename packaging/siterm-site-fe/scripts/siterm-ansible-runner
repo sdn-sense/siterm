@@ -179,7 +179,7 @@ def printports(host, dataIn, _args):
     print('     vlan_mtu - predefined what MTU to use on configured new vlan interfaces (at switch level)')
     print('     rst/rsts_enabled - rst - same as switch name; rsts_enabled - ipv4,ipv6 - if Routing service is enabled')
     print('     vrf - vrf name if needed to put vlans under VRF (optional)')
-    print('For more details about config parameters, see here: https://sdn-sense.github.io/Configuration.html')
+    print('For more details about config parameters, see here: https://sdn-sense.dev/customization/configuration-layout/')
     print('-'*100)
     print(ydump(out))
     print('-'*100)
